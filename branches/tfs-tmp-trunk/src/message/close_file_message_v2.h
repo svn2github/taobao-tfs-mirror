@@ -61,6 +61,16 @@ namespace tfs
           return lease_id_;
         }
 
+        void set_master_id(const uint64_t master_id)
+        {
+          master_id_ = master_id;
+        }
+
+        uint64_t get_master_id() const
+        {
+          return master_id_;
+        }
+
         void set_ds(const common::VUINT64& ds)
         {
           ds_ = ds;
@@ -91,25 +101,11 @@ namespace tfs
           return flag_;
         }
 
-        void set_master()
-        {
-          flag_ |= common::MF_IS_MASTER;
-        }
-
-        void set_slave()
-        {
-          flag_ &= (~common::MF_IS_MASTER);
-        }
-
-        bool is_master()
-        {
-          return flag_ & common::MF_IS_MASTER;
-        }
-
       private:
         uint64_t block_id_;
         uint64_t file_id_;
         uint64_t lease_id_;
+        uint64_t master_id_;
         common::VUINT64 ds_;
         uint32_t crc_;
         int32_t flag_;

@@ -27,11 +27,11 @@ namespace tfs
     Lease::Lease(const LeaseId& lease_id, const int64_t now, const VUINT64& servers):
       lease_id_(lease_id),
       last_update_time_(now),
+      req_begin_time_(now),
       ref_count_(0)
     {
       int32_t index = 0;
       memset(members_, 0, sizeof(members_));
-      reset_member_status();
       VUINT64::const_iterator iter = servers.begin();
       for (; iter != servers.end(); ++iter, ++index)
       {

@@ -46,6 +46,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = output.set_int64(master_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = output.set_int32(version_);
       }
 
@@ -83,6 +88,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&master_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         input.get_int32(&version_);
       }
 
@@ -109,7 +119,7 @@ namespace tfs
     {
       int64_t len = file_seg_.length() +
                     Serialization::get_vint64_length(ds_) +
-                    INT64_SIZE + INT_SIZE * 2;
+                    INT64_SIZE * 2 + INT_SIZE * 2;
       if (file_seg_.length_ > 0)
       {
         len += file_seg_.length_;
@@ -185,7 +195,7 @@ namespace tfs
 
     int SlaveDsRespMessage::deserialize(Stream& input)
     {
-      int ret = input.get_int64(reinterpret_cast<int64_t *>(server_id_));
+      int ret = input.get_int64(reinterpret_cast<int64_t *>(&server_id_));
       if (TFS_SUCCESS == ret)
       {
         int64_t pos = 0;

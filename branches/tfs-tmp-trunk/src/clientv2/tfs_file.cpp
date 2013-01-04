@@ -421,11 +421,11 @@ namespace tfs
         msg.set_offset(file_.offset_);
         msg.set_length(count);
         msg.set_lease_id(file_.lease_id_);
+        msg.set_master_id(file_.get_master_ds());
         msg.set_version(file_.version_);
         msg.set_flag(file_.opt_flag_);
         msg.set_ds(file_.ds_);
         msg.set_data(buf);
-        msg.set_master();
         ret = send_msg_to_server(file_.choose_ds(), client, &msg, resp_msg);
       }
 
@@ -475,9 +475,9 @@ namespace tfs
         msg.set_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
         msg.set_lease_id(file_.lease_id_);
+        msg.set_master_id(file_.get_master_ds());
         msg.set_ds(file_.ds_);
         msg.set_crc(file_.crc_);
-        msg.set_master();
         ret = send_msg_to_server(file_.choose_ds(), client, &msg, resp_msg);
       }
 
@@ -513,8 +513,8 @@ namespace tfs
         msg.set_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
         msg.set_lease_id(file_.lease_id_);
+        msg.set_master_id(file_.get_master_ds());
         msg.set_ds(file_.ds_);
-        msg.set_master();
         msg.set_action(action);
         msg.set_version(file_.version_);
         msg.set_flag(file_.opt_flag_);
@@ -535,9 +535,8 @@ namespace tfs
         {
           StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
           ret = smsg->get_status();
-          TBSYS_LOG(DEBUG, "unlink file fail. status: %d %s", ret, smsg->get_error());
-          file_size = 0;
-          // how to get file size ??
+          TBSYS_LOG(DEBUG, "unlink file status: %d %s", ret, smsg->get_error());
+          file_size = atol(smsg->get_error());
         }
       }
 

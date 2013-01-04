@@ -111,6 +111,16 @@ namespace tfs
           return data_;
         }
 
+        void set_master_id(const uint64_t master_id)
+        {
+          master_id_ = master_id;
+        }
+
+        uint64_t get_master_id() const
+        {
+          return master_id_;
+        }
+
         void set_version(const int32_t version)
         {
           version_ = version;
@@ -131,25 +141,11 @@ namespace tfs
           return flag_;
         }
 
-        void set_master()
-        {
-          flag_ |= common::MF_IS_MASTER;
-        }
-
-        void set_slave()
-        {
-          flag_ &= (~common::MF_IS_MASTER);
-        }
-
-        bool is_master()
-        {
-          return flag_ & common::MF_IS_MASTER;
-        }
-
       private:
         common::FileSegment file_seg_;
         common::VUINT64 ds_;
         uint64_t lease_id_;
+        uint64_t master_id_;
         int32_t version_;
         int32_t flag_;
         const char* data_;

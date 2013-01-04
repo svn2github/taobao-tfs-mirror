@@ -1392,19 +1392,20 @@ namespace tfs
       {
         ret = Serialization::get_int64(data, data_len, pos, &family_id_);
       }
-      if (TFS_SUCCESS == ret)
+
+      if ((TFS_SUCCESS == ret) && (INVALID_FAMILY_ID != family_id_))
       {
         ret = Serialization::get_int32(data, data_len, pos, &family_aid_info_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-        for (uint32_t i = 0; (i < MEMBER_NUM) && (TFS_SUCCESS == ret); i++)
+        if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&members_[i].first));
-          if (TFS_SUCCESS == ret)
+          const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+          for (uint32_t i = 0; (i < MEMBER_NUM) && (TFS_SUCCESS == ret); i++)
           {
-            ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&members_[i].second));
+            ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&members_[i].first));
+            if (TFS_SUCCESS == ret)
+            {
+              ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&members_[i].second));
+            }
           }
         }
       }
@@ -1420,20 +1421,20 @@ namespace tfs
       {
         ret = Serialization::set_int64(data, data_len, pos, family_id_);
       }
-      if (TFS_SUCCESS == ret)
+
+      if ((TFS_SUCCESS == ret) && (INVALID_FAMILY_ID != family_id_))
       {
         ret = Serialization::set_int32(data, data_len, pos, family_aid_info_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-        for (uint32_t i = 0; (i < MEMBER_NUM) && (TFS_SUCCESS == ret); i++)
+        if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::set_int64(data, data_len, pos, members_[i].first);
-          if (TFS_SUCCESS == ret)
+          const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+          for (uint32_t i = 0; (i < MEMBER_NUM) && (TFS_SUCCESS == ret); i++)
           {
-            ret = Serialization::set_int64(data, data_len, pos, members_[i].second);
+            ret = Serialization::set_int64(data, data_len, pos, members_[i].first);
+            if (TFS_SUCCESS == ret)
+            {
+              ret = Serialization::set_int64(data, data_len, pos, members_[i].second);
+            }
           }
         }
       }
@@ -1443,9 +1444,14 @@ namespace tfs
 
     int64_t FamilyInfoExt::length() const
     {
-      const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-      return INT64_SIZE + INT_SIZE + MEMBER_NUM * (INT64_SIZE + INT64_SIZE);
-    }
+      int64_t len = INT64_SIZE;
+      if (INVALID_FAMILY_ID != family_id_)
+      {
+        const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+        len += (INT_SIZE + MEMBER_NUM * (INT64_SIZE + INT64_SIZE));
+      }
+      return len;
+   }
 
     int BlockMeta::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
@@ -1479,17 +1485,7 @@ namespace tfs
         ret = Serialization::set_int32(data, data_len, pos, version_);
       }
 
-      int32_t tmp_flag = 0;
       if (TFS_SUCCESS == ret)
-      {
-        if (INVALID_FAMILY_ID != family_info_.family_id_)
-        {
-          tmp_flag = (flag_ | MF_WITH_FAMILY);
-        }
-        ret = Serialization::set_int32(data, data_len, pos, tmp_flag);
-      }
-
-      if ((TFS_SUCCESS == ret) && (tmp_flag & MF_WITH_FAMILY))
       {
         ret = family_info_.serialize(data, data_len, pos);
       }
@@ -1530,11 +1526,6 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &flag_);
-      }
-
-      if ((TFS_SUCCESS == ret) && (flag_ & MF_WITH_FAMILY))
-      {
         ret = family_info_.deserialize(data, data_len, pos);
       }
 
@@ -1543,12 +1534,7 @@ namespace tfs
 
     int64_t BlockMeta::length() const
     {
-      int64_t len = INT64_SIZE + INT_SIZE * 3 + size_ * INT64_SIZE;
-      if (INVALID_FAMILY_ID != family_info_.family_id_)
-      {
-        len += family_info_.length();
-      }
-      return len;
+      return INT64_SIZE + INT_SIZE * 2 + size_ * INT64_SIZE + family_info_.length();
     }
 
     int FileSegment::serialize(char* data, const int64_t data_len, int64_t& pos) const

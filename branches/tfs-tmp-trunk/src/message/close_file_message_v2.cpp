@@ -44,6 +44,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = output.set_int64(master_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = output.set_int32(crc_);
       }
 
@@ -75,6 +80,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&master_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = input.get_int32(reinterpret_cast<int32_t *>(&crc_));
       }
 
@@ -94,7 +104,7 @@ namespace tfs
 
     int64_t CloseFileMessageV2::length() const
     {
-      return 3 * INT64_SIZE + 2 * INT_SIZE +
+      return 4 * INT64_SIZE + 2 * INT_SIZE +
              Serialization::get_vint64_length(ds_);
     }
 

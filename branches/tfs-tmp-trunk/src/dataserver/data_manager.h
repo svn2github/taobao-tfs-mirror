@@ -42,7 +42,7 @@ namespace tfs
         int update_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
             tbnet::Packet* packet);
         int check_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
-            std::stringstream& err_msg);
+            int64_t& req_cost_time, int64_t& file_size, std::stringstream& err_msg);
         int remove_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id);
 
         /** update & unlink operations */
@@ -51,7 +51,7 @@ namespace tfs
             const int32_t remote_version, common::BlockInfoV2& local);
         int close_file(const uint64_t block_id, uint64_t& file_id, const uint64_t lease_id);
         int unlink_file(const uint64_t block_id, const uint64_t file_id, const int64_t lease_id,
-            const int32_t action, const int32_t remote_version, int64_t& size, common::BlockInfoV2& local);
+            const int32_t action, const int32_t remote_version, common::BlockInfoV2& local);
 
         /** helper functions */
         int update_block_info(const uint64_t block_id, const common::UnlinkFlag unlink_flag);

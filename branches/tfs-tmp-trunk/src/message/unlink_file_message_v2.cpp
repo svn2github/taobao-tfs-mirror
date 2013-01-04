@@ -46,6 +46,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = output.set_int64(master_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = output.set_int32(version_);
       }
 
@@ -54,14 +59,9 @@ namespace tfs
         ret = output.set_int32(action_);
       }
 
-      int32_t tmp_flag = 0;
       if (TFS_SUCCESS == ret)
       {
-        if (INVALID_FAMILY_ID != family_info_.family_id_)
-        {
-          tmp_flag = (flag_ | MF_WITH_FAMILY);
-        }
-        ret = output.set_int32(tmp_flag);
+        ret = output.set_int32(flag_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -69,7 +69,7 @@ namespace tfs
         ret = output.set_vint64(ds_);
       }
 
-      if ((TFS_SUCCESS == ret) && (tmp_flag & MF_WITH_FAMILY))
+      if (TFS_SUCCESS == ret)
       {
         int64_t pos = 0;
         ret = family_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -97,6 +97,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&master_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = input.get_int32(&version_);
       }
 
@@ -115,7 +120,7 @@ namespace tfs
         ret = input.get_vint64(ds_);
       }
 
-      if ((TFS_SUCCESS == ret) && (flag_ & MF_WITH_FAMILY))
+      if (TFS_SUCCESS == ret)
       {
         int64_t pos = 0;
         ret = family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
@@ -130,13 +135,8 @@ namespace tfs
 
     int64_t UnlinkFileMessageV2::length() const
     {
-      int64_t len = 3 * INT64_SIZE + 3 * INT_SIZE +
-        Serialization::get_vint64_length(ds_);
-      if (INVALID_FAMILY_ID != family_info_.family_id_)
-      {
-        len += family_info_.length();
-      }
-      return len;
+      return 4 * INT64_SIZE + 3 * INT_SIZE +
+        Serialization::get_vint64_length(ds_) + family_info_.length();
     }
 
   }

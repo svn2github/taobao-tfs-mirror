@@ -38,17 +38,12 @@ namespace tfs
         ret = output.set_int64(file_id_);
       }
 
-      int32_t tmp_flag = 0;
       if (TFS_SUCCESS == ret)
       {
-        if (INVALID_FAMILY_ID != family_info_.family_id_)
-        {
-          tmp_flag = (flag_ | MF_WITH_FAMILY);
-        }
-        ret = output.set_int32(tmp_flag);
+        ret = output.set_int32(flag_);
       }
 
-      if ((TFS_SUCCESS == ret) && (tmp_flag & MF_WITH_FAMILY))
+      if (TFS_SUCCESS == ret)
       {
         int64_t pos = 0;
         ret = family_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -74,7 +69,7 @@ namespace tfs
         ret = input.get_int32(&flag_);
       }
 
-      if ((TFS_SUCCESS == ret) && (flag_ & MF_WITH_FAMILY))
+      if (TFS_SUCCESS == ret)
       {
         int64_t pos = 0;
         ret = family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
@@ -90,12 +85,7 @@ namespace tfs
 
     int64_t StatFileMessageV2::length() const
     {
-      int64_t len = 2 * INT64_SIZE + INT_SIZE;
-      if (INVALID_FAMILY_ID != family_info_.family_id_)
-      {
-        len += family_info_.length();
-      }
-      return len;
+      return 2 * INT64_SIZE + INT_SIZE + family_info_.length();
     }
 
     StatFileRespMessageV2::StatFileRespMessageV2()
@@ -153,17 +143,12 @@ namespace tfs
         output.pour(file_seg_.length());
       }
 
-      int32_t tmp_flag = flag_;
       if (TFS_SUCCESS == ret)
       {
-        if (INVALID_FAMILY_ID != family_info_.family_id_)
-        {
-          tmp_flag = (flag_ | MF_WITH_FAMILY);
-        }
-        ret = output.set_int32(tmp_flag);
+        ret = output.set_int32(flag_);
       }
 
-      if ((TFS_SUCCESS == ret) && (tmp_flag & MF_WITH_FAMILY))
+      if (TFS_SUCCESS == ret)
       {
         ret = family_info_.serialize(output.get_free(), output.get_free_length(), pos);
         if (TFS_SUCCESS == ret)
@@ -189,7 +174,7 @@ namespace tfs
         ret = input.get_int32(&flag_);
       }
 
-      if ((TFS_SUCCESS == ret) && (flag_ & MF_WITH_FAMILY))
+      if (TFS_SUCCESS == ret)
       {
         int64_t pos = 0;
         ret = family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
@@ -205,12 +190,7 @@ namespace tfs
 
     int64_t ReadFileMessageV2::length() const
     {
-      int64_t len = file_seg_.length() + INT_SIZE;
-      if (INVALID_FAMILY_ID != family_info_.family_id_)
-      {
-        len += family_info_.length();
-      }
-      return len;
+      return file_seg_.length() + INT_SIZE + family_info_.length();
     }
 
     ReadFileRespMessageV2::ReadFileRespMessageV2() :

@@ -62,16 +62,6 @@ namespace tfs
           return flag_;
         }
 
-        void set_force()
-        {
-          flag_ |= common::MF_READ_FORCE;
-        }
-
-        bool get_force()
-        {
-          return (flag_ & common::MF_READ_FORCE);
-        }
-
         void set_family_info(const common::FamilyInfoExt& family_info)
         {
           family_info_ = family_info;
@@ -179,16 +169,6 @@ namespace tfs
         int32_t get_flag() const
         {
           return flag_;
-        }
-
-        void set_force()
-        {
-          flag_ |= common::MF_READ_FORCE;
-        }
-
-        bool get_force()
-        {
-          return (flag_ & common::MF_READ_FORCE);
         }
 
         void set_family_info(const common::FamilyInfoExt& family_info)
