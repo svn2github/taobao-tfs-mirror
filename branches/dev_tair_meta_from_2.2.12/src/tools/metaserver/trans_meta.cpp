@@ -22,10 +22,15 @@
 
 #include "common/parameter.h"
 #include "common/config_item.h"
+#include "name_meta_server/meta_store_manager.h"
+#include "name_meta_server/meta_server_service.h"
 
 using namespace std;
 using namespace __gnu_cxx;
 using namespace tfs::common;
+using namespace tfs::namemetaserver;
+
+MetaStoreManager g_store_manager;
 
 int stop = 0;
 void sign_handler(int32_t sig)
@@ -42,12 +47,122 @@ int usage (const char* n)
   printf("%s -f meta_config_file -s source_file -o dest_file -l log_file\n", n);
   return 0;
 }
-int transfer(const int64_t app_id, const int64_t uid, FILE *d_fd)
+
+int deal_file(const int64_t app_id, const int64_t uid, const vector<MetaInfo> &v_meta_info,
+    const string& full_name, FILE *d_fd)
 {
-  UNUSED(app_id);
-  UNUSED(uid);
+  int ret = TFS_SUCCESS;
   UNUSED(d_fd);
-  return 0;
+  vector<MetaInfo>::const_iterator it = v_meta_info.begin();
+  for (; it != v_meta_info.end(); it++)
+  {
+    //TODO transfer this info to new meta, we just printed it for now
+    TBSYS_LOG(INFO, "full_name %s name =%*s ct %d, mt %d, sz %lu",
+        full_name.c_str(),
+        it->get_name_len() - 1, it->get_name() + 1,
+        it->file_info_.create_time_,
+        it->file_info_.modify_time_,
+        it->file_info_.size_);
+    int32_t cluster_id = 0;
+    int64_t last_offset = 0;
+    vector<MetaInfo> tmp_v_meta_info;
+    ret = g_store_manager.get_meta_info_from_db(app_id, uid, it->file_info_.pid_,
+        it->get_name(), it->get_name_len(), 0, tmp_v_meta_info,
+        cluster_id, last_offset);
+    for (size_t i = 0; i < tmp_v_meta_info.size(); i++)
+    {
+      vector<FragMeta>::const_iterator frag_it = tmp_v_meta_info[i].frag_info_.v_frag_meta_.begin();
+      for (; frag_it != tmp_v_meta_info[i].frag_info_.v_frag_meta_.end(); frag_it++)
+      {
+        TBSYS_LOG(INFO, "off_set %ld cluster_id %d lock_id %d file_id %ld size %d",
+            frag_it->offset_,
+            cluster_id,
+            frag_it->block_id_, frag_it->file_id_, frag_it->size_);
+      }
+    }
+
+  }
+  return ret;
+}
+int transfer_dir(const int64_t app_id, const int64_t uid, const int64_t pid,
+    char *name, int32_t &name_len, string full_name, FILE *d_fd)
+{
+  UNUSED(d_fd);
+  vector<MetaInfo> v_meta_info;
+  bool still_have = false;
+  bool is_file = true;
+  int ret = TFS_SUCCESS;
+  int64_t file_count = 0;
+  MetaInfo last_meta_info;
+  vector<MetaInfo> tmp_v_meta_info;
+  vector<MetaInfo>::iterator tmp_v_meta_info_it;
+  TBSYS_LOG(INFO, "transerfer dir name %s", full_name.c_str());
+
+  do
+  {
+    tmp_v_meta_info.clear();
+    still_have = false;
+    ret = g_store_manager.ls(app_id, uid, pid, name, name_len, NULL, 0, is_file,
+        tmp_v_meta_info, still_have);
+    if (!tmp_v_meta_info.empty())
+    {
+      tmp_v_meta_info_it = tmp_v_meta_info.begin();
+
+      if (is_file)
+      {
+        //convert info to file_info. merge the info hav been splited
+        g_store_manager.calculate_file_meta_info(tmp_v_meta_info_it, tmp_v_meta_info.end(),
+            false, v_meta_info, last_meta_info);
+      }
+      else
+      {
+        for (; tmp_v_meta_info_it != tmp_v_meta_info.end(); tmp_v_meta_info_it++)
+        {
+          v_meta_info.push_back(*tmp_v_meta_info_it);
+        }
+      }
+
+      if (still_have)
+      {
+        tmp_v_meta_info_it--;
+        MetaServerService::next_file_name_base_on(name, name_len,
+            tmp_v_meta_info_it->get_name(), tmp_v_meta_info_it->get_name_len());
+      }
+    }
+
+    if (!still_have && is_file)
+    {
+      //deal all files in v_meta_info;
+      deal_file(app_id, uid, v_meta_info, full_name, d_fd);
+
+      file_count = v_meta_info.size();
+      v_meta_info.clear();
+      still_have = true;
+      is_file = false;
+      name[0] = '\0';
+      name_len = 1;       //continue get files
+    }
+
+  } while(TFS_SUCCESS == ret && still_have);
+
+  TBSYS_LOG(INFO, "app_id:%ld uid:%ld pid:%ld file_count = %d, dir_count %d",
+      app_id, uid, pid, file_count, v_meta_info.size());
+
+  if (0 != pid)
+    if (full_name.length() > 1)
+      full_name += "/";
+  for (size_t i = 0; i < v_meta_info.size() && TFS_SUCCESS == ret; i++)
+  {
+    name_len = v_meta_info[i].get_name_len();
+    memcpy(name, v_meta_info[i].get_name(), name_len);
+    string sub_full_name(full_name);
+    sub_full_name.append(name + 1, name_len - 1);
+
+    ret = transfer_dir(app_id, uid, v_meta_info[i].file_info_.id_,
+        name, name_len, sub_full_name, d_fd);
+  }
+
+  return ret;
 }
 void transfer(const string &source_file_name, const string &out_file_name)
 {
@@ -76,7 +191,7 @@ void transfer(const string &source_file_name, const string &out_file_name)
     buff[127] = 0;
     char *p = NULL;
     const char DLIMER = ',';
-    p = strstr(buff, &DLIMER);
+    p = strchr(buff, DLIMER);
     if (NULL == p)
     {
       TBSYS_LOG(ERROR, "err input line %s", buff);
@@ -94,7 +209,12 @@ void transfer(const string &source_file_name, const string &out_file_name)
       continue;
     }
     TBSYS_LOG(INFO, "transfer app_id %ld uid %ld", app_id, uid);
-    ret = transfer(app_id, uid, d_fd);
+    char name[512] = {'\0'};
+    name[1]='/';
+    name[0]=1;
+    int32_t name_len = 2;
+    string full_name;
+    ret = transfer_dir(app_id, uid, 0, name, name_len, full_name, d_fd);
   }
   fclose(s_fd);
   s_fd = NULL;
@@ -110,7 +230,7 @@ int main(int argc, char *argv[])
   std::string source_file_name;
   std::string out_file_name;
   std::string log_file_name;
-  while ((i = getopt(argc, argv, "f:s:o:l:")) != EOF)
+  while ((i = getopt(argc, argv, "f:s:l:")) != EOF)
   {
     switch (i)
     {
@@ -131,8 +251,8 @@ int main(int argc, char *argv[])
         return TFS_ERROR;
     }
   }
-  if (config_file_name.empty() || source_file_name.empty() ||
-      out_file_name.empty() || log_file_name.empty())
+  out_file_name = "out.txt";
+  if (config_file_name.empty() || source_file_name.empty())
   {
     usage(argv[0]);
     return TFS_ERROR;
@@ -145,7 +265,25 @@ int main(int argc, char *argv[])
   TBSYS_LOGGER.setFileName(log_file_name.c_str());
   TBSYS_LOGGER.setLogLevel("info");
   signal(SIGINT, sign_handler);
-  transfer(source_file_name, out_file_name);
+  int ret = TFS_SUCCESS;
+  if (TFS_SUCCESS != SYSPARAM_NAMEMETASERVER.initialize())
+  {
+    TBSYS_LOG(ERROR, "call SYSPARAM_NAMEMETASERVER::initialize fail.");
+  }
+  else
+  {
+    ret = g_store_manager.init(SYSPARAM_NAMEMETASERVER.max_pool_size_,
+        SYSPARAM_NAMEMETASERVER.max_cache_size_,
+        SYSPARAM_NAMEMETASERVER.gc_ratio_, SYSPARAM_NAMEMETASERVER.max_mutex_size_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "init store_manager error");
+    }
+    else
+    {
+      transfer(source_file_name, out_file_name);
+    }
+  }
 
   return 0;
 }
