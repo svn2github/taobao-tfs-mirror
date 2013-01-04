@@ -97,6 +97,19 @@ public class VerifyTool extends HelpProc {
 		client.getHttpConnectionManager().closeIdleConnections(0);
 	}
 
+	public void verifyResponse(HttpMethod method) throws HttpException,IOException 
+	{
+		HttpClient client = new HttpClient();
+		HttpConnectionManagerParams managerParams = client.getHttpConnectionManager().getParams();
+		managerParams.setConnectionTimeout(30000);
+		managerParams.setSoTimeout(120000);
+		int status = client.executeMethod(method);
+		System.out.println("the status: "+status);
+		
+		method.releaseConnection();
+		client.getHttpConnectionManager().closeIdleConnections(0);
+	}
+	
 	/*
 	 * map --> key:status value: status code map --> key:body value: response
 	 * body

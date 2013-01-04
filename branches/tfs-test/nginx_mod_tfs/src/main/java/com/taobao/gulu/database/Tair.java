@@ -26,7 +26,7 @@ import com.taobao.tair.impl.DefaultTairManager;
 
 public class Tair {
 	private DefaultTairManager tairManager = new DefaultTairManager();
-	private int area = 1;
+	private int area = 0;
 	private String master_address = "0.0.0.0:0000";
 	private String slave_address = "0.0.0.0:0000";
 	private String group_name = "group_1";
@@ -109,8 +109,10 @@ public class Tair {
 	}
 	
 	//根据上传的文件计算该文件在tair中的key
-	public byte[] getKey( byte[] data, int offset, int length) {
-        try {
+	public byte[] getKey( byte[] data, int offset, int length) 
+	{
+        try 
+        {
             MessageDigest algo = MessageDigest.getInstance("MD5");
             algo.update(data, offset, length);
             ByteBuffer bf = ByteBuffer.allocate(4 + algo.getDigestLength()); // algo.getDigestLength() == 16
@@ -118,32 +120,42 @@ public class Tair {
             bf.putInt(algo.getDigestLength(), length);
 
             return bf.array();
-        } catch (NoSuchAlgorithmException e) {
+        } 
+        
+        catch (NoSuchAlgorithmException e)
+        {
         }
         return null;
     }
 	// 根据文件名转成byte数组
 	public byte[]  getByte(String fileName) throws IOException
-	    {
-	    	   InputStream in = new FileInputStream(fileName);
-	           byte[] data= new byte[in.available()];
-	           in.read(data);
-	           return data;
-	    }
+	{
+		InputStream in = new FileInputStream(fileName);
+	    byte[] data= new byte[in.available()];
+	    in.read(data);
+	    return data;
+	}
 	
-	public UniqueValue query(byte[] key) throws TfsException {
+	public UniqueValue query(byte[] key) throws TfsException 
+	{
         UniqueValue value = null;
         DataEntry data = null;
 
         Result<DataEntry> ret = tairManager.get(this.area, key);
-        if (ret.getRc().isSuccess()) {
-            if (ret.getRc() == ResultCode.DATANOTEXSITS) {
+        if (ret.getRc().isSuccess()) 
+        {
+            if (ret.getRc() == ResultCode.DATANOTEXSITS) 
+            {
                 value = new UniqueValue("", TfsConstant.UNIQUE_QUERY_NOT_EXIST);
-            } else if ((data = ret.getValue()) != null) {
+            } 
+            else if ((data = ret.getValue()) != null)
+            {
                 value =  decode((byte[])data.getValue());
                 value.setVersion(data.getVersion());
             }
-        } else {
+        } 
+        else 
+        {
             throw new TfsException("TAIR query failed" + ret.getRc().getMessage());
         }
         return value;

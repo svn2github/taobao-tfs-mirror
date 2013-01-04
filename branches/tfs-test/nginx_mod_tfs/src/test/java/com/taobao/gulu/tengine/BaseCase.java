@@ -124,6 +124,8 @@ public class BaseCase {
 	
 	protected static final String UPDATE_DUPLICATE_SERVER = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_duplicate_server.sql";
 	protected static final String UPDATE_DUPLICATE_SERVER_UNUSE = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_duplicate_server_unuse.sql";
+	protected static final String INIT_DUPLICATE_APP = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/init_duplicate_app.sql";
+	
 	
 	
 	protected static final String STOP_NS_DS_036202 = "sh /home/gongyuan.cz/stopTFS.sh";
@@ -293,26 +295,27 @@ public class BaseCase {
 		return result;
 	}
 
-	protected boolean deleteFile(String fileName) {
+	protected boolean deleteFile(String fileName) 
+	{
 		File file = new File(System.getProperty("user.dir") + "\\" + fileName);
-		if (file.isFile() && file.exists()) {
+		if (file.isFile() && file.exists()) 
+		{
 			System.gc();
-			if (file.delete()) {
-				System.out.println("delete file : "
-						+ System.getProperty("user.dir") + "\\" + fileName
-						+ " success!");
+			if (file.delete()) 
+			{
+				System.out.println("delete file : " + System.getProperty("user.dir") + "\\" + fileName + " success!");
 				return true;
-			} else {
-				System.out.println("delete file : "
-						+ System.getProperty("user.dir") + "\\" + fileName
-						+ " fail in delete!");
+			} 
+			else 
+			{
+				System.out.println("delete file : " + System.getProperty("user.dir") + "\\" + fileName + " fail in delete!");
 				return false;
 			}
 
-		} else {
-			System.out.println("delete file : "
-					+ System.getProperty("user.dir") + "\\" + fileName
-					+ " fail!");
+		} 
+		else 
+		{
+			System.out.println("delete file : " + System.getProperty("user.dir") + "\\" + fileName + " fail!");
 			return false;
 		}
 	}

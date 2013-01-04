@@ -29,11 +29,11 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 	 * 不排重接口删除该文件
 	 * 重新上传该文件
 	 * 成功
-	 * 
-	 * 
 	 */
 	
-	public void test_TFS_Restful_Post_File_Unique_delete_post_agin_2k() {
+	public void test_TFS_Restful_Post_File_Unique_delete_post_agin_2k() 
+	{
+		
 		int filesize = 2 * 1024;
 		VerifyTool tools = new VerifyTool();
 		String tfsFileNameWithSuffix = null;
@@ -51,8 +51,7 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 		String suffix = ".wma";
 		String localFile = tmpFile;
 
-		Assert.assertEquals("creat local temp file fail!", 0,
-				tfsServer.createFile(localFile, filesize));
+		Assert.assertEquals("creat local temp file fail!", 0,tfsServer.createFile(localFile, filesize));
 
 		/* set expect response message */
 		Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -74,14 +73,13 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 
 			/* set post method request */
 			// setting request info
+			tools.verifyCMD(SERVER0435, INIT_DUPLICATE_APP, "", "");
 			String postUrl = url + "?suffix=" + suffix;
 			System.out.println("the postUrl with suffix: " + postUrl);
 			// set the post method
 			/* do post file action */
-			tfsFileNameWithSuffix = tools.verifyResponseAndGetTFSFileName(
-					setPostMethod(postUrl, localFile), expectPostMessage);
-			System.out.println("the tfs file name with suffix is  : "
-					+ tfsFileNameWithSuffix);
+			tfsFileNameWithSuffix = tools.verifyResponseAndGetTFSFileName(setPostMethod(postUrl, localFile), expectPostMessage);
+			System.out.println("the tfs file name with suffix is  : " + tfsFileNameWithSuffix);
 			put2TfsKeys.add(tfsFileNameWithSuffix);
 
 
@@ -95,24 +93,42 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 			
 			// set the post method
 			/* do post file action */
-			tfsFileNameWithSuffix1 = tools.verifyResponseAndGetTFSFileName(
-					setPostMethod(postUrl, localFile), expectPostMessage);
-			System.out.println("the tfs file name with suffix is  : "
-					+ tfsFileNameWithSuffix);
+			tfsFileNameWithSuffix1 = tools.verifyResponseAndGetTFSFileName(setPostMethod(postUrl, localFile), expectPostMessage);
+			System.out.println("the tfs file name with suffix is  : "+ tfsFileNameWithSuffix);
 			put2TfsKeys.add(tfsFileNameWithSuffix1);
 			Assert.assertFalse(tfsFileNameWithSuffix1.equals(tfsFileNameWithSuffix));
-		} catch (Exception e) {
+		} 
+		catch (Exception e) 
+		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} finally {
+		} 
+		finally 
+		{
 			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
+			if (put2TfsKeys.size() > 0) 
+			{
+				for (String key : put2TfsKeys) 
+				{
 					System.out.println("tfsFileName for delete is " + key);
 					tfsServer.delete(key, null);
 				}
 			}
 			put2TfsKeys.clear();
+			
+			try 
+			{
+				tools.verifyCMD(SERVER0435, DROPMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, CREATEMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, INITMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, INITMYSQLTABLES_META_ROOT_INFO, "", "");
+			} 
+			catch (Exception e) 
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 		}
 
 	}
@@ -160,22 +176,8 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 
 	
 	
-	/*
-	 * 
-	 *  排重测试
-	 *  上传文件100次，并删除 100次参数测试 
-	 */
-	@Test
-	public void test_TFS_Restful_Post_Delete_File_Unique_Same_100_2k() {
-		int filesize = 2 * 1024;
-		for (int i=1;i<100;i++){
-			test_TFS_Restful_Post_File_Unique_The_Same_File_TwiceTest(filesize);
-		}
-		
-
-	}
-	public void test_TFS_Restful_Post_File_Unique_The_Same_File_TwiceTest(
-			int filesize) {
+	public void test_TFS_Restful_Post_File_Unique_The_Same_File_TwiceTest(int filesize) 
+	{
 
 		VerifyTool tools = new VerifyTool();
 		String tfsFileNameWithSuffix = null;
@@ -192,8 +194,7 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 		String suffix = ".wma";
 		String localFile = tmpFile;
 
-		Assert.assertEquals("creat local temp file fail!", 0,
-				tfsServer.createFile(localFile, filesize));
+		Assert.assertEquals("creat local temp file fail!", 0,tfsServer.createFile(localFile, filesize,true));
 
 		/* set expect response message */
 		Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -209,32 +210,24 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 
 			/* set post method request */
 			// setting request info
+			tools.verifyCMD(SERVER0435, INIT_DUPLICATE_APP, "", "");
+			
+			TimeUnit.SECONDS.sleep(15);
 			String postUrl = url + "?suffix=" + suffix;
 			System.out.println("the postUrl with suffix: " + postUrl);
 			// set the post method
 			/* do post file action */
-			tfsFileNameWithSuffix = tools.verifyResponseAndGetTFSFileName(
-					setPostMethod(postUrl, localFile), expectPostMessage);
-			System.out.println("the tfs file name with suffix is  : "
-					+ tfsFileNameWithSuffix);
+			tfsFileNameWithSuffix = tools.verifyResponseAndGetTFSFileName(setPostMethod(postUrl, localFile), expectPostMessage);
+			System.out.println("the tfs file name with suffix is  : "+ tfsFileNameWithSuffix);
 			put2TfsKeys.add(tfsFileNameWithSuffix);
 
 			// 再次写文件
-			tfsFileNameWithSuffix2 = tools.verifyResponseAndGetTFSFileName(
-					setPostMethod(postUrl, localFile), expectPostMessage);
+			tfsFileNameWithSuffix2 = tools.verifyResponseAndGetTFSFileName(setPostMethod(postUrl, localFile), expectPostMessage);
 
-			System.out.println("2ed of the tfs file name with  suffix is  : "
-					+ tfsFileNameWithSuffix2);
+			System.out.println("2ed of the tfs file name with  suffix is  : "+ tfsFileNameWithSuffix2);
 			put2TfsKeys.add(tfsFileNameWithSuffix2);
-			Assert.assertEquals(
-					"post the same file twice but the return filename is diffrent ",
-					tfsFileNameWithSuffix, tfsFileNameWithSuffix2);
+			Assert.assertEquals("post the same file twice but the return filename is diffrent ",tfsFileNameWithSuffix, tfsFileNameWithSuffix2);
 
-			/* set get method request */
-			// setting request info
-			String getUrl = url + "/" + tfsFileNameWithSuffix + "?suffix="
-					+ suffix;
-			System.out.println("the getUrl : " + getUrl);
 
 			/* set post method request */
 			// setting request info
@@ -242,46 +235,53 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 			System.out.println("the postUrl without suffix: " + postUrl);
 			// set the post method
 			/* do post file action */
-			tfsFileNameWithOutSuffix = tools.verifyResponseAndGetTFSFileName(
-					setPostMethod(postUrl, localFile), expectPostMessage);
-			System.out.println("of the tfs file name without suffix is  : "
-					+ tfsFileNameWithOutSuffix);
+			tfsFileNameWithOutSuffix = tools.verifyResponseAndGetTFSFileName(setPostMethod(postUrl, localFile), expectPostMessage);
+			System.out.println("of the tfs file name without suffix is  : "+ tfsFileNameWithOutSuffix);
 			put2TfsKeys.add(tfsFileNameWithOutSuffix);
 
 			/* set get method request */
 			// setting request info
-			getUrl = url + "/" + tfsFileNameWithSuffix;
+			String getUrl = url + "/" + tfsFileNameWithSuffix;
 			System.out.println("the getUrl : " + getUrl);
 
 			/* do get file action */
-			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl),
-					expectGetMessage);
+			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl),expectGetMessage);
 
 			String retTairTFSName = getTairValueByFile(localFile, filesize);
-
-			Assert.assertEquals("tair returned file is different from localfile",
-					tfsFileNameWithSuffix + suffix, retTairTFSName);
+			System.out.println(retTairTFSName);
+			Assert.assertEquals("tair returned file is different from localfile",tfsFileNameWithSuffix + suffix, retTairTFSName);
 			// System.out.println(retTairTFSName);
 
-		} catch (Exception e) {
+		} 
+		catch (Exception e) 
+		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} finally {
+		} 
+		finally 
+		{
 			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
+			try 
+			{
+				tools.verifyCMD(SERVER0435, DROPMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, CREATEMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, INITMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, INITMYSQLTABLES_META_ROOT_INFO, "", "");
+				
+				TimeUnit.SECONDS.sleep(15);
+			} 
+			catch (Exception e) 
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-			put2TfsKeys.clear();
+			
 		}
 	}
 
 	
-	public void test_TFS_Restful_Post_File_Unique_The_Same_File_Post_Delete_Test(
-			int filesize) {
-
+	public void test_TFS_Restful_Post_File_Unique_The_Same_File_Post_Delete_Test(int filesize) 
+	{
 		VerifyTool tools = new VerifyTool();
 		String tfsFileNameWithSuffix = null;
 		String tfsFileNameWithOutSuffix = null;
@@ -352,9 +352,8 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 			put2TfsKeys.clear();
 		}
 	}
-	public void test_TFS_Restful_Post_File_Unique_The_Diff_File_Test(
-			int filesize) {
-
+	public void test_TFS_Restful_Post_File_Unique_The_Diff_File_Test(int filesize)
+	{
 		VerifyTool tools = new VerifyTool();
 		String tfsFileNameWithSuffix = null;
 		String tfsFileNameWithSuffix2 = null;
@@ -369,10 +368,8 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 		String localFile = tmpFile;
 		String localFileDiff = tmpFileDiff;
 
-		Assert.assertEquals("creat local temp file fail!", 0,
-				tfsServer.createFile(localFile, filesize));
-		Assert.assertEquals("creat local temp file fail!", 0,
-				tfsServer.createFile(localFileDiff, filesize + 1));
+		Assert.assertEquals("creat local temp file fail!", 0,tfsServer.createFile(localFile, filesize));
+		Assert.assertEquals("creat local temp file fail!", 0,tfsServer.createFile(localFileDiff, filesize + 1));
 		/* set expect response message */
 		Map<String, String> expectPostMessage = new HashMap<String, String>();
 		expectPostMessage.put("Content-Type", "application/json");
@@ -390,35 +387,29 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 		/* ---------------------------------------------- */
 
 		try {
-
+			tools.verifyCMD(SERVER0435, INIT_DUPLICATE_APP, "", "");
+			TimeUnit.SECONDS.sleep(15);
+			
 			/* set post method request */
 			// setting request info
 			String postUrl = url + "?suffix=" + suffix;
 			System.out.println("the postUrl with suffix: " + postUrl);
 			// set the post method
 			/* do post file action */
-			tfsFileNameWithSuffix = tools.verifyResponseAndGetTFSFileName(
-					setPostMethod(postUrl, localFile), expectPostMessage);
-			System.out.println("the tfs file name with suffix is  : "
-					+ tfsFileNameWithSuffix);
+			tfsFileNameWithSuffix = tools.verifyResponseAndGetTFSFileName(setPostMethod(postUrl, localFile), expectPostMessage);
+			System.out.println("the tfs file name with suffix is  : "+ tfsFileNameWithSuffix);
 			put2TfsKeys.add(tfsFileNameWithSuffix);
 
 			//
-			tfsFileNameWithSuffix2 = tools.verifyResponseAndGetTFSFileName(
-					setPostMethod(postUrl, localFileDiff),
-					expectPostMessageDiff);
+			tfsFileNameWithSuffix2 = tools.verifyResponseAndGetTFSFileName(setPostMethod(postUrl, localFileDiff),expectPostMessageDiff);
 
-			System.out.println("2ed of the tfs file name with  suffix is  : "
-					+ tfsFileNameWithSuffix2);
+			System.out.println("2ed of the tfs file name with  suffix is  : "+ tfsFileNameWithSuffix2);
 			put2TfsKeys.add(tfsFileNameWithSuffix2);
-			Assert.assertNotSame(
-					"post the diffrent file  but the return filename is same ",
-					tfsFileNameWithSuffix, tfsFileNameWithSuffix2);
+			Assert.assertNotSame("post the diffrent file  but the return filename is same ",tfsFileNameWithSuffix, tfsFileNameWithSuffix2);
 
 			/* set get method request */
 			// setting request info
-			String getUrl = url + "/" + tfsFileNameWithSuffix + "?suffix="
-					+ suffix;
+			String getUrl = url + "/" + tfsFileNameWithSuffix + "?suffix="+ suffix;
 			System.out.println("the getUrl : " + getUrl);
 
 			/* set post method request */
@@ -433,30 +424,35 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 
 			//
 			String retTairTFSName = getTairValueByFile(localFile, filesize);
-			Assert.assertEquals("tair returned file is different from localfile",
-					tfsFileNameWithSuffix + suffix, retTairTFSName);
-			String retTairTFSNameDiff = getTairValueByFile(localFileDiff,
-					filesize + 1);
-			Assert.assertEquals("tair returned file is different from localfile",
-					tfsFileNameWithSuffix2 + suffix, retTairTFSNameDiff);
-		} catch (Exception e) {
+			Assert.assertEquals("tair returned file is different from localfile",tfsFileNameWithSuffix + suffix, retTairTFSName);
+			String retTairTFSNameDiff = getTairValueByFile(localFileDiff,filesize + 1);
+			Assert.assertEquals("tair returned file is different from localfile",tfsFileNameWithSuffix2 + suffix, retTairTFSNameDiff);
+		} 
+		catch (Exception e) 
+		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
+			try 
+			{
+				tools.verifyCMD(SERVER0435, DROPMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, CREATEMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, INITMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, INITMYSQLTABLES_META_ROOT_INFO, "", "");
+				
+				TimeUnit.SECONDS.sleep(15);
+			} 
+			catch (Exception e) 
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-			put2TfsKeys.clear();
 		}
 	}
 
-	// 根据本地文件蛇生成在tair中的key
-	public String getTairValueByFile(String fileForTair, int fileSize)
-			throws Exception {
+	// 根据本地文件生成在tair中的key
+	public String getTairValueByFile(String fileForTair, int fileSize)throws Exception
+	{
 
 		byte[] fileByte = tairServer.getByte(fileForTair);
 		byte[] tairKey = tairServer.getKey(fileByte, 0, fileSize);

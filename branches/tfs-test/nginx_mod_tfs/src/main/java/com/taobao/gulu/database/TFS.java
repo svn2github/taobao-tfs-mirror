@@ -1,10 +1,15 @@
 package com.taobao.gulu.database;
 
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.util.List;
+import java.util.Random;
 
 import junit.framework.TestCase;
 import net.sf.json.JSONArray;
@@ -112,8 +117,8 @@ public class TFS {
 //		System.out.println(timeOut);
 //		System.out.println(batchCount);
 	
-		tfsManager.setUseNameMeta(false);
-		//tfsManager.setUseNameMeta(true);
+//		tfsManager.setUseNameMeta(false);
+		tfsManager.setUseNameMeta(true);
 		tfsManager.init();
 	}
 
@@ -139,6 +144,27 @@ public class TFS {
 		return 0;
 	}
 
+	public int createFile(String path, long fileSize,boolean is_real_file)
+	{
+		try 
+		{
+			File f = new File(path);
+			if(!f.exists())
+				f.createNewFile();
+			Random random = new Random();
+			byte[] b = new byte[(int) fileSize];
+			random.nextBytes(b);
+			FileOutputStream  output = new FileOutputStream (f);
+			output.write(b);
+			output.close();
+		} 
+		catch (IOException e) 
+		{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+		}
+		return 0;
+	}
 	/*
 	 * use file to create a tfs file and save it to tfs file
 	 * 
