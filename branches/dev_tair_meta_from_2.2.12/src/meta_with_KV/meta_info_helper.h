@@ -44,6 +44,10 @@ namespace tfs
       //int scan_metas();
       //int delete_metas();
 
+      int put_bucket(const std::string& bucket_name, const int64_t create_time);
+      int get_bucket(const std::string& bucket_name, const std::string& prefix,
+          const std::string& start_key, const int32_t limit, common::VSTRING& v_object_name);
+      int del_bucket(const std::string& bucket_name);
 
     private:
       DISALLOW_COPY_AND_ASSIGN(MetaInfoHelper);

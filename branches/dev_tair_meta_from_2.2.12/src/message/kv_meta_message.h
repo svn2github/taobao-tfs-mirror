@@ -124,6 +124,139 @@ namespace tfs
         common::TfsFileInfo tfs_file_info_;
     };
 
+    class ReqKvMetaPutBucketMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaPutBucketMessage();
+        virtual ~ReqKvMetaPutBucketMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+      private:
+        std::string bucket_name_;
+    };
+
+    class ReqKvMetaGetBucketMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaGetBucketMessage();
+        virtual ~ReqKvMetaGetBucketMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        void set_prefix(const std::string& prefix)
+        {
+          prefix_ = prefix;
+        }
+
+        const std::string& get_prefix() const
+        {
+          return prefix_;
+        }
+
+        void set_start_key(const std::string& start_key)
+        {
+          start_key_ = start_key;
+        }
+
+        const std::string& get_start_key() const
+        {
+          return start_key_;
+        }
+
+        void set_limit(const int32_t limit)
+        {
+          limit_ = limit;
+        }
+
+        const int32_t get_limit() const
+        {
+          return limit_;
+        }
+
+
+      private:
+        std::string bucket_name_;
+        std::string prefix_;
+        std::string start_key_;
+        //std::string delimiter_;
+        int32_t limit_;
+    };
+
+    class RspKvMetaGetBucketMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaGetBucketMessage();
+        virtual ~RspKvMetaGetBucketMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        common::VSTRING& get_v_object_name()
+        {
+          return v_object_name_;
+        }
+
+      private:
+        std::string bucket_name_;
+        common::VSTRING v_object_name_;
+    };
+
+    class ReqKvMetaDelBucketMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaDelBucketMessage();
+        virtual ~ReqKvMetaDelBucketMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+      private:
+        std::string bucket_name_;
+    };
+
   }
 }
 

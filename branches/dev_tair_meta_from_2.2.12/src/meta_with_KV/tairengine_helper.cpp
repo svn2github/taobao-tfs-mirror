@@ -18,8 +18,10 @@
 
 #include "Memory.hpp"
 #include "common/parameter.h"
+#include "common/error_msg.h"
 
 using namespace std;
+using namespace tair;
 namespace tfs
 {
 
@@ -88,6 +90,13 @@ namespace tfs
 
           }
           break;
+        case KvKey::KEY_TYPE_BUCKET:
+          {
+            data_entry pkey(key.key_);
+            data_entry pvalue(value.c_str());
+            ret = tair_client_->put(object_area_, pkey, pvalue, 0, 0);
+          }
+          break;
         default:
           TBSYS_LOG(ERROR, "not support");
           ret = TFS_ERROR;
@@ -126,7 +135,18 @@ namespace tfs
                 *version = tvalue->get_version();
               }
               tbsys::gDelete(tvalue);
-
+            }
+            break;
+          case KvKey::KEY_TYPE_BUCKET:
+            {
+              data_entry pkey(key.key_);
+              data_entry* pvalue = NULL;
+              ret = tair_client_->get(object_area_, pkey, pvalue);
+              if (TFS_SUCCESS == ret)
+              {
+                value->assign(pvalue->get_data(), pvalue->get_size());
+              }
+              tbsys::gDelete(pvalue);
             }
             break;
           default:
@@ -150,6 +170,31 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             ret = prefix_remove_from_tair(object_area_, pkey, skey);
+          }
+        }
+          break;
+        case KvKey::KEY_TYPE_BUCKET:
+        {
+          data_entry pkey(key.key_);
+          vector<data_entry*> res;
+          int limit = LIMIT_NUM;
+          ret = tair_client_->get_range(object_area_, pkey, "", "", 0, limit, res);
+          if (TAIR_RETURN_DATA_NOT_EXIST == ret)
+          {
+            ret = TFS_SUCCESS;
+          }
+          else
+          {
+            ret = EXIT_DELETE_DIR_WITH_FILE_ERROR;
+            for (size_t i = 0; i < res.size(); i++)
+            {
+              delete res[i];
+            }
+            res.clear();
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            ret = tair_client_->remove(object_area_, pkey);
           }
         }
           break;
@@ -219,6 +264,64 @@ namespace tfs
       {
         prefix_key->set_data(key.key_, prefix_key_size);
         second_key->set_data(pos + 1, second_key_size);
+      }
+
+      return ret;
+    }
+
+    int TairEngineHelper::list_skeys(const KvKey& key, const string& prefix,
+        const string& start_key, const int32_t limit, common::VSTRING& v_object_name)
+    {
+      v_object_name.clear();
+      int ret = TFS_SUCCESS;
+      data_entry pkey(key.key_);
+      string skey(start_key);
+      string ekey;
+      vector<data_entry*> res;
+      bool loop, first_loop;
+      loop = first_loop = true;
+      int32_t limit_size = limit;
+
+      while (loop)
+      {
+        ret = tair_client_->get_range(object_area_, pkey, data_entry(skey.data(), static_cast<int>(skey.size())),
+              data_entry(ekey.data(), static_cast<int>(ekey.size())), first_loop ? 0 : 1, limit_size, res, CMD_RANGE_KEY_ONLY);
+
+        if (ret < 0)
+        {
+          TBSYS_LOG(ERROR, "get range fail, ret: %d", ret);
+          break;
+        }
+
+        size_t res_size = res.size();
+        for (size_t i = 0; i < res_size; i++)
+        {
+          char* s = res[i]->get_data();
+          char* pos = strstr(s, prefix.c_str());
+          if (NULL != pos && pos == s)
+          {
+            string object(s);
+            v_object_name.push_back(object);
+          }
+        }
+
+        if (static_cast<int>(res_size) == limit_size)
+        {
+          skey.assign(res[res_size-1]->get_data(), res[res_size-1]->get_size());
+          fprintf(stderr, "new start key: %s", skey.c_str());
+          first_loop = false;
+        }
+        else
+        {
+          loop = false;
+        }
+
+        for (size_t i = 0; i < res_size; i++)
+        {
+          delete res[i];
+        }
+
+        res.clear();
       }
 
       return ret;

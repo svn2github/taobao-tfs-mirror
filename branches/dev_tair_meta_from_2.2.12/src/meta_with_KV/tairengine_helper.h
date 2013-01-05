@@ -18,7 +18,6 @@
 #define TFS_METAWITHKV_Tair_ENGINE_HELPER_H_
 
 #include "kvengine_helper.h"
-
 #include "tair_client_api.hpp"
 
 namespace tfs
@@ -26,7 +25,7 @@ namespace tfs
   namespace metawithkv
   {
     //different key type will use different namespace in tair
-
+    const static int LIMIT_NUM = 10;
     class TairEngineHelper : public KvEngineHelper
     {
     public:
@@ -44,6 +43,8 @@ namespace tfs
     public:
       //we split object key like bucketname\objecetname to prefix_key = bucketname, seconde_key = object_name
       static int split_key_for_tair(const KvKey& key, tair::data_entry* prefix_key, tair::data_entry* second_key);
+      int list_skeys(const KvKey& key, const std::string& prefix,
+          const std::string& start_key, const int32_t limit, common::VSTRING& v_object_name);
 
     private:
       int prefix_put_to_tair(const int area, const tair::data_entry &pkey,
@@ -57,7 +58,6 @@ namespace tfs
       tair::tair_client_api* tair_client_;
       int32_t object_area_;
       static const int TAIR_RETRY_COUNT;
-
     };
   }
 }

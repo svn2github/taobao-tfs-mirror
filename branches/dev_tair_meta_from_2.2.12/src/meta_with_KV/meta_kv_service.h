@@ -45,9 +45,11 @@ namespace tfs
       virtual int initialize(int argc, char* argv[]);
       virtual int destroy_service();
 
-      int put_object(message::ReqKvMetaPutObjectMessage* );
-      int get_object(message::ReqKvMetaGetObjectMessage* );
-
+      int put_object(message::ReqKvMetaPutObjectMessage* put_object_msg);
+      int get_object(message::ReqKvMetaGetObjectMessage* get_object_msg);
+      int put_bucket(message::ReqKvMetaPutBucketMessage* put_bucket_msg);
+      int get_bucket(message::ReqKvMetaGetBucketMessage* get_bucket_msg);
+      int del_bucket(message::ReqKvMetaDelBucketMessage* del_bucket_msg);
 
     private:
       DISALLOW_COPY_AND_ASSIGN(MetaKvService);

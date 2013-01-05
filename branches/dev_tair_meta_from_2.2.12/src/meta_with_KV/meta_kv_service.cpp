@@ -16,6 +16,7 @@
 
 #include "meta_kv_service.h"
 
+#include <time.h>
 #include <zlib.h>
 #include "common/config_item.h"
 #include "common/parameter.h"
@@ -114,6 +115,15 @@ namespace tfs
           case REQ_KVMETA_GET_OBJECT_MESSAGE:
             ret = get_object(dynamic_cast<ReqKvMetaGetObjectMessage*>(base_packet));
             break;
+          case REQ_KVMETA_PUT_BUCKET_MESSAGE:
+            ret = put_bucket(dynamic_cast<ReqKvMetaPutBucketMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_GET_BUCKET_MESSAGE:
+            ret = get_bucket(dynamic_cast<ReqKvMetaGetBucketMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_DEL_BUCKET_MESSAGE:
+            ret = del_bucket(dynamic_cast<ReqKvMetaDelBucketMessage*>(base_packet));
+            break;
           default:
             ret = EXIT_UNKNOWN_MSGTYPE;
             TBSYS_LOG(ERROR, "unknown msg type: %d", base_packet->getPCode());
@@ -137,7 +147,7 @@ namespace tfs
       if (NULL == put_object_msg)
       {
         ret = EXIT_INVALID_ARGU;
-        TBSYS_LOG(ERROR, "MetaKvService::put_meta fail, ret: %d", ret);
+        TBSYS_LOG(ERROR, "MetaKvService::put_object fail, ret: %d", ret);
       }
 
       if (TFS_SUCCESS == ret)
@@ -188,6 +198,95 @@ namespace tfs
       //stat_info_helper_.put_meta()
       return ret;
     }
+
+    int MetaKvService::put_bucket(ReqKvMetaPutBucketMessage* put_bucket_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == put_bucket_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "MetaKvService::put_bucket fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t now_time = static_cast<int64_t>(time(NULL));
+        ret = meta_info_helper_.put_bucket(put_bucket_msg->get_bucket_name(), now_time);
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = put_bucket_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+      }
+      else
+      {
+        ret = put_bucket_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+      }
+      //stat_info_helper_.put_bucket()
+      return ret;
+    }
+
+    int MetaKvService::get_bucket(ReqKvMetaGetBucketMessage* get_bucket_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == get_bucket_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "MetaKvService::get_bucket fail, ret: %d", ret);
+      }
+
+      RspKvMetaGetBucketMessage* rsp = new RspKvMetaGetBucketMessage();
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.get_bucket(get_bucket_msg->get_bucket_name(), get_bucket_msg->get_prefix(),
+            get_bucket_msg->get_start_key(), get_bucket_msg->get_limit(), rsp->get_v_object_name());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = get_bucket_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+        tbsys::gDelete(rsp);
+      }
+      else
+      {
+        ret = get_bucket_msg->reply(rsp);
+      }
+      //stat_info_helper_.get_bucket()
+      return ret;
+    }
+
+    int MetaKvService::del_bucket(ReqKvMetaDelBucketMessage* del_bucket_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == del_bucket_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "MetaKvService::del_bucket fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.del_bucket(del_bucket_msg->get_bucket_name());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = del_bucket_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+      }
+      else
+      {
+        ret = del_bucket_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+      }
+      //stat_info_helper_.put_bucket()
+      return ret;
+    }
+
+
+
 
   }/** metawithkv **/
 }/** tfs **/

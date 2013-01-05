@@ -79,6 +79,53 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-  }
-}
+    int MetaInfoHelper::put_bucket(const std::string& bucket_name, const int64_t create_time)
+    {
+      //TODO for test now
+      int ret = TFS_SUCCESS;
+
+      string real_key(bucket_name);
+
+      KvKey key;
+      key.key_ = real_key.c_str();
+      key.key_size_ = real_key.length();
+      key.key_type_ = KvKey::KEY_TYPE_BUCKET;
+      char time_buff[30];
+      snprintf(time_buff, 30, "%"PRI64_PREFIX"d", create_time);
+      string value(time_buff);
+      ret = kv_engine_helper_->put_key(key, value, 0);
+      return ret;
+    }
+
+    int MetaInfoHelper::get_bucket(const std::string& bucket_name, const std::string& prefix,
+        const std::string& start_key, const int32_t limit, VSTRING& v_object_name)
+    {
+      //TODO for test now
+      int ret = TFS_SUCCESS;
+
+      string real_key(bucket_name);
+
+      KvKey pkey;
+      pkey.key_ = real_key.c_str();
+      pkey.key_size_ = real_key.length();
+      pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
+      ret = kv_engine_helper_->list_skeys(pkey, prefix, start_key, limit, v_object_name);
+      return ret;
+    }
+
+    int MetaInfoHelper::del_bucket(const std::string& bucket_name)
+    {
+      //TODO for test now
+      int ret = TFS_SUCCESS;
+      KvKey pkey;
+      pkey.key_ = bucket_name.c_str();
+      pkey.key_size_ = bucket_name.length();
+      pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
+      ret = kv_engine_helper_->delete_key(pkey);
+      return ret;
+    }
+
+
+  }// end for metawithkv
+}// end for tfs
 
