@@ -69,6 +69,7 @@ namespace tfs
       virtual ~Lease() {}
 
       void reset_member_status();
+      inline bool all_finish() { return done_server_size_ >= server_size_; }
       inline uint32_t inc_ref() { return common::atomic_inc(&ref_count_);}
       inline uint32_t dec_ref() { return common::atomic_dec(&ref_count_);}
       inline int64_t get_req_begin_time() { return req_begin_time_; }
@@ -82,6 +83,7 @@ namespace tfs
       bool check_has_version_conflict() const;
       int get_member_info(std::pair<uint64_t, common::BlockInfoV2>* members, int32_t& size) const;
       int update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status);
+      int update_member_info();   // when received a error packet, use this interface
       void reset_member_info();
       void dump(const int32_t level, const char* const format = NULL);
       void dump(std::stringstream& desp);
@@ -91,6 +93,8 @@ namespace tfs
       int64_t req_begin_time_;
       int64_t file_size_;
       uint32_t ref_count_;
+      int8_t server_size_;
+      volatile int8_t done_server_size_;
       LeaseMemberInfo members_[common::MAX_REPLICATION_NUM];
     private:
       DISALLOW_COPY_AND_ASSIGN(Lease);

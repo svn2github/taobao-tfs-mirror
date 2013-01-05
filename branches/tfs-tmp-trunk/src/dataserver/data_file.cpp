@@ -88,7 +88,7 @@ namespace tfs
           }
           if (TFS_SUCCESS == ret)
           {
-            ret = 0 == lseek(fd_, real_offset, SEEK_SET) ? TFS_SUCCESS : -errno;
+            ret = (real_offset == lseek(fd_, real_offset, SEEK_SET)) ? TFS_SUCCESS : -errno;
           }
           if (TFS_SUCCESS == ret)
           {

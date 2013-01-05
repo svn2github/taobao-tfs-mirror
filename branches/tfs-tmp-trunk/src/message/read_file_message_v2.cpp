@@ -150,6 +150,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        int64_t pos = 0;
         ret = family_info_.serialize(output.get_free(), output.get_free_length(), pos);
         if (TFS_SUCCESS == ret)
         {

@@ -41,8 +41,13 @@ namespace tfs
             const LeaseType type, const common::VUINT64& servers);
         int update_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
             tbnet::Packet* packet);
-        int check_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
-            int64_t& req_cost_time, int64_t& file_size, std::stringstream& err_msg);
+        /*
+         * check lease will return true if all server finish
+         * status is the final status to be taken back
+         * if all successful file_size will be set, or err_msg will be set
+         */
+        bool check_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
+            int32_t& status, int64_t& req_cost_time, int64_t& file_size, std::stringstream& err_msg);
         int remove_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id);
 
         /** update & unlink operations */

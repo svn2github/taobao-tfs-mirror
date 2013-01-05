@@ -59,13 +59,12 @@ namespace tfs
       int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0);
       int unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action = common::DELETE);
 
-   private:
-      bool check_init();
+    private:
       int get_fd();
       TfsFile* get_file(const int fd);
       int insert_file(const int fd, TfsFile* tfs_file);
       int erase_file(const int fd);
-      int get_cluster_id_from_ns();
+      int initialize_cluster_id();
 
    private:
       TfsClientImpl();

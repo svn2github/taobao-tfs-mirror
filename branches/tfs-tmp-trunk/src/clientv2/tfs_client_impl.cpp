@@ -78,7 +78,7 @@ namespace tfs
         else
         {
           ns_addr_ = Func::str_to_addr(fields[0].c_str(), atoi(fields[1].c_str()));
-          ret = get_cluster_id_from_ns();
+          ret = initialize_cluster_id();
           if (TFS_SUCCESS == ret)
           {
             is_init_ = true;
@@ -103,7 +103,7 @@ namespace tfs
     {
       int ret_fd = EXIT_INVALIDFD_ERROR;
       int ret = TFS_SUCCESS;
-      if (!check_init())
+      if (!is_init_)
       {
         ret = EXIT_NOT_INIT_ERROR;
         TBSYS_LOG(ERROR, "tfs client not init");
@@ -137,26 +137,12 @@ namespace tfs
       return ret_fd;
     }
 
-    int TfsClientImpl::set_option_flag(const int fd, const int option_flag)
-    {
-      int ret = EXIT_INVALIDFD_ERROR;
-      TfsFile* tfs_file = get_file(fd);
-      if (NULL != tfs_file)
-      {
-        tfs_file->set_option_flag(option_flag);
-        ret = TFS_SUCCESS;
-      }
-      return ret;
-    }
-
     int64_t TfsClientImpl::read(const int fd, void* buf, const int64_t count)
     {
       int64_t ret = EXIT_INVALIDFD_ERROR;
       TfsFile* tfs_file = get_file(fd);
       if (NULL != tfs_file)
       {
-        // modify offset_: use write locker
-        ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
         ret = tfs_file->read(buf, count);
       }
       return ret;
@@ -168,7 +154,6 @@ namespace tfs
       TfsFile* tfs_file = get_file(fd);
       if (NULL != tfs_file)
       {
-        ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
         ret = tfs_file->write(buf, count);
       }
       return ret;
@@ -180,8 +165,6 @@ namespace tfs
       TfsFile* tfs_file = get_file(fd);
       if (NULL != tfs_file)
       {
-        // modify offset_: use write locker
-        ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
         ret = tfs_file->lseek(offset, whence);
       }
       return ret;
@@ -193,7 +176,6 @@ namespace tfs
       TfsFile* tfs_file = get_file(fd);
       if (NULL != tfs_file)
       {
-        ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
         ret = tfs_file->stat(*buf);
       }
       return ret;
@@ -205,24 +187,21 @@ namespace tfs
       TfsFile* tfs_file = get_file(fd);
       if (NULL != tfs_file)
       {
+        ret = tfs_file->close();
+        if (TFS_SUCCESS != ret)
         {
-          ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
-          ret = tfs_file->close();
-          if (TFS_SUCCESS != ret)
+          TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
+        }
+        else if (NULL != ret_tfs_name)
+        {
+          if (ret_tfs_name_len < TFS_FILE_LEN)
           {
-            TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
+            TBSYS_LOG(ERROR, "name buffer length less: %d < %d", ret_tfs_name_len, TFS_FILE_LEN);
+            ret = TFS_ERROR;
           }
-          else if (NULL != ret_tfs_name)
+          else
           {
-            if (ret_tfs_name_len < TFS_FILE_LEN)
-            {
-              TBSYS_LOG(ERROR, "name buffer length less: %d < %d", ret_tfs_name_len, TFS_FILE_LEN);
-              ret = TFS_ERROR;
-            }
-            else
-            {
-              memcpy(ret_tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
-            }
+            memcpy(ret_tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
           }
         }
         erase_file(fd);
@@ -233,74 +212,24 @@ namespace tfs
 
     int TfsClientImpl::unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action)
     {
-      int ret = TFS_SUCCESS;
-      if (!check_init())
+      int ret = EXIT_INVALIDFD_ERROR;
+      TfsFile* tfs_file = get_file(fd);
+      if (NULL != tfs_file)
       {
-        ret = EXIT_NOT_INIT_ERROR;
-        TBSYS_LOG(ERROR, "tfs client not init");
+        ret = tfs_file->unlink(action, file_size);
       }
-      else
-      {
-        TfsFile* tfs_file = get_file(fd);
-        if (NULL != tfs_file)
-        {
-          tfs_file->unlink(action, file_size);
-          ret = TFS_SUCCESS;
-        }
-      }
-
       return ret;
     }
 
-    bool TfsClientImpl::check_init()
+    int TfsClientImpl::set_option_flag(const int fd, const int option_flag)
     {
-      if (!is_init_)
+      int ret = EXIT_INVALIDFD_ERROR;
+      TfsFile* tfs_file = get_file(fd);
+      if (NULL != tfs_file)
       {
-        TBSYS_LOG(ERROR, "tfsclient not initialized");
+        tfs_file->set_option_flag(option_flag);
+        ret = TFS_SUCCESS;
       }
-
-      return is_init_;
-    }
-
-    int TfsClientImpl::get_cluster_id_from_ns()
-    {
-      ClientCmdMessage cc_message;
-      cc_message.set_cmd(CLIENT_CMD_SET_PARAM);
-      cc_message.set_value3(20);
-
-      tbnet::Packet* rsp = NULL;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      int ret = send_msg_to_server(ns_addr_, client, &cc_message, rsp);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "get cluster id from ns fail, ret: %d", ret);
-      }
-      else if (STATUS_MESSAGE == rsp->getPCode())
-      {
-        StatusMessage* status_msg = dynamic_cast<StatusMessage*>(rsp);
-        //ugly use error msg
-        if (status_msg->get_status() == STATUS_MESSAGE_OK &&
-            strlen(status_msg->get_error()) > 0)
-        {
-          char cluster_id = static_cast<char> (atoi(status_msg->get_error()));
-          if (isdigit(cluster_id) || isalpha(cluster_id))
-          {
-            cluster_id_ = cluster_id - '0';
-            TBSYS_LOG(INFO, "get cluster id from nameserver success. cluster id: %d", cluster_id_);
-          }
-          else
-          {
-            TBSYS_LOG(ERROR, "get cluster id from nameserver fail. cluster id: %c", cluster_id);
-            ret = TFS_ERROR;
-          }
-        }
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "get cluster id from ns failed, msg type error. type: %d", rsp->getPCode());
-        ret = EXIT_UNKNOWN_MSGTYPE;
-      }
-      NewClientManager::get_instance().destroy_client(client);
       return ret;
     }
 
@@ -383,6 +312,48 @@ namespace tfs
       tbsys::gDelete(it->second);
       tfs_file_map_.erase(it);
       return TFS_SUCCESS;
+    }
+
+    int TfsClientImpl::initialize_cluster_id()
+    {
+      ClientCmdMessage cc_message;
+      cc_message.set_cmd(CLIENT_CMD_SET_PARAM);
+      cc_message.set_value3(20);
+
+      tbnet::Packet* rsp = NULL;
+      NewClient* client = NewClientManager::get_instance().create_client();
+      int ret = send_msg_to_server(ns_addr_, client, &cc_message, rsp);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "get cluster id from ns fail, ret: %d", ret);
+      }
+      else if (STATUS_MESSAGE == rsp->getPCode())
+      {
+        StatusMessage* status_msg = dynamic_cast<StatusMessage*>(rsp);
+        //ugly use error msg
+        if (status_msg->get_status() == STATUS_MESSAGE_OK &&
+            strlen(status_msg->get_error()) > 0)
+        {
+          char cluster_id = static_cast<char> (atoi(status_msg->get_error()));
+          if (isdigit(cluster_id) || isalpha(cluster_id))
+          {
+            cluster_id_ = cluster_id - '0';
+            TBSYS_LOG(INFO, "get cluster id from nameserver success. cluster id: %d", cluster_id_);
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "get cluster id from nameserver fail. cluster id: %c", cluster_id);
+            ret = TFS_ERROR;
+          }
+        }
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "get cluster id from ns failed, msg type error. type: %d", rsp->getPCode());
+        ret = EXIT_UNKNOWN_MSGTYPE;
+      }
+      NewClientManager::get_instance().destroy_client(client);
+      return ret;
     }
 
   }

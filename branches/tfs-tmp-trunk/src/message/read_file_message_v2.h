@@ -183,8 +183,8 @@ namespace tfs
 
       protected:
         common::FileSegment file_seg_;
-        int32_t flag_;
         common::FamilyInfoExt family_info_;
+        int32_t flag_;
     };
 
     class ReadFileRespMessageV2: public common::BasePacket

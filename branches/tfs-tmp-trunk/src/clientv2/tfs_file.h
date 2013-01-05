@@ -41,7 +41,7 @@ namespace tfs
       int32_t mode_;
       int32_t opt_flag_;
       FileStatus status_;
-      bool eof_;
+      int32_t read_index_;
       common::FamilyInfoExt family_info_;
 
       File()
@@ -51,6 +51,11 @@ namespace tfs
 
       ~File()
       {
+      }
+
+      bool is_valid() const
+      {
+        return has_ds() || has_family();
       }
 
       bool has_ds() const
@@ -63,36 +68,42 @@ namespace tfs
         return common::INVALID_FAMILY_ID != family_info_.family_id_;
       }
 
-      bool is_valid() const
+      int32_t get_retry_time() const
       {
-        return has_ds() || has_family();
+        return ds_.size() > 0 ? ds_.size() : 1;
       }
 
-      uint64_t get_master_ds() const
+      uint64_t get_write_ds()
       {
-        return ds_[0];
-      }
-
-      uint64_t get_master_family_member() const
-      {
-        int32_t index = GET_MASTER_INDEX(family_info_.family_aid_info_);
-        return family_info_.members_[index].first;
-      }
-
-      uint64_t choose_ds() const
-      {
-        uint64_t server_id = common::INVALID_SERVER_ID;
+        uint64_t server_id = 0;
         if (ds_.size() > 0)
         {
-          server_id = get_master_ds();
-        }
-        else if (common::INVALID_FAMILY_ID != family_info_.family_id_)
-        {
-          server_id = get_master_family_member();
+          server_id = ds_[0];
         }
         return server_id;
       }
-   };
+
+      uint64_t get_read_ds()
+      {
+        uint64_t server_id = 0;
+        if (ds_.size() > 0)
+        {
+          read_index_ %= ds_.size();
+          server_id = ds_[read_index_];
+        }
+        else if(common::INVALID_FAMILY_ID != family_info_.family_id_)
+        {
+          int32_t index = GET_MASTER_INDEX(family_info_.family_aid_info_);
+          server_id = family_info_.members_[index].first;
+        }
+        return server_id;
+      }
+
+      void set_next_read_ds()
+      {
+        read_index_++;
+      }
+    };
 
     class TfsFile
     {
@@ -105,8 +116,6 @@ namespace tfs
         int64_t stat(common::TfsFileStat& file_stat);
         int64_t read(void* buf, const int64_t count);
         int64_t write(const void* buf, const int64_t count);
-        int64_t pread(void* buf, const int64_t count, const int64_t offset);
-        int64_t pwrite(const void* buf, const int64_t count, const int64_t offset);
         int close();
         int unlink(const common::TfsUnlinkType action, int64_t& file_size);
 
@@ -122,14 +131,12 @@ namespace tfs
         int do_close();
         int do_unlink(const int32_t action, int64_t& file_size);
 
-      public:
-        common::RWLock rw_lock_;
-
       private:
         File file_;
         FSName fsname_;
         uint64_t ns_addr_;
         int32_t cluster_id_;
+        common::RWLock rw_lock_;
     };
   }
 }

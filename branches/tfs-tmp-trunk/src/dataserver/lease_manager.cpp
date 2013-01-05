@@ -28,10 +28,13 @@ namespace tfs
       lease_id_(lease_id),
       last_update_time_(now),
       req_begin_time_(now),
-      ref_count_(0)
+      ref_count_(0),
+      server_size_(0),
+      done_server_size_(0)
     {
       int32_t index = 0;
       memset(members_, 0, sizeof(members_));
+      server_size_ = servers.size();
       VUINT64::const_iterator iter = servers.begin();
       for (; iter != servers.end(); ++iter, ++index)
       {
@@ -52,6 +55,7 @@ namespace tfs
         members_[index].info_.version_= INVALID_VERSION;
         members_[index].status_ = TFS_ERROR;
       }
+      done_server_size_ = 0;
     }
 
     int Lease::get_member_info(std::pair<uint64_t, common::BlockInfoV2>* members, int32_t& size) const
@@ -87,10 +91,17 @@ namespace tfs
           {
             members_[index].info_ = info;
             members_[index].status_  = status;
+            done_server_size_++;
           }
         }
       }
       return ret;
+    }
+
+    int Lease::update_member_info()
+    {
+      done_server_size_++;
+      return TFS_SUCCESS;
     }
 
     void Lease::reset_member_info()

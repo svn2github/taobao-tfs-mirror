@@ -62,7 +62,8 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        int64_t now = Func::get_monotonic_time();
+        int64_t now_us = Func::get_monotonic_time_us();
+        int64_t now = now_us / 1000000;
         if (INVALID_LEASE_ID == lease_id)
         {
           lease_id = lease_manager_.gen_lease_id();
@@ -76,11 +77,14 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             lease_manager_.generation(lid, now, type, servers);
+            lease = lease_manager_.get(lid, now);
+            ret = (NULL == lease) ? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
           }
         }
-        else
+
+        if (TFS_SUCCESS == ret);
         {
-          lease->set_req_begin_time(now);
+          lease->set_req_begin_time(now_us);
           lease->reset_member_status(); // reset on every reqeust
           lease_manager_.put(lease);
         }
@@ -97,22 +101,25 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        if (SLAVE_DS_RESP_MESSAGE != packet->getPCode())
+        LeaseId lid(block_id, file_id, lease_id);
+        int64_t now = Func::get_monotonic_time();
+        Lease* lease = lease_manager_.get(lid, now);
+        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
         {
-          ret = EXIT_UNKNOWN_MSGTYPE;
-        }
-        else
-        {
-          SlaveDsRespMessage* smsg = dynamic_cast<SlaveDsRespMessage*>(packet);
-          LeaseId lid(block_id, file_id, lease_id);
-          int64_t now = Func::get_monotonic_time();
-          Lease* lease = lease_manager_.get(lid, now);
-          ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
-          if (TFS_SUCCESS == ret)
+          if (SLAVE_DS_RESP_MESSAGE != packet->getPCode())
           {
-            ret = lease->update_member_info(smsg->get_server_id(),
-               smsg->get_block_info(), smsg->get_status());
-            lease_manager_.put(lease);
+            ret = lease->update_member_info();
+          }
+          else
+          {
+            SlaveDsRespMessage* smsg = dynamic_cast<SlaveDsRespMessage*>(packet);
+            if (TFS_SUCCESS == ret)
+            {
+              ret = lease->update_member_info(smsg->get_server_id(),
+                  smsg->get_block_info(), smsg->get_status());
+              lease_manager_.put(lease);
+            }
           }
         }
       }
@@ -120,46 +127,52 @@ namespace tfs
       return ret;
     }
 
-    int DataManager::check_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
-        int64_t& req_cost_time, int64_t& file_size, stringstream& err_msg)
+    bool DataManager::check_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
+        int32_t& status, int64_t& req_cost_time, int64_t& file_size, stringstream& err_msg)
     {
-      int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
+      bool all_finish = false;
+      status = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
           (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == status)
       {
         LeaseId lid(block_id, file_id, lease_id);
-        int64_t now = Func::get_monotonic_time();
+        int64_t now_us = Func::get_monotonic_time_us();
+        int64_t now = now_us / 1000000;
         Lease* lease = lease_manager_.get(lid, now);
-        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
-        if (TFS_SUCCESS == ret)
+        status = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == status)
         {
-          if (lease->check_has_version_conflict())
+          all_finish = lease->all_finish();
+          if (all_finish)
           {
-            ret = EXIT_VERSION_CONFLICT_ERROR;
-          }
+            if (lease->check_has_version_conflict())
+            {
+              status = EXIT_VERSION_CONFLICT_ERROR;
+            }
 
-          if (TFS_SUCCESS == ret)
-          {
-            ret = lease->check_all_successful() ? TFS_SUCCESS : TFS_ERROR;
-          }
+            if (TFS_SUCCESS == status)
+            {
+              status = lease->check_all_successful() ? TFS_SUCCESS : TFS_ERROR;
+            }
 
-          // if not all success, get error msg
-          if (TFS_SUCCESS != ret)
-          {
-            lease->dump(err_msg);
-          }
-          else
-          {
-            file_size = lease->get_file_size();
-          }
+            // if not all success, get error msg
+            if (TFS_SUCCESS != status)
+            {
+              lease->dump(err_msg);
+            }
+            else
+            {
+              file_size = lease->get_file_size();
+            }
 
-          req_cost_time = now - lease->get_req_begin_time();
+            req_cost_time = now_us - lease->get_req_begin_time();
+          }
           lease_manager_.put(lease);
         }
       }
 
-      return ret;
+      return all_finish;
     }
 
     int DataManager::remove_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id)

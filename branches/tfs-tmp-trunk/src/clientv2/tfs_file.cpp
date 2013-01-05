@@ -38,10 +38,12 @@ namespace tfs
 
     int TfsFile::open(const char* file_name, const char* suffix, const int32_t mode)
     {
+      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
       file_.mode_ = mode;
       if ((mode & T_READ) || (mode & T_STAT))
       {
+        file_.mode_ = T_READ;
         if ((NULL == file_name) || (file_name[0] == '\0'))
         {
           ret = EXIT_PARAMETER_ERROR;
@@ -67,6 +69,7 @@ namespace tfs
 
     int64_t TfsFile::lseek(const int64_t offset, const int whence)
     {
+      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
       if (TFS_FILE_OPEN_YES != file_.status_)
       {
@@ -97,6 +100,7 @@ namespace tfs
 
     int64_t TfsFile::stat(common::TfsFileStat& file_stat)
     {
+      ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);
       int ret = TFS_SUCCESS;
       if (TFS_FILE_OPEN_YES != file_.status_)
       {
@@ -104,7 +108,15 @@ namespace tfs
       }
       else
       {
-        ret = do_stat(file_stat);
+        int32_t retry = file_.get_retry_time();
+        while (retry--)
+        {
+          ret = do_stat(file_stat);
+          if (TFS_SUCCESS == ret)
+          {
+            break;
+          }
+        }
       }
 
       return ret;
@@ -118,33 +130,51 @@ namespace tfs
       {
         ret = EXIT_NOT_OPEN_ERROR;
       }
-      else if(!file_.eof_)
+      else
       {
         int64_t read_len = 0;
         int64_t real_read_len = 0;
         while (done < count)
         {
+          int32_t retry = file_.get_retry_time();
           read_len = ((count - done) < MAX_READ_SIZE) ? (count - done) : MAX_READ_SIZE;
-          ret = do_read((char*)buf + done, read_len, real_read_len);
-          if (TFS_SUCCESS != ret)
+          while (retry--)
           {
-            break;
+            ret = do_read((char*)buf + done, read_len, real_read_len);
+            if (TFS_SUCCESS != ret)
+            {
+              file_.set_next_read_ds();
+            }
+            else
+            {
+              // success, no need retry
+              break;
+            }
           }
-          file_.offset_ += real_read_len;
-          done += real_read_len;
-          if (real_read_len < read_len)
+
+          if (TFS_SUCCESS == ret)
           {
-            file_.eof_ = true;
+            done += real_read_len;
+            if (real_read_len < read_len)
+            {
+              // has reach to the end
+              break;
+            }
+          }
+          else
+          {
+            // error after retry, break
             break;
           }
         }
       }
 
-      return (ret < 0) ? ret : done;
+      return done > 0 ? done : ret;
     }
 
     int64_t TfsFile::write(const void* buf, const int64_t count)
     {
+      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
       int64_t done = 0;
       if (TFS_FILE_OPEN_YES != file_.status_)
@@ -167,31 +197,20 @@ namespace tfs
         }
       }
 
-      return (ret < 0) ? ret : done;
-    }
-
-
-    int64_t TfsFile::pread(void* buf, const int64_t count, const int64_t offset)
-    {
-      file_.offset_ = offset;
-      return read(buf, count);
-    }
-
-    int64_t TfsFile::pwrite(const void* buf, const int64_t count, const int64_t offset)
-    {
-      file_.offset_ = offset;
-      return write(buf, count);
+      return done > 0 ? done : ret;
     }
 
     int TfsFile::close()
     {
+      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
       if (TFS_FILE_OPEN_YES != file_.status_)
       {
         ret = EXIT_NOT_OPEN_ERROR;
       }
-      else if(file_.mode_ & T_WRITE)
+      else if(!(file_.mode_ & T_READ) && !(file_.mode_ & T_UNLINK))
       {
+        // only create & update need real close to ds
         ret = do_close();
       }
 
@@ -200,6 +219,7 @@ namespace tfs
 
     int TfsFile::unlink(const common::TfsUnlinkType action, int64_t& file_size)
     {
+      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
       if (TFS_FILE_OPEN_YES != file_.status_)
       {
@@ -215,11 +235,13 @@ namespace tfs
 
     void TfsFile::set_option_flag(const int32_t flag)
     {
+      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       file_.opt_flag_ |= flag;
     }
 
     const char* TfsFile::get_file_name()
     {
+      ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);
       return fsname_.get_name();
     }
 
@@ -243,6 +265,7 @@ namespace tfs
       if (NULL == client)
       {
         ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        TBSYS_LOG(WARN, "create new client fail.");
       }
       else
       {
@@ -273,8 +296,8 @@ namespace tfs
           BlockMeta& meta = response->get_block_meta();
           fsname_.set_block_id(meta.block_id_);
           file_.version_ = meta.version_;
-          TBSYS_LOG(DEBUG, "blockid: %"PRI64_PREFIX"u, replicas: %d, version: %d",
-              meta.block_id_, meta.size_, meta.version_);
+          TBSYS_LOG(DEBUG, "blockid: %"PRI64_PREFIX"u, replicas: %d, version: %d, family_id: %"PRI64_PREFIX"d",
+              meta.block_id_, meta.size_, meta.version_, meta.family_info_.family_id_);
           for (int32_t i = 0; i < meta.size_; i++)
           {
             file_.ds_.push_back(meta.ds_[i]);
@@ -303,6 +326,7 @@ namespace tfs
       if (NULL == client)
       {
         ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        TBSYS_LOG(WARN, "create new client fail.");
       }
       else
       {
@@ -314,7 +338,7 @@ namespace tfs
         {
           msg.set_family_info(file_.family_info_);
         }
-        ret = send_msg_to_server(file_.choose_ds(), client, &msg, resp_msg);
+        ret = send_msg_to_server(file_.get_read_ds(), client, &msg, resp_msg);
       }
 
       if (TFS_SUCCESS == ret)
@@ -339,6 +363,7 @@ namespace tfs
           wrap_file_info(file_stat, file_info);
         }
       }
+      NewClientManager::get_instance().destroy_client(client);
 
       return ret;
     }
@@ -351,12 +376,13 @@ namespace tfs
       if (NULL == client)
       {
         ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        TBSYS_LOG(WARN, "create new client fail.");
       }
       else
       {
+         // in the first version we simply ignore extend file info
         if (0 == file_.offset_)
         {
-          // in the first version we simply ignore extend file info
           file_.offset_ += FILEINFO_EXT_SIZE;
         }
 
@@ -366,11 +392,12 @@ namespace tfs
         msg.set_offset(file_.offset_);
         msg.set_length(count);
         msg.set_flag(file_.opt_flag_);
+        TBSYS_LOG(DEBUG, "family id: %"PRI64_PREFIX"d", file_.family_info_.family_id_);
         if (file_.has_family())
         {
           msg.set_family_info(file_.family_info_);
         }
-        ret = send_msg_to_server(file_.choose_ds(), client, &msg, resp_msg);
+        ret = send_msg_to_server(file_.get_read_ds(), client, &msg, resp_msg);
       }
 
       if (TFS_SUCCESS == ret)
@@ -392,14 +419,11 @@ namespace tfs
         {
           ReadFileRespMessageV2* response = dynamic_cast<ReadFileRespMessageV2*>(resp_msg);
           read_len = response->get_length();
-          if (read_len < count)
-          {
-            file_.eof_ = true;
-          }
           memcpy(buf, response->get_data(), read_len);
           file_.offset_ += read_len;
         }
       }
+      NewClientManager::get_instance().destroy_client(client);
 
       return ret;
     }
@@ -412,6 +436,7 @@ namespace tfs
       if (NULL == client)
       {
         ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        TBSYS_LOG(WARN, "create new client fail.");
       }
       else
       {
@@ -421,12 +446,12 @@ namespace tfs
         msg.set_offset(file_.offset_);
         msg.set_length(count);
         msg.set_lease_id(file_.lease_id_);
-        msg.set_master_id(file_.get_master_ds());
+        msg.set_master_id(file_.get_write_ds());
         msg.set_version(file_.version_);
         msg.set_flag(file_.opt_flag_);
         msg.set_ds(file_.ds_);
         msg.set_data(buf);
-        ret = send_msg_to_server(file_.choose_ds(), client, &msg, resp_msg);
+        ret = send_msg_to_server(file_.get_write_ds(), client, &msg, resp_msg);
       }
 
       if (TFS_SUCCESS == ret)
@@ -451,11 +476,7 @@ namespace tfs
           fsname_.set_file_id(response->get_file_id());
         }
       }
-
-      if (ret < 0)
-      {
-        file_.status_ = TFS_FILE_WRITE_ERROR;
-      }
+      NewClientManager::get_instance().destroy_client(client);
 
       return ret;
     }
@@ -468,6 +489,7 @@ namespace tfs
       if (NULL == client)
       {
         ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        TBSYS_LOG(WARN, "create new client fail.");
       }
       else
       {
@@ -475,10 +497,10 @@ namespace tfs
         msg.set_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
         msg.set_lease_id(file_.lease_id_);
-        msg.set_master_id(file_.get_master_ds());
+        msg.set_master_id(file_.get_write_ds());
         msg.set_ds(file_.ds_);
         msg.set_crc(file_.crc_);
-        ret = send_msg_to_server(file_.choose_ds(), client, &msg, resp_msg);
+        ret = send_msg_to_server(file_.get_write_ds(), client, &msg, resp_msg);
       }
 
       if (TFS_SUCCESS == ret)
@@ -494,6 +516,7 @@ namespace tfs
           TBSYS_LOG(DEBUG, "close file status: %d %s", ret, smsg->get_error());
         }
       }
+      NewClientManager::get_instance().destroy_client(client);
 
       return ret;
     }
@@ -506,6 +529,7 @@ namespace tfs
       if (NULL == client)
       {
         ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        TBSYS_LOG(WARN, "create new client fail.");
       }
       else
       {
@@ -513,7 +537,7 @@ namespace tfs
         msg.set_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
         msg.set_lease_id(file_.lease_id_);
-        msg.set_master_id(file_.get_master_ds());
+        msg.set_master_id(file_.get_write_ds());
         msg.set_ds(file_.ds_);
         msg.set_action(action);
         msg.set_version(file_.version_);
@@ -522,7 +546,7 @@ namespace tfs
         {
           msg.set_family_info(file_.family_info_);
         }
-        ret = send_msg_to_server(file_.choose_ds(), client, &msg, resp_msg);
+        ret = send_msg_to_server(file_.get_write_ds(), client, &msg, resp_msg);
       }
 
       if (TFS_SUCCESS == ret)
@@ -539,6 +563,7 @@ namespace tfs
           file_size = atol(smsg->get_error());
         }
       }
+      NewClientManager::get_instance().destroy_client(client);
 
       return ret;
     }
