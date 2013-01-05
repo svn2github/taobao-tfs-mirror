@@ -282,10 +282,26 @@ namespace tfs
           case common::REQ_KVMETA_PUT_OBJECT_MESSAGE:
             packet = new ReqKvMetaPutObjectMessage();
             break;
+          case common::REQ_KVMETA_DEL_OBJECT_MESSAGE:
+            packet = new ReqKvMetaDelObjectMessage();
+            break;
+          case common::REQ_KVMETA_GET_BUCKET_MESSAGE:
+            packet = new ReqKvMetaGetBucketMessage();
+            break;
+          case common::RSP_KVMETA_GET_BUCKET_MESSAGE:
+            packet = new RspKvMetaGetBucketMessage();
+            break;
+          case common::REQ_KVMETA_PUT_BUCKET_MESSAGE:
+            packet = new ReqKvMetaPutBucketMessage();
+            break;
+          case common::REQ_KVMETA_DEL_BUCKET_MESSAGE:
+            packet = new ReqKvMetaDelBucketMessage();
+            break;
+
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;
-        }
+         }
       }
       return packet;
     }

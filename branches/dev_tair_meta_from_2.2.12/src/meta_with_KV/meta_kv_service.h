@@ -25,7 +25,7 @@
 #include "meta_info_helper.h"
 namespace tfs
 {
-  namespace metawithkv
+  namespace kvmetaserver
   {
     class MetaKvService : public common::BaseService
     {
@@ -50,10 +50,12 @@ namespace tfs
       int put_bucket(message::ReqKvMetaPutBucketMessage* put_bucket_msg);
       int get_bucket(message::ReqKvMetaGetBucketMessage* get_bucket_msg);
       int del_bucket(message::ReqKvMetaDelBucketMessage* del_bucket_msg);
+      int delete_object(message::ReqKvMetaDelObjectMessage* );
 
     private:
       DISALLOW_COPY_AND_ASSIGN(MetaKvService);
 
+      //ObjectHelper object_helper_;
       MetaInfoHelper meta_info_helper_;
       //TODO add stat
       //StatInfoHelper stat_info_helper_;

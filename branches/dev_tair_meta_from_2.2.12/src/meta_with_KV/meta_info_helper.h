@@ -26,7 +26,7 @@
 
 namespace tfs
 {
-  namespace metawithkv
+  namespace kvmetaserver
   {
     class MetaInfoHelper
     {
@@ -44,11 +44,28 @@ namespace tfs
       //int scan_metas();
       //int delete_metas();
 
-      int put_bucket(const std::string& bucket_name, const int64_t create_time);
-      int get_bucket(const std::string& bucket_name, const std::string& prefix,
-          const std::string& start_key, const int32_t limit, common::VSTRING& v_object_name);
-      int del_bucket(const std::string& bucket_name);
 
+      /*----------------------------object part-----------------------------*/
+      int put_object(const std::string& bucket_name,
+                     const std::string& file_name,
+                     const common::TfsFileInfo& tfs_file_info,
+                     const common::ObjectMetaInfo& object_meta_info,
+                     const common::CustomizeInfo& customize_info);
+
+      int get_object(const std::string& bucket_name,
+                     const std::string& file_name,
+                     common::TfsFileInfo* p_tfs_file_info,
+                     common::ObjectMetaInfo* p_object_meta_info,
+                     common::CustomizeInfo* p_customize_info);
+
+      int delete_object(const std::string& bucket_name,
+                        const std::string& file_name);
+
+    /*----------------------------bucket part-----------------------------*/
+    int put_bucket(const std::string& bucket_name, const int64_t create_time);
+    int get_bucket(const std::string& bucket_name, const std::string& prefix,
+                   const std::string& start_key, const int32_t limit, common::VSTRING& v_object_name);
+    int del_bucket(const std::string& bucket_name);
     private:
       DISALLOW_COPY_AND_ASSIGN(MetaInfoHelper);
       KvEngineHelper* kv_engine_helper_;

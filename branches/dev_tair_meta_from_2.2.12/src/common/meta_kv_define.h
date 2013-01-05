@@ -16,6 +16,7 @@
 #ifndef TFS_COMMON_META_KV_DEFINE_H_
 #define TFS_COMMON_META_KV_DEFINE_H_
 #include "define.h"
+#include <string>
 namespace tfs
 {
   namespace common
@@ -27,11 +28,33 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
 
-      int64_t block_id;
-      int64_t file_id;
-      int32_t cluster_id;
+      int64_t block_id_;
+      int64_t file_id_;
+      int32_t cluster_id_;
     };
 
+    struct ObjectMetaInfo
+    {
+      ObjectMetaInfo();
+      int64_t length() const;
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+
+      int64_t create_time_;
+      int64_t modify_time_;
+      int64_t file_size_;
+      int32_t max_tfs_file_size_;
+    };
+
+    struct CustomizeInfo
+    {
+      CustomizeInfo();
+      int64_t length() const;
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+
+      std::string otag_;
+    };
   }
 }
 

@@ -17,6 +17,6 @@
 
 int main(int argc, char* argv[])
 {
-  tfs::metawithkv::MetaKvService service;
+  tfs::kvmetaserver::MetaKvService service;
   return service.main(argc, argv);
 }

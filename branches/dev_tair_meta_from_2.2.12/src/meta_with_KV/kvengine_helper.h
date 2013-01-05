@@ -25,7 +25,7 @@
 
 namespace tfs
 {
-  namespace metawithkv
+  namespace kvmetaserver
   {
     //key of object is like this
     //  bucketname\filename\offset\version_id
@@ -60,7 +60,7 @@ namespace tfs
       virtual int delete_key(const KvKey& key) = 0;
       virtual int delete_keys(const std::vector<KvKey>& vec_keys) = 0;
       virtual int scan_keys(const KvKey& start_key, const KvKey& end_key,
-          const int32_t limit, std::vector<KvKey>* vec_keys,
+          const int32_t limit, std::vector<KvKey>* vec_keys, std::vector<std::string>* vec_realkey,
           std::vector<std::string>* vec_values, int32_t* result_size) = 0;
       virtual int list_skeys(const KvKey& pkey, const std::string& prefix,
           const std::string& start_key, const int32_t limit, common::VSTRING& v_object_name) = 0;

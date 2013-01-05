@@ -1,14 +1,15 @@
 AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
             -I$(TBLIB_ROOT)/include/tbnet \
-						$(TAIR_META_CPPFLAGS)
+						  $(TAIR_META_CPPFLAGS)
 
 AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid $(TAIR_META_LDFLAGS)
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
       $(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a
+      $(TBLIB_ROOT)/lib/libtbsys.a \
+			$(TAIR_ROOT)/lib/libtairclientapi.a
 
 noinst_LIBRARIES=libmetakvserver.a
 
@@ -21,7 +22,7 @@ endif
 libmetakvserver_a_SOURCES=kvengine_helper.cpp meta_kv_service.cpp meta_info_helper.cpp \
 													$(tair_kv_source)  $(metakvserver_INCLUDE)
 
-bin_PROGRAMS = metakvserver #tool_client 
+bin_PROGRAMS = metakvserver tool_client 
 
 metakvserver_SOURCES=$(libmetakvserver_a_SOURCES) main.cpp
-#tool_client_SOURCES=tool_client.cpp
+tool_client_SOURCES=tool_client.cpp

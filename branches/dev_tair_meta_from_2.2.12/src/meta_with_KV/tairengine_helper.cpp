@@ -26,7 +26,7 @@ namespace tfs
 {
 
   using namespace common;
-  namespace metawithkv
+  namespace kvmetaserver
   {
     const int TairEngineHelper::TAIR_RETRY_COUNT = 1;
     //different key type will use different namespace in tair
@@ -75,21 +75,20 @@ namespace tfs
       switch (key.key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
+        {
+          tair::data_entry pkey;
+          tair::data_entry skey;
+          tair::data_entry tvalue;
+          ret = split_key_for_tair(key, &pkey, &skey);
+          if (TFS_SUCCESS == ret)
           {
-            tair::data_entry pkey;
-            tair::data_entry skey;
-            tair::data_entry tvalue;
-            ret = split_key_for_tair(key, &pkey, &skey);
-            if (TFS_SUCCESS == ret)
-            {
-              tvalue.set_data(value.c_str(), value.length());
-              ret = prefix_put_to_tair(object_area_,
-                  pkey, skey, tvalue, version);
-
-            }
-
+            tvalue.set_data(value.c_str(), value.length());
+            ret = prefix_put_to_tair(object_area_,
+                pkey, skey, tvalue, version);
           }
-          break;
+
+         }
+        break;
         case KvKey::KEY_TYPE_BUCKET:
           {
             data_entry pkey(key.key_);
@@ -100,7 +99,6 @@ namespace tfs
         default:
           TBSYS_LOG(ERROR, "not support");
           ret = TFS_ERROR;
-
       }
       return ret;
     }
@@ -207,21 +205,86 @@ namespace tfs
 
     int TairEngineHelper::delete_keys(const std::vector<KvKey>& vec_keys)
     {
-      UNUSED(vec_keys);
-      return TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
+
+      switch (vec_keys.front().key_type_)
+      {
+        case KvKey::KEY_TYPE_OBJECT:
+        {
+          tair::data_entry pkey;
+          tair::data_entry skey;
+          tair::tair_dataentry_set skey_set;
+          tair::key_code_map_t key_code_map;
+
+          std::vector<KvKey>::const_iterator iter = vec_keys.begin();
+          for(; iter != vec_keys.end(); ++iter)
+          {
+            ret = split_key_for_tair(*iter, &pkey, &skey);
+            skey_set.insert(&skey);
+
+          }
+          if (TFS_SUCCESS == ret)
+          {
+             ret = prefix_removes_from_tair(object_area_, pkey, skey_set, key_code_map);
+          }
+        }
+        break;
+        default:
+         TBSYS_LOG(ERROR, "not support");
+         break;
+      }
+      return ret;
     }
 
     int TairEngineHelper::scan_keys(const KvKey& start_key, const KvKey& end_key,
-        const int32_t limit, std::vector<KvKey>* vec_keys,
+        const int32_t limit, std::vector<KvKey>* vec_keys, std::vector<std::string>* vec_realkey,
         std::vector<std::string>* vec_values, int32_t* result_size)
     {
-      UNUSED(start_key);
-      UNUSED(end_key);
-      UNUSED(limit);
-      UNUSED(vec_keys);
-      UNUSED(vec_values);
-      UNUSED(result_size);
-      return TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
+
+      switch (start_key.key_type_)
+      {
+        case KvKey::KEY_TYPE_OBJECT:
+        {
+          tair::data_entry pkey;
+          tair::data_entry start_skey;
+          tair::data_entry end_skey;
+          vector<tair::data_entry *> tvalues;
+          short type = 1;
+          ret = split_key_for_tair(start_key, &pkey, &start_skey);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = split_key_for_tair(end_key, &pkey, &end_skey);
+          }
+          if (TFS_SUCCESS == ret)
+          {
+             ret = prefix_scan_from_tair(object_area_, pkey, start_skey, end_skey,
+                   0/*offset*/, limit, tvalues, type);
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            KvKey tmp_key;
+            vector<tair::data_entry *>::iterator iter = tvalues.begin();
+            for(; iter != tvalues.end(); ++iter)
+            {
+              vec_realkey->push_back((*iter)->get_printable_key().c_str());
+              tmp_key.key_ = vec_realkey->back().c_str();
+              tmp_key.key_size_ = vec_realkey->back().size();
+              tmp_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
+              vec_keys->push_back(tmp_key);
+              ++iter;
+              vec_values->push_back((*iter)->get_printable_key().c_str());
+              (*result_size)++;
+            }
+            *result_size = *result_size / 2;
+          }
+        }
+        break;
+        default:
+        TBSYS_LOG(ERROR, "not support");
+        break;
+      }
+      return ret;
     }
 
     int TairEngineHelper::split_key_for_tair(const KvKey& key, tair::data_entry* prefix_key, tair::
@@ -390,6 +453,45 @@ namespace tfs
         ret = TFS_ERROR;
       }
 
+      return ret;
+    }
+
+    int TairEngineHelper::prefix_removes_from_tair(const int area, const tair::data_entry &pkey,
+        const tair::tair_dataentry_set &skey_set, tair::key_code_map_t &key_code_map)
+    {
+      int retry_count = TAIR_RETRY_COUNT;
+      int ret = TFS_SUCCESS;
+      int tair_ret = 0;
+      do
+      {
+        tair_ret = tair_client_->prefix_removes(area, pkey, skey_set,key_code_map);
+      } while (TAIR_RETURN_TIMEOUT == tair_ret && --retry_count > 0);
+
+      if (TAIR_RETURN_SUCCESS != tair_ret)
+      {
+        //TODO change tair errno to TFS errno
+        ret = TFS_ERROR;
+      }
+      return ret;
+    }
+
+    int TairEngineHelper::prefix_scan_from_tair(int area, const tair::data_entry &pkey,
+                          const tair::data_entry &start_key, const tair::data_entry &end_key,
+                          int offset, int limit, std::vector<tair::data_entry *> &values, short type)
+    {
+      int retry_count = TAIR_RETRY_COUNT;
+      int ret = TFS_SUCCESS;
+      int tair_ret = 0;
+      do
+      {
+        tair_ret = tair_client_->get_range(area, pkey, start_key, end_key, offset, limit, values, type);
+      } while (TAIR_RETURN_TIMEOUT == tair_ret && --retry_count > 0);
+
+      if (TAIR_RETURN_SUCCESS != tair_ret)
+      {
+        //TODO change tair errno to TFS errno
+        ret = TFS_ERROR;
+      }
       return ret;
     }
   }
