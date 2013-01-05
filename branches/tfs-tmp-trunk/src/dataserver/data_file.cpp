@@ -119,7 +119,7 @@ namespace tfs
         {
           if (fd_ >= 0)
           {
-            ret = 0 == lseek(fd_, offset, SEEK_SET) ? TFS_SUCCESS : -errno;
+            ret = (offset == lseek(fd_, offset, SEEK_SET)) ? TFS_SUCCESS : -errno;
             if (TFS_SUCCESS == ret)
             {
               const int32_t max = WRITE_DATA_TMPBUF_SIZE;

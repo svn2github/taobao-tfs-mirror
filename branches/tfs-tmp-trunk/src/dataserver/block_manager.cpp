@@ -701,7 +701,6 @@ namespace tfs
           std::stringstream path;
           path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << index;
           FileOperation file_op(path.str(), O_RDWR | O_CREAT);
-          TBSYS_LOG(INFO, "File================ %d", index);
           ret = file_op.open() < 0 ? EXIT_OPEN_FILE_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS != ret)
           {
