@@ -13,7 +13,7 @@
  *      - initial release
  *
  */
-#include "meta_kv_service.h"
+#include "kv_meta_service.h"
 
 int main(int argc, char* argv[])
 {

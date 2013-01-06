@@ -8,7 +8,7 @@ AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid $(TAIR_META_LDFLAGS)
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
       $(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a \
+      $(TBLIB_ROOT)/lib/libtbsys.a 
 
 noinst_LIBRARIES=libmetakvserver.a
 

@@ -14,7 +14,7 @@
  *
  */
 
-#include "meta_kv_service.h"
+#include "kv_meta_service.h"
 
 #include <time.h>
 #include <zlib.h>
