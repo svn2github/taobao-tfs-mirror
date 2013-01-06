@@ -1,4 +1,4 @@
-AM_CPPFLAGS=-I${top_srcdir}/src/meta_with_KV \
+AM_CPPFLAGS=-I${top_srcdir}/src/kv_meta_server \
             -I$(top_srcdir)/src \
 						-I${top_srcdir}/src/common \
 						-I$(TBLIB_ROOT)/include/tbsys \
@@ -6,7 +6,7 @@ AM_CPPFLAGS=-I${top_srcdir}/src/meta_with_KV \
 
 AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest $(TAIR_META_LDFLAGS)
 
-LDADD=$(top_builddir)/src/meta_with_KV/libmetakvserver.a \
+LDADD=$(top_builddir)/src/kv_meta_server/libmetakvserver.a \
 			$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a \
       $(TAIR_META_LDFLAGS)\

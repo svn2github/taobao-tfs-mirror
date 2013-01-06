@@ -227,7 +227,7 @@ AC_CONFIG_FILES([Makefile
                  src/nameserver/Makefile
                  src/rcserver/Makefile
                  src/name_meta_server/Makefile
-                 src/meta_with_KV/Makefile
+                 src/kv_meta_server/Makefile
                  src/rootserver/Makefile
                  src/checkserver/Makefile
                  src/tools/Makefile
@@ -242,7 +242,7 @@ AC_CONFIG_FILES([Makefile
                  tests/Makefile
                  tests/batch/Makefile
                  tests/rcserver/Makefile
-                 tests/meta_with_KV/Makefile
+                 tests/kv_meta_server/Makefile
                  tests/name_meta_server/Makefile
                  tests/common/Makefile
                  tests/rootserver/Makefile
