@@ -65,7 +65,7 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
     req_po_msg.set_bucket_name(bucket_name);
     //req_po_msg.set_object_name(object_name);
     req_po_msg.set_file_name(object_name);
-    req_po_msg.set_file_info(tfs_file_info);
+    req_po_msg.set_tfs_file_info(tfs_file_info);
 
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
@@ -128,7 +128,7 @@ int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_nam
     else if (RSP_KVMETA_GET_OBJECT_MESSAGE == rsp->getPCode())
     {
       RspKvMetaGetObjectMessage* rsp_msg = dynamic_cast<RspKvMetaGetObjectMessage*>(rsp);
-      tfs_file_info = rsp_msg->get_file_info();
+      tfs_file_info = rsp_msg->get_tfs_file_info();
     }
     else if (STATUS_MESSAGE == rsp->getPCode())
     {

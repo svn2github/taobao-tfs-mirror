@@ -101,9 +101,9 @@ namespace tfs
       else
       {
         TfsFileInfo tfs_file_info;
-        tfs_file_info.block_id = 1;
-        tfs_file_info.file_id = 1;
-        tfs_file_info.cluster_id = 1;
+        tfs_file_info.block_id_ = 1;
+        tfs_file_info.file_id_ = 1;
+        tfs_file_info.cluster_id_ = 1;
         ret = do_put_object(bucket_name, object_name, tfs_file_info);
         if (TFS_SUCCESS != ret)
         {

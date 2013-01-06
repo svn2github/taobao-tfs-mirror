@@ -179,8 +179,8 @@ namespace tfs
     const int32_t EXIT_TABLE_VERSION_ERROR = -15003;//table version error
     const int32_t EXIT_BUCKET_ID_INVLAID= -15004;//bucket id invalid
     const int32_t EXIT_BUCKET_NOT_EXIST= -15005;//bucket not exist
-    const int32_t EXIT_NEW_TABLE_NOT_EXIST= -15005;//new table not exist
-    const int32_t EXIT_NEW_TABLE_INVALID = -15005;//new table invalid
+    const int32_t EXIT_NEW_TABLE_NOT_EXIST= -15006;//new table not exist
+    const int32_t EXIT_NEW_TABLE_INVALID = -15007;//new table invalid
 
   }
 }
