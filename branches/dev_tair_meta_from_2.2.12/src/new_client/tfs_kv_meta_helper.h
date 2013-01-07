@@ -33,12 +33,19 @@ namespace tfs
                                const int32_t limit, std::vector<std::string>& v_object_name);
       static int do_del_bucket(const uint64_t server_id, const char *bucket_name);
 
-      static int do_put_object(const uint64_t server_id, const char *bucket_name,
-          const char *object_name, const common::TfsFileInfo& tfs_file_info);
-      static int do_get_object(const uint64_t server_id, const char *bucket_name,
-          const char *object_name, common::TfsFileInfo& tfs_file_info);
-      static int do_del_object(const uint64_t server_id, const char *bucket_name,
-          const char *object_name);
+      static int do_put_object(const uint64_t server_id,
+                               const char *bucket_name, const char *object_name,
+                               const common::TfsFileInfo &tfs_file_info,
+                               const common::ObjectMetaInfo &object_meta_info,
+                               const common::CustomizeInfo &customize_info);
+      static int do_get_object(const uint64_t server_id,
+                               const char *bucket_name, const char *object_name,
+                               common::TfsFileInfo& tfs_file_info,
+                               common::ObjectMetaInfo &object_meta_info,
+                               common::CustomizeInfo &customize_info);
+      static int do_del_object(const uint64_t server_id,
+                               const char *bucket_name,
+                               const char *object_name);
     };
   }
 }

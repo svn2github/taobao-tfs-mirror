@@ -147,7 +147,10 @@ namespace tfs
         tfs_file_info.block_id_ = 1;
         tfs_file_info.file_id_ = 1;
         tfs_file_info.cluster_id_ = 1;
-        ret = do_put_object(bucket_name, object_name, tfs_file_info);
+        ObjectMetaInfo object_meta_info;
+        CustomizeInfo customize_info;
+        ret = do_put_object(bucket_name, object_name, tfs_file_info, object_meta_info, customize_info);
+
         if (TFS_SUCCESS != ret)
         {
             TBSYS_LOG(ERROR, "put object failed");
@@ -263,15 +266,16 @@ namespace tfs
     }
 
     int KvMetaClientImpl::do_put_object(const char *bucket_name,
-        const char *object_name, const TfsFileInfo &tfs_file_info)
+        const char *object_name, const TfsFileInfo &tfs_file_info,
+        const common::ObjectMetaInfo &object_meta_info, const common::CustomizeInfo &customize_info)
     {
-      return KvMetaHelper::do_put_object(kms_id_, bucket_name, object_name, tfs_file_info);
+      return KvMetaHelper::do_put_object(kms_id_, bucket_name, object_name, tfs_file_info, object_meta_info, customize_info);
     }
 
     int KvMetaClientImpl::do_get_object(const char *bucket_name,
-        const char *object_name, TfsFileInfo &tfs_file_info)
+        const char *object_name, TfsFileInfo &tfs_file_info, ObjectMetaInfo &object_meta_info, CustomizeInfo &customize_info)
     {
-      return KvMetaHelper::do_get_object(kms_id_, bucket_name, object_name, tfs_file_info);
+      return KvMetaHelper::do_get_object(kms_id_, bucket_name, object_name, tfs_file_info, object_meta_info, customize_info);
     }
 
     int KvMetaClientImpl::do_del_object(const char *bucket_name, const char *object_name)

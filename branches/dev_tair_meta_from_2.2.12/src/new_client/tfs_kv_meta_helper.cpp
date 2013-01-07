@@ -162,8 +162,8 @@ int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_nam
 
 }
 
-int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_name,
-    const char *object_name, const TfsFileInfo &tfs_file_info)
+int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_name,const char *object_name,
+    const TfsFileInfo &tfs_file_info, const ObjectMetaInfo &object_meta_info, const CustomizeInfo &customize_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name || NULL == object_name)
@@ -174,9 +174,10 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
   {
     ReqKvMetaPutObjectMessage req_po_msg;
     req_po_msg.set_bucket_name(bucket_name);
-    //req_po_msg.set_object_name(object_name);
     req_po_msg.set_file_name(object_name);
     req_po_msg.set_tfs_file_info(tfs_file_info);
+    req_po_msg.set_object_meta_info(object_meta_info);
+    req_po_msg.set_customize_info(customize_info);
 
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
@@ -210,8 +211,8 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
   return ret;
 }
 
-int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_name,
-    const char *object_name, TfsFileInfo &tfs_file_info)
+int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_name, const char *object_name,
+  TfsFileInfo &tfs_file_info, ObjectMetaInfo &object_meta_info, CustomizeInfo &customize_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name || NULL == object_name)
@@ -222,7 +223,6 @@ int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_nam
   {
     ReqKvMetaGetObjectMessage req_go_msg;
     req_go_msg.set_bucket_name(bucket_name);
-    //req_go_msg.set_object_name(object_name);
     req_go_msg.set_file_name(object_name);
 
     tbnet::Packet* rsp = NULL;
@@ -240,6 +240,9 @@ int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_nam
     {
       RspKvMetaGetObjectMessage* rsp_go_msg = dynamic_cast<RspKvMetaGetObjectMessage*>(rsp);
       tfs_file_info = rsp_go_msg->get_tfs_file_info();
+      object_meta_info = rsp_msg->get_object_meta_info();
+      customize_info = rsp_msg->get_customize_info();
+
     }
     else if (STATUS_MESSAGE == rsp->getPCode())
     {
@@ -265,9 +268,46 @@ int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_nam
 int KvMetaHelper::do_del_object(const uint64_t server_id, const char *bucket_name,
     const char *object_name)
 {
-  UNUSED(server_id);
-  UNUSED(bucket_name);
-  UNUSED(object_name);
   int ret = TFS_SUCCESS;
+  if (NULL == bucket_name || NULL == object_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaDelObjectMessage req_do_msg;
+    req_do_msg.set_bucket_name(bucket_name);
+    req_do_msg.set_file_name(object_name);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_do_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call del object fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "object_name: %s, ret: %d",
+          server_id, bucket_name, object_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "del object return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "del object fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "object_name: %s, ret: %d, msg type: %d",
+          server_id, bucket_name, object_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
   return ret;
 }
+
