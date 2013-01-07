@@ -69,21 +69,65 @@ namespace tfs
     TfsRetType KvMetaClientImpl::put_bucket(const char *bucket_name)
     {
        TfsRetType ret = TFS_ERROR;
-       UNUSED(bucket_name);
+
+       if (!is_valid_bucket_name(bucket_name))
+       {
+         TBSYS_LOG(ERROR, "bucket: %s is invalid", bucket_name);
+       }
+       else
+       {
+         ret = TFS_SUCCESS;
+       }
+
+       if (TFS_SUCCESS == ret)
+       {
+         ret = do_put_bucket(bucket_name);
+       }
+
        return ret;
     }
 
-    TfsRetType KvMetaClientImpl::get_bucket(const char *bucket_name)
+    TfsRetType KvMetaClientImpl::get_bucket(const char *bucket_name, const char* prefix,
+                                            const char* start_key, const int32_t limit,
+                                            vector<string>& v_object_name)
     {
        TfsRetType ret = TFS_ERROR;
-       UNUSED(bucket_name);
+
+       if (!is_valid_file_path(bucket_name))
+       {
+         //TBSYS_LOG();
+       }
+       else
+       {
+         ret = TFS_SUCCESS;
+       }
+
+       if (TFS_SUCCESS == ret)
+       {
+         ret = do_get_bucket(bucket_name, prefix, start_key, limit, v_object_name);
+       }
+
        return ret;
     }
 
     TfsRetType KvMetaClientImpl::del_bucket(const char *bucket_name)
     {
        TfsRetType ret = TFS_ERROR;
-       UNUSED(bucket_name);
+
+       if (!is_valid_file_path(bucket_name))
+       {
+         //TBSYS_LOG();
+       }
+       else
+       {
+         ret = TFS_SUCCESS;
+       }
+
+       if (TFS_SUCCESS == ret)
+       {
+         ret = do_del_bucket(bucket_name);
+       }
+
        return ret;
     }
 
@@ -206,9 +250,11 @@ namespace tfs
     }
 
     // TODO
-    int KvMetaClientImpl::do_get_bucket(const char *bucket_name)
+    int KvMetaClientImpl::do_get_bucket(const char *bucket_name, const char* prefix,
+                                        const char* start_key, const int32_t limit,
+                                        vector<string>& v_object_name)
     {
-      return KvMetaHelper::do_get_bucket(kms_id_, bucket_name);
+      return KvMetaHelper::do_get_bucket(kms_id_, bucket_name, prefix, start_key, limit, v_object_name);
     }
 
     int KvMetaClientImpl::do_del_bucket(const char *bucket_name)
@@ -236,6 +282,100 @@ namespace tfs
     bool KvMetaClientImpl::is_valid_file_path(const char* file_path)
     {
       return ((file_path != NULL) && (strlen(file_path) > 0) && (static_cast<int32_t>(strlen(file_path)) < MAX_FILE_PATH_LEN) && (file_path[0] == '/') && (strstr(file_path, " ") == NULL));
+    }
+
+    bool KvMetaClientImpl::is_valid_bucket_name(const char *bucket_name)
+    {
+      bool is_valid = true;
+
+
+      if (NULL == bucket_name)
+      {
+        is_valid = false;
+      }
+
+      /*
+      int32_t len = -1;
+      // len > 3 && len < 256
+      if (is_valid)
+      {
+        len = static_cast<int32_t>(strlen(bucket_name));
+
+        if (len < MIN_FILE_PATH_LEN || len > MAX_FILE_PATH_LEN)
+        {
+          is_valid = false;
+        }
+      }
+
+      // start & end loweralpha or digit, other is loweralpha or digit or '.'
+      // my..aws is not permit
+      if (is_valid)
+      {
+        //handle the string like my..aws
+        bool conjoin = false;
+        for (int32_t i = 0; i < len; i++)
+        {
+          if (i == 0 || i == len - 1)
+          {
+            if (!islower(bucket_name[i]) && !isdigit(bucket_name[i]))
+            {
+              is_valid = false;
+              break;
+            }
+          }
+          else
+          {
+            if (!islower(bucket_name[i]) && !isdigit(bucket_name[i])
+                && PERIOD != bucket_name[i] && DASH != bucket_name[i])
+            {
+              is_valid = false;
+              break;
+            }
+            else if (PERIOD == bucket_name[i])
+            {
+              if (conjoin)
+              {
+                is_valid = false;
+                break;
+              }
+              else
+              {
+                conjoin = true;
+              }
+            }
+            else
+            {
+              conjoin = false;
+            }
+          }
+        }
+      }
+
+      // check the form 192.234.34.45
+      if (is_valid)
+      {
+        int32_t period_size = 0;
+        int32_t digit_size = 0;
+        for (int i = 0; i < len; i++)
+        {
+          if (isdigit(bucket_name[i]))
+          {
+            digit_size++;
+          }
+          else if (PERIOD == bucket_name[i])
+          {
+            period_size++;
+          }
+        }
+
+        if (MIN_FILE_PATH_LEN == period_size && period_size + digit_size == len)
+        {
+          is_valid = false;
+        }
+      }
+      */
+
+      return is_valid;
     }
 
     // copy from NameMetaClientImpl::write_data

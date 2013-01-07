@@ -50,10 +50,12 @@ namespace tfs
       return impl_->put_bucket(bucket_name);
     }
 
-    //TfsRetType KvMetaClient::get_bucket(const char *bucket_name, const char *object_name)
-    //{
-    //  return impl_->get_bucket(bucket_name, object_name);
-    //}
+    TfsRetType KvMetaClient::get_bucket(const char *bucket_name, const char *prefix,
+                                        const char* start_key, const int32_t limit,
+                                        vector<string>& v_object_name)
+    {
+      return impl_->get_bucket(bucket_name, prefix, start_key, limit, v_object_name);
+    }
 
     TfsRetType KvMetaClient::del_bucket(const char *bucket_name)
     {

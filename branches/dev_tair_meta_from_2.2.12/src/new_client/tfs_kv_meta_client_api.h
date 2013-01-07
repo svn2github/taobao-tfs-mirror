@@ -16,6 +16,7 @@
 #ifndef TFS_CLIENT_KV_META_CLIENT_API_H_
 #define TFS_CLIENT_KV_META_CLIENT_API_H_
 
+#include <vector>
 
 namespace tfs
 {
@@ -33,8 +34,9 @@ namespace tfs
         int initialize(const int64_t kms_addr);
 
         TfsRetType put_bucket(const char *bucket_name);
-        //TfsRetType get_bucket(const char *bucket_name, const char *object_name,
-        //    const char* local_file);
+        TfsRetType get_bucket(const char *bucket_name, const char *prefix,
+                              const char* start_key, const int32_t limit,
+                              std::vector<std::string>& v_object_name);
         TfsRetType del_bucket(const char *bucket_name);
 
         TfsRetType put_object(const char *bucket_name, const char *object_name,

@@ -29,26 +29,137 @@ using namespace std;
 
 int KvMetaHelper::do_put_bucket(const uint64_t server_id, const char *bucket_name)
 {
-  UNUSED(server_id);
-  UNUSED(bucket_name);
   int ret = TFS_SUCCESS;
+  if (NULL == bucket_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaPutBucketMessage req_pb_msg;
+    req_pb_msg.set_bucket_name(bucket_name);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_pb_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call put bucket fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "ret: %d",
+          server_id, bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "put bucket return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "put bucket fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          server_id, bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
   return ret;
 }
 
-int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_name)
+int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_name,
+                                const char* prefix, const char* start_key,
+                                const int32_t limit, vector<string>& v_object_name)
 {
-  UNUSED(server_id);
-  UNUSED(bucket_name);
   int ret = TFS_SUCCESS;
+  if (NULL == bucket_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaGetBucketMessage req_gb_msg;
+    req_gb_msg.set_bucket_name(bucket_name);
+    req_gb_msg.set_prefix(prefix);
+    req_gb_msg.set_start_key(start_key);
+    req_gb_msg.set_limit(limit);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_gb_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call get bucket fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "ret: %d",
+          server_id, bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_GET_BUCKET_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaGetBucketMessage* rsp_gb_msg = dynamic_cast<RspKvMetaGetBucketMessage*>(rsp);
+      v_object_name = rsp_gb_msg->get_v_object_name();
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "get bucket fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          server_id, bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
   return ret;
 }
 
 int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_name)
 {
-  UNUSED(server_id);
-  UNUSED(bucket_name);
   int ret = TFS_SUCCESS;
+  if (NULL == bucket_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaDelBucketMessage req_db_msg;
+    req_db_msg.set_bucket_name(bucket_name);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_db_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call del bucket fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "ret: %d",
+          server_id, bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "del bucket return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "del bucket fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          server_id, bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
   return ret;
+
 }
 
 int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_name,
@@ -127,8 +238,8 @@ int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_nam
     }
     else if (RSP_KVMETA_GET_OBJECT_MESSAGE == rsp->getPCode())
     {
-      RspKvMetaGetObjectMessage* rsp_msg = dynamic_cast<RspKvMetaGetObjectMessage*>(rsp);
-      tfs_file_info = rsp_msg->get_tfs_file_info();
+      RspKvMetaGetObjectMessage* rsp_go_msg = dynamic_cast<RspKvMetaGetObjectMessage*>(rsp);
+      tfs_file_info = rsp_go_msg->get_tfs_file_info();
     }
     else if (STATUS_MESSAGE == rsp->getPCode())
     {
@@ -141,7 +252,7 @@ int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_nam
     else
     {
       ret = EXIT_UNKNOWN_MSGTYPE;
-      TBSYS_LOG(ERROR, "get object fail,"
+      TBSYS_LOG(ERROR, "get object fail, "
           "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
           "object_name: %s, ret: %d, msg type: %d",
           server_id, bucket_name, object_name, ret, rsp->getPCode());

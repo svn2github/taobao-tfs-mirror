@@ -37,7 +37,9 @@ namespace tfs
         int initialize(const int64_t kms_addr);
 
         TfsRetType put_bucket(const char *bucket_name);
-        TfsRetType get_bucket(const char *bucket_name);
+        TfsRetType get_bucket(const char *bucket_name, const char* prefix,
+                              const char* start_key, const int32_t limit,
+                              std::vector<std::string>& v_object_name);
         TfsRetType del_bucket(const char *bucket_name);
 
         TfsRetType put_object(const char *bucket_name, const char *object_name,
@@ -47,7 +49,9 @@ namespace tfs
         TfsRetType del_object(const char *bucket_name, const char *object_name);
 
         int do_put_bucket(const char *bucket_name);
-        int do_get_bucket(const char *bucket_name);
+        int do_get_bucket(const char *bucket_name, const char* prefix,
+                          const char* start_key, const int32_t limit,
+                          std::vector<std::string>& v_object_name);
         int do_del_bucket(const char *bucket_name);
 
         int do_put_object(const char *bucket_name,
@@ -57,7 +61,8 @@ namespace tfs
         int do_del_object(const char *bucket_name,
             const char *object_name);
 
-        bool is_valid_file_path(const char* file_path);
+        bool is_valid_file_path(const char *file_path);
+        bool is_valid_bucket_name(const char *bucket_name);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClientImpl);

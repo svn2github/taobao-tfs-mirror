@@ -23,6 +23,9 @@ namespace tfs
 {
   namespace common
   {
+    const char PERIOD = '.';
+    const char DASH = '-';
+    const int32_t MAX_LIMIT = 1000;
     struct TfsFileInfo
     {
       TfsFileInfo();
@@ -56,6 +59,20 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
 
       std::string otag_;
+    };
+
+    struct BucketMetaInfo
+    {
+      BucketMetaInfo();
+      int64_t length() const;
+      int serialize(char *data, const int64_t data_len, int64_t &pos) const;
+      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
+
+      void set_create_time(const int64_t create_time)
+      {
+        create_time_ = create_time;
+      }
+      int64_t create_time_;
     };
   }
 }

@@ -151,6 +151,35 @@ namespace tfs
       return ret;
     }
 
+    //bucketmetainfo
+    BucketMetaInfo::BucketMetaInfo()
+    {}
+
+    int64_t BucketMetaInfo::length() const
+    {
+      return INT64_SIZE;
+    }
+
+    int BucketMetaInfo::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, create_time_);
+      }
+      return ret;
+    }
+
+    int BucketMetaInfo::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &create_time_);
+      }
+      return ret;
+    }
+
   }
 }
 

@@ -16,6 +16,7 @@
 #ifndef TFS_CLIENT_KVMETA_HELPER_H_
 #define TFS_CLIENT_KVMETA_HELPER_H_
 
+#include <vector>
 #include "common/kv_meta_define.h"
 
 namespace tfs
@@ -27,7 +28,9 @@ namespace tfs
     public:
       static int do_put_bucket(const uint64_t server_id, const char *bucket_name);
       // TODO: parameter
-      static int do_get_bucket(const uint64_t server_id, const char *bucket_name);
+      static int do_get_bucket(const uint64_t server_id, const char *bucket_name,
+                               const char* prefix, const char* start_key,
+                               const int32_t limit, std::vector<std::string>& v_object_name);
       static int do_del_bucket(const uint64_t server_id, const char *bucket_name);
 
       static int do_put_object(const uint64_t server_id, const char *bucket_name,
