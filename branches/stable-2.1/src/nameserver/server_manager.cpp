@@ -669,7 +669,7 @@ namespace tfs
     {
       result = NULL;
       SORT_MAP sorts;
-      GROUP_MAP group;
+      GROUP_MAP group, servers;
       ServerCollect* server = NULL;
       for (int32_t i = 0; i < sources.get_array_index(); ++i)
       {
@@ -680,7 +680,14 @@ namespace tfs
           int64_t use = static_cast<int64_t>(calc_capacity_percentage(server->use_capacity(),
                 server->total_capacity()) *  PERCENTAGE_MAGIC);
           sorts.insert(SORT_MAP::value_type(use, server));
+          uint32_t id  = server->id() & 0xFFFFFFFF;
           uint32_t lan = Func::get_lan(server->id(), SYSPARAM_NAMESERVER.group_mask_);
+          GROUP_MAP_ITER it   = servers.find(id);
+          if (servers.end() == it)
+          {
+            it = servers.insert(GROUP_MAP::value_type(id, SORT_MAP())).first;
+          }
+          it->second.insert(SORT_MAP::value_type(use, server));
           GROUP_MAP_ITER iter = group.find(lan);
           if (group.end() == iter)
           {
@@ -696,14 +703,23 @@ namespace tfs
       }
       else
       {
-        uint32_t nums = 0;
-        GROUP_MAP_ITER iter = group.begin();
-        for (; iter != group.end(); ++iter)
+        GROUP_MAP_ITER iter = servers.begin();
+        for (; servers.end() != iter && NULL == result; ++iter)
         {
-          if (iter->second.size() > nums)
-          {
-            nums = iter->second.size();
+          if (iter->second.size() > 1u)
             result = iter->second.rbegin()->second;
+        }
+        if (NULL == result)
+        {
+          uint32_t nums = 0;
+          iter = group.begin();
+          for (; iter != group.end(); ++iter)
+          {
+            if (iter->second.size() > nums)
+            {
+              nums = iter->second.size();
+              result = iter->second.rbegin()->second;
+            }
           }
         }
         if (NULL == result)
