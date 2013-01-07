@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef TFS_METAWITHKV_META_KV_SERVICE_H_
-#define TFS_METAWITHKV_META_KV_SERVICE_H_
+#ifndef TFS_KVMETASERVER_KV_META_SERVICE_H_
+#define TFS_KVMETASERVER_KV_META_SERVICE_H_
 
 #include "common/parameter.h"
 #include "common/base_service.h"
@@ -27,11 +27,11 @@ namespace tfs
 {
   namespace kvmetaserver
   {
-    class MetaKvService : public common::BaseService
+    class KvMetaService : public common::BaseService
     {
     public:
-      MetaKvService();
-      virtual ~MetaKvService();
+      KvMetaService();
+      virtual ~KvMetaService();
 
     public:
       // override
@@ -53,7 +53,7 @@ namespace tfs
       int delete_object(message::ReqKvMetaDelObjectMessage* );
 
     private:
-      DISALLOW_COPY_AND_ASSIGN(MetaKvService);
+      DISALLOW_COPY_AND_ASSIGN(KvMetaService);
 
       //ObjectHelper object_helper_;
       MetaInfoHelper meta_info_helper_;

@@ -10,18 +10,18 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(TBLIB_ROOT)/lib/libtbnet.a \
       $(TBLIB_ROOT)/lib/libtbsys.a 
 
-noinst_LIBRARIES=libmetakvserver.a
+noinst_LIBRARIES=libkvmetaserver.a
 
-metakvserver_INCLUDE=kv_meta_service.h
+kvmetaserver_INCLUDE=kv_meta_service.h
 
 if WITH_KV_META
 tair_kv_source=tairengine_helper.cpp tairengine_helper.h
 endif
 
-libmetakvserver_a_SOURCES=kvengine_helper.cpp kv_meta_service.cpp meta_info_helper.cpp \
-													$(tair_kv_source)  $(metakvserver_INCLUDE)
+libkvmetaserver_a_SOURCES=kvengine_helper.cpp kv_meta_service.cpp meta_info_helper.cpp \
+													$(tair_kv_source)  $(kvmetaserver_INCLUDE)
 
 bin_PROGRAMS = kvmetaserver# tool_client 
 
-kvmetaserver_SOURCES=$(libmetakvserver_a_SOURCES) main.cpp
+kvmetaserver_SOURCES=$(libkvmetaserver_a_SOURCES) main.cpp
 #tool_client_SOURCES=tool_client.cpp

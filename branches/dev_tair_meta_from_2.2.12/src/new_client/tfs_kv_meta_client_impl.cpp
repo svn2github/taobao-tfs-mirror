@@ -15,7 +15,6 @@
  */
 
 #include "tfs_kv_meta_client_impl.h"
-#include "common/meta_kv_define.h"
 #include "common/client_manager.h"
 #include "message/message_factory.h"
 #include "tfs_kv_meta_helper.h"

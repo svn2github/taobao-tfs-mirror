@@ -13,10 +13,12 @@
  *      - initial release
  *
  */
-#ifndef TFS_COMMON_META_KV_DEFINE_H_
-#define TFS_COMMON_META_KV_DEFINE_H_
+#ifndef TFS_COMMON_KV_META_DEFINE_H_
+#define TFS_COMMON_KV_META_DEFINE_H_
+
 #include "define.h"
 #include <string>
+
 namespace tfs
 {
   namespace common

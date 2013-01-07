@@ -16,7 +16,7 @@
 #ifndef TFS_CLIENT_KVMETA_HELPER_H_
 #define TFS_CLIENT_KVMETA_HELPER_H_
 
-#include "common/meta_kv_define.h"
+#include "common/kv_meta_define.h"
 
 namespace tfs
 {

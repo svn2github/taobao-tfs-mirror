@@ -18,7 +18,7 @@
 #define TFS_KV_META_MESSAGE_H
 
 #include "common/base_packet.h"
-#include "common/meta_kv_define.h"
+#include "common/kv_meta_define.h"
 
 namespace tfs
 {

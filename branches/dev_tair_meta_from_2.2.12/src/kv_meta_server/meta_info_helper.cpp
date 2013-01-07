@@ -230,6 +230,6 @@ namespace tfs
     }
 
 
-  }// end for metawithkv
+  }// end for kvmetaserver
 }// end for tfs
 

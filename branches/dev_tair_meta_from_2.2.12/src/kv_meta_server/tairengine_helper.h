@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef TFS_METAWITHKV_Tair_ENGINE_HELPER_H_
-#define TFS_METAWITHKV_Tair_ENGINE_HELPER_H_
+#ifndef TFS_KVMETASERVER_TAIR_ENGINE_HELPER_H_
+#define TFS_KVMETASERVER_TAIR_ENGINE_HELPER_H_
 
 #include "kvengine_helper.h"
 #include "tair_client_api.hpp"

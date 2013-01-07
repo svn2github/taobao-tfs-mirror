@@ -30,63 +30,63 @@ namespace tfs
 {
   namespace kvmetaserver
   {
-    MetaKvService::MetaKvService()
+    KvMetaService::KvMetaService()
     {
     }
 
-    MetaKvService::~MetaKvService()
+    KvMetaService::~KvMetaService()
     {
     }
 
-    tbnet::IPacketStreamer* MetaKvService::create_packet_streamer()
+    tbnet::IPacketStreamer* KvMetaService::create_packet_streamer()
     {
       return new common::BasePacketStreamer();
     }
 
-    void MetaKvService::destroy_packet_streamer(tbnet::IPacketStreamer* streamer)
+    void KvMetaService::destroy_packet_streamer(tbnet::IPacketStreamer* streamer)
     {
       tbsys::gDelete(streamer);
     }
 
-    common::BasePacketFactory* MetaKvService::create_packet_factory()
+    common::BasePacketFactory* KvMetaService::create_packet_factory()
     {
       return new message::MessageFactory();
     }
 
-    void MetaKvService::destroy_packet_factory(common::BasePacketFactory* factory)
+    void KvMetaService::destroy_packet_factory(common::BasePacketFactory* factory)
     {
       tbsys::gDelete(factory);
     }
 
-    const char* MetaKvService::get_log_file_path()
+    const char* KvMetaService::get_log_file_path()
     {
       const char* log_file_path = NULL;
       const char* work_dir = get_work_dir();
       if (work_dir != NULL)
       {
-      log_file_path_ = work_dir;
-      log_file_path_ += "/logs/meta_kv";
-      log_file_path_ +=  ".log";
-      log_file_path = log_file_path_.c_str();
+        log_file_path_ = work_dir;
+        log_file_path_ += "/logs/kv_meta";
+        log_file_path_ +=  ".log";
+        log_file_path = log_file_path_.c_str();
       }
       return log_file_path;
     }
 
-    const char* MetaKvService::get_pid_file_path()
+    const char* KvMetaService::get_pid_file_path()
     {
       const char* pid_file_path = NULL;
       const char* work_dir = get_work_dir();
       if (work_dir != NULL)
       {
         pid_file_path_ = work_dir;
-        pid_file_path_ += "/logs/meta_kv";
+        pid_file_path_ += "/logs/kv_meta";
         pid_file_path_ += ".pid";
         pid_file_path = pid_file_path_.c_str();
       }
       return pid_file_path;
     }
 
-    int MetaKvService::initialize(int argc, char* argv[])
+    int KvMetaService::initialize(int argc, char* argv[])
     {
       int ret = TFS_SUCCESS;
       UNUSED(argc);
@@ -109,12 +109,12 @@ namespace tfs
       return ret;
     }
 
-    int MetaKvService::destroy_service()
+    int KvMetaService::destroy_service()
     {
       return TFS_SUCCESS;
     }
 
-    bool MetaKvService::handlePacketQueue(tbnet::Packet *packet, void *args)
+    bool KvMetaService::handlePacketQueue(tbnet::Packet *packet, void *args)
     {
       int ret = true;
       BasePacket* base_packet = NULL;
@@ -161,14 +161,14 @@ namespace tfs
       return true;
     }
 
-    int MetaKvService::put_object(ReqKvMetaPutObjectMessage* req_put_object_msg)
+    int KvMetaService::put_object(ReqKvMetaPutObjectMessage* req_put_object_msg)
     {
       int ret = TFS_SUCCESS;
 
       if (NULL == req_put_object_msg)
       {
         ret = EXIT_INVALID_ARGU;
-        TBSYS_LOG(ERROR, "MetaKvService::put_object fail, ret: %d", ret);
+        TBSYS_LOG(ERROR, "KvMetaService::put_object fail, ret: %d", ret);
       }
 
       if (TFS_SUCCESS == ret)
@@ -189,14 +189,14 @@ namespace tfs
       return ret;
     }
 
-    int MetaKvService::get_object(ReqKvMetaGetObjectMessage* req_get_object_msg)
+    int KvMetaService::get_object(ReqKvMetaGetObjectMessage* req_get_object_msg)
     {
       int ret = TFS_SUCCESS;
 
       if (NULL == req_get_object_msg)
       {
         ret = EXIT_INVALID_ARGU;
-        TBSYS_LOG(ERROR, "MetaKvService::get_object fail, ret: %d", ret);
+        TBSYS_LOG(ERROR, "KvMetaService::get_object fail, ret: %d", ret);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -225,14 +225,14 @@ namespace tfs
       return ret;
     }
 
-    int MetaKvService::delete_object(ReqKvMetaDelObjectMessage* req_del_object_msg)
+    int KvMetaService::delete_object(ReqKvMetaDelObjectMessage* req_del_object_msg)
     {
       int ret = TFS_SUCCESS;
 
       if (NULL == req_del_object_msg)
       {
         ret = EXIT_INVALID_ARGU;
-        TBSYS_LOG(ERROR, "MetaKvService::del_object fail, ret: %d", ret);
+        TBSYS_LOG(ERROR, "KvMetaService::del_object fail, ret: %d", ret);
       }
 
       if (TFS_SUCCESS == ret)
@@ -251,14 +251,14 @@ namespace tfs
       return ret;
     }
 
-    int MetaKvService::put_bucket(ReqKvMetaPutBucketMessage* put_bucket_msg)
+    int KvMetaService::put_bucket(ReqKvMetaPutBucketMessage* put_bucket_msg)
     {
       int ret = TFS_SUCCESS;
 
       if (NULL == put_bucket_msg)
       {
         ret = EXIT_INVALID_ARGU;
-        TBSYS_LOG(ERROR, "MetaKvService::put_bucket fail, ret: %d", ret);
+        TBSYS_LOG(ERROR, "KvMetaService::put_bucket fail, ret: %d", ret);
       }
 
       if (TFS_SUCCESS == ret)
@@ -279,14 +279,14 @@ namespace tfs
       return ret;
     }
 
-    int MetaKvService::get_bucket(ReqKvMetaGetBucketMessage* get_bucket_msg)
+    int KvMetaService::get_bucket(ReqKvMetaGetBucketMessage* get_bucket_msg)
     {
       int ret = TFS_SUCCESS;
 
       if (NULL == get_bucket_msg)
       {
         ret = EXIT_INVALID_ARGU;
-        TBSYS_LOG(ERROR, "MetaKvService::get_bucket fail, ret: %d", ret);
+        TBSYS_LOG(ERROR, "KvMetaService::get_bucket fail, ret: %d", ret);
       }
 
       RspKvMetaGetBucketMessage* rsp = new RspKvMetaGetBucketMessage();
@@ -310,14 +310,14 @@ namespace tfs
       return ret;
     }
 
-    int MetaKvService::del_bucket(ReqKvMetaDelBucketMessage* del_bucket_msg)
+    int KvMetaService::del_bucket(ReqKvMetaDelBucketMessage* del_bucket_msg)
     {
       int ret = TFS_SUCCESS;
 
       if (NULL == del_bucket_msg)
       {
         ret = EXIT_INVALID_ARGU;
-        TBSYS_LOG(ERROR, "MetaKvService::del_bucket fail, ret: %d", ret);
+        TBSYS_LOG(ERROR, "KvMetaService::del_bucket fail, ret: %d", ret);
       }
 
       if (TFS_SUCCESS == ret)
@@ -337,5 +337,5 @@ namespace tfs
       return ret;
     }
 
-  }/** metawithkv **/
+  }/** kvmetaserver **/
 }/** tfs **/

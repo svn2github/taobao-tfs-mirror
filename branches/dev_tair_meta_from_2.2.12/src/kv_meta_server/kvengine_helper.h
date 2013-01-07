@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef TFS_METAWITHKV_KV_ENGINE_HELPER_H_
-#define TFS_METAWITHKV_KV_ENGINE_HELPER_H_
+#ifndef TFS_KVMETASERVER_KV_ENGINE_HELPER_H_
+#define TFS_KVMETASERVER_KV_ENGINE_HELPER_H_
 
 #include <string>
 #include <vector>

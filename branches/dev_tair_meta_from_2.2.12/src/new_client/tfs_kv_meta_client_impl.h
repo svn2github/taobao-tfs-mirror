@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <tbsys.h>
 #include "common/define.h"
-#include "common/meta_kv_define.h"
+#include "common/kv_meta_define.h"
 #include "tfs_meta_manager.h"
 #include "tfs_kv_meta_client_api.h"
 

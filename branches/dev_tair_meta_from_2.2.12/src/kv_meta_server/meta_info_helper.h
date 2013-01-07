@@ -14,13 +14,13 @@
  *
  */
 
-#ifndef TFS_METAWITHKV_META_INFO_HELPER_H_
-#define TFS_METAWITHKV_META_INFO_HELPER_H_
+#ifndef TFS_KVMETASERVER_META_INFO_HELPER_H_
+#define TFS_KVMETASERVER_META_INFO_HELPER_H_
 
 #include "common/parameter.h"
 #include "common/base_service.h"
 #include "common/status_message.h"
-#include "common/meta_kv_define.h"
+#include "common/kv_meta_define.h"
 #include "message/message_factory.h"
 #include "kvengine_helper.h"
 
