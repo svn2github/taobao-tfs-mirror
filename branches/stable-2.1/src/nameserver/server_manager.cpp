@@ -100,7 +100,6 @@ namespace tfs
 
     int ServerManager::remove(const uint64_t server, const time_t now)
     {
-      TBSYS_LOG(INFO, "dataserver: %s exit", tbsys::CNetUtil::addrToString(server).c_str());
       ServerCollect query(server);
       ServerCollect* object = NULL;
       rwmutex_.wrlock();
@@ -115,6 +114,8 @@ namespace tfs
 
       if (NULL != object)
       {
+        TBSYS_LOG(INFO, "dataserver: %s exit, now: %"PRI64_PREFIX"d, last_update_time: %"PRI64_PREFIX"d",
+            tbsys::CNetUtil::addrToString(server).c_str(), now, object->get_last_update_time());
         object->update_status();
         object->set_in_dead_queue_timeout(now);
 

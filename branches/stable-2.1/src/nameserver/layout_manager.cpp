@@ -607,13 +607,13 @@ namespace tfs
         {
           while ((get_server_manager().has_report_block_server()) && (!ngi.is_destroyed()))
           {
-            TBSYS_LOG(INFO, "HAS REPORT BLOCK SERVER: %"PRI64_PREFIX"d", get_server_manager().get_report_block_server_queue_size());
+            TBSYS_LOG(DEBUG, "HAS REPORT BLOCK SERVER: %"PRI64_PREFIX"d", get_server_manager().get_report_block_server_queue_size());
             usleep(1000);
           }
 
           while (((need = has_space_in_task_queue_()) <= 0) && (!ngi.is_destroyed()))
           {
-            TBSYS_LOG(INFO, "HAS SPACE IN TASK QUEUE: %"PRI64_PREFIX"d", need);
+            TBSYS_LOG(DEBUG, "HAS SPACE IN TASK QUEUE: %"PRI64_PREFIX"d", need);
             usleep(1000);
           }
 
@@ -681,20 +681,20 @@ namespace tfs
         {
           while ((get_server_manager().has_report_block_server()) && (!ngi.is_destroyed()))
           {
-            TBSYS_LOG(INFO, "HAS REPORT BLOCK SERVER: %"PRI64_PREFIX"d", get_server_manager().get_report_block_server_queue_size());
+            TBSYS_LOG(DEBUG, "HAS REPORT BLOCK SERVER: %"PRI64_PREFIX"d", get_server_manager().get_report_block_server_queue_size());
             usleep(1000);
           }
 
           while ((get_block_manager().has_emergency_replicate_in_queue()) && (!ngi.is_destroyed()) && sleep_nums++ <= MAX_SLEEP_NUMS)
           {
-            TBSYS_LOG(INFO, "HAS EMERGENCY REPLICATE IN QUEUE: %"PRI64_PREFIX"d, SLEEP NUM : %"PRI64_PREFIX"d",
+            TBSYS_LOG(DEBUG, "HAS EMERGENCY REPLICATE IN QUEUE: %"PRI64_PREFIX"d, SLEEP NUM : %"PRI64_PREFIX"d",
                 get_block_manager().get_emergency_replicate_queue_size(), sleep_nums);
             usleep(1000);
           }
 
           while (((need = has_space_in_task_queue_()) <= 0) && (!ngi.is_destroyed()))
           {
-            TBSYS_LOG(INFO, "HAS SPACE IN TASK QUEUE: %"PRI64_PREFIX"d", need);
+            TBSYS_LOG(DEBUG, "HAS SPACE IN TASK QUEUE: %"PRI64_PREFIX"d", need);
             usleep(1000);
           }
 

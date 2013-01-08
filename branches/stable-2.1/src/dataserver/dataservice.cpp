@@ -595,6 +595,7 @@ namespace tfs
       sleep(heart_interval);
       while (!stop_)
       {
+        TIMER_START();
         if (who % 2 == 0)
         {
           data_management_.get_ds_filesystem_info(data_server_info_.block_count_, data_server_info_.use_capacity_,
@@ -622,6 +623,8 @@ namespace tfs
         {
           usleep(heart_interval * 1000000);
         }
+        TIMER_END();
+        TBSYS_LOG(DEBUG, "keppalive %s, cost time: %"PRI64_PREFIX"d", tbsys::CNetUtil::addrToString(hb_ip_port_[who]).c_str(),TIMER_DURATION());
       }
       return TFS_SUCCESS;
     }
