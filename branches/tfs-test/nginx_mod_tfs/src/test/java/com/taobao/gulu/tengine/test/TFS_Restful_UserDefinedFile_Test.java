@@ -46,7 +46,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlDelFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/file" + "/file_201"+methodName;
 		String urlFile = urlDelFile + "?recursive=0";
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -86,7 +86,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlFile = url + "v2/" + tfsServer.getTfs_app_key() + "/2" + "/1"
 				+ "/file" + "/file_401";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -124,7 +124,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlFile = url + "v2/" + tfsServer.getTfs_app_key() + "/X" + "/1"
 				+ "/file" + "/file_400";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -163,7 +163,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1" + "/1"
 				+ "/file" + "/dir_404/file_404?recursive=0";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -202,7 +202,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 				+ "/file"
 				+ "/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403?recursive=0";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -241,7 +241,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlDelFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/file" + "/file_201"+methodName;
 		String urlFile = urlDelFile + "?recursive=0";
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -291,7 +291,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlDelFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/file" + "/file_201"+methodName;
 		String urlFile = urlDelFile + "?recursive=0";
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -334,7 +334,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlFile = url + "v2/" + tfsServer.getTfs_app_key() + "/X" + "/1"
 				+ "/file" + "/file_201";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -371,7 +371,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlFile = url + "v2/" + tfsServer.getTfs_app_key() + "/2" + "/1"
 				+ "/file" + "/dir_201";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -409,7 +409,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String url = NGINX.getRoot_url_adress();
 		String urlFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1" + "/1"
 				+ "/file" + "/dir_404";
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -458,7 +458,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlDelDestFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/file" + destFile;
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -523,7 +523,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlDelDestDir = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir" + "/paret_dir";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -584,7 +584,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlDelSrcFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/file" + srcFile;
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -644,7 +644,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlDelSrcFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/file" + srcFile;
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -713,7 +713,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlDelSrcFile = url2 + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/file" + srcFile;
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -766,7 +766,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlDestFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/file" + destFile;
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -825,7 +825,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlDelSrcFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/file" + srcFile;
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -891,7 +891,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlLs = url + "v2/" + tfsServer.getTfs_app_key() + "/metadata"
 				+ "/1" + "/1" + "/file" + "/dir_forlsfile/lsfile";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -956,7 +956,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlLs = url + "v2/" + tfsServer.getTfs_app_key() + "/metadata"
 				+ "/1" + "/1" + "/file" + "/dir_forlsfile/lsfile";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectGetMessage404 = new HashMap<String, String>();
@@ -997,7 +997,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlLs = url + "v2/" + tfsServer.getTfs_app_key() + "/metadata"
 				+ "/x" + "/1" + "/file" + "/dir_forlsfile/lsfile";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectGetMessage400 = new HashMap<String, String>();
@@ -1044,7 +1044,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlLs = url + "v2/" + tfsServer.getTfs_app_key() + "/x" + "/1"
 				+ "/file" + "/filename";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectGetMessage400 = new HashMap<String, String>();
@@ -1084,7 +1084,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlLs = url + "v2/" + tfsServer.getTfs_app_key() + "/1" + "/1"
 				+ "/file" + "/file_non_exist";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -1127,7 +1127,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlHeadFile = urlDelFile;
 		String urlFile = urlDelFile + "?recursive=0";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -1266,7 +1266,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 				+ "/1" + "/file" + "/file_201";
 		String urlFile = urlDelFile + "?offset=0&size=0";
 		String localFile = _2kFile;
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -1307,7 +1307,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 				+ "/1" + "/file" + "/file_201";
 		String urlFile = urlDelFile + "?offset=0&size=0";
 		String localFile = _2kFile;
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -1349,7 +1349,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 				+ "/1" + "/file" + "/file_201"+methodName;
 		String urlFile = urlDelFile + "?offset=0&size=0";
 		String localFile = _2kFile;
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -1390,7 +1390,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 				+ "/1" + "/file" + "/file_201"+methodName;
 		String urlFile = urlDelFile + "?offset=" + offset + "&size=" + size;
 		String localFile = _2kFile;
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage201 = new HashMap<String, String>();
@@ -1450,7 +1450,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 				+ "/1" + "/file" + "/file_201";
 		String urlFile = urlDelFile + "?offset=" + offset + "&size=" + size;
 		String localFile = _2kFile;
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage201 = new HashMap<String, String>();
@@ -1520,7 +1520,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlReadFile = url + "v2/" + tfsServer.getTfs_app_key() + "/x" + "/1" + "/file" + "/file_201";
 		
 		String localFile = _2kFile;
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage201 = new HashMap<String, String>();
@@ -1571,7 +1571,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String urlReadFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/file" + "/file_201xx"+methodName;
 		String localFile = _2kFile;
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage201 = new HashMap<String, String>();

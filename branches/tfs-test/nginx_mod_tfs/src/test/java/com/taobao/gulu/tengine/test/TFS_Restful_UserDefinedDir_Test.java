@@ -51,7 +51,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlMeta = url + "v2/" + tfsServer.getTfs_app_key() + "/1" + "/1"
 				+ "/dir" + "/dir_201create201";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -91,7 +91,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlMeta = url + "v2/" + tfsServer.getTfs_app_key() + "/2" + "/1"
 				+ "/dir" + "/dir_401";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -129,7 +129,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlMeta = url + "v2/" + tfsServer.getTfs_app_key() + "/X" + "/1"
 				+ "/dir" + "/dir_400";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -167,7 +167,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlMeta = url + "v2/" + tfsServer.getTfs_app_key() + "/1" + "/1"
 				+ "/dir" + "/dir_404/dir_404/";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -210,7 +210,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 				+ "/dir"
 				+ "/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403/dir_403";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -248,7 +248,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlMeta = url + "v2/" + tfsServer.getTfs_app_key() + "/X" + "/1"
 				+ "/dir" + "/dir_201";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -287,7 +287,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlMeta = url + "v2/" + tfsServer.getTfs_app_key() + "/2" + "/1"
 				+ "/dir" + "/dir_201";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -328,7 +328,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlMetaParent = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir" + "/dir_403";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -381,7 +381,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlMetaParent = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir/dir_403";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -433,7 +433,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 				+ "/dir" + "/dir_404/dir_404";
 		String urlMetaParent = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir" + "/dir_404";
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -479,7 +479,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlDestDir = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir" + destDir + "?recursive=0";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -538,7 +538,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		
 		
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -591,7 +591,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlSrcDir = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir" + srcDir;
 		String urlDestDir = urlSrcDir;
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -645,7 +645,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlDestDir = url + "v2/" + tfsServer.getTfs_app_key() + "/2"
 				+ "/1" + "/dir" + destDir + "?recursive=1";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -696,7 +696,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlDestDir = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir" + destDir + "?recursive=1";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -743,7 +743,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlSrcDir = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir" + srcDir;
 		String urlDestDir = urlSrcDir + "/son_dir";
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -792,7 +792,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 				+ "/1" + "/dir" + srcDir;
 		String urlDestDir = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir" + destDir;
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -846,7 +846,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 				+ "/1" + "/dir" + srcDir;
 		String urlDestDir = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir" + destDir;
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -902,7 +902,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlDestDir = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
 				+ "/1" + "/dir" + destDir;
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -966,7 +966,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlLs = url + "v2/" + tfsServer.getTfs_app_key() + "/metadata"
 				+ "/1" + "/1" + "/dir" + "/dir_200ls";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -1042,7 +1042,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlLs = url + "v2/" + tfsServer.getTfs_app_key() + "/metadata"
 				+ "/X" + "/1" + "/dir" + "/dir_201ls400";
 
-		try {		
+		try { restartMeta();		
 
 			System.out.println("the urlLs   is : " + urlLs);
 			/* do post file action */
@@ -1079,7 +1079,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlLs = url + "v2/" + tfsServer.getTfs_app_key() + "/metadata"
 				+ "/1" + "/1" + "/dir" + "/dir_201ls404";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -1139,7 +1139,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlMeta = url + "v2/" + tfsServer.getTfs_app_key() + "/X" + "/1"
 				+ "/dir" + "/dir_201";
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -1186,7 +1186,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 		String urlMeta = url + "v2/" + tfsServer.getTfs_app_key() + "/1" + "/1"
 				+ "/dir" + "/dir_201check404";
 
-		try {
+		try { restartMeta();
 
 	
 			// set expect response message
@@ -1225,7 +1225,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 				+ "/dir" + "/dir_201head200";
 
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();
@@ -1288,7 +1288,7 @@ public class TFS_Restful_UserDefinedDir_Test extends BaseCase {
 				+ "/dir_201head404" + "/name";
 
 
-		try {
+		try { restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage = new HashMap<String, String>();

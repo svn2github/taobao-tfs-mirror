@@ -53,7 +53,7 @@ public class TFS_Restful_UserDefinedAppId_Test extends BaseCase {
 		// expectGetMessage.put("Content-Type", "image/x-ms-bmp");
 		/* ---------------------------------------------- */
 
-		try {
+		try { restartMeta();
 
 			/* set get method request */
 			// setting request info
@@ -113,7 +113,7 @@ public class TFS_Restful_UserDefinedAppId_Test extends BaseCase {
 		// expectGetMessage.put("Content-Type", "image/x-ms-bmp");
 		/* ---------------------------------------------- */
 
-		try {
+		try { restartMeta();
 
 			/* set get method request */
 			// setting request info
@@ -163,7 +163,7 @@ public class TFS_Restful_UserDefinedAppId_Test extends BaseCase {
 		// expectGetMessage.put("Content-Type", "image/x-ms-bmp");
 		/* ---------------------------------------------- */
 
-		try {
+		try { restartMeta();
 
 			/* set get method request */
 			// setting request info
