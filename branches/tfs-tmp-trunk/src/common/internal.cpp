@@ -906,11 +906,11 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, value3_);
+        iret = common::Serialization::set_int64(data, data_len, pos, value3_);
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, value4_);
+        iret = common::Serialization::set_int64(data, data_len, pos, value4_);
       }
       if (common::TFS_SUCCESS == iret)
       {
@@ -921,7 +921,9 @@ namespace tfs
 
     int ClientCmdInformation::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      // change value3&value4 to 64bits, must compatible with old client
+      // int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      int32_t iret = TFS_SUCCESS;
       if (common::TFS_SUCCESS == iret)
       {
         iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&cmd_));
@@ -932,13 +934,13 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &value3_);
+        iret = common::Serialization::get_int64(data, data_len, pos, &value3_);
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &value4_);
+        iret = common::Serialization::get_int64(data, data_len, pos, &value4_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == iret && data_len > pos)
       {
         iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value2_));
       }
@@ -947,7 +949,7 @@ namespace tfs
 
     int64_t ClientCmdInformation::length() const
     {
-      return common::INT_SIZE * 3 + common::INT64_SIZE * 2;
+      return common::INT_SIZE + common::INT64_SIZE * 4;
     }
 
 
@@ -1752,12 +1754,12 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, update_size_);
+        ret = Serialization::set_int32(data, data_len, pos, update_file_count_);
       }
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, update_file_count_);
+        ret = Serialization::set_int32(data, data_len, pos, update_size_);
       }
 
       return ret;
@@ -1784,6 +1786,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::get_int32(data, data_len, pos, &file_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::get_int32(data, data_len, pos, &size_);
       }
 
@@ -1799,14 +1806,15 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &update_size_);
+        ret = Serialization::get_int32(data, data_len, pos, &update_file_count_);
       }
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &update_file_count_);
+        ret = Serialization::get_int32(data, data_len, pos, &update_size_);
       }
-      return ret;
+
+     return ret;
     }
 
     int64_t BlockInfoV2::length() const

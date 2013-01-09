@@ -777,8 +777,8 @@ namespace tfs
     {
       int64_t value1_;
       int64_t value2_;
-      int32_t value3_;
-      int32_t value4_;
+      int64_t value3_;
+      int64_t value4_;
       int32_t  cmd_;
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -1076,6 +1076,11 @@ namespace tfs
     	int32_t create_time_; // create time
     	uint16_t next_;      //next index
 
+      FileInfoV2()
+      {
+        id_ = INVALID_FILE_ID;
+      }
+
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
@@ -1103,6 +1108,12 @@ namespace tfs
       int32_t del_file_count_;
       int32_t update_size_;
       int32_t update_file_count_;
+
+      BlockInfoV2()
+      {
+        block_id_ = INVALID_BLOCK_ID;
+      }
+
       bool operator < (const BlockInfoV2& rhs) const
       {
         return block_id_ < rhs.block_id_;
