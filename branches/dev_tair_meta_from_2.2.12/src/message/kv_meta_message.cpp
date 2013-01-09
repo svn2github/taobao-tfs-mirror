@@ -42,30 +42,10 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         int64_t pos = 0;
-        iret = tfs_file_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        iret = object_info_.serialize(output.get_free(), output.get_free_length(), pos);
         if (common::TFS_SUCCESS == iret)
         {
-          output.pour(tfs_file_info_.length());
-        }
-      }
-
-      if (common::TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-        iret = object_meta_info_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (common::TFS_SUCCESS == iret)
-        {
-          output.pour(object_meta_info_.length());
-        }
-      }
-
-      if (common::TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-        iret = customize_info_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (common::TFS_SUCCESS == iret)
-        {
-          output.pour(customize_info_.length());
+          output.pour(object_info_.length());
         }
       }
 
@@ -84,30 +64,10 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         int64_t pos = 0;
-        iret = tfs_file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        iret = object_info_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (common::TFS_SUCCESS == iret)
         {
-          input.drain(tfs_file_info_.length());
-        }
-      }
-
-      if (common::TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-        iret = object_meta_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (common::TFS_SUCCESS == iret)
-        {
-          input.drain(object_meta_info_.length());
-        }
-      }
-
-      if (common::TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-        iret = customize_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (common::TFS_SUCCESS == iret)
-        {
-          input.drain(customize_info_.length());
+          input.drain(object_info_.length());
         }
       }
 
@@ -116,8 +76,9 @@ namespace tfs
 
     int64_t ReqKvMetaPutObjectMessage::length() const
     {
-      return common::Serialization::get_string_length(bucket_name_) + common::Serialization::get_string_length(file_name_)
-      + tfs_file_info_.length() + object_meta_info_.length() + customize_info_.length();
+      return common::Serialization::get_string_length(bucket_name_) +
+        common::Serialization::get_string_length(file_name_) +
+        object_info_.length();
     }
 
     //req_get_object_msg
@@ -166,24 +127,10 @@ namespace tfs
     int RspKvMetaGetObjectMessage::serialize(common::Stream& output) const
     {
       int64_t pos = 0;
-      int32_t iret = tfs_file_info_.serialize(output.get_free(), output.get_free_length(), pos);
+      int32_t iret = object_info_.serialize(output.get_free(), output.get_free_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {
-        output.pour(tfs_file_info_.length());
-      }
-
-      pos = 0;
-      iret = object_meta_info_.serialize(output.get_free(), output.get_free_length(), pos);
-      if (common::TFS_SUCCESS == iret)
-      {
-        output.pour(object_meta_info_.length());
-      }
-
-      pos = 0;
-      iret = customize_info_.serialize(output.get_free(), output.get_free_length(), pos);
-      if (common::TFS_SUCCESS == iret)
-      {
-        output.pour(customize_info_.length());
+        output.pour(object_info_.length());
       }
 
       return iret;
@@ -192,24 +139,10 @@ namespace tfs
     int RspKvMetaGetObjectMessage::deserialize(common::Stream& input)
     {
       int64_t pos = 0;
-      int32_t iret = tfs_file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+      int32_t iret = object_info_.deserialize(input.get_data(), input.get_data_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {
-        input.drain(tfs_file_info_.length());
-      }
-
-      pos = 0;
-      iret = object_meta_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-      if (common::TFS_SUCCESS == iret)
-      {
-        input.drain(object_meta_info_.length());
-      }
-
-      pos = 0;
-      iret = customize_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-      if (common::TFS_SUCCESS == iret)
-      {
-        input.drain(customize_info_.length());
+        input.drain(object_info_.length());
       }
 
       return iret;
@@ -217,7 +150,7 @@ namespace tfs
 
     int64_t RspKvMetaGetObjectMessage::length() const
     {
-      return tfs_file_info_.length() + object_meta_info_.length() + customize_info_.length();
+      return object_info_.length();
     }
 
 

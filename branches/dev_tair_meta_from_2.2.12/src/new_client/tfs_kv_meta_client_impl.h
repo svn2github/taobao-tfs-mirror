@@ -18,7 +18,6 @@
 
 #include <stdio.h>
 #include <tbsys.h>
-#include "common/define.h"
 #include "common/kv_meta_define.h"
 #include "tfs_meta_manager.h"
 #include "tfs_kv_meta_client_api.h"
@@ -33,8 +32,8 @@ namespace tfs
         KvMetaClientImpl();
         ~KvMetaClientImpl();
 
-        int initialize(const char *kms_addr);
-        int initialize(const int64_t kms_addr);
+        int initialize(const char *kms_addr, const char *ns_addr);
+        int initialize(const int64_t kms_addr, const char *ns_addr);
 
         TfsRetType put_bucket(const char *bucket_name);
         TfsRetType get_bucket(const char *bucket_name, const char* prefix,
@@ -42,6 +41,8 @@ namespace tfs
                               std::vector<std::string>& v_object_name);
         TfsRetType del_bucket(const char *bucket_name);
 
+        TfsRetType put_object(const char *bucket_name, const char *object_name,
+            const void *buffer, int64_t offset, int64_t length);
         TfsRetType put_object(const char *bucket_name, const char *object_name,
             const char* local_file);
         TfsRetType get_object(const char *bucket_name, const char *object_name,
@@ -55,21 +56,23 @@ namespace tfs
         int do_del_bucket(const char *bucket_name);
 
         int do_put_object(const char *bucket_name, const char *object_name,
-                          const common::TfsFileInfo &tfs_file_info,
-                          const common::ObjectMetaInfo &object_meta_info,
-                          const common::CustomizeInfo &customize_info);
+                          const common::ObjectInfo &object_info);
         int do_get_object(const char *bucket_name, const char *object_name,
-                          common::TfsFileInfo& tfs_file_info,
-                          common::ObjectMetaInfo &object_meta_info,
-                          common::CustomizeInfo &customize_info);
+                          common::ObjectInfo *object_info);
         int do_del_object(const char *bucket_name, const char *object_name);
 
-        bool is_valid_file_path(const char *file_path);
         bool is_valid_bucket_name(const char *bucket_name);
+        bool is_valid_object_name(const char *object_name);
+
+      private:
+        int64_t write_data(const char *ns_addr,
+            const void *buffer, int64_t offset, int64_t length,
+            std::vector<common::FragMeta> *v_frag_meta);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClientImpl);
         uint64_t kms_id_;
+        std::string ns_addr_;
         common::BasePacketFactory* packet_factory_;
         common::BasePacketStreamer* packet_streamer_;
         TfsMetaManager tfs_meta_manager_;

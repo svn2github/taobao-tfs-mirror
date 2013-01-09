@@ -87,7 +87,6 @@ namespace tfs
     const common::TfsFileInfo& tfs_file_info, const common::ObjectMetaInfo& object_meta_info,
     const common::CustomizeInfo& customize_info)
     {
-
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
       //op key
       string real_key(bucket_name + KvKey::DELIMITER + file_name);
@@ -110,15 +109,15 @@ namespace tfs
       int64_t pos = 0;
       if(TFS_SUCCESS == ret)
       {
-        ret =  tfs_file_info.serialize(tair_value_object_info_buff, TAIR_VALUE_BUFF_SIZE, pos);
+        ret = tfs_file_info.serialize(tair_value_object_info_buff, TAIR_VALUE_BUFF_SIZE, pos);
       }
       if(TFS_SUCCESS == ret)
       {
-        ret =  object_meta_info.serialize(tair_value_object_info_buff, TAIR_VALUE_BUFF_SIZE, pos);
+        ret = object_meta_info.serialize(tair_value_object_info_buff, TAIR_VALUE_BUFF_SIZE, pos);
       }
       if(TFS_SUCCESS == ret)
       {
-        ret =  customize_info.serialize(tair_value_object_info_buff, TAIR_VALUE_BUFF_SIZE, pos);
+        ret = customize_info.serialize(tair_value_object_info_buff, TAIR_VALUE_BUFF_SIZE, pos);
       }
       if(TFS_SUCCESS == ret)
       {
@@ -152,33 +151,33 @@ namespace tfs
       int64_t pos = 0;
       if(TFS_SUCCESS == ret)
       {
-        ret =  p_tfs_file_info->deserialize(value.c_str(), value.size(), pos);
+        ret = p_tfs_file_info->deserialize(value.c_str(), value.size(), pos);
       }
       if(TFS_SUCCESS == ret)
       {
-        ret =  p_object_meta_info->deserialize(value.c_str(), value.size(), pos);
+        ret = p_object_meta_info->deserialize(value.c_str(), value.size(), pos);
       }
       if(TFS_SUCCESS == ret)
       {
-        ret =  p_customize_info->deserialize(value.c_str(), value.size(), pos);
+        ret = p_customize_info->deserialize(value.c_str(), value.size(), pos);
       }
       return ret;
     }
 
-    int MetaInfoHelper::delete_object(const std::string& bucket_name, const std::string& file_name)
+    int MetaInfoHelper::del_object(const std::string& bucket_name, const std::string& file_name)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
       string real_key(bucket_name + KvKey::DELIMITER + file_name);
-        real_key += KvKey::DELIMITER;
-        real_key += "0" ; //version_id;
-        real_key += KvKey::DELIMITER;
-        real_key += "0" ; //offset;
+      real_key += KvKey::DELIMITER;
+      real_key += "0" ; //version_id;
+      real_key += KvKey::DELIMITER;
+      real_key += "0" ; //offset;
 
-        KvKey key;
-        key.key_ = real_key.c_str();
-        key.key_size_ = real_key.length();
-        key.key_type_ = KvKey::KEY_TYPE_OBJECT;
-        ret = kv_engine_helper_->delete_key(key);
+      KvKey key;
+      key.key_ = real_key.c_str();
+      key.key_size_ = real_key.length();
+      key.key_type_ = KvKey::KEY_TYPE_OBJECT;
+      ret = kv_engine_helper_->delete_key(key);
 
       return ret;
     }

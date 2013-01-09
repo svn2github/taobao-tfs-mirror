@@ -130,6 +130,7 @@ namespace tfs
 
     static const int64_t MIN_GC_EXPIRED_TIME = 21600000; // 6h
     static const int64_t MAX_SEGMENT_SIZE = 1 << 21; // 2M
+    static const int64_t MAX_BATCH_DATA_LENGTH = 1 << 23; // 8M
     static const int64_t MAX_BATCH_COUNT = 16;
 
     static const int32_t MAX_DEV_TAG_LEN = 8;
@@ -831,7 +832,6 @@ namespace tfs
       CLEAR_SYSTEM_TABLE_FLAG_REPORT_SERVER = 1 << 2,
       CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE  = 1 << 3
     }ClearSystemTableFlag;
-
     extern const char* dynamic_parameter_str[31];
 
     // defined type typedef

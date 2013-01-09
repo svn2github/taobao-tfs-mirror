@@ -163,7 +163,7 @@ int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_nam
 }
 
 int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_name,const char *object_name,
-    const TfsFileInfo &tfs_file_info, const ObjectMetaInfo &object_meta_info, const CustomizeInfo &customize_info)
+    const ObjectInfo &object_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name || NULL == object_name)
@@ -175,9 +175,7 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
     ReqKvMetaPutObjectMessage req_po_msg;
     req_po_msg.set_bucket_name(bucket_name);
     req_po_msg.set_file_name(object_name);
-    req_po_msg.set_tfs_file_info(tfs_file_info);
-    req_po_msg.set_object_meta_info(object_meta_info);
-    req_po_msg.set_customize_info(customize_info);
+    req_po_msg.set_object_info(object_info);
 
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
@@ -212,7 +210,7 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
 }
 
 int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_name, const char *object_name,
-  TfsFileInfo &tfs_file_info, ObjectMetaInfo &object_meta_info, CustomizeInfo &customize_info)
+  ObjectInfo *object_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name || NULL == object_name)
@@ -239,10 +237,7 @@ int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_nam
     else if (RSP_KVMETA_GET_OBJECT_MESSAGE == rsp->getPCode())
     {
       RspKvMetaGetObjectMessage* rsp_go_msg = dynamic_cast<RspKvMetaGetObjectMessage*>(rsp);
-      tfs_file_info = rsp_go_msg->get_tfs_file_info();
-      object_meta_info = rsp_msg->get_object_meta_info();
-      customize_info = rsp_msg->get_customize_info();
-
+      *object_info = rsp_go_msg->get_object_info();
     }
     else if (STATUS_MESSAGE == rsp->getPCode())
     {

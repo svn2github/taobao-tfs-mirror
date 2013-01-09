@@ -170,7 +170,7 @@ namespace tfs
             ret = prefix_remove_from_tair(object_area_, pkey, skey);
           }
         }
-          break;
+        break;
         case KvKey::KEY_TYPE_BUCKET:
         {
           data_entry pkey(key.key_);
@@ -179,10 +179,12 @@ namespace tfs
           ret = tair_client_->get_range(object_area_, pkey, "", "", 0, limit, res);
           if (TAIR_RETURN_DATA_NOT_EXIST == ret)
           {
+            TBSYS_LOG(DEBUG, "bucket: %s is empty", key.key_);
             ret = TFS_SUCCESS;
           }
           else
           {
+            TBSYS_LOG(ERROR, "delete bucket: %s failed! bucket is not empty", key.key_);
             ret = EXIT_DELETE_DIR_WITH_FILE_ERROR;
             for (size_t i = 0; i < res.size(); i++)
             {
@@ -195,10 +197,10 @@ namespace tfs
             ret = tair_client_->remove(object_area_, pkey);
           }
         }
-          break;
+        break;
         default:
-         TBSYS_LOG(ERROR, "not support");
-         break;
+          TBSYS_LOG(ERROR, "not support");
+        break;
       }
       return ret;
     }

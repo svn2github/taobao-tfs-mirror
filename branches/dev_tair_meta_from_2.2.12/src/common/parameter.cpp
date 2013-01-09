@@ -533,10 +533,10 @@ namespace tfs
         return TFS_ERROR;
       }
 
-      tair_master_ = config.getString(CONF_SN_KVMEAT, CONF_TAIR_MASTER, "");
-      tair_slave_ = config.getString(CONF_SN_KVMEAT, CONF_TAIR_SLAVE, "");
-      tair_group_ = config.getString(CONF_SN_KVMEAT, CONF_TAIR_GROUP, "");
-      tair_object_area_ = config.getInt(CONF_SN_KVMEAT, CONF_TAIR_OBJECT_AREA, -1);
+      tair_master_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_MASTER, "");
+      tair_slave_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_SLAVE, "");
+      tair_group_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_GROUP, "");
+      tair_object_area_ = config.getInt(CONF_SN_KVMETA, CONF_TAIR_OBJECT_AREA, -1);
 
       return TFS_SUCCESS;
     }

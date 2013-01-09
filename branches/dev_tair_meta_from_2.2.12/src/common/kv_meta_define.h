@@ -16,8 +16,9 @@
 #ifndef TFS_COMMON_KV_META_DEFINE_H_
 #define TFS_COMMON_KV_META_DEFINE_H_
 
-#include "define.h"
 #include <string>
+#include "define.h"
+#include "meta_define.h"
 
 namespace tfs
 {
@@ -26,6 +27,7 @@ namespace tfs
     const char PERIOD = '.';
     const char DASH = '-';
     const int32_t MAX_LIMIT = 1000;
+
     struct TfsFileInfo
     {
       TfsFileInfo();
@@ -59,6 +61,21 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
 
       std::string otag_;
+    };
+
+    struct ObjectInfo
+    {
+      ObjectInfo();
+      int64_t length() const;
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+
+      int64_t offset_;
+      bool has_meta_info_;
+      bool has_customize_info_;
+      ObjectMetaInfo object_meta_info_;
+      TfsFileInfo tfs_file_info_;
+      CustomizeInfo customize_info_;
     };
 
     struct BucketMetaInfo

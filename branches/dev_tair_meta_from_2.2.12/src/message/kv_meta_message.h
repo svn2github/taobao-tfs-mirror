@@ -43,19 +43,9 @@ namespace tfs
           return file_name_;
         }
 
-        const common::TfsFileInfo& get_tfs_file_info() const
+        const common::ObjectInfo& get_object_info() const
         {
-          return tfs_file_info_;
-        }
-
-        const common::ObjectMetaInfo& get_object_meta_info() const
-        {
-          return object_meta_info_;
-        }
-
-        const common::CustomizeInfo& get_customize_info() const
-        {
-          return customize_info_;
+          return object_info_;
         }
 
         void set_bucket_name(const std::string& bucket_name)
@@ -68,27 +58,15 @@ namespace tfs
           file_name_ = file_name;
         }
 
-        void set_tfs_file_info(const common::TfsFileInfo& tfs_file_info)
+        void set_object_info(const common::ObjectInfo& object_info)
         {
-          tfs_file_info_ = tfs_file_info;
-        }
-
-        void set_object_meta_info(const common::ObjectMetaInfo& object_meta_info)
-        {
-          object_meta_info_ = object_meta_info;
-        }
-
-        void set_customize_info(const common::CustomizeInfo& customize_info)
-        {
-          customize_info_ = customize_info;
+          object_info_ = object_info;
         }
 
       private:
         std::string bucket_name_;
         std::string file_name_;
-        common::TfsFileInfo tfs_file_info_;
-        common::ObjectMetaInfo object_meta_info_;
-        common::CustomizeInfo customize_info_;
+        common::ObjectInfo object_info_;
     };
 
     class ReqKvMetaGetObjectMessage : public common::BasePacket
@@ -134,39 +112,18 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        const common::TfsFileInfo& get_tfs_file_info() const
+        const common::ObjectInfo& get_object_info() const
         {
-          return tfs_file_info_;
+          return object_info_;
         }
 
-        const common::ObjectMetaInfo& get_object_meta_info() const
+        void set_object_info(const common::ObjectInfo& object_info)
         {
-          return object_meta_info_;
+          object_info_ = object_info;
         }
 
-        const common::CustomizeInfo& get_customize_info() const
-        {
-          return customize_info_;
-        }
-
-        void set_tfs_file_info(const common::TfsFileInfo& tfs_file_info)
-        {
-          tfs_file_info_ = tfs_file_info;
-        }
-
-        void set_object_meta_info(const common::ObjectMetaInfo& object_meta_info)
-        {
-          object_meta_info_ = object_meta_info;
-        }
-
-        void set_customize_info(const common::CustomizeInfo& customize_info)
-        {
-          customize_info_ = customize_info;
-        }
       private:
-        common::TfsFileInfo tfs_file_info_;
-        common::ObjectMetaInfo object_meta_info_;
-        common::CustomizeInfo customize_info_;
+        common::ObjectInfo object_info_;
     };
 
     class ReqKvMetaDelObjectMessage : public common::BasePacket

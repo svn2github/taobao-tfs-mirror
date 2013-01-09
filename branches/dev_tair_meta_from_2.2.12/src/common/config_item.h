@@ -31,7 +31,7 @@ namespace tfs
 #define CONF_SN_NAMEMETASERVER                        "metaserver"
 #define CONF_SN_ROOTSERVER                            "rootserver"
 #define CONF_SN_CHECKSERVER                           "checkserver"
-#define CONF_SN_KVMEAT                                "kvmetaserver"
+#define CONF_SN_KVMETA                                "kvmetaserver"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"

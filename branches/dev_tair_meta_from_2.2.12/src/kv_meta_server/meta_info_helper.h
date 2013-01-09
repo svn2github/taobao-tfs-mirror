@@ -58,8 +58,8 @@ namespace tfs
                      common::ObjectMetaInfo* p_object_meta_info,
                      common::CustomizeInfo* p_customize_info);
 
-      int delete_object(const std::string& bucket_name,
-                        const std::string& file_name);
+      int del_object(const std::string& bucket_name,
+                     const std::string& file_name);
 
     /*----------------------------bucket part-----------------------------*/
     int put_bucket(const std::string& bucket_name, const int64_t create_time);

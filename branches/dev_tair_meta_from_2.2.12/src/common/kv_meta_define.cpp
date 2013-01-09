@@ -20,7 +20,6 @@ namespace tfs
 {
   namespace common
   {
-
     TfsFileInfo::TfsFileInfo()
       :block_id_(0), file_id_(0), cluster_id_(0)
     { }
@@ -151,8 +150,84 @@ namespace tfs
       return ret;
     }
 
+    //object meta info
+    ObjectInfo::ObjectInfo()
+    :offset_(0), has_meta_info_(false), has_customize_info_(false)
+    {}
+
+    int64_t ObjectInfo::length() const
+    {
+      return INT8_SIZE * 2 + INT64_SIZE + tfs_file_info_.length() +
+          has_meta_info_ ? object_meta_info_.length() : 0 + has_customize_info_ ? customize_info_.length() : 0;
+    }
+
+    int ObjectInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, offset_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = tfs_file_info_.serialize(data, data_len, pos);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int8(data, data_len, pos, has_meta_info_);
+      }
+      if (TFS_SUCCESS == ret && has_meta_info_)
+      {
+        ret = object_meta_info_.serialize(data, data_len, pos);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int8(data, data_len, pos, has_customize_info_);
+      }
+      if (TFS_SUCCESS == ret && has_customize_info_)
+      {
+        ret = customize_info_.serialize(data, data_len, pos);
+      }
+
+      return ret;
+    }
+
+    int ObjectInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &offset_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = tfs_file_info_.deserialize(data, data_len, pos);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&has_meta_info_));
+      }
+      if (TFS_SUCCESS == ret && has_meta_info_)
+      {
+        ret = object_meta_info_.deserialize(data, data_len, pos);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&has_customize_info_));
+      }
+      if (TFS_SUCCESS == ret && has_customize_info_)
+      {
+        ret = customize_info_.deserialize(data, data_len, pos);
+      }
+
+      return ret;
+    }
+
     //bucketmetainfo
     BucketMetaInfo::BucketMetaInfo()
+    :create_time_(0)
     {}
 
     int64_t BucketMetaInfo::length() const

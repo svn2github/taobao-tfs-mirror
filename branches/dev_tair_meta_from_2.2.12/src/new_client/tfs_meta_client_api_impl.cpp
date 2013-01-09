@@ -514,7 +514,7 @@ namespace tfs
     {
       int ret = TFS_ERROR;
       int fd = -1;
-      int64_t read_len = 0, write_len = 0, pos = 0, off_set = 0;
+      int64_t read_len = 0, write_len = 0, offset = 0;
       if (!is_valid_file_path(tfs_name))
       {
         TBSYS_LOG(ERROR, "file name is invalid ");
@@ -552,18 +552,16 @@ namespace tfs
           {
             break;
           }
-          pos = 0;
           while (read_len > 0)
           {
-            write_len = write(ns_addr, app_id, uid, tfs_name, buf, off_set, read_len);
+            write_len = write(ns_addr, app_id, uid, tfs_name, buf, offset, read_len);
             if (write_len <= 0)
             {
               TBSYS_LOG(ERROR, "write to tfs fail");
               ret = write_len;
               break;
             }
-            off_set += write_len;
-            pos += write_len;
+            offset += write_len;
             read_len -= write_len;
           }
         }
@@ -580,7 +578,7 @@ namespace tfs
         ::close(fd);
       }
 
-      return ret != TFS_SUCCESS ? ret : off_set;
+      return ret != TFS_SUCCESS ? ret : offset;
     }
 
     int64_t NameMetaClientImpl::fetch_file(const char* ns_addr, int64_t app_id, int64_t uid, const char* local_file, const char* tfs_name)

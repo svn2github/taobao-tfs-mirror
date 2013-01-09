@@ -1175,6 +1175,7 @@ namespace tfs
       std::cout << "max mmap size " << mmap_option_.max_mmap_size_ << std::endl;
       std::cout << "version " << version_ << std::endl;
     }
+
     const char* dynamic_parameter_str[31] = {
         "log_level",
         "plan_run_flag",

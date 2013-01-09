@@ -65,7 +65,7 @@ namespace tfs
       if (work_dir != NULL)
       {
         log_file_path_ = work_dir;
-        log_file_path_ += "/logs/kv_meta";
+        log_file_path_ += "/logs/kvmetaserver";
         log_file_path_ +=  ".log";
         log_file_path = log_file_path_.c_str();
       }
@@ -79,7 +79,7 @@ namespace tfs
       if (work_dir != NULL)
       {
         pid_file_path_ = work_dir;
-        pid_file_path_ += "/logs/kv_meta";
+        pid_file_path_ += "/logs/kvmetaserver";
         pid_file_path_ += ".pid";
         pid_file_path = pid_file_path_.c_str();
       }
@@ -134,7 +134,7 @@ namespace tfs
             ret = get_object(dynamic_cast<ReqKvMetaGetObjectMessage*>(base_packet));
             break;
           case REQ_KVMETA_DEL_OBJECT_MESSAGE:
-            ret = delete_object(dynamic_cast<ReqKvMetaDelObjectMessage*>(base_packet));
+            ret = del_object(dynamic_cast<ReqKvMetaDelObjectMessage*>(base_packet));
             break;
           case REQ_KVMETA_PUT_BUCKET_MESSAGE:
             ret = put_bucket(dynamic_cast<ReqKvMetaPutBucketMessage*>(base_packet));
@@ -173,14 +173,15 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ObjectInfo object_info = req_put_object_msg->get_object_info();
         ret = meta_info_helper_.put_object(req_put_object_msg->get_bucket_name(), req_put_object_msg->get_file_name(),
-        req_put_object_msg->get_tfs_file_info(), req_put_object_msg->get_object_meta_info(),
-        req_put_object_msg->get_customize_info());
+          object_info.tfs_file_info_, object_info.object_meta_info_,
+          object_info.customize_info_);
       }
 
       if (TFS_SUCCESS != ret)
       {
-        ret = req_put_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+        ret = req_put_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "put object fail");
       }
       else
       {
@@ -200,32 +201,28 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        common::TfsFileInfo tfs_file_info;
-        common::ObjectMetaInfo object_meta_info;
-        common::CustomizeInfo customize_info;
+        common::ObjectInfo object_info;
 
         ret = meta_info_helper_.get_object(req_get_object_msg->get_bucket_name(), req_get_object_msg->get_file_name(),
-                                        &tfs_file_info, &object_meta_info, &customize_info );
+                                        &object_info.tfs_file_info_, &object_info.object_meta_info_, &object_info.customize_info_);
         if (TFS_SUCCESS == ret)
         {
           RspKvMetaGetObjectMessage* rsp_get_object_msg = new(std::nothrow) RspKvMetaGetObjectMessage();
           assert(NULL != rsp_get_object_msg);
-          rsp_get_object_msg->set_tfs_file_info(tfs_file_info);
-          rsp_get_object_msg->set_object_meta_info(object_meta_info);
-          rsp_get_object_msg->set_customize_info(customize_info);
+          rsp_get_object_msg->set_object_info(object_info);
 
           req_get_object_msg->reply(rsp_get_object_msg);
         }
         else
         {
           req_get_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO),
-               ret,  "get object error ret %d", ret);
+               ret, "get object fail");
         }
       }
       return ret;
     }
 
-    int KvMetaService::delete_object(ReqKvMetaDelObjectMessage* req_del_object_msg)
+    int KvMetaService::del_object(ReqKvMetaDelObjectMessage* req_del_object_msg)
     {
       int ret = TFS_SUCCESS;
 
@@ -237,12 +234,12 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = meta_info_helper_.delete_object(req_del_object_msg->get_bucket_name(), req_del_object_msg->get_file_name());
+        ret = meta_info_helper_.del_object(req_del_object_msg->get_bucket_name(), req_del_object_msg->get_file_name());
       }
 
       if (TFS_SUCCESS != ret)
       {
-        ret = req_del_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+        ret = req_del_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "del object fail");
       }
       else
       {
@@ -269,7 +266,7 @@ namespace tfs
 
       if (TFS_SUCCESS != ret)
       {
-        ret = put_bucket_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+        ret = put_bucket_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "put bucket fail");
       }
       else
       {
@@ -299,7 +296,7 @@ namespace tfs
 
       if (TFS_SUCCESS != ret)
       {
-        ret = get_bucket_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+        ret = get_bucket_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "get bucket fail");
         tbsys::gDelete(rsp);
       }
       else
@@ -327,7 +324,7 @@ namespace tfs
 
       if (TFS_SUCCESS != ret)
       {
-        ret = del_bucket_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+        ret = del_bucket_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "del bucket fail");
       }
       else
       {
