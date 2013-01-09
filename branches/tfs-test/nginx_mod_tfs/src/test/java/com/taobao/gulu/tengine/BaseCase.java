@@ -146,7 +146,7 @@ public class BaseCase {
 	protected static final String START_NS_DS_T1B_BACKUP_036202 = "sh /home/gongyuan.cz/start_T1B_backup_TFS.sh";
 	protected static final String START_NS_DS_T1B_BACKUP_036209 = "sh /home/gongyuan.cz/start_T1B_backup_TFS.sh";
 	protected static final String START_NS_DS_T1B_BACKUP_036210 = "sh /home/gongyuan.cz/start_T1B_backup_TFS.sh";
-	
+	protected static final String RESTART_META = "sh /home/gongyuan.cz/restart_meta.sh";
 	
 	private static void init() {
 		// init tfs
@@ -368,4 +368,10 @@ public class BaseCase {
 		TimeUnit.SECONDS.sleep(15);
 	}
 
+	protected void restartMeta()throws Exception
+	{
+		VerifyTool tools = new VerifyTool();
+		tools.verifyCMDWithDumbPTY(SERVER036202,RESTART_META,"","");
+		TimeUnit.SECONDS.sleep(2);
+	}
 }
