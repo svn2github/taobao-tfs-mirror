@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.taobao.gulu.database.TFS;
@@ -67,7 +68,7 @@ public class TFS_Restful_RcServer_Test_Keepalive_Test extends BaseCase
 		catch (Exception e) 
 		{
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 		
 		finally
@@ -80,7 +81,7 @@ public class TFS_Restful_RcServer_Test_Keepalive_Test extends BaseCase
 			catch (Exception e) 
 			{
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 		}
 		

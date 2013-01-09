@@ -74,7 +74,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -218,7 +218,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -348,7 +348,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -479,7 +479,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -611,7 +611,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -746,7 +746,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -881,7 +881,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			TimeUnit.SECONDS.sleep(20);
@@ -1017,7 +1017,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -1152,7 +1152,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -1286,7 +1286,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -1421,7 +1421,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -1497,7 +1497,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -1572,7 +1572,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -1647,7 +1647,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -1722,7 +1722,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -1858,7 +1858,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			TimeUnit.SECONDS.sleep(20);
@@ -1994,7 +1994,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			TimeUnit.SECONDS.sleep(20);

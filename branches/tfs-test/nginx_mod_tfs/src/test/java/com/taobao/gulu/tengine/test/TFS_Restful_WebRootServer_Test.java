@@ -44,7 +44,7 @@ public class TFS_Restful_WebRootServer_Test extends BaseCase {
 	/*
 	 * create file ·µ»Ø201
 	 */
-	@Test
+	//@Test
 	public void test_TFS_RestfulUserDefinedCreateFileReturn201Test() {
 
 		VerifyTool tools = new VerifyTool();

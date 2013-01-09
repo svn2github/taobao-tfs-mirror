@@ -129,7 +129,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 	
@@ -280,7 +280,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 
@@ -370,7 +370,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 	
@@ -582,7 +582,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 //			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* recover mysql */
 			try {
@@ -593,7 +593,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 				TimeUnit.SECONDS.sleep(15);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 		}
 	}
@@ -821,7 +821,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* recover mysql */
 			try {
@@ -832,7 +832,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 				NGINX.restart();
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 		}
 	}
@@ -1046,7 +1046,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* recover mysql */
 			try {
@@ -1057,7 +1057,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 				NGINX.restart();
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 		}
 	}
@@ -1275,7 +1275,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* recover mysql */
 			try
@@ -1288,7 +1288,7 @@ public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase
 				TimeUnit.SECONDS.sleep(15);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 		}
 	}

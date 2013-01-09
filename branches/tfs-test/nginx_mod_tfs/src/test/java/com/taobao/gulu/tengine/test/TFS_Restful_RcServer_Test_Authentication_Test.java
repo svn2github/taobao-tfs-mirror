@@ -258,7 +258,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* recover mysql */
 			try {
@@ -270,7 +270,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 				TimeUnit.SECONDS.sleep(15);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 		}
 	}
@@ -518,7 +518,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* recover mysql */
 			try {
@@ -530,7 +530,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 				TimeUnit.SECONDS.sleep(15);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 		}
 	}
@@ -777,7 +777,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* recover mysql */
 			try {
@@ -789,7 +789,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 				TimeUnit.SECONDS.sleep(15);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 		}
 	}
@@ -1007,7 +1007,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* recover mysql */
 			try {
@@ -1019,7 +1019,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 				TimeUnit.SECONDS.sleep(15);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 		}
 	}

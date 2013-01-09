@@ -86,7 +86,7 @@ public class TFS_Restful_Stat_File_Test_File_Test extends BaseCase
 			catch (Exception e) 
 			{
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			} 
 			finally 
 			{
@@ -224,7 +224,7 @@ public class TFS_Restful_Stat_File_Test_File_Test extends BaseCase
 			catch (Exception e) 
 			{
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			} 
 			finally 
 			{

@@ -8,6 +8,7 @@ import java.util.Map;
 
 import net.sf.json.JSONArray;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.taobao.gulu.database.TFS;
@@ -67,17 +68,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 					expectDeleteMessage);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -114,17 +106,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -161,17 +144,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -205,17 +179,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -257,16 +222,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 
@@ -312,17 +268,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 					expectDeleteMessage);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -369,16 +316,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 					expectDeleteMessage);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 
@@ -415,17 +353,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 					expectDeleteMessage);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -463,17 +392,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 					expectDeleteMessage);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -510,17 +430,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 					expectDeleteMessage);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -580,17 +491,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -656,17 +558,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -724,16 +617,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 
@@ -793,16 +677,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 
@@ -869,17 +744,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -929,17 +795,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -1006,20 +863,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-			// set expect response message
-
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -1091,17 +936,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -1141,16 +977,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 
@@ -1191,17 +1018,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -1247,17 +1065,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -1296,16 +1105,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 
@@ -1358,17 +1158,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -1421,21 +1212,9 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		catch (Exception e) 
 		{
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		} 
-		finally 
-		{
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) 
-			{
-				for (String key : put2TfsKeys) 
-				{
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+		
 	}
 
 	/*
@@ -1511,17 +1290,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	// return 401 无权限
@@ -1561,16 +1331,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 
@@ -1611,17 +1372,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 			tools.verifyResponse(setDeleteMethod(urlDelFile), expecMessage404);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	// return 409 写偏移已存在数据
@@ -1671,17 +1423,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 			tools.verifyResponse(setDeleteMethod(urlDelFile), expecMessage200);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	/*
@@ -1734,17 +1477,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 			tools.verifyResponse(setDeleteMethod(urlDelFile), expecMessage200);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 	public void test_TFS_RestfulUserDefinedReadFileReturn200Offset200Size200Test() {
@@ -1816,17 +1550,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 			tools.verifyResponse(setDeleteMethod(urlDelFile), expecMessage200);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 	
 	@Test
@@ -1867,17 +1592,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
-					System.out.println("tfsFileName for delete is " + key);
-					tfsServer.delete(key, null);
-				}
-			}
-			put2TfsKeys.clear();
-		}
+			e.printStackTrace(); Assert.assertTrue(false);
+		} 
 	}
 
 }

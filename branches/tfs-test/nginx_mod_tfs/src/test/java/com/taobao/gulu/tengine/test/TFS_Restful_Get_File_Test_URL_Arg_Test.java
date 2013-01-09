@@ -89,7 +89,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			TimeUnit.SECONDS.sleep(20);
@@ -280,7 +280,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix1);
@@ -396,7 +396,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -482,7 +482,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -559,7 +559,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -634,7 +634,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -710,7 +710,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}finally{
 				/* do delete tfs file */
 				System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -786,7 +786,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}finally{
 				/* do delete tfs file */
 				System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -892,7 +892,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}finally{
 				/* do delete tfs file */
 				System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -969,7 +969,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}finally{
 				/* do delete tfs file */
 				System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1064,7 +1064,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1158,7 +1158,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1252,7 +1252,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1346,7 +1346,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1439,7 +1439,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1534,7 +1534,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1628,7 +1628,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1721,7 +1721,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1814,7 +1814,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1907,7 +1907,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -1986,7 +1986,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2068,7 +2068,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2151,7 +2151,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2233,7 +2233,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2310,7 +2310,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2387,7 +2387,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2464,7 +2464,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2542,7 +2542,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2622,7 +2622,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2700,7 +2700,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2801,7 +2801,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2888,7 +2888,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -2967,7 +2967,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -3046,7 +3046,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -3125,7 +3125,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -3204,7 +3204,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -3274,7 +3274,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			
@@ -3342,7 +3342,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			
@@ -3410,7 +3410,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			
@@ -3537,7 +3537,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -3640,7 +3640,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -3744,7 +3744,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -3835,7 +3835,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -3926,7 +3926,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -4014,7 +4014,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -4103,7 +4103,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -4201,7 +4201,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			TimeUnit.SECONDS.sleep(20);
@@ -4296,7 +4296,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -4391,7 +4391,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -4488,7 +4488,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -4583,7 +4583,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -4680,7 +4680,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -4780,7 +4780,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -4880,7 +4880,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
@@ -4980,7 +4980,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);

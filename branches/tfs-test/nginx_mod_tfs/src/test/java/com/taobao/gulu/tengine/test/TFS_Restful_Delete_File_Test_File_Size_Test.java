@@ -132,7 +132,7 @@ public class TFS_Restful_Delete_File_Test_File_Size_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 
@@ -256,7 +256,7 @@ public class TFS_Restful_Delete_File_Test_File_Size_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 	
@@ -379,7 +379,7 @@ public class TFS_Restful_Delete_File_Test_File_Size_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 	
@@ -548,7 +548,7 @@ public class TFS_Restful_Delete_File_Test_File_Size_Test extends BaseCase {
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		}
 	}
 }

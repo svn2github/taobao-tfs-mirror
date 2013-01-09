@@ -101,7 +101,7 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 		catch (Exception e) 
 		{
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		} 
 		finally 
 		{
@@ -126,7 +126,7 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 			catch (Exception e) 
 			{
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 			
 		}
@@ -256,7 +256,7 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 		catch (Exception e) 
 		{
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		} 
 		finally 
 		{
@@ -273,7 +273,7 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 			catch (Exception e) 
 			{
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 			
 		}
@@ -340,7 +340,7 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		} finally {
 			/* do delete tfs file */
 			if (put2TfsKeys.size() > 0) {
@@ -431,7 +431,7 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 		catch (Exception e) 
 		{
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e.printStackTrace(); Assert.assertTrue(false);
 		} finally {
 			try 
 			{
@@ -445,7 +445,7 @@ public class TFS_Restful_Unique_Store_Test extends BaseCase {
 			catch (Exception e) 
 			{
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(); Assert.assertTrue(false);
 			}
 		}
 	}
