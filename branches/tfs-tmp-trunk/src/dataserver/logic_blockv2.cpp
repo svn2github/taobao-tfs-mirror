@@ -312,7 +312,7 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::stat(FileInfoV2& info,const uint64_t logic_block_id) const
+    int BaseLogicBlock::stat(FileInfoV2& info, const int8_t flag, const uint64_t logic_block_id) const
     {
       int32_t ret = (INVALID_FILE_ID != info.id_ && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -324,6 +324,18 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = index_handle_->read_file_info(info, sbinfo->max_use_hash_bucket_ratio_, logic_block_id);
+          if (TFS_SUCCESS == ret)
+          {
+            if (FORCE_STAT & flag)
+            {
+              ret = (0 != info.status_ & FILE_STATUS_INVALID) ? EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
+            }
+            else
+            {
+              ret = (0 != (info.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID | FILE_STATUS_CONCEAL))) ?
+                EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
+            }
+          }
         }
       }
       return ret;
@@ -416,6 +428,7 @@ namespace tfs
             TBSYS_LOG(INFO, "logic block: %"PRI64_PREFIX"u,avail_size: %d, total_offset: %d",
               id(), avail_size, total_offset);
             BlockIndex index, ext_index;
+            BasePhysicalBlock* new_physical_block = NULL;
             ret = (!physical_block_list_.empty()) ? TFS_SUCCESS : EXIT_PHYSICALBLOCK_NUM_ERROR;
             if (TFS_SUCCESS == ret)
             {
@@ -428,25 +441,21 @@ namespace tfs
             {
               # ifdef TFS_GTEST
                 ret = physical_block_manager.alloc_ext_block(index, ext_index);
-                TBSYS_LOG(INFO, "ssssssssssssssssssssssKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK");
+                new_physical_block = physical_block_manager.get(ext_index.physical_block_id_);
               # else
                 mutex_.unlock();
-                TBSYS_LOG(INFO, "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK");
                 get_block_manager_().mutex_.wrlock();
                 ret = physical_block_manager.alloc_ext_block(index, ext_index);
+                new_physical_block = physical_block_manager.get(ext_index.physical_block_id_);
                 get_block_manager_().mutex_.unlock();
                 mutex_.wrlock();
               # endif
+              ret = (NULL == new_physical_block) ? EXIT_PHYSICAL_BLOCK_NOT_FOUND : TFS_SUCCESS;
             }
             if (TFS_SUCCESS == ret)
             {
-              BasePhysicalBlock* new_physical_block = physical_block_manager.get(ext_index.physical_block_id_);
-              ret = (NULL == new_physical_block) ? EXIT_PHYSICAL_BLOCK_NOT_FOUND : TFS_SUCCESS;
-              if (TFS_SUCCESS == ret)
-              {
-                PhysicalBlock* physical_block = dynamic_cast<PhysicalBlock*>(new_physical_block);
-                ret = add_physical_block(physical_block);
-              }
+              PhysicalBlock* physical_block = dynamic_cast<PhysicalBlock*>(new_physical_block);
+              ret = add_physical_block(physical_block);
               if (TFS_SUCCESS == ret)
               {
                 avail_size += new_physical_block->length();
@@ -534,10 +543,17 @@ namespace tfs
       return ret;
     }
 
-    int LogicBlock::generation_file_id(uint64_t& fileid, const double threshold)
+    int LogicBlock::generation_file_id(uint64_t& fileid)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      return get_index_handle_()->generation_file_id(fileid, threshold);
+      SuperBlockInfo* sbinfo = NULL;
+      SuperBlockManager& supber_block_manager = get_block_manager_().get_super_block_manager();
+      int ret = supber_block_manager.get_super_block_info(sbinfo);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_index_handle_()->generation_file_id(fileid, sbinfo->max_use_hash_bucket_ratio_);
+      }
+      return ret;
     }
 
     int LogicBlock::check_block_intact()

@@ -78,6 +78,28 @@ namespace tfs
       return ret;
     }
 
+    int Lease::get_block_info(common::BlockInfoV2& info)
+    {
+      int ret = TFS_ERROR;
+      int32_t max_version = -1;
+      for (int32_t index = 0; index < MAX_REPLICATION_NUM; ++index)
+      {
+        if (members_[index].server_ == INVALID_SERVER_ID)
+        {
+          break;
+        }
+
+        if ((TFS_SUCCESS == members_[index].status_) && (members_[index].info_.version_ > max_version))
+        {
+          ret = TFS_SUCCESS; // at least one success
+          max_version = members_[index].info_.version_;
+          info = members_[index].info_;
+        }
+      }
+
+      return ret;
+    }
+
     int Lease::update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status)
     {
       int32_t ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -91,6 +113,8 @@ namespace tfs
           {
             members_[index].info_ = info;
             members_[index].status_  = status;
+
+            tbutil::Mutex::Lock lock(mutex_);
             done_server_size_++;
           }
         }
@@ -100,6 +124,7 @@ namespace tfs
 
     int Lease::update_member_info()
     {
+      tbutil::Mutex::Lock lock(mutex_);
       done_server_size_++;
       return TFS_SUCCESS;
     }
@@ -140,6 +165,17 @@ namespace tfs
       }
     }
 
+    bool Lease::check_all_finish()
+    {
+      tbutil::Mutex::Lock lock(mutex_);
+      bool all_finish = (done_server_size_ >= server_size_);
+      if (all_finish)
+      {
+        done_server_size_ = 0; // so only one thread get all_finish true
+      }
+      return all_finish;
+    }
+
     bool Lease::check_all_successful() const
     {
       int32_t count = 0;
@@ -174,6 +210,11 @@ namespace tfs
       data_file_ = new (std::nothrow) DataFile(lease_id.lease_id_,
           dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir());
       assert(NULL != data_file_);
+    }
+
+    WriteLease::~WriteLease()
+    {
+      tbsys::gDelete(data_file_);
     }
 
     LeaseManager::LeaseManager():

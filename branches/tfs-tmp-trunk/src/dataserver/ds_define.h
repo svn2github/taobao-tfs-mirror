@@ -22,7 +22,7 @@
 #include "common/parameter.h"
 #include "common/new_client.h"
 
-#define TFS_GTEST
+// #define TFS_GTEST
 
 namespace tfs
 {
@@ -47,6 +47,7 @@ namespace tfs
     static const int32_t PHYSICAL_BLOCK_ID_INIT_VALUE = 1;
     static const int32_t INDEXFILE_SAFE_MULT = 4;
     static const int32_t MAX_INITIALIZE_INDEX_SIZE = 2048;
+    static const int32_t BLOCK_RESERVER_SPACE = 1048576; // reserve 1M space for update
 
     enum FileinfoFlag
     {

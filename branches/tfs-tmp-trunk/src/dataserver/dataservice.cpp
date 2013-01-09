@@ -611,6 +611,8 @@ namespace tfs
         if (stop_)
           break;
 
+        data_manager_.timeout(Func::get_monotonic_time());
+
         int32_t current_time = time(NULL);
         // check log: write a new log everyday and expire error block
         if (current_time % 86400 >= zonesec && current_time % 86400 < zonesec + 300 && last_rlog < current_time - 600)

@@ -246,6 +246,7 @@ namespace tfs
             ret = alloc_block(alloc_block_index, BLOCK_SPLIT_FLAG_YES);
             if (TFS_SUCCESS == ret)
             {
+              ++info->used_main_block_count_;  // a main block used here
               BasePhysicalBlock* tmp = get_(alloc_block_index.physical_block_id_);
               physical_block = (NULL != tmp) ? dynamic_cast<AllocPhysicalBlock*>(tmp) : NULL;
             }
@@ -259,7 +260,7 @@ namespace tfs
             if (TFS_SUCCESS == ret)
             {
               int32_t physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
-              ret = supber_block_manager.get_legal_physical_block_id(physical_block_id);
+              ret = supber_block_manager.get_legal_physical_block_id(physical_block_id, true);
               if (TFS_SUCCESS == ret)
               {
                 assert(physical_block_id != INVALID_PHYSICAL_BLOCK_ID);
@@ -276,6 +277,10 @@ namespace tfs
                 std::stringstream path;
                 path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << ext_index.physical_file_name_id_;
                 ret = insert_(ext_index, ext_index.physical_block_id_, path.str(), start, end);
+                if (TFS_SUCCESS == ret)
+                {
+                  ++info->used_extend_block_count_;
+                }
               }
             }
           }

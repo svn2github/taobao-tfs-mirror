@@ -264,7 +264,7 @@ namespace tfs
             header->info_.file_count_ += file_count;
             header->info_.size_       += real_new_size;
             header->used_offset_      += real_new_size;
-            header->throughput_.last_update_time_ += file_count;
+            header->throughput_.write_visit_count_ += file_count;
             header->throughput_.write_bytes_ += real_new_size;
           }
 
@@ -277,10 +277,10 @@ namespace tfs
           }
           if (OPER_UNDELETE == oper_type)
           {
-            header->info_.del_file_count_ += file_count;
-            header->info_.del_size_       += real_old_size;
-            header->throughput_.unlink_visit_count_ += file_count;
-            header->throughput_.unlink_bytes_ += real_old_size;
+            header->info_.del_file_count_ -= file_count;
+            header->info_.del_size_       -= real_old_size;
+            header->throughput_.unlink_visit_count_ -= file_count;
+            header->throughput_.unlink_bytes_ -= real_old_size;
           }
           if (OPER_UPDATE == oper_type)
           {

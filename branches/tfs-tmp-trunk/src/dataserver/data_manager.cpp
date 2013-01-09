@@ -50,12 +50,10 @@ namespace tfs
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if ((TFS_SUCCESS == ret) && (0 == (file_id & 0xFFFFFFFF)))
       {
-        // TODO: add config item
-        double threshold = 0.8;
-        ret = block_manager().generation_file_id(file_id, threshold, block_id);
+        ret = block_manager().generation_file_id(file_id, block_id);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "create file id fail. blockid: %"PRI64_PREFIX"u, ret: %d",
+          TBSYS_LOG(WARN, "create file id fail. blockid: %"PRI64_PREFIX"u, ret: %d",
               block_id, ret);
         }
       }
@@ -73,16 +71,16 @@ namespace tfs
         Lease* lease = lease_manager_.get(lid, now);
         if (NULL == lease)
         {
-          ret = lease_manager_.has_out_of_limit() ? EXIT_DATAFILE_OVERLOAD : TFS_SUCCESS;
+          ret = lease_manager_.has_out_of_limit() ? EXIT_BLOCK_LEASE_OVERLOAD_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
             lease_manager_.generation(lid, now, type, servers);
             lease = lease_manager_.get(lid, now);
-            ret = (NULL == lease) ? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+            ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
           }
         }
 
-        if (TFS_SUCCESS == ret);
+        if (TFS_SUCCESS == ret)
         {
           lease->set_req_begin_time(now_us);
           lease->reset_member_status(); // reset on every reqeust
@@ -118,9 +116,9 @@ namespace tfs
             {
               ret = lease->update_member_info(smsg->get_server_id(),
                   smsg->get_block_info(), smsg->get_status());
-              lease_manager_.put(lease);
             }
           }
+          lease_manager_.put(lease);
         }
       }
 
@@ -143,7 +141,7 @@ namespace tfs
         status = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == status)
         {
-          all_finish = lease->all_finish();
+          all_finish = lease->check_all_finish();
           if (all_finish)
           {
             if (lease->check_has_version_conflict())
@@ -188,7 +186,7 @@ namespace tfs
       return ret;
     }
 
-    int DataManager::write_data(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
+    int DataManager::write_file(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
         const char* buffer, const int32_t length, const int32_t offset,
         const int32_t remote_version, BlockInfoV2& local)
     {
@@ -200,8 +198,9 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
+            "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
             "remote version: %d, local version: %d, ret: %d",
-            block_id, remote_version, local.version_, ret);
+            block_id, file_id, lease_id, remote_version, local.version_, ret);
       }
       else
       {
@@ -220,12 +219,7 @@ namespace tfs
           FileInfoInDiskExt none;
           none.version_ = FILE_INFO_EXT_INIT_VERSION;
           ret = data_file.pwrite(none, buffer, length, offset);
-          ret = (ret < 0) ? ret : TFS_SUCCESS;
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(WARN, "write datafile fail. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, ret: %d",
-                block_id, file_id, ret);
-          }
+          ret = (ret < 0) ? ret : TFS_SUCCESS; // transform return status
           lease->update_member_info(service_.get_ds_ipport(), local, ret);
           lease->update_last_time(now);
           lease_manager_.put(lease);
@@ -235,7 +229,8 @@ namespace tfs
       return  ret;
     }
 
-    int DataManager::close_file(const uint64_t block_id, uint64_t& file_id, const uint64_t lease_id)
+    int DataManager::close_file(const uint64_t block_id, uint64_t& file_id, const uint64_t lease_id,
+        BlockInfoV2& local)
     {
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
           (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -253,14 +248,12 @@ namespace tfs
       {
         DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
         ret = block_manager().write(file_id, data_file, block_id, block_id);
-        ret = (ret < 0) ? ret: TFS_SUCCESS;  // write return size, transfer it first
-        if (ret < 0)
+        ret = (ret < 0) ? ret: TFS_SUCCESS;  // transform return status
+        if (TFS_SUCCESS == ret)
         {
-          TBSYS_LOG(WARN, "close file fail. blockid: %"PRI64_PREFIX"u fileid: %"PRI64_PREFIX"u, ret: %d",
-              block_id, file_id, ret);
+          ret = block_manager().get_block_info(local, block_id);
+          lease->update_member_info(service_.get_ds_ipport(), local, ret);
         }
-        BlockInfoV2 local; // have no use here
-        lease->update_member_info(service_.get_ds_ipport(), local, ret);
         lease_manager_.put(lease);
       }
 
@@ -278,9 +271,10 @@ namespace tfs
         ret = block_manager().check_block_version(local, remote_version, block_id);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "unlink check block version conflict. blockid: %"PRI64_PREFIX"u, "
+          TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
+              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
               "remote version: %d, local version: %d, ret: %d",
-              block_id, remote_version, local.version_, ret);
+              block_id, file_id, lease_id, remote_version, local.version_, ret);
         }
       }
 
@@ -288,10 +282,9 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = block_manager().unlink(file_size, file_id, action, block_id, block_id);
-        if (TFS_SUCCESS != ret)
+        if (TFS_SUCCESS == ret)
         {
-          TBSYS_LOG(WARN, "unlink file fail. blockid: %"PRI64_PREFIX"u fileid: %"PRI64_PREFIX"u, ret: %d",
-              block_id, file_id, ret);
+          ret = block_manager().get_block_info(local, block_id);
         }
       }
 
@@ -312,13 +305,24 @@ namespace tfs
       return ret;
     }
 
-    int DataManager::update_block_info(const uint64_t block_id, const common::UnlinkFlag unlink_flag)
+    int DataManager::update_block_info(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
+        const common::UnlinkFlag unlink_flag)
     {
       int ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      Lease* lease = NULL;
       BlockInfoV2 block_info;
       if (TFS_SUCCESS == ret)
       {
-        ret = block_manager().get_block_info(block_info, block_id);
+        LeaseId lid(block_id, file_id, lease_id);
+        int64_t now = Func::get_monotonic_time();
+        lease = lease_manager_.get(lid, now);
+        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR: TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          // get the blockinfo with highest version
+          ret = lease->get_block_info(block_info);
+          lease_manager_.put(lease);
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -344,6 +348,8 @@ namespace tfs
             {
               StatusMessage* smsg = dynamic_cast<StatusMessage*>(ret_msg);
               ret = (STATUS_MESSAGE_OK == smsg->get_status()) ? TFS_SUCCESS : EXIT_COMMIT_BLOCK_UPDATE_ERROR;
+              TBSYS_LOG(INFO, "update block info. blockid: %"PRI64_PREFIX"u, status: %d %s",
+                  block_id, smsg->get_status(), smsg->get_error());
             }
           }
           NewClientManager::get_instance().destroy_client(client);
@@ -375,6 +381,7 @@ namespace tfs
        int32_t member_size = 0;
        req_msg.set_block(block_id);
        ret = lease->get_member_info(req_msg.get_members(), member_size);
+       lease_manager_.put(lease);
        if (TFS_SUCCESS == ret)
        {
          req_msg.set_size(member_size);
@@ -408,10 +415,14 @@ namespace tfs
          NewClientManager::get_instance().destroy_client(client);
        }
 
-       lease_manager_.put(lease);
      }
      return ret;
 
+    }
+
+    int DataManager::timeout(const time_t now)
+    {
+      return lease_manager_.timeout(now);
     }
 
   }

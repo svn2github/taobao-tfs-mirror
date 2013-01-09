@@ -69,7 +69,6 @@ namespace tfs
       virtual ~Lease() {}
 
       void reset_member_status();
-      inline bool all_finish() { return done_server_size_ >= server_size_; }
       inline uint32_t inc_ref() { return common::atomic_inc(&ref_count_);}
       inline uint32_t dec_ref() { return common::atomic_dec(&ref_count_);}
       inline int64_t get_req_begin_time() { return req_begin_time_; }
@@ -79,12 +78,14 @@ namespace tfs
       inline int64_t get_file_size() { return file_size_; }
       inline void set_file_size(const int64_t file_size) { file_size_ = file_size; }
       inline bool timeout(const int64_t now) { return now > last_update_time_ + common::SYSPARAM_DATASERVER.expire_data_file_time_;}
+      bool check_all_finish();
       bool check_all_successful() const;
       bool check_has_version_conflict() const;
       int get_member_info(std::pair<uint64_t, common::BlockInfoV2>* members, int32_t& size) const;
       int update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status);
       int update_member_info();   // when received a error packet, use this interface
       void reset_member_info();
+      int get_block_info(common::BlockInfoV2& info);
       void dump(const int32_t level, const char* const format = NULL);
       void dump(std::stringstream& desp);
 
@@ -95,6 +96,7 @@ namespace tfs
       uint32_t ref_count_;
       int8_t server_size_;
       volatile int8_t done_server_size_;
+      tbutil::Mutex mutex_;
       LeaseMemberInfo members_[common::MAX_REPLICATION_NUM];
     private:
       DISALLOW_COPY_AND_ASSIGN(Lease);
@@ -104,7 +106,7 @@ namespace tfs
     {
     public:
       WriteLease(const LeaseId& lease_id, const int64_t now, const common::VUINT64& servers);
-      virtual ~WriteLease() {}
+      virtual ~WriteLease();
       DataFile& get_data_file() { return *data_file_;}
     private:
       DataFile* data_file_;
@@ -127,7 +129,7 @@ namespace tfs
       int timeout(const int64_t now);
       int64_t size() const;
       bool has_out_of_limit() const;
-      uint64_t gen_lease_id();//这个函数的作用是: 为了向2.4以下的版本赚容，只能被create_file_number调用
+      uint64_t gen_lease_id(); // in old version, it's create_file_number
     private:
       uint64_t base_lease_id_;
       LEASE_MAP leases_;

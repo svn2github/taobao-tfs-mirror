@@ -70,7 +70,7 @@ namespace tfs
           const int8_t flag, const uint64_t logic_block_id);
       int pwrite(const char* buf, const int32_t nbytes, const int32_t offset);
       int pread(char* buf, int32_t& nbytes, const int32_t offset);
-      int stat(common::FileInfoV2& info, const uint64_t logic_block_id) const;
+      int stat(common::FileInfoV2& info, const int8_t flag, const uint64_t logic_block_id) const;
       virtual int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
 
       int64_t get_last_update_time() const { return 0;}//TODO
@@ -106,7 +106,7 @@ namespace tfs
         LogicBlock(BlockManager* manager, const uint64_t logic_block_id, const std::string& index_path);
         virtual ~LogicBlock();
         int create_index(const int32_t bucket_size, const common::MMapOption mmap_option);
-        int generation_file_id(uint64_t& fileid, const double threshold);
+        int generation_file_id(uint64_t& fileid);
         int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
         int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
         int traverse(std::vector<common::FileInfo>& finfos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;

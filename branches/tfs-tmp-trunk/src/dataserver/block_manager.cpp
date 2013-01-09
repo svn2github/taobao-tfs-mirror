@@ -252,6 +252,21 @@ namespace tfs
       return ret;
     }
 
+    int BlockManager::get_used_offset(int32_t& size, const uint64_t logic_block_id) const
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->get_used_offset(size);
+        }
+      }
+      return ret;
+    }
+
     int BlockManager::check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const
     {
       int32_t ret = (remote_version >= 0 && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -312,7 +327,7 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::generation_file_id(uint64_t& fileid, const double threshold, const uint64_t logic_block_id)
+    int BlockManager::generation_file_id(uint64_t& fileid, const uint64_t logic_block_id)
     {
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -321,7 +336,7 @@ namespace tfs
         ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          ret = logic_block->generation_file_id(fileid, threshold);
+          ret = logic_block->generation_file_id(fileid);
         }
       }
       return ret;
@@ -391,7 +406,7 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::stat(FileInfoV2& info,const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const
+    int BlockManager::stat(FileInfoV2& info, const int8_t flag, const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const
     {
       int32_t ret = (INVALID_FILE_ID != info.id_ && INVALID_BLOCK_ID != logic_block_id
                 && INVALID_BLOCK_ID != attach_logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -401,7 +416,7 @@ namespace tfs
         ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          ret = logic_block->stat(info, attach_logic_block_id);
+          ret = logic_block->stat(info, flag, attach_logic_block_id);
         }
       }
       return ret;
@@ -428,21 +443,6 @@ namespace tfs
     bool BlockManager::exist(const uint64_t logic_block_id, const bool tmp) const
     {
       return logic_block_manager_.exist(logic_block_id, tmp);
-    }
-
-    int BlockManager::generation_file_id(uint64_t& fileid, const uint64_t logic_block_id, const double threshold)
-    {
-      int32_t ret = (INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        BaseLogicBlock* logic_block = get(logic_block_id);
-        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
-        if (TFS_SUCCESS == ret)
-        {
-          ret = dynamic_cast<LogicBlock*>(logic_block)->generation_file_id(fileid, threshold);
-        }
-      }
-      return ret;
     }
 
     int BlockManager::load_super_block_(const common::FileSystemParameter& parameter)

@@ -78,8 +78,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
       if (0 == file_id)
       {
-        double threshold = 0.8;
-        ret = block_manager().generation_file_id(file_id, threshold, block_id);
+        ret = block_manager().generation_file_id(file_id, block_id);
       }
 
       data_file_mutex_.lock();
@@ -274,10 +273,9 @@ namespace tfs
     int DataManagement::read_file_info(const uint32_t block_id, const uint64_t file_id, const int32_t mode,
         FileInfo& finfo)
     {
-      UNUSED(mode); // TODO: compatible work
       FileInfoV2 finfo_v2;
       finfo_v2.id_ = file_id;
-      int ret = block_manager().stat(finfo_v2, block_id, block_id);
+      int ret = block_manager().stat(finfo_v2, mode, block_id, block_id);
       if (TFS_SUCCESS == ret)
       {
         // transform FileInfoV2 to FileInfo for compatible

@@ -91,9 +91,6 @@ namespace tfs
       int32_t flag = message->get_flag();
       uint64_t peer_id = message->get_connection()->getPeerId();
 
-      TBSYS_LOG(DEBUG, "stat file. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, flag: %d",
-          block_id, file_id, flag);
-
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id)) ?
         EXIT_PARAMETER_ERROR: TFS_SUCCESS;
 
@@ -101,7 +98,7 @@ namespace tfs
       {
         FileInfoV2 file_info;
         file_info.id_ = file_id;
-        ret = block_manager().stat(file_info, block_id, block_id);
+        ret = block_manager().stat(file_info, flag, block_id, block_id);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "read file info fail. blockid: %"PRI64_PREFIX"u, "
@@ -120,7 +117,7 @@ namespace tfs
       TIMER_END();
 
       // access log
-      TBSYS_LOG(INFO, "stat file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(INFO, "STAT file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
           "peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
           (TFS_SUCCESS == ret) ? "success" : "fail", block_id, file_id,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(), ret);
@@ -138,9 +135,6 @@ namespace tfs
       int8_t flag = message->get_flag();
       uint64_t peer_id = message->get_connection()->getPeerId();
 
-      TBSYS_LOG(DEBUG, "read file. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
-          "length: %d, offset: %d, flag: %d", block_id, file_id, length, offset, flag);
-
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
           (offset < 0) || (length <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
@@ -148,7 +142,7 @@ namespace tfs
       {
         FileInfoV2 file_info;
         file_info.id_ = file_id;
-        ret = block_manager().stat(file_info, block_id, block_id);
+        ret = block_manager().stat(file_info, FORCE_STAT, block_id, block_id);
         if (TFS_SUCCESS == ret)
         {
           // truncate read length
@@ -185,7 +179,7 @@ namespace tfs
       TIMER_END();
 
       // access log
-      TBSYS_LOG(INFO, "read file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(INFO, "READ file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
           "length: %d, offset: %d, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, length, offset,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(), ret);
@@ -208,10 +202,6 @@ namespace tfs
       bool is_master = (master_id == service_.get_ds_ipport());
       uint64_t peer_id = message->get_connection()->getPeerId();
 
-      TBSYS_LOG(DEBUG, "write file. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
-          "leaseid: %"PRI64_PREFIX"u, length: %d, offset: %d, version: %d",
-          block_id, file_id, lease_id, length, offset, version);
-
       int ret = ((NULL == data) || (INVALID_BLOCK_ID == block_id) ||
           (offset < 0) || (length <= 0)) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
 
@@ -222,8 +212,8 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "prepare write lease fail. blockid: %"PRI64_PREFIX"u, "
-              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
-              block_id, file_id, lease_id, ret);
+              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, role: %s, ret: %d",
+              block_id, file_id, lease_id, is_master ? "master" : "slave", ret);
         }
         else
         {
@@ -250,7 +240,7 @@ namespace tfs
       BlockInfoV2 local;
       if (TFS_SUCCESS == ret)
       {
-        ret = data_manager().write_data(block_id,
+        ret = data_manager().write_file(block_id,
             file_id, lease_id, data, length, offset, version, local);
         if (TFS_SUCCESS != ret)
         {
@@ -275,16 +265,22 @@ namespace tfs
         resp_msg->set_block_info(local);
         resp_msg->set_status(ret);
         message->reply(resp_msg);
+
+        // slave write fail, remove lease
+        if (TFS_SUCCESS != ret)
+        {
+          data_manager().remove_lease(block_id, file_id, lease_id);
+        }
       }
 
       TIMER_END();
 
       // access log
       TBSYS_LOG(INFO, "write file %s, block: %"PRI64_PREFIX"d, fileid: %"PRI64_PREFIX"u, "
-          "leaseid: %"PRI64_PREFIX"u, length: %d, offset: %d, role: %s, "
+          "leaseid: %"PRI64_PREFIX"u, length: %d, offset: %d, version: %d, role: %s, "
           "peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
           (TFS_SUCCESS == ret) ? "success" : "fail", block_id, file_id, lease_id, length, offset,
-          is_master ? "master": "slave", tbsys::CNetUtil::addrToString(peer_id).c_str(),
+          version, is_master ? "master": "slave", tbsys::CNetUtil::addrToString(peer_id).c_str(),
           TIMER_DURATION(), ret);
 
       return TFS_SUCCESS;
@@ -296,15 +292,12 @@ namespace tfs
       uint64_t block_id = message->get_block_id();
       uint64_t file_id = message->get_file_id();
       uint64_t lease_id = message->get_lease_id();
-      uint32_t crc = message->get_crc();
       uint64_t master_id = message->get_master_id();
+      uint32_t crc = message->get_crc();
       bool is_master = (master_id == service_.get_ds_ipport());
 
       const VUINT64& servers = message->get_ds();
       uint64_t peer_id = message->get_connection()->getPeerId();
-
-      TBSYS_LOG(DEBUG, "close file. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
-          "leaseid: %"PRI64_PREFIX"u, crc: %u", block_id, file_id, lease_id, crc);
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
           (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -334,9 +327,10 @@ namespace tfs
       }
 
       // close file
+      BlockInfoV2 local;
       if (TFS_SUCCESS == ret)
       {
-        ret = data_manager().close_file(block_id, file_id, lease_id);
+        ret = data_manager().close_file(block_id, file_id, lease_id, local);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "close file fail. block: %u, fileid: %"PRI64_PREFIX"u, "
@@ -356,6 +350,7 @@ namespace tfs
         SlaveDsRespMessage* resp_msg = new (std::nothrow) SlaveDsRespMessage();
         assert(NULL != resp_msg);
         resp_msg->set_server_id(service_.get_ds_ipport());
+        resp_msg->set_block_info(local);
         resp_msg->set_status(ret);
         message->reply(resp_msg);
         data_manager().remove_lease(block_id, file_id, lease_id);
@@ -365,8 +360,8 @@ namespace tfs
 
      // access log
      TBSYS_LOG(INFO, "close file %s. blockid: %" PRI64_PREFIX "u, fileid: %u, "
-         "leaseid: %"PRI64_PREFIX"u, role: %s, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
-         TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, lease_id,
+         "leaseid: %"PRI64_PREFIX"u, crc: %u, role: %s, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
+         TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, lease_id, crc,
          is_master ? "master" : "slave", tbsys::CNetUtil::addrToString(peer_id).c_str(),
          TIMER_DURATION(), ret);
 
@@ -385,10 +380,6 @@ namespace tfs
       int32_t version = message->get_version();
       uint64_t master_id = message->get_master_id();
       bool is_master = (master_id == service_.get_ds_ipport());
-
-      TBSYS_LOG(DEBUG, "unlink file. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
-          "leaseid: %"PRI64_PREFIX"u, action: %d, version: %d",
-          block_id, file_id, lease_id, action, version);
 
       int ret = (INVALID_BLOCK_ID == block_id || INVALID_FILE_ID == file_id) ?
         EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -454,8 +445,8 @@ namespace tfs
 
       // access log
       TBSYS_LOG(INFO, "unlink file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
-          "action: %d, role: %s, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
-          TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, action,
+          "action: %d, version: %d, role: %s, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
+          TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, action, version,
           is_master ? "master" : "slave", tbsys::CNetUtil::addrToString(peer_id).c_str(),
           TIMER_DURATION(), ret);
 
@@ -549,7 +540,6 @@ namespace tfs
             data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
           }
           close_file_callback(msg);
-          data_manager().remove_lease(block_id, file_id, lease_id);
         }
         else if (UNLINK_FILE_MESSAGE_V2 == pcode)
         {
@@ -563,7 +553,6 @@ namespace tfs
             data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
           }
           unlink_file_callback(msg);
-          data_manager().remove_lease(block_id, file_id, lease_id);
         }
       }
 
@@ -600,6 +589,9 @@ namespace tfs
             }
           }
           message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, err_msg.str().c_str());
+
+          // if fail, close will never happen, remove lease
+          data_manager().remove_lease(block_id, file_id, lease_id);
         }
         else
         {
@@ -634,25 +626,21 @@ namespace tfs
           file_id, lease_id, ret, req_cost_time, file_size, err_msg);
       if (all_finish)
       {
+        ret = data_manager().update_block_info(block_id, file_id, lease_id, UNLINK_FLAG_NO);
         if (TFS_SUCCESS != ret)
         {
+          TBSYS_LOG(WARN, "update block info fail. blockid: %"PRI64_PREFIX"u, "
+              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
+              block_id, file_id, lease_id, ret);
           message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, err_msg.str().c_str());
         }
         else
         {
-          ret = data_manager().update_block_info(block_id, UNLINK_FLAG_NO);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(WARN, "update block info fail. "
-                "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
-                block_id, file_id, lease_id, ret);
-            message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, err_msg.str().c_str());
-          }
-          else
-          {
-            message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-          }
+          message->reply(new StatusMessage(STATUS_MESSAGE_OK));
         }
+
+        // after close, remove lease
+        data_manager().remove_lease(block_id, file_id, lease_id);
 
         TBSYS_LOG(INFO, "CLOSE file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
             "leaseid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d",
@@ -679,27 +667,40 @@ namespace tfs
           file_id, lease_id, ret, req_cost_time, file_size, err_msg);
       if (all_finish)
       {
+        int err = ret;
+        ret = data_manager().update_block_info(block_id, file_id, lease_id, UNLINK_FLAG_YES);
+        if (TFS_SUCCESS != ret)
+        {
+          message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, err_msg.str().c_str());
+          TBSYS_LOG(WARN, "update block info fail. blockid: %"PRI64_PREFIX"u, "
+              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
+              block_id, file_id, lease_id, ret);
+        }
+
+        if (EXIT_VERSION_CONFLICT_ERROR == err)
+        {
+          // ignore return value
+          if (TFS_SUCCESS != data_manager().resolve_block_version_conflict(block_id, file_id, lease_id))
+          {
+            TBSYS_LOG(WARN, "resolve block version conflict fail. "
+                "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u",
+                block_id, file_id, lease_id);
+          }
+        }
+
         if (TFS_SUCCESS != ret)
         {
           message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, err_msg.str().c_str());
         }
         else
         {
-          ret = data_manager().update_block_info(block_id, UNLINK_FLAG_YES);
-          if (TFS_SUCCESS != ret)
-          {
-            message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, err_msg.str().c_str());
-            TBSYS_LOG(WARN, "update block info fail. "
-                "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
-                block_id, file_id, lease_id, ret);
-          }
-          else
-          {
-            char ex_msg[64];
-            snprintf(ex_msg, 64, "%"PRI64_PREFIX"d", file_size);
-            message->reply(new StatusMessage(STATUS_MESSAGE_OK, ex_msg));
-          }
+          char ex_msg[64];
+          snprintf(ex_msg, 64, "%"PRI64_PREFIX"d", file_size);
+          message->reply(new StatusMessage(STATUS_MESSAGE_OK, ex_msg));
         }
+
+        // after unlink, remove lease
+        data_manager().remove_lease(block_id, file_id, lease_id);
 
         TBSYS_LOG(INFO, "UNLINK file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
             "leaseid: %"PRI64_PREFIX"u, action: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",
