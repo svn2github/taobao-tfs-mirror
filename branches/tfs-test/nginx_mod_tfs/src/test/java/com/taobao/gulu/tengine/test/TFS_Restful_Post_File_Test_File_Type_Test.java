@@ -3,6 +3,7 @@ package com.taobao.gulu.tengine.test;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.taobao.gulu.database.TFS;
