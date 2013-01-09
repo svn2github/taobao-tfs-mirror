@@ -31,7 +31,7 @@ public class Restful_Web_Service_Original_Delete_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = StatFile(Name,null,"1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
 	@Test
@@ -79,7 +79,7 @@ public class Restful_Web_Service_Original_Delete_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = StatFile(Name,".jpg","1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
 	@Test
@@ -103,7 +103,7 @@ public class Restful_Web_Service_Original_Delete_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = StatFile(Name,".jpg","1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
 	@Test
@@ -151,7 +151,7 @@ public class Restful_Web_Service_Original_Delete_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = StatFile(Name,null,"1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
 	@Test
@@ -191,11 +191,11 @@ public class Restful_Web_Service_Original_Delete_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = DeleteFile(Name,null,null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
 		Ret = StatFile(Name,".jpg",null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 		
 		Ret.clear();
 		Ret = StatFile(Name,".jpg","1");
@@ -223,7 +223,7 @@ public class Restful_Web_Service_Original_Delete_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = StatFile(Name,".jpg","1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 
 	}
 	
@@ -240,7 +240,7 @@ public class Restful_Web_Service_Original_Delete_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = DeleteFile(Name,".png",null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 		
 		Ret.clear();
 		Ret = StatFile(Name,".jpg",null);
@@ -432,11 +432,11 @@ public class Restful_Web_Service_Original_Delete_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = DeleteFile(Name,null,"1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
 		Ret = StatFile(Name,".jpg",null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 		
 		Ret.clear();
 		Ret = StatFile(Name,".jpg","1");
@@ -481,7 +481,7 @@ public class Restful_Web_Service_Original_Delete_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = DeleteFile(Name,".png","1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 		
 		Ret.clear();
 		Ret = StatFile(Name,".jpg",null);

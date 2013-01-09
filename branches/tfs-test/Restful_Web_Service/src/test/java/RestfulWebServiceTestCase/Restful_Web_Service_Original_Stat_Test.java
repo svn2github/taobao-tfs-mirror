@@ -159,7 +159,7 @@ public class Restful_Web_Service_Original_Stat_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = StatFile(Name,null,null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
 	@Test
@@ -197,7 +197,7 @@ public class Restful_Web_Service_Original_Stat_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = StatFile(Name,".png",null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 	
 	@Test

@@ -59,6 +59,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 	
+	@Test
 	public void test_04_writeFile_read_more_offset()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -74,6 +75,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 	
+	@Test
 	public void test_05_writeFile_read_right_with_size()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -89,6 +91,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
+	@Test
 	public void test_06_writeFile_read_wrong_size()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -104,6 +107,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 	
+	@Test
 	public void test_07_writeFile_read_more_size()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -116,9 +120,10 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = FetchFile(Name,"Temp",null,null,String.valueOf(2*(1<<20)+1));
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
+	@Test
 	public void test_08_writeFile_read_right_more_size_and_offset()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -131,7 +136,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = FetchFile(Name,"Temp",null,"1024",String.valueOf(2*(1<<20)-1000));
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
 	@Test
@@ -184,6 +189,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 	
+	@Test
 	public void test_12_writeFile_large_read_more_offset()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -196,9 +202,10 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = FetchFile(Name,"Temp",null,String.valueOf(30*(1<<20)+1),null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
+	@Test
 	public void test_13_writeFile_large_read_right_with_size()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -214,6 +221,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
+	@Test
 	public void test_14_writeFile_large_read_wrong_size()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -229,6 +237,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 	
+	@Test
 	public void test_15_writeFile_large_read_more_size()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -241,9 +250,10 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = FetchFile(Name,"Temp",null,null,String.valueOf(30*(1<<20)+1));
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
+	@Test
 	public void test_16_writeFile_large_read_right_more_size_and_offset()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -256,7 +266,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = FetchFile(Name,"Temp",null,"102400",String.valueOf(30*(1<<20)-10000));
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
 	@Test
@@ -308,6 +318,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 	
+	@Test
 	public void test_20_writeFile_large_flag_read_more_offset()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -320,9 +331,10 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = FetchFile(Name,"Temp",null,String.valueOf(10*(1<<10)+1),null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
+	@Test
 	public void test_21_writeFile_large_flag_read_right_with_size()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -338,6 +350,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
+	@Test
 	public void test_22_writeFile_large_flag_read_wrong_size()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -353,6 +366,7 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 	
+	@Test
 	public void test_23_writeFile_large_flag_read_more_size()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -365,9 +379,10 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = FetchFile(Name,"Temp",null,null,String.valueOf(10*(1<<20)+1));
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
+	@Test
 	public void test_24_writeFile_large_flag_read_right_more_size_and_offset()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -380,9 +395,10 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = FetchFile(Name,"Temp",null,"1024",String.valueOf(10*(1<<10)-1000));
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
+	@Test
 	public void test_25_writeFile_without_suffix_without_sample_name_read()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -398,10 +414,11 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
-		Ret = FetchFile(Name,"Temp",null,".jpg",null);
+		Ret = FetchFile(Name,"Temp",".jpg",null,null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 	}
 	
+	@Test
 	public void test_26_writeFile_with_suffix_without_sample_name_read()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -417,14 +434,15 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
-		Ret = FetchFile(Name,"Temp",null,".jpg",null);
+		Ret = FetchFile(Name,"Temp",".jpg",null,null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
-		Ret = FetchFile(Name,"Temp",null,".png",null);
+		Ret = FetchFile(Name,"Temp",".png",null,null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 	}
 	
+	@Test
 	public void test_27_writeFile_without_suffix_with_sample_name_read()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -440,10 +458,11 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
-		Ret = FetchFile(Name,"Temp",null,".jpg",null);
+		Ret = FetchFile(Name,"Temp",".jpg",null,null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 	}
 	
+	@Test
 	public void test_28_writeFile_with_suffix_with_sample_name_read()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -456,14 +475,14 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		
 		Ret.clear();
 		Ret = FetchFile(Name,"Temp",null,null,null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
-		
-		Ret.clear();
-		Ret = FetchFile(Name,"Temp",null,".jpg",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
-		Ret = FetchFile(Name,"Temp",null,".png",null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		Ret = FetchFile(Name,"Temp",".jpg",null,null);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
+		
+		Ret.clear();
+		Ret = FetchFile(Name,"Temp",".png",null,null);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 }

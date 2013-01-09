@@ -155,8 +155,6 @@ public class Restful_Web_Service_Original_Save_Test extends BaseCase
 		String name = Ret.get("TFS_FILE_NAME");
 		System.out.println("The return TFS name is "+name);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
-		StringBuffer NameBuf = new StringBuffer(name);
-		Assert.assertTrue(NameBuf.charAt(0)=='L');	
 	}
 	
 	@Test
@@ -169,8 +167,6 @@ public class Restful_Web_Service_Original_Save_Test extends BaseCase
 		String name = Ret.get("TFS_FILE_NAME");
 		System.out.println("The return TFS name is "+name);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
-		StringBuffer NameBuf = new StringBuffer(name);
-		Assert.assertTrue(NameBuf.charAt(0)=='L');	
 	}
 	
 	@Test

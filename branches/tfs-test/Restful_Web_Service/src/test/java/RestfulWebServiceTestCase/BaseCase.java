@@ -20,6 +20,7 @@ import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.RequestEntity;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
@@ -45,11 +46,11 @@ public class BaseCase
 		ExecuteUrl.SetBase("http://"+Server.getRestful_web_server()+"/v1/"+Server.getTfs_app_key());
 		ExecuteUrl.Init();
 		FileMap.put("10K", 10*(1<<10));
-		FileMap.put("2M", 10*(1<<10));
+		FileMap.put("2M", 2*(1<<20));
 		FileMap.put("20M", 20*(1<<20));
-		FileMap.put("30M", 0*(1<<20));
+		FileMap.put("30M", 30*(1<<20));
 		FileMap.put("empty", 0);
-		//createFile("10K",10*(1<<10));
+		createFileMap(FileMap);
 	}
 	
 	@Rule
@@ -193,22 +194,19 @@ public class BaseCase
 				f.createNewFile();
 			Random random = new Random();
 			FileOutputStream  output = new FileOutputStream (f);
-			int writeSize = 10*(1<<20);
-			long allSize = 0;
-			byte[] b ;
-			while(allSize!=fileSize)
+			int writingSize = 0;
+			long writedSize = 0;
+			int bufSize = 10*(1<<20);
+			byte[] b = new byte[10*(1<<20)];
+			while(writedSize!=fileSize)
 			{
-				if(writeSize<fileSize-allSize)
-					b = new byte[writeSize];
-				
-				else
-				{
-					b = new byte[(int)(fileSize-allSize)];
-					allSize=fileSize;
-				}
 				random.nextBytes(b);
-				output.write(b);
-				
+				if(bufSize<fileSize-writedSize)
+				   writingSize = bufSize;
+				else
+				   writingSize=(int)(fileSize-writedSize);
+					output.write(b, 0, writingSize);
+					writedSize+=writingSize;
 			}
 			output.close();
 			log.info("Create file "+path+" success!");
@@ -221,7 +219,7 @@ public class BaseCase
 		return 0;
 	}
 	
-	public void createFileMap(Map<String,Integer> FileMap)
+	static public void createFileMap(Map<String,Integer> FileMap)
 	{
 		Set<String> keySet = FileMap.keySet();
 		Iterator<String> it = keySet.iterator();
@@ -230,7 +228,24 @@ public class BaseCase
 			String key = it.next();
 			createFile(key,FileMap.get(key));
 		}
+	}
 	
+	static protected void deleteFile(String FilePath)
+	{
+		File file = new File(FilePath);
+		System.out.println("Delete file "+FilePath);
+		file.delete();
+	}
+	//@AfterClass
+	static public void cleanResource()
+	{
+		Set<String> keySet = FileMap.keySet();
+		Iterator<String> it = keySet.iterator();
+		while(it.hasNext())
+		{
+			String key = it.next();
+			deleteFile(key);
+		}
 	}
 }
 
