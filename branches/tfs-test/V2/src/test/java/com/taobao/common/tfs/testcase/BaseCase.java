@@ -105,25 +105,25 @@ public class BaseCase
 	{
 		log.debug(" @@ beforeclass begin");
 
-		Map<String, Integer> fileMap = new HashMap<String, Integer>() 
+		HashMap<String, Long> fileMap = new HashMap<String, Long>() 
 		{
 			private static final long serialVersionUID = 1L;
 			{
-				put("1B.jpg", 1);
-				put("2B.jpg", 2);
-				put("1K.jpg", 1 << 10);
-				put("10K.jpg", 10 * (1 << 10));
-				put("100K.jpg", 100 * (1 << 10));
-				put("1M.jpg", 1 << 20);
-				put("2M.jpg", 2 * (1 << 20));
-				put("3M.jpg", 3 * (1 << 20));
-				put("4M.jpg", 4 * (1 << 20));
-				put("5M.jpg", 5 * (1 << 20));
-				put("10M.jpg", 10 * (1 << 20));
-				put("20M.jpg", 20 * (1 << 20));
-				put("50M.jpg", 50 * (1 << 20));
-				put("100M.jpg", 100 * (1 << 20));
-				put("1G.jpg", 1 << 30);
+				put("1B.jpg", 1L);
+				put("2B.jpg", 2L);
+				put("1K.jpg", 1L << 10);
+				put("10K.jpg", 10 * (1L << 10));
+				put("100K.jpg", 100 * (1L << 10));
+				put("1M.jpg", 1L << 20);
+				put("2M.jpg", 2 * (1L << 20));
+				put("3M.jpg", 3 * (1L << 20));
+				put("4M.jpg", 4 * (1L << 20));
+				put("5M.jpg", 5 * (1L << 20));
+				put("10M.jpg", 10 * (1L << 20));
+				put("20M.jpg", 20 * (1L << 20));
+				put("50M.jpg", 50 * (1L << 20));
+				put("100M.jpg", 100 * (1L << 20));
+				put("1G.jpg", 1L << 30);
 				put("6G.jpg", 6 * (1L<< 30));
 			}
 		};
