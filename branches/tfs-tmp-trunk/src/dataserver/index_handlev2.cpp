@@ -352,7 +352,6 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             file_id = header->seq_no_;
-            ++header->used_file_info_bucket_size_;
           }
         }
       }
@@ -420,10 +419,13 @@ namespace tfs
         ret = get_slot_(slot, info.id_, current, prev, threshold, override, force);
         if (TFS_SUCCESS == ret)
         {
+          IndexHeaderV2* header = get_index_header_();
+          assert(NULL != header);
           assert(NULL != current);
           *current = info;
           if (NULL != prev)
             prev->next_ = slot;
+          ++header->used_file_info_bucket_size_;
         }
       }
       return ret;
@@ -439,10 +441,14 @@ namespace tfs
         ret = get_slot_(slot, info.id_, current, prev, buf, nbytes, override, force);
         if (TFS_SUCCESS == ret)
         {
+          char* data = const_cast<char*>(buf);
+          IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
+          assert(NULL != header);
           assert(NULL != current);
           *current = info;
           if (NULL != prev)
             prev->next_ = slot;
+          ++header->used_file_info_bucket_size_;
         }
       }
       return ret;
@@ -625,8 +631,6 @@ namespace tfs
         {
           FileInfoV2& finfo = (*iter);
           ret = insert_file_info_(finfo, threshold, false,false);
-          if (TFS_SUCCESS == ret)
-            ++pheader->used_file_info_bucket_size_;
         }
       }
       return ret;
