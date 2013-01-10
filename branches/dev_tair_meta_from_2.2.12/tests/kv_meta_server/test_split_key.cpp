@@ -19,7 +19,7 @@
 using namespace std;
 using namespace tfs;
 using namespace tfs::common;
-using namespace tfs::metawithkv;
+using namespace tfs::kvmetaserver;
 
 class SplitKeyTest: public ::testing::Test
 {

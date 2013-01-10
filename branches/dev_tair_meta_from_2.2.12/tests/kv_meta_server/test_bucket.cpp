@@ -15,26 +15,23 @@
  */
 
 #include <gtest/gtest.h>
-#include "common/parameter.h"
-#include "kvengine_helper.h"
-#include "tairengine_helper.h"
+#include "parameter.h"
+#include "test_meta_info_helper.h"
+#include "kv_meta_define.h"
+#include "test_kvengine.h"
 #include "define.h"
-#include "common/error_msg.h"
+#include "error_msg.h"
 
 using namespace std;
 using namespace tfs;
 using namespace tfs::common;
-using namespace tfs::metawithkv;
+using namespace tfs::kvmetaserver;
 
 class BucketTest: public ::testing::Test
 {
   public:
     BucketTest()
     {
-      SYSPARAM_KVMETA.tair_master_ = "10.235.145.80:5198";
-      SYSPARAM_KVMETA.tair_slave_ = "10.235.145.82:5198";
-      SYSPARAM_KVMETA.tair_group_ = "group_ldbcommon";
-      SYSPARAM_KVMETA.tair_object_area_ = 630;
     }
     ~BucketTest()
     {
@@ -42,159 +39,206 @@ class BucketTest: public ::testing::Test
     }
     virtual void SetUp()
     {
-      kv_engine_helper_ = new TairEngineHelper();
-      kv_engine_helper_->init();
+      test_meta_info_helper_ = new TestMetaInfoHelper();
+      test_meta_info_helper_->set_kv_engine(&test_engine_);
+      test_meta_info_helper_->init();
     }
     virtual void TearDown()
     {
-      delete kv_engine_helper_;
-      kv_engine_helper_ = NULL;
+      test_meta_info_helper_->set_kv_engine(NULL);
+      delete test_meta_info_helper_;
+      test_meta_info_helper_ = NULL;
     }
 
   protected:
-    KvEngineHelper* kv_engine_helper_;
+    TestMetaInfoHelper *test_meta_info_helper_;
+    TestEngineHelper test_engine_;
 };
 
 TEST_F(BucketTest, test_put)
 {
   int ret = TFS_SUCCESS;
-  string test_key1("bucketname");
-  string now_time("2012-01-06");
-  string value(now_time);
+  string bucket_name("bucketname");
+  int64_t now_time = 11111;
 
-  KvKey key;
-  key.key_ = test_key1.c_str();
-  key.key_size_ = test_key1.length();
-  key.key_type_ = KvKey::KEY_TYPE_BUCKET;
+  BucketMetaInfo bucket_meta_info;
+  bucket_meta_info.create_time_ = now_time;
 
-  ret = kv_engine_helper_->put_key(key, value, 0);
-
-  string* tvalue = &value;
-
-  int64_t version = -1;
-  ret = kv_engine_helper_->get_key(key, tvalue, &version);
-  EXPECT_EQ(*tvalue, now_time);
-
-  ret = kv_engine_helper_->delete_key(key);
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
 }
 
-TEST_F(BucketTest, test_del_with_no_object)
+/*TEST_F(BucketTest, test_del_with_no_object)
 {
   int ret = TFS_SUCCESS;
-  string test_key1("bucketname");
-  string now_time("2012-01-06");
-  string value(now_time);
+  string bucket_name("bucketname");
+  int64_t now_time = 11111;
 
-  KvKey key;
-  key.key_ = test_key1.c_str();
-  key.key_size_ = test_key1.length();
-  key.key_type_ = KvKey::KEY_TYPE_BUCKET;
+  BucketMetaInfo bucket_meta_info;
+  bucket_meta_info.set_create_time(now_time);
 
-  ret = kv_engine_helper_->put_key(key, value, 0);
+  ret = meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
-  ret = kv_engine_helper_->delete_key(key);
+  string file_name("objectname");
+  TfsFileInfo tfs_file_info;
+  ObjectMetaInfo object_meta_info;
+  CustomizeInfo customize_info;
+  ret = meta_info_helper_->put_object(bucket_name, file_name, tfs_file_info, object_meta_info, customize_info);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+  ret = meta_info_helper_->del_object(bucket_name, file_name);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
-  string* tvalue = &value;
-  int64_t version = -1;
-  ret = kv_engine_helper_->get_key(key, tvalue, &version);
-  EXPECT_NE(ret, TFS_SUCCESS);
-
+  ret = meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
 }
 
 TEST_F(BucketTest, test_del_with_object)
 {
   int ret = TFS_SUCCESS;
-  string test_key1("bucketname");
-  string now_time("2012-01-06");
-  string value(now_time);
+  string bucket_name("bucketname");
+  int64_t now_time = 11111;
 
-  KvKey key;
-  key.key_ = test_key1.c_str();
-  key.key_size_ = test_key1.length();
-  key.key_type_ = KvKey::KEY_TYPE_BUCKET;
+  BucketMetaInfo bucket_meta_info;
+  bucket_meta_info.create_time_ = now_time;
 
-  ret = kv_engine_helper_->put_key(key, value, 0);
+  ret = meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
   //put obj
-  KvKey obj_key;
-  string test_key2("bucketname");
-  test_key2 += KvKey::DELIMITER;
-  test_key2 += "objectname";
-  obj_key.key_ = test_key2.c_str();
-  obj_key.key_size_ = test_key2.length();
-  obj_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
-
-  ret = kv_engine_helper_->put_key(obj_key, value, 0);
+  string file_name("objectname");
+  TfsFileInfo tfs_file_info;
+  ObjectMetaInfo object_meta_info;
+  CustomizeInfo customize_info;
+  ret = meta_info_helper_->put_object(bucket_name, file_name, tfs_file_info, object_meta_info, customize_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
-  ret = kv_engine_helper_->delete_key(key);
+  ret = meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(ret, EXIT_DELETE_DIR_WITH_FILE_ERROR);
 
-  ret = kv_engine_helper_->delete_key(obj_key);
+  ret = meta_info_helper_->del_object(bucket_name, file_name);
   EXPECT_EQ(ret, TFS_SUCCESS);
-  ret = kv_engine_helper_->delete_key(key);
+  ret = meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(ret, TFS_SUCCESS);
+}
+
+TEST_F(BucketTest, test_with_prefix)
+{
+  const char *s = "objectname/aa/";
+  const string prefix = "objectname/aa";
+  char delimiter = '/';
+
+  bool prefix_flag = false;
+  bool common_flag = false;
+  int pos = -1;
+
+  MetaInfoHelper::get_common_prefix(s, prefix, delimiter, &prefix_flag, &common_flag, &pos);
+
+  EXPECT_EQ(prefix_flag, true);
+  EXPECT_EQ(common_flag, true);
+
+  EXPECT_EQ(pos, 13);
+}
+
+TEST_F(BucketTest, test_no_prefix)
+{
+  const char *s = "photos/2006/feb/aaa";
+  char delimiter = '/';
+  const string prefix;
+
+  bool prefix_flag = false;
+  bool common_flag = false;
+  int pos = -1;
+
+  MetaInfoHelper::get_common_prefix(s, prefix, delimiter, &prefix_flag, &common_flag, &pos);
+
+  EXPECT_EQ(prefix_flag, true);
+  EXPECT_EQ(common_flag, true);
+
+  EXPECT_EQ(pos, 6);
+}
+
+TEST_F(BucketTest, test_prefix_match_delimiter_dismatch)
+{
+  const char *s = "photos/2006/feb/aaa";
+  const string prefix = "photos/2006/";
+  char delimiter = '*';
+
+  bool prefix_flag = false;
+  bool common_flag = false;
+  int pos = -1;
+
+  MetaInfoHelper::get_common_prefix(s, prefix, delimiter, &prefix_flag, &common_flag, &pos);
+
+  EXPECT_EQ(prefix_flag, true);
+  EXPECT_EQ(common_flag, false);
+
+  EXPECT_EQ(pos, -1);
+}
+
+TEST_F(BucketTest, test_prefix_delimiter_dismatch)
+{
+  const char *s = "photos/2006/feb/aaa";
+  const string prefix = "2006/";
+  char delimiter = '*';
+
+  bool prefix_flag = false;
+  bool common_flag = false;
+  int pos = -1;
+
+  MetaInfoHelper::get_common_prefix(s, prefix, delimiter, &prefix_flag, &common_flag, &pos);
+
+  EXPECT_EQ(prefix_flag, false);
+  EXPECT_EQ(common_flag, false);
+
+  EXPECT_EQ(pos, -1);
 }
 
 
 TEST_F(BucketTest, test_get)
 {
   int ret = TFS_SUCCESS;
-  string test_key1("bucketname");
-  string now_time("2012-01-06");
-  string value(now_time);
+  string bucket_name("bucketname");
+  int64_t now_time = 11111;
 
-  KvKey key;
-  key.key_ = test_key1.c_str();
-  key.key_size_ = test_key1.length();
-  key.key_type_ = KvKey::KEY_TYPE_BUCKET;
+  BucketMetaInfo bucket_meta_info;
+  bucket_meta_info.create_time_ = now_time;
 
-  ret = kv_engine_helper_->put_key(key, value, 0);
+  ret = meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
-  KvKey obj_key;
-  string test_key2("bucketname");
-  test_key2 += KvKey::DELIMITER;
-  test_key2 += "objectname";
-  obj_key.key_ = test_key2.c_str();
-  obj_key.key_size_ = test_key2.length();
-  obj_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
-
-  ret = kv_engine_helper_->put_key(obj_key, value, 0);
+  //put obj
+  string file_name("objectname/aa/");
+  TfsFileInfo tfs_file_info;
+  ObjectMetaInfo object_meta_info;
+  CustomizeInfo customize_info;
+  ret = meta_info_helper_->put_object(bucket_name, file_name, tfs_file_info, object_meta_info, customize_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
-  KvKey obj_key1;
-  string test_key3("object");
-  test_key3 += KvKey::DELIMITER;
-  test_key3 += "object";
-  obj_key1.key_ = test_key3.c_str();
-  obj_key1.key_size_ = test_key3.length();
-  obj_key1.key_type_ = KvKey::KEY_TYPE_OBJECT;
-
-  ret = kv_engine_helper_->put_key(obj_key1, value, 0);
-  EXPECT_EQ(ret, TFS_SUCCESS);
-
+  // get bucket -> list obj
+  string prefix("objectname/aa");
+  string start_key("objectname/a");
+  char delimiter = '/';
+  vector<ObjectMetaInfo> v_object_meta_info;
   vector<string> v_object_name;
-  string prefix("object");
-  string start_key("objectname");
+  set<string> s_common_prefix;
   int32_t limit = 10;
-  ret = kv_engine_helper_->list_skeys(key, prefix, start_key, limit, v_object_name);
-  EXPECT_EQ(ret, TFS_SUCCESS);
-  EXPECT_EQ(v_object_name[0], start_key);
+  int8_t is_truncated = -1;
 
-  ret = kv_engine_helper_->delete_key(obj_key);
+  ret = meta_info_helper_->get_bucket(bucket_name, prefix, start_key, delimiter, limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated);
   EXPECT_EQ(ret, TFS_SUCCESS);
-  ret = kv_engine_helper_->delete_key(obj_key1);
-  EXPECT_EQ(ret, TFS_SUCCESS);
-  ret = kv_engine_helper_->delete_key(key);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(0, is_truncated);
+  EXPECT_EQ(1, static_cast<int32_t>(s_common_prefix.size()));
+  EXPECT_EQ(0, static_cast<int32_t>(v_object_name.size()));
 
-}
+  ret = meta_info_helper_->del_object(bucket_name, file_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+  ret = meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+}*/
 
 int main(int argc, char* argv[])
 {

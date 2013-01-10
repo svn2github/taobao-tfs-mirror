@@ -6,7 +6,7 @@ AM_CPPFLAGS=-I${top_srcdir}/src/kv_meta_server \
 
 AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest $(TAIR_META_LDFLAGS)
 
-LDADD=$(top_builddir)/src/kv_meta_server/libmetakvserver.a \
+LDADD=$(top_builddir)/src/kv_meta_server/libkvmetaserver.a \
 			$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a \
       $(TAIR_META_LDFLAGS)\
@@ -19,9 +19,12 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_split_key 
-TESTS+=test_split_key
-check_PROGRAMS+=test_split_key
+noinst_PROGRAMS=test_split_key test_bucket
+TESTS+=test_split_key test_bucket
+check_PROGRAMS+=test_split_key test_bucket
+
 test_split_key_SOURCES=test_split_key.cpp
 test_split_key_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
 
+test_bucket_SOURCES=test_bucket.cpp test_kvengine.cpp
+test_bucket_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest
