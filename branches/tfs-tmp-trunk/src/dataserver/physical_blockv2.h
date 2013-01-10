@@ -60,13 +60,14 @@ namespace tfs
         AllocPhysicalBlock(const int32_t physical_block_id, const std::string& path,
           const int32_t start, const int32_t end);
         virtual ~AllocPhysicalBlock();
-        int alloc(int8_t& index, int32_t& start, int32_t& end, const int32_t max_ext_block_size);
-        int free(const int8_t index);
-        bool empty() const;
-        bool full() const;
+        int alloc(int8_t& index, int32_t& start, int32_t& end,
+              const int32_t max_main_block_size, const int32_t max_ext_block_size);
+        int free(const int8_t index, const int32_t max_main_block_size, const int32_t max_ext_block_size);
+        bool empty(const int32_t max_main_block_size, const int32_t max_ext_block_size) const;
+        bool full(const int32_t max_main_block_size, const int32_t max_ext_block_size) const;
 
-        static const int8_t STORE_ALLOC_BIT_MAP_SIZE;
-        static const int8_t ALLOC_BIT_MAP_SIZE;
+        static const int32_t STORE_ALLOC_BIT_MAP_SIZE;
+        static const int32_t ALLOC_BIT_MAP_SIZE;
       private:
         int load_alloc_bit_map_();//只能被PhysicalBlockManager->insert调用
 

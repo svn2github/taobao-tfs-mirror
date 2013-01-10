@@ -25,8 +25,8 @@ namespace tfs
   namespace dataserver
   {
     const int32_t BasePhysicalBlock::MAX_WARN_CONSUME_TIME_US = 1000000000;
-    const int8_t AllocPhysicalBlock::STORE_ALLOC_BIT_MAP_SIZE = sizeof(uint64_t);
-    const int8_t AllocPhysicalBlock::ALLOC_BIT_MAP_SIZE   = 32;//只使用32位
+    const int32_t AllocPhysicalBlock::STORE_ALLOC_BIT_MAP_SIZE = sizeof(uint64_t);
+    const int32_t AllocPhysicalBlock::ALLOC_BIT_MAP_SIZE   = 32;//只使用32位
     const uint64_t BIT_MAP_MASK[AllocPhysicalBlock::ALLOC_BIT_MAP_SIZE] =
     {
       0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,
@@ -69,13 +69,15 @@ namespace tfs
 
     }
 
-    int AllocPhysicalBlock::alloc(int8_t& index, int32_t& start, int32_t& end, const int32_t max_ext_block_size)
+    int AllocPhysicalBlock::alloc(int8_t& index, int32_t& start, int32_t& end,
+          const int32_t max_main_block_size, const int32_t max_ext_block_size)
     {
       index = -1, start = 0, end = 0;
       int32_t ret =  CHECK_EXT_BLOCK_SIZE(max_ext_block_size) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         int8_t retry_times = 0;
+        const int8_t max_alloc_ext_block_count = std::min(max_main_block_size/max_ext_block_size, ALLOC_BIT_MAP_SIZE);
         do
         {
           ret = (!(alloc_bit_map_ & BIT_MAP_MASK[retry_times])) ? TFS_SUCCESS : EXIT_BIT_MAP_OUT_OF_RANGE;
@@ -91,14 +93,15 @@ namespace tfs
               ret = file_op_.fsync();
           }
         }
-        while (TFS_SUCCESS != ret && retry_times++ < ALLOC_BIT_MAP_SIZE);
+        while (TFS_SUCCESS != ret && retry_times++ < max_alloc_ext_block_count);
       }
       return ret;
     }
 
-    int AllocPhysicalBlock::free(const int8_t index)
+    int AllocPhysicalBlock::free(const int8_t index, const int32_t max_main_block_size, const int32_t max_ext_block_size)
     {
-      int32_t ret = (index > 0 && index <= ALLOC_BIT_MAP_SIZE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t max_alloc_ext_block_count = std::min(max_main_block_size/ max_ext_block_size, ALLOC_BIT_MAP_SIZE);
+      int32_t ret = (index > 0 && index <= max_alloc_ext_block_count) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         if (alloc_bit_map_ & BIT_MAP_MASK[index])
@@ -115,20 +118,22 @@ namespace tfs
       return ret;
     }
 
-    bool AllocPhysicalBlock::empty() const
+    bool AllocPhysicalBlock::empty(const int32_t max_main_block_size, const int32_t max_ext_block_size) const
     {
       bool ret = true;
-      for (int8_t index = 0; index < ALLOC_BIT_MAP_SIZE && ret; ++index)
+      int32_t max_alloc_ext_block_count = std::min(max_main_block_size/ max_ext_block_size, ALLOC_BIT_MAP_SIZE);
+      for (int8_t index = 0; index < max_alloc_ext_block_count && ret; ++index)
       {
         ret = (0 == (alloc_bit_map_ & BIT_MAP_MASK[index]));
       }
       return ret;
     }
 
-    bool AllocPhysicalBlock::full() const
+    bool AllocPhysicalBlock::full(const int32_t max_main_block_size, const int32_t max_ext_block_size) const
     {
       int8_t count = 0;
-      for (int8_t index = 0; index < ALLOC_BIT_MAP_SIZE; ++index)
+      int32_t max_alloc_ext_block_count = std::min(max_main_block_size/ max_ext_block_size, ALLOC_BIT_MAP_SIZE);
+      for (int8_t index = 0; index < max_alloc_ext_block_count; ++index)
       {
         if (alloc_bit_map_ & BIT_MAP_MASK[index])
           ++count;

@@ -2321,7 +2321,7 @@ namespace tfs
          block_manager_->get_all_block_info(blocks_helper);
        }
        req_msg.set_flag(msg->get_flag());
-       TBSYS_LOG(INFO, "report block to ns, blocks size: %zd, ext size: %zd",
+       TBSYS_LOG(INFO, "report block to ns, blocks size: %zd, ext size: %d",
            req_msg.get_blocks().size(), req_msg.get_block_count());
 
        NewClient* client = NewClientManager::get_instance().create_client();

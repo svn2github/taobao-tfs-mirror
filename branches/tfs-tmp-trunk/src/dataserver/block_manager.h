@@ -83,8 +83,6 @@ namespace tfs
 
         bool exist(const uint64_t logic_block_id, const bool tmp = false) const;
 
-        int generation_file_id(uint64_t& fileid, const uint64_t logic_block_id, const double threshold);
-
         SuperBlockManager& get_super_block_manager() { return super_block_manager_;}
         LogicBlockManager& get_logic_block_manager() { return logic_block_manager_;}
         PhysicalBlockManager& get_physical_block_manager() { return physical_block_manager_;}

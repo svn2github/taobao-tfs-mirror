@@ -72,7 +72,6 @@ namespace tfs
       private:
         DataService& service_;
     };
-
   }
 }
 #endif /* CLIENT_REQUEST_SERVER_H_ */

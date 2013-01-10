@@ -114,29 +114,35 @@ namespace tfs
     {
       BlockIndex index;
       physical_block = NULL;
+      SuperBlockInfo* info = NULL;
       int32_t ret = (INVALID_PHYSICAL_BLOCK_ID != physcical_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         SuperBlockManager& supber_block_manager = get_block_manager().get_super_block_manager();
-        ret = supber_block_manager.get_block_index(index, physcical_block_id);
+        ret = supber_block_manager.get_super_block_info(info);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = supber_block_manager.get_block_index(index, physcical_block_id);
+        }
         if (TFS_SUCCESS == ret)
         {
           if (BLOCK_SPLIT_FLAG_YES != index.split_flag_)
           {
+            --info->used_extend_block_count_;
             BasePhysicalBlock query(physcical_block_id);
             physical_block = physical_blocks_.erase(&query);
             ret = supber_block_manager.cleanup_block_index(physcical_block_id);
           }
           if (TFS_SUCCESS == ret
               && (0 != index.index_)
-                || (BLOCK_SPLIT_FLAG_YES == index.split_flag_))
+              || (BLOCK_SPLIT_FLAG_YES == index.split_flag_))
           {
             ret = free_ext_block(index, false);
           }
-          if (TFS_SUCCESS == ret)
-          {
-            ret = supber_block_manager.flush();
-          }
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = supber_block_manager.flush();
         }
       }
       TBSYS_LOG(INFO, "free physical block: %d %s %d, logic block id: %"PRI64_PREFIX"u",
@@ -227,79 +233,89 @@ namespace tfs
           {
             assert(NULL != (*iter));
             physical_block = dynamic_cast<AllocPhysicalBlock*>((*iter));
-            if (physical_block->full())
+            if (physical_block->full(info->max_main_block_size_,info->max_extend_block_size_))
             {
               rms.push_back(physical_block);
               physical_block = NULL;
             }
           }
+          BlockIndex alloc_block_index;
           std::vector<AllocPhysicalBlock*>::const_iterator it = rms.begin();
-          for (; it != rms.end(); ++it)
+          for (; it != rms.end() && TFS_SUCCESS == ret; ++it)
           {
-            alloc_physical_blocks_.erase((*it));
-          }
-          ret = (NULL == physical_block) ? EXIT_PHYSICAL_BLOCK_NOT_FOUND : TFS_SUCCESS;
-          if (TFS_SUCCESS != ret)
-          {
-            BlockIndex alloc_block_index;
-            alloc_block_index.logic_block_id_ = INVALID_BLOCK_ID;
-            ret = alloc_block(alloc_block_index, BLOCK_SPLIT_FLAG_YES);
+            ret = supber_block_manager.get_block_index(alloc_block_index, (*it)->id());
             if (TFS_SUCCESS == ret)
             {
-              ++info->used_main_block_count_;  // a main block used here
-              BasePhysicalBlock* tmp = get_(alloc_block_index.physical_block_id_);
-              physical_block = (NULL != tmp) ? dynamic_cast<AllocPhysicalBlock*>(tmp) : NULL;
+              alloc_block_index.split_status_ = BLOCK_SPLIT_STATUS_COMPLETE;
+              ret = supber_block_manager.update_block_index(alloc_block_index, (*it)->id());
             }
-            ret = (NULL == physical_block) ? EXIT_PHYSICAL_BLOCK_NOT_FOUND : TFS_SUCCESS;
+            alloc_physical_blocks_.erase((*it));
           }
           if (TFS_SUCCESS == ret)
           {
-            int8_t  pos = 0;
-            int32_t start = 0, end = 0;
-            ret = physical_block->alloc(pos, start, end, info->max_extend_block_size_);
-            if (TFS_SUCCESS == ret)
+            ret = (NULL == physical_block) ? EXIT_PHYSICAL_BLOCK_NOT_FOUND : TFS_SUCCESS;
+            if (TFS_SUCCESS != ret)
             {
-              int32_t physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
-              ret = supber_block_manager.get_legal_physical_block_id(physical_block_id, true);
+              memset(&alloc_block_index, 0, sizeof(alloc_block_index));
+              alloc_block_index.logic_block_id_ = INVALID_BLOCK_ID;
+              ret = alloc_block(alloc_block_index, BLOCK_SPLIT_FLAG_YES);
               if (TFS_SUCCESS == ret)
               {
-                assert(physical_block_id != INVALID_PHYSICAL_BLOCK_ID);
-                ext_index.index_ = pos;
-                ext_index.physical_block_id_ = physical_block_id;
-                ext_index.logic_block_id_ = index.logic_block_id_;
-                ext_index.physical_file_name_id_ = physical_block->id();
-                ext_index.next_index_ = 0;
-                ext_index.prev_index_ = index.physical_block_id_;
-                ext_index.split_flag_ = BLOCK_SPLIT_FLAG_NO;
-                ext_index.split_status_= BLOCK_SPLIT_STATUS_UNCOMPLETE;
-                ext_index.status_     = BLOCK_CREATE_COMPLETE_STATUS_COMPLETE;
-                index.next_index_     = ext_index.physical_block_id_;
-                std::stringstream path;
-                path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << ext_index.physical_file_name_id_;
-                ret = insert_(ext_index, ext_index.physical_block_id_, path.str(), start, end);
+                ++info->used_main_block_count_;  // a main block used here
+                BasePhysicalBlock* tmp = get_(alloc_block_index.physical_block_id_);
+                physical_block = (NULL != tmp) ? dynamic_cast<AllocPhysicalBlock*>(tmp) : NULL;
+              }
+              ret = (NULL == physical_block) ? EXIT_PHYSICAL_BLOCK_NOT_FOUND : TFS_SUCCESS;
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              int8_t  pos = 0;
+              int32_t start = 0, end = 0;
+              ret = physical_block->alloc(pos, start, end, info->max_main_block_size_, info->max_extend_block_size_);
+              if (TFS_SUCCESS == ret)
+              {
+                int32_t physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
+                ret = supber_block_manager.get_legal_physical_block_id(physical_block_id, true);
                 if (TFS_SUCCESS == ret)
                 {
-                  ++info->used_extend_block_count_;
+                  assert(physical_block_id != INVALID_PHYSICAL_BLOCK_ID);
+                  ext_index.index_ = pos;
+                  ext_index.physical_block_id_ = physical_block_id;
+                  ext_index.logic_block_id_ = index.logic_block_id_;
+                  ext_index.physical_file_name_id_ = physical_block->id();
+                  ext_index.next_index_ = 0;
+                  ext_index.prev_index_ = index.physical_block_id_;
+                  ext_index.split_flag_ = BLOCK_SPLIT_FLAG_NO;
+                  ext_index.split_status_= BLOCK_SPLIT_STATUS_UNCOMPLETE;
+                  ext_index.status_     = BLOCK_CREATE_COMPLETE_STATUS_COMPLETE;
+                  index.next_index_     = ext_index.physical_block_id_;
+                  std::stringstream path;
+                  path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << ext_index.physical_file_name_id_;
+                  ret = insert_(ext_index, ext_index.physical_block_id_, path.str(), start, end);
+                  if (TFS_SUCCESS == ret)
+                  {
+                    ++info->used_extend_block_count_;
+                  }
                 }
               }
             }
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            ret = supber_block_manager.update_block_index(ext_index, ext_index.physical_block_id_);
             if (TFS_SUCCESS == ret)
             {
-              ret = supber_block_manager.update_block_index(index, index.physical_block_id_);
-              if (TFS_SUCCESS != ret)
+              ret = supber_block_manager.update_block_index(ext_index, ext_index.physical_block_id_);
+              if (TFS_SUCCESS == ret)
               {
-                ret = supber_block_manager.cleanup_block_index(ext_index.physical_block_id_);
+                ret = supber_block_manager.update_block_index(index, index.physical_block_id_);
+                if (TFS_SUCCESS != ret)
+                {
+                  ret = supber_block_manager.cleanup_block_index(ext_index.physical_block_id_);
+                }
               }
             }
-          }
 
-          if (TFS_SUCCESS == ret)
-          {
-              ret = get_block_manager().get_super_block_manager().flush();
+            if (TFS_SUCCESS == ret)
+            {
+                ret = get_block_manager().get_super_block_manager().flush();
+            }
           }
         }
         while (TFS_SUCCESS != ret && retry_times-- > 0);
@@ -314,60 +330,67 @@ namespace tfs
       int32_t ret = (0 == index.index_ &&  BLOCK_SPLIT_FLAG_YES != index.split_flag_) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        bool cleanup = false;
-        AllocPhysicalBlock* physical_block = NULL;
-        BasePhysicalBlock query(index.physical_file_name_id_);
-        PHYSICAL_BLOCK_MAP_ITER iter = physical_blocks_.find(&query);
-        int32_t ret = (physical_blocks_.end() != iter) ? TFS_SUCCESS : EXIT_PHYSICAL_BLOCK_NOT_FOUND;
+        SuperBlockInfo* info = NULL;
+        SuperBlockManager& supber_block_manager = get_block_manager().get_super_block_manager();
+        ret = supber_block_manager.get_super_block_info(info);
         if (TFS_SUCCESS == ret)
         {
-          physical_block = dynamic_cast<AllocPhysicalBlock*>((*iter));
-          assert(NULL != physical_block);
-        }
-        if (TFS_SUCCESS == ret && 0 != index.index_)
-        {
-          ret = physical_block->free(index.index_);
-        }
-        if (TFS_SUCCESS == ret)
-        {
-          cleanup = physical_block->empty();
-          PHYSICAL_BLOCK_MAP_ITER iter = alloc_physical_blocks_.find(physical_block);
-          if (cleanup)
+          bool cleanup = false;
+          AllocPhysicalBlock* physical_block = NULL;
+          BasePhysicalBlock query(index.physical_file_name_id_);
+          PHYSICAL_BLOCK_MAP_ITER iter = physical_blocks_.find(&query);
+          int32_t ret = (physical_blocks_.end() != iter) ? TFS_SUCCESS : EXIT_PHYSICAL_BLOCK_NOT_FOUND;
+          if (TFS_SUCCESS == ret)
           {
-            physical_blocks_.erase(physical_block);
-            if (alloc_physical_blocks_.end() != iter)
-              alloc_physical_blocks_.erase(physical_block);
-            tbsys::gDelete(physical_block);//TODO
+            physical_block = dynamic_cast<AllocPhysicalBlock*>((*iter));
+            assert(NULL != physical_block);
           }
-          else
+          if (TFS_SUCCESS == ret && 0 != index.index_)
           {
-            BasePhysicalBlock* result = NULL;
-            if (alloc_physical_blocks_.end() == iter)
-              ret = alloc_physical_blocks_.insert_unique(result, physical_block);
+            ret = physical_block->free(index.index_, info->max_main_block_size_, info->max_extend_block_size_);
           }
-        }
+          if (TFS_SUCCESS == ret)
+          {
+            cleanup = physical_block->empty(info->max_main_block_size_, info->max_extend_block_size_);
+            PHYSICAL_BLOCK_MAP_ITER iter = alloc_physical_blocks_.find(physical_block);
+            if (cleanup)
+            {
+              physical_blocks_.erase(physical_block);
+              if (alloc_physical_blocks_.end() != iter)
+                alloc_physical_blocks_.erase(physical_block);
+              tbsys::gDelete(physical_block);//TODO
+            }
+            else
+            {
+              BasePhysicalBlock* result = NULL;
+              if (alloc_physical_blocks_.end() == iter)
+                ret = alloc_physical_blocks_.insert_unique(result, physical_block);
+            }
+          }
 
-        if (TFS_SUCCESS == ret)
-        {
           BlockIndex main_block_index;
-          ret = get_block_manager().get_super_block_manager().get_block_index(main_block_index, index.physical_file_name_id_);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = get_block_manager().get_super_block_manager().get_block_index(main_block_index, index.physical_file_name_id_);
+          }
           if (TFS_SUCCESS == ret)
           {
             if (cleanup)
             {
+              --info->used_main_block_count_;
               ret = get_block_manager().get_super_block_manager().cleanup_block_index(main_block_index.physical_block_id_);
+              TBSYS_LOG(INFO, "free alloc physical block: %d, physical extend block: %d, logic block id: %"PRI64_PREFIX"u",
+                  index.physical_file_name_id_, index.physical_block_id_, index.logic_block_id_);
             }
-
             if (!cleanup && (main_block_index.split_status_ == BLOCK_SPLIT_STATUS_COMPLETE))
             {
               main_block_index.split_status_ = BLOCK_SPLIT_STATUS_UNCOMPLETE;
               ret = get_block_manager().get_super_block_manager().update_block_index(main_block_index, main_block_index.physical_block_id_);
             }
-
-            if (TFS_SUCCESS == ret && flush)
-            {
-              ret = get_block_manager().get_super_block_manager().flush();
-            }
+          }
+          if (TFS_SUCCESS == ret && flush)
+          {
+            ret = get_block_manager().get_super_block_manager().flush();
           }
         }
       }
