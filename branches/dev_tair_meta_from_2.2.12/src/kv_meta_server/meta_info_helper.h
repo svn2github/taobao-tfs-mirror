@@ -54,9 +54,7 @@ namespace tfs
 
       int get_object(const std::string& bucket_name,
                      const std::string& file_name,
-                     common::TfsFileInfo* p_tfs_file_info,
-                     common::ObjectMetaInfo* p_object_meta_info,
-                     common::CustomizeInfo* p_customize_info);
+                     common::ObjectInfo* p_object_info);
 
       int del_object(const std::string& bucket_name,
                      const std::string& file_name);

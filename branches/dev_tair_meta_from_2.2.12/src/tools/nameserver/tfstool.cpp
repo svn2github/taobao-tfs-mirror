@@ -1887,7 +1887,9 @@ int cmd_get_object(const VSTRING& param)
   const char* object_name = param[1].c_str();
   const char* local_file = expand_path(const_cast<string&>(param[2]));
 
-  int ret = g_kv_meta_client.get_object(bucket_name, object_name, local_file);
+  ObjectMetaInfo object_meta_info;
+  CustomizeInfo customize_info;
+  int ret = g_kv_meta_client.get_object(bucket_name, object_name, local_file, &object_meta_info, &customize_info);
   if (TFS_SUCCESS == ret)
   ToolUtil::print_info(ret, "get object: %s, object: %s => %s", bucket_name, object_name, local_file);
 

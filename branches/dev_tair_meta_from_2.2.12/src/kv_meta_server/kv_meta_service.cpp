@@ -40,7 +40,7 @@ namespace tfs
 
     tbnet::IPacketStreamer* KvMetaService::create_packet_streamer()
     {
-      return new common::BasePacketStreamer();
+      return new BasePacketStreamer();
     }
 
     void KvMetaService::destroy_packet_streamer(tbnet::IPacketStreamer* streamer)
@@ -48,12 +48,12 @@ namespace tfs
       tbsys::gDelete(streamer);
     }
 
-    common::BasePacketFactory* KvMetaService::create_packet_factory()
+    BasePacketFactory* KvMetaService::create_packet_factory()
     {
       return new message::MessageFactory();
     }
 
-    void KvMetaService::destroy_packet_factory(common::BasePacketFactory* factory)
+    void KvMetaService::destroy_packet_factory(BasePacketFactory* factory)
     {
       tbsys::gDelete(factory);
     }
@@ -174,9 +174,11 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ObjectInfo object_info = req_put_object_msg->get_object_info();
-        ret = meta_info_helper_.put_object(req_put_object_msg->get_bucket_name(), req_put_object_msg->get_file_name(),
-          object_info.tfs_file_info_, object_info.object_meta_info_,
-          object_info.customize_info_);
+        ret = meta_info_helper_.put_object(req_put_object_msg->get_bucket_name(),
+            req_put_object_msg->get_file_name(),
+            object_info.tfs_file_info_,
+            object_info.meta_info_,
+            object_info.customize_info_);
       }
 
       if (TFS_SUCCESS != ret)
@@ -201,21 +203,27 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        common::ObjectInfo object_info;
+        ObjectInfo object_info;
+        ret = meta_info_helper_.get_object(req_get_object_msg->get_bucket_name(),
+                  req_get_object_msg->get_file_name(), &object_info);
 
-        ret = meta_info_helper_.get_object(req_get_object_msg->get_bucket_name(), req_get_object_msg->get_file_name(),
-                                        &object_info.tfs_file_info_, &object_info.object_meta_info_, &object_info.customize_info_);
+        TBSYS_LOG(DEBUG, "get object, bucket_name: %s , object_name: %s, ret: %d",
+                  req_get_object_msg->get_bucket_name().c_str(),
+                  req_get_object_msg->get_file_name().c_str(),
+                  ret);
+
         if (TFS_SUCCESS == ret)
         {
           RspKvMetaGetObjectMessage* rsp_get_object_msg = new(std::nothrow) RspKvMetaGetObjectMessage();
           assert(NULL != rsp_get_object_msg);
           rsp_get_object_msg->set_object_info(object_info);
+          object_info.dump();
 
           req_get_object_msg->reply(rsp_get_object_msg);
         }
         else
         {
-          req_get_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO),
+          req_get_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),
                ret, "get object fail");
         }
       }

@@ -112,6 +112,16 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
+        const bool get_still_have() const
+        {
+          return still_have_;
+        }
+
+        void set_still_have(const bool still_have)
+        {
+          still_have_ = still_have;
+        }
+
         const common::ObjectInfo& get_object_info() const
         {
           return object_info_;
@@ -123,6 +133,7 @@ namespace tfs
         }
 
       private:
+        bool still_have_;
         common::ObjectInfo object_info_;
     };
 

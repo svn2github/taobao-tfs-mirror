@@ -34,6 +34,7 @@ namespace tfs
       int64_t length() const;
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      void dump() const;
 
       int64_t block_id_;
       int64_t file_id_;
@@ -46,6 +47,7 @@ namespace tfs
       int64_t length() const;
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      void dump() const;
 
       int64_t create_time_;
       int64_t modify_time_;
@@ -69,11 +71,12 @@ namespace tfs
       int64_t length() const;
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      void dump() const;
 
       int64_t offset_;
       bool has_meta_info_;
       bool has_customize_info_;
-      ObjectMetaInfo object_meta_info_;
+      ObjectMetaInfo meta_info_;
       TfsFileInfo tfs_file_info_;
       CustomizeInfo customize_info_;
     };

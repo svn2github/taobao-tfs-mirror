@@ -18,9 +18,10 @@
 #include "meta_info_helper.h"
 #include <malloc.h>
 #include "tairengine_helper.h"
-using namespace std;
+
 namespace tfs
 {
+  using namespace std;
   using namespace common;
   namespace kvmetaserver
   {
@@ -47,8 +48,8 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::put_meta(const std::string& bucket_name, const std::string& file_name,
-         const common::TfsFileInfo& tfs_file_info)
+    int MetaInfoHelper::put_meta(const string& bucket_name, const string& file_name,
+         const TfsFileInfo& tfs_file_info)
     {
       //TODO for test now
       int ret = TFS_SUCCESS;
@@ -72,8 +73,8 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::get_meta(const std::string& bucket_name, const std::string& file_name,
-        common::TfsFileInfo* tfs_file_info)
+    int MetaInfoHelper::get_meta(const string& bucket_name, const string& file_name,
+        TfsFileInfo* tfs_file_info)
     {
       UNUSED(bucket_name);
       UNUSED(file_name);
@@ -83,17 +84,17 @@ namespace tfs
 
 
     /*----------------------------object part-----------------------------*/
-    int MetaInfoHelper::put_object(const std::string& bucket_name, const std::string& file_name,
-    const common::TfsFileInfo& tfs_file_info, const common::ObjectMetaInfo& object_meta_info,
-    const common::CustomizeInfo& customize_info)
+    int MetaInfoHelper::put_object(const string& bucket_name, const string& file_name,
+    const TfsFileInfo& tfs_file_info, const ObjectMetaInfo& object_meta_info,
+    const CustomizeInfo& customize_info)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
       //op key
       string real_key(bucket_name + KvKey::DELIMITER + file_name);
       real_key += KvKey::DELIMITER;
-      real_key += "0" ; //version_id;
+      real_key += "0"; //version_id;
       real_key += KvKey::DELIMITER;
-      real_key += "0" ; //offset;
+      real_key += "0"; //offset;
 
       KvKey key;
       key.key_ = real_key.c_str();
@@ -128,16 +129,16 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::get_object(const std::string& bucket_name, const std::string& file_name,
-           common::TfsFileInfo* p_tfs_file_info,common::ObjectMetaInfo* p_object_meta_info,
-           common::CustomizeInfo* p_customize_info)
+    // TODO
+    int MetaInfoHelper::get_object(const string &bucket_name, const string &file_name,
+            ObjectInfo *p_object_info)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
       string real_key(bucket_name + KvKey::DELIMITER + file_name);
       real_key += KvKey::DELIMITER;
-      real_key += "0" ; //version_id;
+      real_key += "0"; //version_id;
       real_key += KvKey::DELIMITER;
-      real_key += "0" ; //offset;
+      real_key += "0"; //offset;
 
       KvKey key;
       key.key_ = real_key.c_str();
@@ -151,20 +152,27 @@ namespace tfs
       int64_t pos = 0;
       if(TFS_SUCCESS == ret)
       {
-        ret = p_tfs_file_info->deserialize(value.c_str(), value.size(), pos);
+        if (0 == p_object_info->offset_)
+        {
+          p_object_info->has_meta_info_ = true;
+          p_object_info->has_customize_info_ = true;
+        }
+
+        ret = p_object_info->tfs_file_info_.deserialize(value.c_str(), value.size(), pos);
       }
       if(TFS_SUCCESS == ret)
       {
-        ret = p_object_meta_info->deserialize(value.c_str(), value.size(), pos);
+        ret = p_object_info->meta_info_.deserialize(value.c_str(), value.size(), pos);
       }
       if(TFS_SUCCESS == ret)
       {
-        ret = p_customize_info->deserialize(value.c_str(), value.size(), pos);
+        ret = p_object_info->customize_info_.deserialize(value.c_str(), value.size(), pos);
       }
+
       return ret;
     }
 
-    int MetaInfoHelper::del_object(const std::string& bucket_name, const std::string& file_name)
+    int MetaInfoHelper::del_object(const string& bucket_name, const string& file_name)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
       string real_key(bucket_name + KvKey::DELIMITER + file_name);
@@ -183,7 +191,7 @@ namespace tfs
     }
     /*----------------------------object part-----------------------------*/
 
-    int MetaInfoHelper::put_bucket(const std::string& bucket_name, const int64_t create_time)
+    int MetaInfoHelper::put_bucket(const string& bucket_name, const int64_t create_time)
     {
       //TODO for test now
       int ret = TFS_SUCCESS;
@@ -200,8 +208,8 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::get_bucket(const std::string& bucket_name, const std::string& prefix,
-        const std::string& start_key, const int32_t limit, VSTRING& v_object_name)
+    int MetaInfoHelper::get_bucket(const string& bucket_name, const string& prefix,
+        const string& start_key, const int32_t limit, VSTRING& v_object_name)
     {
       //TODO for test now
       int ret = TFS_SUCCESS;
@@ -216,7 +224,7 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::del_bucket(const std::string& bucket_name)
+    int MetaInfoHelper::del_bucket(const string& bucket_name)
     {
       //TODO for test now
       int ret = TFS_SUCCESS;

@@ -210,7 +210,7 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
 }
 
 int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_name, const char *object_name,
-  ObjectInfo *object_info)
+  ObjectInfo *object_info, bool *still_have)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name || NULL == object_name)
@@ -229,15 +229,16 @@ int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_nam
     if (TFS_SUCCESS != ret)
     {
       TBSYS_LOG(ERROR, "call get object fail,"
-          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "server_addr: %s, bucket_name: %s, "
           "object_name: %s, ret: %d",
-          server_id, bucket_name, object_name, ret);
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, object_name, ret);
       ret = EXIT_NETWORK_ERROR;
     }
     else if (RSP_KVMETA_GET_OBJECT_MESSAGE == rsp->getPCode())
     {
       RspKvMetaGetObjectMessage* rsp_go_msg = dynamic_cast<RspKvMetaGetObjectMessage*>(rsp);
       *object_info = rsp_go_msg->get_object_info();
+      *still_have = rsp_go_msg->get_still_have();
     }
     else if (STATUS_MESSAGE == rsp->getPCode())
     {

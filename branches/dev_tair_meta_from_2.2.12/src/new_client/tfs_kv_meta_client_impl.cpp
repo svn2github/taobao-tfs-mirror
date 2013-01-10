@@ -181,10 +181,78 @@ namespace tfs
       return ret;
     }
 
-    TfsRetType KvMetaClientImpl::put_object(const char *bucket_name, const char *object_name,
+    int64_t KvMetaClientImpl::read_data(const char* ns_addr,
+        const vector<FragMeta> &v_frag_meta,
+        void *buffer, int64_t offset, int64_t length)
+    {
+      int64_t ret = TFS_SUCCESS;
+      int64_t cur_offset = offset;
+      int64_t cur_length = 0;
+      int64_t left_length = length;
+      int64_t cur_pos = 0;
+
+      vector<FragMeta>::const_iterator iter = v_frag_meta.begin();
+      for(; iter != v_frag_meta.end(); iter++)
+      {
+        if (cur_offset > iter->offset_ + iter->size_)
+        {
+          TBSYS_LOG(ERROR, "fatal error wrong pos, cur_offset: %"PRI64_PREFIX"d, total: %"PRI64_PREFIX"d",
+              cur_offset, (iter->offset_ + iter->size_));
+          break;
+        }
+
+        // deal with the hole
+        if (cur_offset < iter->offset_)
+        {
+          int32_t diff = min(offset + length - cur_offset, iter->offset_ - cur_offset);
+          left_length -= diff;
+          memset(reinterpret_cast<char*>(buffer) + cur_pos, 0, diff);
+          if (left_length <= 0)
+          {
+            left_length = 0;
+            break;
+          }
+          cur_offset += diff;
+          cur_pos += diff;
+        }
+
+        cur_length = min(iter->size_ - (cur_offset - iter->offset_), left_length);
+        int64_t read_length = tfs_meta_manager_.read_data(ns_addr, iter->block_id_, iter->file_id_,
+            reinterpret_cast<char*>(buffer) + cur_pos, (cur_offset - iter->offset_), cur_length);
+
+        if (read_length < 0)
+        {
+          TBSYS_LOG(ERROR, "read tfs data failed, block_id: %u, file_id: %"PRI64_PREFIX"u",
+              iter->block_id_, iter->file_id_);
+          ret = read_length;
+          break;
+        }
+
+        if (read_length != cur_length)
+        {
+          left_length -= read_length;
+          TBSYS_LOG(WARN, "read tfs data return wrong length,"
+              " cur_offset: %"PRI64_PREFIX"d, cur_length: %"PRI64_PREFIX"d, "
+              "read_length(%"PRI64_PREFIX"d) => cur_length(%"PRI64_PREFIX"d), left_length: %"PRI64_PREFIX"d",
+              cur_offset, cur_length, read_length, cur_length, left_length);
+          break;
+        }
+        cur_pos += read_length;
+        cur_offset += read_length;
+        left_length -= read_length;
+
+        if (left_length <= 0)
+        {
+          break;
+        }
+      }
+      return (TFS_SUCCESS == ret) ? (length - left_length) : ret;
+    }
+
+    int64_t KvMetaClientImpl::put_object(const char *bucket_name, const char *object_name,
         const void *buffer, int64_t offset, int64_t length)
     {
-      TfsRetType ret = TFS_ERROR;
+      int64_t ret = EXIT_GENERAL_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
       {
         TBSYS_LOG(ERROR, "bucket name of object name is invalid ");
@@ -192,7 +260,7 @@ namespace tfs
       }
       else if (buffer == NULL || length < 0)
       {
-        TBSYS_LOG(ERROR, "invalid buffer, length %"PRI64_PREFIX"d", length);
+        TBSYS_LOG(ERROR, "invalid buffer, length: %"PRI64_PREFIX"d", length);
         ret = EXIT_INVALID_ARGU_ERROR;
       }
       else
@@ -227,26 +295,135 @@ namespace tfs
             {
               object_info.has_meta_info_ = true;
               object_info.has_customize_info_ = true;
-              object_info.object_meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
+              object_info.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
+              TBSYS_LOG(DEBUG, "first object info, will put meta info.");
+              object_info.meta_info_.dump();
             }
             object_info.offset_ = iter->offset_;
 
+            object_info.tfs_file_info_.block_id_ = iter->block_id_;
             object_info.tfs_file_info_.file_id_ = iter->file_id_;
             object_info.tfs_file_info_.cluster_id_ = cluster_id;
-            object_info.tfs_file_info_.block_id_ = iter->block_id_;
+
             ret = do_put_object(bucket_name, object_name, object_info);
             if (TFS_SUCCESS != ret)
             {
-              TBSYS_LOG(ERROR, "do put object fail");
+              TBSYS_LOG(ERROR, "do put object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %d",
+                  bucket_name, object_name, iter->offset_, ret);
+              if (TFS_ERROR == ret)
+              {
+                ret = EXIT_GENERAL_ERROR;
+              }
+              break;
+            }
+          }
+          left_length -= real_write_length;
+          cur_pos += real_write_length;
+          cur_offset += real_write_length;
+        }
+        while (left_length > 0 && TFS_SUCCESS == ret);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = length - left_length;
+        }
+      }
+
+      return ret;
+    }
+
+    int64_t KvMetaClientImpl::get_object(const char *bucket_name, const char *object_name,
+        void *buffer, int64_t offset, int64_t length,
+        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info)
+    {
+      int64_t ret = EXIT_GENERAL_ERROR;
+      if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name of object name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else if (buffer == NULL || offset < 0 || length < 0)
+      {
+        TBSYS_LOG(ERROR, "invalid buffer, offset: %"PRI64_PREFIX"d,"
+                  " length: %"PRI64_PREFIX"d", offset, length);
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else
+      {
+        bool still_have = false;
+        int64_t left_length = length;
+        int64_t read_length = 0;
+        int64_t cur_offset = offset;
+        int64_t cur_length = 0;
+        int64_t cur_pos = 0;
+
+        do
+        {
+          // get object
+          ObjectInfo object_info;
+          object_info.offset_ = cur_offset;
+          ret = do_get_object(bucket_name, object_name, &object_info, &still_have);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "do get object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %d",
+                bucket_name, object_name, cur_offset, ret);
+            if (TFS_ERROR == ret)
+            {
+              ret = EXIT_GENERAL_ERROR;
+            }
+            break;
+          }
+          if (0 == cur_offset)
+          {
+            if (!object_info.has_meta_info_ || !object_info.has_customize_info_)
+            {
+              TBSYS_LOG(ERROR, "invalid object, no meta info or customize info, bucket: %s, object: %s",
+                        bucket_name, object_name);
+              ret = EXIT_INVALID_OBJECT;
               break;
             }
 
-            left_length -= real_write_length;
-            cur_pos += real_write_length;
-            cur_offset += real_write_length;
+            if (NULL != object_meta_info)
+            {
+              *object_meta_info = object_info.meta_info_;
+              *customize_info = object_info.customize_info_;
+            }
           }
+          vector<FragMeta> v_frag_meta;
+          FragMeta frag_meta(object_info.tfs_file_info_.block_id_,
+              object_info.tfs_file_info_.file_id_,
+              cur_offset,
+              object_info.meta_info_.max_tfs_file_size_);
+          v_frag_meta.push_back(frag_meta);
+
+          cur_length = min(static_cast<int64_t>(object_info.meta_info_.max_tfs_file_size_), left_length);
+
+          // read tfs
+          read_length = read_data(ns_addr_.c_str(), v_frag_meta,
+              reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length);
+          // tfs error occurs
+          if (read_length < 0)
+          {
+            TBSYS_LOG(ERROR, "read data from tfs failed, read_length: %"PRI64_PREFIX"d", read_length);
+            ret = read_length;
+            break;
+          }
+          // one tfs file read data error, should break
+          if (0 == read_length)
+          {
+            break;
+          }
+
+          left_length -= read_length;
+          TBSYS_LOG(DEBUG, "@@ read once, offset: %ld, length %ld, read_length: %ld, left: %ld",
+              cur_offset, cur_length, read_length, left_length);
+          cur_offset += read_length;
+          cur_pos += read_length;
         }
-        while (left_length > 0 && TFS_SUCCESS == ret);
+        while(left_length > 0 && still_have);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = (length - left_length);
+        }
       }
 
       return ret;
@@ -257,7 +434,7 @@ namespace tfs
     {
       TfsRetType ret = TFS_SUCCESS;
       int fd = -1;
-      int64_t read_len = 0, offset = 0;
+      int64_t read_len = 0, write_len = 0, offset = 0;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
       {
         TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
@@ -292,22 +469,20 @@ namespace tfs
           }
           while (read_len > 0)
           {
-            ret = put_object(bucket_name, object_name, buf, offset, read_len);
-            if (TFS_SUCCESS != ret)
+            write_len = put_object(bucket_name, object_name, buf, offset, read_len);
+            if (write_len <= 0)
             {
+              TBSYS_LOG(ERROR, "put object fail. bucket: %s, object: %s", bucket_name, object_name);
+              ret = TFS_ERROR;
               break;
             }
 
-            offset += read_len;
-            read_len -= read_len;
+            offset += write_len;
+            read_len -= write_len;
           }
         }
 
         tbsys::gDeleteA(buf);
-      }
-
-      if (fd > 0)
-      {
         ::close(fd);
       }
 
@@ -315,12 +490,61 @@ namespace tfs
     }
 
     TfsRetType KvMetaClientImpl::get_object(const char *bucket_name, const char *object_name,
-        const char* local_file)
+        const char* local_file,
+        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info)
     {
-      TfsRetType ret = TFS_ERROR;
-      UNUSED(bucket_name);
-      UNUSED(object_name);
-      UNUSED(local_file);
+      TfsRetType ret = TFS_SUCCESS;
+      int fd = -1;
+      int64_t offset = 0;
+      if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else if (NULL == local_file)
+      {
+        TBSYS_LOG(ERROR, "local file is null");
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else if ((fd = ::open(local_file, O_WRONLY|O_CREAT, 0644)) < 0)
+      {
+        TBSYS_LOG(ERROR, "open local file %s to write fail: %s", local_file, strerror(errno));
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else
+      {
+        int32_t io_size = MAX_READ_SIZE;
+
+        char* buf = new char[io_size];
+        int64_t read_len = 0, write_len = 0;
+        while (1)
+        {
+          read_len = get_object(bucket_name, object_name, buf, offset, io_size, object_meta_info, customize_info);
+          if (read_len < 0)
+          {
+            ret = read_len;
+            TBSYS_LOG(ERROR, "get object fail. bucket: %s, object: %s, ret: %d", bucket_name, object_name, ret);
+            break;
+          }
+
+          if (0 == read_len)
+          {
+            break;
+          }
+
+          if ((write_len = ::write(fd, buf, read_len)) != read_len)
+          {
+            TBSYS_LOG(ERROR, "write local file %s fail, write len: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d, error: %s",
+                local_file, read_len, write_len, strerror(errno));
+            ret = TFS_ERROR;
+            break;
+          }
+          offset += read_len;
+        }
+        tbsys::gDeleteA(buf);
+        ::close(fd);
+      }
+
       return ret;
     }
 
@@ -338,7 +562,7 @@ namespace tfs
 
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "del bucket: %s, object: %s failed", bucket_name, object_name);
+          TBSYS_LOG(ERROR, "del object failed. bucket: %s, object: %s", bucket_name, object_name);
         }
       }
 
@@ -370,9 +594,9 @@ namespace tfs
     }
 
     int KvMetaClientImpl::do_get_object(const char *bucket_name,
-        const char *object_name, ObjectInfo *object_info)
+        const char *object_name, ObjectInfo *object_info, bool *still_have)
     {
-      return KvMetaHelper::do_get_object(kms_id_, bucket_name, object_name, object_info);
+      return KvMetaHelper::do_get_object(kms_id_, bucket_name, object_name, object_info, still_have);
     }
 
     int KvMetaClientImpl::do_del_object(const char *bucket_name, const char *object_name)

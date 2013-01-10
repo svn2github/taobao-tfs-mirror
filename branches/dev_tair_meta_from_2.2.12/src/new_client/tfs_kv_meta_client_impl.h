@@ -41,12 +41,18 @@ namespace tfs
                               std::vector<std::string>& v_object_name);
         TfsRetType del_bucket(const char *bucket_name);
 
-        TfsRetType put_object(const char *bucket_name, const char *object_name,
+        int64_t put_object(const char *bucket_name, const char *object_name,
             const void *buffer, int64_t offset, int64_t length);
+        int64_t get_object(const char *bucket_name, const char *object_name,
+            void *buffer, int64_t offset, int64_t length,
+            common::ObjectMetaInfo *object_meta_info, common::CustomizeInfo *customize_info);
+
         TfsRetType put_object(const char *bucket_name, const char *object_name,
             const char* local_file);
         TfsRetType get_object(const char *bucket_name, const char *object_name,
-            const char* local_file);
+            const char* local_file, common::ObjectMetaInfo *object_meta_info,
+            common::CustomizeInfo *customize_info);
+
         TfsRetType del_object(const char *bucket_name, const char *object_name);
 
         int do_put_bucket(const char *bucket_name);
@@ -58,7 +64,7 @@ namespace tfs
         int do_put_object(const char *bucket_name, const char *object_name,
                           const common::ObjectInfo &object_info);
         int do_get_object(const char *bucket_name, const char *object_name,
-                          common::ObjectInfo *object_info);
+                          common::ObjectInfo *object_info, bool *still_have);
         int do_del_object(const char *bucket_name, const char *object_name);
 
         bool is_valid_bucket_name(const char *bucket_name);
@@ -68,6 +74,9 @@ namespace tfs
         int64_t write_data(const char *ns_addr,
             const void *buffer, int64_t offset, int64_t length,
             std::vector<common::FragMeta> *v_frag_meta);
+        int64_t read_data(const char* ns_addr,
+            const std::vector<common::FragMeta> &v_frag_meta,
+            void *buffer, int64_t offset, int64_t length);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClientImpl);

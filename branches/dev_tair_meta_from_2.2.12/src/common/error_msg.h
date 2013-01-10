@@ -182,6 +182,8 @@ namespace tfs
     const int32_t EXIT_NEW_TABLE_NOT_EXIST= -15006;//new table not exist
     const int32_t EXIT_NEW_TABLE_INVALID = -15007;//new table invalid
 
+    const int32_t EXIT_INVALID_OBJECT = -16000;// no meta info or something
+
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_
