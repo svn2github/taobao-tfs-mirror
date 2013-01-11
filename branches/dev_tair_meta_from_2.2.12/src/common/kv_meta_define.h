@@ -26,6 +26,7 @@ namespace tfs
   {
     const char PERIOD = '.';
     const char DASH = '-';
+    const char DEFAULT_CHAR = 7;
     const int32_t MAX_LIMIT = 1000;
 
     struct TfsFileInfo

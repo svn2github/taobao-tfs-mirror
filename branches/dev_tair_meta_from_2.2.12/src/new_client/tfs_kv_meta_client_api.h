@@ -17,6 +17,8 @@
 #define TFS_CLIENT_KV_META_CLIENT_API_H_
 
 #include <vector>
+#include <set>
+#include "common/kv_meta_define.h"
 
 namespace tfs
 {
@@ -35,8 +37,10 @@ namespace tfs
 
         TfsRetType put_bucket(const char *bucket_name);
         TfsRetType get_bucket(const char *bucket_name, const char *prefix,
-                              const char* start_key, const int32_t limit,
-                              std::vector<std::string>& v_object_name);
+                              const char *start_key, const char delimiter, const int32_t limit,
+                              std::vector<common::ObjectMetaInfo> *v_object_meta_info,
+                              std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix,
+                              int8_t *is_truncated);
         TfsRetType del_bucket(const char *bucket_name);
 
         TfsRetType put_object(const char *bucket_name, const char *object_name,

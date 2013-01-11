@@ -15,7 +15,6 @@
  */
 
 #include "test_kvengine.h"
-
 #include "Memory.hpp"
 #include "common/parameter.h"
 #include "common/error_msg.h"
@@ -24,7 +23,6 @@ using namespace std;
 using namespace tair;
 namespace tfs
 {
-
   using namespace common;
   namespace kvmetaserver
   {
@@ -51,12 +49,27 @@ namespace tfs
       {
         case KvKey::KEY_TYPE_OBJECT:
           {
-
+            KvKey pkey, skey;
+            ret = split_key(key, &pkey, &skey);
+            if (TFS_SUCCESS == ret)
+            {
+              OBJECT_CONTAINER::iterator iter = obj_map_store_.find(string(pkey.key_, pkey.key_size_));
+              if (iter != obj_map_store_.end())
+              {
+                (iter->second)[string(skey.key_, skey.key_size_)] = value;
+              }
+              else
+              {
+                CONTAINER temp;
+                temp[string(skey.key_, skey.key_size_)] = value;
+                obj_map_store_[string(pkey.key_, pkey.key_size_)] = temp;
+              }
+            }
           }
           break;
         case KvKey::KEY_TYPE_BUCKET:
           {
-            map_store_[string(key.key_, key.key_size_ )] = value;
+            map_store_[string(key.key_, key.key_size_)] = value;
             ret = TFS_SUCCESS;
           }
           break;
@@ -68,23 +81,45 @@ namespace tfs
     }
     int TestEngineHelper::get_key(const KvKey& key, std::string* value, int64_t* version)
     {
+      UNUSED(version);
       int ret = TFS_SUCCESS;
-      string store_key(key.key_, key.key_size_);
-      if (NULL == value || NULL == version)
-      {
-        TBSYS_LOG(ERROR, "shuold never got this, bug!");
-        ret = TFS_ERROR;
-      }
+
       if (TFS_SUCCESS == ret)
       {
         switch (key.key_type_)
         {
           case KvKey::KEY_TYPE_OBJECT:
             {
+              KvKey skey, pkey;
+              ret = split_key(key, &pkey, &skey);
+              if (TFS_SUCCESS == ret)
+              {
+                OBJECT_CONTAINER::iterator iter = obj_map_store_.find(string(pkey.key_, pkey.key_size_));
+                if (iter != obj_map_store_.end())
+                {
+                  CONTAINER::iterator obj_iter = (iter->second).find(string(skey.key_, skey.key_size_));
+
+                  if (obj_iter != (iter->second).end())
+                  {
+                    *value = obj_iter->second;
+                  }
+                  else
+                  {
+                    TBSYS_LOG(ERROR, "object not put");
+                    ret = TFS_ERROR;
+                  }
+                }
+                else
+                {
+                  TBSYS_LOG(ERROR, "bucket not put");
+                  ret = TFS_ERROR;
+                }
+              }
             }
             break;
           case KvKey::KEY_TYPE_BUCKET:
             {
+              string store_key(key.key_, key.key_size_);
               CONTAINER::iterator iter = map_store_.find(store_key);
               if (iter != map_store_.end())
               {
@@ -106,18 +141,31 @@ namespace tfs
 
     int TestEngineHelper::delete_key(const KvKey& key)
     {
-      string store_key(key.key_, key.key_size_);
       int ret = TFS_SUCCESS;
       switch (key.key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
         {
-          //todo
-          ret = TFS_SUCCESS;
+          KvKey skey, pkey;
+          ret = split_key(key, &pkey, &skey);
+          if (TFS_SUCCESS == ret)
+          {
+            OBJECT_CONTAINER::iterator iter = obj_map_store_.find(string(pkey.key_, pkey.key_size_));
+            if (iter != obj_map_store_.end())
+            {
+              (iter->second).erase(string(skey.key_, skey.key_size_));
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "bucket not put");
+              ret = TFS_ERROR;
+            }
+          }
         }
           break;
         case KvKey::KEY_TYPE_BUCKET:
         {
+          string store_key(key.key_, key.key_size_);
           map_store_.erase(store_key);
         }
           break;
@@ -125,6 +173,52 @@ namespace tfs
          TBSYS_LOG(ERROR, "not support");
          break;
       }
+      return ret;
+    }
+
+    int TestEngineHelper::split_key(const KvKey& key, KvKey *prefix_key, KvKey *second_key)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == prefix_key || NULL == second_key
+          || NULL == key.key_ || 0 == key.key_size_ || KvKey::KEY_TYPE_OBJECT != key.key_type_)
+      {
+        TBSYS_LOG(ERROR, "parameters error");
+        ret = TFS_ERROR;
+      }
+
+      const char* pos = NULL;
+      int64_t prefix_key_size = -1;
+      int64_t second_key_size = -1;
+      if (TFS_SUCCESS == ret)
+      {
+        const char* p = key.key_;
+        do
+        {
+          if (KvKey::DELIMITER == *p)
+          {
+            pos = p;
+            break;
+          }
+          p++;
+        } while(p - key.key_ < key.key_size_);
+
+        prefix_key_size = pos - key.key_;
+        second_key_size = key.key_size_ - 1 - prefix_key_size;
+        if (NULL == pos || 0 >= prefix_key_size || 0 >= second_key_size)
+        {
+          TBSYS_LOG(ERROR, "invalid key is %s", key.key_);
+          ret = TFS_ERROR;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        prefix_key->key_ = key.key_;
+        prefix_key->key_size_ = prefix_key_size;
+        second_key->key_ = pos+1;
+        second_key->key_size_ = second_key_size;
+      }
+
       return ret;
     }
 

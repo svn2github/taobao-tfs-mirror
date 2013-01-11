@@ -72,8 +72,10 @@ int KvMetaHelper::do_put_bucket(const uint64_t server_id, const char *bucket_nam
 }
 
 int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_name,
-                                const char* prefix, const char* start_key,
-                                const int32_t limit, vector<string>& v_object_name)
+                                const char *prefix, const char *start_key, char delimiter,
+                                const int32_t limit, vector<ObjectMetaInfo> *v_object_meta_info,
+                                vector<string>* v_object_name, set<string> *s_common_prefix,
+                                int8_t *is_truncated)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name)
@@ -86,6 +88,7 @@ int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_nam
     req_gb_msg.set_bucket_name(bucket_name);
     req_gb_msg.set_prefix(prefix);
     req_gb_msg.set_start_key(start_key);
+    req_gb_msg.set_delimiter(delimiter);
     req_gb_msg.set_limit(limit);
 
     tbnet::Packet* rsp = NULL;
@@ -102,7 +105,10 @@ int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_nam
     else if (RSP_KVMETA_GET_BUCKET_MESSAGE == rsp->getPCode())
     {
       RspKvMetaGetBucketMessage* rsp_gb_msg = dynamic_cast<RspKvMetaGetBucketMessage*>(rsp);
-      v_object_name = rsp_gb_msg->get_v_object_name();
+      v_object_meta_info = rsp_gb_msg->get_mutable_v_object_meta_info();
+      v_object_name = rsp_gb_msg->get_mutable_v_object_name();
+      s_common_prefix = rsp_gb_msg->get_mutable_s_common_prefix();
+      is_truncated = rsp_gb_msg->get_mutable_truncated();
     }
     else
     {

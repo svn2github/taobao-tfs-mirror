@@ -269,7 +269,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int64_t now_time = static_cast<int64_t>(time(NULL));
-        ret = meta_info_helper_.put_bucket(put_bucket_msg->get_bucket_name(), now_time);
+        BucketMetaInfo *bucket_meta_info = put_bucket_msg->get_mutable_bucket_meta_info();
+        bucket_meta_info->set_create_time(now_time);
+
+        ret = meta_info_helper_.put_bucket(put_bucket_msg->get_bucket_name(), *bucket_meta_info);
       }
 
       if (TFS_SUCCESS != ret)
@@ -298,8 +301,24 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = meta_info_helper_.get_bucket(get_bucket_msg->get_bucket_name(), get_bucket_msg->get_prefix(),
-            get_bucket_msg->get_start_key(), get_bucket_msg->get_limit(), rsp->get_v_object_name());
+        const string& bucket_name = get_bucket_msg->get_bucket_name();
+        const string& prefix = get_bucket_msg->get_prefix();
+        const string& start_key = get_bucket_msg->get_start_key();
+        char delimiter = get_bucket_msg->get_delimiter();
+        const int32_t limit = get_bucket_msg->get_limit();
+
+        ret = meta_info_helper_.get_bucket(bucket_name, prefix, start_key, delimiter, limit,
+            rsp->get_mutable_v_object_meta_info(), rsp->get_mutable_v_object_name(), rsp->get_mutable_s_common_prefix(),
+            rsp->get_mutable_truncated());
+
+        if (TFS_SUCCESS == ret)
+        {
+          rsp->set_bucket_name(bucket_name);
+          rsp->set_prefix(prefix);
+          rsp->set_start_key(start_key);
+          rsp->set_delimiter(delimiter);
+          rsp->set_limit(limit);
+        }
       }
 
       if (TFS_SUCCESS != ret)

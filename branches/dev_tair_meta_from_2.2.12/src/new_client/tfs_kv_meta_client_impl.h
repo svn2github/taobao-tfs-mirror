@@ -36,9 +36,11 @@ namespace tfs
         int initialize(const int64_t kms_addr, const char *ns_addr);
 
         TfsRetType put_bucket(const char *bucket_name);
-        TfsRetType get_bucket(const char *bucket_name, const char* prefix,
-                              const char* start_key, const int32_t limit,
-                              std::vector<std::string>& v_object_name);
+        TfsRetType get_bucket(const char *bucket_name, const char *prefix,
+                              const char *start_key, const char delimiter, const int32_t limit,
+                              std::vector<common::ObjectMetaInfo> *v_object_meta_info,
+                              std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix,
+                              int8_t *is_trucated);
         TfsRetType del_bucket(const char *bucket_name);
 
         int64_t put_object(const char *bucket_name, const char *object_name,
@@ -56,9 +58,12 @@ namespace tfs
         TfsRetType del_object(const char *bucket_name, const char *object_name);
 
         int do_put_bucket(const char *bucket_name);
-        int do_get_bucket(const char *bucket_name, const char* prefix,
-                          const char* start_key, const int32_t limit,
-                          std::vector<std::string>& v_object_name);
+        int do_get_bucket(const char *bucket_name, const char *prefix,
+                          const char *start_key, const char delimiter, const int32_t limit,
+                          std::vector<common::ObjectMetaInfo> *v_object_meta_info,
+                          std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix,
+                          int8_t *is_trucated);
+
         int do_del_bucket(const char *bucket_name);
 
         int do_put_object(const char *bucket_name, const char *object_name,
@@ -67,8 +72,8 @@ namespace tfs
                           common::ObjectInfo *object_info, bool *still_have);
         int do_del_object(const char *bucket_name, const char *object_name);
 
-        bool is_valid_bucket_name(const char *bucket_name);
-        bool is_valid_object_name(const char *object_name);
+        static bool is_valid_bucket_name(const char *bucket_name);
+        static bool is_valid_object_name(const char *object_name);
 
       private:
         int64_t write_data(const char *ns_addr,

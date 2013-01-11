@@ -30,43 +30,68 @@ namespace tfs
   {
     class MetaInfoHelper
     {
-    public:
-      MetaInfoHelper();
-      virtual ~MetaInfoHelper();
-      int init();
-      int put_meta(const std::string& bucket_name, const std::string& file_name,
-          /*const int64_t offset,*/ const common::TfsFileInfo& tfs_file_info
-          /* const taglist , versioning*/
-          );
-      int get_meta(const std::string& bucket_name, const std::string& file_name,
-          /*const int64_t offset,*/ /*const get_tag_list*/ common::TfsFileInfo* tfs_file_info
-          /*taglist* */);
-      //int scan_metas();
-      //int delete_metas();
+      public:
+        MetaInfoHelper();
+        virtual ~MetaInfoHelper();
+        int init();
+        int put_meta(const std::string& bucket_name, const std::string& file_name,
+            /*const int64_t offset,*/ const common::TfsFileInfo& tfs_file_info
+            /* const taglist , versioning*/
+            );
+        int get_meta(const std::string& bucket_name, const std::string& file_name,
+            /*const int64_t offset,*/ /*const get_tag_list*/ common::TfsFileInfo* tfs_file_info
+            /*taglist* */);
+        //int scan_metas();
+        //int delete_metas();
 
 
-      /*----------------------------object part-----------------------------*/
-      int put_object(const std::string& bucket_name,
-                     const std::string& file_name,
-                     const common::TfsFileInfo& tfs_file_info,
-                     const common::ObjectMetaInfo& object_meta_info,
-                     const common::CustomizeInfo& customize_info);
+        /*----------------------------object part-----------------------------*/
+        int put_object(const std::string& bucket_name,
+            const std::string& file_name,
+            const common::TfsFileInfo& tfs_file_info,
+            const common::ObjectMetaInfo& object_meta_info,
+            const common::CustomizeInfo& customize_info);
 
-      int get_object(const std::string& bucket_name,
-                     const std::string& file_name,
-                     common::ObjectInfo* p_object_info);
+        int get_object(const std::string& bucket_name,
+            const std::string& file_name,
+            common::ObjectInfo* p_object_info);
 
-      int del_object(const std::string& bucket_name,
-                     const std::string& file_name);
+        int del_object(const std::string& bucket_name,
+            const std::string& file_name);
 
-    /*----------------------------bucket part-----------------------------*/
-    int put_bucket(const std::string& bucket_name, const int64_t create_time);
-    int get_bucket(const std::string& bucket_name, const std::string& prefix,
-                   const std::string& start_key, const int32_t limit, common::VSTRING& v_object_name);
-    int del_bucket(const std::string& bucket_name);
-    private:
-      DISALLOW_COPY_AND_ASSIGN(MetaInfoHelper);
-      KvEngineHelper* kv_engine_helper_;
+        /*----------------------------bucket part-----------------------------*/
+
+        int head_bucket(const std::string& bucket_name, common::BucketMetaInfo *bucket_meta_info);
+        static int get_common_prefix(const char *key, const std::string &prefix, const char delimiter,
+            bool *prefix_flag, bool *common_flag, int *common_end_pos);
+
+        int put_bucket(const std::string& bucket_name, const common::BucketMetaInfo& bucket_meta_info);
+        int get_bucket(const std::string& bucket_name, const std::string& prefix,
+            const std::string& start_key, const char delimiter, const int32_t limit,
+            std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
+            std::set<std::string>* s_common_prefix, int8_t* is_truncated);
+        int del_bucket(const std::string& bucket_name);
+
+      protected:
+        int list_objects_ex(const char *k, const char *v, const std::string &prefix, const char delimiter,
+            std::vector<common::ObjectMetaInfo> *v_object_meta_info,
+            std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix);
+
+        int get_range(const KvKey &pkey, const std::string &start_key,
+            const int32_t offset, const int32_t limit, std::vector<KvKey> *vec_keys,
+            std::vector<std::string> *vec_realkeys,
+            std::vector<std::string> *vec_values, int32_t *result_size);
+
+
+        int list_objects(const KvKey &pkey, const std::string &prefix,
+            const std::string &start_key, const char delimiter, const int32_t limit,
+            std::vector<common::ObjectMetaInfo> *v_object_meta_info, common::VSTRING *v_object_name,
+            std::set<std::string> *s_common_prefix, int8_t *is_truncated);
+
+      protected:
+        KvEngineHelper* kv_engine_helper_;
+      private:
+        DISALLOW_COPY_AND_ASSIGN(MetaInfoHelper);
     };
   }
 }

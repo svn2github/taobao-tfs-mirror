@@ -22,6 +22,7 @@
 
 using namespace std;
 using namespace tair;
+using namespace common;
 namespace tfs
 {
 
@@ -175,7 +176,7 @@ namespace tfs
         {
           data_entry pkey(key.key_);
           vector<data_entry*> res;
-          int limit = LIMIT_NUM;
+          int limit = MAX_LIMIT;
           ret = tair_client_->get_range(object_area_, pkey, "", "", 0, limit, res);
           if (TAIR_RETURN_DATA_NOT_EXIST == ret)
           {
@@ -239,7 +240,7 @@ namespace tfs
     }
 
     int TairEngineHelper::scan_keys(const KvKey& start_key, const KvKey& end_key,
-        const int32_t limit, std::vector<KvKey>* vec_keys, std::vector<std::string>* vec_realkey,
+        const int32_t offset, const int32_t limit, std::vector<KvKey>* vec_keys, std::vector<std::string>* vec_realkey,
         std::vector<std::string>* vec_values, int32_t* result_size)
     {
       int ret = TFS_SUCCESS;
@@ -253,15 +254,18 @@ namespace tfs
           tair::data_entry end_skey;
           vector<tair::data_entry *> tvalues;
           short type = 1;
-          ret = split_key_for_tair(start_key, &pkey, &start_skey);
-          if (TFS_SUCCESS == ret)
+          if (NULL != start_key.key_)
+          {
+            ret = split_key_for_tair(start_key, &pkey, &start_skey);
+          }
+          if (TFS_SUCCESS == ret && NULL != end_key.key_)
           {
             ret = split_key_for_tair(end_key, &pkey, &end_skey);
           }
           if (TFS_SUCCESS == ret)
           {
-             ret = prefix_scan_from_tair(object_area_, pkey, start_skey, end_skey,
-                   0/*offset*/, limit, tvalues, type);
+             ret = prefix_scan_from_tair(object_area_, pkey, start_skey, NULL == end_key.key_ ? "" : end_skey,
+                   offset, limit, tvalues, type);
           }
           if (TFS_SUCCESS == ret)
           {
@@ -269,16 +273,21 @@ namespace tfs
             vector<tair::data_entry *>::iterator iter = tvalues.begin();
             for(; iter != tvalues.end(); ++iter)
             {
-              vec_realkey->push_back((*iter)->get_printable_key().c_str());
+              vec_realkey->push_back((*iter)->get_data());
               tmp_key.key_ = vec_realkey->back().c_str();
               tmp_key.key_size_ = vec_realkey->back().size();
               tmp_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
               vec_keys->push_back(tmp_key);
               ++iter;
-              vec_values->push_back((*iter)->get_printable_key().c_str());
+              vec_values->push_back((*iter)->get_data());
               (*result_size)++;
             }
             *result_size = *result_size / 2;
+            for (size_t i = 0; i < tvalues.size(); i++)
+            {
+              delete tvalues[i];
+            }
+            tvalues.clear();
           }
         }
         break;
@@ -329,64 +338,6 @@ namespace tfs
       {
         prefix_key->set_data(key.key_, prefix_key_size);
         second_key->set_data(pos + 1, second_key_size);
-      }
-
-      return ret;
-    }
-
-    int TairEngineHelper::list_skeys(const KvKey& key, const string& prefix,
-        const string& start_key, const int32_t limit, common::VSTRING& v_object_name)
-    {
-      v_object_name.clear();
-      int ret = TFS_SUCCESS;
-      data_entry pkey(key.key_);
-      string skey(start_key);
-      string ekey;
-      vector<data_entry*> res;
-      bool loop, first_loop;
-      loop = first_loop = true;
-      int32_t limit_size = limit;
-
-      while (loop)
-      {
-        ret = tair_client_->get_range(object_area_, pkey, data_entry(skey.data(), static_cast<int>(skey.size())),
-              data_entry(ekey.data(), static_cast<int>(ekey.size())), first_loop ? 0 : 1, limit_size, res, CMD_RANGE_KEY_ONLY);
-
-        if (ret < 0)
-        {
-          TBSYS_LOG(ERROR, "get range fail, ret: %d", ret);
-          break;
-        }
-
-        size_t res_size = res.size();
-        for (size_t i = 0; i < res_size; i++)
-        {
-          char* s = res[i]->get_data();
-          char* pos = strstr(s, prefix.c_str());
-          if (NULL != pos && pos == s)
-          {
-            string object(s);
-            v_object_name.push_back(object);
-          }
-        }
-
-        if (static_cast<int>(res_size) == limit_size)
-        {
-          skey.assign(res[res_size-1]->get_data(), res[res_size-1]->get_size());
-          fprintf(stderr, "new start key: %s", skey.c_str());
-          first_loop = false;
-        }
-        else
-        {
-          loop = false;
-        }
-
-        for (size_t i = 0; i < res_size; i++)
-        {
-          delete res[i];
-        }
-
-        res.clear();
       }
 
       return ret;

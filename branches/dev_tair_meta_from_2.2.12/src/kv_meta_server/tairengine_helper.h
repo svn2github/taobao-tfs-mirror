@@ -17,6 +17,7 @@
 #ifndef TFS_KVMETASERVER_TAIR_ENGINE_HELPER_H_
 #define TFS_KVMETASERVER_TAIR_ENGINE_HELPER_H_
 
+#include "common/kv_meta_define.h"
 #include "kvengine_helper.h"
 #include "tair_client_api.hpp"
 
@@ -25,7 +26,6 @@ namespace tfs
   namespace kvmetaserver
   {
     //different key type will use different namespace in tair
-    const static int LIMIT_NUM = 10;
     class TairEngineHelper : public KvEngineHelper
     {
     public:
@@ -37,14 +37,13 @@ namespace tfs
       virtual int delete_key(const KvKey& key);
       virtual int delete_keys(const std::vector<KvKey>& vec_keys);
       virtual int scan_keys(const KvKey& start_key, const KvKey& end_key,
-          const int32_t limit, std::vector<KvKey>* vec_keys, std::vector<std::string>* vec_realkey,
+          const int32_t offset, const int32_t limit, std::vector<KvKey>* vec_keys,
+          std::vector<std::string>* vec_realkey,
           std::vector<std::string>* vec_values, int32_t* result_size);
 
     public:
       //we split object key like bucketname\objecetname to prefix_key = bucketname, seconde_key = object_name
       static int split_key_for_tair(const KvKey& key, tair::data_entry* prefix_key, tair::data_entry* second_key);
-      int list_skeys(const KvKey& key, const std::string& prefix,
-          const std::string& start_key, const int32_t limit, common::VSTRING& v_object_name);
 
     private:
       int prefix_put_to_tair(const int area, const tair::data_entry &pkey,
@@ -56,6 +55,7 @@ namespace tfs
                                    const tair::tair_dataentry_set &skey_set, tair::key_code_map_t &key_code_map);
       int prefix_scan_from_tair(int area, const tair::data_entry &pkey, const tair::data_entry &start_key, const tair::data_entry &end_key,
                                 int offset, int limit, std::vector<tair::data_entry *> &values, short type);
+
     private:
       DISALLOW_COPY_AND_ASSIGN(TairEngineHelper);
       tair::tair_client_api* tair_client_;

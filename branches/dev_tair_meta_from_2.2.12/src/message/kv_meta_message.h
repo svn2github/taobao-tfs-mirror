@@ -190,8 +190,24 @@ namespace tfs
           return bucket_name_;
         }
 
+        void set_bucket_meta_info(const common::BucketMetaInfo& bucket_meta_info)
+        {
+          bucket_meta_info_ = bucket_meta_info;
+        }
+
+        const common::BucketMetaInfo* get_bucket_meta_info() const
+        {
+          return &bucket_meta_info_;
+        }
+
+        common::BucketMetaInfo* get_mutable_bucket_meta_info()
+        {
+          return &bucket_meta_info_;
+        }
+
       private:
         std::string bucket_name_;
+        common::BucketMetaInfo bucket_meta_info_;
     };
 
     class ReqKvMetaGetBucketMessage : public common::BasePacket
@@ -233,6 +249,16 @@ namespace tfs
           return start_key_;
         }
 
+        void set_delimiter(char delimiter)
+        {
+          delimiter_ = delimiter;
+        }
+
+        char get_delimiter() const
+        {
+          return delimiter_;
+        }
+
         void set_limit(const int32_t limit)
         {
           limit_ = limit;
@@ -243,13 +269,12 @@ namespace tfs
           return limit_;
         }
 
-
       private:
         std::string bucket_name_;
         std::string prefix_;
         std::string start_key_;
-        //std::string delimiter_;
         int32_t limit_;
+        char delimiter_; //just a character to group keys
     };
 
     class RspKvMetaGetBucketMessage : public common::BasePacket
@@ -266,19 +291,77 @@ namespace tfs
           bucket_name_ = bucket_name;
         }
 
-        const std::string& get_bucket_name() const
+        void set_prefix(const std::string& prefix)
         {
-          return bucket_name_;
+          prefix_ = prefix;
         }
 
-        common::VSTRING& get_v_object_name()
+        void set_start_key(const std::string& start_key)
         {
-          return v_object_name_;
+          start_key_ = start_key;
         }
+
+        void set_delimiter(const char delimiter)
+        {
+          delimiter_ = delimiter;
+        }
+
+        void set_limit(const int32_t limit)
+        {
+          limit_ = limit;
+        }
+
+        const std::set<std::string>* get_s_common_prefix() const
+        {
+          return &s_common_prefix_;
+        }
+
+        const common::VSTRING* get_v_object_name() const
+        {
+          return &v_object_name_;
+        }
+
+        const std::vector<common::ObjectMetaInfo>* get_v_object_meta_info() const
+        {
+          return &v_object_meta_info_;
+        }
+
+        const int8_t* get_truncated() const
+        {
+          return &is_truncated;
+        }
+
+        std::set<std::string>* get_mutable_s_common_prefix()
+        {
+          return &s_common_prefix_;
+        }
+
+        common::VSTRING* get_mutable_v_object_name()
+        {
+          return &v_object_name_;
+        }
+
+        std::vector<common::ObjectMetaInfo>* get_mutable_v_object_meta_info()
+        {
+          return &v_object_meta_info_;
+        }
+
+        int8_t* get_mutable_truncated()
+        {
+          return &is_truncated;
+        }
+
 
       private:
         std::string bucket_name_;
+        std::string prefix_;
+        std::string start_key_;
+        std::set<std::string> s_common_prefix_; //the same common_prefix count as single
         common::VSTRING v_object_name_;
+        std::vector<common::ObjectMetaInfo> v_object_meta_info_;
+        int32_t limit_;
+        int8_t is_truncated;
+        char delimiter_;
     };
 
     class ReqKvMetaDelBucketMessage : public common::BasePacket

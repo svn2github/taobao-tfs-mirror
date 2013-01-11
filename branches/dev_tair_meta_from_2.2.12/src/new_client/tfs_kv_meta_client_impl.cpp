@@ -91,9 +91,11 @@ namespace tfs
        return ret;
     }
 
-    TfsRetType KvMetaClientImpl::get_bucket(const char *bucket_name, const char* prefix,
-                                            const char* start_key, const int32_t limit,
-                                            vector<string>& v_object_name)
+    TfsRetType KvMetaClientImpl::get_bucket(const char *bucket_name, const char *prefix,
+                                            const char *start_key, const char delimiter, const int32_t limit,
+                                            vector<ObjectMetaInfo> *v_object_meta_info,
+                                            vector<string> *v_object_name, set<string> *s_common_prefix,
+                                            int8_t *is_truncated)
     {
        TfsRetType ret = TFS_ERROR;
 
@@ -108,7 +110,8 @@ namespace tfs
 
        if (TFS_SUCCESS == ret)
        {
-         ret = do_get_bucket(bucket_name, prefix, start_key, limit, v_object_name);
+         ret = do_get_bucket(bucket_name, prefix, start_key, delimiter, limit,
+             v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
        }
 
        return ret;
@@ -575,11 +578,14 @@ namespace tfs
     }
 
     // TODO
-    int KvMetaClientImpl::do_get_bucket(const char *bucket_name, const char* prefix,
-                                        const char* start_key, const int32_t limit,
-                                        vector<string>& v_object_name)
+    int KvMetaClientImpl::do_get_bucket(const char *bucket_name, const char *prefix,
+                                        const char *start_key, const char delimiter, const int32_t limit,
+                                        vector<ObjectMetaInfo> *v_object_meta_info,
+                                        vector<string> *v_object_name, set<string> *s_common_prefix,
+                                        int8_t *is_truncated)
     {
-      return KvMetaHelper::do_get_bucket(kms_id_, bucket_name, prefix, start_key, limit, v_object_name);
+      return KvMetaHelper::do_get_bucket(kms_id_, bucket_name, prefix, start_key, delimiter, limit,
+          v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
     }
 
     int KvMetaClientImpl::do_del_bucket(const char *bucket_name)

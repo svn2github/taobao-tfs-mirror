@@ -51,10 +51,13 @@ namespace tfs
     }
 
     TfsRetType KvMetaClient::get_bucket(const char *bucket_name, const char *prefix,
-                                        const char* start_key, const int32_t limit,
-                                        vector<string>& v_object_name)
+                                        const char *start_key, const char delimiter, const int32_t limit,
+                                        vector<common::ObjectMetaInfo> *v_object_meta_info,
+                                        vector<string> *v_object_name, set<string> *s_common_prefix,
+                                        int8_t *is_truncated)
     {
-      return impl_->get_bucket(bucket_name, prefix, start_key, limit, v_object_name);
+      return impl_->get_bucket(bucket_name, prefix, start_key, delimiter, limit,
+          v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
     }
 
     TfsRetType KvMetaClient::del_bucket(const char *bucket_name)
