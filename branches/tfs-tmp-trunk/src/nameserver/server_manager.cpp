@@ -692,6 +692,7 @@ namespace tfs
         server = servers_.at(index);
         ++index;
       }
+      rwmutex_.unlock();
       return (NULL != server) ? server->expand_ratio(expand_ratio) : TFS_SUCCESS;
     }
 

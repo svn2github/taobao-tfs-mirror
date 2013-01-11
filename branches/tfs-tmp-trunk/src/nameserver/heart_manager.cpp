@@ -193,7 +193,8 @@ namespace tfs
         ReportBlocksToNsResponseMessage* result_msg = new ReportBlocksToNsResponseMessage();
         result_msg->set_server(ngi.owner_ip_port_);
         time_t now = Func::get_monotonic_time();
-        ArrayHelper<BlockInfoV2> blocks(message->get_block_count(), message->get_blocks_ext());
+        ArrayHelper<BlockInfoV2> blocks(message->get_block_count(),
+            message->get_blocks_ext(), message->get_block_count());
 			  result = ret = manager_.get_layout_manager().get_client_request_server().report_block(
           result_msg->get_blocks(), server, now, blocks, message->get_type());
         result_msg->set_status(HEART_MESSAGE_OK);

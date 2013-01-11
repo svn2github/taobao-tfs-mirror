@@ -435,6 +435,9 @@ namespace tfs
                 meta.family_info_, mode, now);
         if (TFS_SUCCESS == ret)
         {
+          meta.block_id_ = block_id;
+          meta.size_ = servers.get_array_index();
+          meta.version_ = version;
           ret = message->reply(result_msg);
         }
         else
@@ -503,6 +506,7 @@ namespace tfs
         param.block_info_= message->get_block_info();
         param.lease_id_ = param.block_info_.block_id_;
         param.need_new_ = false;
+        param.error_msg_[0] = '\0';
         param.unlink_flag_ = message->get_unlink_flag();
         ret = layout_manager_.get_client_request_server().close(param);
         if (TFS_SUCCESS != ret)

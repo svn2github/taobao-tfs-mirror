@@ -313,6 +313,7 @@ namespace tfs
         if (child_type & SSM_CHILD_BLOCK_TYPE_INFO)
         {
           int64_t pos = 0;
+          param.data_.ensureFree(info_.length());
           int32_t ret = info_.serialize(param.data_.getFree(), param.data_.getFreeLen(), pos);
           if (TFS_SUCCESS == ret)
             param.data_.pourData(info_.length());
