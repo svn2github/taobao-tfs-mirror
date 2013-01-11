@@ -276,7 +276,7 @@ namespace tfs
       TIMER_END();
 
       // access log
-      TBSYS_LOG(INFO, "write file %s, block: %"PRI64_PREFIX"d, fileid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(INFO, "write file %s, blockid: %"PRI64_PREFIX"d, fileid: %"PRI64_PREFIX"u, "
           "leaseid: %"PRI64_PREFIX"u, length: %d, offset: %d, version: %d, role: %s, "
           "peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
           (TFS_SUCCESS == ret) ? "success" : "fail", block_id, file_id, lease_id, length, offset,
@@ -320,7 +320,7 @@ namespace tfs
         ret = (result == EXIT_POST_MSG_RET_POST_MSG_ERROR) ? EXIT_SENDMSG_ERROR: TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "close file to slave fail. block: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
+          TBSYS_LOG(WARN, "close file to slave fail. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
               "leaseid: %"PRI64_PREFIX"u, role: master, ret: %d",
               block_id, file_id, lease_id, ret);
         }
@@ -333,7 +333,7 @@ namespace tfs
         ret = data_manager().close_file(block_id, file_id, lease_id, local);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "close file fail. block: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
+          TBSYS_LOG(WARN, "close file fail. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
               "lease id: %"PRI64_PREFIX"u, role: %s, ret: %d",
               block_id, file_id, lease_id, is_master? "master" : "slave", ret);
         }
@@ -359,7 +359,7 @@ namespace tfs
      TIMER_END();
 
      // access log
-     TBSYS_LOG(INFO, "close file %s. blockid: %" PRI64_PREFIX "u, fileid: %"PRI64_PREFIX"u, "
+     TBSYS_LOG(INFO, "close file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
          "leaseid: %"PRI64_PREFIX"u, crc: %u, role: %s, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
          TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, lease_id, crc,
          is_master ? "master" : "slave", tbsys::CNetUtil::addrToString(peer_id).c_str(),
@@ -406,7 +406,7 @@ namespace tfs
         ret = (result  == EXIT_POST_MSG_RET_POST_MSG_ERROR) ?  EXIT_SENDMSG_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "unlink file to slave fail. block: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
+          TBSYS_LOG(WARN, "unlink file to slave fail. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
               "lease id: %"PRI64_PREFIX"u, role: master ret: %d",
               block_id, file_id, lease_id, ret);
         }
@@ -602,7 +602,7 @@ namespace tfs
           message->reply(resp_msg);
         }
 
-        TBSYS_LOG(INFO, "WRITE file %s, block: %"PRI64_PREFIX"d, fileid: %"PRI64_PREFIX"u, "
+        TBSYS_LOG(INFO, "WRITE file %s, blockid: %"PRI64_PREFIX"d, fileid: %"PRI64_PREFIX"u, "
             "leaseid: %"PRI64_PREFIX"u, length: %d, offset: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",
             (TFS_SUCCESS == ret) ? "success": "fail", block_id, file_id, lease_id, length, offset,
             tbsys::CNetUtil::addrToString(peer_id).c_str(), req_cost_time);

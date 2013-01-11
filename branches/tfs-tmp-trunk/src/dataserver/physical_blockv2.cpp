@@ -93,7 +93,7 @@ namespace tfs
               ret = file_op_.fsync();
           }
         }
-        while (TFS_SUCCESS != ret && retry_times++ < max_alloc_ext_block_count);
+        while (TFS_SUCCESS != ret && ++retry_times < max_alloc_ext_block_count);
       }
       return ret;
     }
@@ -138,7 +138,7 @@ namespace tfs
         if (alloc_bit_map_ & BIT_MAP_MASK[index])
           ++count;
       }
-      return count == ALLOC_BIT_MAP_SIZE;
+      return count == max_alloc_ext_block_count;
     }
 
     int AllocPhysicalBlock::load_alloc_bit_map_()
