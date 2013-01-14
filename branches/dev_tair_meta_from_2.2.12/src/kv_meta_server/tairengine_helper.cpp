@@ -267,22 +267,23 @@ namespace tfs
              ret = prefix_scan_from_tair(object_area_, pkey, start_skey, NULL == end_key.key_ ? "" : end_skey,
                    offset, limit, tvalues, type);
           }
-          if (TFS_SUCCESS == ret)
+
+          if(TFS_SUCCESS == ret)
           {
             KvKey tmp_key;
             vector<tair::data_entry *>::iterator iter = tvalues.begin();
             for(; iter != tvalues.end(); ++iter)
             {
-              vec_realkey->push_back((*iter)->get_data());
-              tmp_key.key_ = vec_realkey->back().c_str();
-              tmp_key.key_size_ = vec_realkey->back().size();
+              tmp_key.key_ = (*iter)->get_data();
+              tmp_key.key_size_ = (*iter)->get_size();
               tmp_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
-              vec_keys->push_back(tmp_key);
+              TBSYS_LOG(DEBUG, "object name: %s", tmp_key.key_);
+              vec_realkey->push_back(string(tmp_key.key_, tmp_key.key_size_));
+              //vec_keys->push_back(tmp_key);
               ++iter;
-              vec_values->push_back((*iter)->get_data());
-              (*result_size)++;
+              vec_values->push_back(string((*iter)->get_data(), (*iter)->get_size()));
             }
-            *result_size = *result_size / 2;
+            *result_size = static_cast<int32_t>(tvalues.size()) >> 1;
             for (size_t i = 0; i < tvalues.size(); i++)
             {
               delete tvalues[i];
@@ -440,7 +441,7 @@ namespace tfs
         tair_ret = tair_client_->get_range(area, pkey, start_key, end_key, offset, limit, values, type);
       } while (TAIR_RETURN_TIMEOUT == tair_ret && --retry_count > 0);
 
-      if (TAIR_RETURN_SUCCESS != tair_ret)
+      if (TAIR_RETURN_SUCCESS != tair_ret && TAIR_RETURN_DATA_NOT_EXIST != tair_ret)
       {
         //TODO change tair errno to TFS errno
         ret = TFS_ERROR;

@@ -259,6 +259,7 @@ namespace tfs
       }
 
       ret = kv_engine_helper_->scan_keys(start_obj_key, end_obj_key, offset, limit, vec_keys, vec_realkeys, vec_values, result_size);
+
       return ret;
     }
 
@@ -349,10 +350,15 @@ namespace tfs
           ret = get_range(pkey, temp_start_key, first_loop ? 0 : 1,
               limit_size + 1, &vec_keys, &vec_realkeys, &vec_values, &res_size);
 
-          // empty or error
+          // error
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(ERROR, "get range fail, ret: %d", ret);
+            break;
+          }
+
+          if (res_size == 0)
+          {
             break;
           }
 
@@ -371,6 +377,12 @@ namespace tfs
               *is_truncated = 1;
               break;
             }
+          }
+
+          if (need_out)
+          {
+            first_loop = false;
+            temp_start_key = vec_realkeys[res_size-1];
           }
         }// end of while
       }// end of if

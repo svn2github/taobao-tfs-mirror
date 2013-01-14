@@ -136,6 +136,24 @@ namespace tfs
         return iret;
       }
 
+      template <typename T>
+      int set_sstring(const T& value)
+      {
+        int64_t pos = 0;
+        int64_t size = Serialization::get_vstring_length(value);
+        if (buffer_.get_free_length() < size)
+        {
+          buffer_.expand(size);
+        }
+        int32_t iret = Serialization::set_sstring(buffer_.get_free(), buffer_.get_free_length(), pos, value);
+        if (TFS_SUCCESS == iret)
+        {
+          buffer_.pour(size);
+        }
+        return iret;
+      }
+
+
       int get_int8(int8_t* value);
       int get_int16(int16_t* value);
       int get_int32(int32_t* value);
@@ -200,6 +218,18 @@ namespace tfs
         }
         return iret;
       }
+      template <typename T>
+      int get_sstring(T& value)
+      {
+        int64_t pos = 0;
+        int32_t iret = Serialization::get_sstring(static_cast<const char*>(buffer_.get_data()), buffer_.get_data_length(), pos, value);
+        if (TFS_SUCCESS == iret)
+        {
+          buffer_.drain(pos);
+        }
+        return iret;
+      }
+
 
     private:
       void expand(const int64_t length);

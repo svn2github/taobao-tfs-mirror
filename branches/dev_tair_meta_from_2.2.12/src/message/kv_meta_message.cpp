@@ -423,13 +423,15 @@ namespace tfs
 
       if (common::TFS_SUCCESS == iret)
       {
+        ObjectMetaInfo object_meta_info;
         for (int i = 0; common::TFS_SUCCESS == iret && i < obj_size; i++)
         {
           int64_t pos = 0;
-          iret = v_object_meta_info_[i].deserialize(input.get_data(), input.get_data_length(), pos);
+          iret = object_meta_info.deserialize(input.get_data(), input.get_data_length(), pos);
           if (common::TFS_SUCCESS == iret)
           {
-            input.drain(v_object_meta_info_[i].length());
+            v_object_meta_info_.push_back(object_meta_info);
+            input.drain(object_meta_info.length());
           }
         }
       }

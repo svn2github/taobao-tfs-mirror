@@ -30,6 +30,7 @@
 #include "common/client_manager.h"
 #include "common/status_message.h"
 #include "common/meta_server_define.h"
+#include "common/kv_meta_define.h"
 #include "message/server_status_message.h"
 #include "message/client_cmd_message.h"
 #include "message/message_factory.h"
@@ -41,6 +42,7 @@
 #include "new_client/tfs_rc_client_api_impl.h"
 #include "new_client/tfs_meta_client_api_impl.h"
 #include "new_client/tfs_kv_meta_client_impl.h"
+
 
 using namespace std;
 using namespace tfs::client;
@@ -381,7 +383,7 @@ void init()
     break;
   case META_KV:
     g_cmd_map["put_bucket"] = CmdNode("put_bucket bucket_name", "create a bucket", 1, 1, cmd_put_bucket);
-    g_cmd_map["get_bucket"] = CmdNode("get_bucket bucket_name", "get a bucket(list object)", 1, 1, cmd_get_bucket);
+    g_cmd_map["get_bucket"] = CmdNode("get_bucket bucket_name [ prefix start_key delimiter limit ]", "get a bucket(list object)", 1, 5, cmd_get_bucket);
     g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name", "delete a bucket", 1, 1, cmd_del_bucket);
     g_cmd_map["put_object"] = CmdNode("put_object bucket_name object_name local_file", "put a object", 3, 3, cmd_put_object);
     g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name local_file", "get a object", 3, 3, cmd_get_object);
@@ -1854,8 +1856,66 @@ int cmd_put_bucket(const VSTRING& param)
 
 int cmd_get_bucket(const VSTRING& param)
 {
-  UNUSED(param);
+  int size = param.size();
+
   int ret = TFS_SUCCESS;
+  const char *bucket_name = NULL;
+  const char *prefix = NULL;
+  const char *start_key = NULL;
+  char delimiter = DEFAULT_CHAR;
+  int32_t limit = -1;
+
+  bucket_name = param[0].c_str();
+
+  if (size > 1)
+  {
+    prefix = param[1].c_str();
+  }
+
+  if (size > 2)
+  {
+    start_key = param[2].c_str();
+  }
+
+  if (size > 3)
+  {
+    delimiter = param[3].size() == 1 ? param[3][0] : DEFAULT_CHAR;
+  }
+
+  if (size > 4)
+  {
+    limit = atoi(param[4].c_str());
+  }
+
+  vector<ObjectMetaInfo> v_object_meta_info;
+  VSTRING v_object_name;
+  set<string> s_common_prefix;
+  int8_t is_truncated = 0;
+
+  ret = g_kv_meta_client.get_bucket(bucket_name, prefix, start_key, delimiter, limit,
+      &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated);
+
+  if (TFS_SUCCESS == ret)
+  {
+    printf("bucket: %s has %d common_prefix\n", bucket_name, static_cast<int>(s_common_prefix.size()));
+    set<string>::iterator iter = s_common_prefix.begin();
+    for (int i = 0; iter != s_common_prefix.end(); iter++, i++)
+    {
+      cout << i << ": " << *iter << endl;
+    }
+  }
+
+  if (TFS_SUCCESS == ret)
+  {
+    printf("bucket: %s has %d objects\n", bucket_name, static_cast<int>(v_object_name.size()));
+    for (int i = 0; i < static_cast<int>(v_object_name.size()); i++)
+    {
+      cout << i << ": " << v_object_name[i] << endl;
+    }
+  }
+
+  //todo show info of objects
+  ToolUtil::print_info(ret, "get bucket %s", bucket_name);
   return ret;
 }
 

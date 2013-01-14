@@ -62,6 +62,18 @@ namespace tfs
         }
         return len;
       }
+      template <typename T>
+      static int64_t get_sstring_length(const T& value)
+      {
+        int64_t len = INT_SIZE;
+        typename T::const_iterator iter = value.begin();
+        for (; iter != value.end(); ++iter)
+        {
+          len += get_string_length(*iter);
+        }
+        return len;
+      }
+
       static int get_int8(const char* data, const int64_t data_len, int64_t& pos, int8_t* value)
       {
         int32_t iret = NULL != value && NULL != data && data_len - pos >= INT8_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
@@ -336,6 +348,31 @@ namespace tfs
         return iret;
       }
 
+      template <typename T>
+      static int get_sstring(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      {
+        int32_t iret = NULL != data && data_len - pos >= INT_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          int32_t length = 0;
+          iret = Serialization::get_int32(data, data_len, pos, &length);
+          if (TFS_SUCCESS == iret
+              && length > 0)
+          {
+            std::string tmp;
+            for (int32_t i = 0; i < length; ++i)
+            {
+              iret = Serialization::get_string(data, data_len, pos, tmp);
+              if (TFS_SUCCESS == iret)
+                value.insert(tmp);
+              else
+                break;
+            }
+          }
+        }
+        return iret;
+      }
+
       static int set_int8(char* data, const int64_t data_len, int64_t& pos, const int8_t value)
       {
         int32_t iret = NULL != data && data_len - pos >= INT8_SIZE  &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
@@ -547,6 +584,27 @@ namespace tfs
         }
         return iret;
       }
+      template <typename T>
+      static int set_sstring(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      {
+        int32_t iret = NULL != data && data_len - pos >= get_sstring_length(value) &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          iret = Serialization::set_int32(data, data_len, pos, value.size());
+          if (TFS_SUCCESS == iret)
+          {
+            typename T::const_iterator iter = value.begin();
+            for (; iter != value.end(); ++iter)
+            {
+              iret = Serialization::set_string(data, data_len, pos, (*iter));
+              if (TFS_SUCCESS != iret)
+                break;
+            }
+          }
+        }
+        return iret;
+      }
+
 
       template <typename T>
       static int serialize_list(char* data, const int64_t data_len, int64_t& pos, const T& value)
