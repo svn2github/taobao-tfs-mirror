@@ -46,6 +46,12 @@ public class HttpVerifyTool
 							Message.put("STATUS", jsonResponse.getString("STATUS"));
 						if(!jsonResponse.isNull("CRC"))
 							Message.put("CRC", jsonResponse.getString("CRC"));
+						if(!jsonResponse.isNull("APP_ID"))
+							Message.put("APP_ID", jsonResponse.getString("APP_ID"));
+						if(!jsonResponse.isNull("NAME"))
+							Message.put("NAME", jsonResponse.getString("NAME"));
+						if(!jsonResponse.isNull("IS_FILE"))
+							Message.put("IS_FILE", jsonResponse.getString("IS_FILE"));
 					}
 				}
 			

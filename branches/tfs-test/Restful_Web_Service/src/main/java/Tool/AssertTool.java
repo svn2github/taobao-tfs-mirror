@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.zip.CRC32;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.Assert;
 
 public class AssertTool 
@@ -51,5 +53,44 @@ public class AssertTool
 			e.getStackTrace();
 		}
 		return crc.getValue();
+	}
+	
+	public int[] dealWithLsDir(String LsDirRet)
+	{
+		StringBuffer Str = new StringBuffer(LsDirRet);
+	
+		int allNum=0;
+		int fileNum=0;
+		int start;
+		int end;
+		
+		while( -1!=(start=Str.indexOf("{")))
+		{
+			++allNum;
+			end = Str.indexOf("}");
+			try 
+			{
+				JSONObject  jsonResponse = new JSONObject(Str.substring(start, end+1));
+				if(jsonResponse.getString("IS_FILE").contains("true"))
+				++fileNum;
+			} 
+			catch (JSONException e)
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			Str.delete(0, end+1);
+		}		
+		int [] Ret = new int [2];
+		Ret[0]= allNum;
+		Ret[1]= fileNum;
+		return Ret;
+	}
+	
+	public void AssertLsDirEquals(String LsDirRet,int [] ExpectNum)
+	{
+		int [] Ret = new int [2];
+		Ret = dealWithLsDir(LsDirRet);
+		Assert.assertArrayEquals(Ret, ExpectNum);
 	}
 }

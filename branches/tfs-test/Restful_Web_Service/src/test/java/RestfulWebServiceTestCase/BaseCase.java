@@ -15,6 +15,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.methods.HeadMethod;
 import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.RequestEntity;
@@ -41,6 +42,7 @@ public class BaseCase
 	protected static final RestfulWebServer Server = (RestfulWebServer) Bean.getBean("RestfulWebServer");
 	protected static Map<String,Integer> FileMap = new HashMap<String ,Integer> ();
 	protected static String App_key = Server.getTfs_app_key();
+	protected static String App_id = "1";
 	
 	static
 	{
@@ -88,17 +90,19 @@ public class BaseCase
 	protected PostMethod setPostMethod(String url, String filePath) 
 	{
 		PostMethod postMethod = new PostMethod(url);
-		File uploadFile = new File(filePath);
-
-		try 
+		if(null!=filePath)
 		{
-			FileInputStream fileInputStream = new FileInputStream(uploadFile);
-			InputStreamRequestEntity inputStreamRequestEntity = new InputStreamRequestEntity(fileInputStream);
-			postMethod.setRequestEntity((RequestEntity) inputStreamRequestEntity);
-		} 
-		catch (Exception ex) 
-		{
-			ex.printStackTrace();
+			File uploadFile = new File(filePath);
+			try 
+			{
+				FileInputStream fileInputStream = new FileInputStream(uploadFile);
+				InputStreamRequestEntity inputStreamRequestEntity = new InputStreamRequestEntity(fileInputStream);
+				postMethod.setRequestEntity((RequestEntity) inputStreamRequestEntity);
+			} 
+			catch (Exception ex) 
+			{
+				ex.printStackTrace();
+			}
 		}
 		return postMethod;
 	}
@@ -113,6 +117,12 @@ public class BaseCase
 	protected GetMethod setGetMethod(String url) 
 	{
 		GetMethod getMethod = new GetMethod(url);
+		return getMethod;
+	}
+	
+	protected HeadMethod setHeadMethod(String url) 
+	{
+		HeadMethod getMethod = new HeadMethod(url);
 		return getMethod;
 	}
 	
@@ -190,6 +200,174 @@ public class BaseCase
 		log.info(ExecuteUrl.GetUrl());
 		HttpVerifyTool Tool = new HttpVerifyTool();
 		Message = Tool.verifyResponse(setGetMethod(ExecuteUrl.GetUrl()),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> GetAppID()
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/appid");
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setGetMethod(ExecuteUrl.GetUrl()),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> CreateDir(String Appid, String Uid, String Dir, String recursive)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/dir/"+Dir);
+		if(null!=recursive)
+			ExecuteUrl.AddPara("recursive", recursive);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setPostMethod(ExecuteUrl.GetUrl(),null),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> RmDir(String Appid, String Uid, String Dir)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/dir/"+Dir);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setDeleteMethod(ExecuteUrl.GetUrl()),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> MvDir(String Appid, String Uid, String SrcDir, String DestDir, String recursive)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/dir/"+DestDir);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		PostMethod MvMethod = setPostMethod(ExecuteUrl.GetUrl(),null);
+		MvMethod.setRequestHeader("x-tb-move-source","/"+SrcDir);
+		Message = Tool.verifyResponse(MvMethod,null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> LsDir(String Appid, String Uid, String Dir)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/dir/"+Dir);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setGetMethod(ExecuteUrl.GetUrl()),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> IsDirExist(String Appid, String Uid, String Dir)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/dir/"+Dir);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setHeadMethod(ExecuteUrl.GetUrl()),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+
+	public Map<String, String> CreateFile(String Appid, String Uid, String File, String recursive)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/file/"+File);
+		if(null!=recursive)
+			ExecuteUrl.AddPara("recursive", recursive);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setPostMethod(ExecuteUrl.GetUrl(),null),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> RmFile(String Appid, String Uid, String File)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/file/"+File);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setDeleteMethod(ExecuteUrl.GetUrl()),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> MvFile(String Appid, String Uid, String SrcFile, String DestFile, String recursive)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/file/"+DestFile);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		PostMethod MvMethod = setPostMethod(ExecuteUrl.GetUrl(),null);
+		MvMethod.setRequestHeader("x-tb-move-source","/"+SrcFile);
+		Message = Tool.verifyResponse(MvMethod,null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> LsFile(String Appid, String Uid, String File)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/metadata/"+Appid+"/"+Uid+"/file/"+File);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setGetMethod(ExecuteUrl.GetUrl()),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> IsFileExist(String Appid, String Uid, String File)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/dir/"+File);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setHeadMethod(ExecuteUrl.GetUrl()),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> WriteFile(String Appid, String Uid, String File, String LocalFile, String offset, String size)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/file/"+File);
+		if(null!=offset)
+			ExecuteUrl.AddPara("offset", offset);
+		if(null!=size)
+			ExecuteUrl.AddPara("size", size);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setPostMethod(ExecuteUrl.GetUrl(),LocalFile),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> ReadFile(String Appid, String Uid, String File, String LocalFile, String offset, String size)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/file/"+File);
+		if(null!=offset)
+			ExecuteUrl.AddPara("offset", offset);
+		if(null!=size)
+			ExecuteUrl.AddPara("size", size);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setGetMethod(ExecuteUrl.GetUrl()),LocalFile);
 		ExecuteUrl.ResetUrl();
 		return Message;
 	}
