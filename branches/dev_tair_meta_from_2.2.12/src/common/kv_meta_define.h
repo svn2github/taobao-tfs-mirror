@@ -40,6 +40,8 @@ namespace tfs
       int64_t block_id_;
       int64_t file_id_;
       int32_t cluster_id_;
+      int64_t file_size_;
+      int64_t offset_;
     };
 
     struct ObjectMetaInfo
@@ -52,8 +54,8 @@ namespace tfs
 
       int64_t create_time_;
       int64_t modify_time_;
-      int64_t file_size_;
       int32_t max_tfs_file_size_;
+      int64_t big_file_size_;
     };
 
     struct CustomizeInfo
@@ -74,11 +76,10 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       void dump() const;
 
-      int64_t offset_;
       bool has_meta_info_;
       bool has_customize_info_;
       ObjectMetaInfo meta_info_;
-      TfsFileInfo tfs_file_info_;
+      std::vector<TfsFileInfo> v_tfs_file_info_;
       CustomizeInfo customize_info_;
     };
 
@@ -95,6 +96,7 @@ namespace tfs
       }
       int64_t create_time_;
     };
+
   }
 }
 

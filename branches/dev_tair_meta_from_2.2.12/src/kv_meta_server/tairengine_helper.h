@@ -25,6 +25,21 @@ namespace tfs
 {
   namespace kvmetaserver
   {
+    class TairValue : public KvValue
+    {
+    public:
+      TairValue();
+      virtual ~TairValue();
+      virtual int32_t get_size() const;
+      virtual const char* get_data() const;
+      virtual void free();
+      tair::data_entry* get_mutable_tair_value();
+      void set_tair_value(tair::data_entry* tair_value);
+    private:
+      tair::data_entry* tair_value_;
+    };
+
+
     //different key type will use different namespace in tair
     class TairEngineHelper : public KvEngineHelper
     {
@@ -32,6 +47,13 @@ namespace tfs
       TairEngineHelper();
       virtual ~TairEngineHelper();
       virtual int init();
+      //qixiao new add
+      virtual int scan_keys(const KvKey& start_key, const KvKey& end_key, const uint32_t limit, int32_t *first,
+                           std::vector<KvValue*> *keys, std::vector<KvValue*> *values, uint32_t* result_size);
+      virtual int get_key(const KvKey& key, KvValue **pp_value, int64_t *version);
+      virtual int put_key(const KvKey& key, const KvMemValue &value, const int64_t version);
+      //qixiao new end
+
       virtual int put_key(const KvKey& key, const std::string& value, const int64_t version);
       virtual int get_key(const KvKey& key, std::string* value, int64_t* version);
       virtual int delete_key(const KvKey& key);
@@ -40,7 +62,6 @@ namespace tfs
           const int32_t offset, const int32_t limit, std::vector<KvKey>* vec_keys,
           std::vector<std::string>* vec_realkey,
           std::vector<std::string>* vec_values, int32_t* result_size);
-
     public:
       //we split object key like bucketname\objecetname to prefix_key = bucketname, seconde_key = object_name
       static int split_key_for_tair(const KvKey& key, tair::data_entry* prefix_key, tair::data_entry* second_key);

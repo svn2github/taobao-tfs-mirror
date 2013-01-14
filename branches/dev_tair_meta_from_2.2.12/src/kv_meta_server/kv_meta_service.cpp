@@ -118,6 +118,7 @@ namespace tfs
     {
       int ret = true;
       BasePacket* base_packet = NULL;
+      TBSYS_LOG(ERROR, "we at handle");
       if (!(ret = BaseService::handlePacketQueue(packet, args)))
       {
         TBSYS_LOG(ERROR, "call BaseService::handlePacketQueue fail. ret: %d", ret);
@@ -164,7 +165,7 @@ namespace tfs
     int KvMetaService::put_object(ReqKvMetaPutObjectMessage* req_put_object_msg)
     {
       int ret = TFS_SUCCESS;
-
+      TBSYS_LOG(ERROR, "we at put_object kvService");
       if (NULL == req_put_object_msg)
       {
         ret = EXIT_INVALID_ARGU;
@@ -175,10 +176,8 @@ namespace tfs
       {
         ObjectInfo object_info = req_put_object_msg->get_object_info();
         ret = meta_info_helper_.put_object(req_put_object_msg->get_bucket_name(),
-            req_put_object_msg->get_file_name(),
-            object_info.tfs_file_info_,
-            object_info.meta_info_,
-            object_info.customize_info_);
+            req_put_object_msg->get_file_name(), req_put_object_msg->get_offset(),
+            object_info);
       }
 
       if (TFS_SUCCESS != ret)
@@ -195,7 +194,7 @@ namespace tfs
     int KvMetaService::get_object(ReqKvMetaGetObjectMessage* req_get_object_msg)
     {
       int ret = TFS_SUCCESS;
-
+      TBSYS_LOG(ERROR, "we at get_object kvService");
       if (NULL == req_get_object_msg)
       {
         ret = EXIT_INVALID_ARGU;
@@ -205,7 +204,8 @@ namespace tfs
       {
         ObjectInfo object_info;
         ret = meta_info_helper_.get_object(req_get_object_msg->get_bucket_name(),
-                  req_get_object_msg->get_file_name(), &object_info);
+                  req_get_object_msg->get_file_name(), req_get_object_msg->get_offset(),
+                   &object_info);
 
         TBSYS_LOG(DEBUG, "get object, bucket_name: %s , object_name: %s, ret: %d",
                   req_get_object_msg->get_bucket_name().c_str(),

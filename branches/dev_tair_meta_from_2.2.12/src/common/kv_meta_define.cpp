@@ -21,18 +21,19 @@ namespace tfs
   namespace common
   {
     TfsFileInfo::TfsFileInfo()
-      :block_id_(0), file_id_(0), cluster_id_(0)
+      :block_id_(0), file_id_(0), cluster_id_(0), file_size_(0), offset_(0)
     { }
 
     int64_t TfsFileInfo::length() const
     {
-      return INT64_SIZE * 2 + INT_SIZE;
+      return INT64_SIZE * 4 + INT_SIZE;
     }
 
     void TfsFileInfo::dump() const
     {
       TBSYS_LOG(DEBUG, "TfsFileInfo: [block_id: %"PRI64_PREFIX"d, file_id: %"PRI64_PREFIX"d, "
-                "cluster_id: %d]", block_id_, file_id_, cluster_id_);
+                "cluster_id: %d, file_size: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d]",
+                 block_id_, file_id_, cluster_id_, file_size_, offset_);
     }
 
     int TfsFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -49,6 +50,14 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int32(data, data_len, pos, cluster_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, file_size_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, offset_);
       }
       return ret;
     }
@@ -68,12 +77,20 @@ namespace tfs
       {
         ret = Serialization::get_int32(data, data_len, pos, &cluster_id_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &file_size_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &offset_);
+      }
       return ret;
     }
 
     //object meta info
     ObjectMetaInfo::ObjectMetaInfo()
-    :create_time_(0), modify_time_(0), file_size_(0), max_tfs_file_size_(2048)
+    :create_time_(0), modify_time_(0), max_tfs_file_size_(2048), big_file_size_(0)
     {}
 
     int64_t ObjectMetaInfo::length() const
@@ -84,8 +101,8 @@ namespace tfs
     void ObjectMetaInfo::dump() const
     {
       TBSYS_LOG(DEBUG, "ObjectMetaInfo: [create_time: %"PRI64_PREFIX"d, modify_time: %"PRI64_PREFIX"d, "
-                "file_size: %"PRI64_PREFIX"d, max_tfs_file_size: %d]",
-                create_time_, modify_time_, file_size_, max_tfs_file_size_);
+                "big_file_size: %"PRI64_PREFIX"d, max_tfs_file_size: %d]",
+                create_time_, modify_time_, big_file_size_, max_tfs_file_size_);
     }
 
     int ObjectMetaInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -102,7 +119,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int64(data, data_len, pos, file_size_);
+        ret = Serialization::set_int64(data, data_len, pos, big_file_size_);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -126,7 +143,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int64(data, data_len, pos, &file_size_);
+        ret = Serialization::get_int64(data, data_len, pos, &big_file_size_);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -166,21 +183,21 @@ namespace tfs
 
     //object meta info
     ObjectInfo::ObjectInfo()
-    :offset_(0), has_meta_info_(false), has_customize_info_(false)
-    {}
+    : has_meta_info_(false), has_customize_info_(false)
+    {v_tfs_file_info_.clear();}
 
     int64_t ObjectInfo::length() const
     {
-      return (INT8_SIZE * 2 + INT64_SIZE + tfs_file_info_.length() +
+      return (INT8_SIZE * 2  + (v_tfs_file_info_.size() * (INT64_SIZE * 4 + INT_SIZE)) + INT_SIZE +
           (has_meta_info_ ? meta_info_.length() : 0) +
           (has_customize_info_ ? customize_info_.length() : 0));
     }
 
     void ObjectInfo::dump() const
     {
-      TBSYS_LOG(DEBUG, "ObjectInfo: [offset: %"PRI64_PREFIX"d, has_meta_info: %d, "
-                "has_customize_info: %d]", offset_, has_meta_info_, has_customize_info_);
-      tfs_file_info_.dump();
+      TBSYS_LOG(DEBUG, "ObjectInfo: [has_meta_info: %d, "
+                "has_customize_info: %d]",  has_meta_info_, has_customize_info_);
+      //tfs_file_info_.dump();
       meta_info_.dump();
     }
 
@@ -190,11 +207,14 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int64(data, data_len, pos, offset_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = tfs_file_info_.serialize(data, data_len, pos);
+        int32_t tfs_file_count = static_cast<int32_t>(v_tfs_file_info_.size());
+        common::Serialization::set_int32(data, data_len, pos, tfs_file_count);
+        std::vector<common::TfsFileInfo>::const_iterator iter = v_tfs_file_info_.begin();
+        for (; iter != v_tfs_file_info_.end(); iter++)
+        {
+          (*iter).serialize(data, data_len, pos);
+        }
+        ret = common::TFS_SUCCESS;
       }
       if (TFS_SUCCESS == ret)
       {
@@ -220,13 +240,21 @@ namespace tfs
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
 
+      int32_t tfs_file_count = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int64(data, data_len, pos, &offset_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = tfs_file_info_.deserialize(data, data_len, pos);
+        ret = common::Serialization::get_int32(data, data_len, pos, &tfs_file_count);
+        if (TFS_SUCCESS == ret)
+        {
+
+          TfsFileInfo tmp;
+          int i = 0;
+          for (; i < tfs_file_count && TFS_SUCCESS == ret; i++)
+          {
+            ret = tmp.deserialize(data, data_len, pos);
+            v_tfs_file_info_.push_back(tmp);
+          }
+        }
       }
       if (TFS_SUCCESS == ret)
       {
@@ -277,6 +305,7 @@ namespace tfs
       }
       return ret;
     }
+
 
   }
 }

@@ -28,6 +28,43 @@ namespace tfs
     }
     const char KvKey::DELIMITER = 7;
 
+    KvValue::KvValue()
+    {
+    }
+    KvValue::~KvValue()
+    {
+    }
+    void KvValue::free()
+    {
+      delete this;
+    }
+
+    KvMemValue::KvMemValue()
+    :data_(NULL),size_(0)
+    {
+    }
+    KvMemValue::~KvMemValue()
+    {
+    }
+
+    int32_t KvMemValue::get_size() const
+    {
+      return size_;
+    }
+    const char* KvMemValue::get_data() const
+    {
+      return data_;
+    }
+    void KvMemValue::set_data(const char* data, const int32_t size)
+    {
+      data_ = data;
+      size_ = size;
+    }
+    void KvMemValue::free()
+    {
+      delete this;
+    }
+
   }
 }
 

@@ -50,12 +50,45 @@ namespace tfs
         KEY_TYPE_OBJECT = 3,
       };
     };
+
+    class KvValue
+    {
+    public:
+      KvValue();
+      virtual ~KvValue();
+
+      virtual int32_t get_size() const = 0;
+      virtual const char* get_data() const = 0;
+      virtual void free();
+    };
+
+    class KvMemValue :public KvValue
+    {
+      public:
+        KvMemValue();
+        virtual ~KvMemValue();
+        virtual int32_t get_size() const;
+        virtual const char* get_data() const;
+        virtual void free();
+      public:
+        void set_data(const char* data, const int32_t size);
+      protected:
+        const char* data_;
+        int32_t size_;
+    };
+
     class KvEngineHelper
     {
     public:
       KvEngineHelper(){};
       virtual ~KvEngineHelper(){};
       virtual int init() = 0;
+      //qixiao new add
+      virtual int scan_keys(const KvKey& start_key, const KvKey& end_key, const uint32_t limit, int32_t *first,
+                            std::vector<KvValue*> *keys, std::vector<KvValue*> *values, uint32_t* result_size) = 0;
+      virtual int get_key(const KvKey& key, KvValue **pp_value, int64_t *version) = 0;
+      virtual int put_key(const KvKey& key, const KvMemValue &value, const int64_t version) = 0;
+      //qixiao new end
       virtual int put_key(const KvKey& key, const std::string& value, const int64_t version) = 0;
       virtual int get_key(const KvKey& key, std::string* value, int64_t* version) = 0;
       virtual int delete_key(const KvKey& key) = 0;
@@ -64,11 +97,11 @@ namespace tfs
           const int32_t offset, const int32_t limit, std::vector<KvKey>* vec_keys,
           std::vector<std::string>* vec_realkey,
           std::vector<std::string>* vec_values, int32_t* result_size) = 0;
-
     private:
       DISALLOW_COPY_AND_ASSIGN(KvEngineHelper);
 
     };
+
   }
 }
 #endif

@@ -43,6 +43,11 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
+        iret = output.set_int64(offset_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
         int64_t pos = 0;
 
         iret = object_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -66,6 +71,11 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
+        iret = input.get_int64(&offset_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
         int64_t pos = 0;
         iret = object_info_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (TFS_SUCCESS == iret)
@@ -80,7 +90,7 @@ namespace tfs
     int64_t ReqKvMetaPutObjectMessage::length() const
     {
       return Serialization::get_string_length(bucket_name_) +
-        Serialization::get_string_length(file_name_) +
+        Serialization::get_string_length(file_name_) + INT64_SIZE +
         object_info_.length();
     }
 
@@ -100,6 +110,11 @@ namespace tfs
         iret = output.set_string(file_name_);
       }
 
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int64(offset_);
+      }
+
       return iret;
     }
 
@@ -112,12 +127,17 @@ namespace tfs
         iret = input.get_string(file_name_);
       }
 
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int64(&offset_);
+      }
+
       return iret;
     }
 
     int64_t ReqKvMetaGetObjectMessage::length() const
     {
-      return Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(file_name_);
+      return Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(file_name_) + INT64_SIZE;
     }
 
     // rsp_get_object_msg
@@ -162,7 +182,6 @@ namespace tfs
 
       return ret;
     }
-
     int64_t RspKvMetaGetObjectMessage::length() const
     {
       return INT8_SIZE + object_info_.length();

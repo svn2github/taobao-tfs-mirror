@@ -45,17 +45,24 @@ namespace tfs
         //int delete_metas();
 
 
-        /*----------------------------object part-----------------------------*/
+      /*----------------------------object part-----------------------------*/
+        int serialize_key(const std::string &bucket_name,
+                        const std::string &file_name, const int64_t &offset,
+                        KvKey *key, char **key_buff, int32_t key_type);
+
         int put_object(const std::string& bucket_name,
-            const std::string& file_name,
-            const common::TfsFileInfo& tfs_file_info,
-            const common::ObjectMetaInfo& object_meta_info,
-            const common::CustomizeInfo& customize_info);
+                     const std::string& file_name,
+                     const int64_t &offset,
+                     common::ObjectInfo &object_info);
+        int get_single_value(const std::string &bucket_name,
+                           const std::string &file_name,
+                           const int64_t &offset,
+                           common::ObjectInfo *object_info);
 
         int get_object(const std::string& bucket_name,
-            const std::string& file_name,
-            common::ObjectInfo* p_object_info);
-
+                     const std::string& file_name,
+                     const int64_t &offset,
+                     common::ObjectInfo *object_info);
         int del_object(const std::string& bucket_name,
             const std::string& file_name);
 
