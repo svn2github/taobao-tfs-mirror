@@ -71,7 +71,7 @@ public class Restful_Web_Service_Original_Stat_Test extends BaseCase
 	}
 	
 	@Test
-	public void test_04_writeFile_with_suffix_without_sample_name_stat_without_suffix()
+	public void test_04_writeFile_with_suffix_without_sample_name_stat_with_suffix()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
 		ExpectMessage ExpMeg = new ExpectMessage();

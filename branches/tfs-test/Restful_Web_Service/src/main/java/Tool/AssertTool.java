@@ -13,6 +13,7 @@ public class AssertTool
 	{
 		if(ExpectMeg.containsKey("status"))
 		{
+			System.out.println("status is : "+Meg.get("status"));
 			Assert.assertTrue(Meg.get("status").equals(ExpectMeg.get("status")));
 		}
 		if(ExpectMeg.containsKey("SIZE"))

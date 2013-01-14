@@ -40,10 +40,11 @@ public class BaseCase
 	protected static final ApplicationContext Bean = new ClassPathXmlApplicationContext("conf.xml");
 	protected static final RestfulWebServer Server = (RestfulWebServer) Bean.getBean("RestfulWebServer");
 	protected static Map<String,Integer> FileMap = new HashMap<String ,Integer> ();
+	protected static String App_key = Server.getTfs_app_key();
 	
 	static
 	{
-		ExecuteUrl.SetBase("http://"+Server.getRestful_web_server()+"/v1/"+Server.getTfs_app_key());
+		ExecuteUrl.SetBase("http://"+Server.getRestful_web_server());
 		ExecuteUrl.Init();
 		FileMap.put("10K", 10*(1<<10));
 		FileMap.put("2M", 2*(1<<20));
@@ -118,6 +119,8 @@ public class BaseCase
 	public Map<String, String> SaveFile(String file, String simple_name, String large_file,String suffix)
 	{
 		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v1/"+App_key);
 		if(null!=simple_name)
 			ExecuteUrl.AddPara("simple_name", simple_name);
 		if(null!=large_file)
@@ -134,6 +137,8 @@ public class BaseCase
 	public Map<String, String> FetchFile(String TFS_name, String file, String suffix, String offset, String size)
 	{
 		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v1/"+App_key);
 		if(null==TFS_name||""==TFS_name)
 			return Message;
 		ExecuteUrl.AddUrlDomain(TFS_name);
@@ -153,6 +158,8 @@ public class BaseCase
 	public Map<String, String> DeleteFile(String TFS_name, String suffix, String hide)
 	{
 		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v1/"+App_key);
 		if(null==TFS_name||""==TFS_name)
 			return Message;
 		ExecuteUrl.AddUrlDomain(TFS_name);
@@ -170,6 +177,8 @@ public class BaseCase
 	public Map<String, String> StatFile(String TFS_name, String suffix, String type)
 	{
 		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v1/"+App_key);
 		if(null==TFS_name||""==TFS_name)
 			return Message;
 		ExecuteUrl.AddUrlDomain("metadata");
