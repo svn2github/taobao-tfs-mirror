@@ -65,13 +65,18 @@ TEST_F(BucketTest, test_put)
   bucket_meta_info.create_time_ = now_time;
 
   ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  BucketMetaInfo new_meta_info;
+  ret = test_meta_info_helper_->head_bucket(bucket_name, &new_meta_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+  EXPECT_EQ(now_time, new_meta_info.create_time_);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 }
 
-/*TEST_F(BucketTest, test_del_with_no_object)
+TEST_F(BucketTest, test_del_with_no_object)
 {
   int ret = TFS_SUCCESS;
   string bucket_name("bucketname");
@@ -80,19 +85,19 @@ TEST_F(BucketTest, test_put)
   BucketMetaInfo bucket_meta_info;
   bucket_meta_info.set_create_time(now_time);
 
-  ret = meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
   string file_name("objectname");
   TfsFileInfo tfs_file_info;
   ObjectMetaInfo object_meta_info;
   CustomizeInfo customize_info;
-  ret = meta_info_helper_->put_object(bucket_name, file_name, tfs_file_info, object_meta_info, customize_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, tfs_file_info, object_meta_info, customize_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
-  ret = meta_info_helper_->del_object(bucket_name, file_name);
+  ret = test_meta_info_helper_->del_object(bucket_name, file_name);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
-  ret = meta_info_helper_->del_bucket(bucket_name);
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(ret, TFS_SUCCESS);
 }
 
@@ -105,7 +110,7 @@ TEST_F(BucketTest, test_del_with_object)
   BucketMetaInfo bucket_meta_info;
   bucket_meta_info.create_time_ = now_time;
 
-  ret = meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
   //put obj
@@ -113,15 +118,15 @@ TEST_F(BucketTest, test_del_with_object)
   TfsFileInfo tfs_file_info;
   ObjectMetaInfo object_meta_info;
   CustomizeInfo customize_info;
-  ret = meta_info_helper_->put_object(bucket_name, file_name, tfs_file_info, object_meta_info, customize_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, tfs_file_info, object_meta_info, customize_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
-  ret = meta_info_helper_->del_bucket(bucket_name);
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(ret, EXIT_DELETE_DIR_WITH_FILE_ERROR);
 
-  ret = meta_info_helper_->del_object(bucket_name, file_name);
+  ret = test_meta_info_helper_->del_object(bucket_name, file_name);
   EXPECT_EQ(ret, TFS_SUCCESS);
-  ret = meta_info_helper_->del_bucket(bucket_name);
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(ret, TFS_SUCCESS);
 }
 
@@ -197,7 +202,6 @@ TEST_F(BucketTest, test_prefix_delimiter_dismatch)
   EXPECT_EQ(pos, -1);
 }
 
-
 TEST_F(BucketTest, test_get)
 {
   int ret = TFS_SUCCESS;
@@ -207,7 +211,7 @@ TEST_F(BucketTest, test_get)
   BucketMetaInfo bucket_meta_info;
   bucket_meta_info.create_time_ = now_time;
 
-  ret = meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
   //put obj
@@ -215,7 +219,7 @@ TEST_F(BucketTest, test_get)
   TfsFileInfo tfs_file_info;
   ObjectMetaInfo object_meta_info;
   CustomizeInfo customize_info;
-  ret = meta_info_helper_->put_object(bucket_name, file_name, tfs_file_info, object_meta_info, customize_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, tfs_file_info, object_meta_info, customize_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
   // get bucket -> list obj
@@ -228,17 +232,17 @@ TEST_F(BucketTest, test_get)
   int32_t limit = 10;
   int8_t is_truncated = -1;
 
-  ret = meta_info_helper_->get_bucket(bucket_name, prefix, start_key, delimiter, limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated);
+  ret = test_meta_info_helper_->get_bucket(bucket_name, prefix, start_key, delimiter, limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated);
   EXPECT_EQ(ret, TFS_SUCCESS);
   EXPECT_EQ(0, is_truncated);
   EXPECT_EQ(1, static_cast<int32_t>(s_common_prefix.size()));
   EXPECT_EQ(0, static_cast<int32_t>(v_object_name.size()));
 
-  ret = meta_info_helper_->del_object(bucket_name, file_name);
+  ret = test_meta_info_helper_->del_object(bucket_name, file_name);
   EXPECT_EQ(ret, TFS_SUCCESS);
-  ret = meta_info_helper_->del_bucket(bucket_name);
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(ret, TFS_SUCCESS);
-}*/
+}
 
 int main(int argc, char* argv[])
 {

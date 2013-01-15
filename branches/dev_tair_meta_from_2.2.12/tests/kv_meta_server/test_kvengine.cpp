@@ -49,28 +49,12 @@ namespace tfs
       {
         case KvKey::KEY_TYPE_OBJECT:
           {
-            KvKey pkey, skey;
-            ret = split_key(key, &pkey, &skey);
-            if (TFS_SUCCESS == ret)
-            {
-              OBJECT_CONTAINER::iterator iter = obj_map_store_.find(string(pkey.key_, pkey.key_size_));
-              if (iter != obj_map_store_.end())
-              {
-                (iter->second)[string(skey.key_, skey.key_size_)] = value;
-              }
-              else
-              {
-                CONTAINER temp;
-                temp[string(skey.key_, skey.key_size_)] = value;
-                obj_map_store_[string(pkey.key_, pkey.key_size_)] = temp;
-              }
-            }
+            map_store_[string(key.key_, key.key_size_)] = value;
           }
           break;
         case KvKey::KEY_TYPE_BUCKET:
           {
             map_store_[string(key.key_, key.key_size_)] = value;
-            ret = TFS_SUCCESS;
           }
           break;
         default:
@@ -90,31 +74,17 @@ namespace tfs
         {
           case KvKey::KEY_TYPE_OBJECT:
             {
-              KvKey skey, pkey;
-              ret = split_key(key, &pkey, &skey);
-              if (TFS_SUCCESS == ret)
+              string store_key(key.key_, key.key_size_);
+              CONTAINER::iterator iter = map_store_.find(store_key);
+              if (iter != map_store_.end())
               {
-                OBJECT_CONTAINER::iterator iter = obj_map_store_.find(string(pkey.key_, pkey.key_size_));
-                if (iter != obj_map_store_.end())
-                {
-                  CONTAINER::iterator obj_iter = (iter->second).find(string(skey.key_, skey.key_size_));
-
-                  if (obj_iter != (iter->second).end())
-                  {
-                    *value = obj_iter->second;
-                  }
-                  else
-                  {
-                    TBSYS_LOG(ERROR, "object not put");
-                    ret = TFS_ERROR;
-                  }
-                }
-                else
-                {
-                  TBSYS_LOG(ERROR, "bucket not put");
-                  ret = TFS_ERROR;
-                }
+                *value = iter->second;
               }
+              else
+              {
+                ret = TFS_ERROR;
+              }
+
             }
             break;
           case KvKey::KEY_TYPE_BUCKET:
@@ -146,21 +116,8 @@ namespace tfs
       {
         case KvKey::KEY_TYPE_OBJECT:
         {
-          KvKey skey, pkey;
-          ret = split_key(key, &pkey, &skey);
-          if (TFS_SUCCESS == ret)
-          {
-            OBJECT_CONTAINER::iterator iter = obj_map_store_.find(string(pkey.key_, pkey.key_size_));
-            if (iter != obj_map_store_.end())
-            {
-              (iter->second).erase(string(skey.key_, skey.key_size_));
-            }
-            else
-            {
-              TBSYS_LOG(ERROR, "bucket not put");
-              ret = TFS_ERROR;
-            }
-          }
+          string store_key(key.key_, key.key_size_);
+          map_store_.erase(store_key);
         }
           break;
         case KvKey::KEY_TYPE_BUCKET:
@@ -253,10 +210,42 @@ namespace tfs
          break;
       }
       return ret;
+    }*/
+
+    int TestEngineHelper::scan_from_map(const KvKey &start_key, const KvKey &end_key,
+        const int32_t offset, const int32_t limit, std::vector<std::string> *vec_realkey, std::vector<string> *vec_values, int *result_size)
+    {
+      string temp_start_key = NULL != start_key.key_ ? string(start_key.key_, start_key.key_size_) : "";
+      string temp_end_key = NULL != end_key.key_ ? string(end_key.key_, end_key.key_size_) : "";
+
+      CONTAINER::iterator iter = map_store_.lower_bound(temp_start_key);
+
+      int count = 0;
+      int temp_offset = 0;
+      for (; iter != map_store_.end() && count < limit; iter++)
+      {
+
+        if ((iter->first).compare(temp_end_key) < 0)
+        {
+          if (temp_offset < offset)
+          {
+            temp_offset++;
+          }
+          else
+          {
+            vec_realkey->push_back(iter->first);
+            vec_values->push_back(iter->second);
+            count++;
+          }
+        }
+      }
+
+      *result_size = count;
+      return TFS_SUCCESS;
     }
 
     int TestEngineHelper::scan_keys(const KvKey& start_key, const KvKey& end_key,
-        const int32_t limit, std::vector<KvKey>* vec_keys, std::vector<std::string>* vec_realkey,
+        const int32_t offset, const int32_t limit, std::vector<std::string>* vec_realkey,
         std::vector<std::string>* vec_values, int32_t* result_size)
     {
       int ret = TFS_SUCCESS;
@@ -264,49 +253,18 @@ namespace tfs
       switch (start_key.key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
-        {
-          tair::data_entry pkey;
-          tair::data_entry start_skey;
-          tair::data_entry end_skey;
-          vector<tair::data_entry *> tvalues;
-          short type = 1;
-          ret = split_key_for_tair(start_key, &pkey, &start_skey);
-          if (TFS_SUCCESS == ret)
           {
-            ret = split_key_for_tair(end_key, &pkey, &end_skey);
+            ret = scan_from_map(start_key, end_key, offset, limit, vec_realkey, vec_values, result_size);
           }
-          if (TFS_SUCCESS == ret)
-          {
-             ret = prefix_scan_from_tair(object_area_, pkey, start_skey, end_skey,
-                   0, limit, tvalues, type);
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            KvKey tmp_key;
-            vector<tair::data_entry *>::iterator iter = tvalues.begin();
-            for(; iter != tvalues.end(); ++iter)
-            {
-              vec_realkey->push_back((*iter)->get_printable_key().c_str());
-              tmp_key.key_ = vec_realkey->back().c_str();
-              tmp_key.key_size_ = vec_realkey->back().size();
-              tmp_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
-              vec_keys->push_back(tmp_key);
-              ++iter;
-              vec_values->push_back((*iter)->get_printable_key().c_str());
-              (*result_size)++;
-            }
-            *result_size = *result_size / 2;
-          }
-        }
-        break;
+          break;
         default:
-        TBSYS_LOG(ERROR, "not support");
-        break;
+          TBSYS_LOG(ERROR, "not support");
+          break;
       }
       return ret;
     }
 
-    int TestEngineHelper::split_key_for_tair(const KvKey& key, tair::data_entry* prefix_key, tair::
+    /*int TestEngineHelper::split_key_for_tair(const KvKey& key, tair::data_entry* prefix_key, tair::
             data_entry* second_key)
     {
       int ret = TFS_SUCCESS;

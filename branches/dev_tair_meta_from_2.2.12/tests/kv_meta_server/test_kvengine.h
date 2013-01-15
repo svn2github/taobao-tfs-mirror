@@ -37,10 +37,14 @@ namespace tfs
       virtual int get_key(const KvKey& key, std::string* value, int64_t* version);
       virtual int delete_key(const KvKey& key);
       int split_key(const KvKey& key, KvKey *prefix_key, KvKey *second_key);
-      //virtual int scan_keys(const KvKey& start_key, const KvKey& end_key,
-      //    const int32_t limit, std::vector<KvKey>* vec_keys, std::vector<std::string>* vec_realkey,
-      //    std::vector<std::string>* vec_values, int32_t* result_size);
-      /*virtual int delete_keys(const std::vector<KvKey>& vec_keys);
+      virtual int scan_keys(const KvKey& start_key, const KvKey& end_key,
+          const int32_t offset, const int32_t limit, std::vector<std::string>* vec_realkey,
+          std::vector<std::string>* vec_values, int32_t* result_size);
+
+      int scan_from_map(const KvKey &start_key, const KvKey &end_key,
+          const int32_t offset, const int32_t limit, std::vector<std::string> *vec_realkey, std::vector<string> *vec_values, int *result_size);
+
+        /*virtual int delete_keys(const std::vector<KvKey>& vec_keys);
 
     public:
       //we split object key like bucketname\objecetname to prefix_key = bucketname, seconde_key = object_name
@@ -61,9 +65,7 @@ namespace tfs
     private:
       DISALLOW_COPY_AND_ASSIGN(TestEngineHelper);
       typedef std::map<std::string, std::string> CONTAINER;
-      typedef std::map<std::string, map<std::string, std::string> > OBJECT_CONTAINER;
       CONTAINER map_store_;
-      OBJECT_CONTAINER obj_map_store_;
     };
   }
 }
