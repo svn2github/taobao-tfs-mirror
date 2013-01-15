@@ -630,7 +630,7 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
-      uint32_t block_id_;
+      uint64_t block_id_;
       uint64_t source_id_;
       uint64_t destination_id_;
       int32_t start_time_;
@@ -1026,6 +1026,12 @@ namespace tfs
       REPAIR_FAMILY_ID_CONFLICT
     };
 
+    enum SwitchFlag
+    {
+      SWITCH_BLOCK_NO = 0,
+      SWITCH_BLOCK_YES
+    };
+
     struct BlockMeta
     {
       uint64_t block_id_;
@@ -1136,6 +1142,10 @@ namespace tfs
       int64_t unlink_visit_count_;
       int64_t last_update_time_;
       int64_t last_statistics_time_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
     };
 
     struct IndexHeaderV2
@@ -1155,7 +1165,32 @@ namespace tfs
       int8_t  max_index_num_;
     	int8_t  reserve_[3];
 
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+
       bool check_need_mremap(const double threshold) const;
+    };
+
+    struct IndexDataV2
+    {
+      IndexHeaderV2 header_;
+      std::vector<FileInfoV2> finfos_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+    };
+
+    struct ECMeta
+    {
+      uint64_t family_id_;
+      int32_t used_offset_;
+      int32_t mars_offset_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
     };
 
     // defined type typedef

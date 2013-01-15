@@ -353,7 +353,7 @@ namespace tfs
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, block_id_);
+        iret = Serialization::set_int64(data, data_len, pos, block_id_);
       }
       if (TFS_SUCCESS == iret)
       {
@@ -383,7 +383,7 @@ namespace tfs
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&block_id_));
       }
       if (TFS_SUCCESS == iret)
       {
@@ -410,7 +410,7 @@ namespace tfs
 
     int64_t ReplBlock::length() const
     {
-      return  INT_SIZE * 4 + INT64_SIZE * 2;
+      return  INT_SIZE * 3 + INT64_SIZE * 3;
     }
 
     int CheckBlockInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -1598,6 +1598,115 @@ namespace tfs
       return (2 * INT64_SIZE + 2 * INT_SIZE);
     }
 
+    int ThroughputV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int64_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      ret = Serialization::set_int64(data, data_len, pos, write_bytes_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, read_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, update_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, unlink_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, write_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, read_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, update_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, unlink_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, last_update_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, last_statistics_time_);
+      }
+
+      return ret;
+    }
+
+    int ThroughputV2::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int64_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      ret = Serialization::get_int64(data, data_len, pos, &write_bytes_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &read_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &update_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &unlink_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &write_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &read_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &update_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &unlink_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &last_update_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &last_statistics_time_);
+      }
+
+      return ret;
+
+    }
+    int64_t ThroughputV2::length() const
+    {
+      return INT64_SIZE * 10;
+    }
+
     bool IndexHeaderV2::check_need_mremap(const double threshold) const
     {
       bool ret = (file_info_bucket_size_ > 0 && used_file_info_bucket_size_ > 0);
@@ -1608,6 +1717,233 @@ namespace tfs
         //TBSYS_LOG(INFO, "need remap %d, %e, %e", ret, ratio, threshold);
       }
       return ret;
+    }
+
+    int IndexHeaderV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = info_.serialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = throughput_.serialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, used_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, avail_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, marshalling_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, seq_no_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int16(data, data_len, pos, file_info_bucket_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int16(data, data_len, pos, used_file_info_bucket_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int8(data, data_len, pos, max_index_num_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 3); i++)
+        {
+          ret = Serialization::set_int8(data, data_len, pos, reserve_[i]);
+        }
+      }
+
+      return ret;
+    }
+
+    int IndexHeaderV2::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = info_.deserialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = throughput_.deserialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &used_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &avail_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &marshalling_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos,
+            reinterpret_cast<int32_t* >(&seq_no_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int16(data, data_len, pos,
+            reinterpret_cast<int16_t* >(&file_info_bucket_size_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int16(data, data_len, pos,
+            reinterpret_cast<int16_t* >(&used_file_info_bucket_size_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int8(data, data_len, pos, &max_index_num_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 3); i++)
+        {
+          ret = Serialization::get_int8(data, data_len, pos, &reserve_[i]);
+        }
+      }
+
+      return ret;
+    }
+
+    int64_t IndexHeaderV2::length() const
+    {
+      return info_.length() + throughput_.length() + INT_SIZE * 6;
+    }
+
+    int IndexDataV2::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = header_.deserialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t finfo_size = 0;
+        FileInfoV2 finfo;
+        ret = Serialization::get_int32(data, data_len, pos, &finfo_size);
+        for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < finfo_size); i++)
+        {
+          ret =  finfo.deserialize(data, data_len, pos);
+          if (TFS_SUCCESS == ret)
+          {
+            finfos_.push_back(finfo);
+          }
+        }
+      }
+
+      return ret;
+    }
+
+    int IndexDataV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = header_.serialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, finfos_.size());
+        for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < finfos_.size()); i++)
+        {
+          ret =  finfos_[i].serialize(data, data_len, pos);
+        }
+      }
+
+      return ret;
+    }
+
+    int64_t IndexDataV2::length() const
+    {
+      int64_t len = header_.length() + INT_SIZE;
+      FileInfoV2 finfo;
+      len += finfos_.size() * finfo.length();
+      return len;
+    }
+
+    int ECMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t* >(&family_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &used_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &mars_offset_);
+      }
+
+      return ret;
+    }
+
+    int ECMeta::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, family_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, used_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, mars_offset_);
+      }
+
+      return ret;
+    }
+
+    int64_t ECMeta::length() const
+    {
+      return INT64_SIZE + INT_SIZE * 2;
     }
 
     int FileInfoV2::serialize(char* data, const int64_t data_len, int64_t& pos) const

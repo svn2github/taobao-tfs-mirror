@@ -212,6 +212,7 @@ namespace tfs
     const int32_t EXIT_NOT_SUPPORT_ERROR = -8070; // a clue to old clients
     const int32_t EXIT_BLOCK_LEASE_OVERLOAD_ERROR = -8071;
     const int32_t EXIT_BLOCK_LEASE_INTERNAL_ERROR = -8072;
+    const int32_t EXIT_NETWORK_BUSY_ERROR = -8073;
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;
