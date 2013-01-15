@@ -55,6 +55,11 @@
 #include "read_file_message_v2.h"
 #include "close_file_message_v2.h"
 #include "unlink_file_message_v2.h"
+#include "read_data_message_v2.h"
+#include "write_data_message_v2.h"
+#include "read_index_message_v2.h"
+#include "write_index_message_v2.h"
+#include "ec_meta_message.h"
 
 namespace tfs
 {

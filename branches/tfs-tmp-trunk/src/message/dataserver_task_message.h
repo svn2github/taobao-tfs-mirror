@@ -33,7 +33,7 @@ namespace tfs
         inline void set_source_id(const uint64_t source_id) {source_id_ = source_id;}
         inline uint64_t get_source_id() const {return source_id_;}
       private:
-        uint32_t block_id_;
+        uint64_t block_id_;
         uint64_t source_id_;
     };
 

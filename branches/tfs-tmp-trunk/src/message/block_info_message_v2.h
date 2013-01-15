@@ -167,8 +167,41 @@ namespace tfs
           return block_id_;
         }
 
+        void set_family_id(const uint64_t family_id)
+        {
+          family_id_ = family_id;
+        }
+
+        uint64_t get_family_id() const
+        {
+          return family_id_;
+        }
+
+        void set_index_num(const uint32_t index_num)
+        {
+          index_num_ = index_num;
+        }
+
+        uint32_t get_index_num() const
+        {
+          return index_num_;
+        }
+
+        void set_tmp_flag(const bool tmp)
+        {
+          tmp_ = tmp;
+        }
+
+        bool get_tmp_flag()
+        {
+          return tmp_;
+        }
+
       private:
         uint64_t block_id_;
+        uint64_t family_id_;
+        int32_t index_num_;
+        int8_t tmp_;
     };
 
     class RemoveBlockMessageV2: public common::BasePacket

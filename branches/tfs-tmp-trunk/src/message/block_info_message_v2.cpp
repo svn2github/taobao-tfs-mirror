@@ -202,7 +202,8 @@ namespace tfs
       return len;
     }
 
-    NewBlockMessageV2::NewBlockMessageV2()
+    NewBlockMessageV2::NewBlockMessageV2():
+      family_id_(INVALID_FAMILY_ID), index_num_(0), tmp_(0)
     {
       _packetHeader._pcode = NEW_BLOCK_MESSAGE_V2;
     }
@@ -213,17 +214,49 @@ namespace tfs
 
     int NewBlockMessageV2::serialize(Stream& output) const
     {
-      return output.set_int64(block_id_);
+      int ret = output.set_int64(block_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(family_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(index_num_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(tmp_);
+      }
+
+      return ret;
     }
 
     int NewBlockMessageV2::deserialize(Stream& input)
     {
-      return input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
+      int ret = input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&family_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&index_num_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(&tmp_);
+      }
+
+      return ret;
     }
 
     int64_t NewBlockMessageV2::length() const
     {
-      return INT64_SIZE;
+      return 2 * INT64_SIZE + INT_SIZE + INT8_SIZE;
     }
 
     RemoveBlockMessageV2::RemoveBlockMessageV2():

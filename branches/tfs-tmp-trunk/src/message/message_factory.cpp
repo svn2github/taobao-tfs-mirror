@@ -384,6 +384,33 @@ namespace tfs
           case common::REMOVE_BLOCK_MESSAGE_V2:
             packet = new RemoveBlockMessageV2();
             break;
+          case common::READ_RAWDATA_MESSAGE_V2:
+            packet = new ReadRawdataMessageV2();
+            break;
+          case common::READ_RAWDATA_RESP_MESSAGE_V2:
+            packet = new ReadRawdataRespMessageV2();
+            break;
+          case common::WRITE_RAWDATA_MESSAGE_V2:
+            packet = new WriteRawdataMessageV2();
+            break;
+          case common::READ_INDEX_MESSAGE_V2:
+            packet = new ReadIndexMessageV2();
+            break;
+          case common::READ_INDEX_RESP_MESSAGE_V2:
+            packet = new ReadIndexRespMessageV2();
+            break;
+          case common::WRITE_INDEX_MESSAGE_V2:
+            packet = new WriteIndexMessageV2();
+            break;
+          case common::QUERY_EC_META_MESSAGE:
+            packet = new QueryEcMetaMessage();
+            break;
+          case common::QUERY_EC_META_RESP_MESSAGE:
+            packet = new QueryEcMetaRespMessage();
+            break;
+          case common::COMMIT_EC_META_MESSAGE:
+            packet = new CommitEcMetaMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;
