@@ -115,6 +115,22 @@ namespace tfs
       return ret;
     }
 
+    int BaseIndexHandle::set_used_offset(const int32_t size)
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        ret = size > 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          IndexHeaderV2* header = get_index_header_();
+          assert(NULL != header);
+          header->used_offset_ = size;
+        }
+      }
+      return ret;
+    }
+
     int BaseIndexHandle::update_avail_offset(const int32_t size)
     {
       int32_t ret = check_load();
@@ -636,7 +652,7 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::traverse(std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id) const
+    int IndexHandle::traverse(common::IndexHeaderV2& iheader, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id) const
     {
       UNUSED(logic_block_id);
       int32_t ret = check_load();
@@ -644,6 +660,7 @@ namespace tfs
       {
         IndexHeaderV2* header = get_index_header_();
         assert(NULL != header);
+        iheader = *header;
         FileInfoV2* finfos    = get_file_infos_array_();
         for (uint16_t bucket = 0; bucket < header->file_info_bucket_size_; ++bucket)
         {
@@ -1059,7 +1076,7 @@ namespace tfs
       return ret;
     }
 
-    int VerifyIndexHandle::traverse(std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id) const
+    int VerifyIndexHandle::traverse(common::IndexHeaderV2& vheader, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id) const
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
@@ -1076,6 +1093,7 @@ namespace tfs
         {
           IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
           assert(NULL != header);
+          vheader = *header;
           FileInfoV2* finfos  = reinterpret_cast<FileInfoV2*>(data + INDEX_HEADER_V2_LENGTH);
           assert(NULL != finfos);
           int32_t total = header->used_file_info_bucket_size_ * FILE_INFO_V2_LENGTH;

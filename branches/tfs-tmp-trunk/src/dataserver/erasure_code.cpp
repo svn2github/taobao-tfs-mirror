@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "ds_define.h"
 #include "galois.h"
 #include "jerasure.h"
 #include "erasure_code.h"

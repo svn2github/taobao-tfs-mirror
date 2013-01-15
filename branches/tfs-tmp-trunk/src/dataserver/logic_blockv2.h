@@ -57,14 +57,15 @@ namespace tfs
       int get_block_info(common::BlockInfoV2& info) const;
       virtual int check_block_intact() { return common::TFS_SUCCESS;}
       int load_index(const common::MMapOption mmap_option);
-      int traverse(std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id) const;
+      int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id) const;
       int get_family_id(int64_t& family_id) const;
       int set_family_id(const int64_t family_id);
       int get_used_offset(int32_t& size) const;//data file length
+      int set_used_offset(int32_t size);  // used after encoded
       int get_avail_offset(int32_t& size) const;
       int get_marshalling_offset(int32_t& offset) const;
       int set_marshalling_offset(const int32_t size);
-      int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold);
+      int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id);
       virtual int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id);
       int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,
           const int8_t flag, const uint64_t logic_block_id);

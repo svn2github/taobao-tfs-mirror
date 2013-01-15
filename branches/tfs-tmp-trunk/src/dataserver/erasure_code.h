@@ -14,9 +14,6 @@
  *
  */
 
-
-#include "dataserver_define.h"
-
 namespace tfs
 {
   namespace dataserver

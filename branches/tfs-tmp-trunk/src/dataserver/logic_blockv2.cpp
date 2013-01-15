@@ -162,13 +162,13 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::traverse(std::vector<FileInfoV2>& finfos, const uint64_t logic_block_id) const
+    int BaseLogicBlock::traverse(common::IndexHeaderV2& header, std::vector<FileInfoV2>& finfos, const uint64_t logic_block_id) const
     {
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         RWLock::Lock lock(mutex_, READ_LOCKER);
-        ret = index_handle_->traverse(finfos, logic_block_id);
+        ret = index_handle_->traverse(header, finfos, logic_block_id);
       }
       return ret;
     }
@@ -192,6 +192,12 @@ namespace tfs
       return index_handle_->get_used_offset(size);
     }
 
+    int BaseLogicBlock::set_used_offset(const int32_t size)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      return index_handle_->set_used_offset(size);
+    }
+
     int BaseLogicBlock::get_avail_offset(int32_t& size) const
     {
       RWLock::Lock lock(mutex_, READ_LOCKER);
@@ -210,10 +216,18 @@ namespace tfs
       return index_handle_->set_marshalling_offset(size);
     }
 
-    int BaseLogicBlock::write_file_infos(common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const double threshold)
+    int BaseLogicBlock::write_file_infos(common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const uint64_t logic_block_id)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      return index_handle_->write_file_infos(header, infos, threshold);
+      SuperBlockInfo* sbinfo = NULL;
+      SuperBlockManager& supber_block_manager = get_block_manager_().get_super_block_manager();
+      int ret = supber_block_manager.get_super_block_info(sbinfo);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = index_handle_->write_file_infos(header, infos,
+            sbinfo->max_use_hash_bucket_ratio_, logic_block_id);
+      }
+      return ret;
     }
 
     int BaseLogicBlock::write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id)

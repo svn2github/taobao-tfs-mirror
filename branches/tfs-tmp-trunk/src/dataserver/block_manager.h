@@ -65,6 +65,10 @@ namespace tfs
         int timeout(const time_t now);
 
         int get_used_offset(int32_t& size, const uint64_t logic_block_id) const;
+        int set_used_offset(const int32_t size, const uint64_t logic_block_id);
+        int get_marshalling_offset(int32_t& size, const uint64_t logic_block_id) const;
+        int set_marshalling_offset(const int32_t size, const uint64_t logic_block_id);
+
         int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const;
         int update_block_info(const common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
@@ -80,6 +84,9 @@ namespace tfs
         int stat(common::FileInfoV2& info, const int8_t flag, const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const;
         int unlink(int64_t& size, const uint64_t fileid, const int32_t action,
               const uint64_t logic_block_id, const uint64_t attach_logic_block_id);
+
+        int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, uint64_t attach_logic_block_id);
+        int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id, uint64_t attach_logic_block_id) const;
 
         bool exist(const uint64_t logic_block_id, const bool tmp = false) const;
 

@@ -267,6 +267,53 @@ namespace tfs
       return ret;
     }
 
+    int BlockManager::set_used_offset(const int32_t size, const uint64_t logic_block_id)
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->set_used_offset(size);
+        }
+      }
+      return ret;
+    }
+
+    int BlockManager::get_marshalling_offset(int32_t& size, const uint64_t logic_block_id) const
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->get_marshalling_offset(size);
+        }
+      }
+      return ret;
+    }
+
+    int BlockManager::set_marshalling_offset(const int32_t size, const uint64_t logic_block_id)
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->set_marshalling_offset(size);
+        }
+      }
+      return ret;
+    }
+
+
+
     int BlockManager::check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const
     {
       int32_t ret = (remote_version >= 0 && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -435,6 +482,36 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = logic_block->unlink(size, fileid, action, attach_logic_block_id);
+        }
+      }
+      return ret;
+    }
+
+    int BlockManager::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, uint64_t attach_logic_block_id)
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id && INVALID_BLOCK_ID != attach_logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->write_file_infos(header, infos, attach_logic_block_id);
+        }
+      }
+      return ret;
+    }
+
+    int BlockManager::traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id, uint64_t attach_logic_block_id) const
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id && INVALID_BLOCK_ID != attach_logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->traverse(header, finfos, attach_logic_block_id);
         }
       }
       return ret;
