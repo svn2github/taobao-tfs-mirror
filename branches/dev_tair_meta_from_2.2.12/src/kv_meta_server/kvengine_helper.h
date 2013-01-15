@@ -85,7 +85,7 @@ namespace tfs
       virtual int init() = 0;
       //qixiao new add
       virtual int scan_keys(const KvKey& start_key, const KvKey& end_key, const int32_t limit, int32_t *first,
-                            std::vector<KvValue*> *keys, std::vector<KvValue*> *values, int32_t* result_size, short key_serial,short scan_type) = 0;
+                            std::vector<KvValue*> *keys, std::vector<KvValue*> *values, int32_t* result_size, short scan_type) = 0;
       virtual int get_key(const KvKey& key, KvValue **pp_value, int64_t *version) = 0;
       virtual int put_key(const KvKey& key, const KvMemValue &value, const int64_t version) = 0;
       //qixiao new end

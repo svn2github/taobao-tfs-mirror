@@ -126,23 +126,20 @@ namespace tfs
       {
         case KvKey::KEY_TYPE_OBJECT:
           {
-            tair::data_entry pkey;
-            tair::data_entry skey;
+            tair::data_entry t_pkey;
+            tair::data_entry t_skey;
             tair::data_entry tvalue;
 
-            string pkey_buff;
             int64_t pos = 0;
             int ret = NULL != key.key_ && key.key_size_ - pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
             if (TFS_SUCCESS == ret)
             {
-              ret = common::Serialization::get_string(key.key_, key.key_size_, pos, pkey_buff);
+              ret = split_key_for_tair(key, &t_pkey, &t_skey);
             }
-            pkey.set_data(key.key_, pos);
-            skey.set_data(key.key_ + pos, key.key_size_ - pos);
             tvalue.set_data(value.get_data(),value.get_size());
 
             ret = prefix_put_to_tair(object_area_,
-                pkey, skey, tvalue, version);
+                t_pkey, t_skey, tvalue, version);
 
           }
           break;
@@ -183,13 +180,10 @@ namespace tfs
               int ret = NULL != key.key_ && key.key_size_ - pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS == ret)
               {
-                ret = common::Serialization::get_string(key.key_, key.key_size_, pos, pkey_buff);
+                ret = split_key_for_tair(key, &t_pkey, &t_skey);
               }
               if(TFS_SUCCESS == ret)
               {
-                t_pkey.set_data(key.key_, pos);
-                t_skey.set_data(key.key_ + pos, key.key_size_ - pos);
-
                 ret = prefix_get_from_tair(object_area_, t_pkey, t_skey, tvalue/*p_tair_value->get_tair_value()*/);
               }
 
@@ -234,7 +228,7 @@ namespace tfs
     }
 
     int TairEngineHelper::scan_keys(const KvKey& start_key, const KvKey& end_key, const int32_t limit, int32_t *first,
-        vector<KvValue*> *keys, vector<KvValue*> *values, int32_t* result_size, short key_serial, short scan_type)
+        vector<KvValue*> *keys, vector<KvValue*> *values, int32_t* result_size, short scan_type)
     {
       int ret = TFS_SUCCESS;
 
@@ -250,31 +244,16 @@ namespace tfs
 
             uint32_t i;
             int32_t over_flag = -1;
-            if(key_serial == 0)
+
+            if (NULL != start_key.key_)
             {
-               if (NULL != start_key.key_)
-               {
-                  ret = split_key_for_tair(start_key, &t_pkey, &t_start_skey);
-               }
-               if (TFS_SUCCESS == ret && NULL != end_key.key_)
-               {
-                  ret = split_key_for_tair(end_key, &t_pkey, &t_end_skey);
-               }
+               ret = split_key_for_tair(start_key, &t_pkey, &t_start_skey);
+            }
+            if (TFS_SUCCESS == ret && NULL != end_key.key_)
+            {
+               ret = split_key_for_tair(end_key, &t_pkey, &t_end_skey);
             }
 
-            else if(key_serial == 1)
-            {
-              string pkey_buff;
-              int64_t pos = 0;
-              int ret = NULL != start_key.key_ && start_key.key_size_ - pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
-              if (TFS_SUCCESS == ret)
-              {
-                ret = common::Serialization::get_string(start_key.key_, start_key.key_size_, pos, pkey_buff);
-              }
-              t_pkey.set_data(start_key.key_, pos);
-              t_start_skey.set_data(start_key.key_ + pos, start_key.key_size_ - pos);
-              t_end_skey.set_data(end_key.key_  + pos, end_key.key_size_ - pos);
-            }
 
 
             if (TFS_SUCCESS == ret)
@@ -437,7 +416,7 @@ namespace tfs
         } while(p - key.key_ < key.key_size_);
 
         prefix_key_size = pos - key.key_;
-        second_key_size = key.key_size_ - 1 - prefix_key_size;
+        second_key_size = key.key_size_ - prefix_key_size;
         if (NULL == pos || 0 >= prefix_key_size || 0 >= second_key_size)
         {
           TBSYS_LOG(ERROR, "invalid key is %s", key.key_);
@@ -448,7 +427,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         prefix_key->set_data(key.key_, prefix_key_size);
-        second_key->set_data(pos + 1, second_key_size);
+        second_key->set_data(pos, second_key_size);
       }
 
       return ret;

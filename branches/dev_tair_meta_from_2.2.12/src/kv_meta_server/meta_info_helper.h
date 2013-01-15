@@ -46,23 +46,17 @@ namespace tfs
 
 
       /*----------------------------object part-----------------------------*/
-        int serialize_key(const std::string &bucket_name,
-                        const std::string &file_name, const int64_t &offset,
-                        KvKey *key, char **key_buff, int32_t key_type);
 
         int put_object(const std::string& bucket_name,
                      const std::string& file_name,
                      const int64_t &offset,
                      common::ObjectInfo &object_info);
-        int get_single_value(const std::string &bucket_name,
-                           const std::string &file_name,
-                           const int64_t &offset,
-                           common::ObjectInfo *object_info);
 
         int get_object(const std::string& bucket_name,
                      const std::string& file_name,
                      const int64_t &offset,
                      common::ObjectInfo *object_info);
+
         int del_object(const std::string& bucket_name,
             const std::string& file_name);
 
@@ -79,6 +73,14 @@ namespace tfs
             std::set<std::string>* s_common_prefix, int8_t* is_truncated);
         int del_bucket(const std::string& bucket_name);
 
+      public:
+        int get_single_value(const std::string &bucket_name,
+                           const std::string &file_name,
+                           const int64_t &offset,
+                           common::ObjectInfo *object_info);
+        int serialize_key(const std::string &bucket_name,
+                        const std::string &file_name, const int64_t &offset,
+                        KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
       protected:
         int list_objects_ex(const char *k, const char *v, const std::string &prefix, const char delimiter,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,

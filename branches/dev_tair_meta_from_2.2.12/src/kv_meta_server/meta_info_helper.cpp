@@ -27,7 +27,7 @@ namespace tfs
     const int TFS_INFO_BUFF_SIZE = 128;
     const int VALUE_BUFF_SIZE = 1024*1024;
     const int KV_VALUE_BUFF_SIZE = 1024*1024;
-    const int KEY_BUFF_SIZE = 512 + 8 + 8;
+    const int32_t KEY_BUFF_SIZE = 512 + 8 + 8;
     const int SCAN_LIMIT = 500;
     MetaInfoHelper::MetaInfoHelper()
     {
@@ -52,37 +52,50 @@ namespace tfs
 
 
     //----------------------------
-    int MetaInfoHelper::serialize_key(const std::string &bucket_name,
-                                   const std::string &file_name, const int64_t &offset,
-                                   KvKey *key, char **key_buff, int32_t key_type)
+    int MetaInfoHelper::serialize_key(const std::string &bucket_name, const std::string &file_name,
+                                      const int64_t &offset, KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type)
     {
-      int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0 && offset >= 0
+                 && key != NULL &&  key_buff != NULL ) ? TFS_SUCCESS : TFS_ERROR;
       int64_t pos = 0;
       if(TFS_SUCCESS == ret)
       {
+        string real_key(bucket_name + KvKey::DELIMITER + file_name);
+        real_key += KvKey::DELIMITER;
+        pos = bucket_name.size() + 1 + file_name.size() + 1;
+        if(pos < buff_size)
+        {
+          strncpy(key_buff, real_key.c_str(), pos);
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+
         int64_t version = 0;
-        if (TFS_SUCCESS == ret)
+
+        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
         {
-          ret = Serialization::set_string(*key_buff, KEY_BUFF_SIZE, pos, bucket_name);
-        }
-        if (TFS_SUCCESS == ret)
-        {
-          ret = Serialization::set_string(*key_buff, KEY_BUFF_SIZE, pos, file_name);
-        }
-        if (TFS_SUCCESS == ret)
-        {
-          ret = Serialization::int64_to_char((*key_buff) + pos, KEY_BUFF_SIZE, version);
+          ret = Serialization::int64_to_char(key_buff + pos, buff_size, version);
           pos = pos + 8;
         }
-        if (TFS_SUCCESS == ret)
+        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
         {
-          ret = Serialization::int64_to_char((*key_buff) + pos, KEY_BUFF_SIZE, offset);
+          key_buff[pos++] = KvKey::DELIMITER;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
+        {
+          ret = Serialization::int64_to_char(key_buff + pos, buff_size, offset);
           pos = pos + 8;
         }
       }
       if(TFS_SUCCESS == ret)
       {
-        key->key_ = *key_buff;
+        key->key_ = key_buff;
         key->key_size_ = pos;
         key->key_type_ = key_type;
       }
@@ -97,9 +110,8 @@ namespace tfs
                                    const int64_t &offset,
                                    common::ObjectInfo &object_info)
     {
-      TBSYS_LOG(ERROR, "we at Metainfohelp put object");
-      TBSYS_LOG(DEBUG, "offset is %"PRI64_PREFIX"d", offset);
-      int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0 &&
+                 offset >= 0 ) ? TFS_SUCCESS : TFS_ERROR;
 
       if(0 < offset)// is not big file `s zero part
       {
@@ -109,7 +121,7 @@ namespace tfs
 
         ret = get_single_value(bucket_name, file_name, zero, &object_info_zero);
 
-        if( TFS_ERROR== ret)// zero non-existent
+        if( TFS_ERROR == ret)// zero non-existent
         {
           object_info_zero.meta_info_.big_file_size_ = object_info.v_tfs_file_info_[0].file_size_ + offset;
 
@@ -136,7 +148,10 @@ namespace tfs
         ret = TFS_ERROR;
       }
       KvKey key;
-      serialize_key(bucket_name, file_name, offset, &key, &key_buff, KvKey::KEY_TYPE_OBJECT);
+      if(ret == TFS_SUCCESS)
+      {
+        ret = serialize_key(bucket_name, file_name, offset, &key, key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+      }
 
       //op value
       char *value_buff = NULL;
@@ -146,7 +161,10 @@ namespace tfs
         ret = TFS_ERROR;
       }
       int64_t pos = 0;
-      object_info.serialize(value_buff, VALUE_BUFF_SIZE, pos);
+      if(ret == TFS_SUCCESS)
+      {
+        ret = object_info.serialize(value_buff, VALUE_BUFF_SIZE, pos);
+      }
 
       KvMemValue kv_value;
       if(ret == TFS_SUCCESS)
@@ -169,7 +187,8 @@ namespace tfs
                                           const int64_t &offset,
                                           common::ObjectInfo *object_info)
     {
-      int ret = (bucket_name.size() > 0 && file_name.size() > 0 && offset >= 0) ? TFS_SUCCESS : TFS_ERROR;
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0
+                 && offset >= 0 && object_info != NULL) ? TFS_SUCCESS : TFS_ERROR;
       //op key
       char *key_buff = NULL;
       key_buff = (char*) malloc(KEY_BUFF_SIZE);
@@ -178,15 +197,22 @@ namespace tfs
         ret = TFS_ERROR;
       }
       KvKey key;
-      serialize_key(bucket_name, file_name, offset, &key, &key_buff, KvKey::KEY_TYPE_OBJECT);
-
+      if(TFS_SUCCESS == ret)
+      {
+        ret = serialize_key(bucket_name, file_name, offset, &key, key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+      }
       //op value
       KvValue *kv_value = NULL;
       int64_t version;
-
-      ret = kv_engine_helper_->get_key(key, &kv_value, &version);
+      if(TFS_SUCCESS == ret)
+      {
+        ret = kv_engine_helper_->get_key(key, &kv_value, &version);
+      }
       int64_t pos = 0;
-      object_info->deserialize(kv_value->get_data(), kv_value->get_size(), pos);
+      if(TFS_SUCCESS == ret)
+      {
+        ret = object_info->deserialize(kv_value->get_data(), kv_value->get_size(), pos);
+      }
       kv_value->free();
       free(key_buff);
 
@@ -197,9 +223,8 @@ namespace tfs
                                    const std::string &file_name, const int64_t &offset,
                                    common::ObjectInfo *object_info)
     {
-      //TODO check object_info;
-      int ret = (bucket_name.size() > 0 && file_name.size() > 0 && offset >= 0) ? TFS_SUCCESS : TFS_ERROR;
-      TBSYS_LOG(ERROR, "we at Metainfohelp get object");
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0
+                 && offset >= 0 && object_info != NULL) ? TFS_SUCCESS : TFS_ERROR;
       //op key
       char *start_key_buff = NULL;
       start_key_buff = (char*) malloc(KEY_BUFF_SIZE);
@@ -217,15 +242,14 @@ namespace tfs
       KvKey end_key;
       int64_t start_offset = 0;
       int64_t end_offset = 5555555555;
-      serialize_key(bucket_name, file_name, start_offset, &start_key, &start_key_buff, KvKey::KEY_TYPE_OBJECT);
-      serialize_key(bucket_name, file_name, end_offset, &end_key, &end_key_buff, KvKey::KEY_TYPE_OBJECT);
+      serialize_key(bucket_name, file_name, start_offset, &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+      serialize_key(bucket_name, file_name, end_offset, &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
 
       //op value
       int32_t limit = SCAN_LIMIT;
       int32_t i;
       int32_t first = 0;
       int32_t result_size = 0;
-      short key_serial = 1;//has serial
       short scan_type = 2;//only scan value
       vector<KvValue*> kv_value_keys;
       vector<KvValue*> kv_value_values;
@@ -233,7 +257,7 @@ namespace tfs
       while(first > -1)
       {
         ret = kv_engine_helper_->scan_keys(start_key, end_key, limit,
-                                           &first, &kv_value_keys, &kv_value_values, &result_size, key_serial, scan_type);
+                                           &first, &kv_value_keys, &kv_value_values, &result_size, scan_type);
         for(i = 0; i < result_size; ++i)
         {
           common::ObjectInfo tmp_object_info;
@@ -257,7 +281,8 @@ namespace tfs
         if(first > -1)
         {
           first = 1;
-          serialize_key(bucket_name, file_name, object_info->v_tfs_file_info_.back().offset_ , &start_key, &start_key_buff, KvKey::KEY_TYPE_OBJECT);
+          serialize_key(bucket_name, file_name, object_info->v_tfs_file_info_.back().offset_ ,
+                        &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
         }
         for(i = 0; i < result_size; ++i)//free tair
         {
@@ -340,7 +365,7 @@ namespace tfs
                vector<KvValue*> &kv_value_values, int32_t *result_size)
     {
       int ret = TFS_SUCCESS;
-      short key_serial = 0;//no serial
+
       short scan_type = 1;//scan key and value
       KvKey start_obj_key;
       KvKey end_obj_key;
@@ -356,7 +381,7 @@ namespace tfs
         start_obj_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
       }
 
-      ret = kv_engine_helper_->scan_keys(start_obj_key, end_obj_key, limit, &offset, &kv_value_keys, &kv_value_values, result_size, key_serial, scan_type);
+      ret = kv_engine_helper_->scan_keys(start_obj_key, end_obj_key, limit, &offset, &kv_value_keys, &kv_value_values, result_size, scan_type);
 
       return ret;
     }
