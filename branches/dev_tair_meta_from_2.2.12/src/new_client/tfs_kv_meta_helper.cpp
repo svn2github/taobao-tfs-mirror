@@ -215,7 +215,7 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
   return ret;
 }
 
-int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_name, const char *object_name,
+int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_name, const char *object_name, const int64_t offset,
   ObjectInfo *object_info, bool *still_have)
 {
   int ret = TFS_SUCCESS;
@@ -228,6 +228,7 @@ int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_nam
     ReqKvMetaGetObjectMessage req_go_msg;
     req_go_msg.set_bucket_name(bucket_name);
     req_go_msg.set_file_name(object_name);
+    req_go_msg.set_offset(offset);
 
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();

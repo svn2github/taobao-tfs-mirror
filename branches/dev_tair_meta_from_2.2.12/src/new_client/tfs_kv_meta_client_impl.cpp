@@ -302,11 +302,18 @@ namespace tfs
               TBSYS_LOG(DEBUG, "first object info, will put meta info.");
               object_info.meta_info_.dump();
             }
-            object_info.offset_ = iter->offset_;
+            else
+            {
+              object_info.has_meta_info_ = false;
+              object_info.has_customize_info_ = false;
+            }
+            TfsFileInfo tmp_tfs_info;
+            tmp_tfs_info.offset_ = iter->offset_;
+            tmp_tfs_info.block_id_ = iter->block_id_;
+            tmp_tfs_info.file_id_ = iter->file_id_;
+            tmp_tfs_info.cluster_id_ = cluster_id;
+            object_info.v_tfs_file_info_.push_back(tmp_tfs_info);
 
-            object_info.tfs_file_info_.block_id_ = iter->block_id_;
-            object_info.tfs_file_info_.file_id_ = iter->file_id_;
-            object_info.tfs_file_info_.cluster_id_ = cluster_id;
 
             ret = do_put_object(bucket_name, object_name, object_info);
             if (TFS_SUCCESS != ret)
@@ -335,7 +342,7 @@ namespace tfs
     }
 
     int64_t KvMetaClientImpl::get_object(const char *bucket_name, const char *object_name,
-        void *buffer, int64_t offset, int64_t length,
+        void *buffer, const int64_t offset, int64_t length,
         ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
@@ -363,8 +370,7 @@ namespace tfs
         {
           // get object
           ObjectInfo object_info;
-          object_info.offset_ = cur_offset;
-          ret = do_get_object(bucket_name, object_name, &object_info, &still_have);
+          ret = do_get_object(bucket_name, object_name, cur_offset, &object_info, &still_have);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(ERROR, "do get object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %d",
@@ -392,11 +398,14 @@ namespace tfs
             }
           }
           vector<FragMeta> v_frag_meta;
-          FragMeta frag_meta(object_info.tfs_file_info_.block_id_,
-              object_info.tfs_file_info_.file_id_,
-              cur_offset,
-              object_info.meta_info_.max_tfs_file_size_);
-          v_frag_meta.push_back(frag_meta);
+          if (!object_info.v_tfs_file_info_.empty())
+          {
+            FragMeta frag_meta(object_info.v_tfs_file_info_[0].block_id_,
+                object_info.v_tfs_file_info_[0].file_id_,
+                cur_offset,  //fix me, is this ok?
+                object_meta_info->max_tfs_file_size_);
+            v_frag_meta.push_back(frag_meta);
+          }
 
           cur_length = min(static_cast<int64_t>(object_info.meta_info_.max_tfs_file_size_), left_length);
 
@@ -600,9 +609,9 @@ namespace tfs
     }
 
     int KvMetaClientImpl::do_get_object(const char *bucket_name,
-        const char *object_name, ObjectInfo *object_info, bool *still_have)
+        const char *object_name, const int64_t offset, ObjectInfo *object_info, bool *still_have)
     {
-      return KvMetaHelper::do_get_object(kms_id_, bucket_name, object_name, object_info, still_have);
+      return KvMetaHelper::do_get_object(kms_id_, bucket_name, object_name, offset, object_info, still_have);
     }
 
     int KvMetaClientImpl::do_del_object(const char *bucket_name, const char *object_name)
