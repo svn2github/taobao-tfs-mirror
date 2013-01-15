@@ -146,6 +146,13 @@ namespace tfs
 
           }
           break;
+        case KvKey::KEY_TYPE_BUCKET:
+          {
+            data_entry pkey(key.key_, key.key_size_);
+            data_entry pvalue(value.get_data(), value.get_size());
+            ret = tair_client_->put(object_area_, pkey, pvalue, 0, 0);
+          }
+          break;
         default:
           TBSYS_LOG(ERROR, "not support");
           ret = TFS_ERROR;
@@ -199,6 +206,25 @@ namespace tfs
               *pp_value = p_tair_value;
             }
             break;
+          case KvKey::KEY_TYPE_BUCKET:
+            {
+              data_entry pkey(key.key_, key.key_size_);
+              data_entry* pvalue = NULL;
+              ret = tair_client_->get(object_area_, pkey, pvalue);
+
+              TairValue *p_tair_value = new TairValue();
+              if(NULL == p_tair_value)
+              {
+                ret = TFS_ERROR;
+              }
+
+              if (TFS_SUCCESS == ret)
+              {
+                p_tair_value->set_tair_value(pvalue);
+                *pp_value = p_tair_value;
+              }
+            }
+            break;
           default:
             TBSYS_LOG(ERROR, "not support");
             ret = TFS_ERROR;
@@ -207,10 +233,9 @@ namespace tfs
       return ret;
     }
 
-    int TairEngineHelper::scan_keys(const KvKey& start_key, const KvKey& end_key, const uint32_t limit, int32_t *first,
-        vector<KvValue*> *keys, vector<KvValue*> *values, uint32_t* result_size)
+    int TairEngineHelper::scan_keys(const KvKey& start_key, const KvKey& end_key, const int32_t limit, int32_t *first,
+        vector<KvValue*> *keys, vector<KvValue*> *values, int32_t* result_size, short key_serial, short scan_type)
     {
-      UNUSED(keys);
       int ret = TFS_SUCCESS;
 
       switch (start_key.key_type_)
@@ -222,40 +247,74 @@ namespace tfs
             tair::data_entry t_end_skey;
             vector<tair::data_entry *> tvalues;
 
-            short type = 2;
+
             uint32_t i;
             int32_t over_flag = -1;
-
-            string pkey_buff;
-            int64_t pos = 0;
-            int ret = NULL != start_key.key_ && start_key.key_size_ - pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
-            if (TFS_SUCCESS == ret)
+            if(key_serial == 0)
             {
-              ret = common::Serialization::get_string(start_key.key_, start_key.key_size_, pos, pkey_buff);
+               if (NULL != start_key.key_)
+               {
+                  ret = split_key_for_tair(start_key, &t_pkey, &t_start_skey);
+               }
+               if (TFS_SUCCESS == ret && NULL != end_key.key_)
+               {
+                  ret = split_key_for_tair(end_key, &t_pkey, &t_end_skey);
+               }
             }
-            t_pkey.set_data(start_key.key_, pos);
-            t_start_skey.set_data(start_key.key_ + pos, start_key.key_size_ - pos);
-            t_end_skey.set_data(end_key.key_  + pos, end_key.key_size_ - pos);
 
-
-            if (TFS_SUCCESS == ret)
+            else if(key_serial == 1)
             {
-              ret = prefix_scan_from_tair(object_area_, t_pkey, t_start_skey, t_end_skey,
-                  *first, limit, tvalues, type);
-            }
-            if (TFS_SUCCESS == ret)
-            {
-              for(i = 0; i < tvalues.size(); ++i)
+              string pkey_buff;
+              int64_t pos = 0;
+              int ret = NULL != start_key.key_ && start_key.key_size_ - pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+              if (TFS_SUCCESS == ret)
               {
-                TairValue* p_tmp = new TairValue();
-                p_tmp->set_tair_value(tvalues[i]);
-                values->push_back(p_tmp);
+                ret = common::Serialization::get_string(start_key.key_, start_key.key_size_, pos, pkey_buff);
               }
-              *result_size = i;
+              t_pkey.set_data(start_key.key_, pos);
+              t_start_skey.set_data(start_key.key_ + pos, start_key.key_size_ - pos);
+              t_end_skey.set_data(end_key.key_  + pos, end_key.key_size_ - pos);
             }
-            if(*result_size < limit)//over
+
+
+            if (TFS_SUCCESS == ret)
             {
-              *first = over_flag;
+              ret = prefix_scan_from_tair(object_area_, t_pkey, t_start_skey, NULL == end_key.key_ ? "" : t_end_skey,
+                  *first, limit, tvalues, scan_type);
+            }
+
+            if(scan_type == 1)
+            {
+              if (TFS_SUCCESS == ret)
+              {
+                for(i = 0; i < tvalues.size(); i+=2)
+                {
+                  TairValue* k_tmp = new TairValue();
+                  k_tmp->set_tair_value(tvalues[i]);
+                  keys->push_back(k_tmp);
+                  TairValue* v_tmp = new TairValue();
+                  v_tmp->set_tair_value(tvalues[i+1]);
+                  values->push_back(v_tmp);
+                }
+                *result_size = i/2;
+              }
+            }
+            else if(scan_type == 2)
+            {
+              if (TFS_SUCCESS == ret)
+              {
+                for(i = 0; i < tvalues.size(); ++i)
+                {
+                  TairValue* p_tmp = new TairValue();
+                  p_tmp->set_tair_value(tvalues[i]);
+                  values->push_back(p_tmp);
+                }
+                *result_size = i;
+              }
+              if(*result_size < limit)//over
+              {
+                *first = over_flag;
+              }
             }
           }
           break;
@@ -266,91 +325,6 @@ namespace tfs
       return ret;
     }
     //qixiao new end
-    int TairEngineHelper::put_key(const KvKey& key, const string& value, const int64_t version)
-    {
-      int ret = TFS_SUCCESS;
-      switch (key.key_type_)
-      {
-        case KvKey::KEY_TYPE_OBJECT:
-          {
-            tair::data_entry pkey;
-            tair::data_entry skey;
-            tair::data_entry tvalue;
-            ret = split_key_for_tair(key, &pkey, &skey);
-            if (TFS_SUCCESS == ret)
-            {
-              tvalue.set_data(value.c_str(), value.length());
-              ret = prefix_put_to_tair(object_area_,
-                  pkey, skey, tvalue, version);
-            }
-
-          }
-          break;
-        case KvKey::KEY_TYPE_BUCKET:
-          {
-            data_entry pkey(key.key_);
-            data_entry pvalue(value.c_str());
-            ret = tair_client_->put(object_area_, pkey, pvalue, 0, 0);
-          }
-          break;
-        default:
-          TBSYS_LOG(ERROR, "not support");
-          ret = TFS_ERROR;
-      }
-      return ret;
-    }
-
-    int TairEngineHelper::get_key(const KvKey& key, std::string* value, int64_t* version)
-    {
-      int ret = TFS_SUCCESS;
-      if (NULL == value || NULL == version)
-      {
-        TBSYS_LOG(ERROR, "shuold never got this, bug!");
-        ret = TFS_ERROR;
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        switch (key.key_type_)
-        {
-          case KvKey::KEY_TYPE_OBJECT:
-            {
-              tair::data_entry pkey;
-              tair::data_entry skey;
-              tair::data_entry* tvalue = NULL;
-              ret = split_key_for_tair(key, &pkey, &skey);
-              if (TFS_SUCCESS == ret)
-              {
-                ret = prefix_get_from_tair(object_area_,
-                    pkey, skey, tvalue);
-
-              }
-              if (TFS_SUCCESS == ret)
-              {
-                value->assign(tvalue->get_data(), tvalue->get_size());
-                *version = tvalue->get_version();
-              }
-              tbsys::gDelete(tvalue);
-            }
-            break;
-          case KvKey::KEY_TYPE_BUCKET:
-            {
-              data_entry pkey(key.key_);
-              data_entry* pvalue = NULL;
-              ret = tair_client_->get(object_area_, pkey, pvalue);
-              if (TFS_SUCCESS == ret)
-              {
-                value->assign(pvalue->get_data(), pvalue->get_size());
-              }
-              tbsys::gDelete(pvalue);
-            }
-            break;
-          default:
-            TBSYS_LOG(ERROR, "not support");
-            ret = TFS_ERROR;
-        }
-      }
-      return ret;
-    }
 
     int TairEngineHelper::delete_key(const KvKey& key)
     {
@@ -431,66 +405,6 @@ namespace tfs
         default:
           TBSYS_LOG(ERROR, "not support");
           break;
-      }
-      return ret;
-    }
-
-    int TairEngineHelper::scan_keys(const KvKey& start_key, const KvKey& end_key,
-        const int32_t offset, const int32_t limit, std::vector<KvKey>* vec_keys, std::vector<std::string>* vec_realkey,
-        std::vector<std::string>* vec_values, int32_t* result_size)
-    {
-      UNUSED(vec_keys);
-      int ret = TFS_SUCCESS;
-
-      switch (start_key.key_type_)
-      {
-        case KvKey::KEY_TYPE_OBJECT:
-        {
-          tair::data_entry pkey;
-          tair::data_entry start_skey;
-          tair::data_entry end_skey;
-          vector<tair::data_entry *> tvalues;
-          short type = 1;
-          if (NULL != start_key.key_)
-          {
-            ret = split_key_for_tair(start_key, &pkey, &start_skey);
-          }
-          if (TFS_SUCCESS == ret && NULL != end_key.key_)
-          {
-            ret = split_key_for_tair(end_key, &pkey, &end_skey);
-          }
-          if (TFS_SUCCESS == ret)
-          {
-             ret = prefix_scan_from_tair(object_area_, pkey, start_skey, NULL == end_key.key_ ? "" : end_skey,
-                   offset, limit, tvalues, type);
-          }
-          if(TFS_SUCCESS == ret)
-          {
-            KvKey tmp_key;
-            vector<tair::data_entry *>::iterator iter = tvalues.begin();
-            for(; iter != tvalues.end(); ++iter)
-            {
-              tmp_key.key_ = (*iter)->get_data();
-              tmp_key.key_size_ = (*iter)->get_size();
-              tmp_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
-              TBSYS_LOG(DEBUG, "object name: %s", tmp_key.key_);
-              vec_realkey->push_back(string(tmp_key.key_, tmp_key.key_size_));
-              //vec_keys->push_back(tmp_key);
-              ++iter;
-              vec_values->push_back(string((*iter)->get_data(), (*iter)->get_size()));
-            }
-            *result_size = static_cast<int32_t>(tvalues.size()) >> 1;
-            for (size_t i = 0; i < tvalues.size(); i++)
-            {
-              delete tvalues[i];
-            }
-            tvalues.clear();
-          }
-        }
-        break;
-        default:
-        TBSYS_LOG(ERROR, "not support");
-        break;
       }
       return ret;
     }

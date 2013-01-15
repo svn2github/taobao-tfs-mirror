@@ -85,10 +85,8 @@ namespace tfs
             std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix);
 
         int get_range(const KvKey &pkey, const std::string &start_key,
-            const int32_t offset, const int32_t limit, std::vector<KvKey> *vec_keys,
-            std::vector<std::string> *vec_realkeys,
-            std::vector<std::string> *vec_values, int32_t *result_size);
-
+                      int32_t offset, const int32_t limit, std::vector<KvValue*> &kv_value_keys,
+                      std::vector<KvValue*> &kv_value_values, int32_t *result_size);
 
         int list_objects(const KvKey &pkey, const std::string &prefix,
             const std::string &start_key, const char delimiter, const int32_t limit,

@@ -48,20 +48,14 @@ namespace tfs
       virtual ~TairEngineHelper();
       virtual int init();
       //qixiao new add
-      virtual int scan_keys(const KvKey& start_key, const KvKey& end_key, const uint32_t limit, int32_t *first,
-                           std::vector<KvValue*> *keys, std::vector<KvValue*> *values, uint32_t* result_size);
+      virtual int scan_keys(const KvKey& start_key, const KvKey& end_key, const int32_t limit, int32_t *first,
+                           std::vector<KvValue*> *keys, std::vector<KvValue*> *values, int32_t* result_size, short key_serial, short scan_type);
       virtual int get_key(const KvKey& key, KvValue **pp_value, int64_t *version);
       virtual int put_key(const KvKey& key, const KvMemValue &value, const int64_t version);
       //qixiao new end
 
-      virtual int put_key(const KvKey& key, const std::string& value, const int64_t version);
-      virtual int get_key(const KvKey& key, std::string* value, int64_t* version);
       virtual int delete_key(const KvKey& key);
       virtual int delete_keys(const std::vector<KvKey>& vec_keys);
-      virtual int scan_keys(const KvKey& start_key, const KvKey& end_key,
-          const int32_t offset, const int32_t limit, std::vector<KvKey>* vec_keys,
-          std::vector<std::string>* vec_realkey,
-          std::vector<std::string>* vec_values, int32_t* result_size);
     public:
       //we split object key like bucketname\objecetname to prefix_key = bucketname, seconde_key = object_name
       static int split_key_for_tair(const KvKey& key, tair::data_entry* prefix_key, tair::data_entry* second_key);
