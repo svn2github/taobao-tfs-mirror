@@ -455,12 +455,15 @@ namespace tfs
 
     int ClientRequestServer::new_block(NewBlockMessageV2* message)
     {
-      int ret = TFS_SUCCESS;
-      const uint64_t block_id = message->get_block_id();
-      ret = block_manager().new_block(block_id, false);
+      uint64_t block_id = message->get_block_id();
+      int64_t family_id = message->get_family_id();
+      int8_t index_num = message->get_index_num();
+      bool tmp = message->get_tmp_flag();
+      int ret = block_manager().new_block(block_id, tmp, family_id, index_num);
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "new block %"PRI64_PREFIX"u fail, ret: %d", block_id, ret);
+        TBSYS_LOG(ERROR, "new block %"PRI64_PREFIX"u fail, tmp: %d, family_id: %"PRI64_PREFIX"u, "
+            "index num: %d, ret: %d", block_id, tmp, family_id, index_num, ret);
       }
       else
       {
@@ -710,6 +713,201 @@ namespace tfs
 
       return TFS_SUCCESS;
     }
+
+    int ClientRequestServer::read_raw_data(message::ReadRawdataMessageV2* message)
+    {
+      uint64_t block_id = message->get_block_id();
+      int32_t length = message->get_length();
+      int32_t offset = message->get_offset();
+
+      int ret = ((INVALID_BLOCK_ID == block_id) || (length <= 0) || (offset < 0)) ?
+        EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ReadRawdataRespMessageV2* resp_msg = new (std::nothrow) ReadRawdataRespMessageV2();
+        assert(NULL != resp_msg);
+        char* data = resp_msg->alloc_data(length);
+        assert(NULL != data);
+        ret = block_manager().pread(data, length, offset, block_id);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(resp_msg);
+          TBSYS_LOG(WARN, "read raw data fail. blockid: %"PRI64_PREFIX"u, "
+              "length: %d, offset: %d, ret: %d", block_id, length, offset, ret);
+        }
+        else
+        {
+          resp_msg->set_length(length);
+          ret = message->reply(resp_msg);
+        }
+      }
+
+      return ret;
+    }
+
+    int ClientRequestServer::write_raw_data(message::WriteRawdataMessageV2* message)
+    {
+      uint64_t block_id = message->get_block_id();
+      int32_t length = message->get_length();
+      int32_t offset = message->get_offset();
+      const char* data = message->get_data();
+
+      int ret = ((INVALID_BLOCK_ID == block_id) || (length <= 0) || (offset < 0)
+          || (NULL == data)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = block_manager().pwrite(data, length, offset, block_id);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "write raw data fail. blockid: %"PRI64_PREFIX"u, "
+              "length: %d, offset: %d, ret: %d", block_id, length, offset, ret);
+        }
+        else
+        {
+          ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        }
+      }
+
+      return ret;
+    }
+
+    int ClientRequestServer::read_index(message::ReadIndexMessageV2* message)
+    {
+      uint64_t block_id = message->get_block_id();
+      uint64_t attach_block_id = message->get_block_id();
+
+      int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_BLOCK_ID == attach_block_id)) ?
+        EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ReadIndexRespMessageV2* resp_msg = new (std::nothrow) ReadIndexRespMessageV2();
+        assert(NULL != resp_msg);
+        ret = block_manager().traverse(resp_msg->get_index_data().header_,
+            resp_msg->get_index_data().finfos_, block_id, attach_block_id);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(resp_msg);
+          TBSYS_LOG(WARN, "read index fail. blockid: %"PRI64_PREFIX"u, "
+              "attach_block_id: %"PRI64_PREFIX"u, ret: %d",
+              block_id, attach_block_id, ret);
+        }
+        else
+        {
+          ret = message->reply(resp_msg);
+        }
+      }
+
+      return ret;
+    }
+
+    int ClientRequestServer::write_index(message::WriteIndexMessageV2* message)
+    {
+      uint64_t block_id = message->get_block_id();
+      uint64_t attach_block_id = message->get_block_id();
+      IndexDataV2& index_data = message->get_index_data();
+
+      int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_BLOCK_ID == attach_block_id)) ?
+        EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = block_manager().write_file_infos(index_data.header_,
+            index_data.finfos_, block_id, attach_block_id);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "read index fail. blockid: %"PRI64_PREFIX"u, "
+              "attach_block_id: %"PRI64_PREFIX"u, ret: %d",
+              block_id, attach_block_id, ret);
+        }
+        else
+        {
+          ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        }
+      }
+
+      return ret;
+    }
+
+    int ClientRequestServer::query_ec_meta(message::QueryEcMetaMessage* message)
+    {
+      uint64_t block_id = message->get_block_id();
+      int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        QueryEcMetaRespMessage* resp_msg = new (std::nothrow) QueryEcMetaRespMessage();
+        assert(NULL != resp_msg);
+        ECMeta& ec_meta = resp_msg->get_ec_meta();
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = block_manager().get_family_id(ec_meta.family_id_, block_id);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = block_manager().get_used_offset(ec_meta.used_offset_, block_id);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(resp_msg);
+          TBSYS_LOG(WARN, "query ec meta fail. blockid: %"PRI64_PREFIX"u, ret: %d",
+              block_id, ret);
+        }
+        else
+        {
+          ret = message->reply(resp_msg);
+        }
+      }
+
+      return ret;
+    }
+
+    int ClientRequestServer::commit_ec_meta(message::CommitEcMetaMessage* message)
+    {
+      uint64_t block_id = message->get_block_id();
+      ECMeta& ec_meta = message->get_ec_meta();
+
+      int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        if (TFS_SUCCESS == ret)
+        {
+          ret = block_manager().set_family_id(ec_meta.family_id_, block_id);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = block_manager().set_used_offset(ec_meta.used_offset_, block_id);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = block_manager().set_marshalling_offset(ec_meta.mars_offset_, block_id);
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "commit ec meta fail. blockid: %"PRI64_PREFIX"u, ret: %d",
+              block_id, ret);
+        }
+        else
+        {
+          ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        }
+      }
+
+      return ret;
+    }
+
   }
 }
 

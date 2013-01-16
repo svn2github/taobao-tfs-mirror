@@ -64,6 +64,8 @@ namespace tfs
         int switch_logic_block(const uint64_t logic_block_id, const bool tmp = false);
         int timeout(const time_t now);
 
+        int get_family_id(int64_t& family_id, const uint64_t logic_block_id) const;
+        int set_family_id(const int64_t family_id, const uint64_t logic_block_id);
         int get_used_offset(int32_t& size, const uint64_t logic_block_id) const;
         int set_used_offset(const int32_t size, const uint64_t logic_block_id);
         int get_marshalling_offset(int32_t& size, const uint64_t logic_block_id) const;

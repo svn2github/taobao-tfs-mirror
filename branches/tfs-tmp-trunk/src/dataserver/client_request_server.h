@@ -67,6 +67,14 @@ namespace tfs
         int new_block(message::NewBlockMessageV2* message);
         int remove_block(message::RemoveBlockMessageV2* message);
 
+        /** data & index interface */
+        int read_raw_data(message::ReadRawdataMessageV2* message);
+        int write_raw_data(message::WriteRawdataMessageV2* message);
+        int read_index(message::ReadIndexMessageV2* message);
+        int write_index(message::WriteIndexMessageV2* message);
+        int query_ec_meta(message::QueryEcMetaMessage* message);
+        int commit_ec_meta(message::CommitEcMetaMessage* message);
+
         /** tool support interface */
 
       private:

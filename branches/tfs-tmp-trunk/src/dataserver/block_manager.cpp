@@ -282,6 +282,36 @@ namespace tfs
       return ret;
     }
 
+    int BlockManager::get_family_id(int64_t& family_id, const uint64_t logic_block_id) const
+    {
+      int64_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->get_family_id(family_id);
+        }
+      }
+      return ret;
+    }
+
+    int BlockManager::set_family_id(const int64_t family_id, const uint64_t logic_block_id)
+    {
+      int64_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->set_family_id(family_id);
+        }
+      }
+      return ret;
+    }
+
     int BlockManager::get_marshalling_offset(int32_t& size, const uint64_t logic_block_id) const
     {
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
