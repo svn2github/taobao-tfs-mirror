@@ -114,6 +114,8 @@ namespace tfs
              v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
        }
 
+       TBSYS_LOG(INFO, "%d, %d", static_cast<int32_t>(v_object_name->size()), static_cast<int32_t>(s_common_prefix->size()));
+
        return ret;
     }
 
@@ -315,7 +317,6 @@ namespace tfs
             tmp_tfs_info.cluster_id_ = cluster_id;
             tmp_tfs_info.file_size_ = iter->size_;
             object_info.v_tfs_file_info_.push_back(tmp_tfs_info);
-
 
             ret = do_put_object(bucket_name, object_name, object_info);
             if (TFS_SUCCESS != ret)
