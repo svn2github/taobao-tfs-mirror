@@ -118,7 +118,6 @@ namespace tfs
     {
       int ret = true;
       BasePacket* base_packet = NULL;
-      TBSYS_LOG(ERROR, "we at handle");
       if (!(ret = BaseService::handlePacketQueue(packet, args)))
       {
         TBSYS_LOG(ERROR, "call BaseService::handlePacketQueue fail. ret: %d", ret);
@@ -165,7 +164,6 @@ namespace tfs
     int KvMetaService::put_object(ReqKvMetaPutObjectMessage* req_put_object_msg)
     {
       int ret = TFS_SUCCESS;
-      TBSYS_LOG(ERROR, "we at put_object kvService");
       if (NULL == req_put_object_msg)
       {
         ret = EXIT_INVALID_ARGU;
@@ -194,7 +192,6 @@ namespace tfs
     int KvMetaService::get_object(ReqKvMetaGetObjectMessage* req_get_object_msg)
     {
       int ret = TFS_SUCCESS;
-      TBSYS_LOG(ERROR, "we at get_object kvService");
       if (NULL == req_get_object_msg)
       {
         ret = EXIT_INVALID_ARGU;

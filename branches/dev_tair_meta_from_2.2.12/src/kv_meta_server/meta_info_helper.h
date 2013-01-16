@@ -78,17 +78,19 @@ namespace tfs
                            const std::string &file_name,
                            const int64_t &offset,
                            common::ObjectInfo *object_info);
+        int deserialize_key(const char *key, const int32_t key_size, std::string *object_name,
+            int64_t *offset, int64_t *version);
         int serialize_key(const std::string &bucket_name,
                         const std::string &file_name, const int64_t &offset,
                         KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
       protected:
-        int list_objects_ex(const char *k, const char *v, const std::string &prefix, const char delimiter,
+        int list_objects_ex(const std::string &k, const std::string &v, const std::string &prefix, const char delimiter,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,
             std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix);
 
         int get_range(const KvKey &pkey, const std::string &start_key,
-                      int32_t offset, const int32_t limit, std::vector<KvValue*> &kv_value_keys,
-                      std::vector<KvValue*> &kv_value_values, int32_t *result_size);
+            int32_t offset, const int32_t limit, std::vector<KvValue*> *kv_value_keys,
+            std::vector<KvValue*> *kv_value_values, int32_t *result_size);
 
         int list_objects(const KvKey &pkey, const std::string &prefix,
             const std::string &start_key, const char delimiter, const int32_t limit,

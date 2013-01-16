@@ -113,7 +113,7 @@ namespace tfs
       int ret = (bucket_name.size() > 0 && file_name.size() > 0 &&
                  offset >= 0 ) ? TFS_SUCCESS : TFS_ERROR;
 
-      if(0 < offset)// is not big file `s zero part
+      if(offset > 0)// is not big file `s zero part
       {
         common::ObjectInfo object_info_zero;
 
@@ -136,7 +136,7 @@ namespace tfs
         }
 
       }
-      else if(0 > offset)
+      else if(offset < 0)
       {
         TBSYS_LOG(DEBUG, "offset error %"PRI64_PREFIX"d", offset);
       }
@@ -256,8 +256,8 @@ namespace tfs
 
       while(first > -1)
       {
-        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit,
-                                           &first, &kv_value_keys, &kv_value_values, &result_size, scan_type);
+        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit, offset,
+            &kv_value_keys, &kv_value_values, &result_size, scan_type);
         for(i = 0; i < result_size; ++i)
         {
           common::ObjectInfo tmp_object_info;
@@ -361,8 +361,8 @@ namespace tfs
     }
 
     int MetaInfoHelper::get_range(const KvKey &pkey, const string &start_key,
-          int32_t offset, const int32_t limit, vector<KvValue*> &kv_value_keys,
-               vector<KvValue*> &kv_value_values, int32_t *result_size)
+          const int32_t offset, const int32_t limit, vector<KvValue*> *kv_value_keys,
+               vector<KvValue*> *kv_value_values, int32_t *result_size)
     {
       int ret = TFS_SUCCESS;
 
@@ -381,13 +381,53 @@ namespace tfs
         start_obj_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
       }
 
-      ret = kv_engine_helper_->scan_keys(start_obj_key, end_obj_key, limit, &offset, &kv_value_keys, &kv_value_values, result_size, scan_type);
+      ret = kv_engine_helper_->scan_keys(start_obj_key, end_obj_key, limit, offset, kv_value_keys, kv_value_values, result_size, scan_type);
 
       return ret;
     }
 
+    int MetaInfoHelper::deserialize_key(const char *key, const int32_t key_size, string *object_name,
+        int64_t *offset, int64_t *version)
+    {
+      int ret = (key != NULL && key_size > 0 &&  object_name != NULL &&
+          version != NULL && offset != NULL) ? TFS_SUCCESS : TFS_ERROR;
 
-    int MetaInfoHelper::list_objects_ex(const char *k, const char *v, const string &prefix, const char delimiter,
+      if (TFS_SUCCESS == ret)
+      {
+        char *pos = const_cast<char*>(key);
+        do
+        {
+          if (KvKey::DELIMITER == *pos)
+          {
+            break;
+          }
+          pos++;
+        } while(pos - key < key_size);
+
+        int64_t object_name_size = pos - key;
+
+        object_name->assign(key, object_name_size);
+
+        pos++;
+        if (TFS_SUCCESS == ret && (pos + 8) <= key + key_size)
+        {
+          ret = Serialization::char_to_int64(pos, key + key_size - pos, *version);
+          pos = pos + 8;
+        }
+
+        pos++;
+
+        if (TFS_SUCCESS == ret && (pos + 8) <= key + key_size)
+        {
+          ret = Serialization::char_to_int64(pos, key + key_size - pos, *offset);
+          pos = pos + 8;
+        }
+      }
+
+      return ret;
+    }
+
+    int MetaInfoHelper::list_objects_ex(const string &k, const string &v, const string &prefix, const char delimiter,
         vector<ObjectMetaInfo> *v_object_meta_info, vector<string> *v_object_name, set<string> *s_common_prefix)
     {
       int ret = TFS_SUCCESS;
@@ -396,29 +436,33 @@ namespace tfs
       bool prefix_flag = false;
       bool common_flag = false;
 
-      ret = get_common_prefix(k, prefix, delimiter, &prefix_flag, &common_flag, &common_pos);
+      string object_name;
+      int64_t offset = -1;
+      int64_t version = -1;
+
+
+      //deserialze from object_name/offset/version
+      ret = deserialize_key(k.c_str(), k.length(), &object_name, &offset, &version);
+
+      ret = get_common_prefix(object_name.c_str(), prefix, delimiter, &prefix_flag, &common_flag, &common_pos);
 
       if (TFS_SUCCESS == ret)
       {
-        string object_name(k);
         if (common_flag)
         {
           string common_prefix(object_name.substr(0, common_pos+1));
           s_common_prefix->insert(common_prefix);
         }
-        else if (prefix_flag)
+        else if (prefix_flag && offset == 0)
         {
-          v_object_name->push_back(object_name);
-
-          TfsFileInfo tfs_file_info;
-          ObjectMetaInfo object_meta_info;
-          CustomizeInfo customize_info;
-
+          ObjectInfo object_info;
           int64_t pos = 0;
-          tfs_file_info.deserialize(v, strlen(v), pos);
-          object_meta_info.deserialize(v, strlen(v), pos);
-          customize_info.deserialize(v, strlen(v), pos);
-          v_object_meta_info->push_back(object_meta_info);
+          ret = object_info.deserialize(v.c_str(), v.length(), pos);
+          if (TFS_SUCCESS == ret)
+          {
+            v_object_meta_info->push_back(object_info.meta_info_);
+            v_object_name->push_back(object_name);
+          }
         }
       }
 
@@ -452,7 +496,7 @@ namespace tfs
         v_object_name->clear();
         s_common_prefix->clear();
 
-        uint32_t first_loop = 1;
+        bool first_loop = true;
         int32_t limit_size = limit;
         *is_truncated = 0;
 
@@ -471,8 +515,7 @@ namespace tfs
           limit_size = limit - actual_size;
 
           ret = get_range(pkey, temp_start_key,  first_loop ? 0 : 1, limit_size + 1,
-                          kv_value_keys, kv_value_values, &res_size);
-
+                          &kv_value_keys, &kv_value_values, &res_size);
           // error
           if (TFS_SUCCESS != ret)
           {
@@ -491,8 +534,8 @@ namespace tfs
               static_cast<int32_t>(v_object_name->size()) < limit;
             if (need_out)
             {
-              const char* k = kv_value_keys[i]->get_data();
-              const char* v = kv_value_values[i]->get_data();
+              string k(kv_value_keys[i]->get_data(), kv_value_keys[i]->get_size());
+              string v(kv_value_values[i]->get_data(), kv_value_values[i]->get_size());
               list_objects_ex(k, v, prefix, delimiter, v_object_meta_info, v_object_name, s_common_prefix);
             }
             else if (i < res_size -1)
@@ -504,9 +547,18 @@ namespace tfs
 
           if (need_out)
           {
-            first_loop = 0;
-            temp_start_key = kv_value_keys[res_size-1]->get_data();
+            first_loop = false;
+            temp_start_key = string(kv_value_keys[res_size-1]->get_data(), kv_value_keys[res_size-1]->get_size());
           }
+
+          //delete for tair
+          for (int i = 0; i < res_size; ++i)
+          {
+            kv_value_keys[i]->free();
+            kv_value_values[i]->free();
+          }
+          kv_value_keys.clear();
+          kv_value_values.clear();
         }// end of while
       }// end of if
       return ret;
