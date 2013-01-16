@@ -46,7 +46,7 @@ int32_t SegmentData::get_nearest_ds(uint32_t ip)
 void SegmentData::set_pri_ds_index()
 {
   uint32_t local_ip = LocalResource::get_instance()->local_ip_;
-  if (0 != local_ip)
+  if (0 == local_ip)
   {
     pri_ds_index_ = seg_info_.file_id_ % ds_.size();
   }
@@ -54,7 +54,8 @@ void SegmentData::set_pri_ds_index()
   {
     pri_ds_index_ = get_nearest_ds(local_ip);
   }
-  TBSYS_LOG(DEBUG, "select ds %d, %"PRI64_PREFIX"u", pri_ds_index_, ds_[pri_ds_index_]);
+  TBSYS_LOG(DEBUG, "block_id: %d, select ds %d, %s", seg_info_.block_id_, pri_ds_index_,
+      Func::addr_to_str(ds_[pri_ds_index_], true).c_str());
 }
 
 LocalKey::LocalKey() : server_id_(0)
