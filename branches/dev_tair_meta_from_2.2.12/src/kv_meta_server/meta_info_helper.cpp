@@ -52,6 +52,7 @@ namespace tfs
 
 
     //----------------------------
+
     int MetaInfoHelper::serialize_key(const std::string &bucket_name, const std::string &file_name,
                                       const int64_t &offset, KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type)
     {
@@ -253,14 +254,16 @@ namespace tfs
       short scan_type = 2;//only scan value
       vector<KvValue*> kv_value_keys;
       vector<KvValue*> kv_value_values;
+      string tmp_key;
 
       while(first > -1)
       {
-        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit, offset,
+        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit, first,
             &kv_value_keys, &kv_value_values, &result_size, scan_type);
         for(i = 0; i < result_size; ++i)
         {
           common::ObjectInfo tmp_object_info;
+          //key get
           int64_t pos = 0;
           //value get
           tmp_object_info.deserialize(kv_value_values[i]->get_data(),
@@ -278,16 +281,22 @@ namespace tfs
           }
         }
 
-        if(first > -1)
+        if(result_size > limit)
         {
           first = 1;
           serialize_key(bucket_name, file_name, object_info->v_tfs_file_info_.back().offset_ ,
                         &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
         }
+        else
+        {
+          first = -1;
+        }
         for(i = 0; i < result_size; ++i)//free tair
         {
+//          kv_value_keys[i]->free();
           kv_value_values[i]->free();
         }
+  //      kv_value_keys.clear();
         kv_value_values.clear();
       }
       free(start_key_buff);

@@ -43,11 +43,6 @@ namespace tfs
           return file_name_;
         }
 
-        const int64_t get_offset()
-        {
-          return offset_;
-        }
-
         const common::ObjectInfo& get_object_info() const
         {
           return object_info_;
@@ -63,11 +58,6 @@ namespace tfs
           file_name_ = file_name;
         }
 
-        void set_offset(const int64_t offset)
-        {
-          offset_ = offset;
-        }
-
         void set_object_info(const common::ObjectInfo& object_info)
         {
           object_info_ = object_info;
@@ -76,7 +66,6 @@ namespace tfs
       private:
         std::string bucket_name_;
         std::string file_name_;
-        int64_t offset_;
         common::ObjectInfo object_info_;
     };
 

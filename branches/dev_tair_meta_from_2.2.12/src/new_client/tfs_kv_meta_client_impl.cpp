@@ -199,9 +199,10 @@ namespace tfs
       {
         if (cur_offset > iter->offset_ + iter->size_)
         {
+          continue; // fix me later, when server have pread
           TBSYS_LOG(ERROR, "fatal error wrong pos, cur_offset: %"PRI64_PREFIX"d, total: %"PRI64_PREFIX"d",
               cur_offset, (iter->offset_ + iter->size_));
-          break;
+
         }
 
         // deal with the hole
@@ -312,6 +313,7 @@ namespace tfs
             tmp_tfs_info.block_id_ = iter->block_id_;
             tmp_tfs_info.file_id_ = iter->file_id_;
             tmp_tfs_info.cluster_id_ = cluster_id;
+            tmp_tfs_info.file_size_ = iter->size_;
             object_info.v_tfs_file_info_.push_back(tmp_tfs_info);
 
 
@@ -371,6 +373,8 @@ namespace tfs
           // get object
           ObjectInfo object_info;
           ret = do_get_object(bucket_name, object_name, cur_offset, &object_info, &still_have);
+          TBSYS_LOG(DEBUG, "bucket_name %s object_name %s "
+          "cur_offset %ld still_have %d", bucket_name, object_name, cur_offset, still_have);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(ERROR, "do get object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %d",
@@ -394,18 +398,23 @@ namespace tfs
             if (NULL != object_meta_info)
             {
               *object_meta_info = object_info.meta_info_;
+            }
+            if (NULL != customize_info)
+            {
               *customize_info = object_info.customize_info_;
             }
           }
           vector<FragMeta> v_frag_meta;
-          if (!object_info.v_tfs_file_info_.empty())
-          {
-            FragMeta frag_meta(object_info.v_tfs_file_info_[0].block_id_,
-                object_info.v_tfs_file_info_[0].file_id_,
-                cur_offset,  //fix me, is this ok?
-                object_meta_info->max_tfs_file_size_);
-            v_frag_meta.push_back(frag_meta);
-          }
+          size_t i = 0;
+          TBSYS_LOG(ERROR, "vector size ================= is: %d",object_info.v_tfs_file_info_.size());
+            for(; i < object_info.v_tfs_file_info_.size(); ++i)
+            {
+              FragMeta frag_meta(object_info.v_tfs_file_info_[i].block_id_,
+                object_info.v_tfs_file_info_[i].file_id_,
+                object_info.v_tfs_file_info_[i].offset_,
+                object_info.v_tfs_file_info_[i].file_size_);
+              v_frag_meta.push_back(frag_meta);
+            }
 
           cur_length = min(static_cast<int64_t>(object_info.meta_info_.max_tfs_file_size_), left_length);
 
@@ -417,7 +426,7 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "read data from tfs failed, read_length: %"PRI64_PREFIX"d", read_length);
             ret = read_length;
-            break;
+            //break;
           }
           // one tfs file read data error, should break
           if (0 == read_length)

@@ -174,7 +174,7 @@ namespace tfs
       {
         ObjectInfo object_info = req_put_object_msg->get_object_info();
         ret = meta_info_helper_.put_object(req_put_object_msg->get_bucket_name(),
-            req_put_object_msg->get_file_name(), req_put_object_msg->get_offset(),
+            req_put_object_msg->get_file_name(), object_info.v_tfs_file_info_.front().offset_,
             object_info);
       }
 
@@ -214,6 +214,7 @@ namespace tfs
           RspKvMetaGetObjectMessage* rsp_get_object_msg = new(std::nothrow) RspKvMetaGetObjectMessage();
           assert(NULL != rsp_get_object_msg);
           rsp_get_object_msg->set_object_info(object_info);
+          rsp_get_object_msg->set_still_have(false);
           object_info.dump();
 
           req_get_object_msg->reply(rsp_get_object_msg);

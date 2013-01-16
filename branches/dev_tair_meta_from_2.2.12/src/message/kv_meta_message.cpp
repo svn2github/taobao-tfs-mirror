@@ -43,11 +43,6 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
-        iret = output.set_int64(offset_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
         int64_t pos = 0;
 
         iret = object_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -71,11 +66,6 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
-        iret = input.get_int64(&offset_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
         int64_t pos = 0;
         iret = object_info_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (TFS_SUCCESS == iret)
@@ -90,7 +80,7 @@ namespace tfs
     int64_t ReqKvMetaPutObjectMessage::length() const
     {
       return Serialization::get_string_length(bucket_name_) +
-        Serialization::get_string_length(file_name_) + INT64_SIZE +
+        Serialization::get_string_length(file_name_) +
         object_info_.length();
     }
 
