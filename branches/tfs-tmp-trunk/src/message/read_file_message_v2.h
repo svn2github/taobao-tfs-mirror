@@ -42,6 +42,16 @@ namespace tfs
           return block_id_;
         }
 
+        void set_attach_block_id(const uint64_t attach_block_id)
+        {
+          attach_block_id_ = attach_block_id;
+        }
+
+        uint64_t get_attach_block_id() const
+        {
+          return attach_block_id_;
+        }
+
         void set_file_id(const uint64_t file_id)
         {
           file_id_ = file_id;
@@ -74,6 +84,7 @@ namespace tfs
 
       private:
         uint64_t block_id_;
+        uint64_t attach_block_id_;
         uint64_t file_id_;
         int32_t flag_;
         common::FamilyInfoExt family_info_;
@@ -181,9 +192,20 @@ namespace tfs
           return family_info_;
         }
 
+        void set_attach_block_id(const uint64_t attach_block_id)
+        {
+          attach_block_id_ = attach_block_id;
+        }
+
+        uint64_t get_attach_block_id() const
+        {
+          return attach_block_id_;
+        }
+
       protected:
         common::FileSegment file_seg_;
         common::FamilyInfoExt family_info_;
+        uint64_t attach_block_id_;
         int32_t flag_;
     };
 

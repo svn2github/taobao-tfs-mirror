@@ -21,7 +21,8 @@ namespace tfs
   namespace message
   {
     WriteFileMessageV2::WriteFileMessageV2():
-      lease_id_(INVALID_LEASE_ID), flag_(INVALID_FLAG), data_(NULL)
+      attach_block_id_(INVALID_BLOCK_ID), lease_id_(INVALID_LEASE_ID),
+      flag_(INVALID_FLAG), data_(NULL)
     {
       _packetHeader._pcode = WRITE_FILE_MESSAGE_V2;
     }
@@ -37,6 +38,11 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = output.pour(file_seg_.length());
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(attach_block_id_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -57,6 +63,16 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int32(flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t pos = 0;
+        ret = family_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == ret)
+        {
+          output.pour(family_info_.length());
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -83,6 +99,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&attach_block_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = input.get_int64(reinterpret_cast<int64_t *>(&lease_id_));
       }
 
@@ -103,6 +124,16 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        int64_t pos = 0;
+        ret = family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == ret)
+        {
+          input.drain(family_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = input.get_vint64(ds_);
       }
 
@@ -117,9 +148,9 @@ namespace tfs
 
     int64_t WriteFileMessageV2::length() const
     {
-      int64_t len = file_seg_.length() +
+      int64_t len = file_seg_.length() + family_info_.length() +
                     Serialization::get_vint64_length(ds_) +
-                    INT64_SIZE * 2 + INT_SIZE * 2;
+                    INT64_SIZE * 3 + INT_SIZE * 2;
       if (file_seg_.length_ > 0)
       {
         len += file_seg_.length_;

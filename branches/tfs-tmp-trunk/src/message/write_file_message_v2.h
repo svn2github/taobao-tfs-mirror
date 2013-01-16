@@ -91,6 +91,16 @@ namespace tfs
           return ds_;
         }
 
+        void set_attach_block_id(const uint64_t attach_block_id)
+        {
+          attach_block_id_ = attach_block_id;
+        }
+
+        uint64_t get_attach_block_id() const
+        {
+          return attach_block_id_;
+        }
+
         void set_lease_id(const uint64_t lease_id)
         {
           lease_id_ = lease_id;
@@ -144,6 +154,8 @@ namespace tfs
       private:
         common::FileSegment file_seg_;
         common::VUINT64 ds_;
+        common::FamilyInfoExt family_info_;
+        uint64_t attach_block_id_;
         uint64_t lease_id_;
         uint64_t master_id_;
         int32_t version_;

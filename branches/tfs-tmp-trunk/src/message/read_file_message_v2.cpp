@@ -21,7 +21,8 @@ namespace tfs
   namespace message
   {
     StatFileMessageV2::StatFileMessageV2():
-      block_id_(INVALID_BLOCK_ID), file_id_(0), flag_(INVALID_FLAG)
+      block_id_(INVALID_BLOCK_ID), attach_block_id_(INVALID_BLOCK_ID),
+      file_id_(0), flag_(INVALID_FLAG)
     {
       _packetHeader._pcode = STAT_FILE_MESSAGE_V2;
     }
@@ -33,6 +34,11 @@ namespace tfs
     int StatFileMessageV2::serialize(Stream& output) const
     {
       int ret = output.set_int64(block_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(attach_block_id_);
+      }
+
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int64(file_id_);
@@ -61,6 +67,11 @@ namespace tfs
       int ret = input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
       if (TFS_SUCCESS == ret)
       {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&attach_block_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = input.get_int64(reinterpret_cast<int64_t *>(&file_id_));
       }
 
@@ -85,7 +96,7 @@ namespace tfs
 
     int64_t StatFileMessageV2::length() const
     {
-      return 2 * INT64_SIZE + INT_SIZE + family_info_.length();
+      return 3 * INT64_SIZE + INT_SIZE + family_info_.length();
     }
 
     StatFileRespMessageV2::StatFileRespMessageV2()
@@ -125,7 +136,7 @@ namespace tfs
     }
 
     ReadFileMessageV2::ReadFileMessageV2():
-      flag_(INVALID_FLAG)
+      attach_block_id_(INVALID_BLOCK_ID), flag_(INVALID_FLAG)
     {
       _packetHeader._pcode = READ_FILE_MESSAGE_V2;
     }
@@ -158,6 +169,11 @@ namespace tfs
         }
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(attach_block_id_);
+      }
+
       return ret;
     }
 
@@ -185,13 +201,18 @@ namespace tfs
         }
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&attach_block_id_));
+      }
+
       return ret;
     }
 
 
     int64_t ReadFileMessageV2::length() const
     {
-      return file_seg_.length() + INT_SIZE + family_info_.length();
+      return file_seg_.length() + INT64_SIZE + INT_SIZE + family_info_.length();
     }
 
     ReadFileRespMessageV2::ReadFileRespMessageV2() :
