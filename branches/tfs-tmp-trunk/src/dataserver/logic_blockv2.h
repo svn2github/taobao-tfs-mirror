@@ -58,6 +58,7 @@ namespace tfs
       virtual int check_block_intact() { return common::TFS_SUCCESS;}
       int load_index(const common::MMapOption mmap_option);
       int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id) const;
+      int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const;
       int get_family_id(int64_t& family_id) const;
       int set_family_id(const int64_t family_id);
       int get_used_offset(int32_t& size) const;//data file length

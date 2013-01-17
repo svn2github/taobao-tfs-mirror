@@ -20,6 +20,7 @@
 #include "common/internal.h"
 #include "common/error_msg.h"
 #include "common/mmap_file_op.h"
+#include "common/array_helper.h"
 
 #ifdef TFS_GTEST
 #include <gtest/gtest.h>
@@ -41,6 +42,7 @@ namespace tfs
         virtual int write_file_info(common::FileInfoV2& info,const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) = 0;
         virtual int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) = 0;
         virtual int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const = 0;
+        virtual int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const = 0;
         virtual int mmap(const uint64_t logic_block_id, const common::MMapOption& map_options) = 0;
         int flush();
         int update_block_info(const common::BlockInfoV2& info) const;
@@ -106,6 +108,7 @@ namespace tfs
         int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
         int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int traverse(std::vector<common::FileInfo>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+        int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const;
         int update_block_statistic_info(const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback = false);
         iterator begin();
         iterator end();
@@ -149,6 +152,7 @@ namespace tfs
       int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
       int read_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
       int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+      int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const;
 
       private:
       static const int32_t INDEX_DATA_START_OFFSET = sizeof(common::IndexHeaderV2) + common::MAX_MARSHALLING_NUM * sizeof(InnerIndex);

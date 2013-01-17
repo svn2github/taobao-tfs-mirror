@@ -40,8 +40,8 @@ namespace tfs
       return service_.block_manager();
     }
 
-    int DataHelper::new_temp_block(const uint64_t server_id,
-        const uint64_t block_id, const uint64_t family_id, const int32_t index_num)
+    int DataHelper::new_remote_block(const uint64_t server_id, const uint64_t block_id,
+        const bool tmp, const uint64_t family_id, const int32_t index_num)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (index_num < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -50,9 +50,9 @@ namespace tfs
       {
         NewBlockMessageV2 req_msg;
         req_msg.set_block_id(block_id);
+        req_msg.set_tmp_flag(tmp);
         req_msg.set_family_id(family_id);
         req_msg.set_index_num(index_num);
-        req_msg.set_tmp_flag(true);
 
         int32_t status = TFS_ERROR;
         ret = send_msg_to_server(server_id, &req_msg, status);
@@ -60,7 +60,7 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           ret = EXIT_ADD_NEW_BLOCK_ERROR;
-          TBSYS_LOG(WARN, "new temp block fail. "
+          TBSYS_LOG(WARN, "new remote block fail. "
               "blockid: "PRI64_PREFIX"u, familyid: %"PRI64_PREFIX"u, index_num: %d",
               block_id, family_id, index_num);
         }
@@ -69,7 +69,7 @@ namespace tfs
       return ret;
     }
 
-    int DataHelper::read_raw_data(const uint64_t server_id, const uint64_t block_id,
+    int DataHelper::read_raw_data_ex(const uint64_t server_id, const uint64_t block_id,
         char* data, int32_t& length, const int32_t offset)
     {
       int ret = ((INVALID_SERVER_ID == server_id) ||(INVALID_BLOCK_ID == block_id) ||
@@ -123,7 +123,7 @@ namespace tfs
       return ret;
     }
 
-    int DataHelper::write_raw_data(const uint64_t server_id, const uint64_t block_id,
+    int DataHelper::write_raw_data_ex(const uint64_t server_id, const uint64_t block_id,
         const char* data, const int32_t length, const int32_t offset)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
@@ -150,7 +150,7 @@ namespace tfs
       return ret;
     }
 
-    int DataHelper::read_index(const uint64_t server_id, const uint64_t block_id,
+    int DataHelper::read_index_ex(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, common::IndexDataV2& index_data)
     {
        int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
@@ -201,7 +201,7 @@ namespace tfs
        return ret;
     }
 
-    int DataHelper::write_index(const uint64_t server_id, const uint64_t block_id,
+    int DataHelper::write_index_ex(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, common::IndexDataV2& index_data, const int32_t switch_flag)
     {
        int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
@@ -228,28 +228,28 @@ namespace tfs
        return ret;
     }
 
-    int DataHelper::read_raw_data_fc(const uint64_t server_id, const uint64_t block_id,
+    int DataHelper::read_raw_data(const uint64_t server_id, const uint64_t block_id,
         char* data, int32_t& length, const int32_t offset)
     {
-      return read_raw_data(server_id, block_id, data, length, offset);
+      return read_raw_data_ex(server_id, block_id, data, length, offset);
     }
 
-    int DataHelper::write_raw_data_fc(const uint64_t server_id, const uint64_t block_id,
+    int DataHelper::write_raw_data(const uint64_t server_id, const uint64_t block_id,
         const char* data, const int32_t length, const int32_t offset)
     {
-      return write_raw_data_fc(server_id, block_id, data, length, offset);
+      return write_raw_data_ex(server_id, block_id, data, length, offset);
     }
 
-    int DataHelper::read_index_fc(const uint64_t server_id, const uint64_t block_id,
+    int DataHelper::read_index(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, common::IndexDataV2& index_data)
     {
-      return read_index(server_id, block_id, attach_block_id, index_data);
+      return read_index_ex(server_id, block_id, attach_block_id, index_data);
     }
 
-    int DataHelper::write_index_fc(const uint64_t server_id, const uint64_t block_id,
+    int DataHelper::write_index(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, common::IndexDataV2& index_data, const int32_t switch_flag)
     {
-      return write_index(server_id, block_id, attach_block_id, index_data, switch_flag);
+      return write_index_ex(server_id, block_id, attach_block_id, index_data, switch_flag);
     }
 
     int DataHelper::query_ec_meta(const uint64_t server_id, const uint64_t block_id,

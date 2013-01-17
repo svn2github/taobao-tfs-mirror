@@ -32,19 +32,19 @@ namespace tfs
 
         inline BlockManager& block_manager();
 
-        int new_temp_block(const uint64_t server_id, const uint64_t block_id,
-            const uint64_t family_id, const int32_t index_num);
+        int new_remote_block(const uint64_t server_id, const uint64_t block_id,
+            const bool tmp, const uint64_t family_id, const int32_t index_num);
 
         /**
-         * use following interface to do flow control
+         * use following interface to do flow control(shor for fc)
          */
-        int read_raw_data_fc(const uint64_t server_id, const uint64_t block_id,
+        int read_raw_data(const uint64_t server_id, const uint64_t block_id,
             char* data, int32_t& length, const int32_t offset);
-        int write_raw_data_fc(const uint64_t server_id, const uint64_t block_id,
+        int write_raw_data(const uint64_t server_id, const uint64_t block_id,
             const char* data, const int32_t length, const int32_t offset);
-        int read_index_fc(const uint64_t server_id, const uint64_t block_id,
+        int read_index(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data);
-        int write_index_fc(const uint64_t server_id, const uint64_t block_id,
+        int write_index(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data,
             const int32_t switch_flag = common::SWITCH_BLOCK_NO);
 
@@ -56,13 +56,13 @@ namespace tfs
             const uint64_t attach_block_id, const uint64_t file_id, common::FileInfoV2& finfo);
 
       private:
-        int read_raw_data(const uint64_t server_id, const uint64_t block_id,
+        int read_raw_data_ex(const uint64_t server_id, const uint64_t block_id,
             char* data, int32_t& length, const int32_t offset);
-        int write_raw_data(const uint64_t server_id, const uint64_t block_id,
+        int write_raw_data_ex(const uint64_t server_id, const uint64_t block_id,
             const char* data, const int32_t length, const int32_t offset);
-        int read_index(const uint64_t server_id, const uint64_t block_id,
+        int read_index_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data);
-        int write_index(const uint64_t server_id, const uint64_t block_id,
+        int write_index_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data,
             const int32_t switch_flag = common::SWITCH_BLOCK_NO);
 

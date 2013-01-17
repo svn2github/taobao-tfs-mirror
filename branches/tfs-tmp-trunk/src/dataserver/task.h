@@ -248,10 +248,9 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN(ReplicateTask);
-        int do_replicate(const common::ReplBlock& repl_block);
-        int replicate_data(const uint64_t server_id, const uint64_t block_id,
-            char* buffer, const int32_t length, const int32_t offset);
-        int replicate_index(const uint64_t server_id, const uint64_t block_id);
+        int do_replicate();
+        int replicate_data(const int32_t block_size);
+        int replicate_index();
 
       protected:
         common::ReplBlock repl_info_;
@@ -265,7 +264,7 @@ namespace tfs
           const int64_t family_id);
         virtual ~MarshallingTask();
 
-        int set_family_member_info(const common::FamilyMemberInfo* members,
+        int set_family_info(const common::FamilyMemberInfo* members,
             const int32_t family_aid_info);
 
         virtual int handle();
@@ -274,8 +273,9 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN(MarshallingTask);
-
         int do_marshalling();
+        int encode_data(common::ECMeta* ec_metas, int32_t& marshalling_len);
+        int backup_index();
 
       protected:
         common::FamilyMemberInfo* family_members_;
@@ -293,13 +293,17 @@ namespace tfs
 
         virtual int handle();
         virtual int report_to_ns(const int status);
+        int set_family_info(const common::FamilyMemberInfo* members,
+            const int32_t family_aid_info, const int* erased);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(ReinstateTask);
         int do_reinstate();
+        int decode_data(common::ECMeta* ec_meta);
+        int recovery_index();
 
       private:
-        int earsed[common::MAX_MARSHALLING_NUM];
+        int erased_[common::MAX_MARSHALLING_NUM];
     };
 
     class DissolveTask: public MarshallingTask

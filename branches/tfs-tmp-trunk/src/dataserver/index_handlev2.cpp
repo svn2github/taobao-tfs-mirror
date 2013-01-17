@@ -703,6 +703,18 @@ namespace tfs
       return ret;
     }
 
+    int IndexHandle::get_attach_blocks(ArrayHelper<uint64_t>& blocks) const
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        IndexHeaderV2* header = get_index_header_();
+        assert(NULL != header);
+        blocks.push_back(header->info_.block_id_);
+      }
+      return ret;
+    }
+
     int IndexHandle::update_block_statistic_info(const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback)
     {
       int32_t ret = check_load();
@@ -1111,6 +1123,23 @@ namespace tfs
 
         if (NULL != data)
           free_index_mem_(data, inner_index, false);
+      }
+      return ret;
+    }
+
+    int VerifyIndexHandle::get_attach_blocks(ArrayHelper<uint64_t>& blocks) const
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        IndexHeaderV2* pheader = get_index_header_();
+        InnerIndex* inner_index = get_inner_index_array_();
+        assert(NULL != inner_index);
+
+        for (int32_t i = 0; i < pheader->index_num_; i++)
+        {
+          blocks.push_back((*(inner_index + i)).logic_block_id_);
+        }
       }
       return ret;
     }

@@ -230,7 +230,7 @@ namespace tfs
         {
           MarshallingTask* task = new MarshallingTask(service_, seqno,
               service_.get_ns_ipport(), expire_time, family_id);
-          ret = task->set_family_member_info(family_members, family_aid_info);
+          ret = task->set_family_info(family_members, family_aid_info);
           if (TFS_SUCCESS == ret)
           {
             ret = add_task_queue(task);
@@ -262,7 +262,7 @@ namespace tfs
         {
           ReinstateTask* task = new ReinstateTask(service_, seqno,
               service_.get_ns_ipport(), expire_time, family_id);
-          ret = task->set_family_member_info(family_members, family_aid_info);
+          ret = task->set_family_info(family_members, family_aid_info, erased);
           if (TFS_SUCCESS == ret)
           {
             ret = add_task_queue(task);
@@ -293,7 +293,7 @@ namespace tfs
         {
           DissolveTask* task = new DissolveTask(service_, seqno,
               service_.get_ns_ipport(), expire_time, family_id);
-          ret = task->set_family_member_info(family_members, family_aid_info);
+          ret = task->set_family_info(family_members, family_aid_info);
           if (TFS_SUCCESS == ret)
           {
             ret = add_task_queue(task);

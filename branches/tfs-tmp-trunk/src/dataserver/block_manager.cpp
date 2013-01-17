@@ -547,6 +547,21 @@ namespace tfs
       return ret;
     }
 
+    int BlockManager::get_attach_blocks(common::ArrayHelper<uint64_t>& blocks, const uint64_t logic_block_id) const
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->get_attach_blocks(blocks);
+        }
+      }
+      return ret;
+    }
+
     bool BlockManager::exist(const uint64_t logic_block_id, const bool tmp) const
     {
       return logic_block_manager_.exist(logic_block_id, tmp);

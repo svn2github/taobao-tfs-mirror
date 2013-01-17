@@ -173,6 +173,12 @@ namespace tfs
       return ret;
     }
 
+    int BaseLogicBlock::get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const
+    {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return index_handle_->get_attach_blocks(blocks);
+    }
+
     int BaseLogicBlock::get_family_id(int64_t& family_id) const
     {
       family_id = INVALID_FAMILY_ID;
@@ -298,6 +304,10 @@ namespace tfs
               mem_offset += length;
             }
           }
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = set_used_offset(nbytes + offset);
         }
         mutex_.unlock();
       }

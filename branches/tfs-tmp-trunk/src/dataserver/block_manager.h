@@ -89,6 +89,7 @@ namespace tfs
 
         int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, uint64_t attach_logic_block_id);
         int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id, uint64_t attach_logic_block_id) const;
+        int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks, const uint64_t logic_block_id) const;
 
         bool exist(const uint64_t logic_block_id, const bool tmp = false) const;
 
