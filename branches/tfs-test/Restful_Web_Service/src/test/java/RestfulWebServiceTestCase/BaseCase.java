@@ -14,11 +14,15 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import org.apache.commons.httpclient.methods.DeleteMethod;
+import org.apache.commons.httpclient.methods.FileRequestEntity;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.HeadMethod;
 import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.RequestEntity;
+import org.apache.commons.httpclient.methods.multipart.FilePart;
+import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
+import org.apache.commons.httpclient.methods.multipart.Part;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.AfterClass;
@@ -28,7 +32,11 @@ import org.junit.runner.Description;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+import com.taobao.common.tfs.TfsManager;
 
+
+import Tool.AssertTool;
+import Tool.ExpectMessage;
 import Tool.HttpVerifyTool;
 import Tool.RestfulWebServer;
 import Tool.UrlJoin;
@@ -43,6 +51,7 @@ public class BaseCase
 	protected static Map<String,Integer> FileMap = new HashMap<String ,Integer> ();
 	protected static String App_key = Server.getTfs_app_key();
 	protected static String App_id = "1";
+	protected static String User_id = "727";
 	
 	static
 	{
@@ -52,10 +61,32 @@ public class BaseCase
 		FileMap.put("2M", 2*(1<<20));
 		FileMap.put("20M", 20*(1<<20));
 		FileMap.put("30M", 30*(1<<20));
+		FileMap.put("1G", 1<<30);
 		FileMap.put("empty", 0);
-		createFileMap(FileMap);
+		//createFileMap(FileMap);
 	}
 	
+    public  void deleteDir(StringBuilder s,int n)
+    {
+    	Map<String, String> Ret = new HashMap<String, String>();
+    	ExpectMessage ExpMeg = new ExpectMessage();
+		AssertTool assert_tool = new AssertTool();
+		
+    	if(n==1)
+    	{
+    		Ret = RmDir(App_id,User_id,s.toString());
+    		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
+    	}
+    	else
+        {
+    	    s.append("/test");
+    		n=n-1;
+    		deleteDir(s,n);
+    		Ret = RmDir(App_id,User_id,s.toString());
+    		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
+    	}  
+    }
+    
 	@Rule
 	public TestWatcher watchman = new TestWatcher() 
 	{
@@ -95,9 +126,9 @@ public class BaseCase
 			File uploadFile = new File(filePath);
 			try 
 			{
-				FileInputStream fileInputStream = new FileInputStream(uploadFile);
-				InputStreamRequestEntity inputStreamRequestEntity = new InputStreamRequestEntity(fileInputStream);
-				postMethod.setRequestEntity((RequestEntity) inputStreamRequestEntity);
+				//FileInputStream fileInputStream = new FileInputStream(uploadFile);
+				//InputStreamRequestEntity inputStreamRequestEntity = new InputStreamRequestEntity(fileInputStream);
+				postMethod.setRequestEntity(new FileRequestEntity(uploadFile, null));
 			} 
 			catch (Exception ex) 
 			{
@@ -204,11 +235,11 @@ public class BaseCase
 		return Message;
 	}
 	
-	public Map<String, String> GetAppID()
+	public Map<String, String> GetAppID(String App_Key)
 	{
 		Map<String, String> Message = new HashMap<String, String>();
 		
-		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/appid");
+		ExecuteUrl.AddUrlDomain("v2/"+App_Key+"/appid");
 		log.info(ExecuteUrl.GetUrl());
 		HttpVerifyTool Tool = new HttpVerifyTool();
 		Message = Tool.verifyResponse(setGetMethod(ExecuteUrl.GetUrl()),null);

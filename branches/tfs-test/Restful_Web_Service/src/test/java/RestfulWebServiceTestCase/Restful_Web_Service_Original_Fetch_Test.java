@@ -145,16 +145,16 @@ public class Restful_Web_Service_Original_Fetch_Test extends BaseCase
 		Map<String, String> Ret = new HashMap<String, String>();
 		ExpectMessage ExpMeg = new ExpectMessage();
 		AssertTool assert_tool = new AssertTool();
-		Ret = SaveFile("30M",null,"1",null);
+		Ret = SaveFile("1G",null,"1",null);
 		String Name = Ret.get("TFS_FILE_NAME");
 		System.out.println("The return TFS name is "+Name);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
-		long Crc = assert_tool.getCrc("30M");
+		long Crc = assert_tool.getCrc("1G");
 		Ret = FetchFile(Name,"Temp",null,null,null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
-		assert_tool.AssertCRCEquals("30M", "Temp");
+		assert_tool.AssertCRCEquals("1G", "Temp");
 	}
 	
 	@Test
