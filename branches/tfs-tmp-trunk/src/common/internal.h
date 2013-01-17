@@ -1184,9 +1184,28 @@ namespace tfs
 
     struct ECMeta
     {
-      uint64_t family_id_;
+      int64_t family_id_;
       int32_t used_offset_;
       int32_t mars_offset_;
+
+      ECMeta(): family_id_(0),
+        used_offset_(0), mars_offset_(0)
+      {
+
+      }
+
+      static bool u_compare(const ECMeta& left, const ECMeta& right)
+      {
+        return left.used_offset_ < right.used_offset_;
+      }
+
+      static bool m_compare(const ECMeta& left, const ECMeta& right)
+      {
+        return left.mars_offset_ < right.mars_offset_;
+      }
+
+
+
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
