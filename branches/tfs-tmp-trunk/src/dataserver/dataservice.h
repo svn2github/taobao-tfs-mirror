@@ -37,6 +37,8 @@
 #include "gc.h"
 #include "client_request_server.h"
 #include "data_manager.h"
+#include "data_helper.h"
+#include "task_manager.h"
 
 namespace tfs
 {
@@ -182,6 +184,16 @@ namespace tfs
           return data_manager_;
         }
 
+        DataHelper& data_helper()
+        {
+          return data_helper_;
+        }
+
+        TaskManager& task_manager()
+        {
+          return task_manager_;
+        }
+
       private:
         bool access_deny(common::BasePacket* message);
         void do_stat(const uint64_t peer_id,
@@ -266,6 +278,8 @@ namespace tfs
         Requester ds_requester_;
         ClientRequestServer client_request_server_;
         DataManager data_manager_;
+        DataHelper data_helper_;
+        TaskManager task_manager_;
         BlockManager *block_manager_;
 
         int32_t server_local_port_;

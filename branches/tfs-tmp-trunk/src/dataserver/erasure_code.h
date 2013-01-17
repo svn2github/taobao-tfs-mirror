@@ -14,6 +14,9 @@
  *
  */
 
+
+#ifndef TFS_DATASERVER_ERASURECODE_H_
+#define TFS_DATASERVER_ERASURECODE_H_
 namespace tfs
 {
   namespace dataserver
@@ -21,7 +24,6 @@ namespace tfs
     class ErasureCode
     {
       public:
-
         /**
          * @brief constructor
          */
@@ -52,6 +54,13 @@ namespace tfs
          * @param size: data size
          */
         void bind(char* data, const int index, const int size);
+
+        /**
+        * @brief return the data buffer by specified index
+        *
+        * @return
+        */
+        char* get_data(const int index);
 
         /**
          * @brief bind data
@@ -92,6 +101,14 @@ namespace tfs
         static const int ws_;         // word size, shouldn't change
         static const int ps_;         // packet_size, shouldn't change
 
+      public:
+        enum
+        {
+          NODE_DEAD = 0,
+          NODE_ALIVE = 1,
+          NODE_UNUSED = -1
+        };
+
       private:
         DISALLOW_COPY_AND_ASSIGN(ErasureCode);
 
@@ -107,5 +124,6 @@ namespace tfs
   }
 }
 
+#endif
 
 

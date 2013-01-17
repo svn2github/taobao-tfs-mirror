@@ -21,6 +21,8 @@
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "common/status_message.h"
+#include "dataservice.h"
+#include "erasure_code.h"
 #include "task_manager.h"
 
 namespace tfs
@@ -33,23 +35,14 @@ namespace tfs
     using namespace std;
     using namespace tbsys;
 
-    TaskManager::TaskManager()
+    TaskManager::TaskManager(DataService& service):
+      service_(service), stop_(false)
     {
-      stop_ = false;
     }
 
     TaskManager::~TaskManager()
     {
 
-    }
-
-    int TaskManager::init(const uint64_t ns_id, const uint64_t ds_id)
-    {
-      ns_id_ = ns_id;
-      ds_id_ = ds_id;
-      expire_cloned_interval_ = SYSPARAM_DATASERVER.expire_cloned_block_time_;
-      last_expire_cloned_block_time_ = 0;
-      return TFS_SUCCESS;
     }
 
     int TaskManager::handle(BaseTaskMessage* packet)
@@ -127,17 +120,19 @@ namespace tfs
       int64_t seqno = message->get_seqno();
       int32_t expire_time = message->get_expire_time();
       const ReplBlock* repl_info = message->get_repl_block();
-
       int ret = TFS_SUCCESS;
-      if (seqno < 0 || expire_time < 0 || repl_info == NULL ||
-          repl_info->block_id_ == INVALID_BLOCK_ID || repl_info->source_id_ == INVALID_SERVER_ID ||
-          repl_info->destination_id_ == INVALID_SERVER_ID)
+      if ((NULL == repl_info) ||
+          (seqno < 0) || (expire_time <= 0) ||
+          (INVALID_BLOCK_ID == repl_info->block_id_) ||
+          (INVALID_SERVER_ID == repl_info->source_id_) ||
+          (INVALID_SERVER_ID == repl_info->destination_id_))
       {
-        ret = EXIT_INVALID_ARGU;
+        ret = EXIT_PARAMETER_ERROR;
       }
       else
       {
-        ReplicateTask* task = new ReplicateTask(*this, seqno, ns_id_, expire_time, *repl_info);
+        ReplicateTask* task = new ReplicateTask(service_, seqno,
+            service_.get_ns_ipport(), expire_time, *repl_info);
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
         {
@@ -152,15 +147,12 @@ namespace tfs
       int64_t seqno = message->get_seqno();
       int32_t expire_time = message->get_expire_time();
       uint32_t block_id = message->get_block_id();
-
-      int ret = TFS_SUCCESS;
-      if (seqno < 0 || expire_time < 0 || block_id == INVALID_BLOCK_ID)
+      int ret = ((seqno < 0) || (expire_time <= 0) || (INVALID_BLOCK_ID == block_id)) ?
+        EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
-        ret = EXIT_INVALID_ARGU;
-      }
-      else
-      {
-        CompactTask* task = new CompactTask(*this, seqno, ns_id_, expire_time, block_id);
+        CompactTask* task = new CompactTask(service_, seqno,
+            service_.get_ns_ipport(), expire_time, block_id);
         task->set_servers(message->get_servers());
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
@@ -174,20 +166,22 @@ namespace tfs
     int TaskManager::add_ds_replicate_task(DsReplicateBlockMessage* message)
     {
       int64_t seqno = message->get_seqno();
-      uint64_t source_id = message->get_source_id();
       int32_t expire_time = message->get_expire_time();
+      const uint64_t source_id = message->get_source_id();
       const ReplBlock* repl_info = message->get_repl_block();
-
       int ret = TFS_SUCCESS;
-      if (seqno < 0 || expire_time < 0 || repl_info == NULL ||
-          repl_info->block_id_ == INVALID_BLOCK_ID || repl_info->source_id_ == INVALID_SERVER_ID ||
-          repl_info->destination_id_ == INVALID_SERVER_ID)
+      if ((NULL == repl_info) ||
+          (seqno < 0) || (expire_time <= 0) ||
+          (INVALID_BLOCK_ID == repl_info->block_id_) ||
+          (INVALID_SERVER_ID == repl_info->source_id_) ||
+          (INVALID_SERVER_ID == repl_info->destination_id_) ||
+          (INVALID_SERVER_ID == source_id))
       {
-        ret = EXIT_INVALID_ARGU;
+        ret = EXIT_PARAMETER_ERROR;
       }
       else
       {
-        ReplicateTask* task = new ReplicateTask(*this, seqno, source_id, expire_time, *repl_info);
+        ReplicateTask* task = new ReplicateTask(service_, seqno, source_id, expire_time, *repl_info);
         task->set_task_from_ds();
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
@@ -201,18 +195,15 @@ namespace tfs
     int TaskManager::add_ds_compact_task(DsCompactBlockMessage* message)
     {
       int64_t seqno = message->get_seqno();
-      uint64_t source_id = message->get_source_id();
       int32_t expire_time = message->get_expire_time();
+      uint64_t source_id = message->get_source_id();
       uint32_t block_id = message->get_block_id();
 
-      int ret = TFS_SUCCESS;
-      if (seqno < 0 || expire_time < 0 || block_id == INVALID_BLOCK_ID)
+      int ret = ((seqno < 0) || (expire_time <= 0) || (INVALID_BLOCK_ID == block_id) ||
+          (source_id == INVALID_SERVER_ID)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
-        ret = EXIT_INVALID_ARGU;
-      }
-      else
-      {
-        CompactTask* task = new CompactTask(*this, seqno, source_id, expire_time, block_id);
+        CompactTask* task = new CompactTask(service_, seqno, source_id, expire_time, block_id);
         task->set_task_from_ds();
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
@@ -231,23 +222,24 @@ namespace tfs
       int32_t family_aid_info = message->get_family_aid_info();
       FamilyMemberInfo* family_members = message->get_family_member_info();
 
-      int ret = TFS_SUCCESS;
-      if (seqno < 0 || expire_time < 0 || family_id < 0 || family_members == NULL)
+      int ret = ((seqno < 0) || (expire_time <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
-        ret = EXIT_INVALID_ARGU;
-      }
-      else
-      {
-        MarshallingTask* task = new MarshallingTask(*this, seqno, ns_id_, expire_time, family_id);
-        ret = task->set_family_member_info(family_members, family_aid_info);
+        ret = check_marshalling(family_id, family_aid_info, family_members);
         if (TFS_SUCCESS == ret)
         {
-          ret = add_task_queue(task);
-        }
+          MarshallingTask* task = new MarshallingTask(service_, seqno,
+              service_.get_ns_ipport(), expire_time, family_id);
+          ret = task->set_family_member_info(family_members, family_aid_info);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = add_task_queue(task);
+          }
 
-        if (TFS_SUCCESS != ret)
-        {
-          tbsys::gDelete(task);
+          if (TFS_SUCCESS != ret)
+          {
+            tbsys::gDelete(task);
+          }
         }
       }
       return ret;
@@ -260,24 +252,26 @@ namespace tfs
       int64_t family_id = message->get_family_id();
       int32_t family_aid_info = message->get_family_aid_info();
       FamilyMemberInfo* family_members = message->get_family_member_info();
+      int erased[MAX_MARSHALLING_NUM];
 
-      int ret = TFS_SUCCESS;
-      if (seqno < 0 || expire_time < 0 || family_id < 0 || family_members == NULL)
+      int ret = ((seqno < 0) || (expire_time <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
-        ret = EXIT_INVALID_ARGU;
-      }
-      else
-      {
-        ReinstateTask* task = new ReinstateTask(*this, seqno, ns_id_, expire_time, family_id);
-        ret = task->set_family_member_info(family_members, family_aid_info);
+        ret = check_reinstate(family_id, family_aid_info, family_members, erased);
         if (TFS_SUCCESS == ret)
         {
-          ret = add_task_queue(task);
-        }
+          ReinstateTask* task = new ReinstateTask(service_, seqno,
+              service_.get_ns_ipport(), expire_time, family_id);
+          ret = task->set_family_member_info(family_members, family_aid_info);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = add_task_queue(task);
+          }
 
-        if (TFS_SUCCESS != ret)
-        {
-          tbsys::gDelete(task);
+          if (TFS_SUCCESS != ret)
+          {
+            tbsys::gDelete(task);
+          }
         }
       }
       return ret;
@@ -291,23 +285,24 @@ namespace tfs
       int32_t family_aid_info = message->get_family_aid_info();
       FamilyMemberInfo* family_members = message->get_family_member_info();
 
-      int ret = TFS_SUCCESS;
-      if (seqno < 0 || expire_time < 0 || family_id < 0 || family_members == NULL)
+      int ret = ((seqno < 0) || (expire_time <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
-        ret = EXIT_INVALID_ARGU;
-      }
-      else
-      {
-        DissolveTask* task = new DissolveTask(*this, seqno, ns_id_, expire_time, family_id);
-        ret = task->set_family_member_info(family_members, family_aid_info);
+        ret = check_dissolve(family_id, family_aid_info, family_members);
         if (TFS_SUCCESS == ret)
         {
-          ret = add_task_queue(task);
-        }
+          DissolveTask* task = new DissolveTask(service_, seqno,
+              service_.get_ns_ipport(), expire_time, family_id);
+          ret = task->set_family_member_info(family_members, family_aid_info);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = add_task_queue(task);
+          }
 
-        if (TFS_SUCCESS != ret)
-        {
-          tbsys::gDelete(task);
+          if (TFS_SUCCESS != ret)
+          {
+            tbsys::gDelete(task);
+          }
         }
       }
       return ret;
@@ -436,92 +431,141 @@ namespace tfs
     void TaskManager::stop()
     {
       stop_ = true;
-      clear_cloned_block_map();
 
       task_monitor_.lock();
       task_monitor_.notifyAll();
       task_monitor_.unlock();
     }
 
-    int TaskManager::add_cloned_block_map(const uint32_t block_id)
+    int TaskManager::check_family(const int64_t family_id, const int32_t family_aid_info)
     {
-      TBSYS_LOG(DEBUG, "add cloned block map blockid :%u", block_id);
-      ClonedBlock* cloned_block = new ClonedBlock();
-
-      cloned_block->blockid_ = block_id;
-      cloned_block->start_time_ = Func::get_monotonic_time();
-      cloned_block_mutex_.lock();
-      cloned_block_map_.insert(ClonedBlockMap::value_type(block_id, cloned_block));
-      cloned_block_mutex_.unlock();
-
-      return TFS_SUCCESS;
-    }
-
-    int TaskManager::del_cloned_block_map(const uint32_t block_id)
-    {
-      TBSYS_LOG(DEBUG, "del cloned block map blockid :%u", block_id);
-      cloned_block_mutex_.lock();
-      ClonedBlockMapIter mit = cloned_block_map_.find(block_id);
-      if (mit != cloned_block_map_.end())
+      int ret = (INVALID_FAMILY_ID != family_id)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        tbsys::gDelete(mit->second);
-        cloned_block_map_.erase(mit);
-      }
-      cloned_block_mutex_.unlock();
-
-      return TFS_SUCCESS;
-    }
-
-    int TaskManager::expire_cloned_block_map()
-    {
-      int ret = TFS_SUCCESS;
-      int32_t current_time = Func::get_monotonic_time();
-      int32_t now_time = current_time - expire_cloned_interval_;
-      if (last_expire_cloned_block_time_ < now_time)
-      {
-        cloned_block_mutex_.lock();
-        int old_cloned_block_size = cloned_block_map_.size();
-        for (ClonedBlockMapIter mit = cloned_block_map_.begin(); mit != cloned_block_map_.end();)
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
+        if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
         {
-          if (now_time < 0)
-            break;
-          if (mit->second->start_time_ < now_time)
+          ret = EXIT_INVALID_ARGU_ERROR;
+        }
+      }
+      return ret;
+    }
+
+    int TaskManager::check_marshalling(const int64_t family_id, const int32_t family_aid_info,
+        common::FamilyMemberInfo* family_members)
+    {
+      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_family(family_id, family_aid_info);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        // check if all data ok
+        int normal_count = 0;
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
+        for (int32_t i = 0; i < data_num; i++)
+        {
+          if (INVALID_BLOCK_ID != family_members[i].block_ &&
+              INVALID_SERVER_ID != family_members[i].server_ &&
+              FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
           {
-            ret = BlockFileManager::get_instance()->del_block(mit->first);
-            TBSYS_LOG(INFO, "expire cloned block: %u, del it, ret: %d", mit->first, ret);
-            tbsys::gDelete(mit->second);
-            cloned_block_map_.erase(mit++);
+            normal_count++;
+          }
+        }
+
+        if (normal_count < data_num)
+        {
+          TBSYS_LOG(ERROR, "no enough node to marshalling, normal count: %d", normal_count);
+          ret = EXIT_NO_ENOUGH_DATA;
+        }
+      }
+
+      return ret;
+    }
+
+    int TaskManager::check_reinstate(const int64_t family_id, const int32_t family_aid_info,
+        common::FamilyMemberInfo* family_members, int* erased)
+    {
+      assert(NULL != erased);
+      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_family(family_id, family_aid_info);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
+        const int32_t member_num = data_num + check_num;
+
+        bool need_recovery = false;
+        int normal_count = 0;
+        for (int32_t i = 0; i < member_num; i++)
+        {
+          // just need data_num nodes to recovery
+          if (INVALID_BLOCK_ID != family_members[i].block_ &&
+              INVALID_SERVER_ID != family_members[i].server_ &&
+              FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
+          {
+            if (normal_count < data_num)
+            {
+              erased[i] = ErasureCode::NODE_ALIVE;
+              normal_count++;
+            }
+            else
+            {
+              erased[i] = ErasureCode::NODE_UNUSED;
+            }
           }
           else
           {
-            ++mit;
+            erased[i] = ErasureCode::NODE_DEAD;
+            need_recovery = true;
           }
         }
 
-        int32_t new_cloned_block_size = cloned_block_map_.size();
-        last_expire_cloned_block_time_ = current_time;
-        cloned_block_mutex_.unlock();
-        TBSYS_LOG(INFO, "cloned block map: old: %d, new: %d", old_cloned_block_size, new_cloned_block_size);
-      }
-      return TFS_SUCCESS;
-    }
-
-    void TaskManager::clear_cloned_block_map()
-    {
-      int ret = TFS_SUCCESS;
-      cloned_block_mutex_.lock();
-      for (ClonedBlockMapIter mit = cloned_block_map_.begin(); mit != cloned_block_map_.end(); ++mit)
-      {
-        ret = BlockFileManager::get_instance()->del_block(mit->first);
-        if (TFS_SUCCESS != ret)
+        if (normal_count < data_num)
         {
-          TBSYS_LOG(ERROR, "in check thread: del blockid: %u error. ret: %d", mit->first, ret);
+          TBSYS_LOG(ERROR, "no enough normal node to reinstate, normal count: %d", normal_count);
+          ret = EXIT_NO_ENOUGH_DATA;
         }
 
-        tbsys::gDelete(mit->second);
+        // all node ok, no need to recovery, just return
+        if (TFS_SUCCESS == ret && !need_recovery)
+        {
+          TBSYS_LOG(INFO, "all nodes are normal, no need do recovery");
+          ret = EXIT_NO_NEED_REINSTATE;
+        }
       }
-      cloned_block_map_.clear();
-      cloned_block_mutex_.unlock();
+
+      return ret;
+    }
+
+    int TaskManager::check_dissolve(const int64_t family_id, const int32_t family_aid_info,
+        common::FamilyMemberInfo* family_members)
+    {
+      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        if (INVALID_FAMILY_ID == family_id)
+        {
+          ret = EXIT_INVALID_ARGU_ERROR;
+        }
+        else
+        {
+          const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info) / 2;
+          const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info) / 2;
+          if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
+          {
+            ret = EXIT_INVALID_ARGU_ERROR;
+          }
+        }
+      }
+      return ret;
     }
   }
 }

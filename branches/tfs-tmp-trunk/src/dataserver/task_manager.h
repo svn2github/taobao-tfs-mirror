@@ -19,9 +19,7 @@
 
 #include <Mutex.h>
 #include <Monitor.h>
-#include "logic_block.h"
-#include "blockfile_manager.h"
-#include "dataserver_define.h"
+#include "ds_define.h"
 #include "task.h"
 #include "common/base_packet.h"
 #include "message/message_factory.h"
@@ -32,21 +30,12 @@ namespace tfs
   {
     using namespace message;
 
-    class Task;
-
+    class DataService;
     class TaskManager
     {
       public:
-        TaskManager();
+        TaskManager(DataService& service);
         ~TaskManager();
-
-        int init(const uint64_t ns_id, const uint64_t ds_id);
-
-        uint64_t get_ns_id() { return ns_id_; }
-        void set_ns_id(const uint64_t ns_id) { ns_id_ = ns_id; }
-
-        uint64_t get_ds_id() { return ds_id_; }
-        void set_ds_id(const uint64_t ds_id) { ds_id_ = ds_id; }
 
         int handle(BaseTaskMessage* packet);
         int handle_complete(BaseTaskMessage* packet);
@@ -54,14 +43,6 @@ namespace tfs
         int run_task();
         int expire_task();
         void stop();
-
-        void clear_compact_block_map();
-        int expire_compact_block_map();
-
-        int add_cloned_block_map(const uint32_t block_id);
-        int del_cloned_block_map(const uint32_t block_id);
-        int expire_cloned_block_map();
-        void clear_cloned_block_map();
 
       private:
         DISALLOW_COPY_AND_ASSIGN(TaskManager);
@@ -75,22 +56,22 @@ namespace tfs
         int add_reinstate_task(ECReinstateMessage* message);
         int add_dissolve_task(ECDissolveMessage* message);
 
-      private:
-        uint64_t ns_id_;
-        uint64_t ds_id_;
+        int check_family(const int64_t family_id, const int32_t family_aid_info);
+        int check_marshalling(const int64_t family_id, const int32_t family_aid_info,
+            common::FamilyMemberInfo* family_members);
+        int check_reinstate(const int64_t family_id, const int32_t family_aid_info,
+            common::FamilyMemberInfo* family_members, int* erased);
+        int check_dissolve(const int64_t family_id, const int32_t family_aid_info,
+            common::FamilyMemberInfo* family_members);
 
+      private:
+        DataService& service_;
         bool stop_;
         std::deque<Task*> task_queue_;
         tbutil::Monitor<tbutil::Mutex> task_monitor_;
 
         std::map<int64_t, Task*> running_task_;
         tbutil::Mutex running_task_mutex_;
-
-        ClonedBlockMap cloned_block_map_;
-        tbutil::Mutex cloned_block_mutex_;
-
-        int32_t expire_cloned_interval_;
-        int32_t last_expire_cloned_block_time_;
     };
   }
 }

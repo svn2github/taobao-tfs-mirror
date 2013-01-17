@@ -55,6 +55,8 @@ namespace tfs
         data_management_(*this),
         client_request_server_(*this),
         data_manager_(*this),
+        data_helper_(*this),
+        task_manager_(*this),
         server_local_port_(-1),
         ns_ip_port_(0),
         sync_mirror_status_(0),

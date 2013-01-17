@@ -134,6 +134,11 @@ namespace tfs
       }
     }
 
+    char* ErasureCode::get_data(const int index)
+    {
+      return data_[index];
+    }
+
     void ErasureCode::clear()
     {
       dn_ = -1;

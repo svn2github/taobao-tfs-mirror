@@ -884,12 +884,12 @@ namespace tfs
           ret = block_manager().set_family_id(ec_meta.family_id_, block_id);
         }
 
-        if (TFS_SUCCESS == ret)
+        if ((TFS_SUCCESS == ret) && (ec_meta.used_offset_ > 0))
         {
           ret = block_manager().set_used_offset(ec_meta.used_offset_, block_id);
         }
 
-        if (TFS_SUCCESS == ret)
+        if ((TFS_SUCCESS == ret) && (ec_meta.mars_offset_ > 0))
         {
           ret = block_manager().set_marshalling_offset(ec_meta.mars_offset_, block_id);
         }

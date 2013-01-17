@@ -23,7 +23,9 @@
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "task.h"
-#include "task_manager.h"
+#include "data_helper.h"
+#include "block_manager.h"
+#include "dataservice.h"
 #include "erasure_code.h"
 
 namespace tfs
@@ -34,6 +36,35 @@ namespace tfs
     using namespace message;
     using namespace tbutil;
     using namespace std;
+
+    Task::Task(DataService& service, const int64_t seqno,
+        const uint64_t source_id, const int32_t expire_time):
+      service_(service), seqno_(seqno), source_id_(source_id), expire_time_(expire_time)
+    {
+      start_time_ = common::Func::get_monotonic_time();
+      task_from_ds_ = false;
+    }
+
+    Task::~Task()
+    {
+    }
+
+    inline DataHelper& Task::data_helper()
+    {
+      return service_.data_helper();
+    }
+
+    inline BlockManager& Task::block_manager()
+    {
+      return service_.block_manager();
+    }
+
+    int Task::send_simple_request(uint64_t server_id, common::BasePacket* message)
+    {
+      int32_t status = TFS_ERROR;
+      int ret = send_msg_to_server(server_id, message, status);
+      return (ret < 0) ? ret : status;
+    }
 
     string Task::dump() const
     {
@@ -70,407 +101,9 @@ namespace tfs
       return tmp_stream.str();
     }
 
-    int Task::send_simple_request(uint64_t server_id, common::BasePacket* message)
-    {
-      int ret = TFS_SUCCESS;
-      int status = 0;
-      ret = send_msg_to_server(server_id, message, status);
-      TBSYS_LOG(DEBUG, "send simple request, ret: %d, status: %d", ret, status);
-      if (TFS_SUCCESS == ret && STATUS_MESSAGE_OK != status)
-      {
-        ret = TFS_ERROR;
-      }
-      return ret;
-    }
-
-    int Task::write_raw_data(const uint64_t server_id, const uint32_t block_id,
-        const char* data, const int32_t length, const int32_t offset, const RawDataType type)
-    {
-      int ret = TFS_SUCCESS;
-      WriteRawDataMessage req_wrd_msg;
-      req_wrd_msg.set_block_id(block_id);
-      req_wrd_msg.set_offset(offset);
-      req_wrd_msg.set_length(length);
-      req_wrd_msg.set_data(data);
-
-      //new block		
-      if (0 == offset)
-      {
-        req_wrd_msg.set_new_block(type);
-      }
-
-      ret = send_simple_request(server_id, &req_wrd_msg);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "write raw data to %s fail, blockid: %u, offset: %u, length: %d, ret: %d",
-            tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length, ret);
-      }
-
-      TBSYS_LOG(DEBUG, "write raw data to %s, blockid: %u, offset: %u, length: %d",
-          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length);
-
-      return ret;
-    }
-
-    int Task::read_raw_data(const uint64_t server_id, const uint32_t block_id,
-      char* data, const int32_t length, const int32_t offset, int32_t& data_file_size)
-    {
-      int ret = TFS_SUCCESS;
-      ReadRawDataMessage req_rrd_msg;
-      req_rrd_msg.set_block_id(block_id);
-      req_rrd_msg.set_offset(offset);
-      req_rrd_msg.set_length(length);
-
-      NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL == client)
-      {
-        ret = TFS_ERROR;
-        TBSYS_LOG(ERROR, "create client error");
-      }
-      else
-      {
-        tbnet::Packet* rsp_msg = NULL;
-        if (TFS_SUCCESS == send_msg_to_server(server_id, client, &req_rrd_msg, rsp_msg))
-        {
-          if (rsp_msg->getPCode() == RESP_READ_RAW_DATA_MESSAGE)
-          {
-            RespReadRawDataMessage* message = dynamic_cast<RespReadRawDataMessage*> (rsp_msg);
-            int read_len = message->get_length();
-            if (read_len >= 0)
-            {
-              memcpy(data, message->get_data(), read_len);
-              data_file_size = message->get_data_file_size();
-            }
-            else
-            {
-              ret = read_len;  // error info stored in length
-            }
-          }
-          else
-          {
-            ret = TFS_ERROR;
-            TBSYS_LOG(ERROR, "read raw data from %s fail, blockid: %u, offset: %u, length: %d",
-                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length);
-          }
-        }
-        else
-        {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "read raw data from %s fail, blockid: %u, offset: %u, length: %d",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length);
-        }
-        NewClientManager::get_instance().destroy_client(client);
-      }
-
-      TBSYS_LOG(DEBUG, "read raw data from %s, blockid: %u, offset: %u, length: %d, ret: %d",
-          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length, ret);
-
-      return ret;
-    }
-
-    int Task::batch_write_index(const uint64_t server_id, const uint32_t block_id)
-    {
-      int ret = TFS_SUCCESS;
-      RawMetaVec raw_meta_vec;
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        ret = EXIT_NO_LOGICBLOCK_ERROR;
-        TBSYS_LOG(ERROR, "block is not exist. blockid: %u\n", block_id);
-      }
-      else
-      {
-        ret = logic_block->get_meta_infos(raw_meta_vec);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "get meta info fail, server: %s, blockid: %u, ret: %d",
-            tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, ret);
-          ret = TFS_ERROR;
-        }
-        else
-        {
-          WriteInfoBatchMessage req_wib_msg;
-          req_wib_msg.set_block_id(block_id);
-          req_wib_msg.set_offset(0);
-          req_wib_msg.set_length(raw_meta_vec.size());
-          req_wib_msg.set_raw_meta_list(&raw_meta_vec);
-          req_wib_msg.set_block_info(logic_block->get_block_info());
-
-          ret = send_simple_request(server_id, &req_wib_msg);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u, ret: %d",
-                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, ret);
-          }
-        }
-      }
-
-      TBSYS_LOG(DEBUG, "batch write index. blockid: %u, meta info size: %zd, ret: %d",
-          block_id, raw_meta_vec.size(), ret);
-
-      return ret;
-    }
-
-    int Task::write_raw_index(const uint64_t server_id, const uint32_t block_id,
-        const int64_t family_id, const RawIndexOp index_op, const RawIndexVec& index_vec)
-    {
-      WriteRawIndexMessage wri_msg;
-      wri_msg.set_block_id(block_id);
-      wri_msg.set_family_id(family_id);
-      wri_msg.set_index_op(index_op);
-      wri_msg.set_index_vec(index_vec);
-
-      int ret = TFS_SUCCESS;
-      ret = send_simple_request(server_id, &wri_msg);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "write raw index to %s fail, blockid: %u, index_op: %d, ret: %d",
-            tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op, ret);
-      }
-
-      TBSYS_LOG(DEBUG, "write raw index to %s, blockid: %u, index op: %d, vec size: %zd, ret: %d",
-          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op, index_vec.size(), ret);
-
-      return ret;
-    }
-
-    int Task::read_raw_index(const uint64_t server_id, const uint32_t block_id,
-        const RawIndexOp index_op, const uint32_t index_id, char* & data, int32_t& length)
-    {
-      int ret = TFS_SUCCESS;
-      ReadRawIndexMessage rri_msg;
-      rri_msg.set_block_id(block_id);
-      rri_msg.set_index_op(index_op);
-      rri_msg.set_index_id(index_id);
-
-      NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL == client)
-      {
-        ret = TFS_ERROR;
-        TBSYS_LOG(ERROR, "create client error");
-      }
-      else
-      {
-        tbnet::Packet* rsp_msg = NULL;
-        if (TFS_SUCCESS == send_msg_to_server(server_id, client, &rri_msg, rsp_msg))
-        {
-          if (rsp_msg->getPCode() == RSP_READ_RAW_INDEX_MESSAGE)
-          {
-            RespReadRawIndexMessage* message = dynamic_cast<RespReadRawIndexMessage*> (rsp_msg);
-            length = message->get_length();
-            if (length >= 0)
-            {
-              data = (char*)malloc(length * sizeof(char));
-              assert (NULL != data);
-              memcpy(data, message->get_data(), length);
-            }
-            else
-            {
-              ret = length;
-            }
-          }
-          else
-          {
-            ret = TFS_ERROR;
-            TBSYS_LOG(ERROR, "read raw index from %s fail, blockid: %u, index_op: %d",
-                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op);
-          }
-        }
-        else
-        {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "read raw index from %s fail, blockid: %u, index_op: %d",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op);
-        }
-        NewClientManager::get_instance().destroy_client(client);
-      }
-
-      TBSYS_LOG(DEBUG, "read raw index from %s, blockid: %u, index_op: %d, ret: %d",
-          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op, ret);
-
-      return ret;
-    }
-
-    int Task::check_family(const int64_t family_id, const int32_t family_aid_info)
-    {
-      int ret = (INVALID_FAMILY_ID != family_id)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
-        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
-        if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
-        {
-          ret = EXIT_INVALID_ARGU_ERROR;
-        }
-      }
-      return ret;
-    }
-
-    int Task::check_marshalling(const int64_t family_id, const int32_t family_aid_info,
-        common::FamilyMemberInfo* family_members)
-    {
-      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = check_family(family_id, family_aid_info);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        // check if all data ok
-        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
-
-        int normal_count = 0;
-        for (int32_t i = 0; i < data_num; i++)
-        {
-          if (INVALID_BLOCK_ID != family_members[i].block_ &&
-              INVALID_SERVER_ID != family_members[i].server_ &&
-              FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
-          {
-            normal_count++;
-          }
-        }
-
-        if (normal_count < data_num)
-        {
-          TBSYS_LOG(ERROR, "no enough normal node to marshalling, normal count: %d", normal_count);
-          ret = EXIT_NO_ENOUGH_DATA;
-        }
-      }
-
-      return ret;
-    }
-
-    int Task::check_reinstate(const int64_t family_id, const int32_t family_aid_info,
-        common::FamilyMemberInfo* family_members, int* erased)
-    {
-      assert(NULL != erased);
-      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = check_family(family_id, family_aid_info);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
-        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
-        const int32_t member_num = data_num + check_num;
-
-        bool need_recovery = false;
-        int normal_count = 0;
-        for (int32_t i = 0; i < member_num; i++)
-        {
-          // just need data_num nodes to recovery
-          if (INVALID_BLOCK_ID != family_members[i].block_ &&
-              INVALID_SERVER_ID != family_members[i].server_ &&
-              FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
-          {
-            if (normal_count < data_num)
-            {
-              erased[i] = NODE_ALIVE;
-              normal_count++;
-            }
-            else
-            {
-              erased[i] = NODE_UNUSED;
-            }
-          }
-          else
-          {
-            erased[i] = NODE_DEAD;
-            need_recovery = true;
-          }
-        }
-
-        if (normal_count < data_num)
-        {
-          TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
-          ret = EXIT_NO_ENOUGH_DATA;
-        }
-
-        // all node ok, no need to recovery, just return
-        if (TFS_SUCCESS == ret && !need_recovery)
-        {
-          TBSYS_LOG(INFO, "all nodes are normal, no need do recovery");
-          ret = EXIT_NO_NEED_REINSTATE;
-        }
-      }
-
-      return ret;
-    }
-
-    int Task::check_reinstate(const FamilyInfoExt& family_info,  int* erased)
-    {
-      assert(NULL != erased);
-      int ret = check_family(family_info.family_id_, family_info.family_aid_info_);
-
-      if (TFS_SUCCESS == ret)
-      {
-        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
-        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
-        const int32_t member_num = data_num + check_num;
-
-        int normal_count = 0;
-        for (int32_t i = 0; i < member_num; i++)
-        {
-          // just need data_num nodes to recovery
-          if (INVALID_BLOCK_ID != family_info.members_[i].first &&
-              INVALID_SERVER_ID == family_info.members_[i].second)
-          {
-            if (normal_count < data_num)
-            {
-              erased[i] = NODE_ALIVE;
-              normal_count++;
-            }
-            else
-            {
-              erased[i] = NODE_UNUSED;
-            }
-          }
-          else
-          {
-            erased[i] = NODE_DEAD;
-          }
-       }
-
-        if (normal_count < data_num)
-        {
-          TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
-          ret = EXIT_NO_ENOUGH_DATA;
-        }
-      }
-
-      return ret;
-
-    }
-
-    int Task::check_dissolve(const int64_t family_id, const int32_t family_aid_info,
-        common::FamilyMemberInfo* family_members)
-    {
-      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        if (INVALID_FAMILY_ID == family_id)
-        {
-          ret = EXIT_INVALID_ARGU_ERROR;
-        }
-        else
-        {
-          const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info) / 2;
-          const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info) / 2;
-          if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
-          {
-            ret = EXIT_INVALID_ARGU_ERROR;
-          }
-        }
-      }
-      return ret;
-    }
-
-    CompactTask::CompactTask(TaskManager& manager, const int64_t seqno,
+    CompactTask::CompactTask(DataService& service, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time, const uint32_t block_id):
-      Task(manager, seqno, source_id, expire_time)
+      Task(service, seqno, source_id, expire_time)
     {
       type_ = PLAN_TYPE_COMPACT;
       block_id_ = block_id;
@@ -576,66 +209,8 @@ namespace tfs
 
     int CompactTask::do_compact(const uint32_t block_id)
     {
-      TBSYS_LOG(DEBUG, "compact start blockid: %u\n", block_id);
-      int ret = TFS_SUCCESS;
-      LogicBlock* src_logic_block = NULL;
-      LogicBlock* dest_logic_block = NULL;
-
-      src_logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == src_logic_block)
-      {
-        TBSYS_LOG(ERROR, "src block is not exist. blockid: %u\n", block_id);
-        ret = EXIT_NO_LOGICBLOCK_ERROR;
-      }
-      else
-      {
-        BlockInfo* src_blk = src_logic_block->get_block_info();
-        assert(src_blk->block_id_ == block_id);
-
-        // create the dest block
-        uint32_t physical_block_id = 0;
-        ret = BlockFileManager::get_instance()->new_block(block_id, physical_block_id, C_COMPACT_BLOCK);
-        TBSYS_LOG(DEBUG, "compact new block blockid: %u, physical blockid: %d\n", block_id, physical_block_id);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        dest_logic_block = BlockFileManager::get_instance()->get_logic_block(block_id, C_COMPACT_BLOCK);
-        if (NULL == dest_logic_block)
-        {
-          TBSYS_LOG(ERROR, "get compact dest block fail. blockid: %u\n", block_id);
-          ret = EXIT_NO_LOGICBLOCK_ERROR;
-        }
-        else
-        {
-          ret = real_compact(src_logic_block, dest_logic_block);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "inner real compact blockid: %u fail. ret: %d\n", block_id, ret);
-          }
-          else
-          {
-            TBSYS_LOG(DEBUG, "compact blockid : %u, switch compact blk\n", block_id);
-            BlockFileManager::get_instance()->switch_compact_blk(block_id);
-            if (TFS_SUCCESS != ret)
-            {
-              TBSYS_LOG(ERROR, "compact blockid: %u, switch compact blk fail. ret: %d\n", block_id, ret);
-            }
-          }
-
-          /** must remove one block here */
-
-          TBSYS_LOG(DEBUG, "compact del old blockid: %u\n", block_id);
-          // del serve block
-          ret = BlockFileManager::get_instance()->del_block(block_id, C_COMPACT_BLOCK);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "compact blockid: %u after switch, del old block fail. ret: %d\n", block_id, ret);
-          }
-        }
-      }
-
-      return ret;
+      UNUSED(block_id);
+      return 0;
     }
 
     int CompactTask::report_to_ns(const int status)
@@ -646,7 +221,6 @@ namespace tfs
       cmit_cpt_msg.set_seqno(seqno_);
       cmit_cpt_msg.set_block_info(info_);
       cmit_cpt_msg.set_result(result_);
-
       ret = send_simple_request(source_id_, &cmit_cpt_msg);
 
       TBSYS_LOG(INFO, "compact report to ns. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s, ret: %d",
@@ -659,11 +233,12 @@ namespace tfs
     {
       RespDsCompactBlockMessage resp_cpt_msg;
       resp_cpt_msg.set_seqno(seqno_);
-      resp_cpt_msg.set_ds_id(manager_.get_ds_id());
+      resp_cpt_msg.set_ds_id(service_.get_ds_ipport());
       resp_cpt_msg.set_status(status);
 
       if (PLAN_STATUS_END == status)
       {
+        /*
         LogicBlock* LogicBlock = BlockFileManager::get_instance()->get_logic_block(block_id_);
         if (NULL == LogicBlock)
         {
@@ -675,6 +250,7 @@ namespace tfs
           BlockInfo* blk = LogicBlock->get_block_info();
           resp_cpt_msg.set_block_info(*blk);
         }
+        */
       }
 
       TBSYS_LOG(INFO, "compact report to ds. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
@@ -689,25 +265,23 @@ namespace tfs
     int CompactTask::request_ds_to_compact()
     {
       int ret = TFS_SUCCESS;
-      for (uint32_t i = 0; i < servers_.size() && TFS_SUCCESS == ret; i++)
+      for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers_.size()); i++)
       {
         DsCompactBlockMessage req_cpt_msg;
         req_cpt_msg.set_seqno(seqno_);
         req_cpt_msg.set_block_id(block_id_);
-        req_cpt_msg.set_source_id(manager_.get_ds_id());
-        ret = send_simple_request(servers_[i], &req_cpt_msg);
+        req_cpt_msg.set_source_id(service_.get_ds_ipport());
+        int32_t status = TFS_ERROR;
+        ret = send_msg_to_server(source_id_, &req_cpt_msg, status);
+        ret = (ret < 0) ? ret : status;
+
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to compact, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(servers_[i]).c_str(), ret);
-
-        if (TFS_SUCCESS != ret)
-        {
-          break;
-        }
       }
-
       return ret;
     }
 
+    /*
     int CompactTask::real_compact(LogicBlock* src, LogicBlock* dest)
     {
       assert(NULL != src && NULL != dest);
@@ -880,10 +454,11 @@ namespace tfs
 
       return ret;
     }
+    */
 
-    ReplicateTask::ReplicateTask(TaskManager& manager, const int64_t seqno,
+    ReplicateTask::ReplicateTask(DataService& service, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time, const common::ReplBlock& repl_info):
-      Task(manager, seqno, source_id, expire_time)
+      Task(service, seqno, source_id, expire_time)
     {
       type_ = PLAN_TYPE_REPLICATE;
       repl_info_ = repl_info;
@@ -894,36 +469,9 @@ namespace tfs
 
     }
 
-    bool ReplicateTask::can_be_replicate(const uint32_t block_id)
-    {
-      bool repl_ok = true;
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        repl_ok = false;
-      }
-      else
-      {
-        if (!task_from_ds() && logic_block->get_family_id() != 0)
-        {
-          repl_ok = false;
-        }
-      }
-      return repl_ok;
-    }
-
     int ReplicateTask::handle()
     {
-      int ret = TFS_SUCCESS;
-      if (!can_be_replicate(repl_info_.block_id_))
-      {
-        ret = EXIT_MOVE_OR_REPLICATE_ERROR;
-      }
-      else
-      {
-        ret = do_replicate(repl_info_);
-      }
-
+      int ret = do_replicate(repl_info_);
       int status = translate_status(ret);
       if (task_from_ds())
       {
@@ -1002,7 +550,7 @@ namespace tfs
 
       if (need_remove)
       {
-        int rm_ret = BlockFileManager::get_instance()->del_block(repl_info_.block_id_);
+        int rm_ret = block_manager().del_block(repl_info_.block_id_);
         TBSYS_LOG(INFO, "send repl block complete info: del blockid: %u, result: %d\n", repl_info_.block_id_, rm_ret);
       }
 
@@ -1016,7 +564,7 @@ namespace tfs
     {
       RespDsReplicateBlockMessage resp_repl_msg;
       resp_repl_msg.set_seqno(seqno_);
-      resp_repl_msg.set_ds_id(manager_.get_ds_id());
+      resp_repl_msg.set_ds_id(service_.get_ds_ipport());
       resp_repl_msg.set_status(status);
 
       TBSYS_LOG(INFO, "replicate report to ds. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
@@ -1028,75 +576,59 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int ReplicateTask::do_replicate(const ReplBlock& repl_block)
+    /**
+     * @brief because replicate_data may be called many times
+     * the caller need pass a buffer to this function to avoid
+     * multiple times malloc/free
+     *
+     * @return
+     */
+    int ReplicateTask::replicate_data(const uint64_t server_id, const uint64_t block_id,
+        char* buffer, const int32_t length, const int32_t offset)
     {
-      uint64_t ds_ip = repl_block.destination_id_;
-      uint32_t block_id = repl_block.block_id_;
-
-      TBSYS_LOG(INFO, "replicating now, seqno: %"PRI64_PREFIX"d, blockid: %u, %s = >%s\n",
-          seqno_, block_id, tbsys::CNetUtil::addrToString(repl_block.source_id_).c_str(),
-          tbsys::CNetUtil::addrToString(ds_ip).c_str());
-
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        TBSYS_LOG(ERROR, "block is not exist, blockid: %u, %s=>%s\n", repl_block.block_id_,
-            tbsys::CNetUtil::addrToString(repl_block.source_id_).c_str(),
-            tbsys::CNetUtil::addrToString(ds_ip).c_str());
-        return TFS_ERROR;
-      }
-
-      //replicate block file
-      int32_t len = 0, offset = 0;
-      int ret = TFS_SUCCESS;
-      char tmp_data_buf[MAX_READ_SIZE];
-
-      //this block will not be write or update now, locked by ns
-      int32_t total_len = logic_block->get_data_file_size();
-      do  // use do while to process empty block
-      {
-        int32_t read_len = MAX_READ_SIZE;
-        if (total_len - offset < MAX_READ_SIZE)
-        {
-          read_len = total_len - offset;
-        }
-        ret = logic_block->read_raw_data(tmp_data_buf, read_len, offset);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "read raw data fail, ip: %s, blockid: %u, offset: %d, reading len: %d, ret: %d",
-              tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, offset, read_len, ret);
-          break;
-        }
-        len = read_len;
-
-        TBSYS_LOG(DEBUG, "replicate raw data blockid: %u, offset: %d, read len: %d, total len: %d\n", block_id,
-            offset, len, total_len);
-
-        ret = Task::write_raw_data(ds_ip, block_id, tmp_data_buf, len, offset);
-        if (TFS_SUCCESS != ret)
-        {
-          break;
-        }
-
-        offset += len;
-      } while (offset < total_len);
+      int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
+          (length <= 0) || (offset < 0) || (NULL == buffer)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       if (TFS_SUCCESS == ret)
       {
-        ret = batch_write_index(ds_ip, block_id);
+        int32_t real_length = length;
+        ret = data_helper().read_raw_data_fc(server_id, block_id, buffer, real_length, offset);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = data_helper().write_raw_data_fc(server_id, block_id, buffer, real_length, offset);
+        }
       }
 
-      // update block info local
-      if (TFS_SUCCESS == ret)
-      {
-        ret = logic_block->update_block_version(VERSION_INC_STEP_REPLICATE);
-      }
       return ret;
     }
 
-    MarshallingTask::MarshallingTask(TaskManager& manager, const int64_t seqno,
+    int ReplicateTask::replicate_index(const uint64_t server_id, const uint64_t block_id)
+    {
+      int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id)) ?
+        EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        IndexDataV2 index_data;
+        ret = data_helper().read_index_fc(service_.get_ds_ipport(), block_id, block_id, index_data);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = data_helper().write_index_fc(server_id, block_id, block_id, index_data, SWITCH_BLOCK_YES);
+        }
+      }
+
+      return ret;
+    }
+
+    int ReplicateTask::do_replicate(const ReplBlock& repl_block)
+    {
+      UNUSED(repl_block);
+      return 0;
+    }
+
+    MarshallingTask::MarshallingTask(DataService& service, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time, const int64_t family_id) :
-      Task(manager, seqno, source_id, expire_time)
+      Task(service, seqno, source_id, expire_time)
     {
       type_ = PLAN_TYPE_EC_MARSHALLING;
       family_id_ = family_id;
@@ -1109,9 +641,10 @@ namespace tfs
 
     int MarshallingTask::set_family_member_info(const FamilyMemberInfo* members, const int32_t family_aid_info)
     {
-      const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) + GET_CHECK_MEMBER_NUM(family_aid_info);
+      const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) +
+        GET_CHECK_MEMBER_NUM(family_aid_info);
       int32_t ret = TFS_SUCCESS;
-      if (NULL == members || MEMBER_NUM <= 0 || MEMBER_NUM > MAX_MARSHALLING_NUM)
+      if ((NULL == members) || (MEMBER_NUM <= 0) || (MEMBER_NUM) > (MAX_MARSHALLING_NUM))
       {
         ret = EXIT_PARAMETER_ERROR;
       }
@@ -1162,11 +695,12 @@ namespace tfs
       cmit_msg.set_seqno(seqno_);
       cmit_msg.set_status(status);
       cmit_msg.set_family_id(family_id_);
-
       ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
-        ret = send_simple_request(source_id_, &cmit_msg);
+        int32_t status = TFS_ERROR;
+        ret = send_msg_to_server(source_id_, &cmit_msg, status);
+        ret = (ret < 0) ? ret : status;
       }
 
       TBSYS_LOG(INFO, "marshalling report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
@@ -1177,6 +711,7 @@ namespace tfs
 
     int MarshallingTask::do_marshalling()
     {
+      /*
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
@@ -1198,7 +733,6 @@ namespace tfs
         return ret;
       }
 
-      /* family info ok, continue marshalling */
 
       // config encoder parameter, alloc buffer
       ret = encoder.config(data_num, check_num);
@@ -1352,12 +886,14 @@ namespace tfs
         tbsys::gDelete(index_data[i]);
       }
 
-      return ret;
+      */
+
+      return 0;
     }
 
-    ReinstateTask::ReinstateTask(TaskManager& manager, const int64_t seqno,
+    ReinstateTask::ReinstateTask(DataService& service, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time, const int64_t family_id) :
-      MarshallingTask(manager, seqno, source_id, expire_time, family_id)
+      MarshallingTask(service, seqno, source_id, expire_time, family_id)
     {
       type_ = PLAN_TYPE_EC_REINSTATE;
     }
@@ -1376,6 +912,7 @@ namespace tfs
 
     int ReinstateTask::do_reinstate()
     {
+      /*
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
@@ -1402,8 +939,6 @@ namespace tfs
         }
         return ret;
       }
-
-      /* family info ok, continue reinstate*/
 
       // config encoder parameter, alloc buffer
       ret = decoder.config(data_num, check_num, erased);
@@ -1634,7 +1169,9 @@ namespace tfs
         tbsys::gDelete(index_data[i]);
       }
 
-      return ret;
+      */
+
+      return 0;
     }
 
     int ReinstateTask::report_to_ns(const int status)
@@ -1644,11 +1181,12 @@ namespace tfs
       cmit_msg.set_seqno(seqno_);
       cmit_msg.set_status(status);
       cmit_msg.set_family_id(family_id_);
-
       ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
-        ret = send_simple_request(source_id_, &cmit_msg);
+        int32_t status = TFS_ERROR;
+        ret = send_msg_to_server(source_id_, &cmit_msg, status);
+        ret = (ret < 0) ? ret : status;
       }
 
       TBSYS_LOG(INFO, "reinstate report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
@@ -1657,9 +1195,9 @@ namespace tfs
       return ret;
     }
 
-    DissolveTask::DissolveTask(TaskManager& manager, const int64_t seqno,
+    DissolveTask::DissolveTask(DataService& service, const int64_t seqno,
           const uint64_t source_id, const int expire_time, const int64_t family_id) :
-      MarshallingTask(manager, seqno, source_id, expire_time, family_id)
+      MarshallingTask(service, seqno, source_id, expire_time, family_id)
     {
       type_ = PLAN_TYPE_EC_DISSOLVE;
     }
@@ -1701,12 +1239,7 @@ namespace tfs
 
     int DissolveTask::do_dissolve()
     {
-      int ret = check_dissolve(family_id_, family_aid_info_, family_members_);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = request_ds_to_replicate();
-      }
-      return ret;
+      return request_ds_to_replicate();
     }
 
     int DissolveTask::handle_complete(BasePacket* packet)
@@ -1749,7 +1282,6 @@ namespace tfs
 
     int DissolveTask::report_to_ns(const int status)
     {
-      int ret = TFS_SUCCESS;
       int final_status = status;
       if (PLAN_STATUS_TIMEOUT != final_status) // maybe expired by task manager
       {
@@ -1768,8 +1300,7 @@ namespace tfs
       cmit_msg.set_seqno(seqno_);
       cmit_msg.set_status(final_status);
       cmit_msg.set_family_id(family_id_);
-
-      ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
+      int ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
         ret = send_simple_request(source_id_, &cmit_msg);
@@ -1788,11 +1319,11 @@ namespace tfs
       int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_) / 2;
       int32_t total_num = data_num + check_num;
 
-      for (int32_t i = 0; i < data_num; i++)
+      for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
         if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
         {
-          continue;
+          continue;  // lost block, can't to replicate
         }
 
         DsReplicateBlockMessage repl_msg;
@@ -1804,17 +1335,13 @@ namespace tfs
 
         repl_msg.set_seqno(seqno_);
         repl_msg.set_expire_time(expire_time_);
-        repl_msg.set_source_id(manager_.get_ds_id());
+        repl_msg.set_source_id(service_.get_ds_ipport());
         repl_msg.set_repl_info(repl_block);
-
         ret = send_simple_request(family_members_[i].server_, &repl_msg);
+
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to replicate, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
 
-        if (TFS_SUCCESS != ret)
-        {
-          break;
-        }
       }
 
       return ret;
@@ -1830,13 +1357,13 @@ namespace tfs
       {
         if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
         {
-          continue;
+          continue;  // lost block, no need to delete
         }
 
         RemoveBlockMessage del_msg;
         del_msg.set(family_members_[i].block_);
-
         ret = send_simple_request(family_members_[i].server_, &del_msg);
+
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to delete, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
 
@@ -1854,12 +1381,17 @@ namespace tfs
       {
         if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
         {
-          continue;
+          continue; // lost block, can't clear family id
         }
 
-        RawIndexVec empty_vec;
-        ret = write_raw_index(family_members_[i].server_, family_members_[i].block_,
-            0, WRITE_DATA_INDEX, empty_vec);
+        ECMeta ec_meta;
+        ec_meta.family_id_ = 0;
+        ec_meta.used_offset_ = -1;
+        ec_meta.used_offset_ = -1;
+
+        ret = data_helper().commit_ec_meta(family_members_[i].server_,
+            family_members_[i].block_, ec_meta);
+
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to clear family id, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
 
@@ -1867,6 +1399,5 @@ namespace tfs
 
       return ret;
     }
-
   }
 }
