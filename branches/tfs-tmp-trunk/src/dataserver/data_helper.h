@@ -33,10 +33,13 @@ namespace tfs
         inline BlockManager& block_manager();
 
         int new_remote_block(const uint64_t server_id, const uint64_t block_id,
-            const bool tmp, const uint64_t family_id, const int32_t index_num);
+            const bool tmp = false, const uint64_t family_id = common::INVALID_FAMILY_ID ,
+            const int32_t index_num = 0);
+        int delete_remote_block(const uint64_t server_id, const uint64_t block_id,
+            const bool tmp = false);
 
         /**
-         * use following interface to do flow control(shor for fc)
+         * use following interface to do flow control
          */
         int read_raw_data(const uint64_t server_id, const uint64_t block_id,
             char* data, int32_t& length, const int32_t offset);
@@ -45,13 +48,12 @@ namespace tfs
         int read_index(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data);
         int write_index(const uint64_t server_id, const uint64_t block_id,
-            const uint64_t attach_block_id, common::IndexDataV2& index_data,
-            const int32_t switch_flag = common::SWITCH_BLOCK_NO);
+            const uint64_t attach_block_id, common::IndexDataV2& index_data);
 
         int query_ec_meta(const uint64_t server_id, const uint64_t block_id,
             common::ECMeta& ec_meta);
         int commit_ec_meta(const uint64_t server_id, const uint64_t block_id,
-            const common::ECMeta& ec_meta);
+            const common::ECMeta& ec_meta, const int8_t switch_flag = common::SWITCH_BLOCK_NO);
         int query_file_info(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id, common::FileInfoV2& finfo);
 
@@ -63,8 +65,7 @@ namespace tfs
         int read_index_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data);
         int write_index_ex(const uint64_t server_id, const uint64_t block_id,
-            const uint64_t attach_block_id, common::IndexDataV2& index_data,
-            const int32_t switch_flag = common::SWITCH_BLOCK_NO);
+            const uint64_t attach_block_id, common::IndexDataV2& index_data);
 
       private:
         DataService& service_;

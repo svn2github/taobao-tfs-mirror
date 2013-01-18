@@ -147,7 +147,7 @@ namespace tfs
         {
           result_.push_back(std::make_pair(servers_[i], common::PLAN_STATUS_TIMEOUT));
         }
-        ret = request_ds_to_compact();
+        ret = compact_peer_blocks();
       }
 
       TBSYS_LOG(INFO, "handle compact task, seqno: %"PRI64_PREFIX"d, ret: %d\n", seqno_, ret );
@@ -262,7 +262,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int CompactTask::request_ds_to_compact()
+    int CompactTask::compact_peer_blocks()
     {
       int ret = TFS_SUCCESS;
       for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers_.size()); i++)
@@ -611,27 +611,22 @@ namespace tfs
       uint64_t block_id = repl_info_.block_id_;
       uint64_t dest_id = repl_info_.destination_id_;
 
+      // TODO: update block version first
+
       uint64_t helper[MAX_DATA_MEMBER_NUM];
       ArrayHelper<uint64_t> attach_blocks(MAX_DATA_MEMBER_NUM, helper);
       int ret = block_manager().get_attach_blocks(attach_blocks, block_id);
       if (TFS_SUCCESS == ret)
       {
-        int32_t switch_flag = SWITCH_BLOCK_NO;
         for (int i = 0; i < attach_blocks.get_array_index(); i++)
         {
-          // if last index, set switch flag to YES
-          if (i == (attach_blocks.get_array_index() - 1))
-          {
-            switch_flag = SWITCH_BLOCK_YES;
-          }
-
           IndexDataV2 index_data;
           ret = data_helper().read_index(service_.get_ds_ipport(),
               block_id, *attach_blocks.at(i), index_data);
           if (TFS_SUCCESS == ret)
           {
             ret = data_helper().write_index(dest_id,
-                block_id, *attach_blocks.at(i), index_data, switch_flag);
+                block_id, *attach_blocks.at(i), index_data);
           }
         }
       }
@@ -674,6 +669,14 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = replicate_index();
+      }
+
+      // commit block
+      if (TFS_SUCCESS == ret)
+      {
+        ECMeta ec_meta;
+        ec_meta.family_id_ = -1; // not update family id
+        ret = data_helper().commit_ec_meta(dest_id, block_id, ec_meta, SWITCH_BLOCK_YES);
       }
 
       return ret;
@@ -860,14 +863,12 @@ namespace tfs
       for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
         IndexDataV2 index_data;
-        int32_t switch_flag = (i == data_num - 1) ? SWITCH_BLOCK_YES : SWITCH_BLOCK_NO;
         ret = data_helper().read_index(family_members_[i].server_,
             family_members_[i].block_, family_members_[i].block_, index_data);
         for (int j = data_num; (TFS_SUCCESS == ret)  && (j < member_num); j++)
         {
           ret = data_helper().write_index(family_members_[j].server_,
-              family_members_[j].block_, family_members_[i].block_,
-              index_data, switch_flag);
+              family_members_[j].block_, family_members_[i].block_, index_data);
         }
       }
       return ret;
@@ -888,13 +889,20 @@ namespace tfs
             family_members_[i].block_, ec_metas[i]);
       }
 
+      // create parity block
+      for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
+      {
+        ret = data_helper().new_remote_block(family_members_[i].server_,
+            family_members_[i].block_, true, family_id_, data_num);
+      }
+
       // encode data & write to parity block
       if (TFS_SUCCESS == ret)
       {
         ret = encode_data(ec_metas, marshalling_len);
       }
 
-      // back every blocks' index to parity blocks
+      // backup index to parity block's index
       if (TFS_SUCCESS == ret)
       {
         ret = backup_index();
@@ -908,7 +916,6 @@ namespace tfs
           ec_metas[i].family_id_ = family_id_;
           // set used_offset as marshalling_offset for data node
           ec_metas[i].mars_offset_ = ec_metas[i].used_offset_;
-          ec_metas[i].used_offset_ = 0;  // denotes not update used_offset
           ret = data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_metas[i]);
         }
@@ -916,11 +923,10 @@ namespace tfs
         ECMeta ec_meta;
         ec_meta.family_id_ = family_id_;
         ec_meta.mars_offset_ = marshalling_len;
-        ec_meta.used_offset_ = 0;  // denotes not update used_offset
         for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
         {
           ret = data_helper().commit_ec_meta(family_members_[i].server_,
-            family_members_[i].block_, ec_meta);
+            family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
         }
       }
 
@@ -980,6 +986,26 @@ namespace tfs
         }
         ret = data_helper().query_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_metas[i]);
+      }
+
+      // create lost block
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
+      {
+        if (ErasureCode::NODE_DEAD != family_members_[i].status_)
+        {
+          continue;  // only query dead nodes
+        }
+
+        if (i < data_num)  // create data block
+        {
+          ret = data_helper().new_remote_block(family_members_[i].server_,
+            family_members_[i].block_, true);
+        }
+        else // create parity block
+        {
+          ret = data_helper().new_remote_block(family_members_[i].server_,
+              family_members_[i].block_, true, family_id_, data_num);
+        }
       }
 
       // decode data & write to recovery target
@@ -1170,7 +1196,7 @@ namespace tfs
 
     int DissolveTask::do_dissolve()
     {
-      return request_ds_to_replicate();
+      return replicate_data_blocks();
     }
 
     int DissolveTask::handle_complete(BasePacket* packet)
@@ -1178,7 +1204,8 @@ namespace tfs
       int ret = TFS_SUCCESS;
       if (RESP_DS_REPLICATE_BLOCK_MESSAGE == packet->getPCode())
       {
-        RespDsReplicateBlockMessage* resp_msg = dynamic_cast<RespDsReplicateBlockMessage*> (packet);
+        RespDsReplicateBlockMessage* resp_msg =
+          dynamic_cast<RespDsReplicateBlockMessage*> (packet);
         int status = resp_msg->get_status();
         uint64_t server = resp_msg->get_ds_id();
 
@@ -1199,12 +1226,11 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             // success, do clear work, ignore return value
-            request_to_clear_family_id();
-            request_ds_to_delete();
+            delete_parity_blocks();
           }
         }
 
-        TBSYS_LOG(INFO, "handle complete dissolve task, "
+        TBSYS_LOG(INFO, "handle complete dissolve task. "
             "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
             seqno_, tbsys::CNetUtil::addrToString(resp_msg->get_ds_id()).c_str(), status, ret);
       }
@@ -1243,7 +1269,7 @@ namespace tfs
       return ret;
     }
 
-    int DissolveTask::request_ds_to_replicate()
+    int DissolveTask::replicate_data_blocks()
     {
       int ret = TFS_SUCCESS;
       int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
@@ -1278,7 +1304,7 @@ namespace tfs
       return ret;
     }
 
-    int DissolveTask::request_ds_to_delete()
+    int DissolveTask::delete_parity_blocks()
     {
       int ret = TFS_SUCCESS;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
@@ -1290,40 +1316,10 @@ namespace tfs
         {
           continue;  // lost block, no need to delete
         }
-
-        RemoveBlockMessage del_msg;
-        del_msg.set(family_members_[i].block_);
-        ret = send_simple_request(family_members_[i].server_, &del_msg);
+        ret = data_helper().delete_remote_block(family_members_[i].server_,
+            family_members_[i].block_);
 
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to delete, ret: %d",
-            seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
-
-      }
-
-      return ret;
-    }
-
-    int DissolveTask::request_to_clear_family_id()
-    {
-      int ret = TFS_SUCCESS;
-      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
-
-      for (int32_t i = 0; i < data_num; i++)
-      {
-        if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
-        {
-          continue; // lost block, can't clear family id
-        }
-
-        ECMeta ec_meta;
-        ec_meta.family_id_ = 0;
-        ec_meta.used_offset_ = -1;
-        ec_meta.used_offset_ = -1;
-
-        ret = data_helper().commit_ec_meta(family_members_[i].server_,
-            family_members_[i].block_, ec_meta);
-
-        TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to clear family id, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
 
       }

@@ -59,10 +59,34 @@ namespace tfs
         ret = (ret < 0) ? ret: status;
         if (TFS_SUCCESS != ret)
         {
-          ret = EXIT_ADD_NEW_BLOCK_ERROR;
-          TBSYS_LOG(WARN, "new remote block fail. "
-              "blockid: "PRI64_PREFIX"u, familyid: %"PRI64_PREFIX"u, index_num: %d",
-              block_id, family_id, index_num);
+          TBSYS_LOG(WARN, "new remote block fail. server: %s, "
+              "blockid: "PRI64_PREFIX"u, tmp: %d, familyid: %"PRI64_PREFIX"u, index_num: %d",
+              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, tmp, family_id, index_num);
+        }
+      }
+
+      return ret;
+    }
+
+    int DataHelper::delete_remote_block(const uint64_t server_id, const uint64_t block_id,
+        const bool tmp)
+    {
+      int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id)) ?
+          EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        RemoveBlockMessageV2 req_msg;
+        req_msg.set_block_id(block_id);
+        req_msg.set_tmp_flag(tmp);
+
+        int32_t status = TFS_ERROR;
+        ret = send_msg_to_server(server_id, &req_msg, status);
+        ret = (ret < 0) ? ret: status;
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "delete remote block fail. server: %s, blockid: "PRI64_PREFIX"u",
+              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, tmp);
         }
       }
 
@@ -202,7 +226,7 @@ namespace tfs
     }
 
     int DataHelper::write_index_ex(const uint64_t server_id, const uint64_t block_id,
-        const uint64_t attach_block_id, common::IndexDataV2& index_data, const int32_t switch_flag)
+        const uint64_t attach_block_id, common::IndexDataV2& index_data)
     {
        int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (INVALID_BLOCK_ID == attach_block_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -218,7 +242,6 @@ namespace tfs
          req_msg.set_block_id(block_id);
          req_msg.set_attach_block_id(attach_block_id);
          req_msg.set_index_data(index_data);
-         req_msg.set_switch_flag(switch_flag);
 
          int32_t status = TFS_ERROR;
          ret = send_msg_to_server(server_id, &req_msg, status);
@@ -247,9 +270,9 @@ namespace tfs
     }
 
     int DataHelper::write_index(const uint64_t server_id, const uint64_t block_id,
-        const uint64_t attach_block_id, common::IndexDataV2& index_data, const int32_t switch_flag)
+        const uint64_t attach_block_id, common::IndexDataV2& index_data)
     {
-      return write_index_ex(server_id, block_id, attach_block_id, index_data, switch_flag);
+      return write_index_ex(server_id, block_id, attach_block_id, index_data);
     }
 
     int DataHelper::query_ec_meta(const uint64_t server_id, const uint64_t block_id,
@@ -293,11 +316,10 @@ namespace tfs
        }
 
        return ret;
-
     }
 
     int DataHelper::commit_ec_meta(const uint64_t server_id, const uint64_t block_id,
-        const common::ECMeta& ec_meta)
+        const common::ECMeta& ec_meta, const int8_t switch_flag)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id)) ?
           EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -307,6 +329,7 @@ namespace tfs
          CommitEcMetaMessage req_msg;
          req_msg.set_block_id(block_id);
          req_msg.set_ec_meta(ec_meta);
+         req_msg.set_switch_flag(switch_flag);
 
          int32_t status = TFS_ERROR;
          ret = send_msg_to_server(server_id, &req_msg, status);
@@ -315,6 +338,5 @@ namespace tfs
 
        return ret;
     }
-
   }
 }

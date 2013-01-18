@@ -230,7 +230,7 @@ namespace tfs
     }
 
     int DataManager::close_file(const uint64_t block_id, uint64_t& file_id, const uint64_t lease_id,
-        BlockInfoV2& local)
+        const bool tmp, BlockInfoV2& local)
     {
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
           (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -247,7 +247,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
-        ret = block_manager().write(file_id, data_file, block_id, block_id);
+        ret = block_manager().write(file_id, data_file, block_id, block_id, tmp);
         ret = (ret < 0) ? ret: TFS_SUCCESS;  // transform return status
         if (TFS_SUCCESS == ret)
         {

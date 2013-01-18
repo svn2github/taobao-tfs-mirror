@@ -294,6 +294,7 @@ namespace tfs
       uint64_t lease_id = message->get_lease_id();
       uint64_t master_id = message->get_master_id();
       uint32_t crc = message->get_crc();
+      bool tmp = message->get_tmp_flag();
       bool is_master = (master_id == service_.get_ds_ipport());
 
       const VUINT64& servers = message->get_ds();
@@ -330,7 +331,7 @@ namespace tfs
       BlockInfoV2 local;
       if (TFS_SUCCESS == ret)
       {
-        ret = data_manager().close_file(block_id, file_id, lease_id, local);
+        ret = data_manager().close_file(block_id, file_id, lease_id, tmp, local);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "close file fail. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
@@ -477,10 +478,12 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       uint64_t block_id = message->get_block_id();
-      ret = block_manager().del_block(block_id, false);
+      bool tmp = message->get_tmp_flag();
+      ret = block_manager().del_block(block_id, tmp);
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "remove block %"PRI64_PREFIX"u fail, ret: %d", block_id, ret);
+        TBSYS_LOG(ERROR, "remove block %"PRI64_PREFIX"u fail, tmp: %d, ret: %d",
+            block_id, tmp, ret);
       }
       else
       {
@@ -758,7 +761,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = block_manager().pwrite(data, length, offset, block_id);
+        ret = block_manager().pwrite(data, length, offset, block_id, true);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write raw data fail. blockid: %"PRI64_PREFIX"u, "
@@ -815,10 +818,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = block_manager().write_file_infos(index_data.header_,
-            index_data.finfos_, block_id, attach_block_id);
+            index_data.finfos_, block_id, attach_block_id, true);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "read index fail. blockid: %"PRI64_PREFIX"u, "
+          TBSYS_LOG(WARN, "write index fail. blockid: %"PRI64_PREFIX"u, "
               "attach_block_id: %"PRI64_PREFIX"u, ret: %d",
               block_id, attach_block_id, ret);
         }
@@ -875,20 +878,18 @@ namespace tfs
     {
       uint64_t block_id = message->get_block_id();
       ECMeta& ec_meta = message->get_ec_meta();
+      int8_t switch_flag = message->get_switch_flag();
 
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        if (TFS_SUCCESS == ret)
+        // commit family id
+        if ((TFS_SUCCESS == ret) && (ec_meta.family_id_ >= 0))
         {
           ret = block_manager().set_family_id(ec_meta.family_id_, block_id);
         }
 
-        if ((TFS_SUCCESS == ret) && (ec_meta.used_offset_ > 0))
-        {
-          ret = block_manager().set_used_offset(ec_meta.used_offset_, block_id);
-        }
-
+        // commit marshalling length
         if ((TFS_SUCCESS == ret) && (ec_meta.mars_offset_ > 0))
         {
           ret = block_manager().set_marshalling_offset(ec_meta.mars_offset_, block_id);
@@ -899,7 +900,17 @@ namespace tfs
           TBSYS_LOG(WARN, "commit ec meta fail. blockid: %"PRI64_PREFIX"u, ret: %d",
               block_id, ret);
         }
-        else
+        else if (switch_flag) // if need, switch block
+        {
+          ret = block_manager().switch_logic_block(block_id, true);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(WARN, "switch logic block fail. blockid: %"PRI64_PREFIX"u, "
+                "ret: %d", block_id, ret);
+          }
+        }
+
+        if (TFS_SUCCESS == ret)
         {
           ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
         }

@@ -223,7 +223,7 @@ namespace tfs
             const common::FileInfo& src_info,
             const common::FileInfo& dest_info, int32_t woffset);
             */
-        int request_ds_to_compact();
+        int compact_peer_blocks();
         void add_response(const uint64_t server, const int status, const common::BlockInfo& info);
 
       protected:
@@ -321,12 +321,9 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN(DissolveTask);
-
-        int request_ds_to_replicate();
-        int request_ds_to_delete();
-        int request_to_clear_family_id();
-
         int do_dissolve();
+        int replicate_data_blocks();
+        int delete_parity_blocks();
 
       private:
         std::vector<std::pair<uint64_t, int8_t> > result_;

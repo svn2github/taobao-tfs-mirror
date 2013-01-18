@@ -1,4 +1,4 @@
-/* * (C) 2007-2013 Alibaba Group Holding Limited.
+/** (C) 2007-2013 Alibaba Group Holding Limited.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -77,17 +77,17 @@ namespace tfs
         int get_block_info(common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
 
         int generation_file_id(uint64_t& fileid, const uint64_t logic_block_id);
-        int pwrite(const char* buf, const int32_t nbytes, const int32_t offset, const uint64_t logic_block_id);
+        int pwrite(const char* buf, const int32_t nbytes, const int32_t offset, const uint64_t logic_block_id, const bool tmp = false);
         int pread(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t logic_block_id);
         int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id,
-            const uint64_t attach_logic_block_id);
+            const uint64_t attach_logic_block_id, const bool tmp = false);
         int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,
             const int8_t flag, const uint64_t logic_block_id, const uint64_t attach_logic_block_id);
         int stat(common::FileInfoV2& info, const int8_t flag, const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const;
         int unlink(int64_t& size, const uint64_t fileid, const int32_t action,
               const uint64_t logic_block_id, const uint64_t attach_logic_block_id);
 
-        int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, uint64_t attach_logic_block_id);
+        int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, uint64_t attach_logic_block_id, const bool tmp = false);
         int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id, uint64_t attach_logic_block_id) const;
         int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks, const uint64_t logic_block_id) const;
 
