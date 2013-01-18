@@ -39,11 +39,6 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        output.set_int32(switch_flag_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
         int64_t pos = 0;
         ret = index_data_.serialize(output.get_free(), output.get_free_length(), pos);
         if (TFS_SUCCESS == ret)
@@ -64,11 +59,6 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = input.get_int32(&switch_flag_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
         int64_t pos = 0;
         int ret = index_data_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (TFS_SUCCESS == ret)
@@ -82,7 +72,7 @@ namespace tfs
 
     int64_t WriteIndexMessageV2::length() const
     {
-      return INT64_SIZE * 2 + INT_SIZE + index_data_.length();
+      return INT64_SIZE * 2 + index_data_.length();
     }
 
   }

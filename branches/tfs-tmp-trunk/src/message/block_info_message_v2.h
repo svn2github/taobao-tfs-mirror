@@ -223,8 +223,19 @@ namespace tfs
           return block_id_;
         }
 
+        void set_tmp_flag(const bool tmp)
+        {
+          tmp_ = tmp;
+        }
+
+        bool get_tmp_flag() const
+        {
+          return tmp_;
+        }
+
       private:
         uint64_t block_id_;
+        int8_t tmp_;
     };
 
     class UpdateBlockInfoMessageV2: public common::BasePacket

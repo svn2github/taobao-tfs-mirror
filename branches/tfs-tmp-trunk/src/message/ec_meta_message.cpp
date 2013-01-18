@@ -94,6 +94,10 @@ namespace tfs
       int ret = output.set_int64(block_id_);
       if (TFS_SUCCESS == ret)
       {
+        ret = output.set_int8(switch_flag_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
         int64_t pos = 0;
         int ret = ec_meta_.serialize(output.get_free(), output.get_free_length(), pos);
         if (TFS_SUCCESS == ret)
@@ -109,6 +113,10 @@ namespace tfs
       int ret = input.get_int64(reinterpret_cast<int64_t* >(&block_id_));
       if (TFS_SUCCESS == ret)
       {
+        ret = input.get_int8(&switch_flag_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
         int64_t pos = 0;
         int ret = ec_meta_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (TFS_SUCCESS == ret)
@@ -121,7 +129,7 @@ namespace tfs
 
     int64_t CommitEcMetaMessage::length() const
     {
-      return INT64_SIZE + ec_meta_.length();
+      return INT64_SIZE + INT8_SIZE + ec_meta_.length();
     }
 
   }

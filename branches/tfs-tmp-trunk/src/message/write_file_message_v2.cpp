@@ -21,8 +21,8 @@ namespace tfs
   namespace message
   {
     WriteFileMessageV2::WriteFileMessageV2():
-      attach_block_id_(INVALID_BLOCK_ID), lease_id_(INVALID_LEASE_ID),
-      flag_(INVALID_FLAG), data_(NULL)
+      attach_block_id_(INVALID_BLOCK_ID),
+      lease_id_(INVALID_LEASE_ID), flag_(INVALID_FLAG), data_(NULL)
     {
       _packetHeader._pcode = WRITE_FILE_MESSAGE_V2;
     }

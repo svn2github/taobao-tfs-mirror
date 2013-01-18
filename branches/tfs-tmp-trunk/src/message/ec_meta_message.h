@@ -97,9 +97,20 @@ namespace tfs
           ec_meta_ = ec_meta;
         }
 
+        void set_switch_flag(const int8_t switch_flag)
+        {
+          switch_flag_ = switch_flag;
+        }
+
+        int8_t get_switch_flag() const
+        {
+          return switch_flag_;
+        }
+
       private:
-        uint64_t block_id_;
         common::ECMeta ec_meta_;
+        uint64_t block_id_;
+        int8_t switch_flag_;
     };
 
   }

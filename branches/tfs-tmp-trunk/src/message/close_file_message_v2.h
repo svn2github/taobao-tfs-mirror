@@ -51,6 +51,16 @@ namespace tfs
           return file_id_;
         }
 
+        void set_attach_block_id(const uint64_t attach_block_id)
+        {
+          attach_block_id_ = attach_block_id;
+        }
+
+        uint64_t get_attach_block_id() const
+        {
+          return attach_block_id_;
+        }
+
         void set_lease_id(const uint64_t lease_id)
         {
           lease_id_ = lease_id;
@@ -101,14 +111,37 @@ namespace tfs
           return flag_;
         }
 
+        void set_family_info(const common::FamilyInfoExt& family_info)
+        {
+          family_info_ = family_info;
+        }
+
+        const common::FamilyInfoExt& get_family_info() const
+        {
+          return family_info_;
+        }
+
+        void set_tmp_flag(const bool tmp)
+        {
+          tmp_ = tmp;
+        }
+
+        bool get_tmp_flag()
+        {
+          return tmp_;
+        }
+
       private:
         uint64_t block_id_;
+        uint64_t attach_block_id_;
         uint64_t file_id_;
         uint64_t lease_id_;
         uint64_t master_id_;
         common::VUINT64 ds_;
+        common::FamilyInfoExt family_info_;
         uint32_t crc_;
         int32_t flag_;
+        int8_t tmp_; // meanless to client
     };
 
   }

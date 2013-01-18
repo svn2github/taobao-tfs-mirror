@@ -260,7 +260,7 @@ namespace tfs
     }
 
     RemoveBlockMessageV2::RemoveBlockMessageV2():
-      block_id_(INVALID_BLOCK_ID)
+      block_id_(INVALID_BLOCK_ID), tmp_(0)
     {
       _packetHeader._pcode = REMOVE_BLOCK_MESSAGE_V2;
     }
@@ -271,17 +271,27 @@ namespace tfs
 
     int RemoveBlockMessageV2::serialize(Stream& output) const
     {
-      return output.set_int64(block_id_);
+      int ret = output.set_int64(block_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(tmp_);
+      }
+      return ret;
     }
 
     int RemoveBlockMessageV2::deserialize(Stream& input)
     {
-      return input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
+      int ret = input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(&tmp_);
+      }
+      return ret;
     }
 
     int64_t RemoveBlockMessageV2::length() const
     {
-      return INT64_SIZE;
+      return INT64_SIZE + INT8_SIZE;
     }
 
     UpdateBlockInfoMessageV2::UpdateBlockInfoMessageV2():

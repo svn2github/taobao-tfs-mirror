@@ -61,21 +61,10 @@ namespace tfs
           index_data_ = index_data;
         }
 
-        void set_switch_flag(const int32_t switch_flag)
-        {
-          switch_flag_ = switch_flag;
-        }
-
-        int32_t get_switch_flag() const
-        {
-          return switch_flag_;
-        }
-
       private:
         common::IndexDataV2 index_data_;
         uint64_t block_id_;
         uint64_t attach_block_id_;
-        int32_t switch_flag_;
     };
   }
 }

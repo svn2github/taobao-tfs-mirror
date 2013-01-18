@@ -91,16 +91,6 @@ namespace tfs
           return ds_;
         }
 
-        void set_attach_block_id(const uint64_t attach_block_id)
-        {
-          attach_block_id_ = attach_block_id;
-        }
-
-        uint64_t get_attach_block_id() const
-        {
-          return attach_block_id_;
-        }
-
         void set_lease_id(const uint64_t lease_id)
         {
           lease_id_ = lease_id;
@@ -119,6 +109,16 @@ namespace tfs
         const char* get_data() const
         {
           return data_;
+        }
+
+        void set_attach_block_id(const uint64_t attach_block_id)
+        {
+          attach_block_id_ = attach_block_id;
+        }
+
+        uint64_t get_attach_block_id() const
+        {
+          return attach_block_id_;
         }
 
         void set_master_id(const uint64_t master_id)
@@ -149,6 +149,16 @@ namespace tfs
         int32_t get_flag() const
         {
           return flag_;
+        }
+
+        void set_family_info(const common::FamilyInfoExt& family_info)
+        {
+          family_info_ = family_info;
+        }
+
+        const common::FamilyInfoExt& get_family_info() const
+        {
+          return family_info_;
         }
 
       private:
