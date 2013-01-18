@@ -1,7 +1,6 @@
 package RestfulWebServiceTestCase;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
@@ -17,12 +16,7 @@ import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.FileRequestEntity;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.HeadMethod;
-import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.commons.httpclient.methods.PostMethod;
-import org.apache.commons.httpclient.methods.RequestEntity;
-import org.apache.commons.httpclient.methods.multipart.FilePart;
-import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
-import org.apache.commons.httpclient.methods.multipart.Part;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.AfterClass;
@@ -31,9 +25,6 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
-
-import com.taobao.common.tfs.TfsManager;
-
 
 import Tool.AssertTool;
 import Tool.ExpectMessage;
@@ -61,12 +52,13 @@ public class BaseCase
 		FileMap.put("2M", 2*(1<<20));
 		FileMap.put("20M", 20*(1<<20));
 		FileMap.put("30M", 30*(1<<20));
+		FileMap.put("100M", 100*(1<<20));
 		FileMap.put("1G", 1<<30);
 		FileMap.put("empty", 0);
 		//createFileMap(FileMap);
 	}
 	
-    public  void deleteDir(StringBuilder s,int n)
+    public  void deleteDir(StringBuilder s,int n,String Seed)
     {
     	Map<String, String> Ret = new HashMap<String, String>();
     	ExpectMessage ExpMeg = new ExpectMessage();
@@ -79,9 +71,9 @@ public class BaseCase
     	}
     	else
         {
-    	    s.append("/test");
+    	    s.append("/"+Seed);
     		n=n-1;
-    		deleteDir(s,n);
+    		deleteDir(s,n,Seed);
     		Ret = RmDir(App_id,User_id,s.toString());
     		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
     	}  
@@ -466,34 +458,3 @@ public class BaseCase
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

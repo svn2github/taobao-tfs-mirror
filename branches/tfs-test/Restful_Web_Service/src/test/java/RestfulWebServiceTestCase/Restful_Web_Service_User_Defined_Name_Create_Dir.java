@@ -132,7 +132,7 @@ public class Restful_Web_Service_User_Defined_Name_Create_Dir extends BaseCase
 		}
 		StringBuilder Dir_Del_Name = new StringBuilder ();
 		Dir_Del_Name.append("test");
-		deleteDir(Dir_Del_Name,8);
+		deleteDir(Dir_Del_Name,8,"test");
 	}
 	
 	@Test
@@ -169,7 +169,7 @@ public class Restful_Web_Service_User_Defined_Name_Create_Dir extends BaseCase
 		}
 		StringBuilder Dir_Del_Name = new StringBuilder ();
 		Dir_Del_Name.append("test");
-		deleteDir(Dir_Del_Name,8);
+		deleteDir(Dir_Del_Name,8,"test");
 	}
 	
 	@Test
@@ -184,7 +184,7 @@ public class Restful_Web_Service_User_Defined_Name_Create_Dir extends BaseCase
 		
 		StringBuilder Dir_Del_Name = new StringBuilder ();
 		Dir_Del_Name.append("test");
-		deleteDir(Dir_Del_Name,4);
+		deleteDir(Dir_Del_Name,4,"test");
 	}
 	
 	@Test
@@ -207,7 +207,7 @@ public class Restful_Web_Service_User_Defined_Name_Create_Dir extends BaseCase
 		
 		StringBuilder Dir_Del_Name = new StringBuilder ();
 		Dir_Del_Name.append("test");
-		deleteDir(Dir_Del_Name,5);
+		deleteDir(Dir_Del_Name,5,"test");
 	}
 	
 	@Test
@@ -280,7 +280,7 @@ public class Restful_Web_Service_User_Defined_Name_Create_Dir extends BaseCase
 		
 		StringBuilder Dir_Del_Name = new StringBuilder ();
 		Dir_Del_Name.append("test");
-		deleteDir(Dir_Del_Name,8);
+		deleteDir(Dir_Del_Name,8,"test");
 	}
 	
 	@Test
@@ -310,7 +310,7 @@ public class Restful_Web_Service_User_Defined_Name_Create_Dir extends BaseCase
 		}
 		StringBuilder Dir_Del_Name = new StringBuilder ();
 		Dir_Del_Name.append("test");
-		deleteDir(Dir_Del_Name,8);
+		deleteDir(Dir_Del_Name,8,"test");
 	}
 	
 	@Test
