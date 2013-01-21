@@ -586,20 +586,19 @@ namespace tfs
       uint64_t block_id = repl_info_.block_id_;
       uint64_t source_id = repl_info_.source_id_;
       uint64_t dest_id = repl_info_.destination_id_;
-      char buffer[MAX_READ_SIZE];  // just use 1M stack space
+      char data[MAX_READ_SIZE];  // just use 1M stack space
       int ret = TFS_SUCCESS;
       while ((TFS_SUCCESS == ret) && (offset < block_size))
       {
         length = std::min(block_size - offset, MAX_READ_SIZE);
-        ret = data_helper().read_raw_data(source_id, block_id, buffer, length, offset);
+        ret = data_helper().read_raw_data(source_id, block_id, data, length, offset);
         if (TFS_SUCCESS == ret)
         {
-          ret = data_helper().write_raw_data(dest_id, block_id, buffer, length, offset);
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          offset += length;
+          ret = data_helper().write_raw_data(dest_id, block_id, data, length, offset);
+          if (TFS_SUCCESS == ret)
+          {
+            offset += length;
+          }
         }
       }
 
@@ -611,23 +610,18 @@ namespace tfs
       uint64_t block_id = repl_info_.block_id_;
       uint64_t dest_id = repl_info_.destination_id_;
 
-      // TODO: update block version first
-
       uint64_t helper[MAX_DATA_MEMBER_NUM];
       ArrayHelper<uint64_t> attach_blocks(MAX_DATA_MEMBER_NUM, helper);
       int ret = block_manager().get_attach_blocks(attach_blocks, block_id);
-      if (TFS_SUCCESS == ret)
+      for (int i = 0; i < (TFS_SUCCESS == ret) && (attach_blocks.get_array_index()); i++)
       {
-        for (int i = 0; i < attach_blocks.get_array_index(); i++)
+        IndexDataV2 index_data;
+        ret = data_helper().read_index(service_.get_ds_ipport(),
+            block_id, *attach_blocks.at(i), index_data);
+        if (TFS_SUCCESS == ret)
         {
-          IndexDataV2 index_data;
-          ret = data_helper().read_index(service_.get_ds_ipport(),
+          ret = data_helper().write_index(dest_id,
               block_id, *attach_blocks.at(i), index_data);
-          if (TFS_SUCCESS == ret)
-          {
-            ret = data_helper().write_index(dest_id,
-                block_id, *attach_blocks.at(i), index_data);
-          }
         }
       }
 
@@ -648,7 +642,7 @@ namespace tfs
         ret = block_manager().get_used_offset(block_size, block_id);
         if ((TFS_SUCCESS == ret) && IS_VERFIFY_BLOCK(block_id))
         {
-          // index_num = block_manager().get_index_num();
+          ret = block_manager().get_index_num(index_num, block_id);
         }
       }
 
@@ -664,6 +658,8 @@ namespace tfs
       {
         ret = replicate_data(block_size);
       }
+
+      // TODO: add block version ???
 
       // replicate index
       if (TFS_SUCCESS == ret)
@@ -862,7 +858,8 @@ namespace tfs
         IndexDataV2 index_data;
         ret = data_helper().read_index(family_members_[i].server_,
             family_members_[i].block_, family_members_[i].block_, index_data);
-        for (int j = data_num; (TFS_SUCCESS == ret)  && (j < member_num); j++)
+        // backup every data block's index to all check blocks
+        for (int j = data_num; (TFS_SUCCESS == ret) && (j < member_num); j++)
         {
           ret = data_helper().write_index(family_members_[j].server_,
               family_members_[j].block_, family_members_[i].block_, index_data);
@@ -975,14 +972,26 @@ namespace tfs
       ECMeta ec_metas[member_num];
 
       int ret = TFS_SUCCESS;
+      bool lost_data = false;
+      bool lost_check = false;
       for (int i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
       {
-        if (ErasureCode::NODE_ALIVE != family_members_[i].status_)
+        if (ErasureCode::NODE_ALIVE == family_members_[i].status_)
         {
-          continue;  // only query alive nodes
+          ret = data_helper().query_ec_meta(family_members_[i].server_,
+              family_members_[i].block_, ec_metas[i]);
         }
-        ret = data_helper().query_ec_meta(family_members_[i].server_,
-            family_members_[i].block_, ec_metas[i]);
+        else if (ErasureCode::NODE_DEAD == family_members_[i].status_)
+        {
+          if (i < data_num)
+          {
+            lost_data = true;
+          }
+          else
+          {
+            lost_check = true;
+          }
+        }
       }
 
       // create lost block
@@ -996,7 +1005,7 @@ namespace tfs
         if (i < data_num)  // create data block
         {
           ret = data_helper().new_remote_block(family_members_[i].server_,
-            family_members_[i].block_, true);
+            family_members_[i].block_, true, family_id_, 0);
         }
         else // create parity block
         {
@@ -1005,22 +1014,22 @@ namespace tfs
         }
       }
 
-      // decode data & write to recovery target
+      // decode data & write to recover target
       if (TFS_SUCCESS == ret)
       {
         ret = decode_data(ec_metas, marshalling_len);
       }
 
-      // recovery data index
-      if (TFS_SUCCESS == ret)
+      // recover data index
+      if ((TFS_SUCCESS == ret) && lost_data)
       {
-        ret = recovery_data_index(marshalling_len);
+        ret = recover_data_index(marshalling_len);
       }
 
-      // recovery check index
-      if (TFS_SUCCESS == ret)
+      // recover check index
+      if ((TFS_SUCCESS == ret) && lost_check)
       {
-        ret = recovery_check_index(marshalling_len);
+        ret = recover_check_index(marshalling_len);
       }
 
       // commit family id & other infos
@@ -1104,7 +1113,7 @@ namespace tfs
           ret = decoder.decode(length);
         }
 
-        // recovery data
+        // recover data
         for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
         {
           if (ErasureCode::NODE_DEAD != erased_[i])
@@ -1126,38 +1135,34 @@ namespace tfs
       return ret;
     }
 
-    int ReinstateTask::recovery_data_index(const int32_t marshalling_len)
+    int ReinstateTask::recover_data_index(const int32_t marshalling_len)
     {
       int ret = TFS_SUCCESS;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
 
-      int32_t src = -1;
+      int32_t pi = -1;
+      for (int i = data_num; (i < member_num) && (pi < 0); i++)
+      {
+        if (ErasureCode::NODE_ALIVE == erased_[i])
+        {
+          pi = i;  // find a alive parity block's index
+          break;
+        }
+      }
+
+      ret = (pi > 0) ? TFS_SUCCESS: EXIT_NO_ENOUGH_DATA;
       for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
         if (ErasureCode::NODE_DEAD != erased_[i])
         {
-          continue; // we need find dead node to recovery
+          continue; // we need find dead node to recover
         }
 
         IndexDataV2 index_data;
-        for (int j = data_num; j < member_num; j++)
-        {
-          if (ErasureCode::NODE_ALIVE != erased_[i])
-          {
-            continue; // we need find alive node
-          }
-
-          ret = data_helper().read_index(family_members_[j].server_,
-              family_members_[j].block_, family_members_[i].block_, index_data);
-          if (TFS_SUCCESS == ret)
-          {
-            src = j;
-            break; // try all alive check nodes until success
-          }
-        }
-
+        ret = data_helper().read_index(family_members_[pi].server_,
+            family_members_[pi].block_, family_members_[i].block_, index_data);
         if (TFS_SUCCESS == ret)
         {
           ret = data_helper().write_index(family_members_[i].server_,
@@ -1166,8 +1171,8 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          ret = replicate_files(index_data, marshalling_len,
-              family_members_[i].block_, src, i);
+          ret = recover_updated_files(index_data, marshalling_len,
+              family_members_[i].block_, pi, i);
           if ((TFS_SUCCESS == ret) && index_data.finfos_.size() > 0)
           {
             // we just need update header here
@@ -1181,7 +1186,7 @@ namespace tfs
       return ret;
     }
 
-    int ReinstateTask::recovery_check_index(const int32_t marshalling_len)
+    int ReinstateTask::recover_check_index(const int32_t marshalling_len)
     {
       int ret = TFS_SUCCESS;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
@@ -1193,58 +1198,55 @@ namespace tfs
       {
         if (ErasureCode::NODE_ALIVE == erased_[i])
         {
-          pi = i;
+          pi = i;  // has parity block alive
           break;
         }
       }
 
-      if (pi > 0)  // recovery parity index from other parity block
+      if (pi > 0)  // recover parity index from other parity block
       {
-        ret = recovery_check_index_from_cnodes(marshalling_len, pi);
+        ret = recover_check_index_from_cnodes(marshalling_len, pi);
       }
       else
       {
-        ret = recovery_check_index_from_dnodes(marshalling_len);
+        ret = recover_check_index_from_dnodes(marshalling_len);
       }
 
       return ret;
     }
 
 
-    int ReinstateTask::recovery_check_index_from_dnodes(const int32_t marshalling_len)
+    int ReinstateTask::recover_check_index_from_dnodes(const int32_t marshalling_len)
     {
       int ret = TFS_SUCCESS;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
 
-      for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
+      // all data nodes are alive
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
-        if (ErasureCode::NODE_DEAD != erased_[i])
+        IndexDataV2 index_data;
+        ret = data_helper().read_index(family_members_[i].server_,
+            family_members_[i].block_, family_members_[i].block_, index_data);
+        for (int j = data_num; (TFS_SUCCESS == ret) && (j < member_num); j++)
         {
-          continue; // we need find dead node to recovery
-        }
-
-        for (int j = 0; (TFS_SUCCESS == ret) && (j < data_num); j++)
-        {
-          IndexDataV2 index_data;
-          ret = data_helper().read_index(family_members_[j].server_,
-              family_members_[j].block_, family_members_[j].block_, index_data);
-          if (TFS_SUCCESS == ret)
+          if (ErasureCode::NODE_DEAD != erased_[j])
           {
-            ret = data_helper().write_index(family_members_[i].server_,
-                family_members_[i].block_, family_members_[j].block_, index_data);
+            continue; // we need find dead node to recove
           }
+          ret = data_helper().write_index(family_members_[j].server_,
+              family_members_[j].block_, family_members_[i].block_, index_data);
           if (TFS_SUCCESS == ret)
           {
-            ret = replicate_files(index_data, marshalling_len,
-                family_members_[j].block_, j, i);
+            ret = recover_updated_files(index_data, marshalling_len,
+                family_members_[i].block_, i, j);
             if ((TFS_SUCCESS == ret) && index_data.finfos_.size() > 0)
             {
               // we just need update header here
               index_data.finfos_.clear();
-              ret = data_helper().write_index(family_members_[i].server_,
-                  family_members_[i].block_, family_members_[j].block_, index_data);
+              ret = data_helper().write_index(family_members_[j].server_,
+                  family_members_[j].block_, family_members_[i].block_, index_data);
             }
           }
         }
@@ -1253,7 +1255,7 @@ namespace tfs
       return ret;
     }
 
-    int ReinstateTask::recovery_check_index_from_cnodes(const int32_t marshalling_len,
+    int ReinstateTask::recover_check_index_from_cnodes(const int32_t marshalling_len,
         const int32_t pi)
     {
       int ret = TFS_SUCCESS;
@@ -1261,33 +1263,29 @@ namespace tfs
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
 
-      for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
-        if (ErasureCode::NODE_DEAD != erased_[i])
+        IndexDataV2 index_data;
+        ret = data_helper().read_index(family_members_[pi].server_,
+            family_members_[pi].block_, family_members_[i].block_, index_data);
+        for (int j = data_num; (TFS_SUCCESS == ret) && (j < member_num); j++)
         {
-          continue; // we need find dead node to recovery
-        }
-
-        for (int j = 0; (TFS_SUCCESS == ret) && (j < data_num); j++)
-        {
-          IndexDataV2 index_data;
-          ret = data_helper().read_index(family_members_[pi].server_,
-              family_members_[pi].block_, family_members_[j].block_, index_data);
-          if (TFS_SUCCESS == ret)
+          if (ErasureCode::NODE_DEAD != erased_[j]) continue;
           {
-            ret = data_helper().write_index(family_members_[i].server_,
-                family_members_[i].block_, family_members_[j].block_, index_data);
+            continue; // we need find dead node to recover
           }
+          ret = data_helper().write_index(family_members_[j].server_,
+              family_members_[j].block_, family_members_[i].block_, index_data);
           if (TFS_SUCCESS == ret)
           {
-            ret = replicate_files(index_data, marshalling_len,
-                family_members_[j].block_, pi, i);
+            ret = recover_updated_files(index_data, marshalling_len,
+                family_members_[i].block_, pi, j);
             if ((TFS_SUCCESS == ret) && index_data.finfos_.size() > 0)
             {
               // we just need update header here
               index_data.finfos_.clear();
-              ret = data_helper().write_index(family_members_[i].server_,
-                  family_members_[i].block_, family_members_[j].block_, index_data);
+              ret = data_helper().write_index(family_members_[j].server_,
+                  family_members_[j].block_, family_members_[i].block_, index_data);
             }
           }
         }
@@ -1296,7 +1294,7 @@ namespace tfs
       return ret;
     }
 
-    int ReinstateTask::replicate_files(const common::IndexDataV2& index_data,
+    int ReinstateTask::recover_updated_files(const common::IndexDataV2& index_data,
       const int32_t marshalling_len, const uint64_t block_id, const int32_t src, const int32_t dest)
     {
       int ret = TFS_SUCCESS;

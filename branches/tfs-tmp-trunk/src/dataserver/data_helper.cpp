@@ -51,9 +51,10 @@ namespace tfs
         ret = new_remote_block_ex(server_id, block_id, tmp, family_id, index_num);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "new remote block fail. server: %s, "
-              "blockid: "PRI64_PREFIX"u, tmp: %d, familyid: %"PRI64_PREFIX"u, index_num: %d",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, tmp, family_id, index_num);
+          TBSYS_LOG(WARN, "new remote block fail. server: %s, blockid: "PRI64_PREFIX"u, "
+              "tmp: %d, familyid: %"PRI64_PREFIX"u, index_num: %d, ret: %d",
+              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id,
+              tmp, family_id, index_num, ret);
         }
       }
 
@@ -71,8 +72,8 @@ namespace tfs
         ret = delete_remote_block_ex(server_id, block_id, tmp);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "delete remote block fail. server: %s, blockid: "PRI64_PREFIX"u",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, tmp);
+          TBSYS_LOG(WARN, "delete remote block fail. server: %s, blockid: "PRI64_PREFIX"u, ret: %d",
+              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, tmp, ret);
         }
       }
 
@@ -91,9 +92,10 @@ namespace tfs
         ret = read_raw_data_ex(server_id, block_id, data, length, offset);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "read raw data fail. "
-              "server: %s, blockid: %"PRI64_PREFIX"u, length: %d, offset: %d",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, length, offset);
+          TBSYS_LOG(WARN, "read raw data fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+              "length: %d, offset: %d, ret: %d",
+              tbsys::CNetUtil::addrToString(server_id).c_str(),
+              block_id, length, offset, ret);
         }
       }
       return ret;
@@ -110,9 +112,10 @@ namespace tfs
         ret =  write_raw_data_ex(server_id, block_id, data, length, offset);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "write raw data fail. "
-              "server: %s, blockid: %"PRI64_PREFIX"u, length: %d, offset: %d",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, length, offset);
+          TBSYS_LOG(WARN, "write raw data fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+              "length: %d, offset: %d, ret: %d",
+              tbsys::CNetUtil::addrToString(server_id).c_str(),
+              block_id, length, offset, ret);
         }
       }
       return ret;
@@ -129,9 +132,10 @@ namespace tfs
         ret = read_index_ex(server_id, block_id, attach_block_id, index_data);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "read index fail. "
-              "server: %s, blockid: %"PRI64_PREFIX"u, attach blockid: %"PRI64_PREFIX"u",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, attach_block_id);
+          TBSYS_LOG(WARN, "read index fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+              "attach blockid: %"PRI64_PREFIX"u, ret: %d",
+              tbsys::CNetUtil::addrToString(server_id).c_str(),
+              block_id, attach_block_id, ret);
         }
       }
       return ret;
@@ -148,9 +152,10 @@ namespace tfs
         ret = write_index_ex(server_id, block_id, attach_block_id, index_data);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "write index fail. "
-              "server: %s, blockid: %"PRI64_PREFIX"u, attach blockid: %"PRI64_PREFIX"u",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, attach_block_id);
+          TBSYS_LOG(WARN, "write index fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+              "attach blockid: %"PRI64_PREFIX"u, ret: %d",
+              tbsys::CNetUtil::addrToString(server_id).c_str(),
+              block_id, attach_block_id, ret);
         }
       }
       return ret;
@@ -167,8 +172,8 @@ namespace tfs
          ret = query_ec_meta_ex(server_id, block_id, ec_meta);
          if (TFS_SUCCESS == ret)
          {
-           TBSYS_LOG(WARN, "query ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u",
-               tbsys::CNetUtil::addrToString(server_id).c_str(), block_id);
+           TBSYS_LOG(WARN, "query ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u, ret: %d",
+               tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, ret);
          }
        }
        return ret;
@@ -185,8 +190,8 @@ namespace tfs
          ret = commit_ec_meta(server_id, block_id, ec_meta, switch_flag);
          if (TFS_SUCCESS == ret)
          {
-           TBSYS_LOG(WARN, "commit ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u",
-               tbsys::CNetUtil::addrToString(server_id).c_str(), block_id);
+           TBSYS_LOG(WARN, "commit ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u, ret: %d",
+               tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, ret);
          }
        }
        return ret;
@@ -212,9 +217,10 @@ namespace tfs
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(INFO, "reinstate read file fail. server: %s ,blockid: %"PRI64_PREFIX"u, "
-                "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, length: %d, offset: %d",
+                "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
+                "length: %d, offset: %d, ret: %d",
                 tbsys::CNetUtil::addrToString(server_id).c_str(),
-                block_id, attach_block_id, file_id, length, offset);
+                block_id, attach_block_id, file_id, length, offset, ret);
           }
           else
           {
@@ -246,9 +252,10 @@ namespace tfs
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(INFO, "reinstate write file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
-                "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, length: %d, offset: %d",
+                "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
+                "length: %d, offset: %d, ret: %d",
                 tbsys::CNetUtil::addrToString(server_id).c_str(),
-                block_id, attach_block_id, file_id, length, offset);
+                block_id, attach_block_id, file_id, length, offset, ret);
           }
           else
           {
@@ -263,9 +270,9 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(INFO, "reinstate close file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
-              "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u",
+              "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, ret: %d",
               tbsys::CNetUtil::addrToString(server_id).c_str(),
-              block_id, attach_block_id, file_id);
+              block_id, attach_block_id, file_id, ret);
         }
       }
 
@@ -275,27 +282,45 @@ namespace tfs
     int DataHelper::new_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
         const bool tmp, const uint64_t family_id, const int32_t index_num)
     {
-      NewBlockMessageV2 req_msg;
-      req_msg.set_block_id(block_id);
-      req_msg.set_tmp_flag(tmp);
-      req_msg.set_family_id(family_id);
-      req_msg.set_index_num(index_num);
+      int ret = TFS_SUCCESS;
+      if (server_id == service_.get_ds_ipport())
+      {
+        ret = block_manager().new_block(block_id, tmp, family_id, index_num);
+      }
+      else
+      {
+        NewBlockMessageV2 req_msg;
+        req_msg.set_block_id(block_id);
+        req_msg.set_tmp_flag(tmp);
+        req_msg.set_family_id(family_id);
+        req_msg.set_index_num(index_num);
 
-      int32_t status = TFS_ERROR;
-      int ret = send_msg_to_server(server_id, &req_msg, status);
-      return (ret < 0) ? ret: status;
+        int32_t status = TFS_ERROR;
+        ret = send_msg_to_server(server_id, &req_msg, status);
+        ret = (ret < 0) ? ret: status;
+      }
+      return ret;
     }
 
     int DataHelper::delete_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
         const bool tmp)
     {
-      RemoveBlockMessageV2 req_msg;
-      req_msg.set_block_id(block_id);
-      req_msg.set_tmp_flag(tmp);
+      int ret = TFS_SUCCESS;
+      if (server_id == service_.get_ds_ipport())
+      {
+        ret = block_manager().del_block(block_id, tmp);
+      }
+      else
+      {
+        RemoveBlockMessageV2 req_msg;
+        req_msg.set_block_id(block_id);
+        req_msg.set_tmp_flag(tmp);
 
-      int32_t status = TFS_ERROR;
-      int ret = send_msg_to_server(server_id, &req_msg, status);
-      return (ret < 0) ? ret: status;
+        int32_t status = TFS_ERROR;
+        ret = send_msg_to_server(server_id, &req_msg, status);
+        ret = (ret < 0) ? ret: status;
+      }
+      return ret;
     }
 
     int DataHelper::read_raw_data_ex(const uint64_t server_id, const uint64_t block_id,
@@ -451,35 +476,55 @@ namespace tfs
         common::ECMeta& ec_meta)
     {
       int ret = TFS_SUCCESS;
-      QueryEcMetaMessage req_msg;
-      tbnet::Packet* ret_msg;
-      req_msg.set_block_id(block_id);
-      NewClient* new_client = NewClientManager::get_instance().create_client();
-      if (NULL == new_client)
+      if (server_id == service_.get_ds_ipport())
       {
-        ret = TFS_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = block_manager().get_family_id(ec_meta.family_id_, block_id);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = block_manager().get_used_offset(ec_meta.used_offset_, block_id);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
+        }
       }
       else
       {
-        ret = send_msg_to_server(server_id, new_client, &req_msg, ret_msg);
-        if (TFS_SUCCESS == ret)
+        QueryEcMetaMessage req_msg;
+        tbnet::Packet* ret_msg;
+        req_msg.set_block_id(block_id);
+        NewClient* new_client = NewClientManager::get_instance().create_client();
+        if (NULL == new_client)
         {
-          if (QUERY_EC_META_RESP_MESSAGE == ret_msg->getPCode())
-          {
-            QueryEcMetaRespMessage* resp_msg = dynamic_cast<QueryEcMetaRespMessage* >(ret_msg);
-            ec_meta = resp_msg->get_ec_meta();
-          }
-          else if (STATUS_MESSAGE == ret_msg->getPCode())
-          {
-            StatusMessage* resp_msg = dynamic_cast<StatusMessage*>(ret_msg);
-            ret = resp_msg->get_status();
-          }
-          else
-          {
-            ret = TFS_ERROR;
-          }
+          ret = TFS_ERROR;
         }
-        NewClientManager::get_instance().destroy_client(new_client);
+        else
+        {
+          ret = send_msg_to_server(server_id, new_client, &req_msg, ret_msg);
+          if (TFS_SUCCESS == ret)
+          {
+            if (QUERY_EC_META_RESP_MESSAGE == ret_msg->getPCode())
+            {
+              QueryEcMetaRespMessage* resp_msg = dynamic_cast<QueryEcMetaRespMessage* >(ret_msg);
+              ec_meta = resp_msg->get_ec_meta();
+            }
+            else if (STATUS_MESSAGE == ret_msg->getPCode())
+            {
+              StatusMessage* resp_msg = dynamic_cast<StatusMessage*>(ret_msg);
+              ret = resp_msg->get_status();
+            }
+            else
+            {
+              ret = TFS_ERROR;
+            }
+          }
+          NewClientManager::get_instance().destroy_client(new_client);
+        }
       }
 
       return ret;
@@ -488,14 +533,33 @@ namespace tfs
     int DataHelper::commit_ec_meta_ex(const uint64_t server_id, const uint64_t block_id,
         const common::ECMeta& ec_meta, const int8_t switch_flag)
     {
-      CommitEcMetaMessage req_msg;
-      req_msg.set_block_id(block_id);
-      req_msg.set_ec_meta(ec_meta);
-      req_msg.set_switch_flag(switch_flag);
+      int ret = TFS_SUCCESS;
+      if (server_id == service_.get_ds_ipport())
+      {
+        // commit family id
+        if ((TFS_SUCCESS == ret) && (ec_meta.family_id_ >= 0))
+        {
+          ret = block_manager().set_family_id(ec_meta.family_id_, block_id);
+        }
 
-      int32_t status = TFS_ERROR;
-      int ret = send_msg_to_server(server_id, &req_msg, status);
-      return (ret < 0) ? ret : status;
+        // commit marshalling length
+        if ((TFS_SUCCESS == ret) && (ec_meta.mars_offset_ > 0))
+        {
+          ret = block_manager().set_marshalling_offset(ec_meta.mars_offset_, block_id);
+        }
+      }
+      else
+      {
+        CommitEcMetaMessage req_msg;
+        req_msg.set_block_id(block_id);
+        req_msg.set_ec_meta(ec_meta);
+        req_msg.set_switch_flag(switch_flag);
+
+        int32_t status = TFS_ERROR;
+        ret = send_msg_to_server(server_id, &req_msg, status);
+        ret = (ret < 0) ? ret : status;
+      }
+      return ret;
     }
 
     int DataHelper::read_file_ex(const uint64_t server_id, const uint64_t block_id,

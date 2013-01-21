@@ -179,6 +179,12 @@ namespace tfs
       return index_handle_->get_attach_blocks(blocks);
     }
 
+    int BaseLogicBlock::get_index_num(int32_t& index_num) const
+    {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return index_handle_->get_index_num(index_num);
+    }
+
     int BaseLogicBlock::get_family_id(int64_t& family_id) const
     {
       family_id = INVALID_FAMILY_ID;

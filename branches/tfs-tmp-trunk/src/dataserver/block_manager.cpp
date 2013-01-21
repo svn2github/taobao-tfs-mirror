@@ -562,6 +562,21 @@ namespace tfs
       return ret;
     }
 
+    int BlockManager::get_index_num(int32_t& index_num, const uint64_t logic_block_id) const
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->get_index_num(index_num);
+        }
+      }
+      return ret;
+    }
+
     bool BlockManager::exist(const uint64_t logic_block_id, const bool tmp) const
     {
       return logic_block_manager_.exist(logic_block_id, tmp);
