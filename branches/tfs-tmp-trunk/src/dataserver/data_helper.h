@@ -38,9 +38,6 @@ namespace tfs
         int delete_remote_block(const uint64_t server_id, const uint64_t block_id,
             const bool tmp = false);
 
-        /**
-         * use following interface to do flow control
-         */
         int read_raw_data(const uint64_t server_id, const uint64_t block_id,
             char* data, int32_t& length, const int32_t offset);
         int write_raw_data(const uint64_t server_id, const uint64_t block_id,
@@ -54,10 +51,23 @@ namespace tfs
             common::ECMeta& ec_meta);
         int commit_ec_meta(const uint64_t server_id, const uint64_t block_id,
             const common::ECMeta& ec_meta, const int8_t switch_flag = common::SWITCH_BLOCK_NO);
+
         int query_file_info(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id, common::FileInfoV2& finfo);
+        int read_file(const uint64_t server_id, const uint64_t block_id,
+            const uint64_t attach_block_id, const uint64_t file_id,
+            char* data, int32_t& len);
+        int write_file(const uint64_t server_id, const uint64_t block_id,
+            const uint64_t attach_block_id, const uint64_t file_id,
+            const char*data, const int32_t len);
 
       private:
+        int new_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
+            const bool tmp = false, const uint64_t family_id = common::INVALID_FAMILY_ID ,
+            const int32_t index_num = 0);
+        int delete_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
+            const bool tmp = false);
+
         int read_raw_data_ex(const uint64_t server_id, const uint64_t block_id,
             char* data, int32_t& length, const int32_t offset);
         int write_raw_data_ex(const uint64_t server_id, const uint64_t block_id,
@@ -66,6 +76,20 @@ namespace tfs
             const uint64_t attach_block_id, common::IndexDataV2& index_data);
         int write_index_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data);
+
+        int query_ec_meta_ex(const uint64_t server_id, const uint64_t block_id,
+            common::ECMeta& ec_meta);
+        int commit_ec_meta_ex(const uint64_t server_id, const uint64_t block_id,
+            const common::ECMeta& ec_meta, const int8_t switch_flag = common::SWITCH_BLOCK_NO);
+
+        int read_file_ex(const uint64_t server_id, const uint64_t block_id,
+            const uint64_t attach_block_id, const uint64_t file_id,
+            char* data, int32_t& length, const int32_t offset);
+        int write_file_ex(const uint64_t server_id, const uint64_t block_id,
+            const uint64_t attach_block_id, const uint64_t file_id,
+            const char* data, const int32_t length, const int32_t offset, uint64_t& lease_id);
+        int close_file_ex(const uint64_t server_id, const uint64_t block_id,
+            const uint64_t attach_block_id, const uint64_t file_id, const uint64_t lease_id);
 
       private:
         DataService& service_;

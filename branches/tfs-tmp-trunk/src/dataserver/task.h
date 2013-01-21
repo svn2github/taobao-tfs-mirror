@@ -299,8 +299,13 @@ namespace tfs
       private:
         DISALLOW_COPY_AND_ASSIGN(ReinstateTask);
         int do_reinstate();
-        int decode_data(common::ECMeta* ec_meta);
-        int recovery_index();
+        int decode_data(common::ECMeta* ec_meta, int32_t& marshalling_len);
+        int recovery_data_index(const int32_t marshalling_len);
+        int recovery_check_index(const int32_t marshalling_len);
+        int recovery_check_index_from_dnodes(const int32_t marshalling_len);
+        int recovery_check_index_from_cnodes(const int32_t marshalling_len, const int32_t pi);
+        int replicate_files(const common::IndexDataV2& index_data,
+          const int32_t marshalling_len, uint64_t block_id, const int32_t src, const int32_t dest);
 
       private:
         int erased_[common::MAX_MARSHALLING_NUM];

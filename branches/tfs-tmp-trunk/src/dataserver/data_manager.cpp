@@ -194,15 +194,19 @@ namespace tfs
         (INVALID_LEASE_ID == lease_id ) || (NULL == buffer) || (offset < 0) || (length <= 0)) ?
         EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
-      ret = block_manager().check_block_version(local, remote_version, block_id);
-      if (TFS_SUCCESS != ret)
+      if ((TFS_SUCCESS == ret) && (remote_version >= 0))  // remote version < 0, don't check
       {
-        TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
-            "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
-            "remote version: %d, local version: %d, ret: %d",
-            block_id, file_id, lease_id, remote_version, local.version_, ret);
+        ret = block_manager().check_block_version(local, remote_version, block_id);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
+              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
+              "remote version: %d, local version: %d, ret: %d",
+              block_id, file_id, lease_id, remote_version, local.version_, ret);
+        }
       }
-      else
+
+      if (TFS_SUCCESS == ret)
       {
         int64_t now = Func::get_monotonic_time();
         Lease* lease = NULL;

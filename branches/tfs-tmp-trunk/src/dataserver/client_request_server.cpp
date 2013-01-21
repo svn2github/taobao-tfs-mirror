@@ -294,7 +294,7 @@ namespace tfs
       uint64_t lease_id = message->get_lease_id();
       uint64_t master_id = message->get_master_id();
       uint32_t crc = message->get_crc();
-      bool tmp = message->get_tmp_flag();
+      bool tmp = message->get_tmp_flag(); // if true, we are writing a tmp block
       bool is_master = (master_id == service_.get_ds_ipport());
 
       const VUINT64& servers = message->get_ds();
@@ -623,6 +623,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       uint64_t lease_id = message->get_lease_id();
       uint64_t peer_id = message->get_connection()->getPeerId();
+      bool tmp = message->get_tmp_flag();
       int64_t file_size = 0;
       int64_t req_cost_time = 0;
       stringstream err_msg;
@@ -632,12 +633,19 @@ namespace tfs
           file_id, lease_id, ret, req_cost_time, file_size, err_msg);
       if (all_finish)
       {
-        ret = data_manager().update_block_info(block_id, file_id, lease_id, UNLINK_FLAG_NO);
+        if (!tmp) // close tmp block no need to commit
+        {
+          ret = data_manager().update_block_info(block_id, file_id, lease_id, UNLINK_FLAG_NO);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(WARN, "update block info fail. blockid: %"PRI64_PREFIX"u, "
+                "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
+                block_id, file_id, lease_id, ret);
+          }
+        }
+
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "update block info fail. blockid: %"PRI64_PREFIX"u, "
-              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
-              block_id, file_id, lease_id, ret);
           message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, err_msg.str().c_str());
         }
         else
