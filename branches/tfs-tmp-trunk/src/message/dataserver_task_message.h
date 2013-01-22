@@ -85,12 +85,12 @@ namespace tfs
         inline void set_status(const int32_t status) { status_ = status;}
         inline uint64_t get_ds_id() const { return ds_id_; }
         inline void set_ds_id(const uint64_t ds_id) { ds_id_ = ds_id; }
-        inline void set_block_info(const common::BlockInfo& info) { info_ = info; }
-        inline common::BlockInfo* get_block_info() { return &info_; }
+        inline void set_block_info(const common::BlockInfoV2& info) { info_ = info; }
+        inline common::BlockInfoV2* get_block_info() { return &info_; }
       private:
         int32_t status_;
         uint64_t ds_id_;
-        common::BlockInfo info_;
+        common::BlockInfoV2 info_;
     };
 
   }
