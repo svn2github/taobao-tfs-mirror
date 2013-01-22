@@ -101,7 +101,7 @@ public class VerifyTool extends HelpProc {
 	{
 		HttpClient client = new HttpClient();
 		HttpConnectionManagerParams managerParams = client.getHttpConnectionManager().getParams();
-		managerParams.setConnectionTimeout(30000);
+		managerParams.setConnectionTimeout(300000);
 		managerParams.setSoTimeout(120000);
 		int status = client.executeMethod(method);
 		System.out.println("the status: "+status);

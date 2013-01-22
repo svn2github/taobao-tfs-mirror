@@ -364,7 +364,7 @@ public class TFS_Restful_Delete_File_Test_File_Size_Test extends BaseCase {
 			
 			/* do delete file aciton */
 			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage);
-			TimeUnit.SECONDS.sleep(20);
+			
 			
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithOutSuffix, expectStatu);

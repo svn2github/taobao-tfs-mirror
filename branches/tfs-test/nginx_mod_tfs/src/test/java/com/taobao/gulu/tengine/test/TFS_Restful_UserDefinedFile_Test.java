@@ -1186,6 +1186,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 		String localFile = _2kFile;
 		try 
 		{
+			 restartMeta();
 
 			// set expect response message
 			Map<String, String> expectPostMessage201 = new HashMap<String, String>();
@@ -1537,15 +1538,16 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase
 			/* do post file action */
 			System.out.println("key point  begin");
 
-			// create file
 			tools.verifyResponse(setDeleteMethod(urlDelFile));
 			
 			tools.verifyResponse(setPostMethod(urlDelFile),expectPostMessage201);
-			// write file
 			tools.verifyResponse(setPutMethod(postFileUrl, localFile),expecMessage200);
-
-			// read file
+			
+			tools.verifyResponse(setGetMethod(urlDelFile), expecMessage200);
+			
 			tools.verifyResponse(setGetMethod(urlReadFile), expecMessage400);
+			
+			tools.verifyResponse(setGetMethod(urlDelFile), expecMessage200);
 			//delete  file
 			tools.verifyResponse(setDeleteMethod(urlDelFile), expecMessage200);
 		} catch (Exception e) {

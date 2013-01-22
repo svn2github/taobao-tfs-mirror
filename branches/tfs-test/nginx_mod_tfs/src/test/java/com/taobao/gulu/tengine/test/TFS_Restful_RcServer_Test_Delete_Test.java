@@ -1,7 +1,15 @@
 package com.taobao.gulu.tengine.test;
 
+import java.sql.Time;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
@@ -9,11 +17,50 @@ import org.junit.Test;
 
 import com.taobao.gulu.database.TFS;
 import com.taobao.gulu.tengine.BaseCase;
+import com.taobao.gulu.tengine.Delete;
 import com.taobao.gulu.tools.VerifyTool;
 
 public class TFS_Restful_RcServer_Test_Delete_Test extends BaseCase 
 {
-
+	@Test
+	public void test_TFS_Restful_RcServer_Retry_Read2() throws InterruptedException, ExecutionException
+	{
+	    ExecutorService exec = Executors.newFixedThreadPool(10);   
+        ArrayList<Future<Integer>> results = new ArrayList<Future<Integer>>();  
+        int ThreadNum = 10;
+        int i;
+        for (i = 0; i < ThreadNum; i++) 
+        {   
+            results.add(exec.submit(new Delete()));   
+        }   
+ 
+        Set  set=new HashSet();
+        int n = ThreadNum;
+        while(n!=0)
+        {
+        	TimeUnit.SECONDS.sleep(10);
+ 
+            for(i = 0 ;i < ThreadNum; i++)
+            {
+                if (results.get(i).isDone()) 
+                {   
+                    System.out.println("!!!!!!"+results.get(i).get()+"!!!!!!"); 
+                    if(set.add(i))
+                        --n;
+                } 
+                else 
+                {   
+                    System.out.println("Future of "+i+" result is not yet complete");   
+                }  
+            }
+ 
+            System.out.println("______________________________________");
+ 
+        }
+ 
+        exec.shutdown();   
+    } 
+	
 	/* 
 	 * 特殊数据删除
 	 * 在T2M[T2M（读）（独立的物理集群，存放以前的老数据）]中存放一些T2数据

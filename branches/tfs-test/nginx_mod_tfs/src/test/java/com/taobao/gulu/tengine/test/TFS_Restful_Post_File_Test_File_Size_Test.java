@@ -884,7 +884,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
-			TimeUnit.SECONDS.sleep(20);
+			
 			if (put2TfsKeys.size() > 0) {
 				for (String key : put2TfsKeys) {
 					System.out.println("tfsFileName for delete is " + key);
@@ -1861,7 +1861,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
-			TimeUnit.SECONDS.sleep(20);
+			
 			if (put2TfsKeys.size() > 0) {
 				for (String key : put2TfsKeys) {
 					System.out.println("tfsFileName for delete is " + key);
@@ -1997,7 +1997,7 @@ public class TFS_Restful_Post_File_Test_File_Size_Test extends BaseCase {
 			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
-			TimeUnit.SECONDS.sleep(20);
+			
 			if (put2TfsKeys.size() > 0) {
 				for (String key : put2TfsKeys) {
 					System.out.println("tfsFileName for delete is " + key);

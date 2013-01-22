@@ -92,7 +92,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
-			TimeUnit.SECONDS.sleep(20);
+			
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
 			tfsServer.delete(tfsFileNameWithSuffix, null);
 		}
@@ -4204,7 +4204,7 @@ public class TFS_Restful_Get_File_Test_URL_Arg_Test extends BaseCase {
 			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
-			TimeUnit.SECONDS.sleep(20);
+			
 			System.out.println("tfsFileName for delete is " + tfsFileNameWithSuffix);
 			tfsServer.delete(tfsFileNameWithSuffix, null);
 			

@@ -2230,7 +2230,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			e.printStackTrace(); Assert.assertTrue(false);
 		}finally{
 			/* do delete tfs file */
-			TimeUnit.SECONDS.sleep(20);
+			
 			if (put2TfsKeys.size() > 0) {
 				for (String key : put2TfsKeys) {
 					System.out.println("tfsFileName for delete is " + key);
@@ -3644,8 +3644,8 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			String deleteUrl = url + "/" + tfsFileNameWithSuffix;
 			System.out.println("the deleteUrl : " + deleteUrl);
 			// do delete file aciton 
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
-			TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
+			
 			
 			/* set get meta method request */
 			// setting request info -- with suffix
@@ -3670,7 +3670,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			deleteUrl = url + "/" + tfsFileNameWithSuffixAndSimpleName;
 			System.out.println("the deleteUrl : " + deleteUrl);
 			// do delete file aciton 
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			// setting meta request info -- with suffix and simple name
 	//		getMetaUrl = url + "/metadata/" + tfsFileNameWithSuffixAndSimpleName + "?suffix=" + suffix + "&type=" + type;
@@ -3781,7 +3781,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			String deleteUrl = url + "/" + tfsFileNameWithSuffix;
 			System.out.println("the deleteUrl : " + deleteUrl);
 			// do delete file aciton 
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffix, expectStatu);
 			/* set get meta method request */
@@ -3819,7 +3819,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			deleteUrl = url + "/" + tfsFileNameWithSuffixAndSimpleName;
 			System.out.println("the deleteUrl : " + deleteUrl);
 			// do delete file aciton 
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			
 			/* set get meta info request after delete */
@@ -3936,7 +3936,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			String deleteUrl = url + "/" + tfsFileNameWithSuffix;
 			System.out.println("the deleteUrl : " + deleteUrl);
 			// do delete file aciton 
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			/* set get meta method request */
 			// setting request info -- with suffix
@@ -3961,7 +3961,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			deleteUrl = url + "/" + tfsFileNameWithSuffixAndSimpleName;
 			System.out.println("the deleteUrl : " + deleteUrl);
 			// do delete file aciton 
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			// setting meta request info -- with suffix and simple name
 	//		getMetaUrl = url + "/metadata/" + tfsFileNameWithSuffixAndSimpleName + "?suffix=" + suffix + "&type=" + type;
@@ -4073,7 +4073,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			System.out.println("the hideUrl : " + deleteUrl);
 			
 			/* do delete file aciton */
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffix, suffix, expectStatu_hide);
@@ -4103,7 +4103,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			deleteUrl = url + "/" + tfsFileNameWithSuffixAndSimpleName + "?suffix=" + suffix + "&type=" + type_hide;
 			System.out.println("the hideUrl : " + deleteUrl);
 			// do delete file aciton 
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffixAndSimpleName, suffix, expectStatu_hide);
 			// setting meta request info -- with suffix and simple name
@@ -4216,7 +4216,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			System.out.println("the hideUrl : " + deleteUrl);
 			
 			/* do delete file aciton */
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffix, suffix, expectStatu_hide);
@@ -4260,7 +4260,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			deleteUrl = url + "/" + tfsFileNameWithSuffixAndSimpleName + "?suffix=" + suffix + "&type=" + type_hide;
 			System.out.println("the hideUrl : " + deleteUrl);
 			// do delete file aciton 
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			// setting meta request info -- with suffix and simple name
 	//		getMetaUrl = url + "/metadata/" + tfsFileNameWithSuffixAndSimpleName + "?suffix=" + suffix + "&type=" + type;
@@ -4386,7 +4386,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			System.out.println("the hideUrl : " + deleteUrl);
 			
 			/* do delete file aciton */
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffix, suffix, expectStatu_hide);
@@ -4416,7 +4416,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			deleteUrl = url + "/" + tfsFileNameWithSuffixAndSimpleName + "?suffix=" + suffix + "&type=" + type_hide;
 			System.out.println("the hideUrl : " + deleteUrl);
 			// do delete file aciton 
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffixAndSimpleName, suffix, expectStatu_hide);
 			// setting meta request info -- with suffix and simple name
@@ -5328,8 +5328,8 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			System.out.println("the deleteUrl : " + deleteUrl);
 			
 			/* do delete file aciton */
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
-			TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
+			
 			
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffix, suffix, expectStatu);
@@ -5366,7 +5366,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			System.out.println("the deleteUrl : " + deleteUrl);
 			
 			/* do delete file aciton */
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffixAndSimpleName, suffix, expectStatu);
@@ -5492,7 +5492,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			System.out.println("the deleteUrl : " + deleteUrl);
 			
 			/* do delete file aciton */
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffix, suffix, expectStatu);
@@ -5538,7 +5538,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			System.out.println("the deleteUrl : " + deleteUrl);
 			
 			/* do delete file aciton */
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffixAndSimpleName, suffix, expectStatu);
@@ -5677,8 +5677,8 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			System.out.println("the deleteUrl : " + deleteUrl);
 			
 			/* do delete file aciton */
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
-			TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
+			
 			
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffix, suffix, expectStatu);
@@ -5715,7 +5715,7 @@ public class TFS_Restful_Get_File_Meta_Test_URL_Arg_Test extends BaseCase {
 			System.out.println("the deleteUrl : " + deleteUrl);
 			
 			/* do delete file aciton */
-			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); TimeUnit.SECONDS.sleep(20);
+			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage); 
 			
 			// use java client verify the status info 
 			tools.verifyTFSFileStatu(tfsServer, tfsFileNameWithSuffixAndSimpleName, suffix, expectStatu);

@@ -158,6 +158,7 @@ public class BaseCase {
 		tfs_NginxB03.init();
 		tfs_NginxIPMap01.init();
 		tfs_NginxIPMap02.init();
+		tfs_NginxC01.init();
 		//init tair
 		tair_01.init();
 	}
@@ -372,6 +373,5 @@ public class BaseCase {
 	{
 		VerifyTool tools = new VerifyTool();
 		tools.verifyCMDWithDumbPTY(SERVER036202,RESTART_META,"","");
-		TimeUnit.SECONDS.sleep(2);
 	}
 }
