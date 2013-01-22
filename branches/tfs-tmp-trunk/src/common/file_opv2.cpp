@@ -81,6 +81,7 @@ namespace tfs
               total += length;
             }
           }
+          check_return_value_(ret);
         }
       }
       return  ret < 0 ? ret : total;
@@ -125,6 +126,7 @@ namespace tfs
               total += length;
             }
           }
+          check_return_value_(ret);
         }
       }
       return  ret < 0 ? ret : total;
@@ -168,6 +170,7 @@ namespace tfs
               total += length;
             }
           }
+          check_return_value_(ret);
         }
       }
       return  ret < 0 ? ret : total;
@@ -258,6 +261,16 @@ namespace tfs
     int32_t FileOperation::check_()
     {
       return fd_ < 0 ? this->open() : fd_;
+    }
+
+    void FileOperation::check_return_value_(const int32_t ret) const
+    {
+      if (EPERM == -ret || EIO == -ret || ENXIO == -ret
+          || EACCES == -ret || EROFS == -ret)
+      {
+        TBSYS_LOG(WARN, "current file system mybe invalid,we'll shutdown, error: %s", strerror(ret));
+        assert(false);
+      }
     }
   }/** end namespace common **/
 }/** end namespace tfs **/

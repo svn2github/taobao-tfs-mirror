@@ -116,7 +116,6 @@ namespace tfs
     static const int8_t INT64_SIZE = 8;
 
     static const int32_t MAX_PATH_LENGTH = 256;
-    static const int32_t MAX_ADDRESS_LENGTH = 64;
     static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
     static const int64_t MAX_CMD_SIZE = 1024;
     static const int32_t MAX_BATCH_SIZE = 8;
@@ -159,7 +158,6 @@ namespace tfs
     static const int64_t MIN_GC_EXPIRED_TIME = 21600000; // 6h
     static const int64_t MAX_SEGMENT_SIZE = 1 << 21; // 2M
     static const int64_t MAX_BATCH_COUNT = 16;
-    static const int64_t MAX_REPLICATION = 16;
 
     static const int32_t MAX_DEV_TAG_LEN = 8;
 
@@ -182,6 +180,13 @@ namespace tfs
     static const int32_t MIN_EXT_BLOCK_SIZE    = 2 * 1024 * 1024;
     static const int32_t MAX_BLOCK_SIZE        = 128 * 1024 * 1024;
     static const int32_t MIN_BLOCK_SIZE        = 2 * 1024 * 1024;
+
+    static const int32_t MAX_SINGLE_CLUSTER_NS_NUM = 2;
+    static const int32_t MAX_SYNC_IPADDR_LENGTH    = 256;
+
+    static const int32_t MAX_RW_STAT_PAIR_NUM  = 2;
+    static const int32_t DEFAULT_MAX_MR_NETWORK_CAPACITY_MB = 6;
+    static const int32_t DEFAULT_MAX_RW_NETWORK_CAPACITY_MB = 12;
 
     enum VersionStep
     {
@@ -413,11 +418,11 @@ namespace tfs
       LARGE_TFS_FILE_TYPE
     };
 
-    enum BlkType
+    /*enum BlkType
     {
       BLOCK_TYPE_DATA_BLOCK = 0,
       BLOCK_TYPE_CHECK_BLOCK
-    };
+    };*/
 
     struct SSMScanParameter
     {
@@ -674,13 +679,18 @@ namespace tfs
       uint64_t id_;
       int64_t use_capacity_;
       int64_t total_capacity_;
+      int64_t write_bytes_[2];
+      int64_t write_file_count_[2];
+      int64_t read_bytes_[2];
+      int64_t read_file_count_[2];
+      int64_t unlink_file_count_[2];
       int32_t current_load_;
       int32_t block_count_;
       int32_t last_update_time_;
       int32_t startup_time_;
-      Throughput total_tp_;
       int32_t current_time_;
-      DataServerLiveStatus status_;
+      int32_t status_;
+      int32_t total_network_bandwith_;
     };
 
     struct WriteDataInfo
@@ -774,6 +784,18 @@ namespace tfs
     };
 
     struct ClientCmdInformation
+    {
+      int64_t value1_;
+      int64_t value2_;
+      int64_t value3_;
+      int64_t value4_;
+      int32_t  cmd_;
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
+    };
+
+    struct ToolsClientCmdInformation
     {
       int64_t value1_;
       int64_t value2_;
@@ -1068,7 +1090,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[44];
+    extern const char* dynamic_parameter_str[46];
 
     #pragma pack (1)
     struct FileInfoV2//30
@@ -1204,12 +1226,24 @@ namespace tfs
         return left.mars_offset_ < right.mars_offset_;
       }
 
-
-
-
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
+    };
+
+#define TIMER_START()\
+    TimeStat time_stat;\
+    time_stat.start()
+
+#define TIMER_END() time_stat.end()
+#define TIMER_DURATION() time_stat.duration()
+    struct TimeStat
+    {
+      inline void start() { start_ = tbsys::CTimeUtil::getTime();}
+      inline void end() { end_ = tbsys::CTimeUtil::getTime();}
+      inline int64_t duration() const { return end_ - start_;}
+      int64_t start_;
+      int64_t end_;
     };
 
     // defined type typedef

@@ -72,6 +72,8 @@ namespace tfs
       int32_t marshalling_task_expired_time_;
       int32_t reinstate_task_expired_time_;
       int32_t dissolve_task_expired_time_;
+      int32_t max_mr_network_bandwith_ratio_;
+      int32_t max_rw_network_bandwith_ratio_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

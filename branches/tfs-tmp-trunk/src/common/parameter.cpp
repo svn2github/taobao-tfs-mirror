@@ -62,6 +62,8 @@ namespace tfs
       marshalling_task_expired_time_ = 360;
       reinstate_task_expired_time_ = 240;
       dissolve_task_expired_time_  = 120;
+      max_mr_network_bandwith_ratio_ = 50;
+      max_rw_network_bandwith_ratio_ = 50;
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
       report_block_time_interval_min_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL_MIN, 0);
       max_write_timeout_= TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_TIMEOUT, 3);
@@ -280,7 +282,7 @@ namespace tfs
 
     int DataServerParameter::get_real_ds_port(const int ds_port, const std::string& index)
     {
-      return ds_port + ((atoi((index.c_str())) - 1) * PORT_PER_PROCESS);
+      return ds_port + ((atoi((index.c_str())) - 1));
     }
 
     int FileSystemParameter::initialize(const std::string& index)

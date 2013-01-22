@@ -49,6 +49,7 @@ namespace tfs
 
       protected:
         int32_t check_() ;
+        void check_return_value_(const int32_t ret) const;
         static const int MAX_DISK_TIMES = 5;
         static const int OPEN_MODE = 0644;
         std::string path_;//file path
