@@ -156,11 +156,23 @@ namespace tfs
       return insert_(family_id, family_aid_info, members, now);
     }
 
+    bool FamilyManager::exist(const int64_t family_id, const uint64_t block) const
+    {
+      bool ret = (INVALID_FAMILY_ID != family_id && INVALID_BLOCK_ID != block);
+      if (ret)
+      {
+        RWLock::Lock lock(get_mutex_(family_id), READ_LOCKER);
+        FamilyCollect* family = get_(family_id);
+        ret = family->exist(block);
+      }
+      return ret;
+    }
+
     bool FamilyManager::exist(int32_t& version, const int64_t family_id, const uint64_t block, const int32_t new_version)
     {
       version = 0;
       bool ret = (INVALID_FAMILY_ID != family_id && INVALID_BLOCK_ID != block && new_version > 0);
-      if (TFS_SUCCESS == ret)
+      if (ret)
       {
         RWLock::Lock lock(get_mutex_(family_id), READ_LOCKER);
         FamilyCollect* family = get_(family_id);

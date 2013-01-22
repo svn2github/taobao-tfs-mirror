@@ -302,7 +302,7 @@ namespace tfs
               ret = layout_manager_.get_client_request_server().handle(msg);
               break;
             case UPDATE_BLOCK_INFO_MESSAGE:
-              ret = update_block_info(msg);
+              //ret = update_block_info(msg);
               break;
             case SHOW_SERVER_INFORMATION_MESSAGE:
               ret = show_server_information(msg);
@@ -321,6 +321,9 @@ namespace tfs
               break;
             case REQ_GET_FAMILY_INFO_MESSAGE:
               ret = get_family_info(msg);
+              break;
+            case REPAIR_BLOCK_MESSAGE_V2:
+              ret = repair(msg);
               break;
             default:
               ret = EXIT_UNKNOWN_MSGTYPE;
@@ -611,7 +614,7 @@ namespace tfs
       return ret;
     }
 
-    int NameServer::update_block_info(common::BasePacket* msg)
+    /*int NameServer::update_block_info(common::BasePacket* msg)
     {
       int32_t ret = ((NULL != msg) && (msg->getPCode() == UPDATE_BLOCK_INFO_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -656,7 +659,7 @@ namespace tfs
         }
       }
       return ret;
-    }
+    }*/
 
     int NameServer::show_server_information(common::BasePacket* msg)
     {
@@ -910,6 +913,23 @@ namespace tfs
               "got error, when get family: %"PRI64_PREFIX"d mode: %d, result: %d information, %s",
               family_id, mode, ret, tbsys::CNetUtil::addrToString(ipport).c_str());
         }
+      }
+      return ret;
+    }
+
+    int NameServer::repair(common::BasePacket* msg)
+    {
+      int32_t ret = ((NULL != msg) && (msg->getPCode() == REPAIR_BLOCK_MESSAGE_V2)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        char error_msg[512] = {'\0'};
+        RepairBlockMessageV2* message = dynamic_cast<RepairBlockMessageV2*>(msg);
+        const uint64_t block_id = message->get_block_id();
+        const uint64_t server   = message->get_server_id();
+        const int64_t  family_id = message->get_family_id();
+        const int32_t  type     = message->get_repair_type();
+        ret = layout_manager_.repair(error_msg, 512, block_id, server, family_id, type, Func::get_monotonic_time());
+        ret = message->reply(new StatusMessage(ret, error_msg));
       }
       return ret;
     }

@@ -638,7 +638,7 @@ namespace tfs
     {
       result = NULL;
       SORT_MAP sorts;
-      GROUP_MAP group;
+      GROUP_MAP group, servers;
       for (int64_t index = 0; index < sources.get_array_index(); ++index)
       {
         uint64_t id = *sources.at(index);
@@ -650,7 +650,11 @@ namespace tfs
                 server->total_capacity()) *  PERCENTAGE_MAGIC);
           sorts.insert(SORT_MAP::value_type(use, server));
           uint32_t lan = Func::get_lan(server->id(), SYSPARAM_NAMESERVER.group_mask_);
-          GROUP_MAP_ITER iter = group.find(lan);
+          GROUP_MAP_ITER iter = servers.find(server->id());
+          if (servers.end() == iter)
+           iter = servers.insert(GROUP_MAP::value_type(server->id(), SORT_MAP())).first;
+          iter->second.insert(SORT_MAP::value_type(use, server));
+          iter = group.find(lan);
           if (group.end() == iter)
             iter = group.insert(GROUP_MAP::value_type(lan, SORT_MAP())).first;
           iter->second.insert(SORT_MAP::value_type(use, server));
@@ -663,14 +667,23 @@ namespace tfs
       }
       else
       {
-        uint32_t nums = 0;
-        GROUP_MAP_ITER iter = group.begin();
-        for (; iter != group.end(); ++iter)
+        GROUP_MAP_ITER iter = servers.begin();
+        for (; iter != servers.end() && NULL == result; ++iter)
         {
-          if (iter->second.size() > nums)
-          {
-            nums = iter->second.size();
+          if (iter->second.size() > 1u)
             result = iter->second.rbegin()->second;
+        }
+        if (NULL == result)
+        {
+          uint32_t nums = 0;
+          GROUP_MAP_ITER iter = group.begin();
+          for (; iter != group.end(); ++iter)
+          {
+            if (iter->second.size() > nums)
+            {
+              nums = iter->second.size();
+              result = iter->second.rbegin()->second;
+            }
           }
         }
         if (NULL == result)
@@ -694,6 +707,20 @@ namespace tfs
       }
       rwmutex_.unlock();
       return (NULL != server) ? server->expand_ratio(expand_ratio) : TFS_SUCCESS;
+    }
+
+    int ServerManager::calc_single_process_max_network_bandwidth(int32_t& max_mr_network_bandwith,
+        int32_t& max_rw_network_bandwith, const DataServerStatInfo& info) const
+    {
+      if (info.total_network_bandwith_ > 0)
+      {
+        int32_t capacity = info.total_network_bandwith_ / 12;
+        max_mr_network_bandwith = capacity * SYSPARAM_NAMESERVER.max_mr_network_bandwith_ratio_ / 100;
+        max_rw_network_bandwith = capacity * SYSPARAM_NAMESERVER.max_rw_network_bandwith_ratio_ / 100;
+      }
+      max_mr_network_bandwith = std::max(max_mr_network_bandwith, 2);
+      max_rw_network_bandwith = std::max(max_rw_network_bandwith, 4);
+      return TFS_SUCCESS;
     }
 
     int ServerManager::choose_replciate_random_choose_server_base_lock_(ServerCollect*& result,

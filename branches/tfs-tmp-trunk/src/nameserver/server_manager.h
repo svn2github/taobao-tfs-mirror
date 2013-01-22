@@ -118,6 +118,9 @@ namespace tfs
       int choose_excess_backup_server(ServerCollect*& result, const common::ArrayHelper<uint64_t>& sources) const;
 
       int expand_ratio(int32_t& index, const float expand_ratio = 0.1);
+
+      int calc_single_process_max_network_bandwidth(int32_t& max_mr_network_bandwith,
+            int32_t& max_rw_network_bandwith, const common::DataServerStatInfo& info) const;
       private:
       DISALLOW_COPY_AND_ASSIGN(ServerManager);
       ServerCollect* get_(const uint64_t server) const;

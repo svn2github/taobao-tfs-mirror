@@ -409,8 +409,8 @@ namespace tfs
       int32_t ret = (NULL != server && server->is_alive()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        uint64_t servers[MAX_REPLICATION];
-        ArrayHelper<uint64_t> helper(MAX_REPLICATION, servers);
+        uint64_t servers[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         for (int64_t i= 0; i < blocks.get_array_index(); ++i)
         {

@@ -89,8 +89,8 @@ namespace tfs
         if (pcode == SET_DATASERVER_MESSAGE)
         {
           SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*>(msg);
-          server = message->get_ds().id_;
-          status = message->get_ds().status_;
+          server = message->get_dataserver_information().id_;
+          status = message->get_dataserver_information().status_;
           handled = keepalive_threads_.push(msg, SYSPARAM_NAMESERVER.keepalive_queue_size_, false);
         }
         else if (pcode == REQ_REPORT_BLOCKS_TO_NS_MESSAGE)
@@ -156,10 +156,14 @@ namespace tfs
         SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (packet);
         assert(SET_DATASERVER_MESSAGE == packet->getPCode());
         RespHeartMessage *result_msg = new RespHeartMessage();
-        result_msg->set_heart_interval(SYSPARAM_NAMESERVER.heart_interval_);
-        const DataServerStatInfo& ds_info = message->get_ds();
+        int32_t max_mr_network_bandwith = 0, max_rw_network_bandwith = 0;
+        const DataServerStatInfo& ds_info = message->get_dataserver_information();
         time_t now = Func::get_monotonic_time();
-
+        manager_.get_layout_manager().get_server_manager().calc_single_process_max_network_bandwidth(
+          max_mr_network_bandwith, max_rw_network_bandwith, ds_info);
+        result_msg->set_heart_interval(SYSPARAM_NAMESERVER.heart_interval_);
+        result_msg->set_max_mr_network_bandwith_mb(max_mr_network_bandwith);
+        result_msg->set_max_rw_network_bandwith_mb(max_rw_network_bandwith);
         ret = manager_.get_layout_manager().get_client_request_server().keepalive(ds_info, now);
         result_msg->set_status(TFS_SUCCESS == ret ? HEART_MESSAGE_OK : HEART_MESSAGE_FAILED);
         if (TFS_SUCCESS == ret
@@ -193,8 +197,7 @@ namespace tfs
         ReportBlocksToNsResponseMessage* result_msg = new ReportBlocksToNsResponseMessage();
         result_msg->set_server(ngi.owner_ip_port_);
         time_t now = Func::get_monotonic_time();
-        ArrayHelper<BlockInfoV2> blocks(message->get_block_count(),
-            message->get_blocks_ext(), message->get_block_count());
+        ArrayHelper<BlockInfoV2> blocks(message->get_block_count(), message->get_blocks_ext(), message->get_block_count());
 			  result = ret = manager_.get_layout_manager().get_client_request_server().report_block(
           result_msg->get_blocks(), server, now, blocks, message->get_type());
         result_msg->set_status(HEART_MESSAGE_OK);

@@ -65,11 +65,6 @@ namespace tfs
     ServerCollect::ServerCollect(LayoutManager& manager, const DataServerStatInfo& info, const time_t now):
       GCObject((now + common::SYSPARAM_NAMESERVER.heart_interval_ * MULTIPLE)),
       id_(info.id_),
-      write_byte_(0),
-      read_byte_(0),
-      write_count_(0),
-      read_count_(0),
-      unlink_count_(0),
       use_capacity_(info.use_capacity_),
       total_capacity_(info.total_capacity_),
       startup_time_(now),
@@ -79,6 +74,7 @@ namespace tfs
       scan_writable_block_id_(0),
       current_load_(info.current_load_ <= 0 ? 1 : info.current_load_),
       block_count_(info.block_count_),
+      total_network_bandwith_(128),//MB
       write_index_(0),
       status_(common::DATASERVER_STATUS_ALIVE),
       rb_status_(REPORT_BLOCK_STATUS_NONE),
@@ -87,6 +83,14 @@ namespace tfs
         int32_t block_nums = 0;
         int32_t min_expand_size = 0;
         float   expand_ratio = 0.0;
+        for (int8_t index = 0; index < MAX_RW_STAT_PAIR_NUM; ++index)
+        {
+          write_bytes_[index] = 0;
+          read_bytes_[index] = 0;
+          write_file_count_[index] = 0;
+          read_file_count_[index] = 0;
+          unlink_file_count_[index] = 0;
+        }
         calculate_server_init_block_parameter(block_nums, min_expand_size, expand_ratio, total_capacity_);
         hold_     = new (std::nothrow)TfsSortedVector<uint64_t, BlockIdCompareExt>(block_nums, min_expand_size, expand_ratio);
         writable_ = new (std::nothrow)TfsSortedVector<uint64_t, BlockIdCompareExt>(block_nums / 4, min_expand_size / 4, expand_ratio);
@@ -260,10 +264,14 @@ namespace tfs
         param.data_.writeInt32(block_count_);
         param.data_.writeInt64(last_update_time_);
         param.data_.writeInt64(startup_time_);
-        param.data_.writeInt64(write_byte_);
-        param.data_.writeInt64(write_count_);
-        param.data_.writeInt64(read_byte_);
-        param.data_.writeInt64(read_count_);
+        for (int8_t index = 0; index < MAX_RW_STAT_PAIR_NUM; ++index)
+        {
+          param.data_.writeInt64(write_bytes_[index]);
+          param.data_.writeInt64(read_bytes_[index]);
+          param.data_.writeInt64(write_file_count_[index]);
+          param.data_.writeInt64(read_file_count_[index]);
+          param.data_.writeInt64(unlink_file_count_[index]);
+        }
         param.data_.writeInt64(time(NULL));
         param.data_.writeInt32(status_);
       }
@@ -463,15 +471,20 @@ namespace tfs
     {
       use_capacity_ = info.use_capacity_;
       total_capacity_ = info.total_capacity_;
+      total_network_bandwith_ = info.total_network_bandwith_;
       current_load_ = info.current_load_;
       block_count_ = info.block_count_;
       update_last_time(!is_new ? now : (now + common::SYSPARAM_NAMESERVER.heart_interval_ * MULTIPLE));
       startup_time_ = is_new ? now : info.startup_time_;
       status_ = info.status_;
-      read_count_ = info.total_tp_.read_file_count_;
-      read_byte_ = info.total_tp_.read_byte_;
-      write_count_ = info.total_tp_.write_file_count_;
-      write_byte_ = info.total_tp_.write_byte_;
+      for (int8_t index = 0; index < MAX_RW_STAT_PAIR_NUM; ++index)
+      {
+        write_bytes_[index] = info.write_bytes_[index];
+        read_bytes_[index] = info.read_bytes_[index];
+        write_file_count_[index] = info.write_file_count_[index];
+        read_file_count_[index] = info.read_file_count_[index];
+        unlink_file_count_[index] = info.unlink_file_count_[index];
+      }
     }
 
     void ServerCollect::reset(LayoutManager& manager, const common::DataServerStatInfo& info, const time_t now)

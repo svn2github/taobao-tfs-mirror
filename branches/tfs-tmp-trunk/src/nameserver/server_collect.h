@@ -138,11 +138,11 @@ namespace tfs
 
       private:
       uint64_t id_;
-      int64_t write_byte_;
-      int64_t read_byte_;
-      int64_t write_count_;
-      int64_t read_count_;
-      int64_t unlink_count_;
+      int64_t write_bytes_[common::MAX_RW_STAT_PAIR_NUM];
+      int64_t read_bytes_[common::MAX_RW_STAT_PAIR_NUM];
+      int64_t write_file_count_[common::MAX_RW_STAT_PAIR_NUM];
+      int64_t read_file_count_[common::MAX_RW_STAT_PAIR_NUM];
+      int64_t unlink_file_count_[common::MAX_RW_STAT_PAIR_NUM];
       int64_t use_capacity_;
       int64_t total_capacity_;
       int64_t  startup_time_;
@@ -152,6 +152,7 @@ namespace tfs
       uint64_t scan_writable_block_id_;
       int32_t current_load_;
       int32_t block_count_;
+      int32_t total_network_bandwith_;
       mutable int32_t write_index_;
       int16_t  status_;
       int16_t  rb_status_;//report block complete status

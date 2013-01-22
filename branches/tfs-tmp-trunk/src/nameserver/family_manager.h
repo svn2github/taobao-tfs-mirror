@@ -83,6 +83,7 @@ namespace tfs
       int insert(const int64_t family_id, const int32_t family_aid_info,
           const common::ArrayHelper<std::pair<uint64_t, int32_t> >& member, const time_t now);
       int update(const int64_t family_id, const uint64_t block, const int32_t version);
+      bool exist(const int64_t family_id, const uint64_t block) const;
       bool exist(int32_t& version, const int64_t family_id, const uint64_t block, const int32_t new_version);
       int remove(GCObject*& object, const int64_t family_id);
       FamilyCollect* get(const int64_t family_id) const;

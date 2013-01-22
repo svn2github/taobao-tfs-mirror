@@ -91,8 +91,8 @@ namespace tfs
 
       int update_block_info(const common::BlockInfoV2& info, const uint64_t server, const time_t now, const bool addnew);
 
-      int repair(char* msg, const int32_t lenght, const uint64_t block_id,
-          const uint64_t server, const int32_t flag, const time_t now);
+      int repair(char* msg, const int32_t length, const uint64_t block_id,
+          const uint64_t server, const int64_t family_id, const int32_t type, const time_t now);
 
       int scan(common::SSMScanParameter& stream);
 

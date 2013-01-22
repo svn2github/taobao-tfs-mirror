@@ -96,7 +96,6 @@ namespace tfs
       int closev2(common::BasePacket* msg);
       int batch_open(common::BasePacket* msg);
       int batch_openv2(common::BasePacket* msg);
-      int update_block_info(common::BasePacket* msg);
       int show_server_information(common::BasePacket* msg);
       int resolve_block_version_conflict(common::BasePacket* msg);
       int ping(common::BasePacket* msg);
@@ -105,6 +104,7 @@ namespace tfs
       int do_master_msg_helper(common::BasePacket* packet);
       int do_slave_msg_helper(common::BasePacket* packet);
       int get_family_info(common::BasePacket* msg);
+      int repair(common::BasePacket* msg);
 
       int initialize_ns_global_info();
     };

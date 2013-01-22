@@ -40,7 +40,7 @@ namespace tfs
     int ClientRequestServer::keepalive(const common::DataServerStatInfo& ds_info, const time_t now)
     {
       int32_t ret = TFS_ERROR;
-      DataServerLiveStatus status = ds_info.status_;
+      int32_t status = ds_info.status_;
       //check dataserver status
       if (DATASERVER_STATUS_DEAD== status)//dataserver dead
       {
@@ -84,6 +84,7 @@ namespace tfs
       ret = NULL == pserver ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
+        TBSYS_LOG(INFO, "kkkkkkkkkkkkkkkkkkkkk %ld", blocks.get_array_index());
         //update all relations of blocks belongs to it
         ret = manager_.update_relation(expires, pserver, blocks, now, type);
         if (TFS_SUCCESS == ret)
