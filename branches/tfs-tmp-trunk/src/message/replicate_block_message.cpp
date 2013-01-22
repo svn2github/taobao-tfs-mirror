@@ -104,7 +104,7 @@ namespace tfs
 
     void ReplicateBlockMessage::dump(void) const
     {
-      TBSYS_LOG(INFO, "seqno: %"PRI64_PREFIX"d, command: %d, expire: %d, block: %u, source: %s, target: %s, start_time: %d, is_move: %s, server_count: %d",
+      TBSYS_LOG(INFO, "seqno: %"PRI64_PREFIX"d, command: %d, expire: %d, block: %"PRI64_PREFIX"u, source: %s, target: %s, start_time: %d, is_move: %s, server_count: %d",
         seqno_, status_, expire_time_, repl_block_.block_id_,
         tbsys::CNetUtil::addrToString(repl_block_.source_id_).c_str(),
         tbsys::CNetUtil::addrToString(repl_block_.destination_id_).c_str(),

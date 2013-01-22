@@ -28,29 +28,10 @@ namespace tfs
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        void set_ds(common::DataServerStatInfo* ds);
-        inline void set_has_block(const common::HasBlockFlag has_block)
-        {
-          has_block_ = has_block;
-        }
-        void add_block(common::BlockInfo* block_info);
-        inline common::HasBlockFlag get_has_block() const
-        {
-          return has_block_;
-        }
-        inline const common::DataServerStatInfo& get_ds() const
-        {
-          return ds_;
-        }
-        inline common::BLOCK_INFO_LIST& get_blocks()
-        {
-          return blocks_;
-        }
+        inline void set_dataserver_information(const common::DataServerStatInfo& info) { information_ = info;}
+        inline const common::DataServerStatInfo& get_dataserver_information() const { return information_;}
       protected:
-        common::DataServerStatInfo ds_;
-        common::BLOCK_INFO_LIST blocks_;
-        common::HasBlockFlag has_block_;
-        int8_t heart_interval_;
+        common::DataServerStatInfo information_;
     };
 
     class CallDsReportBlockRequestMessage: public common::BasePacket
@@ -82,7 +63,6 @@ namespace tfs
         int32_t flag_;
     };
 
-    //TODO 采用set存储BLOCKINFO的相关代码后期我们会删除
     class ReportBlocksToNsRequestMessage: public common::BasePacket
     {
       public:
@@ -91,18 +71,8 @@ namespace tfs
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        inline void set_server(const uint64_t server)
-        {
-          server_ = server;
-        }
-        inline uint64_t get_server(void) const
-        {
-          return server_;
-        }
-        inline std::set<common::BlockInfo>& get_blocks()
-        {
-          return blocks_;
-        }
+        inline void set_server(const uint64_t server) { server_ = server;}
+        inline uint64_t get_server(void) const { return server_;}
         inline common::BlockInfoV2* alloc_blocks_ext(const int32_t count)
         {
           block_count_ = count;
@@ -111,30 +81,14 @@ namespace tfs
           assert(blocks_ext_);
           return blocks_ext_;
         }
-        inline common::BlockInfoV2* get_blocks_ext()
-        {
-          return blocks_ext_;
-        }
-        inline int32_t get_block_count() const
-        {
-          return block_count_;
-        }
-        inline int8_t get_flag() const
-        {
-          return flag_;
-        }
-        inline void set_flag(const int8_t flag)
-        {
-          flag_ = flag;
-        }
+        inline common::BlockInfoV2* get_blocks_ext() { return blocks_ext_;}
+        inline int32_t get_block_count() const { return block_count_;}
         inline int8_t get_type() { return type_;}
         inline void set_type(const int8_t type) { type_ = type;}
       protected:
-        std::set<common::BlockInfo> blocks_;
         common::BlockInfoV2* blocks_ext_;
         uint64_t server_;
         int32_t  block_count_;
-        int8_t flag_;
         int8_t type_;
     };
 

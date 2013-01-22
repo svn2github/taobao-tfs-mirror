@@ -428,6 +428,5 @@ namespace tfs
     {
       return lease_manager_.timeout(now);
     }
-
-  }
-}
+  }/** end namespace dataserver **/
+}/** end namespace tfs **/

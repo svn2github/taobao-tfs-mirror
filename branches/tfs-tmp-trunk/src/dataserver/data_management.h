@@ -93,7 +93,6 @@ namespace tfs
 
         //gc thread
         int gc_data_file();
-        int remove_data_file();
 
       private:
         DISALLOW_COPY_AND_ASSIGN(DataManagement);
@@ -107,16 +106,6 @@ namespace tfs
         int32_t last_gc_data_file_time_; // last datafile gc time
         common::RWLock block_rw_lock_;   // block layer read-write lock
     };
-
-    /*
-    struct visit_count_sort
-    {
-        bool operator()(const LogicBlock *x, const LogicBlock *y) const
-        {
-          return (x->get_visit_count() > y->get_visit_count());
-        }
-    };
-    */
   }
 }
 #endif //TFS_DATASERVER_DATAMANAGEMENT_H_

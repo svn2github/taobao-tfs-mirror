@@ -22,8 +22,6 @@
 #include "common/parameter.h"
 #include "common/new_client.h"
 
-// #define TFS_GTEST
-
 namespace tfs
 {
   namespace dataserver
@@ -48,6 +46,14 @@ namespace tfs
     static const int32_t INDEXFILE_SAFE_MULT = 4;
     static const int32_t MAX_INITIALIZE_INDEX_SIZE = 2048;
     static const int32_t BLOCK_RESERVER_SPACE = 1048576; // reserve 1M space for update
+
+    /*#define RW_COUNT_STAT "rw-count-stat"
+    #define RW_COUNT_R_SUCCESS "rw-count-r-success"
+    #define RW_COUNT_W_SUCCESS "rw-count-w-success"
+    #define RW_COUNT_U_SUCCESS "rw-count-w-success"
+    #define RW_COUNT_R_FAILED  "rw-count-r-failed"
+    #define RW_COUNT_W_FAILED  "rw-count-w-failed"
+    #define RW_COUNT_U_FAILED  "rw-count-r-failed"*/
 
     enum FileinfoFlag
     {
@@ -115,6 +121,22 @@ namespace tfs
       int dump(std::stringstream& stream) const;
     };
 
+    struct DsRuntimeGlobalInformation
+    {
+      void startup();
+      void destroy();
+      bool is_destroyed() const;
+      void dump(const int32_t level, const char* file, const int32_t line,
+            const char* function, const char* format, ...);
+      common::DataServerStatInfo information_;
+      uint64_t ns_vip_port_;
+      int32_t max_mr_network_bandwidth_mb_;
+      int32_t max_rw_network_bandwidth_mb_;
+      DsRuntimeGlobalInformation();
+      static DsRuntimeGlobalInformation& instance() { return instance_;}
+      static DsRuntimeGlobalInformation instance_;
+    };
+
     typedef enum _OperType
     {
       OPER_NONE   = 0,
@@ -168,10 +190,8 @@ namespace tfs
       }
     };
 
-    typedef __gnu_cxx::hash_map<uint32_t, uint32_t> ChangedBlockMap;   // blockid => last modified time
-    typedef ChangedBlockMap::iterator ChangedBlockMapIter;
-
     int ds_async_callback(common::NewClient* client);
+    int post_message_to_server(common::BasePacket* message, const std::vector<uint64_t>& servers);
   }/** end namespace dataserver **/
 }/** end namespace tfs **/
 

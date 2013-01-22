@@ -552,12 +552,12 @@ namespace tfs
       if (need_remove)
       {
         int rm_ret = block_manager().del_block(repl_info_.block_id_);
-        TBSYS_LOG(INFO, "send repl block complete info: del blockid: %u, ret: %d\n",
+        TBSYS_LOG(INFO, "send repl block complete info: del blockid: %"PRI64_PREFIX"u, ret: %d\n",
             repl_info_.block_id_, rm_ret);
       }
 
       TBSYS_LOG(INFO,
-          "replicate report to ns. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s, ret: %d",
+          "replicate report to ns. seqno: %"PRI64_PREFIX"d, blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
 
       return ret;
@@ -570,7 +570,7 @@ namespace tfs
       resp_repl_msg.set_ds_id(service_.get_ds_ipport());
       resp_repl_msg.set_status(status);
 
-      TBSYS_LOG(INFO, "replicate report to ds. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
+      TBSYS_LOG(INFO, "replicate report to ds. seqno: %"PRI64_PREFIX"d, blockid: %"PRI64_PREFIX"u, status: %d, source: %s",
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
 
       NewClient* client = NewClientManager::get_instance().create_client();

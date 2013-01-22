@@ -504,27 +504,6 @@ namespace tfs
       return ret;
     }
 
-    int TfsMirrorBackup::rename_file(const uint32_t block_id, const uint64_t file_id,
-                                     const uint64_t old_file_id)
-    {
-      UNUSED(block_id);
-      UNUSED(file_id);
-      UNUSED(old_file_id);
-      // FSName fsname(block_id, file_id);
-      // int ret = tfs_client->rename(block_id, old_file_id, file_id);
-      // if (TFS_SUCCESS != ret)
-      // {
-      //   TBSYS_LOG(ERROR, "unlink failure: %s\n", tfs_client->get_error_message());
-      // }
-
-      // TBSYS_LOG(
-      //     INFO,
-      //     "tfs mirror rename file. blockid: %d, fileid: %" PRI64_PREFIX "u, old fileid: %" PRI64_PREFIX "u, ret: %d.\n",
-      //     block_id, file_id, old_file_id);
-      // return ret;
-      return TFS_SUCCESS;
-    }
-
     void TfsMirrorBackup::DoSyncMirrorThreadHelper::run()
     {
       sync_base_.run_sync_mirror();

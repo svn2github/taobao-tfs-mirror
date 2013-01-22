@@ -30,301 +30,185 @@
 #include "common/status_message.h"
 #include "message/message_factory.h"
 #include "sync_base.h"
-#include "visit_stat.h"
-#include "cpu_metrics.h"
 #include "data_management.h"
 #include "requester.h"
 #include "gc.h"
 #include "client_request_server.h"
 #include "data_manager.h"
+#include "heart_manager.h"
 #include "data_helper.h"
 #include "task_manager.h"
+#include "traffic_control.h"
 
 namespace tfs
 {
   namespace dataserver
   {
-#define WRITE_STAT_LOGGER write_stat_log_
-#define WRITE_STAT_PRINT(level, ...) WRITE_STAT_LOGGER.logMessage(TBSYS_LOG_LEVEL(level), __VA_ARGS__)
-#define WRITE_STAT_LOG(level, ...) (TBSYS_LOG_LEVEL_##level>WRITE_STAT_LOGGER._level) ? (void)0 : WRITE_STAT_PRINT(level, __VA_ARGS__)
-
-#define READ_STAT_LOGGER read_stat_log_
-#define READ_STAT_PRINT(level, ...) READ_STAT_LOGGER.logMessage(TBSYS_LOG_LEVEL(level), __VA_ARGS__)
-#define READ_STAT_LOG(level, ...) (TBSYS_LOG_LEVEL_##level>READ_STAT_LOGGER._level) ? (void)0 : READ_STAT_PRINT(level, __VA_ARGS__)
     class DataService: public common::BaseService
     {
 
       friend int SyncBase::run_sync_mirror();
 
       public:
-        DataService();
+      DataService();
 
-        virtual ~DataService();
+      virtual ~DataService();
 
-        /** application parse args*/
-        virtual int parse_common_line_args(int argc, char* argv[], std::string& errmsg);
+      /** application parse args*/
+      virtual int parse_common_line_args(int argc, char* argv[], std::string& errmsg);
 
-        /** get listen port*/
-        virtual int get_listen_port() const ;
+      /** get listen port*/
+      virtual int get_listen_port() const ;
 
-        /** initialize application data*/
-        virtual int initialize(int argc, char* argv[]);
+      /** initialize application data*/
+      virtual int initialize(int argc, char* argv[]);
 
-        /** destroy application data*/
-        virtual int destroy_service();
+      /** destroy application data*/
+      virtual int destroy_service();
 
-        /** create the packet streamer, this is used to create packet according to packet code */
-        virtual tbnet::IPacketStreamer* create_packet_streamer()
-        {
-          return new common::BasePacketStreamer();
-        }
+      /** create the packet streamer, this is used to create packet according to packet code */
+      virtual tbnet::IPacketStreamer* create_packet_streamer()
+      {
+        return new common::BasePacketStreamer();
+      }
 
-        /** destroy the packet streamer*/
-        virtual void destroy_packet_streamer(tbnet::IPacketStreamer* streamer)
-        {
-          tbsys::gDelete(streamer);
-        }
+      /** destroy the packet streamer*/
+      virtual void destroy_packet_streamer(tbnet::IPacketStreamer* streamer)
+      {
+        tbsys::gDelete(streamer);
+      }
 
-        /** create the packet streamer, this is used to create packet*/
-        virtual common::BasePacketFactory* create_packet_factory()
-        {
-          return new message::MessageFactory();
-        }
+      /** create the packet streamer, this is used to create packet*/
+      virtual common::BasePacketFactory* create_packet_factory()
+      {
+        return new message::MessageFactory();
+      }
 
-        /** destroy packet factory*/
-        virtual void destroy_packet_factory(common::BasePacketFactory* factory)
-        {
-          tbsys::gDelete(factory);
-        }
+      /** destroy packet factory*/
+      virtual void destroy_packet_factory(common::BasePacketFactory* factory)
+      {
+        tbsys::gDelete(factory);
+      }
 
-        /** handle single packet */
-        virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
+      /** handle single packet */
+      virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
 
-        /** handle packet*/
-        virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
+      /** handle packet*/
+      virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
 
-        bool check_response(common::NewClient* client);
-        int callback(common::NewClient* client);
+      bool check_response(common::NewClient* client);
+      int callback(common::NewClient* client);
 
-        int post_message_to_server(common::BasePacket* message, const common::VUINT64& ds_list);
+      int post_message_to_server(common::BasePacket* message, const common::VUINT64& ds_list);
 
-        int stop_heart();
+      std::string get_real_work_dir();
 
-        std::string get_real_work_dir();
+      // common interfaces
+      inline BlockManager& block_manager() { return *block_manager_;}
+      inline DataManager& data_manager() { return data_manager_;}
+      inline DataHelper&  data_helper() { return data_helper_;}
+      inline TrafficControl& get_traffic_control() { return traffic_control_;}
+      uint64_t get_ds_ipport() { return 0;}//TODO
+      uint64_t get_ns_ipport() { return 0;}
 
       protected:
-        virtual const char* get_log_file_path();
-        virtual const char* get_pid_file_path();
+      virtual const char* get_log_file_path();
+      virtual const char* get_pid_file_path();
 
       private:
-        int run_heart(const int32_t who);
-        int run_check();
+      int create_file_number(message::CreateFilenameMessage* message);
+      int write_data(message::WriteDataMessage* message);
+      int close_write_file(message::CloseFileMessage* message);
 
-        int create_file_number(message::CreateFilenameMessage* message);
-        int write_data(message::WriteDataMessage* message);
-        int close_write_file(message::CloseFileMessage* message);
+      int write_raw_data(message::WriteRawDataMessage* message);
+      int batch_write_info(message::WriteInfoBatchMessage* message);
 
-        int write_raw_data(message::WriteRawDataMessage* message);
-        int batch_write_info(message::WriteInfoBatchMessage* message);
+      int read_data(message::ReadDataMessage* message);
+      int read_data_extra(message::ReadDataMessageV2* message, int32_t version);
+      int read_raw_data(message::ReadRawDataMessage* message);
+      int read_file_info(message::FileInfoMessage* message);
 
-        int read_data(message::ReadDataMessage* message);
-        int read_data_extra(message::ReadDataMessageV2* message, int32_t version);
-        int read_raw_data(message::ReadRawDataMessage* message);
-        int read_file_info(message::FileInfoMessage* message);
+      int rename_file(message::RenameFileMessage* message);
+      int unlink_file(message::UnlinkFileMessage* message);
 
-        int rename_file(message::RenameFileMessage* message);
-        int unlink_file(message::UnlinkFileMessage* message);
+      //NS <-> DS
+      int new_block(message::NewBlockMessage* message);
+      int remove_block(message::RemoveBlockMessage* message);
 
-        //NS <-> DS
-        int new_block(message::NewBlockMessage* message);
-        int remove_block(message::RemoveBlockMessage* message);
+      //get single blockinfo
+      int get_block_info(message::GetBlockInfoMessage* message);
 
-        int crc_error_cmd(message::CrcErrorMessage* message);
+      //get blockinfos on this server
+      int list_blocks(message::ListBlockMessage* message);
 
-        //get single blockinfo
-        int get_block_info(message::GetBlockInfoMessage* message);
+      int get_server_status(message::GetServerStatusMessage* message);
+      int get_ping_status(common::StatusMessage* message);
+      int client_command(message::ClientCmdMessage* message);
 
-        int query_bit_map(message::ListBitMapMessage* message);
-        //get blockinfos on this server
-        int list_blocks(message::ListBlockMessage* message);
-        int reset_block_version(message::ResetBlockVersionMessage* message);
+      int get_dataserver_information(common::BasePacket* packet);
 
-        int get_server_status(message::GetServerStatusMessage* message);
-        int get_ping_status(common::StatusMessage* message);
-        int client_command(message::ClientCmdMessage* message);
-
-        int reload_config(message::ReloadConfigMessage* message);
-        int send_blocks_to_ns(int8_t& heart_interval, const int32_t who, const int64_t timeout);
-        int send_blocks_to_ns(common::BasePacket* packet);
-
-        int get_dataserver_information(common::BasePacket* packet);
-
-        // check modified blocks
-        int check_blocks(common::BasePacket* packet);
-
-      public:
-        // common interfaces
-        uint64_t get_ds_ipport() const
-        {
-          return data_server_info_.id_;
-        }
-
-        uint64_t get_ns_ipport() const
-        {
-          return ns_ip_port_;
-        }
-
-        BlockManager& block_manager()
-        {
-          return *block_manager_;
-        }
-
-        DataManager& data_manager()
-        {
-          return data_manager_;
-        }
-
-        DataHelper& data_helper()
-        {
-          return data_helper_;
-        }
-
-        TaskManager& task_manager()
-        {
-          return task_manager_;
-        }
+      // check modified blocks
+      int check_blocks(common::BasePacket* packet);
 
       private:
-        bool access_deny(common::BasePacket* message);
-        void do_stat(const uint64_t peer_id,
-            const int32_t visit_file_size, const int32_t real_len, const int32_t offset, const int32_t mode);
-        int set_ns_ip();
-        int init_log_file(tbsys::CLogger& LOGGER, const std::string& log_file);
-        int init_sync_mirror();
+      bool access_deny(common::BasePacket* message);
+      void do_stat(const uint64_t peer_id,
+          const int32_t visit_file_size, const int32_t real_len, const int32_t offset, const int32_t mode);
+      int initialize_nameserver_ip_addr_(std::vector<uint64_t>& ns_ip_port);
+      int initialize_sync_mirror_();
+      void timeout_();
+      void run_task_();
+      void rotate_(time_t& last_rotate_log_time, time_t now, time_t zonesec);
 
       private:
-      class HeartBeatThreadHelper: public tbutil::Thread
+      class TimeoutThreadHelper: public tbutil::Thread
       {
         public:
-          HeartBeatThreadHelper(DataService& service, const int32_t who):
-              service_(service),
-              who_(who)
+          explicit TimeoutThreadHelper(DataService& service):
+            service_(service)
           {
             start();
           }
-          virtual ~HeartBeatThreadHelper(){}
+          virtual ~TimeoutThreadHelper(){}
           void run();
         private:
-          DISALLOW_COPY_AND_ASSIGN(HeartBeatThreadHelper);
+          DISALLOW_COPY_AND_ASSIGN(TimeoutThreadHelper);
           DataService& service_;
-          int32_t who_;
       };
-      typedef tbutil::Handle<HeartBeatThreadHelper> HeartBeatThreadHelperPtr;
+      typedef tbutil::Handle<TimeoutThreadHelper> TimeoutThreadHelperPtr;
 
-      class DoCheckThreadHelper: public tbutil::Thread
+      class RunTaskThreadHelper: public tbutil::Thread
       {
         public:
-          explicit DoCheckThreadHelper(DataService& service):
-              service_(service)
+          explicit RunTaskThreadHelper(DataService& service):
+            service_(service)
           {
             start();
           }
-          virtual ~DoCheckThreadHelper(){}
+          virtual ~RunTaskThreadHelper(){}
           void run();
         private:
-          DISALLOW_COPY_AND_ASSIGN(DoCheckThreadHelper);
+          DISALLOW_COPY_AND_ASSIGN(RunTaskThreadHelper);
           DataService& service_;
       };
-      typedef tbutil::Handle<DoCheckThreadHelper> DoCheckThreadHelperPtr;
-
-      class ReplicateBlockThreadHelper: public tbutil::Thread
-      {
-        public:
-          explicit ReplicateBlockThreadHelper(DataService& service):
-              service_(service)
-          {
-            start();
-          }
-          virtual ~ReplicateBlockThreadHelper(){}
-          void run();
-        private:
-          DISALLOW_COPY_AND_ASSIGN(ReplicateBlockThreadHelper);
-          DataService& service_;
-      };
-      typedef tbutil::Handle<ReplicateBlockThreadHelper> ReplicateBlockThreadHelperPtr;
-
-      class CompactBlockThreadHelper: public tbutil::Thread
-      {
-        public:
-          explicit CompactBlockThreadHelper(DataService& service):
-              service_(service)
-          {
-            start();
-          }
-          virtual ~CompactBlockThreadHelper(){}
-          void run();
-        private:
-          DISALLOW_COPY_AND_ASSIGN(CompactBlockThreadHelper);
-          DataService& service_;
-      };
-      typedef tbutil::Handle<CompactBlockThreadHelper> CompactBlockThreadHelperPtr;
-
+      typedef tbutil::Handle<RunTaskThreadHelper> RunTaskThreadHelperPtr;
       private:
-        DISALLOW_COPY_AND_ASSIGN(DataService);
+      DISALLOW_COPY_AND_ASSIGN(DataService);
 
-        common::DataServerStatInfo data_server_info_; //dataserver info
-        std::string server_index_;
-        DataManagement data_management_;
-        Requester ds_requester_;
-        ClientRequestServer client_request_server_;
-        DataManager data_manager_;
-        DataHelper data_helper_;
-        TaskManager task_manager_;
-        BlockManager *block_manager_;
-
-        int32_t server_local_port_;
-        bool need_send_blockinfo_[2];
-        bool set_flag_[2];
-        uint64_t hb_ip_port_[2];
-        uint64_t ns_ip_port_; //nameserver ip port;
-
-#if defined(TFS_GTEST)
-      public:
-#else
-#endif
-        std::vector<SyncBase*> sync_mirror_;
-        int32_t sync_mirror_status_;
-
-        tbutil::Mutex stop_mutex_;
-        tbutil::Mutex client_mutex_;
-        tbutil::Mutex count_mutex_;
-        tbutil::Mutex read_stat_mutex_;
-        tbutil::Mutex sync_mirror_mutex_;
-
-        AccessControl acl_;
-        AccessStat acs_;
-        VisitStat visit_stat_;
-        CpuMetrics cpu_metrics_;
-        int32_t max_cpu_usage_;
-
-        //write and read log
-        tbsys::CLogger write_stat_log_;
-        tbsys::CLogger read_stat_log_;
-        std::vector<std::pair<uint32_t, uint64_t> > read_stat_buffer_;
-        static const unsigned READ_STAT_LOG_BUFFER_LEN = 100;
-
-        //global stat
-        tbutil::TimerPtr timer_;
-        common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
-        std::string tfs_ds_stat_;
-
-        HeartBeatThreadHelperPtr heartbeat_thread_[2];
-        DoCheckThreadHelperPtr   do_check_thread_;
-
-        std::string read_stat_log_file_;
-        std::string write_stat_log_file_;
+      std::string server_index_;
+      Requester ds_requester_;
+      DataManager data_manager_;
+      DataHelper data_helper_;
+      TaskManager task_manager_;
+      BlockManager *block_manager_;
+      DataManagement data_management_;
+      TrafficControl traffic_control_;
+      DataServerHeartManager* heart_manager_;
+      ClientRequestServer client_request_server_;
+      std::vector<SyncBase*> sync_mirror_;
+      TimeoutThreadHelperPtr  timeout_thread_;
+      RunTaskThreadHelperPtr  task_thread_;
     };
-  }
-}
-
+  }/** end namespace dataserver **/
+}/** end namespace tfs **/
 #endif //TFS_DATASERVER_DATASERVICE_H_

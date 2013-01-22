@@ -30,44 +30,19 @@ namespace tfs
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-
-        inline const common::VUINT32* get_expire_blocks() const
-        {
-          return &expire_blocks_;
-        }
-        inline const common::VUINT32* get_new_blocks() const
-        {
-          return &new_blocks_;
-        }
-        inline void add_expire_id(const uint32_t block_id)
-        {
-          expire_blocks_.push_back(block_id);
-        }
-        inline void set_expire_blocks(const common::VUINT32 & blocks)
-        {
-          expire_blocks_ = blocks;
-        }
-        inline void set_status(const int32_t status)
-        {
-          status_ = status;
-        }
-        inline void set_heart_interval(const int8_t heart_interval)
-        {
-          heart_interval_ = heart_interval;
-        }
-        inline int8_t get_heart_interval(void) const
-        {
-          return heart_interval_;
-        }
-        inline int32_t get_status() const
-        {
-          return status_;
-        }
+        inline void set_status(const int32_t status) { status_ = status;}
+        inline int32_t get_status() const { return status_;}
+        inline void set_heart_interval(const int32_t heart_interval) { heart_interval_ = heart_interval;}
+        inline int32_t get_heart_interval(void) const { return heart_interval_;}
+        inline void set_max_mr_network_bandwith_mb(const int32_t capacity) { max_mr_network_bandwith_mb_ = capacity;}
+        inline int32_t get_max_mr_network_bandwith_mb() const { return max_mr_network_bandwith_mb_;}
+        inline void set_max_rw_network_bandwith_mb(const int32_t capacity) { max_rw_network_bandwith_mb_ = capacity;}
+        inline int32_t get_max_rw_network_bandwith_mb() const { return max_rw_network_bandwith_mb_;}
       protected:
         int32_t status_;
         int32_t heart_interval_;
-        common::VUINT32 expire_blocks_;
-        common::VUINT32 new_blocks_;
+        int32_t max_mr_network_bandwith_mb_;
+        int32_t max_rw_network_bandwith_mb_;
     };
 
 #pragma pack(4)

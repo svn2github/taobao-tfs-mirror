@@ -51,7 +51,7 @@ namespace tfs
         ret = new_remote_block_ex(server_id, block_id, tmp, family_id, index_num);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "new remote block fail. server: %s, blockid: "PRI64_PREFIX"u, "
+          TBSYS_LOG(WARN, "new remote block fail. server: %s, blockid: %"PRI64_PREFIX"u, "
               "tmp: %d, familyid: %"PRI64_PREFIX"u, index_num: %d, ret: %d",
               tbsys::CNetUtil::addrToString(server_id).c_str(), block_id,
               tmp, family_id, index_num, ret);
@@ -72,7 +72,7 @@ namespace tfs
         ret = delete_remote_block_ex(server_id, block_id, tmp);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "delete remote block fail. server: %s, blockid: "PRI64_PREFIX"u, ret: %d",
+          TBSYS_LOG(WARN, "delete remote block fail. server: %s, blockid: %"PRI64_PREFIX"u, tmp: %d, ret: %d",
               tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, tmp, ret);
         }
       }
@@ -298,6 +298,13 @@ namespace tfs
         int32_t status = TFS_ERROR;
         ret = send_msg_to_server(server_id, &req_msg, status);
         ret = (ret < 0) ? ret: status;
+        if (TFS_SUCCESS != ret)
+        {
+          ret = EXIT_ADD_NEW_BLOCK_ERROR;
+          TBSYS_LOG(WARN, "new remote block fail. "
+              "blockid: %"PRI64_PREFIX"u, familyid: %"PRI64_PREFIX"u, index_num: %d",
+              block_id, family_id, index_num);
+        }
       }
       return ret;
     }

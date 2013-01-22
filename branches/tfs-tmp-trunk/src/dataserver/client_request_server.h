@@ -26,8 +26,6 @@
 #include "message/message_factory.h"
 #include "common/client_manager.h"
 #include "sync_base.h"
-#include "visit_stat.h"
-#include "cpu_metrics.h"
 #include "lease_manager.h"
 #include "data_manager.h"
 
@@ -51,6 +49,8 @@ namespace tfs
         int callback(common::NewClient* client);
 
       private:
+        int report_block(message::CallDsReportBlockRequestMessage* message);
+
         /** file service interface */
         int stat_file(message::StatFileMessageV2* message);
         int read_file(message::ReadFileMessageV2* message);

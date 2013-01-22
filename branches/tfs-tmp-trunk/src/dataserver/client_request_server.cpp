@@ -52,6 +52,9 @@ namespace tfs
         int32_t pcode = packet->getPCode();
         switch (pcode)
         {
+          case REQ_CALL_DS_REPORT_BLOCK_MESSAGE:
+            ret = report_block(dynamic_cast<CallDsReportBlockRequestMessage*>(packet));
+            break;
           case STAT_FILE_MESSAGE_V2:
             ret = stat_file(dynamic_cast<StatFileMessageV2*>(packet));
             break;
@@ -80,6 +83,41 @@ namespace tfs
         }
       }
 
+      return ret;
+    }
+
+    int ClientRequestServer::report_block(CallDsReportBlockRequestMessage* message)
+    {
+      int32_t ret = (NULL != message) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
+        CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(message);
+        ReportBlocksToNsRequestMessage req_msg;
+        req_msg.set_server(info.information_.id_);
+        int32_t block_count = block_manager().get_all_logic_block_count();
+        BlockInfoV2* blocks_ext = req_msg.alloc_blocks_ext(block_count);
+        assert(NULL != blocks_ext);
+        ArrayHelper<BlockInfoV2> blocks_helper(block_count, blocks_ext);
+        block_manager().get_all_block_info(blocks_helper);
+        TBSYS_LOG(INFO, "report block to ns, blocks size: %d",req_msg.get_block_count());
+
+        NewClient* client = NewClientManager::get_instance().create_client();
+        tbnet::Packet* message = NULL;
+        ret = send_msg_to_server(msg->get_server(), client, &req_msg, message);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = message->getPCode() == RSP_REPORT_BLOCKS_TO_NS_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            ReportBlocksToNsResponseMessage* msg = dynamic_cast<ReportBlocksToNsResponseMessage*>(message);
+            TBSYS_LOG(INFO, "nameserver %s ask for expire block\n",
+                tbsys::CNetUtil::addrToString(msg->get_server()).c_str());//TODO
+            // data_management_.add_new_expire_block(&msg->get_blocks(), NULL, NULL);
+          }
+        }
+        NewClientManager::get_instance().destroy_client(client);
+      }
       return ret;
     }
 

@@ -16,6 +16,8 @@
 #include <Time.h>
 #include "ds_define.h"
 #include "common/error_msg.h"
+#include "common/new_client.h"
+#include "common/client_manager.h"
 
 namespace tfs
 {
@@ -33,6 +35,66 @@ namespace tfs
         << ",first_mmap_size: " << mmap_option_.first_mmap_size_ << ",per_mmap_size: " << mmap_option_.per_mmap_size_
         << ",max_use_block_ratio: " << max_use_block_ratio_ << ",max_use_hash_bucket_ratio: " <<max_use_hash_bucket_ratio_ <<std::endl;
       return common::TFS_SUCCESS;
+    }
+
+    DsRuntimeGlobalInformation::DsRuntimeGlobalInformation():ns_vip_port_(0)
+    {
+      memset(&information_, 0, sizeof(information_));
+    }
+
+    void DsRuntimeGlobalInformation::startup()
+    {
+      information_.startup_time_ = time(NULL);
+      information_.status_ = common::DATASERVER_STATUS_ALIVE;
+    }
+
+    void DsRuntimeGlobalInformation::destroy()
+    {
+      information_.status_ = common::DATASERVER_STATUS_DEAD;
+    }
+
+    bool DsRuntimeGlobalInformation::is_destroyed() const
+    {
+      return information_.status_ == common::DATASERVER_STATUS_DEAD;
+    }
+
+    void DsRuntimeGlobalInformation::dump(const int32_t level, const char* file, const int32_t line,
+        const char* function, const char* format, ...)
+    {
+      UNUSED(level);
+      UNUSED(file);
+      UNUSED(line);
+      UNUSED(function);
+      UNUSED(format);
+    }
+    static int send_msg_to_server_helper(const uint64_t server, std::vector<uint64_t>& servers)
+    {
+      std::vector<uint64_t>::iterator iter = std::find(servers.begin(), servers.end(), server);
+      if (iter != servers.end())
+      {
+        servers.erase(iter);
+      }
+      return common::TFS_SUCCESS;
+    }
+
+    int post_message_to_server(common::BasePacket* message, const std::vector<uint64_t>& servers)
+    {
+      int32_t ret = (!servers.empty() && NULL != message) ? 0 : -1;
+      if (0 == ret)
+      {
+        DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
+        std::vector<uint64_t> targets(servers);
+        ret = (common::TFS_SUCCESS == send_msg_to_server_helper(info.information_.id_, targets)) ?  0 : -1;
+        if (0 == ret)
+        {
+          if (!targets.empty())
+          {
+            common::NewClient* client = common::NewClientManager::get_instance().create_client();
+            ret = common::TFS_SUCCESS == common::post_msg_to_server(targets, client, message, ds_async_callback) ? 1 : -1;
+          }
+        }
+      }
+      return ret;
     }
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

@@ -62,8 +62,8 @@ namespace tfs
       DISALLOW_COPY_AND_ASSIGN(SyncBackup);
       client::TfsClientImpl* tfs_client_;
 
-      char src_addr_[common::MAX_ADDRESS_LENGTH];
-      char dest_addr_[common::MAX_ADDRESS_LENGTH];
+      char src_addr_[common::MAX_SYNC_IPADDR_LENGTH];
+      char dest_addr_[common::MAX_SYNC_IPADDR_LENGTH];
     };
 
     class TfsMirrorBackup : public SyncBackup

@@ -665,7 +665,7 @@ namespace tfs
               {
                 std::stringstream index_path;
                 index_path << info->mount_point_ << INDEX_DIR_PREFIX << index.physical_block_id_;
-                logic_block = insert_logic_block_(index.logic_block_id_, index_path.str());
+                logic_block = insert_logic_block_(index.logic_block_id_, index_path.str(), complete);
               }
             }
 

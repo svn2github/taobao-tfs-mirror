@@ -21,7 +21,6 @@
  */
 #include "data_management.h"
 #include "ds_define.h"
-#include "visit_stat.h"
 #include <Memory.hpp>
 #include "dataservice.h"
 
@@ -39,6 +38,10 @@ namespace tfs
 
     DataManagement::~DataManagement()
     {
+      for (DataFileMapIter it = data_file_map_.begin(); it != data_file_map_.end(); ++it)
+      {
+        tbsys::gDelete(it->second);
+      }
     }
 
     inline BlockManager& DataManagement::block_manager()
@@ -419,191 +422,6 @@ namespace tfs
       return ret;
     }
 
-    int DataManagement::get_visit_sorted_blockids(std::vector<LogicBlock*>& block_ptrs)
-    {
-      UNUSED(block_ptrs);
-      return EXIT_NOT_SUPPORT_ERROR;
-
-      /*
-      std::list<LogicBlock*> logic_blocks;
-      BlockFileManager::get_instance()->get_all_logic_block(logic_blocks);
-
-      for (std::list<LogicBlock*>::iterator lit = logic_blocks.begin(); lit != logic_blocks.end(); ++lit)
-      {
-        block_ptrs.push_back(*lit);
-      }
-
-      sort(block_ptrs.begin(), block_ptrs.end(), visit_count_sort());
-      return TFS_SUCCESS;
-
-      */
-
-    }
-
-    int DataManagement::get_block_file_list(const uint32_t block_id, std::vector<FileInfo>& fileinfos)
-    {
-      UNUSED(block_id);
-      UNUSED(fileinfos);
-      return EXIT_NOT_SUPPORT_ERROR;
-
-      /*
-      TBSYS_LOG(INFO, "getfilelist. blockid: %u\n", block_id);
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        TBSYS_LOG(ERROR, "blockid: %u is not exist.", block_id);
-        return EXIT_NO_LOGICBLOCK_ERROR;
-      }
-
-      logic_block->get_file_infos(fileinfos);
-      TBSYS_LOG(INFO, "getfilelist. blockid: %u, filenum: %zd\n", block_id, fileinfos.size());
-      return TFS_SUCCESS;
-      */
-    }
-
-    int DataManagement::get_block_meta_info(const uint32_t block_id, RawMetaVec& meta_list)
-    {
-      UNUSED(block_id);
-      UNUSED(meta_list);
-      return EXIT_NOT_SUPPORT_ERROR;
-
-      /*
-      TBSYS_LOG(INFO, "get raw meta list. blockid: %u\n", block_id);
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        TBSYS_LOG(ERROR, "blockid: %u is not exist.", block_id);
-        return EXIT_NO_LOGICBLOCK_ERROR;
-      }
-
-      logic_block->get_meta_infos(meta_list);
-      TBSYS_LOG(INFO, "get meta list. blockid: %u, filenum: %zd\n", block_id, meta_list.size());
-      */
-    }
-
-    int DataManagement::reset_block_version(const uint32_t block_id)
-    {
-      UNUSED(block_id);
-      return EXIT_NOT_SUPPORT_ERROR;
-
-      /*
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        TBSYS_LOG(ERROR, "blockid: %u is not exist.", block_id);
-        return EXIT_NO_LOGICBLOCK_ERROR;
-      }
-
-      logic_block->reset_block_version();
-      TBSYS_LOG(INFO, "reset block version: %u\n", block_id);
-      return TFS_SUCCESS;
-      */
-    }
-
-    int DataManagement::new_single_block(const uint32_t block_id, const bool tmp)
-    {
-      TBSYS_LOG(INFO, "new single block, blockid: %u", block_id);
-      return block_manager().new_block(block_id, tmp);
-    }
-
-    int DataManagement::del_single_block(const uint32_t block_id, const bool tmp)
-    {
-      TBSYS_LOG(INFO, "remove single block, blockid: %u", block_id);
-      return block_manager().del_block(block_id, tmp);
-    }
-
-    int DataManagement::get_block_curr_size(const uint32_t block_id, int32_t& size)
-    {
-      UNUSED(block_id);
-      UNUSED(size);
-      return EXIT_NOT_SUPPORT_ERROR;
-
-      /*
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        TBSYS_LOG(ERROR, "blockid: %u is not exist.", block_id);
-        return EXIT_NO_LOGICBLOCK_ERROR;
-      }
-
-      size = logic_block->get_data_file_size();
-      TBSYS_LOG(DEBUG, "blockid: %u data file size: %d\n", block_id, size);
-      return TFS_SUCCESS;
-      */
-    }
-
-    int DataManagement::read_raw_data(const uint32_t block_id, const int32_t read_offset, int32_t& real_read_len,
-        char* tmp_data_buffer)
-    {
-      int ret = block_manager().pread(tmp_data_buffer, real_read_len, read_offset, block_id);
-      return (ret < 0) ? ret : TFS_SUCCESS;
-    }
-
-    int DataManagement::write_raw_data(const uint32_t block_id, const int32_t data_offset, const int32_t msg_len,
-        const char* data_buffer)
-    {
-      //zero length
-      if (0 == msg_len)
-      {
-        return TFS_SUCCESS;
-      }
-
-      int ret = block_manager().pwrite(data_buffer, msg_len, data_offset, block_id);
-      return (ret < 0) ? ret : TFS_SUCCESS;
-    }
-
-    int DataManagement::batch_write_meta(const uint32_t block_id, const BlockInfo* blk, const RawMetaVec* meta_list)
-    {
-      UNUSED(block_id);
-      UNUSED(blk);
-      UNUSED(meta_list);
-      return EXIT_NOT_SUPPORT_ERROR;
-
-      /*
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        TBSYS_LOG(ERROR, "blockid: %u is not exist.", block_id);
-        return EXIT_NO_LOGICBLOCK_ERROR;
-      }
-
-      int ret = logic_block->batch_write_meta(blk, meta_list);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "blockid: %u batch write meta error.", block_id);
-        return ret;
-      }
-
-      return TFS_SUCCESS;
-      */
-    }
-
-    int DataManagement::add_new_expire_block(const VUINT32* expire_block_ids, const VUINT32* remove_block_ids, const VUINT32* new_block_ids)
-    {
-      // delete expire block
-      if (NULL != expire_block_ids)
-      {
-        TBSYS_LOG(INFO, "expire block list size: %u\n", static_cast<uint32_t>(expire_block_ids->size()));
-        batch_remove_block(expire_block_ids);
-      }
-
-      // delete remove block
-      if (NULL != remove_block_ids)
-      {
-        TBSYS_LOG(INFO, "remove block list size: %u\n", static_cast<uint32_t>(remove_block_ids->size()));
-        batch_remove_block(remove_block_ids);
-      }
-
-      // new block
-      if (NULL != new_block_ids)
-      {
-        TBSYS_LOG(INFO, "new block list size: %u\n", static_cast<uint32_t>(new_block_ids->size()));
-        batch_remove_block(new_block_ids);
-      }
-
-      return TFS_SUCCESS;
-    }
-
     // gc expired and no referenced datafile
     int DataManagement::gc_data_file()
     {
@@ -637,19 +455,5 @@ namespace tfs
 
       return TFS_SUCCESS;
     }
-
-    // remove all datafile
-    int DataManagement::remove_data_file()
-    {
-      data_file_mutex_.lock();
-      for (DataFileMapIter it = data_file_map_.begin(); it != data_file_map_.end(); ++it)
-      {
-        tbsys::gDelete(it->second);
-      }
-      data_file_map_.clear();
-      data_file_mutex_.unlock();
-      return TFS_SUCCESS;
-    }
-
   }
 }
