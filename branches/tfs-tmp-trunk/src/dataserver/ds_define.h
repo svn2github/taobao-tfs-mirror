@@ -133,8 +133,7 @@ namespace tfs
       int32_t max_mr_network_bandwidth_mb_;
       int32_t max_rw_network_bandwidth_mb_;
       DsRuntimeGlobalInformation();
-      static DsRuntimeGlobalInformation& instance() { return instance_;}
-      static DsRuntimeGlobalInformation instance_;
+      static DsRuntimeGlobalInformation& instance();
     };
 
     typedef enum _OperType

@@ -264,7 +264,7 @@ namespace tfs
       // post request to slaves
       if ((TFS_SUCCESS == ret) && (servers.size() > 1U) && is_master)
       {
-        int32_t result = service_.post_message_to_server(message, servers);
+        int32_t result = post_message_to_server(message, servers);
         ret = (result == EXIT_POST_MSG_RET_POST_MSG_ERROR) ? EXIT_SENDMSG_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
@@ -355,7 +355,7 @@ namespace tfs
       // post request to slaves
       if ((TFS_SUCCESS == ret) && (servers.size() > 1U) && is_master)
       {
-        int32_t result = service_.post_message_to_server(message, servers);
+        int32_t result = post_message_to_server(message, servers);
         ret = (result == EXIT_POST_MSG_RET_POST_MSG_ERROR) ? EXIT_SENDMSG_ERROR: TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
@@ -441,7 +441,7 @@ namespace tfs
 
       if ((TFS_SUCCESS == ret) && (servers.size() > 1U) && is_master)
       {
-        int32_t result = service_.post_message_to_server(message, servers);
+        int32_t result = post_message_to_server(message, servers);
         ret = (result  == EXIT_POST_MSG_RET_POST_MSG_ERROR) ?  EXIT_SENDMSG_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {

@@ -28,6 +28,7 @@ namespace tfs
 {
   namespace dataserver
   {
+    class BaseLogicBlock;
     class BlockManager;
     class DataHelper;
     class DataService;
@@ -216,19 +217,16 @@ namespace tfs
       private:
         DISALLOW_COPY_AND_ASSIGN(CompactTask);
 
-        int do_compact(const uint32_t block_id);
-        /**
-        // int real_compact(LogicBlock* src, LogicBlock* dest);
-        int write_big_file(LogicBlock* src, LogicBlock* dest,
-            const common::FileInfo& src_info,
-            const common::FileInfo& dest_info, int32_t woffset);
-            */
+        int do_compact();
+        int real_compact(BaseLogicBlock* src, BaseLogicBlock* dest);
+        int write_big_file(BaseLogicBlock* src, BaseLogicBlock* dest,
+            const common::FileInfoV2& finfo, const int32_t new_offset);
         int compact_peer_blocks();
-        void add_response(const uint64_t server, const int status, const common::BlockInfo& info);
+        void add_response(const uint64_t server, const int status, const common::BlockInfoV2& info);
 
       protected:
-        uint32_t block_id_;
-        common::BlockInfo info_;
+        uint64_t block_id_;
+        common::BlockInfoV2 info_;
         std::vector<uint64_t> servers_;
         std::vector<std::pair<uint64_t, int8_t> > result_;
     };

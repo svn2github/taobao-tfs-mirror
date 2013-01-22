@@ -136,7 +136,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
       if (task_from_ds())
       {
-        ret = do_compact(block_id_);
+        ret = do_compact();
         int status = translate_status(ret);
         ret = report_to_ds(status);
       }
@@ -191,7 +191,8 @@ namespace tfs
       return tmp_stream.str();
     }
 
-    void CompactTask::add_response(const uint64_t server, const int status, const common::BlockInfo& info)
+    void CompactTask::add_response(const uint64_t server, const int status,
+        const common::BlockInfoV2& info)
     {
       for (uint32_t i = 0; i < result_.size(); i++)
       {
@@ -207,12 +208,6 @@ namespace tfs
       }
     }
 
-    int CompactTask::do_compact(const uint32_t block_id)
-    {
-      UNUSED(block_id);
-      return 0;
-    }
-
     int CompactTask::report_to_ns(const int status)
     {
       UNUSED(status);
@@ -223,7 +218,8 @@ namespace tfs
       cmit_cpt_msg.set_result(result_);
       ret = send_simple_request(source_id_, &cmit_cpt_msg);
 
-      TBSYS_LOG(INFO, "compact report to ns. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s, ret: %d",
+      TBSYS_LOG(INFO, "compact report to ns. seqno: %"PRI64_PREFIX"d, "
+          "blockid: %u, status: %d, source: %s, ret: %d",
           seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
 
       return ret;
@@ -238,22 +234,22 @@ namespace tfs
 
       if (PLAN_STATUS_END == status)
       {
-        /*
-        LogicBlock* LogicBlock = BlockFileManager::get_instance()->get_logic_block(block_id_);
-        if (NULL == LogicBlock)
+        BlockInfoV2 info;
+        int ret = block_manager().get_block_info(info, block_id_);
+        if (TFS_SUCCESS != ret)
         {
           resp_cpt_msg.set_status(PLAN_STATUS_FAILURE);
-          TBSYS_LOG(ERROR, "get block failed. blockid: %u\n", block_id_);
+          TBSYS_LOG(ERROR, "compact get block failed. blockid: %"PRI64_PREFIX"u, ret: %d",
+              block_id_, ret);
         }
         else
         {
-          BlockInfo* blk = LogicBlock->get_block_info();
-          resp_cpt_msg.set_block_info(*blk);
+          resp_cpt_msg.set_block_info(info);
         }
-        */
       }
 
-      TBSYS_LOG(INFO, "compact report to ds. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
+      TBSYS_LOG(INFO, "compact report to ds. seqno: %"PRI64_PREFIX"d, "
+          "blockid: %"PRI64_PREFIX"u, status: %d, source: %s",
         seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
 
       NewClient* client = NewClientManager::get_instance().create_client();
@@ -281,180 +277,148 @@ namespace tfs
       return ret;
     }
 
-    /*
-    int CompactTask::real_compact(LogicBlock* src, LogicBlock* dest)
+    int CompactTask::do_compact()
     {
-      assert(NULL != src && NULL != dest);
+      uint64_t block_id = block_id_;
+      BaseLogicBlock* src = NULL;
+      BaseLogicBlock* dest = NULL;
 
-      BlockInfo dest_blk;
-      BlockInfo* src_blk = src->get_block_info();
-      dest_blk.block_id_ = src_blk->block_id_;
-      dest_blk.seq_no_ = src_blk->seq_no_;
-      dest_blk.version_ = src_blk->version_;
-      dest_blk.file_count_ = 0;
-      dest_blk.size_ = 0;
-      dest_blk.del_file_count_ = 0;
-      dest_blk.del_size_ = 0;
-
-      dest->set_last_update(time(NULL));
-      TBSYS_LOG(DEBUG, "compact block set last update. blockid: %u\n", dest->get_logic_block_id());
-
-      char* dest_buf = new char[MAX_COMPACT_READ_SIZE];
-      int32_t write_offset = 0, data_len = 0;
-      int32_t w_file_offset = 0;
-      RawMetaVec dest_metas;
-      FileIterator* fit = new FileIterator(src);
-
-      int ret = TFS_SUCCESS;
-      while (fit->has_next())
+      // create temp block
+      int ret = data_helper().new_remote_block(service_.get_ds_ipport(), block_id, true);
+      if (TFS_SUCCESS == ret)
       {
-        ret = fit->next();
-        if (TFS_SUCCESS != ret)
-        {
-          tbsys::gDeleteA(dest_buf);
-          tbsys::gDelete(fit);
-          return ret;
-        }
-
-        const FileInfo* pfinfo = fit->current_file_info();
-        if (pfinfo->flag_ & (FI_DELETED | FI_INVALID))
-        {
-          continue;
-        }
-
-        FileInfo dfinfo = *pfinfo;
-        dfinfo.offset_ = w_file_offset;
-        // the size returned by FileIterator.current_file_info->size is
-        // the size of file content!!!
-        dfinfo.size_ = pfinfo->size_ + sizeof(FileInfo);
-        dfinfo.usize_ = pfinfo->size_ + sizeof(FileInfo);
-        w_file_offset += dfinfo.size_;
-
-        dest_blk.file_count_++;
-        dest_blk.size_ += dfinfo.size_;
-
-        RawMeta tmp_meta;
-        tmp_meta.set_file_id(dfinfo.id_);
-        tmp_meta.set_size(dfinfo.size_);
-        tmp_meta.set_offset(dfinfo.offset_);
-        dest_metas.push_back(tmp_meta);
-
-        // need flush write buffer
-        if ((0 != data_len) && (fit->is_big_file() || data_len + dfinfo.size_ > MAX_COMPACT_READ_SIZE))
-        {
-          TBSYS_LOG(DEBUG, "write one, blockid: %u, write offset: %d\n", dest->get_logic_block_id(),
-              write_offset);
-          ret = dest->write_raw_data(dest_buf, data_len, write_offset);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "write raw data fail, blockid: %u, offset %d, readinglen: %d, ret :%d",
-                dest->get_logic_block_id(), write_offset, data_len, ret);
-            tbsys::gDeleteA(dest_buf);
-            tbsys::gDelete(fit);
-            return ret;
-          }
-          write_offset += data_len;
-          data_len = 0;
-        }
-
-        if (fit->is_big_file())
-        {
-          ret = write_big_file(src, dest, *pfinfo, dfinfo, write_offset);
-          write_offset += dfinfo.size_;
-        }
-        else
-        {
-          memcpy(dest_buf + data_len, &dfinfo, sizeof(FileInfo));
-          int left_len = MAX_COMPACT_READ_SIZE - data_len;
-          ret = fit->read_buffer(dest_buf + data_len + sizeof(FileInfo), left_len);
-          data_len += dfinfo.size_;
-        }
-        if (TFS_SUCCESS != ret)
-        {
-          tbsys::gDeleteA(dest_buf);
-          tbsys::gDelete(fit);
-          return ret;
-        }
-
-      } // end of iterate
-
-      if (0 != data_len) // flush the last buffer
+        src = block_manager().get(block_id);
+        ret = (NULL != src) ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(DEBUG, "write one, blockid: %u, write offset: %d\n", dest->get_logic_block_id(), write_offset);
-        ret = dest->write_raw_data(dest_buf, data_len, write_offset);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "write raw data fail, blockid: %u, offset %d, readinglen: %d, ret :%d",
-              dest->get_logic_block_id(), write_offset, data_len, ret);
-          tbsys::gDeleteA(dest_buf);
-          tbsys::gDelete(fit);
-          return ret;
-        }
+        dest = block_manager().get(block_id, true);
+        ret = (NULL != dest) ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
       }
 
-      tbsys::gDeleteA(dest_buf);
-      tbsys::gDelete(fit);
-      TBSYS_LOG(DEBUG, "compact write complete. blockid: %u\n", dest->get_logic_block_id());
-
-      ret = dest->batch_write_meta(&dest_blk, &dest_metas, VERSION_INC_STEP_DEFAULT);
-      if (TFS_SUCCESS != ret)
+      // do compact work
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(ERROR, "compact write segment meta failed. blockid: %u, meta size %zd\n", dest->get_logic_block_id(),
-            dest_metas.size());
-        return ret;
+        ret = real_compact(src, dest);
       }
 
-      TBSYS_LOG(DEBUG, "compact set dirty flag. blockid: %u\n", dest->get_logic_block_id());
-      ret = dest->set_block_dirty_type(C_DATA_CLEAN);
-      if (TFS_SUCCESS != ret)
+      // switch block
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(ERROR, "compact blockid: %u set dirty flag fail. ret: %d\n", dest->get_logic_block_id(), ret);
-        return ret;
-      }
-
-      return TFS_SUCCESS;
-    }
-
-    int CompactTask::write_big_file(LogicBlock* src, LogicBlock* dest, const FileInfo& src_info,
-        const FileInfo& dest_info, int32_t woffset)
-    {
-      int32_t rsize = src_info.size_;
-      int32_t roffset = src_info.offset_ + sizeof(FileInfo);
-      char* buf = new char[MAX_COMPACT_READ_SIZE];
-      int32_t read_len = 0;
-      int ret = TFS_SUCCESS;
-
-      memcpy(buf, &dest_info, sizeof(FileInfo));
-      int32_t data_len = sizeof(FileInfo);
-      while (read_len < rsize)
-      {
-        int32_t cur_read = MAX_COMPACT_READ_SIZE - data_len;
-        if (cur_read > rsize - read_len)
-          cur_read = rsize - read_len;
-        ret = src->read_raw_data(buf + data_len, cur_read, roffset);
-        if (TFS_SUCCESS != ret)
-          break;
-        data_len += cur_read;
-        read_len += cur_read;
-        roffset += cur_read;
-
-        ret = dest->write_raw_data(buf, data_len, woffset);
-        if (TFS_SUCCESS != ret)
-          break;
-        woffset += data_len;
-
-        data_len = 0;
-      }
-
-      tbsys::gDeleteA(buf);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "write big file error, blockid: %u, ret: %d", dest->get_logic_block_id(), ret);
+        ret = block_manager().switch_logic_block(block_id, true);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = block_manager().del_block(block_id, true);
+        }
       }
 
       return ret;
     }
-    */
+
+    int CompactTask::real_compact(BaseLogicBlock* src, BaseLogicBlock* dest)
+    {
+      LogicBlock* lsrc = dynamic_cast<LogicBlock* >(src);
+      LogicBlock::Iterator* iter = new (std::nothrow) LogicBlock::Iterator(*lsrc);
+      assert(NULL != iter);
+
+      char* buffer = new (std::nothrow) char[MAX_COMPACT_READ_SIZE];
+      assert(NULL != buffer);
+
+      int32_t new_offset = -1;  // offset to write new file
+      int32_t inner_offset = 0; // offset in compact buffer
+      int32_t mem_offset = 0;   // where to read data in Iterator
+      IndexHeaderV2 header;
+      FileInfoV2* finfo = NULL;
+      vector<FileInfoV2> finfos_vec;
+      int ret = src->get_index_header(header);
+      if (TFS_SUCCESS == ret)
+      {
+        header.info_.file_count_ = 0;
+        header.info_.size_ = 0;
+        header.info_.del_file_count_ = 0;
+        header.info_.del_size_ = 0;
+        // clear update info ???
+      }
+
+      while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == iter->next(mem_offset, finfo)))
+      {
+        if (finfo->status_ & FI_DELETED)
+        {
+          continue;  // ignore deleted file
+        }
+
+        if (new_offset < 0)  // got the first undeleted file, update new offset
+        {
+          new_offset = finfo->offset_;
+        }
+
+        if (iter->is_big_file() || (inner_offset + finfo->size_ > MAX_COMPACT_READ_SIZE))
+        {
+          // flush buffer first
+          ret = dest->pwrite(buffer, inner_offset, new_offset);
+          if (TFS_SUCCESS == ret)
+          {
+            inner_offset = 0;
+            new_offset += inner_offset;
+          }
+
+          // special process big file
+          if ((TFS_SUCCESS == ret) && iter->is_big_file())
+          {
+            ret = write_big_file(src, dest, *finfo, new_offset);
+            if (TFS_SUCCESS == ret)
+            {
+              finfo->offset_ = new_offset; // update fileinfo offset
+              finfos_vec.push_back(*finfo);
+              header.info_.file_count_++;
+              header.info_.size_ += finfo->size_;
+              new_offset += finfo->size_;
+            }
+          }
+        }
+        else  // the tmp buffer can contains current file, just memcopy it
+        {
+          const char* file_data = iter->get_data(mem_offset, finfo->size_);
+          memcpy(buffer + inner_offset, file_data, finfo->size_);
+          finfo->offset_ = new_offset + inner_offset; // update fileinfo offset
+          finfos_vec.push_back(*finfo);
+          header.info_.file_count_++;
+          header.info_.size_ += finfo->size_;
+          inner_offset += finfo->size_;
+        }
+      }
+
+      // write new header and index to dest
+      if (TFS_SUCCESS == ret)
+      {
+        ret = dest->write_file_infos(header, finfos_vec, block_id_);
+      }
+
+      return ret;
+    }
+
+    int CompactTask::write_big_file(BaseLogicBlock* src, BaseLogicBlock* dest,
+        const FileInfoV2& finfo, const int32_t new_offset)
+    {
+      int offset = 0;
+      int length = 0;
+      int ret = TFS_SUCCESS;
+      char buffer[MAX_READ_SIZE]; // use stack space
+      while ((TFS_SUCCESS == ret) && (offset < finfo.size_))
+      {
+        length = std::min(finfo.size_ - offset, MAX_READ_SIZE);
+        ret = src->pread(buffer, length, finfo.offset_ + offset);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = dest->pwrite(buffer, length, new_offset + offset);
+          if (TFS_SUCCESS == ret)
+          {
+            offset += length;
+          }
+        }
+      }
+      return ret;
+    }
 
     ReplicateTask::ReplicateTask(DataService& service, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time, const common::ReplBlock& repl_info):
@@ -556,8 +520,8 @@ namespace tfs
             repl_info_.block_id_, rm_ret);
       }
 
-      TBSYS_LOG(INFO,
-          "replicate report to ns. seqno: %"PRI64_PREFIX"d, blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
+      TBSYS_LOG(INFO, "replicate report to ns. seqno: %"PRI64_PREFIX"d, "
+          "blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
 
       return ret;
@@ -570,7 +534,8 @@ namespace tfs
       resp_repl_msg.set_ds_id(service_.get_ds_ipport());
       resp_repl_msg.set_status(status);
 
-      TBSYS_LOG(INFO, "replicate report to ds. seqno: %"PRI64_PREFIX"d, blockid: %"PRI64_PREFIX"u, status: %d, source: %s",
+      TBSYS_LOG(INFO, "replicate report to ds. seqno: %"PRI64_PREFIX"d, "
+          "blockid: %"PRI64_PREFIX"u, status: %d, source: %s",
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
 
       NewClient* client = NewClientManager::get_instance().create_client();

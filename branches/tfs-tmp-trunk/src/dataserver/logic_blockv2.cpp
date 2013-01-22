@@ -151,6 +151,12 @@ namespace tfs
       return index_handle_->get_block_info(info);
     }
 
+    int BaseLogicBlock::get_index_header(IndexHeaderV2& header) const
+    {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return index_handle_->get_index_header(header);
+    }
+
     int BaseLogicBlock::load_index(const common::MMapOption mmap_option)
     {
       int32_t ret = (mmap_option.check()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -725,6 +731,11 @@ namespace tfs
     bool LogicBlock::Iterator::empty() const
     {
       return (iter_ == logic_block_.get_index_handle_()->end());
+    }
+
+    bool LogicBlock::Iterator::is_big_file() const
+    {
+      return iter_->size_ > MAX_DATA_SIZE;
     }
 
     int LogicBlock::Iterator::next(int32_t& mem_offset, FileInfoV2*& info)

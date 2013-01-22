@@ -58,6 +58,12 @@ namespace tfs
       return information_.status_ == common::DATASERVER_STATUS_DEAD;
     }
 
+    DsRuntimeGlobalInformation& DsRuntimeGlobalInformation::instance()
+    {
+      static DsRuntimeGlobalInformation instance_;
+      return instance_;
+    }
+
     void DsRuntimeGlobalInformation::dump(const int32_t level, const char* file, const int32_t line,
         const char* function, const char* format, ...)
     {

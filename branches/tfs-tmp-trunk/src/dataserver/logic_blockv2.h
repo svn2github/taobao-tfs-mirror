@@ -55,6 +55,7 @@ namespace tfs
       int update_block_info(const common::BlockInfoV2& info) const;
       int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT);
       int get_block_info(common::BlockInfoV2& info) const;
+      int get_index_header(common::IndexHeaderV2& header) const;
       virtual int check_block_intact() { return common::TFS_SUCCESS;}
       int load_index(const common::MMapOption mmap_option);
       int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id) const;
@@ -133,15 +134,16 @@ namespace tfs
               mem_valid_size_(0){}
             virtual ~Iterator() {}
             bool empty() const;
+            bool is_big_file() const;
             int next(int32_t& mem_offset, common::FileInfoV2*& info);
             const common::FileInfoV2& get_file_info() const;
             const char* get_data(int32_t& mem_offset, const int32_t size) const;
           private:
+            static const int32_t MAX_DATA_SIZE = 1 * 1024 * 1024;
             LogicBlock& logic_block_;
             BaseIndexHandle::iterator iter_;
             int32_t used_offset_;//磁盘文件大小(这里的offset是最后一个文件的起始位置)
             int32_t mem_valid_size_;
-            static const int32_t MAX_DATA_SIZE = 1 * 1024 * 1024;
             char data_[MAX_DATA_SIZE];//从磁盘上读出的数据缓存
         };
     };

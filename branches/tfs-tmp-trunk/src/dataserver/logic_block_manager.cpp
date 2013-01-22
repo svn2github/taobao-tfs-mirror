@@ -158,8 +158,17 @@ namespace tfs
           {
             BaseLogicBlock query(logic_block_id);
             LOGIC_BLOCK_MAP_ITER it =  logic_blocks_.find(&query);
-            ret = (logic_blocks_.end() == it) ? TFS_SUCCESS : EXIT_BLOCK_EXIST_ERROR;
-            if (TFS_SUCCESS == ret)
+            if (logic_blocks_.end() != it)
+            {
+              // exchange logic block in two map
+              BaseLogicBlock* result = NULL;
+              BaseLogicBlock* tmp_logic_block = *it;
+              logic_blocks_.erase(*it);
+              logic_blocks_.insert_unique(result, iter->second);
+              tmp_logic_blocks_.erase(iter);
+              tmp_logic_blocks_.insert(TMP_LOGIC_BLOCK_MAP::value_type(logic_block_id, tmp_logic_block));
+            }
+            else
             {
               BaseLogicBlock* result = NULL;
               logic_blocks_.insert_unique(result, iter->second);
@@ -167,6 +176,7 @@ namespace tfs
             }
           }
         }
+        /*  won't happen ??
         else
         {
           BaseLogicBlock query(logic_block_id);
@@ -183,6 +193,7 @@ namespace tfs
             }
           }
         }
+        */
       }
       return ret;
     }

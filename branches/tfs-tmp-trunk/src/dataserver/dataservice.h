@@ -99,8 +99,6 @@ namespace tfs
       bool check_response(common::NewClient* client);
       int callback(common::NewClient* client);
 
-      int post_message_to_server(common::BasePacket* message, const common::VUINT64& ds_list);
-
       std::string get_real_work_dir();
 
       // common interfaces
