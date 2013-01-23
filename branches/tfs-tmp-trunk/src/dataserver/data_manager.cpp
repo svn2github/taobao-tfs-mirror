@@ -233,8 +233,8 @@ namespace tfs
       return  ret;
     }
 
-    int DataManager::close_file(const uint64_t block_id, uint64_t& file_id, const uint64_t lease_id,
-        const bool tmp, BlockInfoV2& local)
+    int DataManager::close_file(const uint64_t block_id, const uint64_t attach_block_id,
+        uint64_t& file_id, const uint64_t lease_id, const bool tmp, BlockInfoV2& local)
     {
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
           (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -251,7 +251,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
-        ret = block_manager().write(file_id, data_file, block_id, block_id, tmp);
+        ret = block_manager().write(file_id, data_file, block_id, attach_block_id, tmp);
         ret = (ret < 0) ? ret: TFS_SUCCESS;  // transform return status
         if (TFS_SUCCESS == ret)
         {
@@ -264,8 +264,9 @@ namespace tfs
       return (ret < 0) ? ret: TFS_SUCCESS;
     }
 
-    int DataManager::unlink_file(const uint64_t block_id, const uint64_t file_id, const int64_t lease_id,
-        const int32_t action, const int32_t remote_version, BlockInfoV2& local)
+    int DataManager::unlink_file(const uint64_t block_id, const uint64_t attach_block_id,
+        const uint64_t file_id, const int64_t lease_id, const int32_t action,
+        const int32_t remote_version, BlockInfoV2& local)
     {
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
           (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
@@ -285,7 +286,7 @@ namespace tfs
       int64_t file_size = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = block_manager().unlink(file_size, file_id, action, block_id, block_id);
+        ret = block_manager().unlink(file_size, file_id, action, block_id, attach_block_id);
         if (TFS_SUCCESS == ret)
         {
           ret = block_manager().get_block_info(local, block_id);
