@@ -974,6 +974,12 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
 
+      // get block by server
+      uint64_t get_block(uint64_t server_id);
+
+      // get parity server list
+      void get_check_servers(std::vector<uint64_t>& servers);
+
       FamilyInfoExt()
       {
         family_id_ = INVALID_FAMILY_ID;

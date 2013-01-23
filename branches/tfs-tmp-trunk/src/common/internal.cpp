@@ -1498,6 +1498,36 @@ namespace tfs
     }
 
 
+    uint64_t FamilyInfoExt::get_block(uint64_t server_id)
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      uint64_t block_id = INVALID_BLOCK_ID;
+      for (int i = member_num - 1; (INVALID_BLOCK_ID == block_id) && (i >= 0); i--)
+      {
+        if (members_[i].second == server_id)
+        {
+          block_id = members_[i].first;
+        }
+      }
+      return block_id;
+    }
+
+    void FamilyInfoExt::get_check_servers(std::vector<uint64_t>& servers)
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      servers.clear();
+      for (int i = data_num; i < member_num; i++)
+      {
+        servers.push_back(members_[i].first);
+      }
+    }
+
     int FamilyInfoExt::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
