@@ -156,7 +156,7 @@ namespace tfs
           family_info_ = family_info;
         }
 
-        const common::FamilyInfoExt& get_family_info() const
+        common::FamilyInfoExt& get_family_info()
         {
           return family_info_;
         }
