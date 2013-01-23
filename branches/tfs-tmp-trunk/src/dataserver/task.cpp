@@ -352,7 +352,7 @@ namespace tfs
           new_offset = finfo->offset_;
         }
 
-        if (iter->is_big_file() || (inner_offset + finfo->size_ > MAX_COMPACT_READ_SIZE))
+        if (inner_offset + finfo->size_ > MAX_COMPACT_READ_SIZE)
         {
           // flush buffer first
           ret = dest->pwrite(buffer, inner_offset, new_offset);
@@ -361,9 +361,12 @@ namespace tfs
             inner_offset = 0;
             new_offset += inner_offset;
           }
+        }
 
+        if (TFS_SUCCESS == ret)
+        {
           // special process big file
-          if ((TFS_SUCCESS == ret) && iter->is_big_file())
+          if (iter->is_big_file())
           {
             ret = write_big_file(src, dest, *finfo, new_offset);
             if (TFS_SUCCESS == ret)
@@ -375,16 +378,16 @@ namespace tfs
               new_offset += finfo->size_;
             }
           }
-        }
-        else  // the tmp buffer can contains current file, just memcopy it
-        {
-          const char* file_data = iter->get_data(mem_offset, finfo->size_);
-          memcpy(buffer + inner_offset, file_data, finfo->size_);
-          finfo->offset_ = new_offset + inner_offset; // update fileinfo offset
-          finfos_vec.push_back(*finfo);
-          header.info_.file_count_++;
-          header.info_.size_ += finfo->size_;
-          inner_offset += finfo->size_;
+          else  // the tmp buffer can contains current file, just memcopy it
+          {
+            const char* file_data = iter->get_data(mem_offset, finfo->size_);
+            memcpy(buffer + inner_offset, file_data, finfo->size_);
+            finfo->offset_ = new_offset + inner_offset; // update fileinfo offset
+            finfos_vec.push_back(*finfo);
+            header.info_.file_count_++;
+            header.info_.size_ += finfo->size_;
+            inner_offset += finfo->size_;
+          }
         }
       }
 
