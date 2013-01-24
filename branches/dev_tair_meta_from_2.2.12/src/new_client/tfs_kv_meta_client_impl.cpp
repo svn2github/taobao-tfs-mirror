@@ -97,15 +97,12 @@ namespace tfs
                                             vector<string> *v_object_name, set<string> *s_common_prefix,
                                             int8_t *is_truncated)
     {
-       TfsRetType ret = TFS_ERROR;
+       TfsRetType ret = TFS_SUCCESS;
 
        if (!is_valid_bucket_name(bucket_name))
        {
+         ret = TFS_ERROR;
          TBSYS_LOG(ERROR, "bucket name is invalid");
-       }
-       else
-       {
-         ret = TFS_SUCCESS;
        }
 
        if (TFS_SUCCESS == ret)
@@ -139,6 +136,29 @@ namespace tfs
 
        return ret;
     }
+
+    TfsRetType KvMetaClientImpl::head_bucket(const char *bucket_name, BucketMetaInfo *bucket_meta_info)
+    {
+       TfsRetType ret = TFS_ERROR;
+
+       if (!is_valid_bucket_name(bucket_name))
+       {
+         TBSYS_LOG(ERROR, "bucket name is invalid");
+       }
+       else
+       {
+         ret = TFS_SUCCESS;
+       }
+
+       if (TFS_SUCCESS == ret)
+       {
+         TBSYS_LOG(ERROR, "head bucket: %s fail", bucket_name);
+         ret = do_head_bucket(bucket_name, bucket_meta_info);
+       }
+
+       return ret;
+    }
+
 
     // copy from NameMetaClientImpl::write_data
     int64_t KvMetaClientImpl::write_data(const char *ns_addr,
@@ -253,6 +273,19 @@ namespace tfs
         }
       }
       return (TFS_SUCCESS == ret) ? (length - left_length) : ret;
+    }
+
+    int64_t KvMetaClientImpl::pwrite_object(const char *bucket_name, const char *object_name,
+        const void *buffer, int64_t offset, int64_t length)
+    {
+      int64_t ret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = put_object(bucket_name, object_name, buffer, offset, length);
+      }
+
+      return ret;
     }
 
     int64_t KvMetaClientImpl::put_object(const char *bucket_name, const char *object_name,
@@ -591,6 +624,28 @@ namespace tfs
       return ret;
     }
 
+    TfsRetType KvMetaClientImpl::head_object(const char *bucket_name, const char *object_name, ObjectInfo *object_info)
+    {
+      TfsRetType ret = TFS_ERROR;
+      if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = do_head_object(bucket_name, object_name, object_info);
+
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "head object failed. bucket: %s, object: %s", bucket_name, object_name);
+        }
+      }
+
+      return ret;
+    }
+
+
     int KvMetaClientImpl::do_put_bucket(const char *bucket_name)
     {
       return KvMetaHelper::do_put_bucket(kms_id_, bucket_name);
@@ -612,6 +667,12 @@ namespace tfs
       return KvMetaHelper::do_del_bucket(kms_id_, bucket_name);
     }
 
+    int KvMetaClientImpl::do_head_bucket(const char *bucket_name, BucketMetaInfo *bucket_meta_info)
+    {
+      return KvMetaHelper::do_head_bucket(kms_id_, bucket_name, bucket_meta_info);
+    }
+
+
     int KvMetaClientImpl::do_put_object(const char *bucket_name,
         const char *object_name, const ObjectInfo &object_info)
     {
@@ -628,6 +689,12 @@ namespace tfs
     {
       return KvMetaHelper::do_del_object(kms_id_, bucket_name, object_name);
     }
+
+    int KvMetaClientImpl::do_head_object(const char *bucket_name, const char *object_name, ObjectInfo *object_info)
+    {
+      return KvMetaHelper::do_head_object(kms_id_, bucket_name, object_name, object_info);
+    }
+
 
     // TODO
     bool KvMetaClientImpl::is_valid_bucket_name(const char *bucket_name)

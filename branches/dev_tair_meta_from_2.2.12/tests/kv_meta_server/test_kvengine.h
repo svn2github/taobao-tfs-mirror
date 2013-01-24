@@ -33,16 +33,16 @@ namespace tfs
       TestEngineHelper();
       virtual ~TestEngineHelper();
       virtual int init();
-      virtual int put_key(const KvKey& key, const std::string& value, const int64_t version);
-      virtual int get_key(const KvKey& key, std::string* value, int64_t* version);
+      virtual int put_key(const KvKey& key, const KvMemValue& value, const int64_t version);
+      virtual int get_key(const KvKey& key, KvValue** value, int64_t* version);
       virtual int delete_key(const KvKey& key);
       int split_key(const KvKey& key, KvKey *prefix_key, KvKey *second_key);
       virtual int scan_keys(const KvKey& start_key, const KvKey& end_key,
-          const int32_t offset, const int32_t limit, std::vector<std::string>* vec_realkey,
-          std::vector<std::string>* vec_values, int32_t* result_size);
+          const int32_t limit, const int32_t offset, std::vector<KvValue*> *vec_realkey,
+          std::vector<KvValue*> *vec_values, int32_t* result_size, short scan_type);
 
       int scan_from_map(const KvKey &start_key, const KvKey &end_key,
-          const int32_t offset, const int32_t limit, std::vector<std::string> *vec_realkey, std::vector<string> *vec_values, int *result_size);
+          const int32_t offset, const int32_t limit, std::vector<KvValue*> *vec_realkey, std::vector<KvValue*> *vec_values, int *result_size);
 
         /*virtual int delete_keys(const std::vector<KvKey>& vec_keys);
 

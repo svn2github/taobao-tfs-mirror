@@ -42,12 +42,20 @@ namespace tfs
                               std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix,
                               int8_t *is_truncated);
         TfsRetType del_bucket(const char *bucket_name);
+        TfsRetType head_bucket(const char *bucket_name, common::BucketMetaInfo *bucket_meta_info);
+
 
         TfsRetType put_object(const char *bucket_name, const char *object_name,
             const char* local_file);
+
+        //pwrite
+        int64_t pwrite_object(const char *bucket_name, const char *object_name,
+            const void *buf, const int64_t object_offset, const int64_t length);
+
         TfsRetType get_object(const char *bucket_name, const char *object_name,
             const char* local_file);
         TfsRetType del_object(const char *bucket_name, const char *object_name);
+        TfsRetType head_object(const char *bucket_name, const char *object_name, common::ObjectInfo *object_info);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClient);

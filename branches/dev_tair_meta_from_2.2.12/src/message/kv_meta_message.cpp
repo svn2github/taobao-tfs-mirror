@@ -105,6 +105,11 @@ namespace tfs
         iret = output.set_int64(offset_);
       }
 
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int64(length_);
+      }
+
       return iret;
     }
 
@@ -122,12 +127,18 @@ namespace tfs
         iret = input.get_int64(&offset_);
       }
 
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int64(&length_);
+      }
+
       return iret;
     }
 
     int64_t ReqKvMetaGetObjectMessage::length() const
     {
-      return Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(file_name_) + INT64_SIZE;
+      return Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(file_name_)
+        + INT64_SIZE + INT64_SIZE;
     }
 
     // rsp_get_object_msg

@@ -86,8 +86,8 @@ int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_nam
   {
     ReqKvMetaGetBucketMessage req_gb_msg;
     req_gb_msg.set_bucket_name(bucket_name);
-    req_gb_msg.set_prefix(prefix);
-    req_gb_msg.set_start_key(start_key);
+    req_gb_msg.set_prefix(NULL == prefix ? "" : string(prefix));
+    req_gb_msg.set_start_key(NULL == start_key ? "" : string(start_key));
     req_gb_msg.set_delimiter(delimiter);
     req_gb_msg.set_limit(limit);
 
@@ -167,6 +167,17 @@ int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_nam
   return ret;
 
 }
+
+int KvMetaHelper::do_head_bucket(const uint64_t server_id, const char *bucket_name, BucketMetaInfo *bucket_meta_info)
+{
+  UNUSED(server_id);
+  UNUSED(bucket_name);
+  UNUSED(bucket_meta_info);
+ //todo
+ return TFS_SUCCESS;
+
+}
+
 
 int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_name,const char *object_name,
     const ObjectInfo &object_info)
@@ -313,5 +324,16 @@ int KvMetaHelper::do_del_object(const uint64_t server_id, const char *bucket_nam
     NewClientManager::get_instance().destroy_client(client);
   }
   return ret;
+}
+
+int KvMetaHelper::do_head_object(const uint64_t server_id, const char *bucket_name,
+    const char *object_name, ObjectInfo *object_info)
+{
+  UNUSED(server_id);
+  UNUSED(bucket_name);
+  UNUSED(object_name);
+  UNUSED(object_info);
+ //todo
+ return TFS_SUCCESS;
 }
 

@@ -65,11 +65,25 @@ namespace tfs
       return impl_->del_bucket(bucket_name);
     }
 
+    TfsRetType KvMetaClient::head_bucket(const char *bucket_name, common::BucketMetaInfo *bucket_meta_info)
+    {
+      return impl_->head_bucket(bucket_name, bucket_meta_info);
+    }
+
+
     TfsRetType KvMetaClient::put_object(const char *bucket_name, const char *object_name,
         const char* local_file)
     {
       return impl_->put_object(bucket_name, object_name, local_file);
     }
+
+    //pwrite
+    int64_t KvMetaClient::pwrite_object(const char *bucket_name, const char *object_name,
+        const void *buf, const int64_t object_offset, const int64_t length)
+    {
+      return impl_->pwrite_object(bucket_name, object_name, buf, object_offset, length);
+    }
+
 
     TfsRetType KvMetaClient::get_object(const char *bucket_name, const char *object_name,
         const char* local_file)
@@ -81,6 +95,13 @@ namespace tfs
     {
       return impl_->del_object(bucket_name, object_name);
     }
+
+    TfsRetType KvMetaClient::head_object(const char *bucket_name, const char *object_name,
+        common::ObjectInfo *object_info)
+    {
+      return impl_->head_object(bucket_name, object_name, object_info);
+    }
+
 
   }
 }

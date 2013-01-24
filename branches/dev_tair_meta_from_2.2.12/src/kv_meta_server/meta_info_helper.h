@@ -47,14 +47,20 @@ namespace tfs
 
       /*----------------------------object part-----------------------------*/
 
+        int head_object(const std::string &bucket_name,
+                     const std::string &file_name,
+                     common::ObjectInfo *object_info_zero);
+
         int put_object(const std::string& bucket_name,
                      const std::string& file_name,
-                     const int64_t &offset,
-                     common::ObjectInfo &object_info);
+                     const int64_t offset,
+                     const int64_t length,
+                     const common::ObjectInfo &object_info);
 
         int get_object(const std::string& bucket_name,
                      const std::string& file_name,
-                     const int64_t &offset,
+                     const int64_t offset,
+                     const int64_t length,
                      common::ObjectInfo *object_info);
 
         int del_object(const std::string& bucket_name,
@@ -74,19 +80,28 @@ namespace tfs
         int del_bucket(const std::string& bucket_name);
 
       public:
+        int put_object_ex(const std::string &bucket_name, const std::string &file_name,
+            const int64_t offset, const common::ObjectInfo &object_info, const int64_t lock_version = 0);
+
         int get_single_value(const std::string &bucket_name,
                            const std::string &file_name,
                            const int64_t &offset,
-                           common::ObjectInfo *object_info);
+                           common::ObjectInfo *object_info,
+                           int64_t *version);
         int deserialize_key(const char *key, const int32_t key_size, std::string *object_name,
             int64_t *offset, int64_t *version);
         int serialize_key(const std::string &bucket_name,
-                        const std::string &file_name, const int64_t &offset,
+                        const std::string &file_name, const int64_t offset,
                         KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
       protected:
-        int list_objects_ex(const std::string &k, const std::string &v, const std::string &prefix, const char delimiter,
+        int match_objects(const std::string &k, const std::string &v, const std::string &prefix, const char delimiter,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,
             std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix);
+
+        int put_object_segment(const std::string &bucket_name, const std::string &file_name, const common::ObjectInfo &object_info, common::ObjectInfo *object_info_zero);
+
+        int update_object_head(const std::string &bucket_name, const std::string &file_name,
+            common::ObjectInfo *object_info_zero, const int64_t offset, const int64_t length);
 
         int get_range(const KvKey &pkey, const std::string &start_key,
             int32_t offset, const int32_t limit, std::vector<KvValue*> *kv_value_keys,

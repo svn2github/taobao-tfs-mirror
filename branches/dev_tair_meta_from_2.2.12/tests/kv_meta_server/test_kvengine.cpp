@@ -16,6 +16,7 @@
 
 #include "test_kvengine.h"
 #include "Memory.hpp"
+#include "kv_meta_define.h"
 #include "common/parameter.h"
 #include "common/error_msg.h"
 
@@ -41,7 +42,7 @@ namespace tfs
       return ret;
     }
 
-    int TestEngineHelper::put_key(const KvKey& key, const string& value, const int64_t version)
+    int TestEngineHelper::put_key(const KvKey& key, const KvMemValue& value, const int64_t version)
     {
       UNUSED(version);
       int ret = TFS_SUCCESS;
@@ -49,12 +50,12 @@ namespace tfs
       {
         case KvKey::KEY_TYPE_OBJECT:
           {
-            map_store_[string(key.key_, key.key_size_)] = value;
+            map_store_[string(key.key_, key.key_size_)] = string(value.get_data(), value.get_size());
           }
           break;
         case KvKey::KEY_TYPE_BUCKET:
           {
-            map_store_[string(key.key_, key.key_size_)] = value;
+            map_store_[string(key.key_, key.key_size_)] = string(value.get_data(), value.get_size());
           }
           break;
         default:
@@ -63,7 +64,8 @@ namespace tfs
       }
       return ret;
     }
-    int TestEngineHelper::get_key(const KvKey& key, std::string* value, int64_t* version)
+
+    int TestEngineHelper::get_key(const KvKey& key, KvValue** value, int64_t* version)
     {
       UNUSED(version);
       int ret = TFS_SUCCESS;
@@ -78,7 +80,9 @@ namespace tfs
               CONTAINER::iterator iter = map_store_.find(store_key);
               if (iter != map_store_.end())
               {
-                *value = iter->second;
+                KvMemValue *v = new KvMemValue();
+                v->set_data(iter->second.c_str(), iter->second.length());
+                *value = v;
               }
               else
               {
@@ -93,7 +97,9 @@ namespace tfs
               CONTAINER::iterator iter = map_store_.find(store_key);
               if (iter != map_store_.end())
               {
-                *value = iter->second;
+                KvMemValue *v = new KvMemValue();
+                v->set_data(iter->second.c_str(), iter->second.length());
+                *value = v;
               }
               else
               {
@@ -213,7 +219,7 @@ namespace tfs
     }*/
 
     int TestEngineHelper::scan_from_map(const KvKey &start_key, const KvKey &end_key,
-        const int32_t offset, const int32_t limit, std::vector<std::string> *vec_realkey, std::vector<string> *vec_values, int *result_size)
+        const int32_t offset, const int32_t limit, std::vector<KvValue*> *vec_realkey, std::vector<KvValue*> *vec_values, int *result_size)
     {
       string temp_start_key = NULL != start_key.key_ ? string(start_key.key_, start_key.key_size_) : "";
       string temp_end_key = NULL != end_key.key_ ? string(end_key.key_, end_key.key_size_) : "";
@@ -225,7 +231,7 @@ namespace tfs
       for (; iter != map_store_.end() && count < limit; iter++)
       {
 
-        if ((iter->first).compare(temp_end_key) < 0)
+        if ((iter->first).compare(temp_end_key) > 0)
         {
           if (temp_offset < offset)
           {
@@ -233,8 +239,14 @@ namespace tfs
           }
           else
           {
-            vec_realkey->push_back(iter->first);
-            vec_values->push_back(iter->second);
+            KvMemValue *key = new KvMemValue();
+            key->set_data((iter->first).c_str(), (iter->first).length());
+
+            KvMemValue *value = new KvMemValue();
+            value->set_data((iter->second).c_str(), (iter->second).length());
+
+            vec_realkey->push_back(key);
+            vec_values->push_back(value);
             count++;
           }
         }
@@ -245,16 +257,17 @@ namespace tfs
     }
 
     int TestEngineHelper::scan_keys(const KvKey& start_key, const KvKey& end_key,
-        const int32_t offset, const int32_t limit, std::vector<std::string>* vec_realkey,
-        std::vector<std::string>* vec_values, int32_t* result_size)
+        const int32_t limit, const int32_t offset, std::vector<KvValue*> *vec_realkey,
+        std::vector<KvValue*> *vec_values, int32_t* result_size, short scan_type)
     {
+      UNUSED(scan_type);
       int ret = TFS_SUCCESS;
 
       switch (start_key.key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
           {
-            ret = scan_from_map(start_key, end_key, offset, limit, vec_realkey, vec_values, result_size);
+            ret = scan_from_map(start_key, end_key, limit, offset, vec_realkey, vec_values, result_size);
           }
           break;
         default:

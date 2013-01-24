@@ -93,6 +93,11 @@ namespace tfs
           return offset_;
         }
 
+        const int64_t get_length()
+        {
+          return length_;
+        }
+
         void set_bucket_name(const std::string& bucket_name)
         {
           bucket_name_ = bucket_name;
@@ -107,10 +112,16 @@ namespace tfs
         {
           offset_ = offset;
         }
+
+        void set_length(const int64_t length)
+        {
+          length_ = length;
+        }
       private:
         std::string bucket_name_;
         std::string file_name_;
         int64_t offset_;
+        int64_t length_;
     };
 
     class RspKvMetaGetObjectMessage : public common::BasePacket
@@ -177,8 +188,8 @@ namespace tfs
       }
 
       private:
-      std::string bucket_name_;
-      std::string file_name_;
+        std::string bucket_name_;
+        std::string file_name_;
     };
 
     class ReqKvMetaPutBucketMessage : public common::BasePacket

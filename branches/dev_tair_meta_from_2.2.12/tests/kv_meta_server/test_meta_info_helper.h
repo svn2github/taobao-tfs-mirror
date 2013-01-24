@@ -35,7 +35,7 @@ namespace tfs
       TestMetaInfoHelper()
       {
       }
-      void set_kv_engine(KvEngineHelper* r)
+      void set_kv_engine(KvEngineHelper *r)
       {
         kv_engine_helper_ = r;
       }

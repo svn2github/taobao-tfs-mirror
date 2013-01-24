@@ -35,6 +35,7 @@ namespace tfs
                                std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix,
                                int8_t *is_trucated);
       static int do_del_bucket(const uint64_t server_id, const char *bucket_name);
+      static int do_head_bucket(const uint64_t server_id, const char *bucket_name, common::BucketMetaInfo *bucket_meta_info);
 
       static int do_put_object(const uint64_t server_id,
                                const char *bucket_name, const char *object_name,
@@ -46,6 +47,10 @@ namespace tfs
       static int do_del_object(const uint64_t server_id,
                                const char *bucket_name,
                                const char *object_name);
+      static int do_head_object(const uint64_t server_id,
+                               const char *bucket_name,
+                               const char *object_name,
+                               common::ObjectInfo *object_info);
     };
   }
 }

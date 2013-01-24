@@ -42,6 +42,10 @@ namespace tfs
                               std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix,
                               int8_t *is_trucated);
         TfsRetType del_bucket(const char *bucket_name);
+        TfsRetType head_bucket(const char *bucket_name, common::BucketMetaInfo *bucket_meta_info);
+
+        int64_t pwrite_object(const char *bucket_name, const char *object_name,
+            const void *buffer, int64_t offset, int64_t length);
 
         int64_t put_object(const char *bucket_name, const char *object_name,
             const void *buffer, int64_t offset, int64_t length);
@@ -56,6 +60,7 @@ namespace tfs
             common::CustomizeInfo *customize_info);
 
         TfsRetType del_object(const char *bucket_name, const char *object_name);
+        TfsRetType head_object(const char *bucket_name, const char *object_name, common::ObjectInfo *object_info);
 
         int do_put_bucket(const char *bucket_name);
         int do_get_bucket(const char *bucket_name, const char *prefix,
@@ -65,6 +70,8 @@ namespace tfs
                           int8_t *is_trucated);
 
         int do_del_bucket(const char *bucket_name);
+        int do_head_bucket(const char *bucket_name, common::BucketMetaInfo *bucket_meta_info);
+
 
         int do_put_object(const char *bucket_name, const char *object_name,
                           const common::ObjectInfo &object_info);
@@ -72,6 +79,7 @@ namespace tfs
                           const int64_t offset, common::ObjectInfo *object_info,
                           bool *still_have);
         int do_del_object(const char *bucket_name, const char *object_name);
+        int do_head_object(const char *bucket_name, const char *object_name, common::ObjectInfo *object_info);
 
         static bool is_valid_bucket_name(const char *bucket_name);
         static bool is_valid_object_name(const char *object_name);
