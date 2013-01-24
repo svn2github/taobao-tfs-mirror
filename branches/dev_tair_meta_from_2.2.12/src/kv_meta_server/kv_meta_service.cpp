@@ -173,9 +173,14 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ObjectInfo object_info = req_put_object_msg->get_object_info();
+        int64_t length = 0;
+        for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
+        {
+          length += object_info.v_tfs_file_info_[i].file_size_;
+        }
         ret = meta_info_helper_.put_object(req_put_object_msg->get_bucket_name(),
             req_put_object_msg->get_file_name(), object_info.v_tfs_file_info_.front().offset_,
-            object_info);
+            length, object_info);
       }
 
       if (TFS_SUCCESS != ret)
@@ -202,7 +207,7 @@ namespace tfs
         ObjectInfo object_info;
         ret = meta_info_helper_.get_object(req_get_object_msg->get_bucket_name(),
                   req_get_object_msg->get_file_name(), req_get_object_msg->get_offset(),
-                   &object_info);
+                  req_get_object_msg->get_length(), &object_info);
 
         TBSYS_LOG(DEBUG, "get object, bucket_name: %s , object_name: %s, ret: %d",
                   req_get_object_msg->get_bucket_name().c_str(),
