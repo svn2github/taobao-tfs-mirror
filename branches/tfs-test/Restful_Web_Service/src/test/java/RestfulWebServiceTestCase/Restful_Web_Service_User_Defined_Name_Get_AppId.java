@@ -34,7 +34,7 @@ public class Restful_Web_Service_User_Defined_Name_Get_AppId extends BaseCase
 		
 		String App_Key = "AAA";
 		Ret = GetAppID(App_Key);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message500);
 		
 	}
 }

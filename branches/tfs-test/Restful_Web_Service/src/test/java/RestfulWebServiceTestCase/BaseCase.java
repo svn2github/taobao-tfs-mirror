@@ -49,6 +49,8 @@ public class BaseCase
 		ExecuteUrl.SetBase("http://"+Server.getRestful_web_server());
 		ExecuteUrl.Init();
 		FileMap.put("10K", 10*(1<<10));
+		FileMap.put("1B", 1);
+		FileMap.put("3M", 3*(1<<20));
 		FileMap.put("2M", 2*(1<<20));
 		FileMap.put("20M", 20*(1<<20));
 		FileMap.put("30M", 30*(1<<20));
@@ -58,7 +60,7 @@ public class BaseCase
 		//createFileMap(FileMap);
 	}
 	
-    public  void deleteDir(StringBuilder s,int n,String Seed)
+    public  void deleteDir(String s,int n,String Seed)
     {
     	Map<String, String> Ret = new HashMap<String, String>();
     	ExpectMessage ExpMeg = new ExpectMessage();
@@ -67,15 +69,38 @@ public class BaseCase
     	if(n==1)
     	{
     		Ret = RmDir(App_id,User_id,s.toString());
-    		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
+    		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
     	}
     	else
         {
-    	    s.append("/"+Seed);
     		n=n-1;
-    		deleteDir(s,n,Seed);
-    		Ret = RmDir(App_id,User_id,s.toString());
-    		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
+    		System.out.println(n);
+    		deleteDir(s+"/"+Seed,n,Seed);
+    		Ret = RmDir(App_id,User_id,s);
+    		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
+    		
+    	}  
+    }
+    
+    public  void deleteFile(String s,int n,String Seed)
+    {
+    	Map<String, String> Ret = new HashMap<String, String>();
+    	ExpectMessage ExpMeg = new ExpectMessage();
+		AssertTool assert_tool = new AssertTool();
+		
+    	if(n==1)
+    	{
+    		Ret = RmFile(App_id,User_id,s.toString());
+    		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
+    	}
+    	else
+        {
+    		n=n-1;
+    		System.out.println(n);
+    		deleteFile(s+"/"+Seed,n,Seed);
+    		Ret = RmDir(App_id,User_id,s);
+    		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
+    		
     	}  
     }
     

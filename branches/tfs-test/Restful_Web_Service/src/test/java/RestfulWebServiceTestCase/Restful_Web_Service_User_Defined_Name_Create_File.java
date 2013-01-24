@@ -77,7 +77,7 @@ public class Restful_Web_Service_User_Defined_Name_Create_File extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 	
-	@Test
+	//@Test
 	public void test_06_createFile_space_filePath()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -104,9 +104,9 @@ public class Restful_Web_Service_User_Defined_Name_Create_File extends BaseCase
 		Ret = CreateFile(App_id,User_id,"test/test/test/test","1");
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
-		StringBuilder Dir_Del_Name = new StringBuilder ();
-		Dir_Del_Name.append("test");
-		deleteDir(Dir_Del_Name,4,"test");
+		
+		String Dir_Del_Name = "test" ;
+		deleteFile(Dir_Del_Name,4,"test");
 	}
 	
 	@Test
@@ -127,9 +127,12 @@ public class Restful_Web_Service_User_Defined_Name_Create_File extends BaseCase
 		Ret = CreateFile(App_id,User_id,"test/test/test/test/test","1");
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
-		StringBuilder Dir_Del_Name = new StringBuilder ();
-		Dir_Del_Name.append("test");
-		deleteDir(Dir_Del_Name,5,"test");
+		Ret.clear();
+		Ret = RmFile(App_id,User_id,"test/test/test/test");
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
+		
+		String Dir_Del_Name = "test" ;
+		deleteFile(Dir_Del_Name,5,"test");
 	}
 	
 	@Test
@@ -154,7 +157,7 @@ public class Restful_Web_Service_User_Defined_Name_Create_File extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 	
-	@Test
+	//@Test
 	public void test_11_createFile_space_filePath_recursive()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
@@ -195,10 +198,7 @@ public class Restful_Web_Service_User_Defined_Name_Create_File extends BaseCase
 		
 		Ret = CreateFile("2",User_id,"test","0");
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message401);
-		
-		Ret.clear();
-		Ret = RmFile("2",User_id,"test");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+
 	}
 	
 	@Test
@@ -211,8 +211,5 @@ public class Restful_Web_Service_User_Defined_Name_Create_File extends BaseCase
 		Ret = CreateFile("2",User_id,"test/test/test/test","1");
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message401);
 		
-		Ret.clear();
-		Ret = RmFile("2",User_id,"test/test/test/test");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
 	}
 }
