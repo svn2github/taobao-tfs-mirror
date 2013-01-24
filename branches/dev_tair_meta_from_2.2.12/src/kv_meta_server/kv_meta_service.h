@@ -20,6 +20,7 @@
 #include "common/parameter.h"
 #include "common/base_service.h"
 #include "common/status_message.h"
+#include "common/statistics.h"
 #include "message/message_factory.h"
 
 #include "meta_info_helper.h"
@@ -58,6 +59,10 @@ namespace tfs
       //ObjectHelper object_helper_;
       MetaInfoHelper meta_info_helper_;
       //TODO add stat
+      //global stat
+      tbutil::TimerPtr timer_;
+      common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
+      std::string tfs_kv_meta_stat_;
       //StatInfoHelper stat_info_helper_;
     };
   }

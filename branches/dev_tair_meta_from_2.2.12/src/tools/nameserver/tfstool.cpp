@@ -391,7 +391,7 @@ void init()
     g_cmd_map["head_bucket"] = CmdNode("head_bucket bucket_name", "stat a bucket", 1, 1, cmd_head_bucket);
 
     g_cmd_map["put_object"] = CmdNode("put_object bucket_name object_name local_file", "put a object", 3, 3, cmd_put_object);
-    g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name local_file", "get a object", 3, 3, cmd_get_object);
+    g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name offset length local_file", "get a object", 5, 5, cmd_get_object);
     g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name", "delete a object", 2, 2, cmd_del_object);
     g_cmd_map["head_object"] = CmdNode("head_object bucket_name object_name", "stat a object", 2, 2, cmd_head_object);
     break;
@@ -1969,13 +1969,16 @@ int cmd_get_object(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   const char* object_name = param[1].c_str();
-  const char* local_file = expand_path(const_cast<string&>(param[2]));
+  int64_t offset = strtoll(param[2].c_str(), NULL, 10);
+  int64_t length = strtoll(param[3].c_str(), NULL, 10);
+  const char* local_file = expand_path(const_cast<string&>(param[4]));
 
   ObjectMetaInfo object_meta_info;
   CustomizeInfo customize_info;
-  int ret = g_kv_meta_client.get_object(bucket_name, object_name, local_file, &object_meta_info, &customize_info);
+  int ret = g_kv_meta_client.get_object(bucket_name, object_name, local_file, offset, length,
+                                        &object_meta_info, &customize_info);
   if (TFS_SUCCESS == ret)
-  ToolUtil::print_info(ret, "get object: %s, object: %s => %s", bucket_name, object_name, local_file);
+  ToolUtil::print_info(ret, "get object: %s, object: %s => %s offset: %lld length: %lld", bucket_name, object_name, local_file, offset, length);
 
   return ret;
 }

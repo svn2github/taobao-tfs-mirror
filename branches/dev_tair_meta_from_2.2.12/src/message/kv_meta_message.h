@@ -88,12 +88,12 @@ namespace tfs
           return file_name_;
         }
 
-        const int64_t get_offset()
+        int64_t get_offset() const
         {
           return offset_;
         }
 
-        const int64_t get_length()
+        int64_t get_length() const
         {
           return length_;
         }

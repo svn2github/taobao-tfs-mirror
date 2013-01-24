@@ -218,6 +218,7 @@ namespace tfs
       std::string tair_slave_;
       std::string tair_group_;
       int tair_object_area_;
+      int32_t dump_stat_info_interval_;
 
       int initialize(const std::string& config_file);
 

@@ -42,7 +42,7 @@ namespace tfs
                                const common::ObjectInfo &object_info);
       static int do_get_object(const uint64_t server_id,
                                const char *bucket_name, const char *object_name,
-                               const int64_t offset,
+                               const int64_t offset, const int64_t length,
                                common::ObjectInfo *object_info, bool *still_have);
       static int do_del_object(const uint64_t server_id,
                                const char *bucket_name,

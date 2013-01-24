@@ -86,9 +86,9 @@ namespace tfs
 
 
     TfsRetType KvMetaClient::get_object(const char *bucket_name, const char *object_name,
-        const char* local_file)
+        const char* local_file, const int64_t offset, const int64_t length)
     {
-      return impl_->get_object(bucket_name, object_name, local_file, NULL, NULL);
+      return impl_->get_object(bucket_name, object_name, local_file, offset, length, NULL, NULL);
     }
 
     TfsRetType KvMetaClient::del_object(const char *bucket_name, const char *object_name)

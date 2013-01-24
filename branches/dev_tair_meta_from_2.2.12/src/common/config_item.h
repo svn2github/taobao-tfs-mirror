@@ -186,6 +186,7 @@ namespace tfs
 #define CONF_TAIR_SLAVE                              "tair_slave"
 #define CONF_TAIR_GROUP                              "tair_group"
 #define CONF_TAIR_OBJECT_AREA                        "tair_object_area"
+#define CONF_STAT_INFO_INTERVAL                      "stat_info_interval"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

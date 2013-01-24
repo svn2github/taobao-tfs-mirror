@@ -107,6 +107,7 @@ namespace tfs
 
     static const int32_t MAX_DEV_NAME_LEN = 64;
     static const int32_t MAX_READ_SIZE = 1048576;
+    static const int32_t MAX_READ_SIZE_KV = 1 << 21; //2M
 
     static const int MAX_FILE_FD = INT_MAX;
     static const int MAX_OPEN_FD_COUNT = MAX_FILE_FD - 1;

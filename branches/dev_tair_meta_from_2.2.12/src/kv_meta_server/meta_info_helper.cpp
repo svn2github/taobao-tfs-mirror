@@ -28,7 +28,19 @@ namespace tfs
     const int VALUE_BUFF_SIZE = 1024*1024;
     const int KV_VALUE_BUFF_SIZE = 1024*1024;
     const int32_t KEY_BUFF_SIZE = 512 + 8 + 8;
-    const int SCAN_LIMIT = 500;
+    const int32_t SCAN_LIMIT = 500;
+    const int32_t MESS_LIMIT = 10;
+    enum
+    {
+      MODE_REQ_LIMIT = 1,
+      MODE_KV_LIMIT = 2,
+    };
+    enum
+    {
+      CMD_RANGE_ALL = 1,
+      CMD_RANGE_VALUE_ONLY,
+      CMD_RANGE_KEY_ONLY,
+    };
     MetaInfoHelper::MetaInfoHelper()
     {
       kv_engine_helper_ = new TairEngineHelper();
@@ -61,25 +73,18 @@ namespace tfs
       int64_t pos = 0;
       if(TFS_SUCCESS == ret)
       {
-        string real_key(bucket_name + KvKey::DELIMITER + file_name);
-        real_key += KvKey::DELIMITER;
-        pos = bucket_name.size() + 1 + file_name.size() + 1;
-        if(pos < buff_size)
+        //bucket
+        int64_t bucket_name_size = static_cast<int64_t>(bucket_name.size());
+        if(pos + bucket_name_size < buff_size)
         {
-          strncpy(key_buff, real_key.c_str(), pos);
+          memcpy(key_buff + pos, bucket_name.data(), bucket_name.size());
+          pos += bucket_name_size;
         }
         else
         {
           ret = TFS_ERROR;
         }
-
-        int64_t version = 0;
-
-        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
-        {
-          ret = Serialization::int64_to_char(key_buff + pos, buff_size, version);
-          pos = pos + 8;
-        }
+        //DELIMITER
         if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
         {
           key_buff[pos++] = KvKey::DELIMITER;
@@ -88,6 +93,43 @@ namespace tfs
         {
           ret = TFS_ERROR;
         }
+        //filename
+        int64_t file_name_size = static_cast<int64_t>(file_name.size());
+        if(pos + file_name_size < buff_size)
+        {
+          memcpy(key_buff + pos, file_name.data(), file_name.size());
+          pos += file_name_size;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //DELIMITER
+        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
+        {
+          key_buff[pos++] = KvKey::DELIMITER;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //version
+        int64_t version = 0;
+        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
+        {
+          ret = Serialization::int64_to_char(key_buff + pos, buff_size, version);
+          pos = pos + 8;
+        }
+        //DELIMITER
+        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
+        {
+          key_buff[pos++] = KvKey::DELIMITER;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //offset
         if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
         {
           ret = Serialization::int64_to_char(key_buff + pos, buff_size, offset);
@@ -412,94 +454,170 @@ namespace tfs
     }
 
     int MetaInfoHelper::get_object(const std::string &bucket_name,
-        const std::string &file_name, const int64_t offset,
-        const int64_t length, common::ObjectInfo *object_info)
+                                   const std::string &file_name, const int64_t offset,
+                                   const int64_t length,
+                                   common::ObjectInfo *object_info, bool* still_have)
     {
-      int ret = (bucket_name.size() > 0 && file_name.size() > 0
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0 && length >= 0
           && offset >= 0 && object_info != NULL) ? TFS_SUCCESS : TFS_ERROR;
-      //op key
-      char *start_key_buff = NULL;
-      start_key_buff = (char*) malloc(KEY_BUFF_SIZE);
-      if(NULL == start_key_buff)
-      {
-        ret = TFS_ERROR;
-      }
-      char *end_key_buff = NULL;
-      end_key_buff = (char*) malloc(KEY_BUFF_SIZE);
-      if(NULL == end_key_buff)
-      {
-        ret = TFS_ERROR;
-      }
-      KvKey start_key;
-      KvKey end_key;
-      int64_t start_offset = offset - MAX_SEGMENT_SIZE > 0 ? offset - MAX_SEGMENT_SIZE : 0;
-      int64_t end_offset = offset + length;
-      serialize_key(bucket_name, file_name, start_offset, &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
-      serialize_key(bucket_name, file_name, end_offset, &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
 
-      //op value
-      int32_t limit = SCAN_LIMIT;
-      int32_t i;
-      int32_t first = 0;
-      int32_t result_size = 0;
-      short scan_type = CMD_RANGE_VALUE_ONLY;//only scan value
-      vector<KvValue*> kv_value_keys;
-      vector<KvValue*> kv_value_values;
-      string tmp_key;
-
-      while (first > -1)
+      common::ObjectInfo object_info_zero;
+      if(TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit, first,
-            &kv_value_keys, &kv_value_values, &result_size, scan_type);
-        for (i = 0; i < result_size; ++i)
+        int64_t version = 0;
+        ret = get_single_value(bucket_name, file_name, 0, &object_info_zero, &version);
+        *object_info = object_info_zero;
+        *still_have = false;
+        if(TFS_SUCCESS != ret)
         {
-          common::ObjectInfo tmp_object_info;
-          //key get
-          int64_t pos = 0;
-          //value get
-          tmp_object_info.deserialize(kv_value_values[i]->get_data(),
-                                   kv_value_values[i]->get_size(), pos);
-          if (0 == i)
+          TBSYS_LOG(ERROR, "object is noexist");
+        }
+      }
+      if(TFS_SUCCESS == ret)
+      {
+        if(offset > object_info_zero.meta_info_.big_file_size_)
+        {
+          TBSYS_LOG(ERROR, "req offset is out of big_file_size_");
+          ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
+        }
+      }
+      if(TFS_SUCCESS == ret)
+      {
+        bool is_big_file = false;
+        if(object_info_zero.v_tfs_file_info_.size() > 0)
+        {
+          if(offset + length <= object_info_zero.v_tfs_file_info_[0].file_size_)
           {
-            *object_info = tmp_object_info;
+            is_big_file = false;
           }
           else
           {
-            for (size_t j = 0; j < tmp_object_info.v_tfs_file_info_.size(); j++)
-            {
-              object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[j]);
-            }
+            is_big_file = true;
           }
-        }
-
-        if (result_size == limit)
-        {
-          first = 1;
-          serialize_key(bucket_name, file_name, object_info->v_tfs_file_info_.back().offset_ ,
-                        &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
         }
         else
         {
-          first = -1;
+          is_big_file = true;
         }
-        for(i = 0; i < result_size; ++i)//free tair
+        if(is_big_file == true )//big file
         {
-          kv_value_values[i]->free();
-        }
-        kv_value_values.clear();
-      }
+          //op key
+          char *start_key_buff = NULL;
+          if(TFS_SUCCESS == ret)
+          {
+            start_key_buff = (char*) malloc(KEY_BUFF_SIZE);
+          }
+          if(NULL == start_key_buff)
+          {
+            ret = TFS_ERROR;
+          }
+          char *end_key_buff = NULL;
+          if(ret == TFS_SUCCESS)
+          {
+            end_key_buff = (char*) malloc(KEY_BUFF_SIZE);
+          }
+          if(NULL == end_key_buff)
+          {
+            ret = TFS_ERROR;
+          }
+          KvKey start_key;
+          KvKey end_key;
+          int64_t start_offset = offset - MAX_SEGMENT_SIZE > 0 ? offset - MAX_SEGMENT_SIZE : 0;
+          int64_t end_offset = offset + length;
+          if(TFS_SUCCESS == ret)
+          {
+            ret = serialize_key(bucket_name, file_name, start_offset,
+                  &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+          }
+          if(TFS_SUCCESS == ret)
+          {
+            ret = serialize_key(bucket_name, file_name, end_offset,
+                  &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+          }
 
-      if (NULL != start_key_buff)
-      {
-        free(start_key_buff);
-        start_key_buff = NULL;
-      }
+          //op value
+          int32_t limit = 0;
+          int32_t limit_mode = 0;
+          int32_t limit_res = MESS_LIMIT;
+          if(SCAN_LIMIT >= MESS_LIMIT)
+          {
+            limit = MESS_LIMIT;
+            limit_mode = MODE_REQ_LIMIT;
+          }
+          else
+          {
+            limit = SCAN_LIMIT;
+            limit_mode = MODE_KV_LIMIT;
+          }
 
-      if (NULL != end_key_buff)
-      {
-        free(end_key_buff);
-        end_key_buff = NULL;
-      }
+          int32_t i;
+          int32_t first = 0;
+          bool go_on = true;
+          short scan_type = CMD_RANGE_VALUE_ONLY;//only scan value
+          vector<KvValue*> kv_value_keys;
+          vector<KvValue*> kv_value_values;
+          object_info->v_tfs_file_info_.clear();
+
+          while(go_on == true)
+          {
+            int32_t result_size = 0;
+            ret = kv_engine_helper_->scan_keys(start_key, end_key, limit, first,
+                &kv_value_keys, &kv_value_values, &result_size, scan_type);
+            for(i = 0; i < result_size; ++i)
+            {
+              common::ObjectInfo tmp_object_info;
+              //value get
+              int64_t pos = 0;
+              tmp_object_info.deserialize(kv_value_values[i]->get_data(),
+                                       kv_value_values[i]->get_size(), pos);
+              //j now max == 1
+              for (size_t j = 0; j < tmp_object_info.v_tfs_file_info_.size(); j++)
+              {
+                object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[j]);
+              }
+
+            }
+            TBSYS_LOG(ERROR, "this time result_size is: %d", result_size);
+            if(result_size >= limit && limit_mode == MODE_KV_LIMIT)
+            {
+              first = 1;
+              limit_res -= result_size;
+              limit = min(limit_res, limit);
+              if(0 == limit)//message full
+              {
+                go_on = false;
+              }
+              ret = serialize_key(bucket_name, file_name, object_info->v_tfs_file_info_.back().offset_,
+                                  &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+            }
+            else
+            {
+              go_on = false;
+            }
+
+            for(i = 0; i < result_size; ++i)//free tair
+            {
+              kv_value_values[i]->free();
+            }
+            kv_value_values.clear();
+          }//end while
+          if(NULL != start_key_buff)
+          {
+            free(start_key_buff);
+            start_key_buff = NULL;
+          }
+          if(NULL != end_key_buff)
+          {
+            free(end_key_buff);
+            end_key_buff = NULL;
+          }
+          int32_t vec_tfs_size = static_cast<int32_t>(object_info->v_tfs_file_info_.size());
+          if(MESS_LIMIT == vec_tfs_size)
+          {
+            *still_have = true;
+          }
+        }//end big file
+      }//end success
       return ret;
     }
 

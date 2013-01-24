@@ -288,7 +288,7 @@ namespace tfs
             }
             else if(scan_type == 2)
             {
-              if (TFS_SUCCESS == ret)
+              if (TFS_SUCCESS == ret || ret == EXIT_KV_RETURN_DATA_NOT_EXIST)
               {
                 for(i = 0; i < tvalues.size(); ++i)
                 {
@@ -297,6 +297,8 @@ namespace tfs
                   values->push_back(p_tmp);
                 }
                 *result_size = static_cast<int32_t>(tvalues.size());
+              //  TBSYS_LOG(ERROR, "*result_size: %d", *result_size);
+                ret = TFS_SUCCESS;
               }
             }
           }
@@ -430,13 +432,13 @@ namespace tfs
 
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
+        ret = EXIT_KV_RETURN_ERROR;
         if (TAIR_RETURN_VERSION_ERROR == tair_ret)
         {
           TBSYS_LOG(WARN, "put to tair version error.");
           ret = EXIT_TAIR_VERSION_ERROR;
         }
         //TODO change tair errno to TFS errno
-        ret = TFS_ERROR;
       }
 
       return ret;
@@ -454,10 +456,14 @@ namespace tfs
         tair_ret = tair_client_->prefix_get(area, pkey, skey, value);
       } while (TAIR_RETURN_TIMEOUT == tair_ret && --retry_count > 0);
 
-      if (TAIR_RETURN_SUCCESS != tair_ret)
+      if(TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+      {
+        ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
+      }
+      if (TAIR_RETURN_SUCCESS != tair_ret && TAIR_RETURN_DATA_NOT_EXIST != tair_ret)
       {
         //TODO change tair errno to TFS errno
-        ret = TFS_ERROR;
+        ret = EXIT_KV_RETURN_ERROR;
       }
 
       return ret;
@@ -514,10 +520,15 @@ namespace tfs
         tair_ret = tair_client_->get_range(area, pkey, start_key, end_key, offset, limit, values, type);
       } while (TAIR_RETURN_TIMEOUT == tair_ret && --retry_count > 0);
 
+      if(TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+      {
+        ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
+      }
+
       if (TAIR_RETURN_SUCCESS != tair_ret && TAIR_RETURN_DATA_NOT_EXIST != tair_ret)
       {
         //TODO change tair errno to TFS errno
-        ret = TFS_ERROR;
+        ret = EXIT_KV_RETURN_ERROR;
       }
       return ret;
     }

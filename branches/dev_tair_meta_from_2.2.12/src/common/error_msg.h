@@ -183,10 +183,14 @@ namespace tfs
     const int32_t EXIT_NEW_TABLE_INVALID = -15007;//new table invalid
 
     const int32_t EXIT_INVALID_OBJECT = -16000;// no meta info or something
-    const int32_t EXIT_OBJECT_OVERLAP = -16001;// pwrite object overlap
-    const int32_t EXIT_TAIR_VERSION_ERROR = -16002; //tair put key version error
-    const int32_t EXIT_OBJECT_NOT_EXIST = -16003; //get_key(key not exist, object type)
-    const int32_t EXIT_WITH_BUCKET_REPEAT_PUT = -16004;// repeat put bucket
+    const int32_t EXIT_KV_RETURN_DATA_NOT_EXIST = -16001;//no data in kv
+    const int32_t EXIT_KV_RETURN_ERROR = -16002;//kv error
+    const int32_t EXIT_KV_RETURN_VERSION_ERROR = -16003;
+
+    const int32_t EXIT_OBJECT_OVERLAP = -16004;// pwrite object overlap
+    const int32_t EXIT_TAIR_VERSION_ERROR = -16005; //tair put key version error
+    const int32_t EXIT_OBJECT_NOT_EXIST = -16006; //get_key(key not exist, object type)
+    const int32_t EXIT_WITH_BUCKET_REPEAT_PUT = -16007;// repeat put bucket
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

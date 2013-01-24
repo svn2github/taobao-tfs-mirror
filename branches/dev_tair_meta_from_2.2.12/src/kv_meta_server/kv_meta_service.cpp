@@ -31,6 +31,7 @@ namespace tfs
   namespace kvmetaserver
   {
     KvMetaService::KvMetaService()
+    :tfs_kv_meta_stat_ ("tfs_kv_meta_stat_")
     {
     }
 
@@ -106,11 +107,31 @@ namespace tfs
         }
       }
 
+      //init global stat
+      ret = stat_mgr_.initialize(get_timer());
+      if (ret != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "%s", "initialize stat manager fail");
+      }
+      else
+      {
+        int64_t current = tbsys::CTimeUtil::getTime();
+        StatEntry<string, string>::StatEntryPtr stat_ptr = new StatEntry<string, string>(tfs_kv_meta_stat_, current, false);
+        stat_ptr->add_sub_key("put_bucket");
+        stat_ptr->add_sub_key("get_bucket");
+        stat_ptr->add_sub_key("del_bucket");
+        stat_ptr->add_sub_key("put_object");
+        stat_ptr->add_sub_key("get_object");
+        stat_ptr->add_sub_key("del_object");
+        stat_mgr_.add_entry(stat_ptr, SYSPARAM_KVMETA.dump_stat_info_interval_);
+      }
       return ret;
     }
 
     int KvMetaService::destroy_service()
     {
+      //global stat destroy
+      stat_mgr_.destroy();
       return TFS_SUCCESS;
     }
 
@@ -190,6 +211,7 @@ namespace tfs
       else
       {
         ret = req_put_object_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "put_object", 1);
       }
       return ret;
     }
@@ -205,13 +227,16 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ObjectInfo object_info;
+        bool still_have = false;
         ret = meta_info_helper_.get_object(req_get_object_msg->get_bucket_name(),
-                  req_get_object_msg->get_file_name(), req_get_object_msg->get_offset(),
-                  req_get_object_msg->get_length(), &object_info);
-
-        TBSYS_LOG(DEBUG, "get object, bucket_name: %s , object_name: %s, ret: %d",
+                                           req_get_object_msg->get_file_name(),
+                                           req_get_object_msg->get_offset(),
+                                           req_get_object_msg->get_length(),
+                                           &object_info, &still_have);
+        TBSYS_LOG(DEBUG, "get object, bucket_name: %s , object_name: %s, still_have: %d ret: %d",
                   req_get_object_msg->get_bucket_name().c_str(),
                   req_get_object_msg->get_file_name().c_str(),
+                  still_have,
                   ret);
 
         if (TFS_SUCCESS == ret)
@@ -219,10 +244,11 @@ namespace tfs
           RspKvMetaGetObjectMessage* rsp_get_object_msg = new(std::nothrow) RspKvMetaGetObjectMessage();
           assert(NULL != rsp_get_object_msg);
           rsp_get_object_msg->set_object_info(object_info);
-          rsp_get_object_msg->set_still_have(false);
+          rsp_get_object_msg->set_still_have(still_have);
           object_info.dump();
 
           req_get_object_msg->reply(rsp_get_object_msg);
+          stat_mgr_.update_entry(tfs_kv_meta_stat_, "get_object", 1);
         }
         else
         {
@@ -255,6 +281,7 @@ namespace tfs
       else
       {
         ret = req_del_object_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "del_object", 1);
       }
       return ret;
     }
@@ -285,6 +312,7 @@ namespace tfs
       else
       {
         ret = put_bucket_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "put_bucket", 1);
       }
       //stat_info_helper_.put_bucket()
       return ret;
@@ -332,6 +360,7 @@ namespace tfs
       else
       {
         ret = get_bucket_msg->reply(rsp);
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "get_bucket", 1);
       }
       //stat_info_helper_.get_bucket()
       return ret;
@@ -359,6 +388,7 @@ namespace tfs
       else
       {
         ret = del_bucket_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "del_bucket", 1);
       }
       //stat_info_helper_.put_bucket()
       return ret;

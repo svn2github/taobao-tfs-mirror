@@ -53,7 +53,7 @@ namespace tfs
             const void *buf, const int64_t object_offset, const int64_t length);
 
         TfsRetType get_object(const char *bucket_name, const char *object_name,
-            const char* local_file);
+            const char* local_file, const int64_t offset, const int64_t length);
         TfsRetType del_object(const char *bucket_name, const char *object_name);
         TfsRetType head_object(const char *bucket_name, const char *object_name, common::ObjectInfo *object_info);
 
