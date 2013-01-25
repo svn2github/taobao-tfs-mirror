@@ -137,7 +137,8 @@ typedef enum
 typedef enum
 {
   READ_DATA_OPTION_FLAG_NORMAL = 0,
-  READ_DATA_OPTION_FLAG_FORCE = 1
+  READ_DATA_OPTION_FLAG_FORCE = 1,
+  READ_DATA_OPTION_WITH_FINFO = 2
 } ReadDataOptionFlag;
 
 typedef enum

@@ -640,7 +640,6 @@ namespace tfs
       uint64_t destination_id_;
       int32_t start_time_;
       int32_t is_move_;
-      int32_t server_count_;
     };
 
     struct CheckBlockInfo

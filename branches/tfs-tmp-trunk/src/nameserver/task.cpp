@@ -146,7 +146,6 @@ namespace tfs
         block.destination_id_ = servers_[1];
         block.start_time_ = Func::get_monotonic_time();
         block.is_move_ = PLAN_TYPE_MOVE  == type_;
-        block.server_count_ = 0;
         msg.set_repl_block(&block);
         msg.set_status(PLAN_STATUS_BEGIN);
         msg.set_seqno(seqno_);
