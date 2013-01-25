@@ -131,7 +131,7 @@ namespace tfs
             tair::data_entry tvalue;
 
             int64_t pos = 0;
-            int ret = NULL != key.key_ && key.key_size_ - pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+            ret = NULL != key.key_ && key.key_size_ - pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
             if (TFS_SUCCESS == ret)
             {
               ret = split_key_for_tair(key, &t_pkey, &t_skey);
@@ -160,7 +160,7 @@ namespace tfs
     int TairEngineHelper::get_key(const KvKey& key, KvValue **pp_value, int64_t *version)
     {
       int ret = TFS_SUCCESS;
-      if (NULL == pp_value || NULL != *pp_value)
+      if (NULL == pp_value || NULL != *pp_value || NULL == version)
       {
         TBSYS_LOG(ERROR, "shuold never got this, bug!");
         ret = TFS_ERROR;
@@ -464,6 +464,10 @@ namespace tfs
       {
         //TODO change tair errno to TFS errno
         ret = EXIT_KV_RETURN_ERROR;
+      }
+      if (TAIR_RETURN_SUCCESS == tair_ret)
+      {
+        ret = TFS_SUCCESS;
       }
 
       return ret;
