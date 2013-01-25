@@ -28,6 +28,7 @@
 #include "sync_base.h"
 #include "lease_manager.h"
 #include "data_manager.h"
+#include "data_helper.h"
 
 namespace tfs
 {
@@ -41,6 +42,7 @@ namespace tfs
         virtual ~ClientRequestServer();
         inline BlockManager& block_manager();
         inline DataManager& data_manager();
+        inline DataHelper& data_helper();
 
         /** main entrance, dispatch task */
         int handle(tbnet::Packet* packet);

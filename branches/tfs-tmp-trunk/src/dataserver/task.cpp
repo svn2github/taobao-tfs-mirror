@@ -781,8 +781,9 @@ namespace tfs
 
           if (offset < ec_metas[i].used_offset_)
           {
+            int ret_len = 0;
             ret = data_helper().read_raw_data(family_members_[i].server_,
-                family_members_[i].block_, data[i], length, offset);
+                family_members_[i].block_, data[i], ret_len, offset);
           }
         }
 
@@ -1070,8 +1071,9 @@ namespace tfs
 
           if (offset < ec_metas[i].mars_offset_)
           {
+            int32_t ret_len = 0;
             ret = data_helper().read_raw_data(family_members_[i].server_,
-                family_members_[i].block_, data[i], length, offset);
+                family_members_[i].block_, data[i], ret_len, offset);
           }
         }
 
@@ -1279,7 +1281,7 @@ namespace tfs
         int32_t length = finfos[i].size_;
         ret = data_helper().read_file(family_members_[src].server_,
             family_members_[src].block_, block_id,
-            finfos[i].id_, data, length);
+            finfos[i].id_, data, length, 0, READ_DATA_OPTION_FLAG_FORCE);
         if (TFS_SUCCESS == ret)
         {
           ret = data_helper().write_file(family_members_[dest].server_,

@@ -52,14 +52,19 @@ namespace tfs
         int commit_ec_meta(const uint64_t server_id, const uint64_t block_id,
             const common::ECMeta& ec_meta, const int8_t switch_flag = common::SWITCH_BLOCK_NO);
 
-        int query_file_info(const uint64_t server_id, const uint64_t block_id,
-            const uint64_t attach_block_id, const uint64_t file_id, common::FileInfoV2& finfo);
+        // we should know file's real length first
         int read_file(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id,
-            char* data, int32_t& len);
+            char* data, const int32_t len, const int32_t off, const int8_t flag);
         int write_file(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id,
             const char*data, const int32_t len);
+
+        int stat_file_degrade(const uint64_t block_id, const uint64_t file_id, const int32_t flag,
+            const common::FamilyInfoExt& family_info, common::FileInfoV2& finfo);
+        int read_file_degrade(const uint64_t block_id, const common::FileInfoV2& finfo, char* data,
+            const int32_t length, const int32_t offset, const int8_t flag,
+            const common::FamilyInfoExt& family_info);
 
       private:
         int new_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
@@ -82,14 +87,22 @@ namespace tfs
         int commit_ec_meta_ex(const uint64_t server_id, const uint64_t block_id,
             const common::ECMeta& ec_meta, const int8_t switch_flag = common::SWITCH_BLOCK_NO);
 
+        int stat_file_ex(const uint64_t server_id, const uint64_t block_id,
+            const uint64_t attach_block_id, const uint64_t file_id, const int8_t flag,
+            common::FileInfoV2& finfo);
         int read_file_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id,
-            char* data, int32_t& length, const int32_t offset);
+            char* data, int32_t& length, const int32_t offset, const int8_t flag);
         int write_file_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id,
             const char* data, const int32_t length, const int32_t offset, uint64_t& lease_id);
         int close_file_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id, const uint64_t lease_id);
+
+        int prepare_read_degrade(const common::FamilyInfoExt& family_info, int* erased);
+        int read_file_degrade_ex(const uint64_t block_id, const common::FileInfoV2& finfo,
+            char* buffer, const int32_t length, const int32_t offset,
+            const common::FamilyInfoExt& family_info, int* erased);
 
       private:
         DataService& service_;

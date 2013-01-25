@@ -439,14 +439,14 @@ namespace tfs
 
     int TaskManager::check_family(const int64_t family_id, const int32_t family_aid_info)
     {
-      int ret = (INVALID_FAMILY_ID != family_id)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      int ret = (INVALID_FAMILY_ID != family_id)? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
         const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
         if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
         {
-          ret = EXIT_INVALID_ARGU_ERROR;
+          ret = EXIT_PARAMETER_ERROR;
         }
       }
       return ret;
@@ -455,7 +455,7 @@ namespace tfs
     int TaskManager::check_marshalling(const int64_t family_id, const int32_t family_aid_info,
         common::FamilyMemberInfo* family_members)
     {
-      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = check_family(family_id, family_aid_info);
@@ -490,7 +490,7 @@ namespace tfs
         common::FamilyMemberInfo* family_members, int* erased)
     {
       assert(NULL != erased);
-      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = check_family(family_id, family_aid_info);
@@ -548,12 +548,12 @@ namespace tfs
     int TaskManager::check_dissolve(const int64_t family_id, const int32_t family_aid_info,
         common::FamilyMemberInfo* family_members)
     {
-      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         if (INVALID_FAMILY_ID == family_id)
         {
-          ret = EXIT_INVALID_ARGU_ERROR;
+          ret = EXIT_PARAMETER_ERROR;
         }
         else
         {
@@ -561,7 +561,7 @@ namespace tfs
           const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info) / 2;
           if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
           {
-            ret = EXIT_INVALID_ARGU_ERROR;
+            ret = EXIT_PARAMETER_ERROR;
           }
         }
       }

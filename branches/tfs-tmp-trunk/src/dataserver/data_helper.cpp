@@ -16,6 +16,7 @@
 #include "common/base_packet.h"
 #include "message/message_factory.h"
 #include "dataservice.h"
+#include "erasure_code.h"
 #include "data_helper.h"
 
 namespace tfs
@@ -199,7 +200,7 @@ namespace tfs
 
     int DataHelper::read_file(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, const uint64_t file_id,
-        char* data, int32_t& len)
+        char* data, const int32_t len, const int32_t off, const int8_t flag)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (INVALID_BLOCK_ID == attach_block_id) || (INVALID_FILE_ID == file_id) ||
@@ -207,13 +208,13 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        int32_t offset = 0;
+        int32_t offset = off;
         int32_t length = 0;
         while ((TFS_SUCCESS == ret) && (offset < len))
         {
-          length = std::min(len - offset, MAX_READ_SIZE);
+          length = std::min(len + off - offset, MAX_READ_SIZE);
           ret = read_file_ex(server_id, block_id, attach_block_id, file_id,
-              data + offset, length, offset);
+              data + offset - off, length, offset, flag);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(INFO, "reinstate read file fail. server: %s ,blockid: %"PRI64_PREFIX"u, "
@@ -226,6 +227,11 @@ namespace tfs
           {
             offset += length;
           }
+        }
+
+        if ((TFS_SUCCESS == ret) && (length != len)) // length must match
+        {
+          ret = EXIT_READ_FILE_ERROR;
         }
       }
       return ret;
@@ -569,9 +575,62 @@ namespace tfs
       return ret;
     }
 
+    int DataHelper::stat_file_ex(const uint64_t server_id, const uint64_t block_id,
+        const uint64_t attach_block_id, const uint64_t file_id, const int8_t flag,
+        common::FileInfoV2& finfo)
+    {
+      int ret = TFS_SUCCESS;
+      // if server_id is self, just read local
+      if (server_id == service_.get_ds_ipport())
+      {
+        finfo.id_ = file_id;
+        ret = block_manager().stat(finfo, flag, block_id, attach_block_id);
+      }
+      else
+      {
+        NewClient* new_client = NewClientManager::get_instance().create_client();
+        if (NULL == new_client)
+        {
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          StatFileMessageV2 req_msg;
+          tbnet::Packet* ret_msg;
+          req_msg.set_block_id(block_id);
+          req_msg.set_attach_block_id(attach_block_id);
+          req_msg.set_file_id(file_id);
+          req_msg.set_flag(flag);
+
+          ret = send_msg_to_server(server_id, new_client, &req_msg, ret_msg);
+          if (TFS_SUCCESS == ret)
+          {
+            if (STAT_FILE_RESP_MESSAGE_V2 == ret_msg->getPCode())
+            {
+              StatFileRespMessageV2* resp_msg = dynamic_cast<StatFileRespMessageV2* >(ret_msg);
+              finfo = resp_msg->get_file_info();
+            }
+            else if (STATUS_MESSAGE == ret_msg->getPCode())
+            {
+              StatusMessage* resp_msg = dynamic_cast<StatusMessage* >(ret_msg);
+              ret = resp_msg->get_status();
+            }
+            else
+            {
+              ret = TFS_ERROR;
+            }
+          }
+          NewClientManager::get_instance().destroy_client(new_client);
+        }
+      }
+
+      return ret;
+
+    }
+
     int DataHelper::read_file_ex(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, const uint64_t file_id,
-        char* data, int32_t& length, const int32_t offset)
+        char* data, int32_t& length, const int32_t offset, const int8_t flag)
     {
       int ret = TFS_SUCCESS;
       // if server_id is self, just read local
@@ -597,7 +656,7 @@ namespace tfs
           req_msg.set_file_id(file_id);
           req_msg.set_length(length);
           req_msg.set_offset(offset);
-          req_msg.set_flag(READ_DATA_OPTION_FLAG_FORCE);
+          req_msg.set_flag(flag);
 
           ret = send_msg_to_server(server_id, new_client, &req_msg, ret_msg);
           if (TFS_SUCCESS == ret)
@@ -692,6 +751,230 @@ namespace tfs
       int32_t status = TFS_ERROR;
       int ret = send_msg_to_server(server_id, &req_msg, status);
       return (ret < 0) ? ret : status;
+    }
+
+    int DataHelper::prepare_read_degrade(const FamilyInfoExt& family_info, int* erased)
+    {
+      assert(NULL != erased);
+      int ret = (INVALID_FAMILY_ID != family_info.family_id_) ?
+        TFS_SUCCESS: EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+        if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
+        {
+          ret = EXIT_PARAMETER_ERROR;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t member_num = data_num + check_num;
+
+        int normal_count = 0;
+        for (int32_t i = 0; i < member_num; i++)
+        {
+          // just need data_num nodes to recovery
+          if (INVALID_BLOCK_ID != family_info.members_[i].first &&
+              INVALID_SERVER_ID == family_info.members_[i].second)
+          {
+            if (normal_count < data_num)
+            {
+              erased[i] = ErasureCode::NODE_ALIVE;
+              normal_count++;
+            }
+            else
+            {
+              erased[i] = ErasureCode::NODE_UNUSED;
+            }
+          }
+          else
+          {
+            erased[i] = ErasureCode::NODE_DEAD;
+          }
+       }
+
+        if (normal_count < data_num)
+        {
+          TBSYS_LOG(ERROR, "no enough normal node to read degrade, normal count: %d", normal_count);
+          ret = EXIT_NO_ENOUGH_DATA;
+        }
+      }
+
+      return ret;
+    }
+
+     int DataHelper::stat_file_degrade(const uint64_t block_id, const uint64_t file_id,
+         const int32_t flag, const common::FamilyInfoExt& family_info, common::FileInfoV2& finfo)
+     {
+      int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id)) ?
+          EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t member_num = data_num + check_num;
+
+        int32_t target = data_num;
+        while((INVALID_SERVER_ID != family_info.members_[target].second)
+            && (target < member_num)) target++;
+        if (target >= member_num) // no check block alive, can't stat degrade
+        {
+          ret = EXIT_NO_ENOUGH_DATA;
+        }
+        else
+        {
+          ret = stat_file_ex(family_info.members_[target].second,
+              block_id, family_info.members_[target].first, file_id, flag, finfo);
+        }
+      }
+
+      return ret;
+    }
+
+    int DataHelper::read_file_degrade(const uint64_t block_id, const FileInfoV2& finfo, char* data,
+        const int32_t length, const int32_t offset, const int8_t flag, const FamilyInfoExt& family_info)
+    {
+      int ret = ((INVALID_BLOCK_ID == block_id) || (NULL == data) || (length <= 0)
+          || (offset < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      // degrade read won't call block_manager's read interface
+      // we need to do permission check solely
+      if (TFS_SUCCESS == ret)
+      {
+        if (READ_DATA_OPTION_FLAG_FORCE & flag)
+        {
+          ret = (finfo.status_ & FILE_STATUS_INVALID) ? EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
+        }
+        else
+        {
+          ret = (finfo.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID | FILE_STATUS_CONCEAL)) ?
+            EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t member_num = data_num + check_num;
+
+        ECMeta ec_meta;
+        int erased[member_num];
+        int32_t target = 0;
+        ret = prepare_read_degrade(family_info, erased);
+        if (TFS_SUCCESS == ret)
+        {
+          target = data_num;
+          while((ErasureCode::NODE_ALIVE != erased[target]) && (target < member_num)) target++;
+          if (target >= member_num) // no check block alive, can't stat degrade
+          {
+            ret = EXIT_NO_ENOUGH_DATA;
+          }
+          else
+          {
+            ret = query_ec_meta(family_info.members_[target].second,
+                family_info.members_[target].first, ec_meta);
+          }
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          // it's an updated file
+          if (finfo.offset_ >= ec_meta.mars_offset_)
+          {
+            ret = read_file(family_info.members_[target].second,
+                family_info.members_[target].first, block_id, finfo.id_,
+                data, length, offset, flag);
+          }
+          else
+          {
+            ret = read_file_degrade_ex(block_id,
+                finfo, data, length, offset, family_info, erased);
+          }
+        }
+      }
+
+      return ret;
+    }
+
+    int DataHelper::read_file_degrade_ex(const uint64_t block_id, const FileInfoV2& finfo, char* buffer,
+        const int32_t length, const int32_t offset, const FamilyInfoExt& family_info, int* erased)
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      int32_t unit = ErasureCode::ps_ * ErasureCode::ws_;
+      int32_t real_offset = finfo.offset_ + offset;
+      int32_t real_end = finfo.offset_ + offset + length;
+      int32_t offset_in_read = real_offset % unit;
+      int32_t offset_in_buffer = 0;
+      if (0 != (real_offset % unit))
+      {
+        real_offset = (real_offset / unit) * unit;
+      }
+      if (0 != (real_end % unit))
+      {
+        real_end = (real_end / unit + 1)  * unit;
+      }
+
+      ErasureCode decoder;
+      char* data[member_num];
+      memset(data, 0, member_num * sizeof(char*));
+
+      // config decoder parameter, alloc buffer
+      int ret = decoder.config(data_num, check_num, erased);
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t i = 0; i < member_num; i++)
+        {
+          data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+          assert(NULL != data[i]);
+        }
+        decoder.bind(data, member_num, MAX_READ_SIZE);
+      }
+
+      // find read target index
+      int32_t target = 0;
+      while ((family_info.members_[target].first != block_id) && (target < data_num)) target++;
+
+      while ((TFS_SUCCESS == ret) && (real_offset < real_end))
+      {
+        int len = std::min(real_end - real_offset, MAX_READ_SIZE);
+        for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
+        {
+          if (ErasureCode::NODE_ALIVE != erased[i])
+          {
+            continue; // not alive, just continue
+          }
+          memset(data[i], 0, len); // must, or member_num times network needed
+          int32_t ret_len = 0;
+          ret = read_raw_data(family_info.members_[i].second,
+              family_info.members_[i].first, data[i], ret_len, real_offset);
+          ret = (EXIT_READ_OFFSET_ERROR == ret) ? TFS_SUCCESS : ret; // ignore read offset error
+        }
+
+        // decode data to buffer
+        if (TFS_SUCCESS == ret)
+        {
+          ret = decoder.decode(len);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t this_len = std::min(length - offset_in_buffer, len - offset_in_buffer);
+          memcpy(buffer + offset_in_buffer, data[target] + offset_in_read, this_len);
+          offset_in_buffer += this_len;
+          offset_in_read = 0; // except first read, offset_in_read will be 0
+          real_offset += len;
+        }
+      }
+
+      return ret;
     }
   }
 }

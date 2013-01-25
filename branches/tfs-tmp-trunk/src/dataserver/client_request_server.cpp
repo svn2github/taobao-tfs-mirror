@@ -44,6 +44,12 @@ namespace tfs
       return service_.data_manager();
     }
 
+
+    inline DataHelper& ClientRequestServer::data_helper()
+    {
+      return service_.data_helper();
+    }
+
     int ClientRequestServer::handle(tbnet::Packet* packet)
     {
       int ret = (NULL == packet) ? EXIT_POINTER_NULL : TFS_SUCCESS;
@@ -129,6 +135,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       int32_t flag = message->get_flag();
       uint64_t peer_id = message->get_connection()->getPeerId();
+      const FamilyInfoExt& family_info = message->get_family_info();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id)) ?
         EXIT_PARAMETER_ERROR: TFS_SUCCESS;
@@ -137,7 +144,16 @@ namespace tfs
       {
         FileInfoV2 file_info;
         file_info.id_ = file_id;
-        ret = block_manager().stat(file_info, flag, block_id, attach_block_id);
+        if (INVALID_FAMILY_ID == family_info.family_id_)
+        {
+          ret = block_manager().stat(file_info, flag, block_id, attach_block_id);
+        }
+        else
+        {
+          ret = data_helper().stat_file_degrade(block_id,
+              file_id, flag, family_info, file_info);
+        }
+
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "read file info fail. blockid: %"PRI64_PREFIX"u, "
@@ -174,6 +190,7 @@ namespace tfs
       int32_t offset = message->get_offset();
       int8_t flag = message->get_flag();
       uint64_t peer_id = message->get_connection()->getPeerId();
+      const FamilyInfoExt& family_info = message->get_family_info();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
           (offset < 0) || (length <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -182,8 +199,17 @@ namespace tfs
       {
         FileInfoV2 file_info;
         file_info.id_ = file_id;
-        ret = block_manager().stat(file_info, FORCE_STAT, block_id,
-            message->get_attach_block_id());
+        if (INVALID_FAMILY_ID == family_info.family_id_)
+        {
+          ret = block_manager().stat(file_info,
+              FORCE_STAT, block_id, message->get_attach_block_id());
+        }
+        else
+        {
+          ret = data_helper().stat_file_degrade(block_id,
+              file_id, FORCE_STAT, family_info, file_info);
+        }
+
         if (TFS_SUCCESS == ret)
         {
           // truncate read length
@@ -199,8 +225,17 @@ namespace tfs
             assert(NULL != message);
             char* buffer = resp_msg->alloc_data(length);
             assert(NULL != buffer);
-            ret = block_manager().read(buffer, length, offset, file_id, flag, block_id, attach_block_id);
-            ret = (ret < 0) ? ret: TFS_SUCCESS;
+            if (INVALID_FAMILY_ID == family_info.family_id_)
+            {
+              ret = block_manager().read(buffer,
+                  length, offset, file_id, flag, block_id, attach_block_id);
+              ret = (ret < 0) ? ret: TFS_SUCCESS;
+            }
+            else
+            {
+              ret = data_helper().read_file_degrade(block_id,
+                  file_info, buffer, length, offset, flag, family_info);
+            }
             if (TFS_SUCCESS != ret)
             {
               // upper layer will reply error packet to client
