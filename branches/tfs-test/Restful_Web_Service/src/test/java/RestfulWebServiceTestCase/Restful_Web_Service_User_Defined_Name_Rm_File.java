@@ -107,7 +107,7 @@ public class Restful_Web_Service_User_Defined_Name_Rm_File extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","2M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","2M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
@@ -126,7 +126,7 @@ public class Restful_Web_Service_User_Defined_Name_Rm_File extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","100M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","100M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();

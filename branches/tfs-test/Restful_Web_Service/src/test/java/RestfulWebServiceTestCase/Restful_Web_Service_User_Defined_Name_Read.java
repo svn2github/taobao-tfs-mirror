@@ -21,7 +21,7 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","2M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","2M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
@@ -44,7 +44,7 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","1G",null,null);
+		Ret = WriteFile(App_id,User_id,"test","1G",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
@@ -67,7 +67,7 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","2M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","2M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Integer offset = 10*(1<<10);
@@ -91,13 +91,13 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","2M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","2M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Integer offset = 10*(1<<20);
 		Ret.clear();
 		Ret = ReadFile(App_id,User_id,"test","temp",null,offset.toString());
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
 		Ret = RmFile(App_id,User_id,"test");
@@ -115,7 +115,7 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","2M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","2M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Integer offset = -1;
@@ -139,7 +139,7 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","2M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","2M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Integer size = 10*(1<<10);
@@ -163,13 +163,13 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","2M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","2M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Integer size = 10*(1<<20);
 		Ret.clear();
 		Ret = ReadFile(App_id,User_id,"test","temp",size.toString(),null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
 		Ret = RmFile(App_id,User_id,"test");
@@ -187,7 +187,7 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","2M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","2M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Integer size = -1;
@@ -211,7 +211,7 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","2M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","2M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Integer size = 10*(1<<10);
@@ -236,7 +236,7 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = WriteFile(App_id,User_id,"test","2M",null,null);
+		Ret = WriteFile(App_id,User_id,"test","2M",null);
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Integer size = 2*(1<<20)+100;
@@ -251,7 +251,7 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 	}
 	
 	@Test
-	public void test_11_read_not_exist()
+	public void test_11_read_empty()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
 		ExpectMessage ExpMeg = new ExpectMessage();
@@ -262,7 +262,7 @@ public class Restful_Web_Service_User_Defined_Name_Read extends BaseCase
 		
 		Ret.clear();
 		Ret = ReadFile(App_id,User_id,"test","temp",null,null);
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
 		Ret = RmFile(App_id,User_id,"test");
