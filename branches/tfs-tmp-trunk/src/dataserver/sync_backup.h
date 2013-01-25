@@ -84,7 +84,6 @@ namespace tfs
       private:
         int copy_file(const uint32_t block_id, const uint64_t file_id);
         int remove_file(const uint32_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
-        int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
         int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
         int get_file_info(const char* nsip, const char* file_name, common::TfsFileStat& buf);
 

@@ -143,9 +143,6 @@ namespace tfs
       case OPLOG_REMOVE:
         ret = remove_file(sf->block_id_, sf->file_id_, static_cast<TfsUnlinkType>(sf->old_file_id_));
         break;
-      case OPLOG_RENAME:
-        ret = rename_file(sf->block_id_, sf->file_id_, sf->old_file_id_);
-        break;
       }
 
       for (int i = 0; i < SYSPARAM_DATASERVER.max_sync_retry_count_ && TFS_SUCCESS != ret; i++)
