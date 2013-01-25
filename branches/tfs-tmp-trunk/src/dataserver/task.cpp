@@ -219,7 +219,7 @@ namespace tfs
       ret = send_simple_request(source_id_, &cmit_cpt_msg);
 
       TBSYS_LOG(INFO, "compact report to ns. seqno: %"PRI64_PREFIX"d, "
-          "blockid: %u, status: %d, source: %s, ret: %d",
+          "blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
           seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
 
       return ret;

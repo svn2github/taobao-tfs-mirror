@@ -124,7 +124,7 @@ namespace tfs
       int read_raw_data(message::ReadRawDataMessage* message);
       int read_file_info(message::FileInfoMessage* message);
 
-      int rename_file(message::RenameFileMessage* message);
+      //int rename_file(message::RenameFileMessage* message);
       int unlink_file(message::UnlinkFileMessage* message);
 
       //NS <-> DS
@@ -138,7 +138,7 @@ namespace tfs
       int list_blocks(message::ListBlockMessage* message);
 
       int get_server_status(message::GetServerStatusMessage* message);
-      int get_ping_status(common::StatusMessage* message);
+      //int get_ping_status(common::StatusMessage* message);
       int client_command(message::ClientCmdMessage* message);
 
       int get_dataserver_information(common::BasePacket* packet);

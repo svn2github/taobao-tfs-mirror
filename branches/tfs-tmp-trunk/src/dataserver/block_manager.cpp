@@ -892,8 +892,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         //0 == index.index_完整的大数据块(主块，分割的块)
-        const int32_t start = (0 == index.index_) ? BLOCK_RESERVER_LENGTH : (index.index_ - 1) * info.max_extend_block_size_;
-        const int32_t end   = (0 == index.index_) ? (start + info.max_main_block_size_) : (start + info.max_extend_block_size_);
+        const int32_t start = (0 == index.index_) ? BLOCK_SPLIT_FLAG_YES == index.split_flag_ ? 0 : BLOCK_RESERVER_LENGTH : (index.index_ - 1) * info.max_extend_block_size_;
+        const int32_t end   = (0 == index.index_) ? info.max_main_block_size_ : info.max_extend_block_size_;
         ret = get_physical_block_manager().insert(index, physical_block_id, path, start, end);
       }
       if (TFS_SUCCESS == ret)

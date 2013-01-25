@@ -16,13 +16,11 @@
 #include <tbsys.h>
 #include <Memory.hpp>
 #include <Mutex.h>
-#include "ns_define.h"
-#include "nameserver.h"
 #include "common/error_msg.h"
 #include "common/config_item.h"
 #include "common/client_manager.h"
 #include "heart_manager.h"
-#include "global_factory.h"
+#include "dataservice.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
@@ -30,7 +28,7 @@ using namespace tbsys;
 
 namespace tfs
 {
-  namespace nameserver
+  namespace dataserver
   {
     static const int32_t SEND_BLOCK_TO_NS_PARAMETER_ERROR = -1;
     static const int32_t SEND_BLOCK_TO_NS_CREATE_NETWORK_CLIENT_ERROR = -2;
@@ -38,10 +36,9 @@ namespace tfs
     DataServerHeartManager::DataServerHeartManager(DataService& service, const std::vector<uint64_t>& ns_ip_port):
       service_(service)
     {
-      assert(NULL != ns_ip_port);
-      assert(ns_ip_port_length <= MAX_SINGLE_CLUSTER_NS_NUM);
+      assert(!ns_ip_port.empty());
       data_server_info_.status_ = DATASERVER_STATUS_DEAD;
-      std::vector<uint64_t>::iterator iter = ns_ip_port.begin();
+      std::vector<uint64_t>::const_iterator iter = ns_ip_port.begin();
       for (int32_t index = 0; iter != ns_ip_port.end(); ++iter,++index)
         ns_ip_port_[index] = (*iter);
       for (int32_t i = 0; i < MAX_SINGLE_CLUSTER_NS_NUM; ++i)
@@ -61,8 +58,8 @@ namespace tfs
       adr->port_ = service_.get_listen_port();
       for (int32_t index = 0; index < MAX_SINGLE_CLUSTER_NS_NUM; ++index)
       {
-        heart_beat_thread_[index] = new (std::nothrow)HeartBeatThreadHelper(*this);
-        assert(NULL != heart_beat_thread_[index]);
+        heart_beat_thread_[index] = new (std::nothrow)HeartBeatThreadHelper(*this, index);
+        assert(0 != heart_beat_thread_[index]);
       }
       data_server_info_.status_ = DATASERVER_STATUS_ALIVE;
       return TFS_SUCCESS;
@@ -79,19 +76,24 @@ namespace tfs
 
     void DataServerHeartManager::HeartBeatThreadHelper::run()
     {
+      manager_.run_(who_);
+    }
+
+    void DataServerHeartManager::run_(const int32_t who)
+    {
       int32_t ret = TFS_ERROR;
       const int32_t KEEPALIVE_TIMEOUT_MS = 2000;//2s
       int8_t heart_interval = DEFAULT_HEART_INTERVAL;
       //sleep for a while, waiting for listen port establish
-      Func::sleep(heart_interval, stop_);
+      sleep(heart_interval);
       TBSYS_LOG(INFO, "start heartbeat,nameserver: %s", tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str());
+      DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
       while (!DsRuntimeGlobalInformation::instance().is_destroyed())
       {
         if (0 == who % MAX_SINGLE_CLUSTER_NS_NUM)
         {
-          DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
-          service_.get_block_manager().get_space(info.information_.total_capacity_, info.information_.total_capacity_);
-          info.information_.block_count_ = service_.get_block_manager().get_all_logic_block_count();
+          service_.get_block_manager().get_space(info.total_capacity_, info.total_capacity_);
+          info.block_count_ = service_.get_block_manager().get_all_logic_block_count();
           info.current_load_ = Func::get_load_avg();
           info.current_time_ = time(NULL);
         }
@@ -109,9 +111,11 @@ namespace tfs
         }
         usleep(sleep_time_us);
       }
-      data_server_info_.status_ = DATASERVER_STATUS_DEAD;
+      info.status_ = DATASERVER_STATUS_DEAD;
       keepalive(heart_interval, who, KEEPALIVE_TIMEOUT_MS);
       TBSYS_LOG(INFO, "stop heartbeat,nameserver: %s", tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str());
+
+
     }
 
     int DataServerHeartManager::keepalive(int8_t& heart_interval, const int32_t who, const int64_t timeout)
@@ -140,8 +144,8 @@ namespace tfs
               DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
               RespHeartMessage* resp_hb_msg = dynamic_cast<RespHeartMessage*>(message);
               heart_interval = resp_hb_msg->get_heart_interval();
-              info.max_mr_traffic_mb_ = resp_hb_msg->get_max_mr_network_capacity_mb();
-              info.max_rw_traffic_mb_ = resp_hb_msg->get_max_rw_network_capacity_mb();
+              info.max_mr_network_bandwidth_mb_ = resp_hb_msg->get_max_mr_network_bandwith_mb();
+              info.max_rw_network_bandwidth_mb_ = resp_hb_msg->get_max_rw_network_bandwith_mb();
               int32_t status = resp_hb_msg->get_status();
               if (HEART_MESSAGE_OK != status)
               {

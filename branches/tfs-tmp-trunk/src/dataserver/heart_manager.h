@@ -16,6 +16,7 @@
 #ifndef TFS_DATASERVER_HEART_MANAGER_H_
 #define TFS_DATASERVER_HEART_MANAGER_H_
 
+#include <vector>
 #include <Timer.h>
 #include "message/message_factory.h"
 
@@ -23,12 +24,13 @@ namespace tfs
 {
   namespace dataserver
   {
+    class DataService;
     class DataServerHeartManager
     {
     public:
       DataServerHeartManager(DataService& service, const std::vector<uint64_t>& ns_ip_port);
       virtual ~DataServerHeartManager();
-      int initialize(const int32_t keepalive_thread_count, const int32_t report_block_thread_count);
+      int initialize();
       void wait_for_shut_down();
     private:
       class HeartBeatThreadHelper : public tbutil::Thread
@@ -45,6 +47,7 @@ namespace tfs
       typedef tbutil::Handle<HeartBeatThreadHelper> HeartBeatThreadHelperPtr;
     private:
       DISALLOW_COPY_AND_ASSIGN(DataServerHeartManager);
+      void run_(const int32_t who);
       int keepalive(int8_t& heart_interval, const int32_t who, const int64_t timeout);
       uint64_t ns_ip_port_[common::MAX_SINGLE_CLUSTER_NS_NUM];
       common::DataServerStatInfo data_server_info_; //dataserver info

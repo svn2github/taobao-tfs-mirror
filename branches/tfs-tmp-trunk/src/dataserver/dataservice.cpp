@@ -717,11 +717,6 @@ namespace tfs
             case UNLINK_FILE_MESSAGE:
               ret = unlink_file(dynamic_cast<UnlinkFileMessage*>(packet));
               break;
-            /* not support
-            case RENAME_FILE_MESSAGE:
-              ret = rename_file(dynamic_cast<RenameFileMessage*>(packet));
-              break;
-            */
             case LIST_BLOCK_MESSAGE:
               ret = list_blocks(dynamic_cast<ListBlockMessage*>(packet));
               break;
@@ -744,8 +739,8 @@ namespace tfs
               break;
             case RELOAD_CONFIG_MESSAGE:
               break;
-            case STATUS_MESSAGE:
-              ret = get_ping_status(dynamic_cast<StatusMessage*>(packet));
+            //case STATUS_MESSAGE:
+              //ret = get_ping_status(dynamic_cast<StatusMessage*>(packet));
               break;
             case CLIENT_CMD_MESSAGE:
               ret = client_command(dynamic_cast<ClientCmdMessage*>(packet));
@@ -1435,22 +1430,6 @@ namespace tfs
       return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), STATUS_MESSAGE_ERROR,
           "get server status type unsupport: %d", type);
     }
-
-    int DataService::get_ping_status(StatusMessage* message)
-    {
-      int ret = TFS_SUCCESS;
-      if (STATUS_MESSAGE_PING == message->get_status())
-      {
-        StatusMessage *statusmessage = new StatusMessage(STATUS_MESSAGE_PING);
-        message->reply(statusmessage);
-      }
-      else
-      {
-        ret = TFS_ERROR;
-      }
-      return ret;
-    }
-
 
     int32_t DataService::client_command(ClientCmdMessage* message)
     {

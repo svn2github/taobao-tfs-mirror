@@ -181,8 +181,8 @@ namespace tfs
               {
                 std::stringstream path;
                 path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << index.physical_file_name_id_;
-                const int32_t start = BLOCK_RESERVER_LENGTH;
-                const int32_t end   = info->max_main_block_size_ + BLOCK_RESERVER_LENGTH;
+                const int32_t start = BLOCK_SPLIT_FLAG_YES != split_flag ? BLOCK_RESERVER_LENGTH : 0;
+                const int32_t end   = info->max_main_block_size_;
                 ret = insert_(index, index.physical_block_id_, path.str(), start, end);
               }
             }
