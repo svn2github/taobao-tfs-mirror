@@ -110,7 +110,7 @@ namespace tfs
       static const int8_t BLOCK_CREATE_FLAG_NO;
       static const int8_t BLOCK_CREATE_FLAG_YES;
       private:
-      DISALLOW_COPY_AND_ASSIGN(BlockCollect);
+      DISALLOW_COPY_AND_ASSIGN(BlockCollect);//44 + 8 * (max_replication + 1) + 4
       uint64_t* servers_;
       common::BlockInfoV2 info_; //7 * 4  + 2 * 8 = 44
       int8_t  reserve_[3];

@@ -305,7 +305,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         DsCommitCompactBlockCompleteToNsMessage* message = dynamic_cast<DsCommitCompactBlockCompleteToNsMessage*>(msg);
-        BlockInfo info = message->get_block_info();
+        BlockInfoV2 info = message->get_block_info();
         BlockCollect* block = manager_.get_manager().get_block_manager().get(info.block_id_);
         ret = (NULL != block) ? TFS_SUCCESS : EXIT_NO_BLOCK;
         if (TFS_SUCCESS == ret)
@@ -339,7 +339,7 @@ namespace tfs
                 {
                   if (!manager_.get_manager().relieve_relation(block, server, now))
                   {
-                    TBSYS_LOG(INFO, "we'll get failed when relive relation between block: %u and server: %s",
+                    TBSYS_LOG(INFO, "we'll get failed when relive relation between block: %"PRI64_PREFIX"u and server: %s",
                         info.block_id_, tbsys::CNetUtil::addrToString(iter->first).c_str());
                   }
                   if ( GFactory::get_runtime_info().is_master())
