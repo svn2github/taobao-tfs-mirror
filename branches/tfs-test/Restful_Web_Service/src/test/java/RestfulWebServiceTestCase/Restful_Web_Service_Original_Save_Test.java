@@ -1,5 +1,10 @@
 package RestfulWebServiceTestCase;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,9 +14,11 @@ import org.junit.Test;
 
 import Tool.AssertTool;
 import Tool.ExpectMessage;
+import Tool.FileIo;
 
 public class Restful_Web_Service_Original_Save_Test extends BaseCase
 {
+	
 	@Test
 	public void test_01_writeFile_with_right_suffix()
 	{

@@ -17,6 +17,7 @@ import org.apache.commons.httpclient.methods.FileRequestEntity;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.HeadMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
+import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.AfterClass;
@@ -112,7 +113,7 @@ public class BaseCase
 		protected void starting(Description d) 
 		{
 			caseIdentifier = d.getClassName() + "." + d.getMethodName();
-			System.out.println("starting: " + caseIdentifier);
+			System.out.println("\nstarting: " + caseIdentifier);
 		}
 
 		protected void succeeded(Description d) 
@@ -143,8 +144,6 @@ public class BaseCase
 			File uploadFile = new File(filePath);
 			try 
 			{
-				//FileInputStream fileInputStream = new FileInputStream(uploadFile);
-				//InputStreamRequestEntity inputStreamRequestEntity = new InputStreamRequestEntity(fileInputStream);
 				postMethod.setRequestEntity(new FileRequestEntity(uploadFile, null));
 			} 
 			catch (Exception ex) 
@@ -153,6 +152,24 @@ public class BaseCase
 			}
 		}
 		return postMethod;
+	}
+	
+	protected PutMethod setPutMethod(String url, String filePath) 
+	{
+		PutMethod putMethod = new PutMethod(url);
+		if(null!=filePath)
+		{
+			File uploadFile = new File(filePath);
+			try 
+			{
+				putMethod.setRequestEntity(new FileRequestEntity(uploadFile, null));
+			} 
+			catch (Exception ex) 
+			{
+				ex.printStackTrace();
+			}
+		}
+		return putMethod;
 	}
 	
 	protected DeleteMethod setDeleteMethod(String url) 
@@ -382,7 +399,7 @@ public class BaseCase
 	public Map<String, String> IsFileExist(String Appid, String Uid, String File)
 	{
 		Map<String, String> Message = new HashMap<String, String>();
-		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/dir/"+File);
+		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/file/"+File);
 		log.info(ExecuteUrl.GetUrl());
 		HttpVerifyTool Tool = new HttpVerifyTool();
 		Message = Tool.verifyResponse(setHeadMethod(ExecuteUrl.GetUrl()),null);
@@ -400,7 +417,7 @@ public class BaseCase
 			ExecuteUrl.AddPara("size", size);
 		log.info(ExecuteUrl.GetUrl());
 		HttpVerifyTool Tool = new HttpVerifyTool();
-		Message = Tool.verifyResponse(setPostMethod(ExecuteUrl.GetUrl(),LocalFile),null);
+		Message = Tool.verifyResponse(setPutMethod(ExecuteUrl.GetUrl(),LocalFile),null);
 		ExecuteUrl.ResetUrl();
 		return Message;
 	}
@@ -448,7 +465,7 @@ public class BaseCase
 		} 
 		catch (IOException e) 
 		{
-				// TODO Auto-generated catch block
+				//TODO Auto-generated catch block
 				e.printStackTrace();
 		}
 		return 0;

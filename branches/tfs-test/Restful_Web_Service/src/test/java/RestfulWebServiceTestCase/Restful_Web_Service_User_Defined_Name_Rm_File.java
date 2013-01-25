@@ -90,6 +90,10 @@ public class Restful_Web_Service_User_Defined_Name_Rm_File extends BaseCase
 		Ret.clear();
 		Ret = RmFile("2",User_id,"test");
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message401);
+		
+		Ret.clear();
+		Ret = RmFile(App_id,User_id,"test");
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
 	@Test

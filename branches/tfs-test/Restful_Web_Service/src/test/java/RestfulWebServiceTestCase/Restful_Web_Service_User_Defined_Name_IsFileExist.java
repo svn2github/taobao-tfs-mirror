@@ -112,7 +112,7 @@ public class Restful_Web_Service_User_Defined_Name_IsFileExist extends BaseCase
 		
 		Ret.clear();
 		Ret = IsFileExist("20",User_id,"test");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 		
 		Ret.clear();
 		Ret = RmFile(App_id,User_id,"test");

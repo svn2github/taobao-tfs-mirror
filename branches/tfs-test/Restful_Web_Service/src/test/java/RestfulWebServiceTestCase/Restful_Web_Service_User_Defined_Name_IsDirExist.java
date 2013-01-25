@@ -37,7 +37,7 @@ public class Restful_Web_Service_User_Defined_Name_IsDirExist extends BaseCase
 		AssertTool assert_tool = new AssertTool();
 		
 		Ret = IsDirExist(App_id,User_id,"");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 	}
 	
 	@Test
@@ -74,7 +74,7 @@ public class Restful_Web_Service_User_Defined_Name_IsDirExist extends BaseCase
 		
 		Ret.clear();
 		Ret = IsDirExist(App_id,User_id,"test");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 		
 		Ret.clear();
 		Ret = RmFile(App_id,User_id,"test");
@@ -112,7 +112,7 @@ public class Restful_Web_Service_User_Defined_Name_IsDirExist extends BaseCase
 		
 		Ret.clear();
 		Ret = IsDirExist("20",User_id,"test");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test");
