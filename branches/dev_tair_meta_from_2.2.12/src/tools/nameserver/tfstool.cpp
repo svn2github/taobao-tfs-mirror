@@ -390,7 +390,7 @@ void init()
     g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name", "delete a bucket", 1, 1, cmd_del_bucket);
     g_cmd_map["head_bucket"] = CmdNode("head_bucket bucket_name", "stat a bucket", 1, 1, cmd_head_bucket);
 
-    g_cmd_map["put_object"] = CmdNode("put_object bucket_name object_name local_file", "put a object", 3, 3, cmd_put_object);
+    g_cmd_map["put_object"] = CmdNode("put_object bucket_name object_name offset length local_file", "put a object", 5, 5, cmd_put_object);
     g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name offset length local_file", "get a object", 5, 5, cmd_get_object);
     g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name", "delete a object", 2, 2, cmd_del_object);
     g_cmd_map["head_object"] = CmdNode("head_object bucket_name object_name", "stat a object", 2, 2, cmd_head_object);
@@ -1957,11 +1957,13 @@ int cmd_put_object(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   const char* object_name = param[1].c_str();
-  const char* local_file = expand_path(const_cast<string&>(param[2]));
-
-  int ret = g_kv_meta_client.put_object(bucket_name, object_name, local_file);
-  ToolUtil::print_info(ret, "put %s => bucket: %s, object: %s", bucket_name, object_name, local_file);
-
+  int64_t offset = strtoll(param[2].c_str(), NULL, 10);
+  int64_t length = strtoll(param[3].c_str(), NULL, 10);
+  const char* local_file = expand_path(const_cast<string&>(param[4]));
+  int rett =0;
+  ToolUtil::print_info(rett, "put object: %s, object: %s => %s offset: %lld length: %lld", bucket_name, object_name, local_file, offset, length);
+  int ret = g_kv_meta_client.put_object(bucket_name, object_name, local_file, offset, length);
+  ToolUtil::print_info(ret, "put object: %s, object: %s => %s offset: %lld length: %lld", bucket_name, object_name, local_file, offset, length);
   return ret;
 }
 

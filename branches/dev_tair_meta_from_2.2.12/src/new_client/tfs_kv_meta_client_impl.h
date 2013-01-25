@@ -47,14 +47,14 @@ namespace tfs
         int64_t pwrite_object(const char *bucket_name, const char *object_name,
             const void *buffer, int64_t offset, int64_t length);
 
-        int64_t put_object(const char *bucket_name, const char *object_name,
+        int64_t put_object_to_buf(const char *bucket_name, const char *object_name,
             const void *buffer, int64_t offset, int64_t length);
         int64_t get_object_to_buf(const char *bucket_name, const char *object_name,
             void *buffer, const int64_t offset, int64_t length,
             common::ObjectMetaInfo *object_meta_info, common::CustomizeInfo *customize_info);
 
         TfsRetType put_object(const char *bucket_name, const char *object_name,
-            const char* local_file);
+            const char* local_file, const int64_t req_offset, const int64_t req_length);
         TfsRetType get_object(const char *bucket_name, const char *object_name,
             const char* local_file, const int64_t req_offset, const int64_t req_length,
             common::ObjectMetaInfo *object_meta_info,

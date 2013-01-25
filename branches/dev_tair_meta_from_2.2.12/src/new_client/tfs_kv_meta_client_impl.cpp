@@ -282,13 +282,13 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = put_object(bucket_name, object_name, buffer, offset, length);
+        ret = put_object_to_buf(bucket_name, object_name, buffer, offset, length);
       }
 
       return ret;
     }
 
-    int64_t KvMetaClientImpl::put_object(const char *bucket_name, const char *object_name,
+    int64_t KvMetaClientImpl::put_object_to_buf(const char *bucket_name, const char *object_name,
         const void *buffer, int64_t offset, int64_t length)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
@@ -484,11 +484,14 @@ namespace tfs
     }
 
     TfsRetType KvMetaClientImpl::put_object(const char *bucket_name, const char *object_name,
-        const char* local_file)
+        const char* local_file, const int64_t req_offset ,const int64_t req_length)
     {
       TfsRetType ret = TFS_SUCCESS;
       int fd = -1;
-      int64_t read_len = 0, write_len = 0, offset = 0;
+      TBSYS_LOG(ERROR, "open local file %s fail", local_file);
+      int64_t read_len = 0, write_len = 0;
+      int64_t offset = req_offset;
+      int64_t left_length = req_length;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
       {
         TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
@@ -517,13 +520,13 @@ namespace tfs
             break;
           }
 
-          if (0 == read_len)
+          if (0 == read_len || left_length <= 0)
           {
             break;
           }
           while (read_len > 0)
           {
-            write_len = put_object(bucket_name, object_name, buf, offset, read_len);
+            write_len = put_object_to_buf(bucket_name, object_name, buf, offset, read_len);
             if (write_len <= 0)
             {
               TBSYS_LOG(ERROR, "put object fail. bucket: %s, object: %s", bucket_name, object_name);
@@ -533,6 +536,7 @@ namespace tfs
 
             offset += write_len;
             read_len -= write_len;
+            left_length -= write_len;
           }
         }
 

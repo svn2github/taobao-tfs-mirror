@@ -72,9 +72,9 @@ namespace tfs
 
 
     TfsRetType KvMetaClient::put_object(const char *bucket_name, const char *object_name,
-        const char* local_file)
+        const char* local_file, const int64_t req_offset, const int64_t req_length )
     {
-      return impl_->put_object(bucket_name, object_name, local_file);
+      return impl_->put_object(bucket_name, object_name, local_file, req_offset, req_length);
     }
 
     //pwrite
