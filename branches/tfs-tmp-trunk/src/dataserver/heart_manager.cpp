@@ -90,8 +90,8 @@ namespace tfs
         if (0 == who % MAX_SINGLE_CLUSTER_NS_NUM)
         {
           DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
-          service_.block_manager().get_space(info.information_.total_capacity_, info.information_.total_capacity_);
-          info.information_.block_count_ = service_.block_manager().get_all_logic_block_count();
+          service_.get_block_manager().get_space(info.information_.total_capacity_, info.information_.total_capacity_);
+          info.information_.block_count_ = service_.get_block_manager().get_all_logic_block_count();
           info.current_load_ = Func::get_load_avg();
           info.current_time_ = time(NULL);
         }

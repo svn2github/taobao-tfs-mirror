@@ -36,7 +36,7 @@ namespace tfs
 
       public:
         /** lease management */
-        inline BlockManager& block_manager();
+        inline BlockManager& get_block_manager();
         int prepare_lease(const uint64_t block_id, uint64_t& file_id, uint64_t& lease_id,
             const LeaseType type, const common::VUINT64& servers);
         int update_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,

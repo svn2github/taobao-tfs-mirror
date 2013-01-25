@@ -45,12 +45,8 @@ namespace tfs
         ~DataManagement();
 
       public:
-        inline BlockManager& block_manager();
+        inline BlockManager& get_block_manager();
         void set_file_number(const uint64_t file_number);
-        int init_block_files(const common::FileSystemParameter& fs_param);
-        void get_ds_filesystem_info(int32_t& block_count, int64_t& use_capacity, int64_t& total_capacity);
-        int get_all_block_info(std::set<common::BlockInfo>& blocks);
-        int64_t get_all_logic_block_size();
 
         int create_file(const uint32_t block_id, uint64_t& file_id, uint64_t& file_number);
         int write_data(const common::WriteDataInfo& write_info, const int32_t lease_id, int32_t& version,
@@ -65,31 +61,9 @@ namespace tfs
         int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t new_file_id);
         int unlink_file(const uint32_t block_id, const uint64_t file_id, const int32_t action, int64_t& file_size);
 
-        int batch_new_block(const common::VUINT32* new_blocks);
-        int batch_remove_block(const common::VUINT32* remove_blocks);
-
-        int query_bit_map(const int32_t query_type, char** tmp_data_buffer, int32_t& bit_map_len, int32_t& set_count);
-
-        int query_block_status(const int32_t query_type, common::VUINT& block_ids, std::map<uint32_t, std::vector<
-            uint32_t> >& logic_2_physic_blocks, std::map<uint32_t, common::BlockInfo*>& block_2_info);
         int get_block_info(const uint32_t block_id, common::BlockInfo& blk, int32_t& visit_count);
-
-        int get_visit_sorted_blockids(std::vector<LogicBlock*>& block_ptrs);
-        int get_block_file_list(const uint32_t block_id, std::vector<common::FileInfo>& fileinfos);
-        int get_block_meta_info(const uint32_t block_id, common::RawMetaVec& meta_list);
-        int reset_block_version(const uint32_t block_id);
-
         int new_single_block(const uint32_t block_id, const bool tmp = false);
         int del_single_block(const uint32_t block_id, const bool tmp = false);
-        int get_block_curr_size(const uint32_t block_id, int32_t& size);
-        int read_raw_data(uint32_t block_id, int32_t read_offset, int32_t& real_read_len, char* tmpDataBuffer);
-        int write_raw_data(const uint32_t block_id, const int32_t data_offset, const int32_t msg_len,
-            const char* data_buffer);
-        int batch_write_meta(const uint32_t block_id, const common::BlockInfo* blk,
-            const common::RawMetaVec* meta_list);
-
-        int add_new_expire_block(const common::VUINT32* expire_block_ids, const common::VUINT32* remove_block_ids,
-            const common::VUINT32* new_block_ids);
 
         //gc thread
         int gc_data_file();
@@ -104,7 +78,6 @@ namespace tfs
 
         //gc datafile
         int32_t last_gc_data_file_time_; // last datafile gc time
-        common::RWLock block_rw_lock_;   // block layer read-write lock
     };
   }
 }

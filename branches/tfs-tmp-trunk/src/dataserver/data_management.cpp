@@ -44,9 +44,9 @@ namespace tfs
       }
     }
 
-    inline BlockManager& DataManagement::block_manager()
+    inline BlockManager& DataManagement::get_block_manager()
     {
-      return service_.block_manager();
+      return service_.get_block_manager();
     }
 
     void DataManagement::set_file_number(const uint64_t file_number)
@@ -55,33 +55,12 @@ namespace tfs
       TBSYS_LOG(INFO, "set file number. file number: %" PRI64_PREFIX "u\n", file_number_);
     }
 
-    int DataManagement::init_block_files(const FileSystemParameter& fs_param)
-    {
-      return block_manager().bootstrap(fs_param);
-    }
-
-    void DataManagement::get_ds_filesystem_info(int32_t& block_count, int64_t& use_capacity, int64_t& total_capacity)
-    {
-      block_count = block_manager().get_all_logic_block_count();
-      block_manager().get_space(total_capacity, use_capacity);
-    }
-
-    int DataManagement::get_all_block_info(std::set<common::BlockInfo>& blocks)
-    {
-      return block_manager().get_all_block_info(blocks);
-    }
-
-    int64_t DataManagement::get_all_logic_block_size()
-    {
-      return block_manager().get_all_logic_block_count();
-    }
-
     int DataManagement::create_file(const uint32_t block_id, uint64_t& file_id, uint64_t& file_number)
     {
       int ret = TFS_SUCCESS;
       if (0 == file_id)
       {
-        ret = block_manager().generation_file_id(file_id, block_id);
+        ret = get_block_manager().generation_file_id(file_id, block_id);
       }
 
       data_file_mutex_.lock();
@@ -105,7 +84,7 @@ namespace tfs
       if (0 == write_info.offset_)
       {
         BlockInfoV2 none;  // not used in old version
-        ret = block_manager().check_block_version(none, version, write_info.block_id_);
+        ret = get_block_manager().check_block_version(none, version, write_info.block_id_);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(DEBUG, "check_block_version error. blockid: %u, ret: %d", write_info.block_id_, ret);
@@ -209,7 +188,7 @@ namespace tfs
 
       write_file_size = datafile->length();
       TIMER_START();
-      int ret = block_manager().write(file_id, *datafile, block_id, block_id);
+      int ret = get_block_manager().write(file_id, *datafile, block_id, block_id);
       ret = (ret < 0) ? ret : TFS_SUCCESS;
       if (TFS_SUCCESS != ret)
       {
@@ -251,7 +230,7 @@ namespace tfs
         int32_t& real_read_len, char* tmp_data_buffer)
     {
       int64_t start = tbsys::CTimeUtil::getTime();
-      int ret = block_manager().read(tmp_data_buffer, real_read_len, read_offset, file_id, flag, block_id, block_id);
+      int ret = get_block_manager().read(tmp_data_buffer, real_read_len, read_offset, file_id, flag, block_id, block_id);
       ret = (ret < 0) ? ret : TFS_SUCCESS;
       if (TFS_SUCCESS != ret)
       {
@@ -278,7 +257,7 @@ namespace tfs
     {
       FileInfoV2 finfo_v2;
       finfo_v2.id_ = file_id;
-      int ret = block_manager().stat(finfo_v2, mode, block_id, block_id);
+      int ret = get_block_manager().stat(finfo_v2, mode, block_id, block_id);
       if (TFS_SUCCESS == ret)
       {
         // transform FileInfoV2 to FileInfo for compatible
@@ -304,111 +283,24 @@ namespace tfs
 
     int DataManagement::unlink_file(const uint32_t block_id, const uint64_t file_id, const int32_t action, int64_t& file_size)
     {
-      return block_manager().unlink(file_size, file_id, action, block_id, block_id);
+      return get_block_manager().unlink(file_size, file_id, action, block_id, block_id);
     }
 
-    int DataManagement::batch_new_block(const VUINT32* new_blocks)
+    int DataManagement::new_single_block(const uint32_t block_id, const bool tmp)
     {
-      int ret = (NULL == new_blocks) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
-      if (TFS_SUCCESS == ret)
-      {
-        // if one fail, return error
-        VUINT32::const_iterator iter = new_blocks->begin();
-        for ( ; (TFS_SUCCESS == ret) && (iter != new_blocks->end()); iter++)
-        {
-          ret = block_manager().new_block(*iter, false);
-        }
-      }
-      return ret;
+      return get_block_manager().new_block(block_id, tmp);
     }
 
-    int DataManagement::batch_remove_block(const VUINT32* remove_blocks)
+    int DataManagement::del_single_block(const uint32_t block_id, const bool tmp)
     {
-      int ret = (NULL == remove_blocks) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
-      if (TFS_SUCCESS == ret)
-      {
-        // if one fail, return error
-        VUINT32::const_iterator iter = remove_blocks->begin();
-        for ( ; (TFS_SUCCESS == ret) && (iter != remove_blocks->end()); iter++)
-        {
-          ret = block_manager().del_block(*iter, false);
-        }
-      }
-      return ret;
-    }
-
-    int DataManagement::query_bit_map(const int32_t query_type, char** tmp_data_buffer, int32_t& bit_map_len,
-        int32_t& set_count)
-    {
-      UNUSED(query_type);
-      UNUSED(tmp_data_buffer);
-      UNUSED(bit_map_len);
-      UNUSED(set_count);
-      return EXIT_NOT_SUPPORT_ERROR;
-    }
-
-    int DataManagement::query_block_status(const int32_t query_type, VUINT& block_ids, std::map<uint32_t, std::vector<
-        uint32_t> >& logic_2_physic_blocks, std::map<uint32_t, BlockInfo*>& block_2_info)
-    {
-      UNUSED(query_type);
-      UNUSED(block_ids);
-      UNUSED(logic_2_physic_blocks);
-      UNUSED(block_2_info);
-      return EXIT_NOT_SUPPORT_ERROR;
-
-      /*
-      std::list<LogicBlock*> logic_blocks;
-      std::list<LogicBlock*>::iterator lit;
-
-      BlockFileManager::get_instance()->get_logic_block_ids(block_ids);
-      BlockFileManager::get_instance()->get_all_logic_block(logic_blocks);
-
-      if (query_type & LB_PAIRS) // logick block ==> physic block list
-      {
-        std::list<PhysicalBlock*>* phy_blocks;
-        std::list<PhysicalBlock*>::iterator pit;
-
-        for (lit = logic_blocks.begin(); lit != logic_blocks.end(); ++lit)
-        {
-          if (*lit)
-          {
-            TBSYS_LOG(DEBUG, "query block status, query type: %d, blockid: %u\n", query_type,
-                (*lit)->get_logic_block_id());
-            phy_blocks = (*lit)->get_physic_block_list();
-            std::vector < uint32_t > phy_block_ids;
-            for (pit = phy_blocks->begin(); pit != phy_blocks->end(); ++pit)
-            {
-              phy_block_ids.push_back((*pit)->get_physic_block_id());
-            }
-
-            logic_2_physic_blocks.insert(std::map<uint32_t, std::vector<uint32_t> >::value_type(
-                (*lit)->get_logic_block_id(), phy_block_ids));
-          }
-        }
-      }
-
-      if (query_type & LB_INFOS) // logic block info
-      {
-        for (lit = logic_blocks.begin(); lit != logic_blocks.end(); ++lit)
-        {
-          if (*lit)
-          {
-            block_2_info.insert(std::map<uint32_t, BlockInfo*>::value_type((*lit)->get_logic_block_id(),
-                (*lit)->get_block_info()));
-          }
-        }
-      }
-
-      return TFS_SUCCESS;
-      */
-
+      return get_block_manager().del_block(block_id, tmp);
     }
 
     int DataManagement::get_block_info(const uint32_t block_id, BlockInfo& blk, int32_t& visit_count)
     {
       visit_count = 0;  // TODO
       BlockInfoV2 blk_v2;
-      int ret = block_manager().get_block_info(blk_v2, block_id);
+      int ret = get_block_manager().get_block_info(blk_v2, block_id);
       if (TFS_SUCCESS == ret)
       {
         blk.block_id_ = blk_v2.block_id_;

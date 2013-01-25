@@ -157,6 +157,12 @@ namespace tfs
       return index_handle_->get_index_header(header);
     }
 
+    int BaseLogicBlock::set_index_header(const common::IndexHeaderV2& header)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      return index_handle_->set_index_header(header);
+    }
+
     int BaseLogicBlock::load_index(const common::MMapOption mmap_option)
     {
       int32_t ret = (mmap_option.check()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;

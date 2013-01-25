@@ -27,6 +27,7 @@
 #include "common/config_item.h"
 #include "common/directory_op.h"
 #include "new_client/fsname.h"
+#include "heart_manager.h"
 
 namespace tfs
 {
@@ -244,7 +245,7 @@ namespace tfs
       //load all blocks
       if (TFS_SUCCESS == ret)
       {
-        ret = block_manager().bootstrap(SYSPARAM_FILESYSPARAM);
+        ret = get_block_manager().bootstrap(SYSPARAM_FILESYSPARAM);
         if (TFS_SUCCESS != ret)
           TBSYS_LOG(ERROR, "load all blocks failed, ret: %d", ret);
       }
@@ -701,12 +702,6 @@ namespace tfs
             case CLOSE_FILE_MESSAGE:
               ret = close_write_file(dynamic_cast<CloseFileMessage*>(packet));
               break;
-            case WRITE_RAW_DATA_MESSAGE:
-              ret = write_raw_data(dynamic_cast<WriteRawDataMessage*>(packet));
-              break;
-            case WRITE_INFO_BATCH_MESSAGE:
-              ret = batch_write_info(dynamic_cast<WriteInfoBatchMessage*>(packet));
-              break;
             case READ_DATA_MESSAGE_V2:
               ret = read_data_extra(dynamic_cast<ReadDataMessageV2*>(packet), READ_VERSION_2);
               break;
@@ -716,34 +711,31 @@ namespace tfs
             case READ_DATA_MESSAGE:
               ret = read_data(dynamic_cast<ReadDataMessage*>(packet));
               break;
-            case READ_RAW_DATA_MESSAGE:
-              ret = read_raw_data(dynamic_cast<ReadRawDataMessage*>(packet));
-              break;
             case FILE_INFO_MESSAGE:
               ret = read_file_info(dynamic_cast<FileInfoMessage*>(packet));
               break;
             case UNLINK_FILE_MESSAGE:
               ret = unlink_file(dynamic_cast<UnlinkFileMessage*>(packet));
               break;
+            /* not support
             case RENAME_FILE_MESSAGE:
               ret = rename_file(dynamic_cast<RenameFileMessage*>(packet));
               break;
-            case NEW_BLOCK_MESSAGE:
-              ret = new_block(dynamic_cast<NewBlockMessage*>(packet));
-              break;
-            case REMOVE_BLOCK_MESSAGE:
-              ret = remove_block(dynamic_cast<RemoveBlockMessage*>(packet));
-              break;
+            */
             case LIST_BLOCK_MESSAGE:
               ret = list_blocks(dynamic_cast<ListBlockMessage*>(packet));
               break;
-           // TODO
-           // case REPLICATE_BLOCK_MESSAGE:
-           //   ret = replicate_block_cmd(dynamic_cast<ReplicateBlockMessage*>(packet));
-           //  break;
-           // case COMPACT_BLOCK_MESSAGE:
-           //   ret = compact_block_cmd(dynamic_cast<CompactBlockMessage*>(packet));
-           //   break;
+            case REPLICATE_BLOCK_MESSAGE:
+            case COMPACT_BLOCK_MESSAGE:
+            case DS_COMPACT_BLOCK_MESSAGE:
+            case DS_REPLICATE_BLOCK_MESSAGE:
+            case RESP_DS_COMPACT_BLOCK_MESSAGE:
+            case RESP_DS_REPLICATE_BLOCK_MESSAGE:
+            case REQ_EC_MARSHALLING_MESSAGE:
+            case REQ_EC_REINSTATE_MESSAGE:
+            case REQ_EC_DISSOLVE_MESSAGE:
+              ret = task_manager_.handle(dynamic_cast<BaseTaskMessage*>(packet));
+              break;
             case GET_BLOCK_INFO_MESSAGE:
               ret = get_block_info(dynamic_cast<GetBlockInfoMessage*>(packet));
               break;
@@ -772,6 +764,12 @@ namespace tfs
             case UNLINK_FILE_MESSAGE_V2:
             case NEW_BLOCK_MESSAGE_V2:
             case REMOVE_BLOCK_MESSAGE_V2:
+            case READ_RAWDATA_MESSAGE_V2:
+            case WRITE_RAWDATA_MESSAGE_V2:
+            case READ_INDEX_MESSAGE_V2:
+            case WRITE_INDEX_MESSAGE_V2:
+            case QUERY_EC_META_MESSAGE:
+            case COMMIT_EC_META_MESSAGE:
               ret = client_request_server_.handle(packet);
               break;
             default:
@@ -1223,49 +1221,6 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataService::read_raw_data(ReadRawDataMessage* message)
-    {
-      RespReadRawDataMessage* resp_rrd_msg = new RespReadRawDataMessage();
-      uint32_t block_id = message->get_block_id();
-      int32_t read_len = message->get_length();
-      int32_t read_offset = message->get_offset();
-
-      TBSYS_LOG(DEBUG, "blockid: %u read data batch, read size: %d, offset: %d", block_id, read_len, read_offset);
-
-      char* tmp_data_buffer = new char[read_len];
-      int32_t real_read_len = read_len;
-      int ret = data_management_.read_raw_data(block_id, read_offset, real_read_len, tmp_data_buffer);
-      if (TFS_SUCCESS != ret)
-      {
-        tbsys::gDeleteA(tmp_data_buffer);
-        resp_rrd_msg->set_length(ret);
-        message->reply(resp_rrd_msg);
-        return TFS_SUCCESS;
-      }
-
-      char* packet_data = resp_rrd_msg->alloc_data(real_read_len);
-      if (0 != real_read_len)
-      {
-        if (NULL == packet_data)
-        {
-          tbsys::gDelete(resp_rrd_msg);
-          tbsys::gDeleteA(tmp_data_buffer);
-          TBSYS_LOG(ERROR, "allocdata fail, blockid: %u, realreadlen: %d", block_id, real_read_len);
-          return TFS_ERROR;
-        }
-        else
-        {
-          memcpy(packet_data, tmp_data_buffer, real_read_len);
-        }
-      }
-      message->set_length(real_read_len);
-      message->reply(resp_rrd_msg);
-      tbsys::gDeleteA(tmp_data_buffer);
-
-      traffic_control_.rw_stat(RW_STAT_TYPE_READ, ret, read_offset,real_read_len);
-      return TFS_SUCCESS;
-    }
-
     int DataService::read_file_info(FileInfoMessage* message)
     {
       TIMER_START();
@@ -1371,72 +1326,10 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataService::new_block(NewBlockMessage* message)
-    {
-      const VUINT32* new_blocks = message->get_new_blocks();
-
-      int ret = data_management_.batch_new_block(new_blocks);
-      if (TFS_SUCCESS != ret)
-      {
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
-            "newblock error, ret: %d", ret);
-      }
-
-      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-      return TFS_SUCCESS;
-    }
-
-    int DataService::remove_block(RemoveBlockMessage* message)
-    {
-      std::vector<uint32_t> remove_blocks;
-      remove_blocks.push_back(message->get());
-      uint64_t peer_id = message->get_connection()->getPeerId();
-
-      TBSYS_LOG(DEBUG, "remove block. peer id: %s", tbsys::CNetUtil::addrToString(peer_id).c_str());
-
-      int ret = data_management_.batch_remove_block(&remove_blocks);
-      if (TFS_SUCCESS != ret)
-      {
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
-            "removeblock error, ret: %d", ret);
-      }
-
-      if (common::REMOVE_BLOCK_RESPONSE_FLAG_YES == message->get_response_flag())
-      {
-        RemoveBlockResponseMessage* msg = new RemoveBlockResponseMessage();
-        msg->set_seqno(message->get_seqno());
-        msg->set(message->get());
-        message->reply(msg);
-      }
-      else
-      {
-        message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-      }
-      return TFS_SUCCESS;
-    }
-
     int DataService::list_blocks(ListBlockMessage* message)
     {
-      int32_t list_type = message->get_block_type();
-      VUINT block_ids;
-      map <uint32_t, vector<uint32_t> > logic_2_physic_blocks;
-      map<uint32_t, BlockInfo*> block_2_info;
-
-      data_management_.query_block_status(list_type, block_ids, logic_2_physic_blocks, block_2_info);
-
-      RespListBlockMessage* resp_lb_msg = new RespListBlockMessage();
-      resp_lb_msg->set_blocks(list_type, &block_ids);
-      if (list_type & LB_PAIRS)
-      {
-        resp_lb_msg->set_pairs(list_type, &logic_2_physic_blocks);
-      }
-      if (list_type & LB_INFOS)
-      {
-        resp_lb_msg->set_infos(list_type, &block_2_info);
-      }
-
-      message->reply(resp_lb_msg);
-      return TFS_SUCCESS;
+      UNUSED(message);
+      return EXIT_NOT_SUPPORT_ERROR;
     }
 
     /**
@@ -1475,14 +1368,14 @@ namespace tfs
     int DataService::get_server_status(GetServerStatusMessage *message)
     {
       int32_t type = message->get_status_type();
-      int32_t ret_row = message->get_return_row();
+      // int32_t ret_row = message->get_return_row();
 
       if (GSS_MAX_VISIT_COUNT == type)
       {
+        /*
         //get max visit count block
         CarryBlockMessage* resp_cb_msg = new CarryBlockMessage();
         // TODO
-        /*
         vector<LogicBlock*> block_vecs;
         data_management_.get_visit_sorted_blockids(block_vecs);
         for (int32_t i = 0; i < ret_row && i < static_cast<int32_t>(block_vecs.size()); ++i)
@@ -1490,13 +1383,14 @@ namespace tfs
           resp_cb_msg->add_expire_id(block_vecs[i]->get_block_info()->block_id_);
           resp_cb_msg->add_new_id(block_vecs[i]->get_visit_count());
         }
-        */
-
         message->reply(resp_cb_msg);
+
+        */
         return TFS_SUCCESS;
       }
       else if (GSS_BLOCK_FILE_INFO == type)
       {
+        /*
         uint32_t block_id = ret_row;
         //get block file list
         vector <FileInfo> fileinfos;
@@ -1514,11 +1408,13 @@ namespace tfs
           v->push_back((fileinfos[i]));
         }
         message->reply(resp_bfi_msg);
+        */
         return TFS_SUCCESS;
       }
       else if (GSS_BLOCK_RAW_META_INFO == type)
       {
         //get block inode info
+        /*
         uint32_t block_id = ret_row;
         RawMetaVec meta_vec;
         int ret = data_management_.get_block_meta_info(block_id, meta_vec);
@@ -1532,12 +1428,29 @@ namespace tfs
         RawMetaVec* v = resp_brm_msg->get_raw_meta_list();
         v->assign(meta_vec.begin(), meta_vec.end());
         message->reply(resp_brm_msg);
+        */
         return TFS_SUCCESS;
       }
 
       return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), STATUS_MESSAGE_ERROR,
           "get server status type unsupport: %d", type);
     }
+
+    int DataService::get_ping_status(StatusMessage* message)
+    {
+      int ret = TFS_SUCCESS;
+      if (STATUS_MESSAGE_PING == message->get_status())
+      {
+        StatusMessage *statusmessage = new StatusMessage(STATUS_MESSAGE_PING);
+        message->reply(statusmessage);
+      }
+      else
+      {
+        ret = TFS_ERROR;
+      }
+      return ret;
+    }
+
 
     int32_t DataService::client_command(ClientCmdMessage* message)
     {
@@ -1557,78 +1470,6 @@ namespace tfs
       }
       while (0);
       message->reply(resp);
-      return TFS_SUCCESS;
-    }
-
-    int DataService::write_raw_data(WriteRawDataMessage* message)
-    {
-      uint32_t block_id = message->get_block_id();
-      int32_t msg_len = message->get_length();
-      int32_t data_offset = message->get_offset();
-      int32_t new_flag = message->get_new_block();
-      const char* data_buffer = message->get_data();
-      uint64_t peer_id = message->get_connection()->getPeerId();
-
-      TBSYS_LOG(DEBUG, "writeblockdatafile start, blockid: %u, len: %d, offset: %d, new flag: %d, peer id: %s",
-          block_id, msg_len, data_offset, new_flag, tbsys::CNetUtil::addrToString(peer_id).c_str());
-
-      int ret = 0;
-      if (new_flag)
-      {
-        ret = data_management_.new_single_block(block_id, true);
-        if (TFS_SUCCESS != ret)
-        {
-          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
-              "write data batch fail, blockid: %u, ret: %d", block_id, ret);
-        }
-
-        //add to m_clonedBlockMap TODO
-        // repl_block_->add_cloned_block_map(block_id);
-      }
-
-      ret = data_management_.write_raw_data(block_id, data_offset, msg_len, data_buffer);
-      if (TFS_SUCCESS != ret)
-      {
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
-            "write data batch fail, blockid: %u, ret: %d", block_id, ret);
-      }
-
-      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-      return TFS_SUCCESS;
-    }
-
-    int DataService::batch_write_info(WriteInfoBatchMessage* message)
-    {
-      uint32_t block_id = message->get_block_id();
-      const BlockInfo* blk = message->get_block_info();
-      const RawMetaVec* raw_metas = message->get_raw_meta_list();
-      uint64_t peer_id = message->get_connection()->getPeerId();
-
-      TBSYS_LOG(DEBUG, "write block fileinfo start, blockid: %u, cluster flag: %d, meta size: %d, peer id: %s", block_id,
-          message->get_cluster(), static_cast<int32_t>(raw_metas->size()), tbsys::CNetUtil::addrToString(peer_id).c_str());
-      int ret = data_management_.batch_write_meta(block_id, blk, raw_metas);
-      if (TFS_SUCCESS != ret)
-      {
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
-            "write block fileinfo fail, blockid: %u, ret: %d", block_id, ret);
-      }
-
-      //between cluster copy
-      if (message->get_cluster())
-      {
-        ret = ds_requester_.req_update_block_info(block_id);
-        if (TFS_SUCCESS != ret)
-        {
-          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
-              "write block FileInfo fail: update block, blockid: %u, ret: %d", block_id, ret);
-        }
-      }
-
-      //clear m_clonedBlockMap
-      // TODO
-
-      TBSYS_LOG(DEBUG, "write block fileinfo successful, blockid: %u", block_id);
-      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
     }
 

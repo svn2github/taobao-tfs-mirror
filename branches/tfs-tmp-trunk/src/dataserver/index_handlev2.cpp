@@ -86,6 +86,18 @@ namespace tfs
       return ret;
     }
 
+    int BaseIndexHandle::set_index_header(const common::IndexHeaderV2& pheader)
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        IndexHeaderV2* header = get_index_header_();
+        assert(NULL != header);
+        *header = pheader;
+      }
+      return ret;
+    }
+
     int BaseIndexHandle::check_block_version(common::BlockInfoV2& info, const int32_t remote_version) const
     {
       int32_t ret = check_load();

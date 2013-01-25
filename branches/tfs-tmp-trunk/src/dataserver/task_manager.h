@@ -66,7 +66,6 @@ namespace tfs
 
       private:
         DataService& service_;
-        bool stop_;
         std::deque<Task*> task_queue_;
         tbutil::Monitor<tbutil::Mutex> task_monitor_;
 

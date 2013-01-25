@@ -40,9 +40,9 @@ namespace tfs
       public:
         explicit ClientRequestServer(DataService& service);
         virtual ~ClientRequestServer();
-        inline BlockManager& block_manager();
-        inline DataManager& data_manager();
-        inline DataHelper& data_helper();
+        inline BlockManager& get_block_manager();
+        inline DataManager& get_data_manager();
+        inline DataHelper& get_data_helper();
 
         /** main entrance, dispatch task */
         int handle(tbnet::Packet* packet);

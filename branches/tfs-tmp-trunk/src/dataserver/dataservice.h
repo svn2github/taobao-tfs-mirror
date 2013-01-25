@@ -102,12 +102,10 @@ namespace tfs
       std::string get_real_work_dir();
 
       // common interfaces
-      inline BlockManager& block_manager() { return *block_manager_;}
-      inline DataManager& data_manager() { return data_manager_;}
-      inline DataHelper&  data_helper() { return data_helper_;}
+      inline BlockManager& get_block_manager() { return *block_manager_;}
+      inline DataManager& get_data_manager() { return data_manager_;}
+      inline DataHelper&  get_data_helper() { return data_helper_;}
       inline TrafficControl& get_traffic_control() { return traffic_control_;}
-      uint64_t get_ds_ipport() { return 0;}//TODO
-      uint64_t get_ns_ipport() { return 0;}
 
       protected:
       virtual const char* get_log_file_path();

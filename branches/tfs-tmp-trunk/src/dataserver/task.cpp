@@ -49,14 +49,14 @@ namespace tfs
     {
     }
 
-    inline DataHelper& Task::data_helper()
+    inline DataHelper& Task::get_data_helper()
     {
-      return service_.data_helper();
+      return service_.get_data_helper();
     }
 
-    inline BlockManager& Task::block_manager()
+    inline BlockManager& Task::get_block_manager()
     {
-      return service_.block_manager();
+      return service_.get_block_manager();
     }
 
     int Task::send_simple_request(uint64_t server_id, common::BasePacket* message)
@@ -123,7 +123,7 @@ namespace tfs
         {
           if (PLAN_STATUS_TIMEOUT == result_[i].second)
           {
-            ret = false;
+            ret = false;  // this subtask not finish yet
             break;
           }
         }
@@ -147,7 +147,7 @@ namespace tfs
         {
           result_.push_back(std::make_pair(servers_[i], common::PLAN_STATUS_TIMEOUT));
         }
-        ret = compact_peer_blocks();
+        ret = dispatch_sub_task();
       }
 
       TBSYS_LOG(INFO, "handle compact task, seqno: %"PRI64_PREFIX"d, ret: %d\n", seqno_, ret );
@@ -227,15 +227,16 @@ namespace tfs
 
     int CompactTask::report_to_ds(const int status)
     {
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       RespDsCompactBlockMessage resp_cpt_msg;
       resp_cpt_msg.set_seqno(seqno_);
-      resp_cpt_msg.set_ds_id(service_.get_ds_ipport());
+      resp_cpt_msg.set_ds_id(ds_info.information_.id_);
       resp_cpt_msg.set_status(status);
 
       if (PLAN_STATUS_END == status)
       {
         BlockInfoV2 info;
-        int ret = block_manager().get_block_info(info, block_id_);
+        int ret = get_block_manager().get_block_info(info, block_id_);
         if (TFS_SUCCESS != ret)
         {
           resp_cpt_msg.set_status(PLAN_STATUS_FAILURE);
@@ -248,29 +249,28 @@ namespace tfs
         }
       }
 
+      // post repsonse to master ds, won't care result
+      NewClient* client = NewClientManager::get_instance().create_client();
+      post_msg_to_server(source_id_, client, &resp_cpt_msg, Task::ds_task_callback);
+
       TBSYS_LOG(INFO, "compact report to ds. seqno: %"PRI64_PREFIX"d, "
           "blockid: %"PRI64_PREFIX"u, status: %d, source: %s",
         seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
 
-      NewClient* client = NewClientManager::get_instance().create_client();
-      post_msg_to_server(source_id_, client, &resp_cpt_msg, Task::ds_task_callback);
-      // NewClientManager::get_instance().destroy_client(client);
       return TFS_SUCCESS;
     }
 
-    int CompactTask::compact_peer_blocks()
+    int CompactTask::dispatch_sub_task()
     {
       int ret = TFS_SUCCESS;
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      DsCompactBlockMessage req_cpt_msg;
+      req_cpt_msg.set_seqno(seqno_);
+      req_cpt_msg.set_block_id(block_id_);
+      req_cpt_msg.set_source_id(ds_info.information_.id_);
       for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers_.size()); i++)
       {
-        DsCompactBlockMessage req_cpt_msg;
-        req_cpt_msg.set_seqno(seqno_);
-        req_cpt_msg.set_block_id(block_id_);
-        req_cpt_msg.set_source_id(service_.get_ds_ipport());
-        int32_t status = TFS_ERROR;
-        ret = send_msg_to_server(source_id_, &req_cpt_msg, status);
-        ret = (ret < 0) ? ret : status;
-
+        int ret = send_simple_request(servers_[i], &req_cpt_msg);
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to compact, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(servers_[i]).c_str(), ret);
       }
@@ -284,15 +284,15 @@ namespace tfs
       BaseLogicBlock* dest = NULL;
 
       // create temp block
-      int ret = data_helper().new_remote_block(service_.get_ds_ipport(), block_id, true);
+      int ret = get_block_manager().new_block(block_id, true);
       if (TFS_SUCCESS == ret)
       {
-        src = block_manager().get(block_id);
+        src = get_block_manager().get(block_id);
         ret = (NULL != src) ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
       }
       if (TFS_SUCCESS == ret)
       {
-        dest = block_manager().get(block_id, true);
+        dest = get_block_manager().get(block_id, true);
         ret = (NULL != dest) ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
       }
 
@@ -305,10 +305,10 @@ namespace tfs
       // switch block
       if (TFS_SUCCESS == ret)
       {
-        ret = block_manager().switch_logic_block(block_id, true);
+        ret = get_block_manager().switch_logic_block(block_id, true);
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager().del_block(block_id, true);
+          ret = get_block_manager().del_block(block_id, true);
         }
       }
 
@@ -317,8 +317,8 @@ namespace tfs
 
     int CompactTask::real_compact(BaseLogicBlock* src, BaseLogicBlock* dest)
     {
-      LogicBlock* lsrc = dynamic_cast<LogicBlock* >(src);
-      LogicBlock::Iterator* iter = new (std::nothrow) LogicBlock::Iterator(*lsrc);
+      LogicBlock* tmpsrc = dynamic_cast<LogicBlock* >(src);
+      LogicBlock::Iterator* iter = new (std::nothrow) LogicBlock::Iterator(*tmpsrc);
       assert(NULL != iter);
 
       char* buffer = new (std::nothrow) char[MAX_COMPACT_READ_SIZE];
@@ -354,12 +354,14 @@ namespace tfs
 
         if (inner_offset + finfo->size_ > MAX_COMPACT_READ_SIZE)
         {
-          // flush buffer first
-          ret = dest->pwrite(buffer, inner_offset, new_offset);
-          if (TFS_SUCCESS == ret)
+          if (inner_offset > 0)  // buffer not empty, flush first
           {
-            inner_offset = 0;
-            new_offset += inner_offset;
+            ret = dest->pwrite(buffer, inner_offset, new_offset);
+            if (TFS_SUCCESS == ret)
+            {
+              inner_offset = 0;
+              new_offset += inner_offset;
+            }
           }
         }
 
@@ -395,6 +397,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = dest->write_file_infos(header, finfos_vec, block_id_);
+        if (TFS_SUCCESS == ret)
+        {
+          dest->update_block_version(VERSION_INC_STEP_DEFAULT);
+        }
       }
 
       return ret;
@@ -477,16 +483,17 @@ namespace tfs
 
       bool need_remove = false;
       NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL != client)
+      if (NULL == client)
+      {
+        ret = TFS_ERROR;
+      }
+      else
       {
         tbnet::Packet* rsp_msg = NULL;
-        if (TFS_SUCCESS == send_msg_to_server(source_id_, client, &req_rb_msg, rsp_msg))
+        ret = send_msg_to_server(source_id_, client, &req_rb_msg, rsp_msg);
+        if (TFS_SUCCESS == ret)
         {
-          if (STATUS_MESSAGE != rsp_msg->getPCode())
-          {
-            TBSYS_LOG(ERROR, "unknow packet pcode: %d", rsp_msg->getPCode());
-          }
-          else
+          if (STATUS_MESSAGE == rsp_msg->getPCode())
           {
             StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
             if ((REPLICATE_BLOCK_MOVE_FLAG_YES == repl_info_.is_move_) &&
@@ -501,24 +508,20 @@ namespace tfs
             }
             else
             {
-              TBSYS_LOG(ERROR, "send repl block complete info: %s\n", sm->get_error());
+              ret = TFS_ERROR;
             }
           }
-        }
-        else
-        {
-          TBSYS_LOG(ERROR, "send repl block complete info to ns error, ret: %d", ret);
+          else
+          {
+            ret = TFS_ERROR;
+          }
         }
         NewClientManager::get_instance().destroy_client(client);
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "create client error");
       }
 
       if (need_remove)
       {
-        int rm_ret = block_manager().del_block(repl_info_.block_id_);
+        int rm_ret = get_block_manager().del_block(repl_info_.block_id_);
         TBSYS_LOG(INFO, "send repl block complete info: del blockid: %"PRI64_PREFIX"u, ret: %d\n",
             repl_info_.block_id_, rm_ret);
       }
@@ -532,9 +535,10 @@ namespace tfs
 
     int ReplicateTask::report_to_ds(const int status)
     {
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       RespDsReplicateBlockMessage resp_repl_msg;
       resp_repl_msg.set_seqno(seqno_);
-      resp_repl_msg.set_ds_id(service_.get_ds_ipport());
+      resp_repl_msg.set_ds_id(ds_info.information_.id_);
       resp_repl_msg.set_status(status);
 
       TBSYS_LOG(INFO, "replicate report to ds. seqno: %"PRI64_PREFIX"d, "
@@ -543,7 +547,6 @@ namespace tfs
 
       NewClient* client = NewClientManager::get_instance().create_client();
       post_msg_to_server(source_id_, client, &resp_repl_msg, Task::ds_task_callback);
-      // NewClientManager::get_instance().destroy_client(client);
       return TFS_SUCCESS;
     }
 
@@ -559,10 +562,10 @@ namespace tfs
       while ((TFS_SUCCESS == ret) && (offset < block_size))
       {
         length = std::min(block_size - offset, MAX_READ_SIZE);
-        ret = data_helper().read_raw_data(source_id, block_id, data, length, offset);
+        ret = get_data_helper().read_raw_data(source_id, block_id, data, length, offset);
         if (TFS_SUCCESS == ret)
         {
-          ret = data_helper().write_raw_data(dest_id, block_id, data, length, offset);
+          ret = get_data_helper().write_raw_data(dest_id, block_id, data, length, offset);
           if (TFS_SUCCESS == ret)
           {
             offset += length;
@@ -577,18 +580,19 @@ namespace tfs
     {
       uint64_t block_id = repl_info_.block_id_;
       uint64_t dest_id = repl_info_.destination_id_;
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
 
       uint64_t helper[MAX_DATA_MEMBER_NUM];
       ArrayHelper<uint64_t> attach_blocks(MAX_DATA_MEMBER_NUM, helper);
-      int ret = block_manager().get_attach_blocks(attach_blocks, block_id);
+      int ret = get_block_manager().get_attach_blocks(attach_blocks, block_id);
       for (int i = 0; i < (TFS_SUCCESS == ret) && (attach_blocks.get_array_index()); i++)
       {
         IndexDataV2 index_data;
-        ret = data_helper().read_index(service_.get_ds_ipport(),
+        ret = get_data_helper().read_index(ds_info.information_.id_,
             block_id, *attach_blocks.at(i), index_data);
         if (TFS_SUCCESS == ret)
         {
-          ret = data_helper().write_index(dest_id,
+          ret = get_data_helper().write_index(dest_id,
               block_id, *attach_blocks.at(i), index_data);
         }
       }
@@ -604,20 +608,20 @@ namespace tfs
       int32_t block_size = 0;
       int32_t index_num = 0;
 
-      int ret = block_manager().get_family_id(family_id, block_id);
+      int ret = get_block_manager().get_family_id(family_id, block_id);
       if (TFS_SUCCESS == ret)
       {
-        ret = block_manager().get_used_offset(block_size, block_id);
+        ret = get_block_manager().get_used_offset(block_size, block_id);
         if ((TFS_SUCCESS == ret) && IS_VERFIFY_BLOCK(block_id))
         {
-          ret = block_manager().get_index_num(index_num, block_id);
+          ret = get_block_manager().get_index_num(index_num, block_id);
         }
       }
 
       // new remote temp block
       if (TFS_SUCCESS == ret)
       {
-        ret = data_helper().new_remote_block(dest_id,
+        ret = get_data_helper().new_remote_block(dest_id,
             block_id, true, family_id, index_num);
       }
 
@@ -640,7 +644,7 @@ namespace tfs
       {
         ECMeta ec_meta;
         ec_meta.family_id_ = -1; // not update family id
-        ret = data_helper().commit_ec_meta(dest_id, block_id, ec_meta, SWITCH_BLOCK_YES);
+        ret = get_data_helper().commit_ec_meta(dest_id, block_id, ec_meta, SWITCH_BLOCK_YES);
       }
 
       return ret;
@@ -782,7 +786,7 @@ namespace tfs
           if (offset < ec_metas[i].used_offset_)
           {
             int ret_len = 0;
-            ret = data_helper().read_raw_data(family_members_[i].server_,
+            ret = get_data_helper().read_raw_data(family_members_[i].server_,
                 family_members_[i].block_, data[i], ret_len, offset);
           }
         }
@@ -796,7 +800,7 @@ namespace tfs
         // write data to check node
         for (int32_t i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
         {
-          ret = data_helper().write_raw_data(family_members_[i].server_,
+          ret = get_data_helper().write_raw_data(family_members_[i].server_,
               family_members_[i].block_, data[i], length, offset);
         }
 
@@ -825,12 +829,12 @@ namespace tfs
       for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
         IndexDataV2 index_data;
-        ret = data_helper().read_index(family_members_[i].server_,
+        ret = get_data_helper().read_index(family_members_[i].server_,
             family_members_[i].block_, family_members_[i].block_, index_data);
         // backup every data block's index to all check blocks
         for (int j = data_num; (TFS_SUCCESS == ret) && (j < member_num); j++)
         {
-          ret = data_helper().write_index(family_members_[j].server_,
+          ret = get_data_helper().write_index(family_members_[j].server_,
               family_members_[j].block_, family_members_[i].block_, index_data);
         }
       }
@@ -848,14 +852,14 @@ namespace tfs
       int ret = TFS_SUCCESS;
       for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
-        ret = data_helper().query_ec_meta(family_members_[i].server_,
+        ret = get_data_helper().query_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_metas[i]);
       }
 
       // create parity block
       for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
       {
-        ret = data_helper().new_remote_block(family_members_[i].server_,
+        ret = get_data_helper().new_remote_block(family_members_[i].server_,
             family_members_[i].block_, true, family_id_, data_num);
       }
 
@@ -879,7 +883,7 @@ namespace tfs
           ec_metas[i].family_id_ = family_id_;
           // set used_offset as marshalling_offset for data node
           ec_metas[i].mars_offset_ = ec_metas[i].used_offset_;
-          ret = data_helper().commit_ec_meta(family_members_[i].server_,
+          ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_metas[i]);
         }
 
@@ -888,7 +892,7 @@ namespace tfs
         ec_meta.mars_offset_ = marshalling_len;
         for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
         {
-          ret = data_helper().commit_ec_meta(family_members_[i].server_,
+          ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
         }
       }
@@ -947,7 +951,7 @@ namespace tfs
       {
         if (ErasureCode::NODE_ALIVE == family_members_[i].status_)
         {
-          ret = data_helper().query_ec_meta(family_members_[i].server_,
+          ret = get_data_helper().query_ec_meta(family_members_[i].server_,
               family_members_[i].block_, ec_metas[i]);
         }
         else if (ErasureCode::NODE_DEAD == family_members_[i].status_)
@@ -973,12 +977,12 @@ namespace tfs
 
         if (i < data_num)  // create data block
         {
-          ret = data_helper().new_remote_block(family_members_[i].server_,
+          ret = get_data_helper().new_remote_block(family_members_[i].server_,
             family_members_[i].block_, true, family_id_, 0);
         }
         else // create parity block
         {
-          ret = data_helper().new_remote_block(family_members_[i].server_,
+          ret = get_data_helper().new_remote_block(family_members_[i].server_,
               family_members_[i].block_, true, family_id_, data_num);
         }
       }
@@ -1015,8 +1019,8 @@ namespace tfs
           {
             continue;  // only query alive nodes
           }
-          ret = data_helper().commit_ec_meta(family_members_[i].server_,
-            family_members_[i].block_, ec_meta, true);
+          ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
+            family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
         }
       }
 
@@ -1072,7 +1076,7 @@ namespace tfs
           if (offset < ec_metas[i].mars_offset_)
           {
             int32_t ret_len = 0;
-            ret = data_helper().read_raw_data(family_members_[i].server_,
+            ret = get_data_helper().read_raw_data(family_members_[i].server_,
                 family_members_[i].block_, data[i], ret_len, offset);
           }
         }
@@ -1088,10 +1092,10 @@ namespace tfs
         {
           if (ErasureCode::NODE_DEAD != erased_[i])
           {
-            continue;  // we want to find dead server
+            continue;  // we want to find dead node
           }
 
-          ret = data_helper().write_raw_data(family_members_[i].server_,
+          ret = get_data_helper().write_raw_data(family_members_[i].server_,
               family_members_[i].block_, data[i], length, offset);
         }
 
@@ -1131,11 +1135,11 @@ namespace tfs
         }
 
         IndexDataV2 index_data;
-        ret = data_helper().read_index(family_members_[pi].server_,
+        ret = get_data_helper().read_index(family_members_[pi].server_,
             family_members_[pi].block_, family_members_[i].block_, index_data);
         if (TFS_SUCCESS == ret)
         {
-          ret = data_helper().write_index(family_members_[i].server_,
+          ret = get_data_helper().write_index(family_members_[i].server_,
               family_members_[i].block_, family_members_[i].block_, index_data);
         }
 
@@ -1146,9 +1150,11 @@ namespace tfs
           if ((TFS_SUCCESS == ret) && index_data.finfos_.size() > 0)
           {
             // we just need update header here
-            index_data.finfos_.clear();
-            ret = data_helper().write_index(family_members_[i].server_,
-                family_members_[i].block_, family_members_[i].block_, index_data);
+            // because after recover updateed files, block version are changed
+            IndexDataV2 only_header;
+            only_header.header_ = index_data.header_;
+            ret = get_data_helper().write_index(family_members_[i].server_,
+                family_members_[i].block_, family_members_[i].block_, only_header);
           }
         }
       }
@@ -1197,7 +1203,7 @@ namespace tfs
       for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
         IndexDataV2 index_data;
-        ret = data_helper().read_index(family_members_[i].server_,
+        ret = get_data_helper().read_index(family_members_[i].server_,
             family_members_[i].block_, family_members_[i].block_, index_data);
         for (int j = data_num; (TFS_SUCCESS == ret) && (j < member_num); j++)
         {
@@ -1205,7 +1211,7 @@ namespace tfs
           {
             continue; // we need find dead node to recove
           }
-          ret = data_helper().write_index(family_members_[j].server_,
+          ret = get_data_helper().write_index(family_members_[j].server_,
               family_members_[j].block_, family_members_[i].block_, index_data);
           if (TFS_SUCCESS == ret)
           {
@@ -1214,9 +1220,11 @@ namespace tfs
             if ((TFS_SUCCESS == ret) && index_data.finfos_.size() > 0)
             {
               // we just need update header here
-              index_data.finfos_.clear();
-              ret = data_helper().write_index(family_members_[j].server_,
-                  family_members_[j].block_, family_members_[i].block_, index_data);
+              // because after recover updateed files, block version are changed
+              IndexDataV2 only_header;
+              only_header.header_ = index_data.header_;
+              ret = get_data_helper().write_index(family_members_[j].server_,
+                  family_members_[j].block_, family_members_[i].block_, only_header);
             }
           }
         }
@@ -1236,7 +1244,7 @@ namespace tfs
       for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
         IndexDataV2 index_data;
-        ret = data_helper().read_index(family_members_[pi].server_,
+        ret = get_data_helper().read_index(family_members_[pi].server_,
             family_members_[pi].block_, family_members_[i].block_, index_data);
         for (int j = data_num; (TFS_SUCCESS == ret) && (j < member_num); j++)
         {
@@ -1244,7 +1252,7 @@ namespace tfs
           {
             continue; // we need find dead node to recover
           }
-          ret = data_helper().write_index(family_members_[j].server_,
+          ret = get_data_helper().write_index(family_members_[j].server_,
               family_members_[j].block_, family_members_[i].block_, index_data);
           if (TFS_SUCCESS == ret)
           {
@@ -1253,9 +1261,11 @@ namespace tfs
             if ((TFS_SUCCESS == ret) && index_data.finfos_.size() > 0)
             {
               // we just need update header here
-              index_data.finfos_.clear();
-              ret = data_helper().write_index(family_members_[j].server_,
-                  family_members_[j].block_, family_members_[i].block_, index_data);
+              // because after recover updateed files, block version are changed
+              IndexDataV2 only_header;
+              only_header.header_ = index_data.header_;
+              ret = get_data_helper().write_index(family_members_[j].server_,
+                  family_members_[j].block_, family_members_[i].block_, only_header);
             }
           }
         }
@@ -1279,15 +1289,16 @@ namespace tfs
         char *data = new (std::nothrow) char[finfos[i].size_];
         assert(NULL != data);
         int32_t length = finfos[i].size_;
-        ret = data_helper().read_file(family_members_[src].server_,
+        ret = get_data_helper().read_file(family_members_[src].server_,
             family_members_[src].block_, block_id,
             finfos[i].id_, data, length, 0, READ_DATA_OPTION_FLAG_FORCE);
         if (TFS_SUCCESS == ret)
         {
-          ret = data_helper().write_file(family_members_[dest].server_,
+          ret = get_data_helper().write_file(family_members_[dest].server_,
               family_members_[dest].block_, block_id,
               finfos[i].id_, data, length);
         }
+        tbsys::gDelete(data);
       }
 
       return ret;
@@ -1438,6 +1449,7 @@ namespace tfs
       int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_) / 2;
       int32_t total_num = data_num + check_num;
 
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
         if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
@@ -1454,7 +1466,7 @@ namespace tfs
 
         repl_msg.set_seqno(seqno_);
         repl_msg.set_expire_time(expire_time_);
-        repl_msg.set_source_id(service_.get_ds_ipport());
+        repl_msg.set_source_id(ds_info.information_.id_);
         repl_msg.set_repl_info(repl_block);
         ret = send_simple_request(family_members_[i].server_, &repl_msg);
 
@@ -1478,7 +1490,7 @@ namespace tfs
         {
           continue;  // lost block, no need to delete
         }
-        ret = data_helper().delete_remote_block(family_members_[i].server_,
+        ret = get_data_helper().delete_remote_block(family_members_[i].server_,
             family_members_[i].block_);
 
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to delete, ret: %d",

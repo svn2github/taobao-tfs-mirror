@@ -36,9 +36,9 @@ namespace tfs
     {
     }
 
-    inline BlockManager& DataHelper::block_manager()
+    inline BlockManager& DataHelper::get_block_manager()
     {
-      return service_.block_manager();
+      return service_.get_block_manager();
     }
 
     int DataHelper::new_remote_block(const uint64_t server_id, const uint64_t block_id,
@@ -289,9 +289,10 @@ namespace tfs
         const bool tmp, const uint64_t family_id, const int32_t index_num)
     {
       int ret = TFS_SUCCESS;
-      if (server_id == service_.get_ds_ipport())
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (server_id == ds_info.information_.id_)
       {
-        ret = block_manager().new_block(block_id, tmp, family_id, index_num);
+        ret = get_block_manager().new_block(block_id, tmp, family_id, index_num);
       }
       else
       {
@@ -319,9 +320,10 @@ namespace tfs
         const bool tmp)
     {
       int ret = TFS_SUCCESS;
-      if (server_id == service_.get_ds_ipport())
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (server_id == ds_info.information_.id_)
       {
-        ret = block_manager().del_block(block_id, tmp);
+        ret = get_block_manager().del_block(block_id, tmp);
       }
       else
       {
@@ -340,10 +342,10 @@ namespace tfs
         char* data, int32_t& length, const int32_t offset)
     {
       int ret = TFS_SUCCESS;
-      // if server_id is self, just read local
-      if (server_id == service_.get_ds_ipport())
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (server_id == ds_info.information_.id_)
       {
-        ret = block_manager().pread(data, length, offset, block_id);
+        ret = get_block_manager().pread(data, length, offset, block_id);
         ret = (ret < 0) ? ret: TFS_SUCCESS;
       }
       else
@@ -391,9 +393,10 @@ namespace tfs
         const char* data, const int32_t length, const int32_t offset)
     {
       int ret = TFS_SUCCESS;
-      if (server_id == service_.get_ds_ipport())
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (server_id == ds_info.information_.id_)
       {
-        ret = block_manager().pwrite(data, length, offset, block_id);
+        ret = get_block_manager().pwrite(data, length, offset, block_id);
         ret = (ret < 0) ? ret : TFS_SUCCESS;
       }
       else
@@ -416,9 +419,10 @@ namespace tfs
         const uint64_t attach_block_id, common::IndexDataV2& index_data)
     {
       int ret = TFS_SUCCESS;
-      if (server_id == service_.get_ds_ipport())
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (server_id == ds_info.information_.id_)
       {
-        ret = block_manager().traverse(index_data.header_, index_data.finfos_,
+        ret = get_block_manager().traverse(index_data.header_, index_data.finfos_,
             block_id, attach_block_id);
       }
       else
@@ -465,9 +469,10 @@ namespace tfs
         const uint64_t attach_block_id, common::IndexDataV2& index_data)
     {
       int ret = TFS_SUCCESS;
-      if (server_id == service_.get_ds_ipport())
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (server_id == ds_info.information_.id_)
       {
-        ret = block_manager().write_file_infos(index_data.header_, index_data.finfos_,
+        ret = get_block_manager().write_file_infos(index_data.header_, index_data.finfos_,
             block_id, attach_block_id);
       }
       else
@@ -489,21 +494,22 @@ namespace tfs
         common::ECMeta& ec_meta)
     {
       int ret = TFS_SUCCESS;
-      if (server_id == service_.get_ds_ipport())
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (server_id == ds_info.information_.id_)
       {
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager().get_family_id(ec_meta.family_id_, block_id);
+          ret = get_block_manager().get_family_id(ec_meta.family_id_, block_id);
         }
 
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager().get_used_offset(ec_meta.used_offset_, block_id);
+          ret = get_block_manager().get_used_offset(ec_meta.used_offset_, block_id);
         }
 
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
+          ret = get_block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
         }
       }
       else
@@ -547,18 +553,19 @@ namespace tfs
         const common::ECMeta& ec_meta, const int8_t switch_flag)
     {
       int ret = TFS_SUCCESS;
-      if (server_id == service_.get_ds_ipport())
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (server_id == ds_info.information_.id_)
       {
         // commit family id
         if ((TFS_SUCCESS == ret) && (ec_meta.family_id_ >= 0))
         {
-          ret = block_manager().set_family_id(ec_meta.family_id_, block_id);
+          ret = get_block_manager().set_family_id(ec_meta.family_id_, block_id);
         }
 
         // commit marshalling length
         if ((TFS_SUCCESS == ret) && (ec_meta.mars_offset_ > 0))
         {
-          ret = block_manager().set_marshalling_offset(ec_meta.mars_offset_, block_id);
+          ret = get_block_manager().set_marshalling_offset(ec_meta.mars_offset_, block_id);
         }
       }
       else
@@ -580,11 +587,11 @@ namespace tfs
         common::FileInfoV2& finfo)
     {
       int ret = TFS_SUCCESS;
-      // if server_id is self, just read local
-      if (server_id == service_.get_ds_ipport())
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (server_id == ds_info.information_.id_)
       {
         finfo.id_ = file_id;
-        ret = block_manager().stat(finfo, flag, block_id, attach_block_id);
+        ret = get_block_manager().stat(finfo, flag, block_id, attach_block_id);
       }
       else
       {
@@ -633,10 +640,10 @@ namespace tfs
         char* data, int32_t& length, const int32_t offset, const int8_t flag)
     {
       int ret = TFS_SUCCESS;
-      // if server_id is self, just read local
-      if (server_id == service_.get_ds_ipport())
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (server_id == ds_info.information_.id_)
       {
-        ret = block_manager().read(data, length, offset, file_id,
+        ret = get_block_manager().read(data, length, offset, file_id,
             READ_DATA_OPTION_FLAG_FORCE, block_id, attach_block_id);
         ret = (ret < 0) ? ret: TFS_SUCCESS;
       }
@@ -774,17 +781,17 @@ namespace tfs
         const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
         const int32_t member_num = data_num + check_num;
 
-        int normal_count = 0;
+        int alive = 0;
         for (int32_t i = 0; i < member_num; i++)
         {
           // just need data_num nodes to recovery
           if (INVALID_BLOCK_ID != family_info.members_[i].first &&
-              INVALID_SERVER_ID == family_info.members_[i].second)
+              INVALID_SERVER_ID != family_info.members_[i].second)
           {
-            if (normal_count < data_num)
+            if (alive < data_num)
             {
               erased[i] = ErasureCode::NODE_ALIVE;
-              normal_count++;
+              alive++;
             }
             else
             {
@@ -797,9 +804,9 @@ namespace tfs
           }
        }
 
-        if (normal_count < data_num)
+        if (alive < data_num)
         {
-          TBSYS_LOG(ERROR, "no enough normal node to read degrade, normal count: %d", normal_count);
+          TBSYS_LOG(ERROR, "no enough data for read degrade, alive: %d", alive);
           ret = EXIT_NO_ENOUGH_DATA;
         }
       }
@@ -828,7 +835,7 @@ namespace tfs
         else
         {
           ret = stat_file_ex(family_info.members_[target].second,
-              block_id, family_info.members_[target].first, file_id, flag, finfo);
+              family_info.members_[target].first, block_id, file_id, flag, finfo);
         }
       }
 
@@ -842,7 +849,7 @@ namespace tfs
           || (offset < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       // degrade read won't call block_manager's read interface
-      // we need to do permission check solely
+      // we need to do permission check solely for degrade-read
       if (TFS_SUCCESS == ret)
       {
         if (READ_DATA_OPTION_FLAG_FORCE & flag)
@@ -870,11 +877,8 @@ namespace tfs
         {
           target = data_num;
           while((ErasureCode::NODE_ALIVE != erased[target]) && (target < member_num)) target++;
-          if (target >= member_num) // no check block alive, can't stat degrade
-          {
-            ret = EXIT_NO_ENOUGH_DATA;
-          }
-          else
+          ret = (target >= member_num) ? EXIT_NO_ENOUGH_DATA : TFS_SUCCESS; // no alive check block
+          if (TFS_SUCCESS == ret)
           {
             ret = query_ec_meta(family_info.members_[target].second,
                 family_info.members_[target].first, ec_meta);
@@ -883,14 +887,14 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          // it's an updated file
+          // it's an updated file, read from check block
           if (finfo.offset_ >= ec_meta.mars_offset_)
           {
             ret = read_file(family_info.members_[target].second,
                 family_info.members_[target].first, block_id, finfo.id_,
                 data, length, offset, flag);
           }
-          else
+          else  // decode from other block's data
           {
             ret = read_file_degrade_ex(block_id,
                 finfo, data, length, offset, family_info, erased);
@@ -941,6 +945,7 @@ namespace tfs
       // find read target index
       int32_t target = 0;
       while ((family_info.members_[target].first != block_id) && (target < data_num)) target++;
+      ret = (target >= data_num) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       while ((TFS_SUCCESS == ret) && (real_offset < real_end))
       {
@@ -969,7 +974,7 @@ namespace tfs
           int32_t this_len = std::min(length - offset_in_buffer, len - offset_in_buffer);
           memcpy(buffer + offset_in_buffer, data[target] + offset_in_read, this_len);
           offset_in_buffer += this_len;
-          offset_in_read = 0; // except first read, offset_in_read will be 0
+          offset_in_read = 0; // except first read, offset_in_read always be 0
           real_offset += len;
         }
       }

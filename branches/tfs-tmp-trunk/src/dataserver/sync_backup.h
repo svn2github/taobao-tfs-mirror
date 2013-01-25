@@ -72,7 +72,7 @@ namespace tfs
         TfsMirrorBackup(SyncBase& sync_base, const char* src_addr, const char* dest_addr);
         virtual ~TfsMirrorBackup();
 
-        BlockManager& block_manager();
+        BlockManager& get_block_manager();
 
         bool init();
         void destroy();

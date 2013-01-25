@@ -342,7 +342,35 @@ namespace tfs
       return ret;
     }
 
+    int BlockManager::get_index_header(common::IndexHeaderV2& header, const uint64_t logic_block_id) const
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->get_index_header(header);
+        }
+      }
+      return ret;
+    }
 
+    int BlockManager::set_index_header(const common::IndexHeaderV2& header, const uint64_t logic_block_id)
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->set_index_header(header);
+        }
+      }
+      return ret;
+    }
 
     int BlockManager::check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const
     {

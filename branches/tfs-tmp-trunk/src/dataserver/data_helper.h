@@ -30,7 +30,7 @@ namespace tfs
         explicit DataHelper(DataService& service);
         ~DataHelper();
 
-        inline BlockManager& block_manager();
+        inline BlockManager& get_block_manager();
 
         int new_remote_block(const uint64_t server_id, const uint64_t block_id,
             const bool tmp = false, const uint64_t family_id = common::INVALID_FAMILY_ID ,

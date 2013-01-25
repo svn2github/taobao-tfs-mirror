@@ -56,6 +56,7 @@ namespace tfs
       int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT);
       int get_block_info(common::BlockInfoV2& info) const;
       int get_index_header(common::IndexHeaderV2& header) const;
+      int set_index_header(const common::IndexHeaderV2& header);
       virtual int check_block_intact() { return common::TFS_SUCCESS;}
       int load_index(const common::MMapOption mmap_option);
       int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id) const;

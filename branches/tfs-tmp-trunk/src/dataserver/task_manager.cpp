@@ -36,7 +36,7 @@ namespace tfs
     using namespace tbsys;
 
     TaskManager::TaskManager(DataService& service):
-      service_(service), stop_(false)
+      service_(service)
     {
     }
 
@@ -120,6 +120,7 @@ namespace tfs
       int64_t seqno = message->get_seqno();
       int32_t expire_time = message->get_expire_time();
       const ReplBlock* repl_info = message->get_repl_block();
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       int ret = TFS_SUCCESS;
       if ((NULL == repl_info) ||
           (seqno < 0) || (expire_time <= 0) ||
@@ -132,7 +133,7 @@ namespace tfs
       else
       {
         ReplicateTask* task = new ReplicateTask(service_, seqno,
-            service_.get_ns_ipport(), expire_time, *repl_info);
+            ds_info.ns_vip_port_, expire_time, *repl_info);
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
         {
@@ -146,13 +147,14 @@ namespace tfs
     {
       int64_t seqno = message->get_seqno();
       int32_t expire_time = message->get_expire_time();
-      uint32_t block_id = message->get_block_id();
-      int ret = ((seqno < 0) || (expire_time <= 0) || (INVALID_BLOCK_ID == block_id)) ?
-        EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      uint64_t block_id = message->get_block_id();
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      int ret = ((seqno < 0) || (expire_time <= 0) || (INVALID_BLOCK_ID == block_id) ||
+          IS_VERFIFY_BLOCK(block_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         CompactTask* task = new CompactTask(service_, seqno,
-            service_.get_ns_ipport(), expire_time, block_id);
+            ds_info.ns_vip_port_, expire_time, block_id);
         task->set_servers(message->get_servers());
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
@@ -197,10 +199,11 @@ namespace tfs
       int64_t seqno = message->get_seqno();
       int32_t expire_time = message->get_expire_time();
       uint64_t source_id = message->get_source_id();
-      uint32_t block_id = message->get_block_id();
+      uint64_t block_id = message->get_block_id();
 
       int ret = ((seqno < 0) || (expire_time <= 0) || (INVALID_BLOCK_ID == block_id) ||
-          (source_id == INVALID_SERVER_ID)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+          (INVALID_SERVER_ID == source_id) || IS_VERFIFY_BLOCK(block_id)) ?
+          EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         CompactTask* task = new CompactTask(service_, seqno, source_id, expire_time, block_id);
@@ -221,6 +224,7 @@ namespace tfs
       int64_t family_id = message->get_family_id();
       int32_t family_aid_info = message->get_family_aid_info();
       FamilyMemberInfo* family_members = message->get_family_member_info();
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
 
       int ret = ((seqno < 0) || (expire_time <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
@@ -229,7 +233,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           MarshallingTask* task = new MarshallingTask(service_, seqno,
-              service_.get_ns_ipport(), expire_time, family_id);
+              ds_info.ns_vip_port_, expire_time, family_id);
           ret = task->set_family_info(family_members, family_aid_info);
           if (TFS_SUCCESS == ret)
           {
@@ -252,16 +256,17 @@ namespace tfs
       int64_t family_id = message->get_family_id();
       int32_t family_aid_info = message->get_family_aid_info();
       FamilyMemberInfo* family_members = message->get_family_member_info();
-      int erased[MAX_MARSHALLING_NUM];
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
 
       int ret = ((seqno < 0) || (expire_time <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
+        int erased[MAX_MARSHALLING_NUM];
         ret = check_reinstate(family_id, family_aid_info, family_members, erased);
         if (TFS_SUCCESS == ret)
         {
           ReinstateTask* task = new ReinstateTask(service_, seqno,
-              service_.get_ns_ipport(), expire_time, family_id);
+              ds_info.ns_vip_port_, expire_time, family_id);
           ret = task->set_family_info(family_members, family_aid_info, erased);
           if (TFS_SUCCESS == ret)
           {
@@ -284,6 +289,7 @@ namespace tfs
       int64_t family_id = message->get_family_id();
       int32_t family_aid_info = message->get_family_aid_info();
       FamilyMemberInfo* family_members = message->get_family_member_info();
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
 
       int ret = ((seqno < 0) || (expire_time <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
@@ -292,7 +298,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           DissolveTask* task = new DissolveTask(service_, seqno,
-              service_.get_ns_ipport(), expire_time, family_id);
+              ds_info.ns_vip_port_, expire_time, family_id);
           ret = task->set_family_info(family_members, family_aid_info);
           if (TFS_SUCCESS == ret)
           {
@@ -345,14 +351,16 @@ namespace tfs
 
     int TaskManager::run_task()
     {
-      while (!stop_)
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      while (!ds_info.is_destroyed())
       {
         task_monitor_.lock();
-        while (!stop_ && task_queue_.empty())
+        while (!ds_info.is_destroyed() && task_queue_.empty())
         {
           task_monitor_.wait();
         }
-        if (stop_)
+
+        if (ds_info.is_destroyed())
         {
           task_monitor_.unlock();
           break;
@@ -428,15 +436,6 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    void TaskManager::stop()
-    {
-      stop_ = true;
-
-      task_monitor_.lock();
-      task_monitor_.notifyAll();
-      task_monitor_.unlock();
-    }
-
     int TaskManager::check_family(const int64_t family_id, const int32_t family_aid_info)
     {
       int ret = (INVALID_FAMILY_ID != family_id)? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
@@ -464,7 +463,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         // check if all data ok
-        int normal_count = 0;
+        int alive = 0;
         const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
         for (int32_t i = 0; i < data_num; i++)
         {
@@ -472,13 +471,13 @@ namespace tfs
               INVALID_SERVER_ID != family_members[i].server_ &&
               FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
           {
-            normal_count++;
+            alive++;
           }
         }
 
-        if (normal_count < data_num)
+        if (alive < data_num)
         {
-          TBSYS_LOG(ERROR, "no enough node to marshalling, normal count: %d", normal_count);
+          TBSYS_LOG(ERROR, "no enough node to marshalling, alive: %d", alive);
           ret = EXIT_NO_ENOUGH_DATA;
         }
       }
@@ -502,8 +501,8 @@ namespace tfs
         const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
         const int32_t member_num = data_num + check_num;
 
+        int alive = 0;
         bool need_recovery = false;
-        int normal_count = 0;
         for (int32_t i = 0; i < member_num; i++)
         {
           // just need data_num nodes to recovery
@@ -511,10 +510,10 @@ namespace tfs
               INVALID_SERVER_ID != family_members[i].server_ &&
               FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
           {
-            if (normal_count < data_num)
+            if (alive < data_num)
             {
               erased[i] = ErasureCode::NODE_ALIVE;
-              normal_count++;
+              alive++;
             }
             else
             {
@@ -528,16 +527,16 @@ namespace tfs
           }
         }
 
-        if (normal_count < data_num)
+        if (alive < data_num)
         {
-          TBSYS_LOG(ERROR, "no enough normal node to reinstate, normal count: %d", normal_count);
+          TBSYS_LOG(ERROR, "no enough alive node to reinstate, alive: %d", alive);
           ret = EXIT_NO_ENOUGH_DATA;
         }
 
         // all node ok, no need to recovery, just return
         if (TFS_SUCCESS == ret && !need_recovery)
         {
-          TBSYS_LOG(INFO, "all nodes are normal, no need do recovery");
+          TBSYS_LOG(INFO, "all nodes are alive, no need do recovery");
           ret = EXIT_NO_NEED_REINSTATE;
         }
       }

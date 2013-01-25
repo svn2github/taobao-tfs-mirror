@@ -39,9 +39,9 @@ namespace tfs
     {
     }
 
-    inline BlockManager& DataManager::block_manager()
+    inline BlockManager& DataManager::get_block_manager()
     {
-      return service_.block_manager();
+      return service_.get_block_manager();
     }
 
     int DataManager::prepare_lease(const uint64_t block_id, uint64_t& file_id, uint64_t& lease_id,
@@ -50,7 +50,7 @@ namespace tfs
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if ((TFS_SUCCESS == ret) && (0 == (file_id & 0xFFFFFFFF)))
       {
-        ret = block_manager().generation_file_id(file_id, block_id);
+        ret = get_block_manager().generation_file_id(file_id, block_id);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "create file id fail. blockid: %"PRI64_PREFIX"u, ret: %d",
@@ -196,7 +196,7 @@ namespace tfs
 
       if ((TFS_SUCCESS == ret) && (remote_version >= 0))  // remote version < 0, don't check
       {
-        ret = block_manager().check_block_version(local, remote_version, block_id);
+        ret = get_block_manager().check_block_version(local, remote_version, block_id);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
@@ -219,12 +219,13 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
+          DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
           DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
           FileInfoInDiskExt none;
           none.version_ = FILE_INFO_EXT_INIT_VERSION;
           ret = data_file.pwrite(none, buffer, length, offset);
           ret = (ret < 0) ? ret : TFS_SUCCESS; // transform return status
-          lease->update_member_info(service_.get_ds_ipport(), local, ret);
+          lease->update_member_info(ds_info.information_.id_, local, ret);
           lease->update_last_time(now);
           lease_manager_.put(lease);
         }
@@ -251,12 +252,13 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
-        ret = block_manager().write(file_id, data_file, block_id, attach_block_id, tmp);
+        ret = get_block_manager().write(file_id, data_file, block_id, attach_block_id, tmp);
         ret = (ret < 0) ? ret: TFS_SUCCESS;  // transform return status
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager().get_block_info(local, block_id);
-          lease->update_member_info(service_.get_ds_ipport(), local, ret);
+          DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+          ret = get_block_manager().get_block_info(local, block_id);
+          lease->update_member_info(ds_info.information_.id_, local, ret);
         }
         lease_manager_.put(lease);
       }
@@ -273,7 +275,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = block_manager().check_block_version(local, remote_version, block_id);
+        ret = get_block_manager().check_block_version(local, remote_version, block_id);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
@@ -286,10 +288,10 @@ namespace tfs
       int64_t file_size = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = block_manager().unlink(file_size, file_id, action, block_id, attach_block_id);
+        ret = get_block_manager().unlink(file_size, file_id, action, block_id, attach_block_id);
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager().get_block_info(local, block_id);
+          ret = get_block_manager().get_block_info(local, block_id);
         }
       }
 
@@ -301,7 +303,8 @@ namespace tfs
         ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          lease->update_member_info(service_.get_ds_ipport(), local, ret);
+          DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+          lease->update_member_info(ds_info.information_.id_, local, ret);
           lease->set_file_size(file_size);
           lease_manager_.put(lease);
         }
@@ -332,10 +335,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
         UpdateBlockInfoMessageV2 req_msg;
         req_msg.set_block_info(block_info);
         req_msg.set_unlink_flag(unlink_flag);
-        req_msg.set_server_id(service_.get_ds_ipport());
+        req_msg.set_server_id(ds_info.information_.id_);
 
         NewClient* client = NewClientManager::get_instance().create_client();
         if (NULL == client)
@@ -345,7 +349,7 @@ namespace tfs
         else
         {
           tbnet::Packet* ret_msg = NULL;
-          ret = send_msg_to_server(service_.get_ns_ipport(),  client, &req_msg, ret_msg);
+          ret = send_msg_to_server(ds_info.ns_vip_port_, client, &req_msg, ret_msg);
           if (TFS_SUCCESS == ret)
           {
             ret = (STATUS_MESSAGE == ret_msg->getPCode())? TFS_SUCCESS : EXIT_COMMIT_BLOCK_UPDATE_ERROR;
@@ -404,8 +408,9 @@ namespace tfs
 
        if (TFS_SUCCESS == ret)
        {
+         DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
          tbnet::Packet* ret_msg = NULL;
-         ret = send_msg_to_server(service_.get_ns_ipport(), client, &req_msg, ret_msg);
+         ret = send_msg_to_server(ds_info.ns_vip_port_, client, &req_msg, ret_msg);
          if (TFS_SUCCESS == ret)
          {
            ret = (RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE == ret_msg->getPCode())

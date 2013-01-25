@@ -39,8 +39,8 @@ namespace tfs
           const uint64_t source_id, const int32_t expire_time);
         virtual ~Task();
 
-        inline DataHelper& data_helper();
-        inline BlockManager& block_manager();
+        inline DataHelper& get_data_helper();
+        inline BlockManager& get_block_manager();
 
         common::PlanType get_type() const { return type_; }
         void set_type(const common::PlanType type) { type_ = type; }
@@ -113,7 +113,7 @@ namespace tfs
         *
         * @return plan status
         */
-        static common::PlanStatus translate_status(const int err_code)
+        common::PlanStatus translate_status(const int err_code)
         {
           common::PlanStatus ret = common::PLAN_STATUS_NONE;
           if (common::TFS_SUCCESS == err_code)
@@ -194,6 +194,12 @@ namespace tfs
         bool task_from_ds_;
     };
 
+    /*
+     * Nameserver dispatch compact task to master ds M
+     * M will dispatch subtask to A, B
+     * M wait for A,B finish subtask
+     * M will report final status to nameserver
+     */
     class CompactTask: public Task
     {
       public:
@@ -221,7 +227,7 @@ namespace tfs
         int real_compact(BaseLogicBlock* src, BaseLogicBlock* dest);
         int write_big_file(BaseLogicBlock* src, BaseLogicBlock* dest,
             const common::FileInfoV2& finfo, const int32_t new_offset);
-        int compact_peer_blocks();
+        int dispatch_sub_task();
         void add_response(const uint64_t server, const int status, const common::BlockInfoV2& info);
 
       protected:
@@ -231,6 +237,11 @@ namespace tfs
         std::vector<std::pair<uint64_t, int8_t> > result_;
     };
 
+    /*
+     * nameserver ask ds A replicate block to B
+     * A then copy block data and index to B
+     * A report final status to B
+     */
     class ReplicateTask: public Task
     {
       public:

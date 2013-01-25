@@ -102,9 +102,9 @@ namespace tfs
     {
     }
 
-    inline BlockManager& TfsMirrorBackup::block_manager()
+    inline BlockManager& TfsMirrorBackup::get_block_manager()
     {
-      return dynamic_cast<DataService*>(DataService::instance())->block_manager();
+      return dynamic_cast<DataService*>(DataService::instance())->get_block_manager();
     }
 
     bool TfsMirrorBackup::init()
@@ -323,7 +323,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         BlockInfoV2 block_info;
-        ret = block_manager().get_block_info(block_info, block_id);
+        ret = get_block_manager().get_block_info(block_info, block_id);
         if (TFS_SUCCESS != ret)
         {
           return remote_copy_file(block_id, file_id);
@@ -340,7 +340,7 @@ namespace tfs
         FileInfo finfo;
 
         /*READ_DATA_OPTION_FLAG_NORMAL*/ //read first data & fileinfo
-        ret = block_manager().read(data, length, offset, file_id, READ_DATA_OPTION_FLAG_FORCE, block_id, block_id);
+        ret = get_block_manager().read(data, length, offset, file_id, READ_DATA_OPTION_FLAG_FORCE, block_id, block_id);
         if (TFS_SUCCESS != ret)
         {
           // if file is local deleted or not exists in local, need not sync
@@ -396,7 +396,7 @@ namespace tfs
                       && TFS_SUCCESS == ret)
                 {
                   length = ((finfo.size_ - total_length) > MAX_READ_SIZE) ? MAX_READ_SIZE : finfo.size_ - total_length;
-                  ret = block_manager().read(data, length, offset, file_id, READ_DATA_OPTION_FLAG_FORCE, block_id, block_id);
+                  ret = get_block_manager().read(data, length, offset, file_id, READ_DATA_OPTION_FLAG_FORCE, block_id, block_id);
                   if (TFS_SUCCESS != ret)
                   {
                     TBSYS_LOG(ERROR, "read file fail. blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %d, ret: %d",
