@@ -21,15 +21,14 @@ namespace tfs
   namespace common
   {
     TfsFileInfo::TfsFileInfo()
-      :block_id_tag_(TFS_FILE_INFO_BLOCK_ID_TAG), block_id_(0),
-      file_id_tag_(TFS_FILE_INFO_FILE_ID_TAG), file_id_(0),
-      cluster_id_tag_(TFS_FILE_INFO_CLUSTER_ID_TAG), cluster_id_(0),
-      file_size_tag_(TFS_FILE_INFO_FILE_SIZE_TAG), file_size_(0),
-      offset_tag_(TFS_FILE_INFO_OFFSET_TAG), offset_(0)
+      :block_id_(0), file_id_(0),
+      cluster_id_(0), file_size_(0),
+      offset_(0)
     { }
 
     int64_t TfsFileInfo::length() const
     {
+      // add 5 tag to self-interpret
       return INT64_SIZE * 4 + INT_SIZE + 5 * INT_SIZE;
     }
 
@@ -45,7 +44,7 @@ namespace tfs
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, block_id_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, TFS_FILE_INFO_BLOCK_ID_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -53,7 +52,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, file_id_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, TFS_FILE_INFO_FILE_ID_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -61,7 +60,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, cluster_id_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, TFS_FILE_INFO_CLUSTER_ID_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -69,7 +68,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, file_size_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, TFS_FILE_INFO_FILE_SIZE_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -77,7 +76,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, offset_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, TFS_FILE_INFO_OFFSET_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -89,55 +88,51 @@ namespace tfs
     int TfsFileInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == ret)
+
+      while (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &block_id_tag_);
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
+
+        if (TFS_SUCCESS == ret)
+        {
+          switch (type_tag)
+          {
+            case TFS_FILE_INFO_BLOCK_ID_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &block_id_);
+              break;
+            case TFS_FILE_INFO_FILE_ID_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &file_id_);
+              break;
+            case TFS_FILE_INFO_CLUSTER_ID_TAG:
+              ret = Serialization::get_int32(data, data_len, pos, &cluster_id_);
+              break;
+            case TFS_FILE_INFO_FILE_SIZE_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &file_size_);
+              break;
+            case TFS_FILE_INFO_OFFSET_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &offset_);
+              break;
+            default:
+              TBSYS_LOG(ERROR, "tfs file info: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
+          }
+        }
+
+        if (TFS_FILE_INFO_OFFSET_TAG == type_tag)
+        {
+          break;
+        }
       }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int64(data, data_len, pos, &block_id_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &file_id_tag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int64(data, data_len, pos, &file_id_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &cluster_id_tag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &cluster_id_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &file_size_tag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int64(data, data_len, pos, &file_size_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &offset_tag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int64(data, data_len, pos, &offset_);
-      }
+
       return ret;
     }
 
     //object meta info
     ObjectMetaInfo::ObjectMetaInfo()
-      :create_time_tag_(OBJECT_META_INFO_CREATE_TIME_TAG), create_time_(0),
-      modify_time_tag_(OBJECT_META_INFO_MODIFY_TIME_TAG), modify_time_(0),
-      max_tfs_file_size_tag_(OBJECT_META_INFO_MAX_TFS_FILE_SIZE_TAG), max_tfs_file_size_(2048),
-      big_file_size_tag_(OBJECT_META_INFO_BIG_FILE_SIZE_TAG), big_file_size_(0)
+      :create_time_(0), modify_time_(0),
+      max_tfs_file_size_(2048), big_file_size_(0)
     {}
 
     int64_t ObjectMetaInfo::length() const
@@ -157,7 +152,7 @@ namespace tfs
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, create_time_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_META_INFO_CREATE_TIME_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -165,7 +160,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, modify_time_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_META_INFO_MODIFY_TIME_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -173,7 +168,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, big_file_size_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_META_INFO_BIG_FILE_SIZE_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -181,7 +176,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, max_tfs_file_size_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_META_INFO_MAX_TFS_FILE_SIZE_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -195,45 +190,46 @@ namespace tfs
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
 
-      if (TFS_SUCCESS == ret)
+      while (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &create_time_tag_);
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
+
+        if (TFS_SUCCESS == ret)
+        {
+          switch (type_tag)
+          {
+            case OBJECT_META_INFO_CREATE_TIME_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &create_time_);
+              break;
+            case OBJECT_META_INFO_MODIFY_TIME_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &modify_time_);
+              break;
+            case OBJECT_META_INFO_BIG_FILE_SIZE_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &big_file_size_);
+              break;
+            case OBJECT_META_INFO_MAX_TFS_FILE_SIZE_TAG:
+              ret = Serialization::get_int32(data, data_len, pos, &max_tfs_file_size_);
+              break;
+            default:
+              TBSYS_LOG(ERROR, "object meta info: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
+          }
+        }
+
+        if (OBJECT_META_INFO_MAX_TFS_FILE_SIZE_TAG == type_tag)
+        {
+          break;
+        }
       }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int64(data, data_len, pos, &create_time_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &modify_time_tag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int64(data, data_len, pos, &modify_time_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &big_file_size_tag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int64(data, data_len, pos, &big_file_size_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &max_tfs_file_size_tag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &max_tfs_file_size_);
-      }
+
       return ret;
     }
 
 
     //customizeinfo
     CustomizeInfo::CustomizeInfo()
-      :otag_tag_(CUSTOMIZE_INFO_OTAG_TAG)
     { }
 
     int64_t CustomizeInfo::length() const
@@ -246,7 +242,7 @@ namespace tfs
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, otag_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, CUSTOMIZE_INFO_OTAG_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -259,24 +255,37 @@ namespace tfs
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
 
-      if (TFS_SUCCESS == ret)
+      while (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &otag_tag_);
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
+
+        if (TFS_SUCCESS == ret)
+        {
+          switch (type_tag)
+          {
+            case CUSTOMIZE_INFO_OTAG_TAG:
+              ret = Serialization::get_string(data, data_len, pos, otag_);
+              break;
+            default:
+              TBSYS_LOG(ERROR, "customize info: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
+          }
+        }
+
+        if (CUSTOMIZE_INFO_OTAG_TAG == type_tag)
+        {
+          break;
+        }
       }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_string(data, data_len, pos, otag_);
-      }
+
       return ret;
     }
 
     //object meta info
     ObjectInfo::ObjectInfo()
-      : has_meta_info_tag_(OBJECT_INFO_HAS_META_INFO_TAG), has_meta_info_(false),
-      has_customize_info_tag_(OBJECT_INFO_HAS_CUSTOMIZE_INFO_TAG), has_customize_info_(false),
-      meta_info_tag_(OBJECT_INFO_META_INFO_TAG),
-      v_tfs_file_info_tag_(OBJECT_INFO_V_TFS_FILE_INFO_TAG),
-      customize_info_tag_(OBJECT_INFO_CUSTOMIZE_INFO_TAG)
+      : has_meta_info_(false), has_customize_info_(false)
     {v_tfs_file_info_.clear();}
 
     int64_t ObjectInfo::length() const
@@ -289,7 +298,7 @@ namespace tfs
     void ObjectInfo::dump() const
     {
       TBSYS_LOG(DEBUG, "ObjectInfo: [has_meta_info: %d, "
-                "has_customize_info: %d]",  has_meta_info_, has_customize_info_);
+          "has_customize_info: %d]",  has_meta_info_, has_customize_info_);
       //tfs_file_info_.dump();
       meta_info_.dump();
     }
@@ -300,7 +309,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, v_tfs_file_info_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_INFO_V_TFS_FILE_INFO_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -315,7 +324,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, has_meta_info_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_INFO_HAS_META_INFO_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -323,7 +332,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, meta_info_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_INFO_META_INFO_TAG);
       }
       if (TFS_SUCCESS == ret && has_meta_info_)
       {
@@ -331,7 +340,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, has_customize_info_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_INFO_HAS_CUSTOMIZE_INFO_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -339,7 +348,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, customize_info_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_INFO_CUSTOMIZE_INFO_TAG);
       }
       if (TFS_SUCCESS == ret && has_customize_info_)
       {
@@ -353,57 +362,62 @@ namespace tfs
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
 
-      int32_t tfs_file_count = 0;
+      while (TFS_SUCCESS == ret)
+      {
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &v_tfs_file_info_tag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = common::Serialization::get_int32(data, data_len, pos, &tfs_file_count);
         if (TFS_SUCCESS == ret)
         {
-          TfsFileInfo tmp;
-          int i = 0;
-          for (; i < tfs_file_count && TFS_SUCCESS == ret; i++)
+          switch (type_tag)
           {
-            ret = tmp.deserialize(data, data_len, pos);
-            v_tfs_file_info_.push_back(tmp);
+            case OBJECT_INFO_V_TFS_FILE_INFO_TAG:
+              if (TFS_SUCCESS == ret)
+              {
+                int32_t tfs_file_count = 0;
+                ret = common::Serialization::get_int32(data, data_len, pos, &tfs_file_count);
+                if (TFS_SUCCESS == ret)
+                {
+                  TfsFileInfo tmp;
+                  int i = 0;
+                  for (; i < tfs_file_count && TFS_SUCCESS == ret; i++)
+                  {
+                    ret = tmp.deserialize(data, data_len, pos);
+                    v_tfs_file_info_.push_back(tmp);
+                  }
+                }
+              }
+              break;
+            case OBJECT_INFO_HAS_META_INFO_TAG:
+              ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&has_meta_info_));
+              break;
+            case OBJECT_INFO_META_INFO_TAG:
+              if (has_meta_info_)
+              {
+                ret = meta_info_.deserialize(data, data_len, pos);
+              }
+              break;
+            case OBJECT_INFO_HAS_CUSTOMIZE_INFO_TAG:
+              ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&has_customize_info_));
+              break;
+            case OBJECT_INFO_CUSTOMIZE_INFO_TAG:
+              if (has_customize_info_)
+              {
+                ret = customize_info_.deserialize(data, data_len, pos);
+              }
+              break;
+
+            default:
+              TBSYS_LOG(ERROR, "object info: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
           }
         }
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &has_meta_info_tag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&has_meta_info_));
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &meta_info_tag_);
-      }
-      if (TFS_SUCCESS == ret && has_meta_info_)
-      {
-        ret = meta_info_.deserialize(data, data_len, pos);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &has_customize_info_tag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&has_customize_info_));
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &customize_info_tag_);
-      }
-      if (TFS_SUCCESS == ret && has_customize_info_)
-      {
-        ret = customize_info_.deserialize(data, data_len, pos);
+
+        if (OBJECT_INFO_CUSTOMIZE_INFO_TAG == type_tag)
+        {
+          break;
+        }
       }
 
       return ret;
@@ -411,7 +425,7 @@ namespace tfs
 
     //bucketmetainfo
     BucketMetaInfo::BucketMetaInfo()
-    :create_time_tag_(BUCKET_META_INFO_CREATE_TIME_TAG), create_time_(0)
+      :create_time_(0)
     {}
 
     int64_t BucketMetaInfo::length() const
@@ -424,7 +438,7 @@ namespace tfs
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, create_time_tag_);
+        ret = Serialization::set_int32(data, data_len, pos, BUCKET_META_INFO_CREATE_TIME_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -437,14 +451,31 @@ namespace tfs
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
 
-      if (TFS_SUCCESS == ret)
+      while (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &create_time_tag_);
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
+
+        if (TFS_SUCCESS == ret)
+        {
+          switch (type_tag)
+          {
+            case BUCKET_META_INFO_CREATE_TIME_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &create_time_);
+              break;
+            default:
+              TBSYS_LOG(ERROR, "bucket meta info: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
+          }
+        }
+
+        if (BUCKET_META_INFO_CREATE_TIME_TAG == type_tag)
+        {
+          break;
+        }
       }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int64(data, data_len, pos, &create_time_);
-      }
+
       return ret;
     }
 

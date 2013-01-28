@@ -152,8 +152,11 @@ namespace tfs
 
        if (TFS_SUCCESS == ret)
        {
-         TBSYS_LOG(ERROR, "head bucket: %s fail", bucket_name);
          ret = do_head_bucket(bucket_name, bucket_meta_info);
+         if (TFS_SUCCESS != ret)
+         {
+           TBSYS_LOG(ERROR, "head bucket failed. bucket: %s", bucket_name);
+         }
        }
 
        return ret;

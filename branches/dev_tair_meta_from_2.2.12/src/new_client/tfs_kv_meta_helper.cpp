@@ -170,12 +170,43 @@ int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_nam
 
 int KvMetaHelper::do_head_bucket(const uint64_t server_id, const char *bucket_name, BucketMetaInfo *bucket_meta_info)
 {
-  UNUSED(server_id);
-  UNUSED(bucket_name);
-  UNUSED(bucket_meta_info);
- //todo
- return TFS_SUCCESS;
+  int ret = TFS_SUCCESS;
+  if (NULL == bucket_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaHeadBucketMessage req_hb_msg;
+    req_hb_msg.set_bucket_name(bucket_name);
 
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_hb_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call head bucket fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "ret: %d",
+          server_id, bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_HEAD_BUCKET_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaHeadBucketMessage *resp_hb_msg = dynamic_cast<RspKvMetaHeadBucketMessage*>(rsp);
+      *bucket_meta_info = *(resp_hb_msg->get_bucket_meta_info());
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "head bucket fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          server_id, bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
 }
 
 
@@ -331,11 +362,43 @@ int KvMetaHelper::do_del_object(const uint64_t server_id, const char *bucket_nam
 int KvMetaHelper::do_head_object(const uint64_t server_id, const char *bucket_name,
     const char *object_name, ObjectInfo *object_info)
 {
-  UNUSED(server_id);
-  UNUSED(bucket_name);
-  UNUSED(object_name);
-  UNUSED(object_info);
- //todo
- return TFS_SUCCESS;
+  int ret = TFS_SUCCESS;
+  if (NULL == bucket_name || NULL == object_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaHeadObjectMessage req_ho_msg;
+    req_ho_msg.set_bucket_name(bucket_name);
+    req_ho_msg.set_file_name(object_name);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_ho_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call head object fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "object_name: %s, ret: %d",
+          server_id, bucket_name, object_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_HEAD_OBJECT_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaHeadObjectMessage* resp_ho_msg = dynamic_cast<RspKvMetaHeadObjectMessage*>(rsp);
+      *object_info = *(resp_ho_msg->get_object_info());
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "head object fail,"
+          "server_id: %"PRI64_PREFIX"u, bucket_name: %s, "
+          "object_name: %s, ret: %d, msg type: %d",
+          server_id, bucket_name, object_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
 }
 
