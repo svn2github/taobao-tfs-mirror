@@ -30,6 +30,7 @@ namespace tfs
     const int32_t KEY_BUFF_SIZE = 512 + 8 + 8;
     const int32_t SCAN_LIMIT = 500;
     const int32_t MESS_LIMIT = 10;
+    const int64_t INT64_INFI = 0x7FFFFFFFFFFFFFFF;
     enum
     {
       MODE_REQ_LIMIT = 1,
@@ -327,7 +328,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
 
-      int32_t retry = MAX_RETRY_COUNT;
+      int32_t retry = VERSION_ERROR_RETRY_COUNT;
       int64_t ver = 1<<15 - 1;
       ObjectInfo tmp_object_info_zero;
       do
@@ -363,8 +364,14 @@ namespace tfs
           {
             ret = EXIT_TAIR_VERSION_ERROR;
           }
-
-          *object_info_zero = tmp_object_info_zero;
+          if(object_info_zero->v_tfs_file_info_.size() == 0)
+          {
+            *object_info_zero = tmp_object_info_zero;
+          }
+          else//first seg offset is 0
+          {
+            object_info_zero->meta_info_ = tmp_object_info_zero.meta_info_;
+          }
         }
       }while (retry-- && EXIT_TAIR_VERSION_ERROR == ret);
 
@@ -404,7 +411,7 @@ namespace tfs
 
     int MetaInfoHelper::get_single_value(const std::string &bucket_name,
         const std::string &file_name,
-        const int64_t &offset,
+        const int64_t offset,
         common::ObjectInfo *object_info,
         int64_t *lock_version)
     {

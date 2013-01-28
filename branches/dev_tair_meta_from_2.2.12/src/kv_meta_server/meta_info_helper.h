@@ -48,22 +48,22 @@ namespace tfs
       /*----------------------------object part-----------------------------*/
 
         int head_object(const std::string &bucket_name,
-                     const std::string &file_name,
-                     common::ObjectInfo *object_info_zero);
+                        const std::string &file_name,
+                        common::ObjectInfo *object_info_zero);
 
         int put_object(const std::string& bucket_name,
-                     const std::string& file_name,
-                     const int64_t offset,
-                     const int64_t length,
-                     const common::ObjectInfo &object_info);
+                       const std::string& file_name,
+                       const int64_t offset,
+                       const int64_t length,
+                       const common::ObjectInfo &object_info);
 
         int get_object(const std::string& bucket_name,
-                     const std::string& file_name,
-                     const int64_t offset, const int64_t length,
-                     common::ObjectInfo *object_info, bool *still_have);
+                       const std::string& file_name,
+                       const int64_t offset, const int64_t length,
+                       common::ObjectInfo *object_info, bool *still_have);
 
         int del_object(const std::string& bucket_name,
-            const std::string& file_name);
+                       const std::string& file_name);
 
         /*----------------------------bucket part-----------------------------*/
 

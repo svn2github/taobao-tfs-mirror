@@ -279,7 +279,10 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = meta_info_helper_.del_object(req_del_object_msg->get_bucket_name(), req_del_object_msg->get_file_name());
+       // ObjectInfo object_info;
+       // bool still_have = false;
+        ret = meta_info_helper_.del_object(req_del_object_msg->get_bucket_name(),
+                                           req_del_object_msg->get_file_name());
       }
 
       if (TFS_SUCCESS != ret)
