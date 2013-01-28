@@ -52,6 +52,8 @@ namespace tfs
       int get_bucket(message::ReqKvMetaGetBucketMessage* get_bucket_msg);
       int del_bucket(message::ReqKvMetaDelBucketMessage* del_bucket_msg);
       int del_object(message::ReqKvMetaDelObjectMessage* del_object_msg);
+      int head_object(message::ReqKvMetaHeadObjectMessage *head_object_msg);
+      int head_bucket(message::ReqKvMetaHeadBucketMessage *head_bucket_msg);
 
     private:
       DISALLOW_COPY_AND_ASSIGN(KvMetaService);

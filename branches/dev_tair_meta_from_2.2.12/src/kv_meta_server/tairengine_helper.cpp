@@ -160,7 +160,7 @@ namespace tfs
     int TairEngineHelper::get_key(const KvKey& key, KvValue **pp_value, int64_t *version)
     {
       int ret = TFS_SUCCESS;
-      if (NULL == pp_value || NULL != *pp_value || NULL == version)
+      if (NULL == pp_value || NULL != *pp_value)
       {
         TBSYS_LOG(ERROR, "shuold never got this, bug!");
         ret = TFS_ERROR;
@@ -251,8 +251,6 @@ namespace tfs
             tair::data_entry t_end_skey;
             vector<tair::data_entry *> tvalues;
 
-            uint32_t i;
-
             if (NULL != start_key.key_)
             {
               ret = split_key_for_tair(start_key, &t_pkey, &t_start_skey);
@@ -269,11 +267,12 @@ namespace tfs
                   NULL == start_key.key_ ? "" : t_start_skey, NULL == end_key.key_ ? "" : t_end_skey,
                   offset, limit, tvalues, scan_type);
             }
-            if(scan_type == 1)
+
+            if (TFS_SUCCESS == ret || ret == EXIT_KV_RETURN_DATA_NOT_EXIST)
             {
-              if (TFS_SUCCESS == ret)
+              if (scan_type == 1)
               {
-                for(i = 0; i < tvalues.size(); i += 2)
+                for(size_t i = 0; i < tvalues.size(); i += 2)
                 {
                   TairValue* k_tmp = new TairValue();
                   k_tmp->set_tair_value(tvalues[i]);
@@ -285,21 +284,17 @@ namespace tfs
                 }
                 *result_size = static_cast<int32_t>(tvalues.size())/2;
               }
-            }
-            else if(scan_type == 2)
-            {
-              if (TFS_SUCCESS == ret || ret == EXIT_KV_RETURN_DATA_NOT_EXIST)
+              else if(scan_type == 2)
               {
-                for(i = 0; i < tvalues.size(); ++i)
+                for(size_t i = 0; i < tvalues.size(); ++i)
                 {
                   TairValue* p_tmp = new TairValue();
                   p_tmp->set_tair_value(tvalues[i]);
                   values->push_back(p_tmp);
                 }
                 *result_size = static_cast<int32_t>(tvalues.size());
-              //  TBSYS_LOG(ERROR, "*result_size: %d", *result_size);
-                ret = TFS_SUCCESS;
               }
+              ret = TFS_SUCCESS;
             }
           }
           break;
@@ -432,6 +427,7 @@ namespace tfs
 
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
+        TBSYS_LOG(INFO, "tair ret: %d", tair_ret);
         ret = EXIT_KV_RETURN_ERROR;
         if (TAIR_RETURN_VERSION_ERROR == tair_ret)
         {
@@ -524,7 +520,7 @@ namespace tfs
         tair_ret = tair_client_->get_range(area, pkey, start_key, end_key, offset, limit, values, type);
       } while (TAIR_RETURN_TIMEOUT == tair_ret && --retry_count > 0);
 
-      if(TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+      if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
       {
         ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
       }

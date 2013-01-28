@@ -92,6 +92,7 @@ namespace tfs
         int64_t read_data(const char* ns_addr,
             const std::vector<common::FragMeta> &v_frag_meta,
             void *buffer, int64_t offset, int64_t length);
+        int unlink_file(const common::FragInfo &frag_info, const char *ns_addr);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClientImpl);

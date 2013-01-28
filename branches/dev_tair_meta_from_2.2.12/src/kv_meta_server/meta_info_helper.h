@@ -84,7 +84,7 @@ namespace tfs
 
         int get_single_value(const std::string &bucket_name,
                            const std::string &file_name,
-                           const int64_t &offset,
+                           const int64_t offset,
                            common::ObjectInfo *object_info,
                            int64_t *version);
         int deserialize_key(const char *key, const int32_t key_size, std::string *object_name,

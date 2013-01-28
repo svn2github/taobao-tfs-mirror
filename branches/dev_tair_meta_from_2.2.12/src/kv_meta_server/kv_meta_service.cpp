@@ -120,9 +120,11 @@ namespace tfs
         stat_ptr->add_sub_key("put_bucket");
         stat_ptr->add_sub_key("get_bucket");
         stat_ptr->add_sub_key("del_bucket");
+        stat_ptr->add_sub_key("head_bucket");
         stat_ptr->add_sub_key("put_object");
         stat_ptr->add_sub_key("get_object");
         stat_ptr->add_sub_key("del_object");
+        stat_ptr->add_sub_key("head_object");
         stat_mgr_.add_entry(stat_ptr, SYSPARAM_KVMETA.dump_stat_info_interval_);
       }
       return ret;
@@ -157,6 +159,9 @@ namespace tfs
           case REQ_KVMETA_DEL_OBJECT_MESSAGE:
             ret = del_object(dynamic_cast<ReqKvMetaDelObjectMessage*>(base_packet));
             break;
+          case REQ_KVMETA_HEAD_OBJECT_MESSAGE:
+            ret = head_object(dynamic_cast<ReqKvMetaHeadObjectMessage*>(base_packet));
+            break;
           case REQ_KVMETA_PUT_BUCKET_MESSAGE:
             ret = put_bucket(dynamic_cast<ReqKvMetaPutBucketMessage*>(base_packet));
             break;
@@ -165,6 +170,9 @@ namespace tfs
             break;
           case REQ_KVMETA_DEL_BUCKET_MESSAGE:
             ret = del_bucket(dynamic_cast<ReqKvMetaDelBucketMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_HEAD_BUCKET_MESSAGE:
+            ret = head_bucket(dynamic_cast<ReqKvMetaHeadBucketMessage*>(base_packet));
             break;
           default:
             ret = EXIT_UNKNOWN_MSGTYPE;
@@ -286,6 +294,36 @@ namespace tfs
       return ret;
     }
 
+    int KvMetaService::head_object(ReqKvMetaHeadObjectMessage* req_head_object_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == req_head_object_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::head_object fail, ret: %d", ret);
+      }
+
+      RspKvMetaHeadObjectMessage *rsp = new RspKvMetaHeadObjectMessage();
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.head_object(req_head_object_msg->get_bucket_name(),
+            req_head_object_msg->get_file_name(), rsp->get_mutable_object_info());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = req_head_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "head object fail");
+        tbsys::gDelete(rsp);
+      }
+      else
+      {
+        ret = req_head_object_msg->reply(rsp);
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "head_object", 1);
+      }
+      return ret;
+    }
+
     int KvMetaService::put_bucket(ReqKvMetaPutBucketMessage* put_bucket_msg)
     {
       int ret = TFS_SUCCESS;
@@ -389,6 +427,36 @@ namespace tfs
       {
         ret = del_bucket_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
         stat_mgr_.update_entry(tfs_kv_meta_stat_, "del_bucket", 1);
+      }
+      //stat_info_helper_.put_bucket()
+      return ret;
+    }
+
+    int KvMetaService::head_bucket(ReqKvMetaHeadBucketMessage* head_bucket_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == head_bucket_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::head_bucket fail, ret: %d", ret);
+      }
+
+      RspKvMetaHeadBucketMessage *rsp = new RspKvMetaHeadBucketMessage();
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.head_bucket(head_bucket_msg->get_bucket_name(), rsp->get_mutable_bucket_meta_info());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = head_bucket_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "head bucket fail");
+        tbsys::gDelete(rsp);
+      }
+      else
+      {
+        ret = head_bucket_msg->reply(rsp);
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "head_bucket", 1);
       }
       //stat_info_helper_.put_bucket()
       return ret;

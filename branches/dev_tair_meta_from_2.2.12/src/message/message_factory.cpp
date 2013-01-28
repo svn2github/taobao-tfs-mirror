@@ -285,6 +285,12 @@ namespace tfs
           case common::REQ_KVMETA_DEL_OBJECT_MESSAGE:
             packet = new ReqKvMetaDelObjectMessage();
             break;
+          case common::REQ_KVMETA_HEAD_OBJECT_MESSAGE:
+            packet = new ReqKvMetaHeadObjectMessage();
+            break;
+          case common::RSP_KVMETA_HEAD_OBJECT_MESSAGE:
+            packet = new RspKvMetaHeadObjectMessage();
+            break;
           case common::REQ_KVMETA_GET_BUCKET_MESSAGE:
             packet = new ReqKvMetaGetBucketMessage();
             break;
@@ -297,7 +303,12 @@ namespace tfs
           case common::REQ_KVMETA_DEL_BUCKET_MESSAGE:
             packet = new ReqKvMetaDelBucketMessage();
             break;
-
+          case common::REQ_KVMETA_HEAD_BUCKET_MESSAGE:
+            packet = new ReqKvMetaHeadBucketMessage();
+            break;
+          case common::RSP_KVMETA_HEAD_BUCKET_MESSAGE:
+            packet = new RspKvMetaHeadBucketMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;

@@ -15,10 +15,10 @@
  */
 
 #include "tfs_kv_meta_client_impl.h"
-
-#include <algorithm>
+#include "fsname.h"
 #include "common/client_manager.h"
 #include "message/message_factory.h"
+#include "tfs_client_api.h"
 #include "tfs_kv_meta_helper.h"
 
 
@@ -291,6 +291,25 @@ namespace tfs
       return ret;
     }
 
+    int KvMetaClientImpl::unlink_file(const FragInfo &frag_info, const char* ns_addr)
+    {
+      int ret = TFS_SUCCESS;
+      int tmp_ret = TFS_ERROR;
+      int64_t file_size = 0;
+      std::vector<FragMeta>::const_iterator iter = frag_info.v_frag_meta_.begin();
+      for(; iter != frag_info.v_frag_meta_.end(); iter++)
+      {
+        FSName fsname(iter->block_id_, iter->file_id_, frag_info.cluster_id_);
+        if ((tmp_ret = TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, ns_addr)) != TFS_SUCCESS)
+        {
+          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "unlink tfs file failed, file: %s, ret: %d", fsname.get_name(), tmp_ret);
+        }
+      }
+      return ret;
+    }
+
+
     int64_t KvMetaClientImpl::put_object_to_buf(const char *bucket_name, const char *object_name,
         const void *buffer, int64_t offset, int64_t length)
     {
@@ -366,6 +385,16 @@ namespace tfs
               break;
             }
           }
+
+          if (TFS_SUCCESS != ret)
+          {
+            FragInfo frag_info;
+            frag_info.v_frag_meta_ = v_frag_meta;
+            frag_info.cluster_id_ = cluster_id;
+            unlink_file(frag_info, ns_addr_.c_str());
+            break;
+          }
+
           left_length -= real_write_length;
           cur_pos += real_write_length;
           cur_offset += real_write_length;
@@ -512,6 +541,13 @@ namespace tfs
       }
       else
       {
+        int64_t local_offset = req_offset;
+        int64_t local_pos = ::lseek(fd, local_offset, SEEK_SET);
+        if (local_pos == -1)
+        {
+          TBSYS_LOG(ERROR, "lseek local file: %s fail", local_file);
+          ret = TFS_ERROR;
+        }
         char* buf = new char[MAX_BATCH_DATA_LENGTH];
 
         while (TFS_SUCCESS == ret)
