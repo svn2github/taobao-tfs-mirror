@@ -43,6 +43,7 @@ namespace tfs
         inline BlockManager& get_block_manager();
         inline DataManager& get_data_manager();
         inline DataHelper& get_data_helper();
+        inline TrafficControl& get_traffic_control();
 
         /** main entrance, dispatch task */
         int handle(tbnet::Packet* packet);

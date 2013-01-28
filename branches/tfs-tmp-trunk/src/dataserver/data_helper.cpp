@@ -18,6 +18,7 @@
 #include "dataservice.h"
 #include "erasure_code.h"
 #include "data_helper.h"
+#include "traffic_control.h"
 
 namespace tfs
 {
@@ -39,6 +40,11 @@ namespace tfs
     inline BlockManager& DataHelper::get_block_manager()
     {
       return service_.get_block_manager();
+    }
+
+    inline TrafficControl& DataHelper::get_traffic_control()
+    {
+      return service_.get_traffic_control();
     }
 
     int DataHelper::send_simple_request(uint64_t server_id, common::BasePacket* message)
@@ -105,10 +111,26 @@ namespace tfs
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (NULL == data) || (length <= 0) || (offset < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
-      // TODO: add flow control
       if (TFS_SUCCESS == ret)
       {
-        ret = read_raw_data_ex(server_id, block_id, data, length, offset);
+        int32_t retry = RW_RETRY_TIMES;
+        while (retry-- > 0)
+        {
+          ret = read_raw_data_ex(server_id, block_id, data, length, offset);
+          if (EXIT_NETWORK_BUSY_ERROR == ret)
+          {
+            usleep(RW_RETRY_SLEEP_MS * 1000);
+          }
+          else
+          {
+            if (TFS_SUCCESS == ret)
+            {
+              get_traffic_control().mr_traffic_stat(true, length);
+            }
+            break;
+          }
+        }
+
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "read raw data fail. server: %s, blockid: %"PRI64_PREFIX"u, "
@@ -128,7 +150,24 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret =  write_raw_data_ex(server_id, block_id, data, length, offset);
+        int32_t retry = RW_RETRY_TIMES;
+        while (retry-- > 0)
+        {
+          if (get_traffic_control().mr_traffic_out_of_threshold(false))
+          {
+            usleep(RW_RETRY_SLEEP_MS * 1000);
+          }
+          else
+          {
+            ret =  write_raw_data_ex(server_id, block_id, data, length, offset);
+            if (TFS_SUCCESS == ret)
+            {
+              get_traffic_control().mr_traffic_stat(false, length);
+            }
+            break;
+          }
+        }
+
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write raw data fail. server: %s, blockid: %"PRI64_PREFIX"u, "
@@ -206,7 +245,7 @@ namespace tfs
 
        if (TFS_SUCCESS == ret)
        {
-         ret = commit_ec_meta(server_id, block_id, ec_meta, switch_flag);
+         ret = commit_ec_meta_ex(server_id, block_id, ec_meta, switch_flag);
          if (TFS_SUCCESS == ret)
          {
            TBSYS_LOG(WARN, "commit ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u, ret: %d",

@@ -22,6 +22,7 @@ namespace tfs
 {
   namespace dataserver
   {
+    class TrafficControl;
     class BlockManager;
     class DataService;
     class DataHelper
@@ -31,6 +32,8 @@ namespace tfs
         ~DataHelper();
 
         inline BlockManager& get_block_manager();
+        inline TrafficControl& get_traffic_control();
+
         /**
         * @brief send a request whose response is a StatusMessage
         *

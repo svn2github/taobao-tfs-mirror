@@ -47,6 +47,9 @@ namespace tfs
     static const int32_t MAX_INITIALIZE_INDEX_SIZE = 2048;
     static const int32_t BLOCK_RESERVER_SPACE = 1048576; // reserve 1M space for update
 
+    static const int32_t RW_RETRY_TIMES = 3;
+    static const int32_t RW_RETRY_SLEEP_MS = 10; // millsecond
+
     /*#define RW_COUNT_STAT "rw-count-stat"
     #define RW_COUNT_R_SUCCESS "rw-count-r-success"
     #define RW_COUNT_W_SUCCESS "rw-count-w-success"

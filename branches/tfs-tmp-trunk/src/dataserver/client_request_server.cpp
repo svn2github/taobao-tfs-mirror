@@ -45,6 +45,10 @@ namespace tfs
       return service_.get_data_manager();
     }
 
+    inline TrafficControl& ClientRequestServer::get_traffic_control()
+    {
+      return service_.get_traffic_control();
+    }
 
     inline DataHelper& ClientRequestServer::get_data_helper()
     {
@@ -259,6 +263,10 @@ namespace tfs
               // TODO: add a flag to denotes if fileinfo is needed
               resp_msg->set_file_info(file_info);
               ret = message->reply(resp_msg);
+              if (TFS_SUCCESS == ret)
+              {
+                get_traffic_control().mr_traffic_stat(false, length);
+              }
             }
           }
         }
@@ -294,6 +302,9 @@ namespace tfs
 
       int ret = ((NULL == data) || (INVALID_BLOCK_ID == block_id) ||
           (offset < 0) || (length <= 0)) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+
+      // tbnet already receive this packet from network
+      get_traffic_control().mr_traffic_stat(true, length);
 
       // first write, create file id & lease id
       if (TFS_SUCCESS == ret)
@@ -887,6 +898,11 @@ namespace tfs
       int ret = ((INVALID_BLOCK_ID == block_id) || (length <= 0) || (offset < 0)) ?
         EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
+      if (get_traffic_control().mr_traffic_out_of_threshold(false))
+      {
+        ret = EXIT_NETWORK_BUSY_ERROR;
+      }
+
       if (TFS_SUCCESS == ret)
       {
         ReadRawdataRespMessageV2* resp_msg = new (std::nothrow) ReadRawdataRespMessageV2();
@@ -904,6 +920,10 @@ namespace tfs
         {
           resp_msg->set_length(length);
           ret = message->reply(resp_msg);
+          if (TFS_SUCCESS == ret)
+          {
+            get_traffic_control().mr_traffic_stat(false, length);
+          }
         }
       }
 
@@ -919,6 +939,9 @@ namespace tfs
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (length <= 0) || (offset < 0)
           || (NULL == data)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      // tbnet already receive this packet from network
+      get_traffic_control().mr_traffic_stat(true, length);
 
       if (TFS_SUCCESS == ret)
       {
