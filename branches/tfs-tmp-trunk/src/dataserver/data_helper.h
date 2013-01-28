@@ -31,6 +31,12 @@ namespace tfs
         ~DataHelper();
 
         inline BlockManager& get_block_manager();
+        /**
+        * @brief send a request whose response is a StatusMessage
+        *
+        * @return TFS_SUCCESS only if server return STATUS_MESSAGE_OK
+        */
+        int send_simple_request(uint64_t server_id, common::BasePacket* message);
 
         int new_remote_block(const uint64_t server_id, const uint64_t block_id,
             const bool tmp = false, const uint64_t family_id = common::INVALID_FAMILY_ID ,

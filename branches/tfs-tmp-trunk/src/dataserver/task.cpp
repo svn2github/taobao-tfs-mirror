@@ -59,13 +59,6 @@ namespace tfs
       return service_.get_block_manager();
     }
 
-    int Task::send_simple_request(uint64_t server_id, common::BasePacket* message)
-    {
-      int32_t status = TFS_ERROR;
-      int ret = send_msg_to_server(server_id, message, status);
-      return (ret < 0) ? ret : status;
-    }
-
     string Task::dump() const
     {
       std::stringstream tmp_stream;
@@ -216,7 +209,7 @@ namespace tfs
       cmit_cpt_msg.set_seqno(seqno_);
       cmit_cpt_msg.set_block_info(info_);
       cmit_cpt_msg.set_result(result_);
-      ret = send_simple_request(source_id_, &cmit_cpt_msg);
+      ret = get_data_helper().send_simple_request(source_id_, &cmit_cpt_msg);
 
       TBSYS_LOG(INFO, "compact report to ns. seqno: %"PRI64_PREFIX"d, "
           "blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
@@ -270,7 +263,7 @@ namespace tfs
       req_cpt_msg.set_source_id(ds_info.information_.id_);
       for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers_.size()); i++)
       {
-        int ret = send_simple_request(servers_[i], &req_cpt_msg);
+        int ret = get_data_helper().send_simple_request(servers_[i], &req_cpt_msg);
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to compact, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(servers_[i]).c_str(), ret);
       }
@@ -1438,7 +1431,7 @@ namespace tfs
       int ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
-        ret = send_simple_request(source_id_, &cmit_msg);
+        ret = get_data_helper().send_simple_request(source_id_, &cmit_msg);
       }
 
       TBSYS_LOG(INFO, "dissolve report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
@@ -1473,7 +1466,7 @@ namespace tfs
         repl_msg.set_expire_time(expire_time_);
         repl_msg.set_source_id(ds_info.information_.id_);
         repl_msg.set_repl_info(repl_block);
-        ret = send_simple_request(family_members_[i].server_, &repl_msg);
+        ret = get_data_helper().send_simple_request(family_members_[i].server_, &repl_msg);
 
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to replicate, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);

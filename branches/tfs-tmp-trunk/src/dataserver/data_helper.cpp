@@ -41,6 +41,24 @@ namespace tfs
       return service_.get_block_manager();
     }
 
+    int DataHelper::send_simple_request(uint64_t server_id, common::BasePacket* message)
+    {
+      int ret = ((INVALID_SERVER_ID == server_id) || (NULL == message)) ?
+          EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t status = TFS_ERROR;
+        ret = send_msg_to_server(server_id, message, status);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = (STATUS_MESSAGE_OK != status) ? TFS_ERROR : TFS_SUCCESS;
+        }
+      }
+
+      return ret;
+    }
+
     int DataHelper::new_remote_block(const uint64_t server_id, const uint64_t block_id,
         const bool tmp, const uint64_t family_id, const int32_t index_num)
     {
@@ -302,9 +320,7 @@ namespace tfs
         req_msg.set_family_id(family_id);
         req_msg.set_index_num(index_num);
 
-        int32_t status = TFS_ERROR;
-        ret = send_msg_to_server(server_id, &req_msg, status);
-        ret = (ret < 0) ? ret: status;
+        ret = send_simple_request(server_id, &req_msg);
         if (TFS_SUCCESS != ret)
         {
           ret = EXIT_ADD_NEW_BLOCK_ERROR;
@@ -331,9 +347,7 @@ namespace tfs
         req_msg.set_block_id(block_id);
         req_msg.set_tmp_flag(tmp);
 
-        int32_t status = TFS_ERROR;
-        ret = send_msg_to_server(server_id, &req_msg, status);
-        ret = (ret < 0) ? ret: status;
+        ret = send_simple_request(server_id, &req_msg);
       }
       return ret;
     }
@@ -406,10 +420,7 @@ namespace tfs
         req_msg.set_length(length);
         req_msg.set_offset(offset);
         req_msg.set_data(data);
-
-        int32_t status = TFS_ERROR;
-        ret = send_msg_to_server(server_id, &req_msg, status);
-        ret = (ret < 0) ? ret : status;
+        ret = send_simple_request(server_id, &req_msg);
       }
 
       return ret;
@@ -481,10 +492,7 @@ namespace tfs
         req_msg.set_block_id(block_id);
         req_msg.set_attach_block_id(attach_block_id);
         req_msg.set_index_data(index_data);
-
-        int32_t status = TFS_ERROR;
-        ret = send_msg_to_server(server_id, &req_msg, status);
-        ret = (ret < 0) ? ret : status;
+        ret = send_simple_request(server_id, &req_msg);
       }
 
       return ret;
@@ -574,10 +582,7 @@ namespace tfs
         req_msg.set_block_id(block_id);
         req_msg.set_ec_meta(ec_meta);
         req_msg.set_switch_flag(switch_flag);
-
-        int32_t status = TFS_ERROR;
-        ret = send_msg_to_server(server_id, &req_msg, status);
-        ret = (ret < 0) ? ret : status;
+        ret = send_simple_request(server_id, &req_msg);
       }
       return ret;
     }
@@ -754,10 +759,7 @@ namespace tfs
       req_msg.set_file_id(file_id);
       req_msg.set_lease_id(lease_id);
       req_msg.set_tmp_flag(true);  // we are writing a tmp block
-
-      int32_t status = TFS_ERROR;
-      int ret = send_msg_to_server(server_id, &req_msg, status);
-      return (ret < 0) ? ret : status;
+      return send_simple_request(server_id, &req_msg);
     }
 
     int DataHelper::prepare_read_degrade(const FamilyInfoExt& family_info, int* erased)

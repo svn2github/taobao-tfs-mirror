@@ -52,13 +52,6 @@ namespace tfs
         void set_source_id(const uint64_t source_id) { source_id_ = source_id; }
 
         /**
-        * @brief send a request whose response is a StatusMessage
-        *
-        * @return
-        */
-        int send_simple_request(uint64_t server_id, common::BasePacket* message);
-
-        /**
         * @brief DS post response callback function
         *
         * @param new_client
