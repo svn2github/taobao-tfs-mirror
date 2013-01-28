@@ -344,6 +344,7 @@ namespace tfs
               object_info_zero->has_meta_info_ ? "true" : "false",
               object_info_zero->has_customize_info_ ? "true" : "false");
         }
+        object_info_zero->has_meta_info_ = true;
 
 
         ret = put_object_ex(bucket_name, file_name, 0, *object_info_zero, ver);

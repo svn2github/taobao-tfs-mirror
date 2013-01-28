@@ -423,10 +423,10 @@ namespace tfs
           {
             if (!object_info.has_meta_info_ || !object_info.has_customize_info_)
             {
-              TBSYS_LOG(ERROR, "invalid object, no meta info or customize info, bucket: %s, object: %s",
+              TBSYS_LOG(WARN, "invalid object, no meta info or customize info, bucket: %s, object: %s",
                         bucket_name, object_name);
-              ret = EXIT_INVALID_OBJECT;
-              break;
+              //ret = EXIT_INVALID_OBJECT;
+              //break;
             }
 
             if (NULL != object_meta_info)
@@ -440,7 +440,7 @@ namespace tfs
           }
           vector<FragMeta> v_frag_meta;
           size_t i = 0;
-          TBSYS_LOG(ERROR, "vector size ================= is: %d",object_info.v_tfs_file_info_.size());
+          TBSYS_LOG(DEBUG, "vector size ================= is: %d",object_info.v_tfs_file_info_.size());
             for(; i < object_info.v_tfs_file_info_.size(); ++i)
             {
               FragMeta frag_meta(object_info.v_tfs_file_info_[i].block_id_,
@@ -488,7 +488,7 @@ namespace tfs
     {
       TfsRetType ret = TFS_SUCCESS;
       int fd = -1;
-      TBSYS_LOG(ERROR, "open local file %s fail", local_file);
+      int64_t cur_length = 0;
       int64_t read_len = 0, write_len = 0;
       int64_t offset = req_offset;
       int64_t left_length = req_length;
@@ -513,7 +513,8 @@ namespace tfs
 
         while (TFS_SUCCESS == ret)
         {
-          if ((read_len = ::read(fd, buf, MAX_BATCH_DATA_LENGTH)) < 0)
+          cur_length = min(MAX_BATCH_DATA_LENGTH, left_length);
+          if ((read_len = ::read(fd, buf, cur_length)) < 0)
           {
             ret = EXIT_INVALID_ARGU_ERROR;
             TBSYS_LOG(ERROR, "read local file %s fail, error: %s", local_file, strerror(errno));
