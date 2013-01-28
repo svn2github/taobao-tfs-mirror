@@ -1106,6 +1106,11 @@ namespace tfs
         }
       }
 
+      for (int32_t i = 0; i < member_num; i++)
+      {
+        tbsys::gDelete(data[i]);
+      }
+
       return ret;
     }
 

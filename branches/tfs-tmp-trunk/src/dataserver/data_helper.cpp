@@ -826,13 +826,12 @@ namespace tfs
         const int32_t member_num = data_num + check_num;
 
         int32_t target = data_num;
-        while((INVALID_SERVER_ID != family_info.members_[target].second)
-            && (target < member_num)) target++;
-        if (target >= member_num) // no check block alive, can't stat degrade
+        while ((target < member_num) && (INVALID_SERVER_ID == family_info.members_[target].second))
         {
-          ret = EXIT_NO_ENOUGH_DATA;
+          target++;
         }
-        else
+        // no check block alive, can't stat degrade
+        ret = (target >= member_num) ? EXIT_NO_ENOUGH_DATA : TFS_SUCCESS;
         {
           ret = stat_file_ex(family_info.members_[target].second,
               family_info.members_[target].first, block_id, file_id, flag, finfo);
@@ -876,7 +875,10 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           target = data_num;
-          while((ErasureCode::NODE_ALIVE != erased[target]) && (target < member_num)) target++;
+          while((target < member_num) && (ErasureCode::NODE_ALIVE != erased[target]))
+          {
+            target++;
+          }
           ret = (target >= member_num) ? EXIT_NO_ENOUGH_DATA : TFS_SUCCESS; // no alive check block
           if (TFS_SUCCESS == ret)
           {
@@ -944,7 +946,10 @@ namespace tfs
 
       // find read target index
       int32_t target = 0;
-      while ((family_info.members_[target].first != block_id) && (target < data_num)) target++;
+      while ((target < data_num) && (family_info.members_[target].first != block_id))
+      {
+        target++;
+      }
       ret = (target >= data_num) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       while ((TFS_SUCCESS == ret) && (real_offset < real_end))
