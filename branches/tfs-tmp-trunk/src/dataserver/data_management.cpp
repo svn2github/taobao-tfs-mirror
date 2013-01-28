@@ -298,7 +298,7 @@ namespace tfs
 
     int DataManagement::get_block_info(const uint32_t block_id, BlockInfo& blk, int32_t& visit_count)
     {
-      visit_count = 0;  // TODO
+      visit_count = 0;
       BlockInfoV2 blk_v2;
       int ret = get_block_manager().get_block_info(blk_v2, block_id);
       if (TFS_SUCCESS == ret)

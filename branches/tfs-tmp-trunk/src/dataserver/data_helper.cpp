@@ -353,7 +353,7 @@ namespace tfs
         NewClient* new_client = NewClientManager::get_instance().create_client();
         if (NULL == new_client)
         {
-          ret = TFS_ERROR;
+          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
         }
         else
         {
@@ -379,7 +379,7 @@ namespace tfs
             }
             else
             {
-              ret = TFS_ERROR;
+              ret = EXIT_UNKNOWN_MSGTYPE;
             }
           }
           NewClientManager::get_instance().destroy_client(new_client);
@@ -436,7 +436,7 @@ namespace tfs
         NewClient* new_client = NewClientManager::get_instance().create_client();
         if (NULL == new_client)
         {
-          ret = TFS_ERROR;
+          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
         }
         else
         {
@@ -455,7 +455,7 @@ namespace tfs
             }
             else
             {
-              ret = TFS_ERROR;
+              ret = EXIT_UNKNOWN_MSGTYPE;
             }
           }
           NewClientManager::get_instance().destroy_client(new_client);
@@ -520,7 +520,7 @@ namespace tfs
         NewClient* new_client = NewClientManager::get_instance().create_client();
         if (NULL == new_client)
         {
-          ret = TFS_ERROR;
+          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
         }
         else
         {
@@ -539,7 +539,7 @@ namespace tfs
             }
             else
             {
-              ret = TFS_ERROR;
+              ret = EXIT_UNKNOWN_MSGTYPE;
             }
           }
           NewClientManager::get_instance().destroy_client(new_client);
@@ -598,7 +598,7 @@ namespace tfs
         NewClient* new_client = NewClientManager::get_instance().create_client();
         if (NULL == new_client)
         {
-          ret = TFS_ERROR;
+          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
         }
         else
         {
@@ -624,7 +624,7 @@ namespace tfs
             }
             else
             {
-              ret = TFS_ERROR;
+              ret = EXIT_UNKNOWN_MSGTYPE;
             }
           }
           NewClientManager::get_instance().destroy_client(new_client);
@@ -652,7 +652,7 @@ namespace tfs
         NewClient* new_client = NewClientManager::get_instance().create_client();
         if (NULL == new_client)
         {
-          ret = TFS_ERROR;
+          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
         }
         else
         {
@@ -681,7 +681,7 @@ namespace tfs
             }
             else
             {
-              ret = TFS_ERROR;
+              ret = EXIT_UNKNOWN_MSGTYPE;
             }
           }
           NewClientManager::get_instance().destroy_client(new_client);
@@ -699,7 +699,7 @@ namespace tfs
       NewClient* new_client = NewClientManager::get_instance().create_client();
       if (NULL == new_client)
       {
-        ret = TFS_ERROR;
+        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       }
       else
       {
@@ -734,7 +734,7 @@ namespace tfs
           }
           else
           {
-            ret = TFS_ERROR;
+            ret = EXIT_UNKNOWN_MSGTYPE;
           }
         }
         NewClientManager::get_instance().destroy_client(new_client);

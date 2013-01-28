@@ -172,13 +172,7 @@ namespace tfs
               file_id, flag, family_info, file_info);
         }
 
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(WARN, "read file info fail. blockid: %"PRI64_PREFIX"u, "
-              "fileid: %"PRI64_PREFIX"u, flag: %d, ret: %d",
-              block_id, file_id, flag, ret);
-        }
-        else
+        if (TFS_SUCCESS == ret)
         {
           StatFileRespMessageV2* resp_msg = new (std::nothrow) StatFileRespMessageV2();
           assert(NULL != resp_msg);
@@ -338,7 +332,7 @@ namespace tfs
           NewClient* client = NewClientManager::get_instance().create_client();
           assert(NULL != client);
           ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "write file to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: master ret: %d",
@@ -450,7 +444,7 @@ namespace tfs
           NewClient* client = NewClientManager::get_instance().create_client();
           assert(NULL != client);
           ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "close file to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: master ret: %d",
@@ -560,7 +554,7 @@ namespace tfs
           NewClient* client = NewClientManager::get_instance().create_client();
           assert(NULL != client);
           ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "unlink file to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: master ret: %d",
