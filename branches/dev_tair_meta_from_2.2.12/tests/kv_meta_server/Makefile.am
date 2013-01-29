@@ -19,12 +19,15 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_split_key test_bucket
+noinst_PROGRAMS=test_split_key test_bucket test_object
 TESTS+=test_split_key test_bucket
-check_PROGRAMS+=test_split_key test_bucket
+check_PROGRAMS+=test_split_key test_bucket test_object
 
 test_split_key_SOURCES=test_split_key.cpp
 test_split_key_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
 
 test_bucket_SOURCES=test_bucket.cpp test_kvengine.cpp
 test_bucket_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest
+
+test_object_SOURCES=test_object.cpp test_kvengine.cpp
+test_object_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest
