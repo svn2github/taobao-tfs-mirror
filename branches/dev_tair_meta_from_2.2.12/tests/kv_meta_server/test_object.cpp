@@ -70,11 +70,16 @@ TEST_F(ObjectTest, test_pwrite_head)
 
   ObjectInfo obj_info;
   obj_info.meta_info_.big_file_size_ = 0;
+  TfsFileInfo tfs_file_info;
+  obj_info.v_tfs_file_info_.push_back(tfs_file_info);
+  obj_info.v_tfs_file_info_[0].offset_ = 0;
+
   ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo new_obj_info;
   ret = test_meta_info_helper_->head_object(bucket_name, object_name, &new_obj_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
   EXPECT_EQ(10, new_obj_info.meta_info_.big_file_size_);
 
 

@@ -58,7 +58,7 @@ class BucketTest: public ::testing::Test
 TEST_F(BucketTest, test_put)
 {
   int ret = TFS_SUCCESS;
-  string bucket_name("bucketname");
+  string bucket_name("bucket");
   int64_t now_time = 11111;
 
   BucketMetaInfo bucket_meta_info;
@@ -89,9 +89,9 @@ TEST_F(BucketTest, test_del_with_no_object)
   EXPECT_EQ(ret, TFS_SUCCESS);
 
   string file_name("objectname");
-  int64_t offset;
   ObjectInfo object_info;
-  ret = test_meta_info_helper_->put_object(bucket_name, file_name,offset, object_info );
+  int64_t offset = 0;
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, offset, 10, object_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
   ret = test_meta_info_helper_->del_object(bucket_name, file_name);
   EXPECT_EQ(ret, TFS_SUCCESS);
@@ -114,9 +114,9 @@ TEST_F(BucketTest, test_del_with_object)
 
   //put obj
   string file_name("objectname");
-  int64_t offset;
-    ObjectInfo object_info;
-      ret = test_meta_info_helper_->put_object(bucket_name, file_name,offset, object_info );
+  ObjectInfo object_info;
+  int64_t offset = 0;
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, offset, 10, object_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
@@ -214,9 +214,9 @@ TEST_F(BucketTest, test_get)
 
   //put obj
   string file_name("objectname/aa/");
-  int64_t offset;
-    ObjectInfo object_info;
-      ret = test_meta_info_helper_->put_object(bucket_name, file_name,offset, object_info );
+  ObjectInfo object_info;
+  int64_t offset = 0;
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, offset, 10, object_info);
   EXPECT_EQ(ret, TFS_SUCCESS);
 
   // get bucket -> list obj
