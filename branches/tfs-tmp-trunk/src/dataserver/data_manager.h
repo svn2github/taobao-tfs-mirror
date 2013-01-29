@@ -42,9 +42,11 @@ namespace tfs
         int update_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
             tbnet::Packet* packet);
         /*
-         * check lease will return true if all server finish
+         * check_lease will return true if all server finish
          * status is the final status to be taken back
          * if all successful file_size will be set, or err_msg will be set
+         *
+         * if check_lease return false, nothing should be done.
          */
         bool check_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
             int32_t& status, int64_t& req_cost_time, int64_t& file_size, std::stringstream& err_msg);

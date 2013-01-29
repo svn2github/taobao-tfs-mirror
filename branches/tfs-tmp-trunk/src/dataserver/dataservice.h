@@ -106,6 +106,7 @@ namespace tfs
       inline DataManager& get_data_manager() { return data_manager_;}
       inline DataHelper&  get_data_helper() { return data_helper_;}
       inline TrafficControl& get_traffic_control() { return traffic_control_;}
+      inline std::vector<SyncBase*>& get_sync_mirror() { return sync_mirror_; }
 
       protected:
       virtual const char* get_log_file_path();

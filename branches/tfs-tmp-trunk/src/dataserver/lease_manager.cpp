@@ -102,6 +102,7 @@ namespace tfs
 
     int Lease::update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status)
     {
+      tbutil::Mutex::Lock lock(mutex_);
       int32_t ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -113,8 +114,6 @@ namespace tfs
           {
             members_[index].info_ = info;
             members_[index].status_  = status;
-
-            tbutil::Mutex::Lock lock(mutex_);
             done_server_size_++;
           }
         }
@@ -131,6 +130,8 @@ namespace tfs
 
     void Lease::reset_member_info()
     {
+      tbutil::Mutex::Lock lock(mutex_);
+      done_server_size_ = 0;
       for (int32_t index = 0; index < MAX_REPLICATION_NUM; ++index)
       {
         members_[index].info_.version_= INVALID_VERSION;
@@ -140,6 +141,7 @@ namespace tfs
 
     void Lease::dump(const int32_t level, const char* const format)
     {
+      tbutil::Mutex::Lock lock(mutex_);
       if (level <= TBSYS_LOGGER._level)
       {
         std::stringstream str;
@@ -155,6 +157,7 @@ namespace tfs
 
     void Lease::dump(std::stringstream& desp)
     {
+      tbutil::Mutex::Lock lock(mutex_);
       for (int32_t index = 0; index < MAX_REPLICATION_NUM ; ++index)
       {
         if (members_[index].server_ != INVALID_SERVER_ID)
@@ -178,6 +181,7 @@ namespace tfs
 
     bool Lease::check_all_successful() const
     {
+      tbutil::Mutex::Lock lock(mutex_);
       int32_t count = 0;
       bool all_successful = true ;
       for (int32_t index = 0; index < MAX_REPLICATION_NUM && all_successful; ++index)
@@ -188,11 +192,12 @@ namespace tfs
           all_successful = members_[index].status_ == TFS_SUCCESS;
         }
       }
-      return all_successful && count > 0;
+      return all_successful && count >= server_size_;
     }
 
     bool Lease::check_has_version_conflict() const
     {
+      tbutil::Mutex::Lock lock(mutex_);
       bool has_version_error = false;
       for (int32_t index = 0; index < MAX_REPLICATION_NUM && !has_version_error; ++index)
       {

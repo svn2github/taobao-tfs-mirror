@@ -45,7 +45,7 @@ namespace tfs
     {
       uint64_t lease_id_;
       uint64_t file_id_;
-      uint32_t block_;
+      uint64_t block_;
       LeaseId(const uint64_t lease_id, const uint64_t file_id, const uint32_t block) :
         lease_id_(lease_id), file_id_(file_id), block_(block) {}
       bool operator < (const LeaseId& lease) const
@@ -71,13 +71,24 @@ namespace tfs
       void reset_member_status();
       inline uint32_t inc_ref() { return common::atomic_inc(&ref_count_);}
       inline uint32_t dec_ref() { return common::atomic_dec(&ref_count_);}
+
+      // we need to stat every request's real process time
       inline int64_t get_req_begin_time() { return req_begin_time_; }
       inline void set_req_begin_time(const int64_t req_begin_time) { req_begin_time_ = req_begin_time; }
-      inline int64_t get_req_cost_time() { return common::Func::get_monotonic_time() - req_begin_time_; }
+      inline int64_t get_req_cost_time() { return common::Func::get_monotonic_time_us() - req_begin_time_; }
+
+      // client call write, but never close, lease need to be expired
       inline void update_last_time(const int64_t now) { last_update_time_ = now;}
+      inline bool timeout(const int64_t now)
+      {
+        return now > last_update_time_ +
+          common::SYSPARAM_DATASERVER.expire_data_file_time_ * 1000000;
+      }
+
+      // unlink need return file_size to client for nginx log statistics
       inline int64_t get_file_size() { return file_size_; }
       inline void set_file_size(const int64_t file_size) { file_size_ = file_size; }
-      inline bool timeout(const int64_t now) { return now > last_update_time_ + common::SYSPARAM_DATASERVER.expire_data_file_time_;}
+
       bool check_all_finish();
       bool check_all_successful() const;
       bool check_has_version_conflict() const;
@@ -90,8 +101,8 @@ namespace tfs
       void dump(std::stringstream& desp);
 
       LeaseId lease_id_;
-      int64_t last_update_time_;
-      int64_t req_begin_time_;
+      int64_t last_update_time_;  // micro seconds
+      int64_t req_begin_time_;    // micro seconds
       int64_t file_size_;
       uint32_t ref_count_;
       int8_t server_size_;

@@ -51,31 +51,25 @@ namespace tfs
       if ((TFS_SUCCESS == ret) && (0 == (file_id & 0xFFFFFFFF)))
       {
         ret = get_block_manager().generation_file_id(file_id, block_id);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(WARN, "create file id fail. blockid: %"PRI64_PREFIX"u, ret: %d",
-              block_id, ret);
-        }
       }
 
       if (TFS_SUCCESS == ret)
       {
         int64_t now_us = Func::get_monotonic_time_us();
-        int64_t now = now_us / 1000000;
         if (INVALID_LEASE_ID == lease_id)
         {
           lease_id = lease_manager_.gen_lease_id();
         }
 
         LeaseId lid(block_id, file_id, lease_id);
-        Lease* lease = lease_manager_.get(lid, now);
+        Lease* lease = lease_manager_.get(lid, now_us);
         if (NULL == lease)
         {
           ret = lease_manager_.has_out_of_limit() ? EXIT_BLOCK_LEASE_OVERLOAD_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
-            lease_manager_.generation(lid, now, type, servers);
-            lease = lease_manager_.get(lid, now);
+            lease_manager_.generation(lid, now_us, type, servers);
+            lease = lease_manager_.get(lid, now_us);
             ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
           }
         }
@@ -100,8 +94,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         LeaseId lid(block_id, file_id, lease_id);
-        int64_t now = Func::get_monotonic_time();
-        Lease* lease = lease_manager_.get(lid, now);
+        int64_t now_us = Func::get_monotonic_time_us();
+        Lease* lease = lease_manager_.get(lid, now_us);
         ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
@@ -136,8 +130,7 @@ namespace tfs
       {
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        int64_t now = now_us / 1000000;
-        Lease* lease = lease_manager_.get(lid, now);
+        Lease* lease = lease_manager_.get(lid, now_us);
         status = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == status)
         {
@@ -208,12 +201,12 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        int64_t now = Func::get_monotonic_time();
+        int64_t now_us = Func::get_monotonic_time_us();
         Lease* lease = NULL;
         if (TFS_SUCCESS == ret)
         {
           LeaseId lid(block_id, file_id, lease_id);
-          lease = lease_manager_.get(lid, now);
+          lease = lease_manager_.get(lid, now_us);
           ret = (NULL == lease)? EXIT_DATA_FILE_ERROR: TFS_SUCCESS;
         }
 
@@ -226,7 +219,7 @@ namespace tfs
           ret = data_file.pwrite(none, buffer, length, offset);
           ret = (ret < 0) ? ret : TFS_SUCCESS; // transform return status
           lease->update_member_info(ds_info.information_.id_, local, ret);
-          lease->update_last_time(now);
+          lease->update_last_time(now_us);
           lease_manager_.put(lease);
         }
       }
@@ -243,9 +236,9 @@ namespace tfs
       Lease* lease = NULL;
       if (TFS_SUCCESS == ret)
       {
-        int64_t now = Func::get_monotonic_time();
+        int64_t now_us = Func::get_monotonic_time_us();
         LeaseId lid(block_id, file_id, lease_id);
-        lease = lease_manager_.get(lid, now);
+        lease = lease_manager_.get(lid, now_us);
         ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
       }
 
@@ -298,8 +291,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         LeaseId lid(block_id, file_id, lease_id);
-        int64_t now = Func::get_monotonic_time();
-        Lease* lease = lease_manager_.get(lid, now);
+        int64_t now_us = Func::get_monotonic_time_us();
+        Lease* lease = lease_manager_.get(lid, now_us);
         ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
@@ -322,8 +315,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         LeaseId lid(block_id, file_id, lease_id);
-        int64_t now = Func::get_monotonic_time();
-        lease = lease_manager_.get(lid, now);
+        int64_t now_us = Func::get_monotonic_time_us();
+        lease = lease_manager_.get(lid, now_us);
         ret = (NULL == lease)? EXIT_DATA_FILE_ERROR: TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
@@ -378,8 +371,8 @@ namespace tfs
      if (TFS_SUCCESS == ret)
      {
        LeaseId lid(block_id, file_id, lease_id);
-       int64_t now = Func::get_monotonic_time();
-       lease = lease_manager_.get(lid, now);
+       int64_t now_us = Func::get_monotonic_time_us();
+       lease = lease_manager_.get(lid, now_us);
        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR: TFS_SUCCESS;
      }
 

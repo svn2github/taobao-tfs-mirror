@@ -797,14 +797,34 @@ namespace tfs
           file_id, lease_id, ret, req_cost_time, file_size, err_msg);
       if (all_finish)
       {
-        if (!tmp) // close tmp block no need to commit
+        if (!tmp) // close tmp block no need to commit & write log
         {
-          ret = get_data_manager().update_block_info(block_id, file_id, lease_id, UNLINK_FLAG_NO);
-          if (TFS_SUCCESS != ret)
+          /*
+           * commit success, keep ret unchanged
+           * commit fail, set ret to error code
+           */
+          int tmp_ret = get_data_manager().update_block_info(block_id, file_id, lease_id, UNLINK_FLAG_NO);
+          if (TFS_SUCCESS != tmp_ret)
           {
+            ret = tmp_ret;
             TBSYS_LOG(WARN, "update block info fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
                 block_id, file_id, lease_id, ret);
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            std::vector<SyncBase*>& sync_mirror = service_.get_sync_mirror();
+            for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)
+            {
+              ret = sync_mirror[i]->write_sync_log(OPLOG_INSERT, block_id, file_id);
+              if (TFS_SUCCESS == ret)
+              {
+                TBSYS_LOG(WARN, "write sync log fail. blockid: %"PRI64_PREFIX"u, "
+                    "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, index: %d, ret: %d",
+                    block_id, file_id, lease_id, i, ret);
+              }
+            }
           }
         }
 
@@ -845,17 +865,20 @@ namespace tfs
           file_id, lease_id, ret, req_cost_time, file_size, err_msg);
       if (all_finish)
       {
-        int err = ret;
-        ret = get_data_manager().update_block_info(block_id, file_id, lease_id, UNLINK_FLAG_YES);
-        if (TFS_SUCCESS != ret)
+        /*
+         * commit success, keep ret unchanged
+         * commit fail, set ret to error code
+         */
+        int tmp_ret = get_data_manager().update_block_info(block_id, file_id, lease_id, UNLINK_FLAG_YES);
+        if (TFS_SUCCESS != tmp_ret)
         {
-          message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, err_msg.str().c_str());
+          ret = tmp_ret;
           TBSYS_LOG(WARN, "update block info fail. blockid: %"PRI64_PREFIX"u, "
               "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
               block_id, file_id, lease_id, ret);
         }
 
-        if (EXIT_VERSION_CONFLICT_ERROR == err)
+        if (EXIT_VERSION_CONFLICT_ERROR == ret)
         {
           // ignore return value
           if (TFS_SUCCESS != get_data_manager().resolve_block_version_conflict(block_id, file_id, lease_id))
@@ -863,6 +886,21 @@ namespace tfs
             TBSYS_LOG(WARN, "resolve block version conflict fail. "
                 "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u",
                 block_id, file_id, lease_id);
+          }
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          std::vector<SyncBase*>& sync_mirror = service_.get_sync_mirror();
+          for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)
+          {
+            ret = sync_mirror[i]->write_sync_log(OPLOG_REMOVE, block_id, file_id);
+            if (TFS_SUCCESS == ret)
+            {
+              TBSYS_LOG(WARN, "write sync log fail. blockid: %"PRI64_PREFIX"u, "
+                  "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, index: %d, ret: %d",
+                  block_id, file_id, lease_id, i, ret);
+            }
           }
         }
 

@@ -829,26 +829,34 @@ namespace tfs
           if (INVALID_BLOCK_ID != family_info.members_[i].first &&
               INVALID_SERVER_ID != family_info.members_[i].second)
           {
-            if (alive < data_num)
-            {
-              erased[i] = ErasureCode::NODE_ALIVE;
-              alive++;
-            }
-            else
-            {
-              erased[i] = ErasureCode::NODE_UNUSED;
-            }
+            erased[i] = ErasureCode::NODE_ALIVE;
+            alive++;
           }
           else
           {
             erased[i] = ErasureCode::NODE_DEAD;
           }
-       }
+        }
 
+        // we need exact data_num nodes to do reinstate
         if (alive < data_num)
         {
-          TBSYS_LOG(ERROR, "no enough data for read degrade, alive: %d", alive);
+          TBSYS_LOG(WARN, "no enough alive node to reinstate, alive: %d", alive);
           ret = EXIT_NO_ENOUGH_DATA;
+        }
+        else if (alive > data_num)
+        {
+          // random set alive-data_num nodes to UNUSED status
+          srand(time(NULL));
+          for (int32_t i = 0; i < alive - data_num; )
+          {
+            int32_t unused = rand() % alive;
+            if (ErasureCode::NODE_ALIVE == erased[unused])
+            {
+              erased[unused] = ErasureCode::NODE_UNUSED;
+              i++;
+            }
+          }
         }
       }
 

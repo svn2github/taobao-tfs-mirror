@@ -510,15 +510,8 @@ namespace tfs
               INVALID_SERVER_ID != family_members[i].server_ &&
               FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
           {
-            if (alive < data_num)
-            {
-              erased[i] = ErasureCode::NODE_ALIVE;
-              alive++;
-            }
-            else
-            {
-              erased[i] = ErasureCode::NODE_UNUSED;
-            }
+            erased[i] = ErasureCode::NODE_ALIVE;
+            alive++;
           }
           else
           {
@@ -527,10 +520,25 @@ namespace tfs
           }
         }
 
+        // we need exact data_num nodes to do reinstate
         if (alive < data_num)
         {
-          TBSYS_LOG(ERROR, "no enough alive node to reinstate, alive: %d", alive);
+          TBSYS_LOG(WARN, "no enough alive node to reinstate, alive: %d", alive);
           ret = EXIT_NO_ENOUGH_DATA;
+        }
+        else if ((alive > data_num) && need_recovery)
+        {
+          // random set alive-data_num nodes to UNUSED status
+          srand(time(NULL));
+          for (int32_t i = 0; i < alive - data_num; )
+          {
+            int32_t unused = rand() % alive;
+            if (ErasureCode::NODE_ALIVE == erased[unused])
+            {
+              erased[unused] = ErasureCode::NODE_UNUSED;
+              i++;
+            }
+          }
         }
 
         // all node ok, no need to recovery, just return
