@@ -291,15 +291,15 @@ namespace tfs
       return ret;
     }
 
-    int KvMetaClientImpl::unlink_file(const FragInfo &frag_info, const char* ns_addr)
+    int KvMetaClientImpl::unlink_file(const vector<FragMeta> &v_frag_meta, const char* ns_addr, int32_t cluster_id)
     {
       int ret = TFS_SUCCESS;
       int tmp_ret = TFS_ERROR;
       int64_t file_size = 0;
-      std::vector<FragMeta>::const_iterator iter = frag_info.v_frag_meta_.begin();
-      for(; iter != frag_info.v_frag_meta_.end(); iter++)
+      vector<FragMeta>::const_iterator iter = v_frag_meta.begin();
+      for(; iter != v_frag_meta.end(); iter++)
       {
-        FSName fsname(iter->block_id_, iter->file_id_, frag_info.cluster_id_);
+        FSName fsname(iter->block_id_, iter->file_id_, cluster_id);
         if ((tmp_ret = TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, ns_addr)) != TFS_SUCCESS)
         {
           ret = TFS_ERROR;
@@ -388,10 +388,7 @@ namespace tfs
 
           if (TFS_SUCCESS != ret)
           {
-            FragInfo frag_info;
-            frag_info.v_frag_meta_ = v_frag_meta;
-            frag_info.cluster_id_ = cluster_id;
-            unlink_file(frag_info, ns_addr_.c_str());
+            unlink_file(v_frag_meta, ns_addr_.c_str(), cluster_id);
             break;
           }
 

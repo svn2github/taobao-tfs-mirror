@@ -63,92 +63,12 @@ namespace tfs
       return ret;
     }
 
-
-    //----------------------------
-
-    /*int MetaInfoHelper::serialize_key(const std::string &bucket_name, const std::string &file_name,
-                                      const int64_t &offset, KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type)
-    {
-      int ret = (bucket_name.size() > 0 && file_name.size() > 0 && offset >= 0
-                 && key != NULL &&  key_buff != NULL ) ? TFS_SUCCESS : TFS_ERROR;
-      int64_t pos = 0;
-      if(TFS_SUCCESS == ret)
-      {
-        //bucket
-        int64_t bucket_name_size = static_cast<int64_t>(bucket_name.size());
-        if(pos + bucket_name_size < buff_size)
-        {
-          memcpy(key_buff + pos, bucket_name.data(), bucket_name.size());
-          pos += bucket_name_size;
-        }
-        else
-        {
-          ret = TFS_ERROR;
-        }
-        //DELIMITER
-        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
-        {
-          key_buff[pos++] = KvKey::DELIMITER;
-        }
-        else
-        {
-          ret = TFS_ERROR;
-        }
-        //filename
-        int64_t file_name_size = static_cast<int64_t>(file_name.size());
-        if(pos + file_name_size < buff_size)
-        {
-          memcpy(key_buff + pos, file_name.data(), file_name.size());
-          pos += file_name_size;
-        }
-        else
-        {
-          ret = TFS_ERROR;
-        }
-        //DELIMITER
-        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
-        {
-          key_buff[pos++] = KvKey::DELIMITER;
-        }
-        else
-        {
-          ret = TFS_ERROR;
-        }
-        //version
-        int64_t version = 0;
-        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
-        {
-          ret = Serialization::int64_to_char(key_buff + pos, buff_size, version);
-          pos = pos + 8;
-        }
-        //DELIMITER
-        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
-        {
-          key_buff[pos++] = KvKey::DELIMITER;
-        }
-        else
-        {
-          ret = TFS_ERROR;
-        }
-        //offset
-        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
-        {
-          ret = Serialization::int64_to_char(key_buff + pos, buff_size, offset);
-          pos = pos + 8;
-        }
-      }
-      if(TFS_SUCCESS == ret)
-      {
-        key->key_ = key_buff;
-        key->key_size_ = pos;
-        key->key_type_ = key_type;
-      }
-      return ret;
-    }*/
-
     int MetaInfoHelper::serialize_key(const std::string &bucket_name, const std::string &file_name,
                                       const int64_t offset, KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type)
     {
+
+      TBSYS_LOG(DEBUG, "part offset: %"PRI64_PREFIX"d", offset);
+
       int ret = (bucket_name.size() > 0 && file_name.size() > 0 && offset >= 0
                  && key != NULL &&  key_buff != NULL ) ? TFS_SUCCESS : TFS_ERROR;
       int64_t pos = 0;
@@ -300,7 +220,10 @@ namespace tfs
         if (tmp_offset == 0)
         {
           object_info_zero->has_meta_info_ = true;
-          object_info_zero->has_customize_info_ = true;
+          object_info_zero->has_customize_info_ = object_info.has_customize_info_;
+          object_info_zero->customize_info_ = object_info.customize_info_;
+
+          object_info_zero->meta_info_ = object_info.meta_info_;
           object_info_zero->meta_info_.create_time_ = static_cast<int64_t>(time(NULL));
           object_info_zero->v_tfs_file_info_.clear();
           object_info_zero->v_tfs_file_info_.push_back(object_info.v_tfs_file_info_[i]);
@@ -331,25 +254,18 @@ namespace tfs
       int32_t retry = VERSION_ERROR_RETRY_COUNT;
       int64_t ver = 1<<15 - 1;
       ObjectInfo tmp_object_info_zero;
+
       do
       {
         if (length + offset > tmp_object_info_zero.meta_info_.big_file_size_ )
         {
           object_info_zero->meta_info_.big_file_size_ = length + offset;
         }
-        object_info_zero->meta_info_.modify_time_ = static_cast<int64_t>(time(NULL));
 
-        if (offset == 0)
-        {
-          TBSYS_LOG(INFO, "has_meta_info: %s, has_customize_info: %s",
-              object_info_zero->has_meta_info_ ? "true" : "false",
-              object_info_zero->has_customize_info_ ? "true" : "false");
-        }
+        object_info_zero->meta_info_.modify_time_ = static_cast<int64_t>(time(NULL));
         object_info_zero->has_meta_info_ = true;
 
-
         ret = put_object_ex(bucket_name, file_name, 0, *object_info_zero, ver);
-
         if (EXIT_TAIR_VERSION_ERROR == ret)
         {
           TBSYS_LOG(INFO, "%s", "update object metainfo version conflict");
@@ -364,14 +280,20 @@ namespace tfs
           {
             ret = EXIT_TAIR_VERSION_ERROR;
           }
-          if(object_info_zero->v_tfs_file_info_.size() == 0)
+
+          if (tmp_object_info_zero.v_tfs_file_info_.size() > 0)
           {
-            *object_info_zero = tmp_object_info_zero;
+            if (object_info_zero->v_tfs_file_info_.size() > 0)
+            {
+              TBSYS_LOG(WARN, "conflict found. drop new one");
+              object_info_zero->v_tfs_file_info_.clear();
+            }
           }
-          else//first seg offset is 0
+          else
           {
-            object_info_zero->meta_info_ = tmp_object_info_zero.meta_info_;
+            tmp_object_info_zero.v_tfs_file_info_ = object_info_zero->v_tfs_file_info_;
           }
+          *object_info_zero = tmp_object_info_zero;
         }
       }while (retry-- && EXIT_TAIR_VERSION_ERROR == ret);
 
@@ -416,7 +338,7 @@ namespace tfs
         int64_t *lock_version)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0
-          && offset >= 0 && NULL != object_info ) ? TFS_SUCCESS : TFS_ERROR;
+          && offset >= 0 && NULL != object_info) ? TFS_SUCCESS : TFS_ERROR;
       //op key
       char *key_buff = NULL;
       key_buff = (char*) malloc(KEY_BUFF_SIZE);
@@ -965,16 +887,16 @@ namespace tfs
         int64_t pos = 0;
         if(TFS_SUCCESS == ret)
         {
-          ret =  bucket_meta_info.serialize(kv_value_bucket_info_buff, KV_VALUE_BUFF_SIZE, pos);
+          ret = bucket_meta_info.serialize(kv_value_bucket_info_buff, KV_VALUE_BUFF_SIZE, pos);
         }
 
         KvMemValue value;
-        if(ret == TFS_SUCCESS)
+        if (ret == TFS_SUCCESS)
         {
           value.set_data(kv_value_bucket_info_buff, pos);
         }
 
-        if(TFS_SUCCESS == ret)
+        if (TFS_SUCCESS == ret)
         {
           ret = kv_engine_helper_->put_key(key, value, 0);
         }

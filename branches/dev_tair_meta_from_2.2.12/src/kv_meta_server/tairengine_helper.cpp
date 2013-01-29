@@ -270,7 +270,7 @@ namespace tfs
 
             if (TFS_SUCCESS == ret || ret == EXIT_KV_RETURN_DATA_NOT_EXIST)
             {
-              if (scan_type == 1)
+              if (scan_type == CMD_RANGE_ALL)
               {
                 for(size_t i = 0; i < tvalues.size(); i += 2)
                 {
@@ -284,7 +284,7 @@ namespace tfs
                 }
                 *result_size = static_cast<int32_t>(tvalues.size())/2;
               }
-              else if(scan_type == 2)
+              else if(scan_type == CMD_RANGE_VALUE_ONLY)
               {
                 for(size_t i = 0; i < tvalues.size(); ++i)
                 {
