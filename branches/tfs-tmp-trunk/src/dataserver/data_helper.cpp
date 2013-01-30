@@ -847,15 +847,18 @@ namespace tfs
         else if (alive > data_num)
         {
           // random set alive-data_num nodes to UNUSED status
-          srand(time(NULL));
-          for (int32_t i = 0; i < alive - data_num; )
+          for (int32_t i = 0; i < alive - data_num; i++)
           {
-            int32_t unused = rand() % alive;
-            if (ErasureCode::NODE_ALIVE == erased[unused])
+            int32_t unused = rand() % member_num;
+            if (ErasureCode::NODE_ALIVE != erased[unused])
             {
-              erased[unused] = ErasureCode::NODE_UNUSED;
-              i++;
+              while (ErasureCode::NODE_ALIVE != erased[unused])
+              {
+                unused = (unused + 1) % member_num;
+              }
             }
+            // got here, erased[unused]  mustbe NODE_ALIVE
+            erased[unused] = ErasureCode::NODE_UNUSED;
           }
         }
       }

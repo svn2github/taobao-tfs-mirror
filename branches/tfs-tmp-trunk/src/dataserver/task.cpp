@@ -624,7 +624,11 @@ namespace tfs
         ret = replicate_data(block_size);
       }
 
-      // TODO: add block version ???
+      // add local version first, it will be copied to remote block
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_manager().update_block_version(VERSION_INC_STEP_REPLICATE, block_id);
+      }
 
       // replicate index
       if (TFS_SUCCESS == ret)

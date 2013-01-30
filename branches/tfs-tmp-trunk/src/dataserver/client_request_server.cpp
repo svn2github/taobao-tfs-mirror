@@ -259,9 +259,11 @@ namespace tfs
             }
             else
             {
-              // every call of read will return file info
-              // TODO: add a flag to denotes if fileinfo is needed
-              resp_msg->set_file_info(file_info);
+              // readv2 support
+              if (flag & READ_DATA_OPTION_WITH_FINFO)
+              {
+                resp_msg->set_file_info(file_info);
+              }
               ret = message->reply(resp_msg);
               if (TFS_SUCCESS == ret)
               {

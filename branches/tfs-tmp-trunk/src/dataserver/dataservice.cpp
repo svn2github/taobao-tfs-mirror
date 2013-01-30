@@ -265,6 +265,13 @@ namespace tfs
         if (TFS_SUCCESS != ret)
           TBSYS_LOG(ERROR, "dataservice::start, init sync mirror fail!, ret: %d", ret);
       }
+
+      // set seed for rand() when service start
+      if (TFS_SUCCESS == ret)
+      {
+        srand(time(NULL));
+      }
+
       // init heartbeat
       if (TFS_SUCCESS == ret)
       {
