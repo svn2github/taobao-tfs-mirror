@@ -67,17 +67,17 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = output.set_vint64(ds_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         int64_t pos = 0;
         ret = family_info_.serialize(output.get_free(), output.get_free_length(), pos);
         if (TFS_SUCCESS == ret)
         {
           output.pour(family_info_.length());
         }
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_vint64(ds_);
       }
 
       if (TFS_SUCCESS == ret && file_seg_.length_ > 0)
@@ -124,17 +124,17 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = input.get_vint64(ds_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         int64_t pos = 0;
         ret = family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (TFS_SUCCESS == ret)
         {
           input.drain(family_info_.length());
         }
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_vint64(ds_);
       }
 
       if (TFS_SUCCESS == ret && file_seg_.length_ > 0)

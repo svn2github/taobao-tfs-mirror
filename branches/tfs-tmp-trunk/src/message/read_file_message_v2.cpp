@@ -36,12 +36,12 @@ namespace tfs
       int ret = output.set_int64(block_id_);
       if (TFS_SUCCESS == ret)
       {
-        ret = output.set_int64(attach_block_id_);
+        ret = output.set_int64(file_id_);
       }
 
       if (TFS_SUCCESS == ret)
       {
-        ret = output.set_int64(file_id_);
+        ret = output.set_int64(attach_block_id_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -67,12 +67,12 @@ namespace tfs
       int ret = input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
       if (TFS_SUCCESS == ret)
       {
-        ret = input.get_int64(reinterpret_cast<int64_t *>(&attach_block_id_));
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&file_id_));
       }
 
       if (TFS_SUCCESS == ret)
       {
-        ret = input.get_int64(reinterpret_cast<int64_t *>(&file_id_));
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&attach_block_id_));
       }
 
       if (TFS_SUCCESS == ret)
@@ -156,6 +156,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = output.set_int64(attach_block_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = output.set_int32(flag_);
       }
 
@@ -167,11 +172,6 @@ namespace tfs
         {
           output.pour(family_info_.length());
         }
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_int64(attach_block_id_);
       }
 
       return ret;
@@ -188,6 +188,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&attach_block_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = input.get_int32(&flag_);
       }
 
@@ -199,11 +204,6 @@ namespace tfs
         {
           input.drain(family_info_.length());
         }
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_int64(reinterpret_cast<int64_t *>(&attach_block_id_));
       }
 
       return ret;
