@@ -2088,39 +2088,39 @@ namespace tfs
         ret = Serialization::set_int64(data, data_len, pos, id_);
       }
 
-      if (TFS_SUCCESS == ret)
+      if ((TFS_SUCCESS == ret) && (INVALID_FILE_ID != id_))
       {
         ret = Serialization::set_int32(data, data_len, pos, offset_);
-      }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int32(data, data_len, pos, size_);
-      }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, size_);
+        }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int8(data, data_len, pos, status_);
-      }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int8(data, data_len, pos, status_);
+        }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int32(data, data_len, pos, crc_);
-      }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, crc_);
+        }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int32(data, data_len, pos, modify_time_);
-      }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, modify_time_);
+        }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int32(data, data_len, pos, create_time_);
-      }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, create_time_);
+        }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int16(data, data_len, pos, next_);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int16(data, data_len, pos, next_);
+        }
       }
 
       return ret;
@@ -2135,43 +2135,42 @@ namespace tfs
         ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t *>(&id_));
       }
 
-      if (TFS_SUCCESS == ret)
+      if ((TFS_SUCCESS == ret) && (INVALID_FILE_ID != id_))
       {
         ret = Serialization::get_int32(data, data_len, pos, &offset_);
-      }
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t size = 0;
+          ret = Serialization::get_int32(data, data_len, pos, &size);
+          size_ = size;
+        }
 
-      if (TFS_SUCCESS == ret)
-      {
-        int32_t size = 0;
-        ret = Serialization::get_int32(data, data_len, pos, &size);
-        size_ = size;
-      }
+        if (TFS_SUCCESS == ret)
+        {
+          int8_t status = 0;
+          ret = Serialization::get_int8(data, data_len, pos, &status);
+          status_ = status;
+        }
 
-      if (TFS_SUCCESS == ret)
-      {
-        int8_t status = 0;
-        ret = Serialization::get_int8(data, data_len, pos, &status);
-        status_ = status;
-      }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t *>(&crc_));
+        }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t *>(&crc_));
-      }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::get_int32(data, data_len, pos, &modify_time_);
+        }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &modify_time_);
-      }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::get_int32(data, data_len, pos, &create_time_);
+        }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &create_time_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int16(data, data_len, pos, reinterpret_cast<int16_t *>(&next_));
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::get_int16(data, data_len, pos, reinterpret_cast<int16_t *>(&next_));
+        }
       }
 
       return ret;
@@ -2179,7 +2178,12 @@ namespace tfs
 
     int64_t FileInfoV2::length() const
     {
-      return 5 * INT_SIZE + INT8_SIZE + INT16_SIZE + INT64_SIZE;
+      int64_t len = INT64_SIZE;
+      if (id_ > 0)
+      {
+        len += 5 * INT_SIZE + INT8_SIZE + INT16_SIZE;
+      }
+      return len;
     }
 
     int BlockInfoV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
