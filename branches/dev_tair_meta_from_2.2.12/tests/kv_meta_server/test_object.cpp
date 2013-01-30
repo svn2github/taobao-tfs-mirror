@@ -101,9 +101,14 @@ TEST_F(ObjectTest, test_pwrite_middle)
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo obj_info;
+  TfsFileInfo tfs_file_info;
+  obj_info.v_tfs_file_info_.push_back(tfs_file_info);
+
+  obj_info.v_tfs_file_info_[0].offset_ = 0;
   ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
+  obj_info.v_tfs_file_info_[0].offset_ = 20;
   ret = test_meta_info_helper_->put_object(bucket_name, object_name, 20, 10, obj_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
@@ -111,8 +116,10 @@ TEST_F(ObjectTest, test_pwrite_middle)
   ret = test_meta_info_helper_->head_object(bucket_name, object_name, &ret_obj_info);
   EXPECT_EQ(30, ret_obj_info.meta_info_.big_file_size_);
 
+  obj_info.v_tfs_file_info_[0].offset_ = 10;
   ret = test_meta_info_helper_->put_object(bucket_name, object_name, 10, 10, obj_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
+
   ret = test_meta_info_helper_->head_object(bucket_name, object_name, &ret_obj_info);
   EXPECT_EQ(30, ret_obj_info.meta_info_.big_file_size_);
 
@@ -183,7 +190,7 @@ TEST_F(ObjectTest, test_pwrite_no_bucket)
   ObjectInfo obj_info;
   ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info);
 
-  EXPECT_EQ(TFS_ERROR, ret);
+  EXPECT_EQ(EXIT_BUCKET_NOT_EXIST, ret);
 }
 
 int main(int argc, char* argv[])

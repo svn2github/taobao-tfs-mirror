@@ -196,8 +196,12 @@ namespace tfs
               {
                 ret = TFS_ERROR;
               }
-              p_tair_value->set_tair_value(tvalue);
-              *pp_value = p_tair_value;
+
+              if (TFS_SUCCESS == ret)
+              {
+                p_tair_value->set_tair_value(tvalue);
+                *pp_value = p_tair_value;
+              }
             }
             break;
           case KvKey::KEY_TYPE_BUCKET:

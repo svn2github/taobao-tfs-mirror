@@ -79,6 +79,8 @@ namespace tfs
         int del_bucket(const std::string& bucket_name);
 
       public:
+        int put_bucket_ex(const std::string &bucket_name, const common::BucketMetaInfo &bucket_meta_info,
+            const int64_t lock_version = 0);
         int put_object_ex(const std::string &bucket_name, const std::string &file_name,
             const int64_t offset, const common::ObjectInfo &object_info, const int64_t lock_version = 0);
 

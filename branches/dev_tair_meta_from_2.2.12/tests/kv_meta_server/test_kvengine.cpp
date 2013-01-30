@@ -44,18 +44,35 @@ namespace tfs
 
     int TestEngineHelper::put_key(const KvKey& key, const KvMemValue& value, const int64_t version)
     {
-      UNUSED(version);
       int ret = TFS_SUCCESS;
       switch (key.key_type_)
       {
-        case KvKey::KEY_TYPE_OBJECT:
-          {
-            map_store_[string(key.key_, key.key_size_)] = string(value.get_data(), value.get_size());
-          }
-          break;
         case KvKey::KEY_TYPE_BUCKET:
           {
-            map_store_[string(key.key_, key.key_size_)] = string(value.get_data(), value.get_size());
+            CONTAINER::iterator iter = map_store_.find(string(key.key_, key.key_size_));
+            if (iter != map_store_.end() && version == MAX_VERSION)
+            {
+              ret = EXIT_WITH_BUCKET_REPEAT_PUT;
+            }
+
+            if (TFS_SUCCESS == ret)
+            {
+              map_store_[string(key.key_, key.key_size_)] = string(value.get_data(), value.get_size());
+            }
+          }
+          break;
+        case KvKey::KEY_TYPE_OBJECT:
+          {
+            CONTAINER::iterator iter = map_store_.find(string(key.key_, key.key_size_));
+            if (iter != map_store_.end() && version == MAX_VERSION)
+            {
+              ret = EXIT_TAIR_VERSION_ERROR;
+            }
+
+            if (TFS_SUCCESS == ret)
+            {
+              map_store_[string(key.key_, key.key_size_)] = string(value.get_data(), value.get_size());
+            }
           }
           break;
         default:
@@ -67,7 +84,6 @@ namespace tfs
 
     int TestEngineHelper::get_key(const KvKey& key, KvValue** value, int64_t* version)
     {
-      UNUSED(version);
       int ret = TFS_SUCCESS;
 
       if (TFS_SUCCESS == ret)
@@ -83,12 +99,15 @@ namespace tfs
                 KvMemValue *v = new KvMemValue();
                 v->set_data(iter->second.c_str(), iter->second.length());
                 *value = v;
+                if (NULL != version)
+                {
+                  *version = 1;
+                }
               }
               else
               {
-                ret = TFS_ERROR;
+                ret = EXIT_OBJECT_NOT_EXIST;
               }
-
             }
             break;
           case KvKey::KEY_TYPE_BUCKET:
@@ -100,10 +119,14 @@ namespace tfs
                 KvMemValue *v = new KvMemValue();
                 v->set_data(iter->second.c_str(), iter->second.length());
                 *value = v;
+                if (NULL != version)
+                {
+                  *version = 1;
+                }
               }
               else
               {
-                ret = TFS_ERROR;
+                ret = EXIT_BUCKET_NOT_EXIST;
               }
             }
             break;

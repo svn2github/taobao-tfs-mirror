@@ -252,7 +252,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
 
       int32_t retry = VERSION_ERROR_RETRY_COUNT;
-      int64_t ver = 1<<15 - 1;
+      int64_t ver = MAX_VERSION;
       ObjectInfo tmp_object_info_zero;
 
       do
@@ -850,6 +850,48 @@ namespace tfs
       return ret;
     }
 
+    int MetaInfoHelper::put_bucket_ex(const string &bucket_name, const BucketMetaInfo &bucket_meta_info,
+        int64_t lock_version)
+    {
+      int ret = TFS_SUCCESS;
+
+      KvKey key;
+      key.key_ = bucket_name.c_str();
+      key.key_size_ = bucket_name.length();
+      key.key_type_ = KvKey::KEY_TYPE_BUCKET;
+
+      char *kv_value_bucket_info_buff = NULL;
+      kv_value_bucket_info_buff = (char*) malloc(KV_VALUE_BUFF_SIZE);
+      if (NULL == kv_value_bucket_info_buff)
+      {
+        ret = TFS_ERROR;
+      }
+
+      int64_t pos = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = bucket_meta_info.serialize(kv_value_bucket_info_buff, KV_VALUE_BUFF_SIZE, pos);
+      }
+
+      KvMemValue value;
+      if (TFS_SUCCESS == ret)
+      {
+        value.set_data(kv_value_bucket_info_buff, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = kv_engine_helper_->put_key(key, value, lock_version);
+      }
+
+      if (NULL != kv_value_bucket_info_buff)
+      {
+        free(kv_value_bucket_info_buff);
+        kv_value_bucket_info_buff = NULL;
+      }
+      return ret;
+    }
+
     int MetaInfoHelper::put_bucket(const std::string& bucket_name, const common::BucketMetaInfo& bucket_meta_info)
     {
       //TODO for test now
@@ -872,35 +914,8 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        KvKey key;
-        key.key_ = bucket_name.c_str();
-        key.key_size_ = bucket_name.length();
-        key.key_type_ = KvKey::KEY_TYPE_BUCKET;
-
-        char *kv_value_bucket_info_buff = NULL;
-        kv_value_bucket_info_buff = (char*) malloc(KV_VALUE_BUFF_SIZE);
-        if(NULL == kv_value_bucket_info_buff)
-        {
-          ret = TFS_ERROR;
-        }
-
-        int64_t pos = 0;
-        if(TFS_SUCCESS == ret)
-        {
-          ret = bucket_meta_info.serialize(kv_value_bucket_info_buff, KV_VALUE_BUFF_SIZE, pos);
-        }
-
-        KvMemValue value;
-        if (ret == TFS_SUCCESS)
-        {
-          value.set_data(kv_value_bucket_info_buff, pos);
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          ret = kv_engine_helper_->put_key(key, value, 0);
-        }
-        free(kv_value_bucket_info_buff);
+        int64_t ver = MAX_VERSION;
+        ret = put_bucket_ex(bucket_name, bucket_meta_info, ver);
       }
 
       return ret;
