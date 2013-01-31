@@ -29,7 +29,7 @@ AC_CHECK_LIB([rt], [main])
 # FIXME: Replace `main' with a function in `-ltcmalloc':
 #AC_CHECK_LIB([tcmalloc], [main])
 
-AC_CHECK_LIB([mysqlclient], [main])
+# AC_CHECK_LIB([mysqlclient], [main])
 
 AC_ARG_WITH([tblib-root],
            AS_HELP_STRING([--with-tblib-root],
@@ -147,7 +147,7 @@ AC_ARG_WITH([release],
     [use optimize (default is NO)]),
     [
       if test "$withval" = "yes"; then
-        CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -fPIC -D__STDC_LIMIT_MACROS -D_NO_EXCEPTION"
+        CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -Wno-deprecated -Wno-unused-result -fPIC -D__STDC_LIMIT_MACROS -D_NO_EXCEPTION"
       fi
     ],
     [CXXFLAGS="-g -D__STDC_LIMIT_MACROS -Wall -Werror -Wextra -Wunused-parameter -Wformat -Wconversion -Wdeprecated "]
@@ -189,7 +189,7 @@ m4_include([tcmalloc.m4])
 
 m4_include([ax_lib_mysql.m4])
 
-AX_LIB_MYSQL([5.1.48])
+#AX_LIB_MYSQL([5.1.48])
 
 TS_CHECK_TCMALLOC
 
