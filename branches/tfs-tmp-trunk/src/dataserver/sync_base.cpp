@@ -207,7 +207,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int SyncBase::write_sync_log(const int32_t cmd, const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id)
+    int SyncBase::write_sync_log(const int32_t cmd, const uint64_t block_id, const uint64_t file_id, const uint64_t old_file_id)
     {
       int32_t ret = block_id > 0 ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)

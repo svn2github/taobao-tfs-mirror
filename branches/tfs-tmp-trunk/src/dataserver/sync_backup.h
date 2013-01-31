@@ -36,7 +36,7 @@ namespace tfs
     struct SyncData
     {
       int32_t cmd_;
-      uint32_t block_id_;
+      uint64_t block_id_;
       uint64_t file_id_;
       uint64_t old_file_id_;
       int32_t retry_count_;
@@ -53,10 +53,10 @@ namespace tfs
       virtual bool init() = 0;
       virtual void destroy() = 0;
       virtual int do_sync(const SyncData* sf);
-      virtual int copy_file(const uint32_t block_id, const uint64_t file_id);
-      virtual int remove_file(const uint32_t block_id, const uint64_t file_id, const int32_t undel);
-      virtual int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
-      virtual int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
+      virtual int copy_file(const uint64_t block_id, const uint64_t file_id);
+      virtual int remove_file(const uint64_t block_id, const uint64_t file_id, const int32_t undel);
+      virtual int rename_file(const uint64_t block_id, const uint64_t file_id, const uint64_t old_file_id);
+      virtual int remote_copy_file(const uint64_t block_id, const uint64_t file_id);
 
     protected:
       DISALLOW_COPY_AND_ASSIGN(SyncBackup);
@@ -82,9 +82,9 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(TfsMirrorBackup);
 
       private:
-        int copy_file(const uint32_t block_id, const uint64_t file_id);
-        int remove_file(const uint32_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
-        int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
+        int copy_file(const uint64_t block_id, const uint64_t file_id);
+        int remove_file(const uint64_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
+        int remote_copy_file(const uint64_t block_id, const uint64_t file_id);
         int get_file_info(const char* nsip, const char* file_name, common::TfsFileStat& buf);
 
         /**
@@ -97,7 +97,7 @@ namespace tfs
         *
         * @return
         */
-        int sync_stat(const uint32_t block_id, const uint64_t file_id);
+        int sync_stat(const uint64_t block_id, const uint64_t file_id);
 
 
         /**

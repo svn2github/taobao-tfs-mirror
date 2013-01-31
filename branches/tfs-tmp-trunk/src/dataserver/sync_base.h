@@ -42,7 +42,7 @@ namespace tfs
         int init();
         void stop();
 
-        int write_sync_log(const int32_t cmd, const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id = 0);
+        int write_sync_log(const int32_t cmd, const uint64_t block_id, const uint64_t file_id, const uint64_t old_file_id = 0);
         int reset_log();
         int disable_log();
         void set_pause(const int32_t v);

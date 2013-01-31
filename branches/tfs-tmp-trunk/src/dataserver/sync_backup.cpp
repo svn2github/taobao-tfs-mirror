@@ -65,22 +65,22 @@ namespace tfs
       return ret;
     }
 
-    int SyncBackup::copy_file(const uint32_t, const uint64_t)
+    int SyncBackup::copy_file(const uint64_t, const uint64_t)
     {
       return TFS_SUCCESS;
     }
 
-    int SyncBackup::remove_file(const uint32_t, const uint64_t, const int32_t)
+    int SyncBackup::remove_file(const uint64_t, const uint64_t, const int32_t)
     {
       return TFS_SUCCESS;
     }
 
-    int SyncBackup::rename_file(const uint32_t, const uint64_t, const uint64_t)
+    int SyncBackup::rename_file(const uint64_t, const uint64_t, const uint64_t)
     {
       return TFS_SUCCESS;
     }
 
-    int SyncBackup::remote_copy_file(const uint32_t, const uint64_t)
+    int SyncBackup::remote_copy_file(const uint64_t, const uint64_t)
     {
       return TFS_SUCCESS;
     }
@@ -164,7 +164,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsMirrorBackup::remote_copy_file(const uint32_t block_id, const uint64_t file_id)
+    int TfsMirrorBackup::remote_copy_file(const uint64_t block_id, const uint64_t file_id)
     {
       int32_t ret = block_id > 0 ? TFS_SUCCESS : EXIT_BLOCKID_ZERO_ERROR;
       if (TFS_SUCCESS == ret)
@@ -314,7 +314,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsMirrorBackup::copy_file(const uint32_t block_id, const uint64_t file_id)
+    int TfsMirrorBackup::copy_file(const uint64_t block_id, const uint64_t file_id)
     {
       int32_t ret = block_id > 0 ? TFS_SUCCESS : EXIT_BLOCKID_ZERO_ERROR;
       if (TFS_SUCCESS == ret)
@@ -475,7 +475,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsMirrorBackup::remove_file(const uint32_t block_id, const uint64_t file_id,
+    int TfsMirrorBackup::remove_file(const uint64_t block_id, const uint64_t file_id,
                                      const TfsUnlinkType action)
     {
       int32_t ret = block_id > 0 ? TFS_SUCCESS : EXIT_BLOCKID_ZERO_ERROR;
@@ -535,7 +535,7 @@ namespace tfs
          (EXIT_META_NOT_FOUND_ERROR == ret);   // ds cannot find file in index
     }
 
-    int TfsMirrorBackup::sync_stat(const uint32_t block_id, const uint64_t file_id)
+    int TfsMirrorBackup::sync_stat(const uint64_t block_id, const uint64_t file_id)
     {
       int ret = TFS_SUCCESS;
 
