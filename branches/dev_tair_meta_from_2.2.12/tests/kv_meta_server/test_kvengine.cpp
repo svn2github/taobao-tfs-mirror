@@ -97,7 +97,7 @@ namespace tfs
               if (iter != map_store_.end())
               {
                 KvMemValue *v = new KvMemValue();
-                v->set_data(iter->second.c_str(), iter->second.length());
+                v->set_data((char*)iter->second.c_str(), iter->second.length());
                 *value = v;
                 if (NULL != version)
                 {
@@ -117,7 +117,7 @@ namespace tfs
               if (iter != map_store_.end())
               {
                 KvMemValue *v = new KvMemValue();
-                v->set_data(iter->second.c_str(), iter->second.length());
+                v->set_data((char*)iter->second.c_str(), iter->second.length());
                 *value = v;
                 if (NULL != version)
                 {
@@ -263,10 +263,10 @@ namespace tfs
           else
           {
             KvMemValue *key = new KvMemValue();
-            key->set_data((iter->first).c_str(), (iter->first).length());
+            key->set_data((char*)(iter->first).c_str(), (iter->first).length());
 
             KvMemValue *value = new KvMemValue();
-            value->set_data((iter->second).c_str(), (iter->second).length());
+            value->set_data((char*)(iter->second).c_str(), (iter->second).length());
 
             vec_realkey->push_back(key);
             vec_values->push_back(value);

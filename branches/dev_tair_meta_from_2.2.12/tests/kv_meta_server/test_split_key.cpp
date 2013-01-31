@@ -49,7 +49,11 @@ TEST_F(SplitKeyTest, testsplit)
   key.key_type_ = KvKey::KEY_TYPE_OBJECT;
   tair::data_entry prefix_key;
   tair::data_entry second_key;
-  tair::data_entry real_prefix("bucketname");
+  string str_real_prefix("bucketname");
+  str_real_prefix += KvKey::DELIMITER;
+
+  tair::data_entry real_prefix;
+  real_prefix.set_data(str_real_prefix.c_str(), str_real_prefix.length());
   tair::data_entry real_second("objectname111");
   EXPECT_EQ(TFS_SUCCESS ,TairEngineHelper::split_key_for_tair(key, &prefix_key, &second_key));
   EXPECT_EQ(real_prefix, prefix_key);
@@ -87,6 +91,7 @@ TEST_F(SplitKeyTest, test_0_inkey)
   tair::data_entry real_prefix;
   tair::data_entry real_second("ketnameobjectname111");
   string real_prefix_str("buc.,*");
+  real_prefix_str += KvKey::DELIMITER;
   real_prefix_str[2] = 0;
   real_prefix.set_data(real_prefix_str.c_str(), real_prefix_str.length());
   EXPECT_EQ(TFS_SUCCESS ,TairEngineHelper::split_key_for_tair(key, &prefix_key, &second_key));
@@ -104,7 +109,14 @@ TEST_F(SplitKeyTest, test_only_prefix)
   key.key_type_ = KvKey::KEY_TYPE_OBJECT;
   tair::data_entry prefix_key;
   tair::data_entry second_key;
-  EXPECT_NE(TFS_SUCCESS ,TairEngineHelper::split_key_for_tair(key, &prefix_key, &second_key));
+  tair::data_entry real_prefix;
+  string real_prefix_str("buc.,*ketnameobjectname111");
+  real_prefix_str += KvKey::DELIMITER;
+  real_prefix.set_data(real_prefix_str.c_str(), real_prefix_str.length());
+  EXPECT_EQ(TFS_SUCCESS ,TairEngineHelper::split_key_for_tair(key, &prefix_key, &second_key));
+  EXPECT_EQ(real_prefix, prefix_key);
+  EXPECT_EQ(0, second_key.get_size());
+
 
 }
 
