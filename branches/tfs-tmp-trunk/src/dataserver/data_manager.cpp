@@ -76,8 +76,7 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          lease->set_req_begin_time(now_us);
-          lease->reset_member_status(); // reset on every reqeust
+          lease->reset_member_info(now_us); // reset on every reqeust
           lease_manager_.put(lease);
         }
       }
@@ -157,7 +156,7 @@ namespace tfs
               file_size = lease->get_file_size();
             }
 
-            req_cost_time = now_us - lease->get_req_begin_time();
+            req_cost_time  = lease->get_req_cost_time_us();
           }
           lease_manager_.put(lease);
         }
@@ -219,7 +218,7 @@ namespace tfs
           ret = data_file.pwrite(none, buffer, length, offset);
           ret = (ret < 0) ? ret : TFS_SUCCESS; // transform return status
           lease->update_member_info(ds_info.information_.id_, local, ret);
-          lease->update_last_time(now_us);
+          lease->update_last_time_us(now_us);
           lease_manager_.put(lease);
         }
       }
@@ -423,9 +422,9 @@ namespace tfs
 
     }
 
-    int DataManager::timeout(const time_t now)
+    int DataManager::timeout(const time_t now_us)
     {
-      return lease_manager_.timeout(now);
+      return lease_manager_.timeout(now_us);
     }
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

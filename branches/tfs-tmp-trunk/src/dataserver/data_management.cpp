@@ -273,22 +273,9 @@ namespace tfs
       return ret;
     }
 
-    int DataManagement::rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t new_file_id)
-    {
-      UNUSED(block_id);
-      UNUSED(file_id);
-      UNUSED(new_file_id);
-      return EXIT_NOT_SUPPORT_ERROR;
-    }
-
     int DataManagement::unlink_file(const uint32_t block_id, const uint64_t file_id, const int32_t action, int64_t& file_size)
     {
       return get_block_manager().unlink(file_size, file_id, action, block_id, block_id);
-    }
-
-    int DataManagement::new_single_block(const uint32_t block_id, const bool tmp)
-    {
-      return get_block_manager().new_block(block_id, tmp);
     }
 
     int DataManagement::del_single_block(const uint32_t block_id, const bool tmp)

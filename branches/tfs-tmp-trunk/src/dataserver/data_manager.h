@@ -66,7 +66,7 @@ namespace tfs
         int update_block_info(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
             const common::UnlinkFlag unlink_flag);
         int resolve_block_version_conflict(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id);
-        int timeout(const time_t now);
+        int timeout(const time_t now_us);
 
       private:
         DataService& service_;

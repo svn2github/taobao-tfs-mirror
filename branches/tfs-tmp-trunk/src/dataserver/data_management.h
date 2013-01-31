@@ -58,11 +58,9 @@ namespace tfs
 
         int read_file_info(const uint32_t block_id,
             const uint64_t file_id, const int32_t mode, common::FileInfo& finfo);
-        int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t new_file_id);
         int unlink_file(const uint32_t block_id, const uint64_t file_id, const int32_t action, int64_t& file_size);
 
         int get_block_info(const uint32_t block_id, common::BlockInfo& blk, int32_t& visit_count);
-        int new_single_block(const uint32_t block_id, const bool tmp = false);
         int del_single_block(const uint32_t block_id, const bool tmp = false);
 
         //gc thread

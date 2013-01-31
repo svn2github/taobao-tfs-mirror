@@ -148,9 +148,6 @@ namespace tfs
       int check_blocks(common::BasePacket* packet);
 
       private:
-      bool access_deny(common::BasePacket* message);
-      void do_stat(const uint64_t peer_id,
-          const int32_t visit_file_size, const int32_t real_len, const int32_t offset, const int32_t mode);
       int initialize_nameserver_ip_addr_(std::vector<uint64_t>& ns_ip_port);
       int initialize_sync_mirror_();
       void timeout_();

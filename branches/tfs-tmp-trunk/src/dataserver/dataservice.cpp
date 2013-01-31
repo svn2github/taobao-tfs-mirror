@@ -411,7 +411,7 @@ namespace tfs
 
         //check datafile
         data_management_.gc_data_file();
-        data_manager_.timeout(Func::get_monotonic_time());
+        data_manager_.timeout(Func::get_monotonic_time_us());
         if (NULL != block_manager_)
           block_manager_->timeout(Func::get_monotonic_time());
         task_manager_.expire_task();
@@ -624,23 +624,6 @@ namespace tfs
       return ret;
     }
 
-    bool DataService::access_deny(BasePacket* message)
-    {
-      tbnet::Connection* conn = message->get_connection();
-      if (!conn)
-        return false;
-      /*uint64_t peer_id = conn->getPeerId();
-      int32_t type = message->getPCode();
-      if (type == READ_DATA_MESSAGE || type == READ_DATA_MESSAGE_V2 ||
-          type == READ_DATA_MESSAGE_V3)
-        return acl_.deny(peer_id, AccessControl::READ);
-      if (type == WRITE_DATA_MESSAGE || type == CLOSE_FILE_MESSAGE)
-        return acl_.deny(peer_id, AccessControl::WRITE);
-      if (type == UNLINK_FILE_MESSAGE)
-        return acl_.deny(peer_id, AccessControl::UNLINK);*/
-      return false;
-    }
-
     tbnet::IPacketHandler::HPRetCode DataService::handlePacket(tbnet::Connection *connection, tbnet::Packet *packet)
     {
       tbnet::IPacketHandler::HPRetCode hret = tbnet::IPacketHandler::FREE_CHANNEL;
@@ -664,8 +647,7 @@ namespace tfs
           {
             bpacket->dump();
           }
-          // add access control by message type
-          if ((!access_deny(bpacket)) && !DsRuntimeGlobalInformation::instance().is_destroyed())
+          if (!DsRuntimeGlobalInformation::instance().is_destroyed())
           {
             bret = push(bpacket, false);
             if (bret)
@@ -1503,46 +1485,6 @@ namespace tfs
         }*/
       }
       return ret;
-    }
-
-
-    void DataService::do_stat(const uint64_t peer_id,
-        const int32_t visit_file_size, const int32_t real_len, const int32_t offset, const int32_t mode)
-    {
-      UNUSED(peer_id);
-      UNUSED(visit_file_size);
-      UNUSED(real_len);
-      UNUSED(offset);
-      UNUSED(mode);
-      /*count_mutex_.lock();
-      if (AccessStat::READ_BYTES == mode)
-      {
-        data_server_info_.total_tp_.read_byte_ += real_len;
-        acs_.incr(peer_id, AccessStat::READ_BYTES, real_len);
-        if (0 == offset)
-        {
-          data_server_info_.total_tp_.read_file_count_++;
-          visit_stat_.stat_visit_count(visit_file_size);
-          acs_.incr(peer_id, AccessStat::READ_COUNT, 1);
-        }
-      }
-      else if (AccessStat::WRITE_BYTES == mode)
-      {
-        data_server_info_.total_tp_.write_byte_ += visit_file_size;
-        data_server_info_.total_tp_.write_file_count_++;
-        acs_.incr(peer_id, AccessStat::WRITE_BYTES, visit_file_size);
-        acs_.incr(peer_id, AccessStat::WRITE_COUNT, 1);
-      }
-      else
-      {
-        data_server_info_.total_tp_.read_byte_ += real_len;
-        if (0 == offset)
-        {
-          data_server_info_.total_tp_.read_file_count_++;
-        }
-      }
-      count_mutex_.unlock();*/
-      return;
     }
 
     void DataService::TimeoutThreadHelper::run()

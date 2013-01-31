@@ -24,10 +24,10 @@ namespace tfs
 {
   namespace dataserver
   {
-    Lease::Lease(const LeaseId& lease_id, const int64_t now, const VUINT64& servers):
+    Lease::Lease(const LeaseId& lease_id, const int64_t now_us, const VUINT64& servers):
       lease_id_(lease_id),
-      last_update_time_(now),
-      req_begin_time_(now),
+      last_update_time_(now_us),
+      req_begin_time_(now_us),
       ref_count_(0),
       server_size_(0),
       done_server_size_(0)
@@ -44,22 +44,9 @@ namespace tfs
       }
     }
 
-    void Lease::reset_member_status()
-    {
-      for (int index = 0; index < MAX_REPLICATION_NUM; index++)
-      {
-        if (members_[index].server_ == INVALID_SERVER_ID)
-        {
-          break;
-        }
-        members_[index].info_.version_= INVALID_VERSION;
-        members_[index].status_ = TFS_ERROR;
-      }
-      done_server_size_ = 0;
-    }
-
     int Lease::get_member_info(std::pair<uint64_t, common::BlockInfoV2>* members, int32_t& size) const
     {
+      tbutil::Mutex::Lock lock(mutex_);
       int ret = (NULL != members) ? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -80,6 +67,7 @@ namespace tfs
 
     int Lease::get_block_info(common::BlockInfoV2& info)
     {
+      tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
       int32_t max_version = -1;
       for (int32_t index = 0; index < MAX_REPLICATION_NUM; ++index)
@@ -128,10 +116,11 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    void Lease::reset_member_info()
+    void Lease::reset_member_info(const time_t now_us)
     {
       tbutil::Mutex::Lock lock(mutex_);
       done_server_size_ = 0;
+      req_begin_time_   = now_us;
       for (int32_t index = 0; index < MAX_REPLICATION_NUM; ++index)
       {
         members_[index].info_.version_= INVALID_VERSION;
@@ -150,7 +139,7 @@ namespace tfs
           if (members_[index].server_ != INVALID_SERVER_ID)
             str << " server: " << tbsys::CNetUtil::addrToString(members_[index].server_) << " version: " << members_[index].info_.version_ << " status: " << members_[index].status_;
         }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s lease id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u,block: %u, info: %s",
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s lease id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u, block: %"PRI64_PREFIX"u, info: %s",
             format == NULL ? "" : format, lease_id_.lease_id_, lease_id_.file_id_, lease_id_.block_, str.str().c_str());
       }
     }
@@ -209,17 +198,16 @@ namespace tfs
       return has_version_error;
     }
 
-    WriteLease::WriteLease(const LeaseId& lease_id, const int64_t now, const VUINT64& servers):
-      Lease(lease_id, now, servers)
+    WriteLease::WriteLease(const LeaseId& lease_id, const int64_t now_us, const VUINT64& servers):
+      Lease(lease_id, now_us, servers),
+      data_file_(lease_id.lease_id_, dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir())
     {
-      data_file_ = new (std::nothrow) DataFile(lease_id.lease_id_,
-          dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir());
-      assert(NULL != data_file_);
+
     }
 
     WriteLease::~WriteLease()
     {
-      tbsys::gDelete(data_file_);
+
     }
 
     LeaseManager::LeaseManager():
@@ -236,27 +224,27 @@ namespace tfs
       }
     }
 
-    void LeaseManager::generation(LeaseId& lease_id, const int64_t now, const int8_t type, const VUINT64& servers)
+    void LeaseManager::generation(LeaseId& lease_id, const int64_t now_us, const int8_t type, const VUINT64& servers)
     {
       RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
       Lease* lease = NULL;
       if (INVALID_LEASE_ID == lease_id.lease_id_)
         lease_id.lease_id_ = atomic_inc(&base_lease_id_);
       if (LEASE_TYPE_UNLINK == type)
-        lease = new Lease(lease_id, now, servers);
+        lease = new Lease(lease_id, now_us, servers);
       else
-        lease = new WriteLease(lease_id, now, servers);
+        lease = new WriteLease(lease_id, now_us, servers);
       assert(lease);
       std::pair<LEASE_MAP_ITER, bool> res = leases_.insert(LEASE_MAP::value_type(lease->lease_id_, lease));
       if (!res.second)
         tbsys::gDelete(lease);
     }
 
-    Lease* LeaseManager::get(const LeaseId& lease_id, const int64_t now) const
+    Lease* LeaseManager::get(const LeaseId& lease_id, const int64_t now_us) const
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
       LEASE_MAP_CONST_ITER iter = leases_.find(lease_id);
-      Lease* lease = (leases_.end() != iter && !iter->second->timeout(now)) ? iter->second : NULL;
+      Lease* lease = (leases_.end() != iter && !iter->second->timeout(now_us)) ? iter->second : NULL;
       if (NULL != lease)
       {
         lease->inc_ref();
@@ -294,14 +282,14 @@ namespace tfs
       return leases_.size();
     }
 
-    int LeaseManager::timeout(const time_t now)
+    int LeaseManager::timeout(const time_t now_us)
     {
       RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
       uint32_t total = leases_.size();
       LEASE_MAP_ITER iter = leases_.begin();
       for (; iter != leases_.end(); )
       {
-        if (iter->second->ref_count_ <= 0 && iter->second->timeout(now))
+        if (iter->second->ref_count_ <= 0 && iter->second->timeout(now_us))
         {
           tbsys::gDelete(iter->second);
           leases_.erase(iter++);

@@ -629,7 +629,7 @@ namespace tfs
       int ret = get_block_manager().new_block(block_id, tmp, family_id, index_num);
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "new block %"PRI64_PREFIX"u fail, tmp: %d, family_id: %"PRI64_PREFIX"u, "
+        TBSYS_LOG(WARN, "new block %"PRI64_PREFIX"u fail, tmp: %d, family_id: %"PRI64_PREFIX"u, "
             "index num: %d, ret: %d", block_id, tmp, family_id, index_num, ret);
       }
       else
@@ -648,7 +648,7 @@ namespace tfs
       ret = get_block_manager().del_block(block_id, tmp);
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "remove block %"PRI64_PREFIX"u fail, tmp: %d, ret: %d",
+        TBSYS_LOG(WARN, "remove block %"PRI64_PREFIX"u fail, tmp: %d, ret: %d",
             block_id, tmp, ret);
       }
       else
