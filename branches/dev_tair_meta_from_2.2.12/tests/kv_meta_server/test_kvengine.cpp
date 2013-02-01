@@ -56,11 +56,14 @@ namespace tfs
           ret = EXIT_KV_RETURN_VERSION_ERROR;
         }
       }
-      inner_version++;
-      InnerValue iv;
-      iv.version_ = inner_version;
-      iv.value_.assign(value.get_data(), value.get_size());
-      map_store_[inner_key] = iv;
+      if (TFS_SUCCESS == ret)
+      {
+        inner_version++;
+        InnerValue iv;
+        iv.version_ = inner_version;
+        iv.value_.assign(value.get_data(), value.get_size());
+        map_store_[inner_key] = iv;
+      }
       return ret;
     }
 
