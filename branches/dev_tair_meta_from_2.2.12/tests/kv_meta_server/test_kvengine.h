@@ -44,8 +44,8 @@ namespace tfs
       int scan_from_map(const KvKey &start_key, const KvKey &end_key,
           const int32_t offset, const int32_t limit, std::vector<KvValue*> *vec_realkey, std::vector<KvValue*> *vec_values, int *result_size);
 
-        /*virtual int delete_keys(const std::vector<KvKey>& vec_keys);
-
+      virtual int delete_keys(const std::vector<KvKey>& vec_keys);
+/*
     public:
       //we split object key like bucketname\objecetname to prefix_key = bucketname, seconde_key = object_name
       static int split_key_for_tair(const KvKey& key, tair::data_entry* prefix_key, tair::data_entry* second_key);

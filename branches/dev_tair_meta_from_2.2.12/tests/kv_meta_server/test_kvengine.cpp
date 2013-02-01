@@ -208,7 +208,7 @@ namespace tfs
       return ret;
     }
 
-    /*int TestEngineHelper::delete_keys(const std::vector<KvKey>& vec_keys)
+    int TestEngineHelper::delete_keys(const std::vector<KvKey>& vec_keys)
     {
       int ret = TFS_SUCCESS;
 
@@ -216,21 +216,11 @@ namespace tfs
       {
         case KvKey::KEY_TYPE_OBJECT:
         {
-          tair::data_entry pkey;
-          tair::data_entry skey;
-          tair::tair_dataentry_set skey_set;
-          tair::key_code_map_t key_code_map;
-
           std::vector<KvKey>::const_iterator iter = vec_keys.begin();
           for(; iter != vec_keys.end(); ++iter)
           {
-            ret = split_key_for_tair(*iter, &pkey, &skey);
-            skey_set.insert(&skey);
-
-          }
-          if (TFS_SUCCESS == ret)
-          {
-             ret = prefix_removes_from_tair(object_area_, pkey, skey_set, key_code_map);
+            string store_key(iter->key_, iter->key_size_);
+            map_store_.erase(store_key);
           }
         }
         break;
@@ -239,7 +229,7 @@ namespace tfs
          break;
       }
       return ret;
-    }*/
+    }
 
     int TestEngineHelper::scan_from_map(const KvKey &start_key, const KvKey &end_key,
         const int32_t offset, const int32_t limit, std::vector<KvValue*> *vec_realkey, std::vector<KvValue*> *vec_values, int *result_size)

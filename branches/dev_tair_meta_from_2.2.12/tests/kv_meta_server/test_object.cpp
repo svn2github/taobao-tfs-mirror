@@ -64,8 +64,9 @@ TEST_F(ObjectTest, test_pwrite_head)
 
   BucketMetaInfo bucket_meta_info;
   bucket_meta_info.create_time_ = now_time;
-
-  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
+  UserInfo user_info;
+  user_info.owner_id_ = 666;
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo obj_info;
@@ -74,7 +75,7 @@ TEST_F(ObjectTest, test_pwrite_head)
   obj_info.v_tfs_file_info_.push_back(tfs_file_info);
   obj_info.v_tfs_file_info_[0].offset_ = 0;
 
-  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo new_obj_info;
@@ -96,8 +97,9 @@ TEST_F(ObjectTest, test_pwrite_middle)
 
   BucketMetaInfo bucket_meta_info;
   bucket_meta_info.create_time_ = now_time;
-
-  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
+  UserInfo user_info;
+  user_info.owner_id_ = 555;
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo obj_info;
@@ -105,11 +107,11 @@ TEST_F(ObjectTest, test_pwrite_middle)
   obj_info.v_tfs_file_info_.push_back(tfs_file_info);
 
   obj_info.v_tfs_file_info_[0].offset_ = 0;
-  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   obj_info.v_tfs_file_info_[0].offset_ = 20;
-  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 20, 10, obj_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 20, 10, obj_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo ret_obj_info;
@@ -117,7 +119,7 @@ TEST_F(ObjectTest, test_pwrite_middle)
   EXPECT_EQ(30, ret_obj_info.meta_info_.big_file_size_);
 
   obj_info.v_tfs_file_info_[0].offset_ = 10;
-  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 10, 10, obj_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 10, 10, obj_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->head_object(bucket_name, object_name, &ret_obj_info);
@@ -136,22 +138,23 @@ TEST_F(ObjectTest, test_pwrite_overlap)
 
   BucketMetaInfo bucket_meta_info;
   bucket_meta_info.create_time_ = now_time;
-
-  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
+  UserInfo user_info;
+  user_info.owner_id_ = 222;
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo obj_info;
-  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info ,user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
-  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 20, 10, obj_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 20, 10, obj_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo ret_obj_info;
   ret = test_meta_info_helper_->head_object(bucket_name, object_name, &ret_obj_info);
   EXPECT_EQ(30, ret_obj_info.meta_info_.big_file_size_);
 
-  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 15, 10, obj_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 15, 10, obj_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
   ret = test_meta_info_helper_->head_object(bucket_name, object_name, &ret_obj_info);
   EXPECT_EQ(30, ret_obj_info.meta_info_.big_file_size_);
@@ -169,12 +172,13 @@ TEST_F(ObjectTest, test_pwrite_error_param)
 
   BucketMetaInfo bucket_meta_info;
   bucket_meta_info.create_time_ = now_time;
-
-  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info);
+  UserInfo user_info;
+  user_info.owner_id_ = 222;
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo obj_info;
-  ret = test_meta_info_helper_->put_object(bucket_name, object_name, -1, 10, obj_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, -1, 10, obj_info, user_info);
   EXPECT_EQ(TFS_ERROR, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
@@ -186,9 +190,10 @@ TEST_F(ObjectTest, test_pwrite_no_bucket)
   int ret = TFS_SUCCESS;
   string bucket_name("abcd");
   string object_name("objectname5");
-
+  UserInfo user_info;
+  user_info.owner_id_ = 222;
   ObjectInfo obj_info;
-  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info);
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 10, obj_info, user_info);
 
   EXPECT_EQ(EXIT_BUCKET_NOT_EXIST, ret);
 }
