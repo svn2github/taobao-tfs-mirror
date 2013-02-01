@@ -70,7 +70,7 @@ namespace tfs
       return ret;
     }
 
-    TfsRetType KvMetaClientImpl::put_bucket(const char *bucket_name)
+    TfsRetType KvMetaClientImpl::put_bucket(const char *bucket_name, const UserInfo &user_info)
     {
        TfsRetType ret = TFS_ERROR;
 
@@ -85,7 +85,9 @@ namespace tfs
 
        if (TFS_SUCCESS == ret)
        {
-         ret = do_put_bucket(bucket_name);
+         BucketMetaInfo bucket_meta_info;
+
+         ret = do_put_bucket(bucket_name, bucket_meta_info, user_info);
        }
 
        return ret;
@@ -95,7 +97,7 @@ namespace tfs
                                             const char *start_key, const char delimiter, const int32_t limit,
                                             vector<ObjectMetaInfo> *v_object_meta_info,
                                             vector<string> *v_object_name, set<string> *s_common_prefix,
-                                            int8_t *is_truncated)
+                                            int8_t *is_truncated, const UserInfo &user_info)
     {
        TfsRetType ret = TFS_SUCCESS;
 
@@ -108,7 +110,7 @@ namespace tfs
        if (TFS_SUCCESS == ret)
        {
          ret = do_get_bucket(bucket_name, prefix, start_key, delimiter, limit,
-             v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
+             v_object_meta_info, v_object_name, s_common_prefix, is_truncated, user_info);
        }
 
        TBSYS_LOG(INFO, "%d, %d", static_cast<int32_t>(v_object_name->size()), static_cast<int32_t>(s_common_prefix->size()));
@@ -116,7 +118,7 @@ namespace tfs
        return ret;
     }
 
-    TfsRetType KvMetaClientImpl::del_bucket(const char *bucket_name)
+    TfsRetType KvMetaClientImpl::del_bucket(const char *bucket_name, const UserInfo &user_info)
     {
        TfsRetType ret = TFS_ERROR;
 
@@ -131,13 +133,13 @@ namespace tfs
 
        if (TFS_SUCCESS == ret)
        {
-         ret = do_del_bucket(bucket_name);
+         ret = do_del_bucket(bucket_name, user_info);
        }
 
        return ret;
     }
 
-    TfsRetType KvMetaClientImpl::head_bucket(const char *bucket_name, BucketMetaInfo *bucket_meta_info)
+    TfsRetType KvMetaClientImpl::head_bucket(const char *bucket_name, BucketMetaInfo *bucket_meta_info, const UserInfo &user_info)
     {
        TfsRetType ret = TFS_ERROR;
 
@@ -152,7 +154,7 @@ namespace tfs
 
        if (TFS_SUCCESS == ret)
        {
-         ret = do_head_bucket(bucket_name, bucket_meta_info);
+         ret = do_head_bucket(bucket_name, bucket_meta_info, user_info);
          if (TFS_SUCCESS != ret)
          {
            TBSYS_LOG(ERROR, "head bucket failed. bucket: %s", bucket_name);
@@ -279,13 +281,13 @@ namespace tfs
     }
 
     int64_t KvMetaClientImpl::pwrite_object(const char *bucket_name, const char *object_name,
-        const void *buffer, int64_t offset, int64_t length)
+        const void *buffer, int64_t offset, int64_t length, const UserInfo &user_info)
     {
       int64_t ret = TFS_SUCCESS;
 
       if (TFS_SUCCESS == ret)
       {
-        ret = put_object_to_buf(bucket_name, object_name, buffer, offset, length);
+        ret = put_object_to_buf(bucket_name, object_name, buffer, offset, length, user_info);
       }
 
       return ret;
@@ -311,7 +313,7 @@ namespace tfs
 
 
     int64_t KvMetaClientImpl::put_object_to_buf(const char *bucket_name, const char *object_name,
-        const void *buffer, int64_t offset, int64_t length)
+        const void *buffer, int64_t offset, int64_t length, const UserInfo &user_info)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
@@ -373,7 +375,7 @@ namespace tfs
             tmp_tfs_info.file_size_ = iter->size_;
             object_info.v_tfs_file_info_.push_back(tmp_tfs_info);
 
-            ret = do_put_object(bucket_name, object_name, object_info);
+            ret = do_put_object(bucket_name, object_name, object_info, user_info);
             if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(ERROR, "do put object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %d",
@@ -408,7 +410,7 @@ namespace tfs
 
     int64_t KvMetaClientImpl::get_object_to_buf(const char *bucket_name, const char *object_name,
         void *buffer, const int64_t offset, int64_t length,
-        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info)
+        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info, const UserInfo &user_info)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
@@ -435,7 +437,7 @@ namespace tfs
         {
           // get object
           ObjectInfo object_info;
-          ret = do_get_object(bucket_name, object_name, cur_offset, left_length, &object_info, &still_have);
+          ret = do_get_object(bucket_name, object_name, cur_offset, left_length, &object_info, &still_have, user_info);
           TBSYS_LOG(DEBUG, "bucket_name %s object_name %s "
           "cur_offset %ld left_length %ld still_have %d", bucket_name, object_name, cur_offset, left_length, still_have);
           if (TFS_SUCCESS != ret)
@@ -513,7 +515,7 @@ namespace tfs
     }
 
     TfsRetType KvMetaClientImpl::put_object(const char *bucket_name, const char *object_name,
-        const char* local_file, const int64_t req_offset ,const int64_t req_length)
+        const char* local_file, const int64_t req_offset ,const int64_t req_length, const UserInfo &user_info)
     {
       TfsRetType ret = TFS_SUCCESS;
       int fd = -1;
@@ -563,7 +565,7 @@ namespace tfs
           }
           while (read_len > 0)
           {
-            write_len = put_object_to_buf(bucket_name, object_name, buf, offset, read_len);
+            write_len = put_object_to_buf(bucket_name, object_name, buf, offset, read_len, user_info);
             if (write_len <= 0)
             {
               TBSYS_LOG(ERROR, "put object fail. bucket: %s, object: %s", bucket_name, object_name);
@@ -586,7 +588,7 @@ namespace tfs
 
     TfsRetType KvMetaClientImpl::get_object(const char *bucket_name, const char *object_name,
         const char* local_file, const int64_t req_offset, const int64_t req_length,
-        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info)
+        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info, const UserInfo &user_info)
     {
       TfsRetType ret = TFS_SUCCESS;
       int fd = -1;
@@ -622,7 +624,7 @@ namespace tfs
         while (1)
         {
           cur_length = min(io_size, length);
-          read_len = get_object_to_buf(bucket_name, object_name, buf, offset, cur_length, object_meta_info, customize_info);
+          read_len = get_object_to_buf(bucket_name, object_name, buf, offset, cur_length, object_meta_info, customize_info, user_info);
           if (read_len < 0)
           {
             ret = read_len;
@@ -658,8 +660,7 @@ namespace tfs
       return ret;
     }
 
-
-    TfsRetType KvMetaClientImpl::del_object(const char *bucket_name, const char *object_name)
+    TfsRetType KvMetaClientImpl::del_object(const char *bucket_name, const char *object_name, const UserInfo &user_info)
     {
       TfsRetType ret = TFS_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
@@ -669,18 +670,45 @@ namespace tfs
       }
       else
       {
-        ret = do_del_object(bucket_name, object_name);
+        std::vector< std::pair<FragMeta,int32_t> > v_frag_pair;
+        pair<FragMeta,int32_t> tmp_frag_pair;
+        bool still_have = false;
+        do
+        {
+          ObjectInfo object_info;
+          still_have = false;
+          ret = do_del_object(bucket_name, object_name, &object_info, &still_have, user_info);
+          TBSYS_LOG(DEBUG, "bucket_name %s object_name %s "
+                    " still_have %d", bucket_name, object_name, still_have);
+          TBSYS_LOG(DEBUG, "del vector size ================= is: %d",object_info.v_tfs_file_info_.size());
+          v_frag_pair.clear();
+
+          for(size_t i = 0; i < object_info.v_tfs_file_info_.size(); ++i)
+          {
+            FragMeta frag_meta(object_info.v_tfs_file_info_[i].block_id_,
+                object_info.v_tfs_file_info_[i].file_id_,
+                object_info.v_tfs_file_info_[i].offset_,
+                object_info.v_tfs_file_info_[i].file_size_);
+            tmp_frag_pair = make_pair(frag_meta, object_info.v_tfs_file_info_[i].cluster_id_);
+            v_frag_pair.push_back(tmp_frag_pair);
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            ret = del_file(v_frag_pair, ns_addr_.c_str());
+          }
+
+        }while(still_have);
 
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "del object failed. bucket: %s, object: %s", bucket_name, object_name);
         }
       }
-
       return ret;
     }
 
-    TfsRetType KvMetaClientImpl::head_object(const char *bucket_name, const char *object_name, ObjectInfo *object_info)
+    TfsRetType KvMetaClientImpl::head_object(const char *bucket_name, const char *object_name, ObjectInfo *object_info, const UserInfo &user_info)
     {
       TfsRetType ret = TFS_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
@@ -690,7 +718,7 @@ namespace tfs
       }
       else
       {
-        ret = do_head_object(bucket_name, object_name, object_info);
+        ret = do_head_object(bucket_name, object_name, object_info, user_info);
 
         if (TFS_SUCCESS != ret)
         {
@@ -702,9 +730,9 @@ namespace tfs
     }
 
 
-    int KvMetaClientImpl::do_put_bucket(const char *bucket_name)
+    int KvMetaClientImpl::do_put_bucket(const char *bucket_name, const BucketMetaInfo& bucket_meta_info, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_put_bucket(kms_id_, bucket_name);
+      return KvMetaHelper::do_put_bucket(kms_id_, bucket_name, bucket_meta_info, user_info);
     }
 
     // TODO
@@ -712,43 +740,43 @@ namespace tfs
                                         const char *start_key, const char delimiter, const int32_t limit,
                                         vector<ObjectMetaInfo> *v_object_meta_info,
                                         vector<string> *v_object_name, set<string> *s_common_prefix,
-                                        int8_t *is_truncated)
+                                        int8_t *is_truncated, const UserInfo &user_info)
     {
       return KvMetaHelper::do_get_bucket(kms_id_, bucket_name, prefix, start_key, delimiter, limit,
-          v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
+          v_object_meta_info, v_object_name, s_common_prefix, is_truncated, user_info);
     }
 
-    int KvMetaClientImpl::do_del_bucket(const char *bucket_name)
+    int KvMetaClientImpl::do_del_bucket(const char *bucket_name, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_del_bucket(kms_id_, bucket_name);
+      return KvMetaHelper::do_del_bucket(kms_id_, bucket_name, user_info);
     }
 
-    int KvMetaClientImpl::do_head_bucket(const char *bucket_name, BucketMetaInfo *bucket_meta_info)
+    int KvMetaClientImpl::do_head_bucket(const char *bucket_name, BucketMetaInfo *bucket_meta_info, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_head_bucket(kms_id_, bucket_name, bucket_meta_info);
+      return KvMetaHelper::do_head_bucket(kms_id_, bucket_name, bucket_meta_info, user_info);
     }
 
 
     int KvMetaClientImpl::do_put_object(const char *bucket_name,
-        const char *object_name, const ObjectInfo &object_info)
+        const char *object_name, const ObjectInfo &object_info, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_put_object(kms_id_, bucket_name, object_name, object_info);
+      return KvMetaHelper::do_put_object(kms_id_, bucket_name, object_name, object_info, user_info);
     }
 
     int KvMetaClientImpl::do_get_object(const char *bucket_name,
-        const char *object_name, const int64_t offset, const int64_t length, ObjectInfo *object_info, bool *still_have)
+        const char *object_name, const int64_t offset, const int64_t length, ObjectInfo *object_info, bool *still_have, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_get_object(kms_id_, bucket_name, object_name, offset, length, object_info, still_have);
+      return KvMetaHelper::do_get_object(kms_id_, bucket_name, object_name, offset, length, object_info, still_have, user_info);
     }
 
-    int KvMetaClientImpl::do_del_object(const char *bucket_name, const char *object_name)
+    int KvMetaClientImpl::do_del_object(const char *bucket_name, const char *object_name, ObjectInfo *object_info, bool *still_have, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_del_object(kms_id_, bucket_name, object_name);
+      return KvMetaHelper::do_del_object(kms_id_, bucket_name, object_name, object_info, still_have, user_info);
     }
 
-    int KvMetaClientImpl::do_head_object(const char *bucket_name, const char *object_name, ObjectInfo *object_info)
+    int KvMetaClientImpl::do_head_object(const char *bucket_name, const char *object_name, ObjectInfo *object_info, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_head_object(kms_id_, bucket_name, object_name, object_info);
+      return KvMetaHelper::do_head_object(kms_id_, bucket_name, object_name, object_info, user_info);
     }
 
 
@@ -858,6 +886,23 @@ namespace tfs
       return is_valid;
     }
 
+    int KvMetaClientImpl::del_file(const std::vector< std::pair < common::FragMeta,int32_t > > &v_frag_pair, const char* ns_addr)
+    {
+      int ret = TFS_SUCCESS;
+
+      int64_t file_size = 0;
+      std::vector< std::pair<FragMeta,int32_t> >::const_iterator iter = v_frag_pair.begin();
+      for(; iter != v_frag_pair.end(); iter++)
+      {
+        FSName fsname(iter->first.block_id_, iter->first.file_id_, iter->second);
+        if ( TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, ns_addr) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "unlink tfs file failed, file: %s, ret: %d", fsname.get_name(), ret);
+          ret = TFS_ERROR;
+        }
+      }
+      return ret;
+    }
   }
 }
 

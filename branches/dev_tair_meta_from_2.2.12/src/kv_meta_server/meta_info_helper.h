@@ -55,7 +55,8 @@ namespace tfs
                        const std::string& file_name,
                        const int64_t offset,
                        const int64_t length,
-                       const common::ObjectInfo &object_info);
+                       common::ObjectInfo &object_info,
+                       const common::UserInfo &user_info);
 
         int get_object(const std::string& bucket_name,
                        const std::string& file_name,
@@ -63,7 +64,8 @@ namespace tfs
                        common::ObjectInfo *object_info, bool *still_have);
 
         int del_object(const std::string& bucket_name,
-                       const std::string& file_name);
+                       const std::string& file_name,
+                       common::ObjectInfo *object_info, bool* still_have);
 
         /*----------------------------bucket part-----------------------------*/
 
@@ -71,7 +73,8 @@ namespace tfs
         static int get_common_prefix(const char *key, const std::string &prefix, const char delimiter,
             bool *prefix_flag, bool *common_flag, int *common_end_pos);
 
-        int put_bucket(const std::string& bucket_name, const common::BucketMetaInfo& bucket_meta_info);
+        int put_bucket(const std::string& bucket_name, common::BucketMetaInfo& bucket_meta_info,
+                       const common::UserInfo &user_info);
         int get_bucket(const std::string& bucket_name, const std::string& prefix,
             const std::string& start_key, const char delimiter, const int32_t limit,
             std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
@@ -89,7 +92,7 @@ namespace tfs
                            const int64_t offset,
                            common::ObjectInfo *object_info,
                            int64_t *version);
-        int deserialize_key(const char *key, const int32_t key_size, std::string *object_name,
+        int deserialize_key(const char *key, const int32_t key_size, std::string *bucket_name, std::string *object_name,
             int64_t *offset, int64_t *version);
         int serialize_key(const std::string &bucket_name,
                         const std::string &file_name, const int64_t offset,

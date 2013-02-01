@@ -71,10 +71,12 @@ namespace tfs
         virtual const char* get_data() const;
         virtual void free();
       public:
-        void set_data(const char* data, const int32_t size);
+        void set_data(char* data, const int32_t size);
+        char* malloc_data(const int32_t buffer_size);
       protected:
-        const char* data_;
+        char* data_;
         int32_t size_;
+        bool is_owner_;
     };
 
     class KvEngineHelper

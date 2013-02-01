@@ -27,7 +27,7 @@ using namespace tfs::common;
 using namespace tfs::message;
 using namespace std;
 
-int KvMetaHelper::do_put_bucket(const uint64_t server_id, const char *bucket_name)
+int KvMetaHelper::do_put_bucket(const uint64_t server_id, const char *bucket_name, const BucketMetaInfo& bucket_meta_info, const UserInfo &user_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name)
@@ -38,6 +38,8 @@ int KvMetaHelper::do_put_bucket(const uint64_t server_id, const char *bucket_nam
   {
     ReqKvMetaPutBucketMessage req_pb_msg;
     req_pb_msg.set_bucket_name(bucket_name);
+    req_pb_msg.set_bucket_meta_info(bucket_meta_info);
+    req_pb_msg.set_user_info(user_info);
 
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
@@ -75,7 +77,7 @@ int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_nam
                                 const char *prefix, const char *start_key, char delimiter,
                                 const int32_t limit, vector<ObjectMetaInfo> *v_object_meta_info,
                                 vector<string> *v_object_name, set<string> *s_common_prefix,
-                                int8_t *is_truncated)
+                                int8_t *is_truncated, const UserInfo &user_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name)
@@ -90,6 +92,7 @@ int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_nam
     req_gb_msg.set_start_key(NULL == start_key ? "" : string(start_key));
     req_gb_msg.set_delimiter(delimiter);
     req_gb_msg.set_limit(limit);
+    req_gb_msg.set_user_info(user_info);
 
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
@@ -123,7 +126,7 @@ int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_nam
   return ret;
 }
 
-int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_name)
+int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_name, const UserInfo &user_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name)
@@ -134,6 +137,7 @@ int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_nam
   {
     ReqKvMetaDelBucketMessage req_db_msg;
     req_db_msg.set_bucket_name(bucket_name);
+    req_db_msg.set_user_info(user_info);
 
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
@@ -168,7 +172,7 @@ int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_nam
 
 }
 
-int KvMetaHelper::do_head_bucket(const uint64_t server_id, const char *bucket_name, BucketMetaInfo *bucket_meta_info)
+int KvMetaHelper::do_head_bucket(const uint64_t server_id, const char *bucket_name, BucketMetaInfo *bucket_meta_info, const UserInfo &user_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name)
@@ -179,6 +183,7 @@ int KvMetaHelper::do_head_bucket(const uint64_t server_id, const char *bucket_na
   {
     ReqKvMetaHeadBucketMessage req_hb_msg;
     req_hb_msg.set_bucket_name(bucket_name);
+    req_hb_msg.set_user_info(user_info);
 
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
@@ -211,7 +216,7 @@ int KvMetaHelper::do_head_bucket(const uint64_t server_id, const char *bucket_na
 
 
 int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_name,const char *object_name,
-    const ObjectInfo &object_info)
+    const ObjectInfo &object_info, const UserInfo &user_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name || NULL == object_name)
@@ -224,6 +229,7 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
     req_po_msg.set_bucket_name(bucket_name);
     req_po_msg.set_file_name(object_name);
     req_po_msg.set_object_info(object_info);
+    req_po_msg.set_user_info(user_info);
 
 
     tbnet::Packet* rsp = NULL;
@@ -259,7 +265,7 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
 }
 
 int KvMetaHelper::do_get_object(const uint64_t server_id, const char *bucket_name, const char *object_name,
-const int64_t offset, const int64_t length, ObjectInfo *object_info, bool *still_have)
+const int64_t offset, const int64_t length, ObjectInfo *object_info, bool *still_have, const UserInfo &user_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name || NULL == object_name)
@@ -273,6 +279,7 @@ const int64_t offset, const int64_t length, ObjectInfo *object_info, bool *still
     req_go_msg.set_file_name(object_name);
     req_go_msg.set_offset(offset);
     req_go_msg.set_length(length);
+    req_go_msg.set_user_info(user_info);
     TBSYS_LOG(DEBUG, "bucket_name %s object_name %s "
             "offset %ld length %ld still_have %d", bucket_name, object_name, offset, length, *still_have);
     tbnet::Packet* rsp = NULL;
@@ -314,7 +321,7 @@ const int64_t offset, const int64_t length, ObjectInfo *object_info, bool *still
 }
 
 int KvMetaHelper::do_del_object(const uint64_t server_id, const char *bucket_name,
-    const char *object_name)
+    const char *object_name, ObjectInfo *object_info, bool *still_have, const UserInfo &user_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name || NULL == object_name)
@@ -326,6 +333,7 @@ int KvMetaHelper::do_del_object(const uint64_t server_id, const char *bucket_nam
     ReqKvMetaDelObjectMessage req_do_msg;
     req_do_msg.set_bucket_name(bucket_name);
     req_do_msg.set_file_name(object_name);
+    req_do_msg.set_user_info(user_info);
 
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
@@ -337,6 +345,12 @@ int KvMetaHelper::do_del_object(const uint64_t server_id, const char *bucket_nam
           "object_name: %s, ret: %d",
           server_id, bucket_name, object_name, ret);
       ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_DEL_OBJECT_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaDelObjectMessage* rsp_do_msg = dynamic_cast<RspKvMetaDelObjectMessage*>(rsp);
+      *object_info = rsp_do_msg->get_object_info();
+      *still_have = rsp_do_msg->get_still_have();
     }
     else if (STATUS_MESSAGE == rsp->getPCode())
     {
@@ -360,7 +374,7 @@ int KvMetaHelper::do_del_object(const uint64_t server_id, const char *bucket_nam
 }
 
 int KvMetaHelper::do_head_object(const uint64_t server_id, const char *bucket_name,
-    const char *object_name, ObjectInfo *object_info)
+    const char *object_name, ObjectInfo *object_info, const UserInfo &user_info)
 {
   int ret = TFS_SUCCESS;
   if (NULL == bucket_name || NULL == object_name)
@@ -372,7 +386,7 @@ int KvMetaHelper::do_head_object(const uint64_t server_id, const char *bucket_na
     ReqKvMetaHeadObjectMessage req_ho_msg;
     req_ho_msg.set_bucket_name(bucket_name);
     req_ho_msg.set_file_name(object_name);
-
+    req_ho_msg.set_user_info(user_info);
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
     ret = send_msg_to_server(server_id, client, &req_ho_msg, rsp, ClientConfig::wait_timeout_);

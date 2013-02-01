@@ -40,7 +40,7 @@ namespace tfs
     }
 
     KvMemValue::KvMemValue()
-    :data_(NULL),size_(0)
+    :data_(NULL), size_(0), is_owner_(false)
     {
     }
     KvMemValue::~KvMemValue()
@@ -55,13 +55,43 @@ namespace tfs
     {
       return data_;
     }
-    void KvMemValue::set_data(const char* data, const int32_t size)
+    void KvMemValue::set_data(char* data, const int32_t size)
     {
+      if (is_owner_)
+      {
+        ::free(data_);
+        data_ = NULL;
+        is_owner_ = false;
+      }
       data_ = data;
       size_ = size;
     }
+    char* KvMemValue::malloc_data(const int32_t buffer_size)
+    {
+      if (NULL != data_ && is_owner_)
+      {
+        ::free(data_);
+      }
+      data_ = (char*) malloc(buffer_size);
+      if (data_ == NULL)
+      {
+        TBSYS_LOG(ERROR, "malloc fail");
+      }
+      else
+      {
+        size_ = buffer_size;
+        is_owner_ = true;
+      }
+      return data_;
+    }
     void KvMemValue::free()
     {
+      if(is_owner_)
+      {
+        ::free(data_);
+        data_ = NULL;
+        is_owner_ = false;
+      }
       delete this;
     }
 

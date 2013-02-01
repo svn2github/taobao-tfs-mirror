@@ -136,11 +136,13 @@ namespace tfs
             {
               ret = split_key_for_tair(key, &t_pkey, &t_skey);
             }
-            tvalue.set_data(value.get_data(), value.get_size());
+            if (TFS_SUCCESS == ret)
+            {
+              tvalue.set_data(value.get_data(), value.get_size());
 
-            ret = prefix_put_to_tair(object_area_,
-                t_pkey, t_skey, tvalue, version);
-
+              ret = prefix_put_to_tair(object_area_,
+                  t_pkey, t_skey, tvalue, version);
+            }
           }
           break;
         case KvKey::KEY_TYPE_BUCKET:
@@ -191,16 +193,18 @@ namespace tfs
               {
                 *version = tvalue->get_version();
               }
-              TairValue *p_tair_value = new TairValue();
-              if (NULL == p_tair_value)
-              {
-                ret = TFS_ERROR;
-              }
-
               if (TFS_SUCCESS == ret)
               {
+                TairValue *p_tair_value = new (std::nothrow) TairValue();
+                assert(NULL != p_tair_value);
+
                 p_tair_value->set_tair_value(tvalue);
                 *pp_value = p_tair_value;
+              }
+              else
+              {
+                delete tvalue;
+                tvalue = NULL;
               }
             }
             break;
@@ -220,16 +224,18 @@ namespace tfs
                 *version = pvalue->get_version();
               }
 
-              TairValue *p_tair_value = new TairValue();
-              if (NULL == p_tair_value)
-              {
-                ret = TFS_ERROR;
-              }
-
               if (TFS_SUCCESS == ret)
               {
+                TairValue *p_tair_value = new (std::nothrow) TairValue();
+                assert(NULL != p_tair_value);
+
                 p_tair_value->set_tair_value(pvalue);
                 *pp_value = p_tair_value;
+              }
+              else
+              {
+                delete pvalue;
+                pvalue = NULL;
               }
             }
             break;
@@ -278,11 +284,21 @@ namespace tfs
               {
                 for(size_t i = 0; i < tvalues.size(); i += 2)
                 {
-                  TairValue* k_tmp = new TairValue();
-                  k_tmp->set_tair_value(tvalues[i]);
+                  KvMemValue* k_tmp = new (std::nothrow) KvMemValue();
+                  assert(NULL != k_tmp);
+                  char* buff = k_tmp->malloc_data(t_pkey.get_size() + tvalues[i]->get_size());
+
+                  int64_t pos = 0;
+                  memcpy(buff + pos, t_pkey.get_data(), t_pkey.get_size());
+                  pos += t_pkey.get_size();
+                  memcpy(buff + pos, tvalues[i]->get_data(), tvalues[i]->get_size());
+                  pos += tvalues[i]->get_size();
                   keys->push_back(k_tmp);
+                  delete tvalues[i];
+                  tvalues[i] = NULL;
                   //TBSYS_LOG(INFO, "keys: %s", string(tvalues[i]->get_data(), tvalues[i]->get_size()).c_str());
-                  TairValue* v_tmp = new TairValue();
+                  TairValue* v_tmp = new (std::nothrow) TairValue();
+                  assert(NULL != v_tmp);
                   v_tmp->set_tair_value(tvalues[i+1]);
                   values->push_back(v_tmp);
                 }
@@ -292,13 +308,25 @@ namespace tfs
               {
                 for(size_t i = 0; i < tvalues.size(); ++i)
                 {
-                  TairValue* p_tmp = new TairValue();
+                  TairValue* p_tmp = new (std::nothrow) TairValue();
+                  assert(NULL != p_tmp);
                   p_tmp->set_tair_value(tvalues[i]);
                   values->push_back(p_tmp);
                 }
                 *result_size = static_cast<int32_t>(tvalues.size());
               }
               ret = TFS_SUCCESS;
+            }
+            else
+            {
+              for(size_t i = 0; i < tvalues.size(); ++i)
+              {
+                if (NULL != tvalues[i])
+                {
+                  delete tvalues[i];
+                  tvalues[i] = NULL;
+                }
+              }
             }
           }
           break;
@@ -348,21 +376,31 @@ namespace tfs
         case KvKey::KEY_TYPE_OBJECT:
           {
             tair::data_entry pkey;
-            tair::data_entry skey;
+            std::vector<tair::data_entry* > v_skey;
             tair::tair_dataentry_set skey_set;
             tair::key_code_map_t key_code_map;
+
+            TBSYS_LOG(DEBUG, "READY removes is %d", ret);
 
             std::vector<KvKey>::const_iterator iter = vec_keys.begin();
             for(; iter != vec_keys.end(); ++iter)
             {
-              ret = split_key_for_tair(*iter, &pkey, &skey);
-              skey_set.insert(&skey);
-
+              data_entry* p_skey = new data_entry();
+              ret = split_key_for_tair(*iter, &pkey, p_skey);
+              v_skey.push_back(p_skey);
+              skey_set.insert(p_skey);
             }
             if (TFS_SUCCESS == ret)
             {
               ret = prefix_removes_from_tair(object_area_, pkey, skey_set, key_code_map);
+              TBSYS_LOG(DEBUG, "ret removes is %d", ret);
             }
+            std::vector<tair::data_entry* >::const_iterator iter_skey = v_skey.begin();
+            for(; iter_skey != v_skey.end(); ++iter_skey)
+            {
+              delete (*iter_skey);
+            }
+
           }
           break;
         default:
@@ -507,6 +545,7 @@ namespace tfs
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
         //TODO change tair errno to TFS errno
+        TBSYS_LOG(ERROR, "tair_ret removes is %d", tair_ret);
         ret = TFS_ERROR;
       }
       return ret;

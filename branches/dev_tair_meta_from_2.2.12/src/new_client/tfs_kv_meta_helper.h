@@ -27,30 +27,36 @@ namespace tfs
     class KvMetaHelper
     {
     public:
-      static int do_put_bucket(const uint64_t server_id, const char *bucket_name);
+      static int do_put_bucket(const uint64_t server_id, const char *bucket_name, const common::BucketMetaInfo& bucket_meta_info,
+                               const common::UserInfo &user_info);
       // TODO: parameter
       static int do_get_bucket(const uint64_t server_id, const char *bucket_name,
                                const char *prefix, const char *start_key, char delimiter, const int32_t limit,
                                std::vector<common::ObjectMetaInfo> *v_object_meta_info,
                                std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix,
-                               int8_t *is_trucated);
-      static int do_del_bucket(const uint64_t server_id, const char *bucket_name);
-      static int do_head_bucket(const uint64_t server_id, const char *bucket_name, common::BucketMetaInfo *bucket_meta_info);
+                               int8_t *is_trucated, const common::UserInfo &user_info);
+      static int do_del_bucket(const uint64_t server_id, const char *bucket_name, const common::UserInfo &user_info);
+      static int do_head_bucket(const uint64_t server_id, const char *bucket_name, common::BucketMetaInfo *bucket_meta_info,
+                                const common::UserInfo &user_info);
 
       static int do_put_object(const uint64_t server_id,
                                const char *bucket_name, const char *object_name,
-                               const common::ObjectInfo &object_info);
+                               const common::ObjectInfo &object_info, const common::UserInfo &user_info);
       static int do_get_object(const uint64_t server_id,
                                const char *bucket_name, const char *object_name,
                                const int64_t offset, const int64_t length,
-                               common::ObjectInfo *object_info, bool *still_have);
+                               common::ObjectInfo *object_info, bool *still_have,
+                               const common::UserInfo &user_info);
       static int do_del_object(const uint64_t server_id,
                                const char *bucket_name,
-                               const char *object_name);
+                               const char *object_name,
+                               common::ObjectInfo *object_info, bool *still_have,
+                               const common::UserInfo &user_info);
       static int do_head_object(const uint64_t server_id,
                                const char *bucket_name,
                                const char *object_name,
-                               common::ObjectInfo *object_info);
+                               common::ObjectInfo *object_info,
+                               const common::UserInfo &user_info);
     };
   }
 }

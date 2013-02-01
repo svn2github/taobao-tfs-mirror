@@ -33,11 +33,13 @@ namespace tfs
       TFS_FILE_INFO_OFFSET_TAG = 104,
       TFS_FILE_INFO_FILE_SIZE_TAG = 105,
 
+
       //ObjectMetaInfo struct
       OBJECT_META_INFO_CREATE_TIME_TAG = 201,
       OBJECT_META_INFO_MODIFY_TIME_TAG = 202,
       OBJECT_META_INFO_MAX_TFS_FILE_SIZE_TAG = 203,
       OBJECT_META_INFO_BIG_FILE_SIZE_TAG = 204,
+      OBJECT_META_INFO_OWNER_ID_TAG = 205,
 
       //CustomizeInfo struct
       CUSTOMIZE_INFO_OTAG_TAG = 301,
@@ -50,7 +52,14 @@ namespace tfs
       OBJECT_INFO_CUSTOMIZE_INFO_TAG = 405,
 
       //BucketMetaInfo struct
-      BUCKET_META_INFO_CREATE_TIME_TAG = 406
+      BUCKET_META_INFO_CREATE_TIME_TAG = 501,
+      BUCKET_META_INFO_OWNER_ID_TAG = 502,
+
+      //UserInfo
+      USER_INFO_OWNER_ID_TAG = 801,
+
+      //End TAG
+      END_TAG = 999
     };
 
     const char PERIOD = '.';
@@ -94,6 +103,8 @@ namespace tfs
       int32_t max_tfs_file_size_;
 
       int64_t big_file_size_;
+
+      int64_t owner_id_;
     };
 
     struct CustomizeInfo
@@ -138,6 +149,17 @@ namespace tfs
       }
 
       int64_t create_time_;
+      int64_t owner_id_;
+    };
+
+    struct UserInfo
+    {
+      UserInfo();
+      int64_t length() const;
+      int serialize(char *data, const int64_t data_len, int64_t &pos) const;
+      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
+
+      int64_t owner_id_;
     };
 
   }

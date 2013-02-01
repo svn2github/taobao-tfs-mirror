@@ -285,6 +285,9 @@ namespace tfs
           case common::REQ_KVMETA_DEL_OBJECT_MESSAGE:
             packet = new ReqKvMetaDelObjectMessage();
             break;
+          case common::RSP_KVMETA_DEL_OBJECT_MESSAGE:
+            packet = new RspKvMetaDelObjectMessage();
+            break;
           case common::REQ_KVMETA_HEAD_OBJECT_MESSAGE:
             packet = new ReqKvMetaHeadObjectMessage();
             break;

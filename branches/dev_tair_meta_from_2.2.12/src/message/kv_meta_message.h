@@ -24,6 +24,7 @@ namespace tfs
 {
   namespace message
   {
+
     class ReqKvMetaPutObjectMessage : public common::BasePacket
     {
       public:
@@ -48,6 +49,11 @@ namespace tfs
           return object_info_;
         }
 
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
         void set_bucket_name(const std::string& bucket_name)
         {
           bucket_name_ = bucket_name;
@@ -63,10 +69,16 @@ namespace tfs
           object_info_ = object_info;
         }
 
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
       private:
         std::string bucket_name_;
         std::string file_name_;
         common::ObjectInfo object_info_;
+        common::UserInfo user_info_;
     };
 
     class ReqKvMetaGetObjectMessage : public common::BasePacket
@@ -98,6 +110,11 @@ namespace tfs
           return length_;
         }
 
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
         void set_bucket_name(const std::string& bucket_name)
         {
           bucket_name_ = bucket_name;
@@ -117,11 +134,17 @@ namespace tfs
         {
           length_ = length;
         }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
       private:
         std::string bucket_name_;
         std::string file_name_;
         int64_t offset_;
         int64_t length_;
+        common::UserInfo user_info_;
     };
 
     class RspKvMetaGetObjectMessage : public common::BasePacket
@@ -177,6 +200,11 @@ namespace tfs
           return file_name_;
         }
 
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
         void set_bucket_name(const std::string& bucket_name)
         {
           bucket_name_ = bucket_name;
@@ -187,9 +215,50 @@ namespace tfs
           file_name_ = file_name;
         }
 
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
+
       private:
         std::string bucket_name_;
         std::string file_name_;
+        common::UserInfo user_info_;
+    };
+
+    class RspKvMetaDelObjectMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaDelObjectMessage();
+        virtual ~RspKvMetaDelObjectMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const bool get_still_have() const
+        {
+          return still_have_;
+        }
+
+        void set_still_have(const bool still_have)
+        {
+          still_have_ = still_have;
+        }
+
+        const common::ObjectInfo& get_object_info() const
+        {
+          return object_info_;
+        }
+
+        void set_object_info(const common::ObjectInfo& object_info)
+        {
+          object_info_ = object_info;
+        }
+
+      private:
+        bool still_have_;
+        common::ObjectInfo object_info_;
     };
 
     class ReqKvMetaHeadObjectMessage : public common::BasePacket
@@ -211,6 +280,11 @@ namespace tfs
           return file_name_;
         }
 
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
         void set_bucket_name(const std::string& bucket_name)
         {
           bucket_name_ = bucket_name;
@@ -221,9 +295,14 @@ namespace tfs
           file_name_ = file_name;
         }
 
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
       private:
         std::string bucket_name_;
         std::string file_name_;
+        common::UserInfo user_info_;
     };
 
     class RspKvMetaHeadObjectMessage : public common::BasePacket
@@ -305,9 +384,20 @@ namespace tfs
           return &bucket_meta_info_;
         }
 
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
       private:
         std::string bucket_name_;
         common::BucketMetaInfo bucket_meta_info_;
+        common::UserInfo user_info_;
     };
 
     class ReqKvMetaGetBucketMessage : public common::BasePacket
@@ -369,12 +459,22 @@ namespace tfs
           return limit_;
         }
 
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
       private:
         std::string bucket_name_;
         std::string prefix_;
         std::string start_key_;
         int32_t limit_;
         char delimiter_; //just a character to group keys
+        common::UserInfo user_info_;
     };
 
     class RspKvMetaGetBucketMessage : public common::BasePacket
@@ -483,8 +583,19 @@ namespace tfs
           return bucket_name_;
         }
 
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
       private:
         std::string bucket_name_;
+        common::UserInfo user_info_;
     };
 
     class ReqKvMetaHeadBucketMessage : public common::BasePacket
@@ -506,8 +617,19 @@ namespace tfs
           return bucket_name_;
         }
 
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
       private:
         std::string bucket_name_;
+        common::UserInfo user_info_;
     };
 
     class RspKvMetaHeadBucketMessage : public common::BasePacket

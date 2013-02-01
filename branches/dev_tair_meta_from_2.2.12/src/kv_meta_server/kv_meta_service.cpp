@@ -202,6 +202,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ObjectInfo object_info = req_put_object_msg->get_object_info();
+        UserInfo user_info = req_put_object_msg->get_user_info();
         int64_t length = 0;
         for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
         {
@@ -209,7 +210,7 @@ namespace tfs
         }
         ret = meta_info_helper_.put_object(req_put_object_msg->get_bucket_name(),
             req_put_object_msg->get_file_name(), object_info.v_tfs_file_info_.front().offset_,
-            length, object_info);
+            length, object_info, user_info);
       }
 
       if (TFS_SUCCESS != ret)
@@ -241,10 +242,11 @@ namespace tfs
                                            req_get_object_msg->get_offset(),
                                            req_get_object_msg->get_length(),
                                            &object_info, &still_have);
-        TBSYS_LOG(DEBUG, "get object, bucket_name: %s , object_name: %s, still_have: %d ret: %d",
+        TBSYS_LOG(DEBUG, "get object, bucket_name: %s , object_name: %s, still_have: %d owner_id: %"PRI64_PREFIX"d ret: %d",
                   req_get_object_msg->get_bucket_name().c_str(),
                   req_get_object_msg->get_file_name().c_str(),
                   still_have,
+                  object_info.meta_info_.owner_id_,
                   ret);
 
         if (TFS_SUCCESS == ret)
@@ -277,12 +279,13 @@ namespace tfs
         TBSYS_LOG(ERROR, "KvMetaService::del_object fail, ret: %d", ret);
       }
 
+      ObjectInfo object_info;
+      bool still_have = false;
       if (TFS_SUCCESS == ret)
       {
-       // ObjectInfo object_info;
-       // bool still_have = false;
         ret = meta_info_helper_.del_object(req_del_object_msg->get_bucket_name(),
-                                           req_del_object_msg->get_file_name());
+                                           req_del_object_msg->get_file_name(),
+                                           &object_info, &still_have);
       }
 
       if (TFS_SUCCESS != ret)
@@ -291,7 +294,13 @@ namespace tfs
       }
       else
       {
-        ret = req_del_object_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        RspKvMetaDelObjectMessage* rsp_del_object_msg = new(std::nothrow) RspKvMetaDelObjectMessage();
+          assert(NULL != rsp_del_object_msg);
+          rsp_del_object_msg->set_object_info(object_info);
+          rsp_del_object_msg->set_still_have(still_have);
+          object_info.dump();
+
+          req_del_object_msg->reply(rsp_del_object_msg);
         stat_mgr_.update_entry(tfs_kv_meta_stat_, "del_object", 1);
       }
       return ret;
@@ -342,8 +351,9 @@ namespace tfs
         int64_t now_time = static_cast<int64_t>(time(NULL));
         BucketMetaInfo *bucket_meta_info = put_bucket_msg->get_mutable_bucket_meta_info();
         bucket_meta_info->set_create_time(now_time);
+        UserInfo user_info = put_bucket_msg->get_user_info();
 
-        ret = meta_info_helper_.put_bucket(put_bucket_msg->get_bucket_name(), *bucket_meta_info);
+        ret = meta_info_helper_.put_bucket(put_bucket_msg->get_bucket_name(), *bucket_meta_info, user_info);
       }
 
       if (TFS_SUCCESS != ret)

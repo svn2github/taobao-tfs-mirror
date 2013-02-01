@@ -29,7 +29,7 @@ namespace tfs
     int64_t TfsFileInfo::length() const
     {
       // add 5 tag to self-interpret
-      return INT64_SIZE * 4 + INT_SIZE + 5 * INT_SIZE;
+      return INT64_SIZE * 4 + INT_SIZE + 6 * INT_SIZE;
     }
 
     void TfsFileInfo::dump() const
@@ -82,12 +82,16 @@ namespace tfs
       {
         ret = Serialization::set_int64(data, data_len, pos, offset_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
       return ret;
     }
 
     int TfsFileInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
 
       while (TFS_SUCCESS == ret)
       {
@@ -113,6 +117,9 @@ namespace tfs
             case TFS_FILE_INFO_OFFSET_TAG:
               ret = Serialization::get_int64(data, data_len, pos, &offset_);
               break;
+            case END_TAG:
+              ;
+              break;
             default:
               TBSYS_LOG(ERROR, "tfs file info: %d can't self-interpret", type_tag);
               ret = TFS_ERROR;
@@ -120,7 +127,7 @@ namespace tfs
           }
         }
 
-        if (TFS_FILE_INFO_OFFSET_TAG == type_tag)
+        if (END_TAG == type_tag)
         {
           break;
         }
@@ -132,19 +139,20 @@ namespace tfs
     //object meta info
     ObjectMetaInfo::ObjectMetaInfo()
       :create_time_(0), modify_time_(0),
-      max_tfs_file_size_(2048), big_file_size_(0)
+      max_tfs_file_size_(2048), big_file_size_(0),
+      owner_id_(0)
     {}
 
     int64_t ObjectMetaInfo::length() const
     {
-      return INT_SIZE  + INT64_SIZE * 3 + 4 * INT_SIZE;
+      return INT_SIZE  + INT64_SIZE * 4 + 6 * INT_SIZE;
     }
 
     void ObjectMetaInfo::dump() const
     {
       TBSYS_LOG(DEBUG, "ObjectMetaInfo: [create_time: %"PRI64_PREFIX"d, modify_time: %"PRI64_PREFIX"d, "
-          "big_file_size: %"PRI64_PREFIX"d, max_tfs_file_size: %d]",
-          create_time_, modify_time_, big_file_size_, max_tfs_file_size_);
+          "big_file_size: %"PRI64_PREFIX"d, max_tfs_file_size: %d, owner_id_: %"PRI64_PREFIX"d]",
+          create_time_, modify_time_, big_file_size_, max_tfs_file_size_, owner_id_);
     }
 
     int ObjectMetaInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -182,13 +190,25 @@ namespace tfs
       {
         ret = Serialization::set_int32(data, data_len, pos, max_tfs_file_size_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_META_INFO_OWNER_ID_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, owner_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
 
       return ret;
     }
 
     int ObjectMetaInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
 
       while (TFS_SUCCESS == ret)
       {
@@ -211,6 +231,12 @@ namespace tfs
             case OBJECT_META_INFO_MAX_TFS_FILE_SIZE_TAG:
               ret = Serialization::get_int32(data, data_len, pos, &max_tfs_file_size_);
               break;
+            case OBJECT_META_INFO_OWNER_ID_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &owner_id_);
+              break;
+            case END_TAG:
+              ;
+              break;
             default:
               TBSYS_LOG(ERROR, "object meta info: %d can't self-interpret", type_tag);
               ret = TFS_ERROR;
@@ -218,7 +244,7 @@ namespace tfs
           }
         }
 
-        if (OBJECT_META_INFO_MAX_TFS_FILE_SIZE_TAG == type_tag)
+        if (END_TAG == type_tag)
         {
           break;
         }
@@ -234,7 +260,7 @@ namespace tfs
 
     int64_t CustomizeInfo::length() const
     {
-      return Serialization::get_string_length(otag_) + INT_SIZE;
+      return Serialization::get_string_length(otag_) + INT_SIZE * 2;
     }
 
     int CustomizeInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -248,12 +274,16 @@ namespace tfs
       {
         ret = Serialization::set_string(data, data_len, pos, otag_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
       return ret;
     }
 
     int CustomizeInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
 
       while (TFS_SUCCESS == ret)
       {
@@ -267,6 +297,9 @@ namespace tfs
             case CUSTOMIZE_INFO_OTAG_TAG:
               ret = Serialization::get_string(data, data_len, pos, otag_);
               break;
+            case END_TAG:
+              ;
+              break;
             default:
               TBSYS_LOG(ERROR, "customize info: %d can't self-interpret", type_tag);
               ret = TFS_ERROR;
@@ -274,7 +307,7 @@ namespace tfs
           }
         }
 
-        if (CUSTOMIZE_INFO_OTAG_TAG == type_tag)
+        if (END_TAG == type_tag)
         {
           break;
         }
@@ -290,9 +323,9 @@ namespace tfs
 
     int64_t ObjectInfo::length() const
     {
-      return (INT8_SIZE * 2  + (v_tfs_file_info_.size() * (INT64_SIZE * 4 + INT_SIZE + 5 * INT_SIZE))
+      return (INT8_SIZE * 2  + (v_tfs_file_info_.size() * (INT64_SIZE * 4 + INT_SIZE + 6 * INT_SIZE))
           + INT_SIZE + (has_meta_info_ ? meta_info_.length() : 0) +
-          (has_customize_info_ ? customize_info_.length() : 0)) + 5 * INT_SIZE;
+          (has_customize_info_ ? customize_info_.length() : 0)) + 6 * INT_SIZE;
     }
 
     void ObjectInfo::dump() const
@@ -354,13 +387,17 @@ namespace tfs
       {
         ret = customize_info_.serialize(data, data_len, pos);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
 
       return ret;
     }
 
     int ObjectInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
 
       while (TFS_SUCCESS == ret)
       {
@@ -406,7 +443,9 @@ namespace tfs
                 ret = customize_info_.deserialize(data, data_len, pos);
               }
               break;
-
+            case END_TAG:
+              ;
+              break;
             default:
               TBSYS_LOG(ERROR, "object info: %d can't self-interpret", type_tag);
               ret = TFS_ERROR;
@@ -414,7 +453,7 @@ namespace tfs
           }
         }
 
-        if (OBJECT_INFO_CUSTOMIZE_INFO_TAG == type_tag)
+        if (END_TAG == type_tag)
         {
           break;
         }
@@ -425,12 +464,12 @@ namespace tfs
 
     //bucketmetainfo
     BucketMetaInfo::BucketMetaInfo()
-      :create_time_(0)
+      :create_time_(0), owner_id_(0)
     {}
 
     int64_t BucketMetaInfo::length() const
     {
-      return INT64_SIZE + INT_SIZE;
+      return INT64_SIZE * 2 + INT_SIZE * 3;
     }
 
     int BucketMetaInfo::serialize(char *data, const int64_t data_len, int64_t &pos) const
@@ -444,12 +483,24 @@ namespace tfs
       {
         ret = Serialization::set_int64(data, data_len, pos, create_time_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKET_META_INFO_OWNER_ID_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, owner_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
       return ret;
     }
 
     int BucketMetaInfo::deserialize(const char *data, const int64_t data_len, int64_t &pos)
     {
-      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
 
       while (TFS_SUCCESS == ret)
       {
@@ -463,6 +514,12 @@ namespace tfs
             case BUCKET_META_INFO_CREATE_TIME_TAG:
               ret = Serialization::get_int64(data, data_len, pos, &create_time_);
               break;
+            case BUCKET_META_INFO_OWNER_ID_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &owner_id_);
+              break;
+            case END_TAG:
+              ;
+              break;
             default:
               TBSYS_LOG(ERROR, "bucket meta info: %d can't self-interpret", type_tag);
               ret = TFS_ERROR;
@@ -470,7 +527,7 @@ namespace tfs
           }
         }
 
-        if (BUCKET_META_INFO_CREATE_TIME_TAG == type_tag)
+        if (END_TAG == type_tag)
         {
           break;
         }
@@ -479,6 +536,67 @@ namespace tfs
       return ret;
     }
 
+    //userinfo
+    UserInfo::UserInfo()
+    :owner_id_(0)
+    {}
+    int64_t UserInfo::length() const
+    {
+      return INT64_SIZE * 1 + INT_SIZE * 2;
+    }
+
+    int UserInfo::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, USER_INFO_OWNER_ID_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, owner_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
+      return ret;
+    }
+
+    int UserInfo::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    {
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
+
+      while (TFS_SUCCESS == ret)
+      {
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
+
+        if (TFS_SUCCESS == ret)
+        {
+          switch (type_tag)
+          {
+            case USER_INFO_OWNER_ID_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &owner_id_);
+              break;
+            case END_TAG:
+              ;
+              break;
+            default:
+              TBSYS_LOG(ERROR, "user info: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
+          }
+        }
+
+        if (END_TAG == type_tag)
+        {
+          break;
+        }
+      }
+
+      return ret;
+    }
 
   }
 }
