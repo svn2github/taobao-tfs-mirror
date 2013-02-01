@@ -1015,8 +1015,8 @@ namespace tfs
     int MetaInfoHelper::put_bucket(const std::string& bucket_name, common::BucketMetaInfo& bucket_meta_info,
                                    const common::UserInfo &user_info)
     {
-      //TODO for test now
-      UNUSED(user_info);
+      int64_t now_time = static_cast<int64_t>(time(NULL));
+      bucket_meta_info.set_create_time(now_time);
       int ret = TFS_SUCCESS;
 
       if (TFS_SUCCESS == ret)

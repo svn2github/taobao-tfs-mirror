@@ -202,7 +202,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ObjectInfo object_info = req_put_object_msg->get_object_info();
-        UserInfo user_info = req_put_object_msg->get_user_info();
+        const UserInfo &user_info = req_put_object_msg->get_user_info();
         int64_t length = 0;
         for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
         {
@@ -348,10 +348,8 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        int64_t now_time = static_cast<int64_t>(time(NULL));
         BucketMetaInfo *bucket_meta_info = put_bucket_msg->get_mutable_bucket_meta_info();
-        bucket_meta_info->set_create_time(now_time);
-        UserInfo user_info = put_bucket_msg->get_user_info();
+        const UserInfo &user_info = put_bucket_msg->get_user_info();
 
         ret = meta_info_helper_.put_bucket(put_bucket_msg->get_bucket_name(), *bucket_meta_info, user_info);
       }
