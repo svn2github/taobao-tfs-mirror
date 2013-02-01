@@ -30,6 +30,11 @@ namespace tfs
     class TestEngineHelper : public TairEngineHelper
     {
     public:
+      struct InnerValue {
+        int64_t version_;
+        std::string value_;
+        InnerValue():version_(0){}
+      };
       TestEngineHelper();
       virtual ~TestEngineHelper();
       virtual int init();
@@ -45,26 +50,9 @@ namespace tfs
           const int32_t offset, const int32_t limit, std::vector<KvValue*> *vec_realkey, std::vector<KvValue*> *vec_values, int *result_size);
 
       virtual int delete_keys(const std::vector<KvKey>& vec_keys);
-/*
-    public:
-      //we split object key like bucketname\objecetname to prefix_key = bucketname, seconde_key = object_name
-      static int split_key_for_tair(const KvKey& key, tair::data_entry* prefix_key, tair::data_entry* second_key);
-      int list_skeys(const KvKey& key, const std::string& prefix,
-          const std::string& start_key, const int32_t limit, common::VSTRING& v_object_name);
-
-    private:
-      int prefix_put_to_tair(const int area, const tair::data_entry &pkey,
-          const tair::data_entry &skey, const tair::data_entry &value, const int version);
-      int prefix_get_from_tair(const int area, const tair::data_entry &pkey,
-        const tair::data_entry &skey, tair::data_entry* &value);
-      int prefix_remove_from_tair(const int area, const tair::data_entry &pkey, const tair::data_entry &skey);
-      int prefix_removes_from_tair(const int area, const tair::data_entry &pkey,
-                                   const tair::tair_dataentry_set &skey_set, tair::key_code_map_t &key_code_map);
-      int prefix_scan_from_tair(int area, const tair::data_entry &pkey, const tair::data_entry &start_key, const tair::data_entry &end_key,
-                                int offset, int limit, std::vector<tair::data_entry *> &values, short type);*/
     private:
       DISALLOW_COPY_AND_ASSIGN(TestEngineHelper);
-      typedef std::map<std::string, std::string> CONTAINER;
+      typedef std::map<std::string, InnerValue> CONTAINER;
       CONTAINER map_store_;
     };
   }

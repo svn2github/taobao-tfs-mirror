@@ -83,6 +83,9 @@ TEST_F(ObjectTest, test_pwrite_head)
   EXPECT_EQ(TFS_SUCCESS, ret);
   EXPECT_EQ(10, new_obj_info.meta_info_.big_file_size_);
 
+  bool still_have = false;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(TFS_SUCCESS, ret);
@@ -125,6 +128,9 @@ TEST_F(ObjectTest, test_pwrite_middle)
   ret = test_meta_info_helper_->head_object(bucket_name, object_name, &ret_obj_info);
   EXPECT_EQ(30, ret_obj_info.meta_info_.big_file_size_);
 
+  bool still_have = false;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &ret_obj_info, &still_have);
+  EXPECT_EQ(TFS_SUCCESS, ret);
   ret = test_meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(TFS_SUCCESS, ret);
 }
@@ -158,6 +164,10 @@ TEST_F(ObjectTest, test_pwrite_overlap)
   EXPECT_EQ(TFS_SUCCESS, ret);
   ret = test_meta_info_helper_->head_object(bucket_name, object_name, &ret_obj_info);
   EXPECT_EQ(30, ret_obj_info.meta_info_.big_file_size_);
+
+  bool still_have = false;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &ret_obj_info, &still_have);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(TFS_SUCCESS, ret);
