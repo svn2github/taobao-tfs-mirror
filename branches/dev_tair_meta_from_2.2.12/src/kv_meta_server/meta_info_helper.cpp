@@ -265,7 +265,7 @@ namespace tfs
         object_info_zero->has_meta_info_ = true;
 
         ret = put_object_ex(bucket_name, file_name, 0, *object_info_zero, ver);
-        if (EXIT_TAIR_VERSION_ERROR == ret)
+        if (EXIT_KV_RETURN_VERSION_ERROR == ret)
         {
           TBSYS_LOG(INFO, "%s", "update object metainfo version conflict");
           ret = get_single_value(bucket_name, file_name, 0, &tmp_object_info_zero, &ver);
@@ -277,7 +277,7 @@ namespace tfs
           }
           else
           {
-            ret = EXIT_TAIR_VERSION_ERROR;
+            ret = EXIT_KV_RETURN_VERSION_ERROR;
           }
           if (tmp_object_info_zero.v_tfs_file_info_.size() > 0)
           {//has real head only need update big_file_size_
@@ -299,7 +299,7 @@ namespace tfs
           }
           *object_info_zero = tmp_object_info_zero;
         }
-      }while (retry-- && EXIT_TAIR_VERSION_ERROR == ret);
+      }while (retry-- && EXIT_KV_RETURN_VERSION_ERROR == ret);
 
       return ret;
     }
@@ -954,6 +954,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = kv_engine_helper_->get_key(key, &value, &version);
+      }
+      if (ret == EXIT_KV_RETURN_DATA_NOT_EXIST)
+      {
+        ret = EXIT_BUCKET_NOT_EXIST;
       }
 
       if (TFS_SUCCESS == ret)

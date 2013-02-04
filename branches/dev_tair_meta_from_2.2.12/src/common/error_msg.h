@@ -188,7 +188,6 @@ namespace tfs
     const int32_t EXIT_KV_RETURN_VERSION_ERROR = -16003;
 
     const int32_t EXIT_OBJECT_OVERLAP = -16004;// pwrite object overlap
-    const int32_t EXIT_TAIR_VERSION_ERROR = -16005; //tair put key version error
     const int32_t EXIT_OBJECT_NOT_EXIST = -16006; //get_key(key not exist, object type)
     const int32_t EXIT_WITH_BUCKET_REPEAT_PUT = -16007;// repeat put bucket
   }

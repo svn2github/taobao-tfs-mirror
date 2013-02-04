@@ -147,9 +147,20 @@ namespace tfs
           break;
         case KvKey::KEY_TYPE_BUCKET:
           {
+            int tair_ret;
             data_entry pkey(key.key_, key.key_size_);
             data_entry pvalue(value.get_data(), value.get_size());
-            ret = tair_client_->put(object_area_, pkey, pvalue, 0, 0);
+            tair_ret = tair_client_->put(object_area_, pkey, pvalue, 0, 0);
+            if (TAIR_RETURN_SUCCESS != tair_ret)
+            {
+              TBSYS_LOG(INFO, "tair ret: %d", tair_ret);
+              ret = EXIT_KV_RETURN_ERROR;
+              if (TAIR_RETURN_VERSION_ERROR == tair_ret)
+              {
+                TBSYS_LOG(WARN, "put bucket to tair version error.");
+                ret = EXIT_KV_RETURN_VERSION_ERROR;
+              }
+            }
           }
           break;
         default:
@@ -212,11 +223,20 @@ namespace tfs
             {
               data_entry pkey(key.key_, key.key_size_);
               data_entry* pvalue = NULL;
-              ret = tair_client_->get(object_area_, pkey, pvalue);
+              int tair_ret = 0;
+              tair_ret = tair_client_->get(object_area_, pkey, pvalue);
 
-              if (TAIR_RETURN_SUCCESS != ret)
+              if(TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
               {
-                ret = EXIT_BUCKET_NOT_EXIST;
+                ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
+              }
+              if (TAIR_RETURN_SUCCESS != tair_ret && TAIR_RETURN_DATA_NOT_EXIST != tair_ret)
+              {
+                ret = EXIT_KV_RETURN_ERROR;
+              }
+              if (TAIR_RETURN_SUCCESS == tair_ret)
+              {
+                ret = TFS_SUCCESS;
               }
 
               if (TFS_SUCCESS == ret && NULL != version)
@@ -356,8 +376,20 @@ namespace tfs
           break;
         case KvKey::KEY_TYPE_BUCKET:
           {
+            int tair_ret = 0;
             data_entry pkey(key.key_);
-            ret = tair_client_->remove(object_area_, pkey);
+            tair_ret = tair_client_->remove(object_area_, pkey);
+            if (TAIR_RETURN_SUCCESS != tair_ret)
+            {
+              ret = EXIT_KV_RETURN_ERROR;
+              if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+              {
+                TBSYS_LOG(WARN, "del data noesxit.");
+                ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
+              }
+              TBSYS_LOG(ERROR, "tair_ret removes is %d", tair_ret);
+            }
+
           }
           break;
         default:
@@ -474,7 +506,7 @@ namespace tfs
         if (TAIR_RETURN_VERSION_ERROR == tair_ret)
         {
           TBSYS_LOG(WARN, "put to tair version error.");
-          ret = EXIT_TAIR_VERSION_ERROR;
+          ret = EXIT_KV_RETURN_VERSION_ERROR;
         }
         //TODO change tair errno to TFS errno
       }
@@ -524,10 +556,14 @@ namespace tfs
 
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
-        //TODO change tair errno to TFS errno
-        ret = TFS_ERROR;
+        ret = EXIT_KV_RETURN_ERROR;
+        if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+        {
+          TBSYS_LOG(WARN, "del data noesxit.");
+          ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
+        }
+        TBSYS_LOG(ERROR, "tair_ret removes is %d", tair_ret);
       }
-
       return ret;
     }
 
@@ -544,9 +580,13 @@ namespace tfs
 
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
-        //TODO change tair errno to TFS errno
+        ret = EXIT_KV_RETURN_ERROR;
+        if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+        {
+          TBSYS_LOG(WARN, "del data noesxit.");
+          ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
+        }
         TBSYS_LOG(ERROR, "tair_ret removes is %d", tair_ret);
-        ret = TFS_ERROR;
       }
       return ret;
     }
