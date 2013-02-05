@@ -237,6 +237,14 @@ TEST_F(ObjectTest, test_pread_head)
   EXPECT_EQ(10, new_obj_info.meta_info_.big_file_size_);
   EXPECT_EQ(now_time, new_obj_info.meta_info_.create_time_);
 
+  ObjectInfo new_obj_info1;
+  bool still_have1 = true;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info1, &still_have1);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+
 }
 
 TEST_F(ObjectTest, test_pread_smallfile)
@@ -272,6 +280,14 @@ TEST_F(ObjectTest, test_pread_smallfile)
   EXPECT_EQ(131, obj_info.v_tfs_file_info_[0].block_id_);
   EXPECT_EQ(false, still_have);
 
+  ObjectInfo new_obj_info1;
+  bool still_have1 = true;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info1, &still_have1);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+
 }
 
 TEST_F(ObjectTest, test_pread_bigfile)
@@ -298,14 +314,12 @@ TEST_F(ObjectTest, test_pread_bigfile)
   ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 2097152, obj_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
-  obj_info.meta_info_.big_file_size_ = 0;
   obj_info.v_tfs_file_info_[0].offset_ = 2097152;
   obj_info.v_tfs_file_info_[0].block_id_ = 132;
 
   ret = test_meta_info_helper_->put_object(bucket_name, object_name, 2097152, 2097152, obj_info, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
-  obj_info.meta_info_.big_file_size_ = 0;
   obj_info.v_tfs_file_info_[0].offset_ = 4194304;
   obj_info.v_tfs_file_info_[0].block_id_ = 133;
 
@@ -322,6 +336,14 @@ TEST_F(ObjectTest, test_pread_bigfile)
   EXPECT_EQ(132, new_obj_info.v_tfs_file_info_[1].block_id_);
   EXPECT_EQ(133, new_obj_info.v_tfs_file_info_[2].block_id_);
   EXPECT_EQ(false, still_have);
+
+  ObjectInfo new_obj_info1;
+  bool still_have1 = true;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info1, &still_have1);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
 
 }
 
@@ -395,6 +417,181 @@ TEST_F(ObjectTest, test_pread_out_of_order)
   EXPECT_EQ(233, new_obj_info2.v_tfs_file_info_[2].block_id_);
   EXPECT_EQ(234, new_obj_info2.v_tfs_file_info_[3].block_id_);
   EXPECT_EQ(false, still_have2);
+
+  ObjectInfo new_obj_info3;
+  bool still_have3 = true;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info3, &still_have3);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+
+}
+
+TEST_F(ObjectTest, test_del_smallfile)
+{
+  int ret = TFS_SUCCESS;
+  string bucket_name("testabcddel");
+  string object_name("testobjectdelsmallfile");
+  int64_t now_time = static_cast<int64_t>(time(NULL));
+
+  BucketMetaInfo bucket_meta_info;
+  bucket_meta_info.create_time_ = now_time;
+  UserInfo user_info;
+  user_info.owner_id_ = 1688;
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ObjectInfo obj_info;
+  obj_info.meta_info_.big_file_size_ = 0;
+  TfsFileInfo tfs_file_info;
+  obj_info.v_tfs_file_info_.push_back(tfs_file_info);
+  obj_info.v_tfs_file_info_[0].offset_ = 0;
+  obj_info.v_tfs_file_info_[0].block_id_ = 131;
+  obj_info.v_tfs_file_info_[0].file_size_= 2097152;
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 2097152, obj_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ObjectInfo new_obj_info;
+  bool still_have = true;
+  ret = test_meta_info_helper_->get_object(bucket_name, object_name, 0, 2097152, &new_obj_info, &still_have);
+
+  EXPECT_EQ(131, new_obj_info.v_tfs_file_info_[0].block_id_);
+  EXPECT_EQ(2097152, new_obj_info.v_tfs_file_info_[0].file_size_);
+  EXPECT_EQ(2097152, new_obj_info.meta_info_.big_file_size_);
+  EXPECT_EQ(false, still_have);
+
+  ObjectInfo new_obj_info1;
+  bool still_have1 = true;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info1, &still_have1);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  EXPECT_EQ(131, new_obj_info1.v_tfs_file_info_[0].block_id_);
+  EXPECT_EQ(2097152, new_obj_info1.v_tfs_file_info_[0].file_size_);
+  EXPECT_EQ(false, still_have1);
+
+  ObjectInfo new_obj_info2;
+  bool still_have2 = true;
+  ret = test_meta_info_helper_->get_object(bucket_name, object_name, 0, 2097152, &new_obj_info2, &still_have2);
+  EXPECT_EQ(EXIT_OBJECT_NOT_EXIST, ret);
+
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+
+}
+
+TEST_F(ObjectTest, test_del_bigfile)
+{
+  int ret = TFS_SUCCESS;
+  string bucket_name("testbigdel");
+  string object_name("testobjectdelbigfile");
+  int64_t now_time = static_cast<int64_t>(time(NULL));
+
+  BucketMetaInfo bucket_meta_info;
+  bucket_meta_info.create_time_ = now_time;
+  UserInfo user_info;
+  user_info.owner_id_ = 1688;
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ObjectInfo obj_info;
+  obj_info.meta_info_.big_file_size_ = 0;
+  TfsFileInfo tfs_file_info;
+  obj_info.v_tfs_file_info_.push_back(tfs_file_info);
+  obj_info.v_tfs_file_info_[0].offset_ = 0;
+  obj_info.v_tfs_file_info_[0].block_id_ = 131;
+
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 0, 2097152, obj_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  obj_info.meta_info_.big_file_size_ = 0;
+  obj_info.v_tfs_file_info_.push_back(tfs_file_info);
+  obj_info.v_tfs_file_info_[0].offset_ = 2097152;
+  obj_info.v_tfs_file_info_[0].block_id_ = 132;
+
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 2097152, 2097152, obj_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  obj_info.meta_info_.big_file_size_ = 0;
+  obj_info.v_tfs_file_info_.push_back(tfs_file_info);
+  obj_info.v_tfs_file_info_[0].offset_ = 4194304;
+  obj_info.v_tfs_file_info_[0].block_id_ = 133;
+
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 4194304, 1048576, obj_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ObjectInfo new_obj_info1;
+  bool still_have1 = true;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info1, &still_have1);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+  EXPECT_EQ(131, new_obj_info1.v_tfs_file_info_[0].block_id_);
+  EXPECT_EQ(132, new_obj_info1.v_tfs_file_info_[1].block_id_);
+  EXPECT_EQ(133, new_obj_info1.v_tfs_file_info_[2].block_id_);
+  EXPECT_EQ(false, still_have1);
+
+  ObjectInfo new_obj_info;
+  bool still_have = true;
+  ret = test_meta_info_helper_->get_object(bucket_name, object_name, 0, 5300000, &new_obj_info, &still_have);
+  EXPECT_EQ(EXIT_OBJECT_NOT_EXIST, ret);
+
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+
+}
+
+TEST_F(ObjectTest, test_del_bigfile_no_head)
+{
+  int ret = TFS_SUCCESS;
+  string bucket_name("testbigdel");
+  string object_name("testobjectdelbigfile");
+  int64_t now_time = static_cast<int64_t>(time(NULL));
+
+  BucketMetaInfo bucket_meta_info;
+  bucket_meta_info.create_time_ = now_time;
+  UserInfo user_info;
+  user_info.owner_id_ = 1688;
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ObjectInfo obj_info;
+  TfsFileInfo tfs_file_info;
+
+  obj_info.meta_info_.big_file_size_ = 0;
+  obj_info.v_tfs_file_info_.push_back(tfs_file_info);
+  obj_info.v_tfs_file_info_[0].offset_ = 2097152;
+  obj_info.v_tfs_file_info_[0].block_id_ = 132;
+
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 2097152, 2097152, obj_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  obj_info.v_tfs_file_info_[0].offset_ = 5242880;
+  obj_info.v_tfs_file_info_[0].block_id_ = 134;
+
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 5242880, 1048576, obj_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  obj_info.v_tfs_file_info_[0].offset_ = 4194304;
+  obj_info.v_tfs_file_info_[0].block_id_ = 133;
+
+  ret = test_meta_info_helper_->put_object(bucket_name, object_name, 4194304, 1048576, obj_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ObjectInfo new_obj_info1;
+  bool still_have1 = true;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info1, &still_have1);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+  EXPECT_EQ(132, new_obj_info1.v_tfs_file_info_[0].block_id_);
+  EXPECT_EQ(133, new_obj_info1.v_tfs_file_info_[1].block_id_);
+  EXPECT_EQ(134, new_obj_info1.v_tfs_file_info_[2].block_id_);
+  EXPECT_EQ(false, still_have1);
+
+  ObjectInfo new_obj_info;
+  bool still_have = true;
+  ret = test_meta_info_helper_->get_object(bucket_name, object_name, 0, 5300000, &new_obj_info, &still_have);
+  EXPECT_EQ(EXIT_OBJECT_NOT_EXIST, ret);
+
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
 
 }
 
