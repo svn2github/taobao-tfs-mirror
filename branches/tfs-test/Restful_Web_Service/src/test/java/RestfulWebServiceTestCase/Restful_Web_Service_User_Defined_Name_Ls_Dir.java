@@ -21,11 +21,11 @@ public class Restful_Web_Service_User_Defined_Name_Ls_Dir extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = LsDir(App_id,User_id,"test/test/test/test");
+		Ret = LsDir(App_id,User_id,"test/test/test");
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		assert_tool.AssertLsDirEquals(Ret.get("body"),new int[]{1,0});
 		
-		StringBuilder Dir_Del_Name = new StringBuilder ();
-		Dir_Del_Name.append("test");
+		String Dir_Del_Name = "test";
 		deleteDir(Dir_Del_Name,4,"test");
 	}
 	
@@ -37,7 +37,7 @@ public class Restful_Web_Service_User_Defined_Name_Ls_Dir extends BaseCase
 		AssertTool assert_tool = new AssertTool();
 	
 		Ret = LsDir(App_id,User_id,"");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);		
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);		
 	}
 	
 	@Test
@@ -62,11 +62,11 @@ public class Restful_Web_Service_User_Defined_Name_Ls_Dir extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = LsDir("20",User_id,"test/test/test/test");
+		Ret = LsDirNeedAppKey("tfsNginxC01",App_id,User_id,"test/test/test");
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		assert_tool.AssertLsDirEquals(Ret.get("body"),new int[]{1,0});
 		
-		StringBuilder Dir_Del_Name = new StringBuilder ();
-		Dir_Del_Name.append("test");
+		String Dir_Del_Name = "test";
 		deleteDir(Dir_Del_Name,4,"test");
 	}
 	
@@ -76,8 +76,8 @@ public class Restful_Web_Service_User_Defined_Name_Ls_Dir extends BaseCase
 		Map<String, String> Ret = new HashMap<String, String>();
 		ExpectMessage ExpMeg = new ExpectMessage();
 		AssertTool assert_tool = new AssertTool();
-		int AllNum = 0;
-		int FileNum = 0 ;
+		int AllNum = 10;
+		int FileNum = 5 ;
 		int i ,j ;
 		for(i=0; i<5; i++)
 		{
@@ -87,8 +87,6 @@ public class Restful_Web_Service_User_Defined_Name_Ls_Dir extends BaseCase
 			Ret.clear();
 			Ret = CreateFile(App_id,User_id,"test"+i,"0");
 			assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
-			AllNum=+2;
-			++FileNum;
 		}
 		
 		for(i=0; i<5; i++)
@@ -101,11 +99,11 @@ public class Restful_Web_Service_User_Defined_Name_Ls_Dir extends BaseCase
 				Ret.clear();
 				Ret = CreateFile(App_id,User_id,"test"+i+"/test"+j,"0");
 				assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
-				AllNum=+2;
-				++FileNum;
 			}
 		}
 		
+		System.out.println("!"+AllNum);
+		System.out.println("!"+FileNum);
 		Ret.clear();
 		Ret = LsDir(App_id,User_id,"/");
 		assert_tool.AssertLsDirEquals(Ret.get("body"),new int[]{AllNum,FileNum});
@@ -116,10 +114,10 @@ public class Restful_Web_Service_User_Defined_Name_Ls_Dir extends BaseCase
 			{
 				Ret.clear();
 				Ret = RmDir(App_id,User_id,"test"+i+"/test"+j);
-				assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
+				assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 				Ret.clear();
 				Ret = RmFile(App_id,User_id,"test"+i+"/test"+j);
-				assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
+				assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 				AllNum=+2;
 				++FileNum;
 			}
@@ -129,10 +127,10 @@ public class Restful_Web_Service_User_Defined_Name_Ls_Dir extends BaseCase
 		{
 			Ret.clear();
 			Ret = RmDir(App_id,User_id,"test"+i);
-			assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
+			assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 			Ret.clear();
 			Ret = RmFile(App_id,User_id,"test"+i);
-			assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
+			assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 			AllNum=+2;
 			++FileNum;
 		}

@@ -114,7 +114,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 		
 		Ret.clear();
 		Ret = MvDir(App_id,User_id,"test_src","test_dest","0");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test_src");
@@ -134,7 +134,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 	
 		Ret.clear();
 		Ret = MvDir(App_id,User_id,"","test_dest","0");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message403);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test_dest");
@@ -166,7 +166,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 	
 		Ret.clear();
 		Ret = MvDir(App_id,User_id,"       ","test_dest","0");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message403);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test_dest");
@@ -288,7 +288,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test1/test2/test3");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test1/test2");
@@ -331,7 +331,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 		
 		Ret.clear();
 		Ret = MvDir(App_id,User_id,"test_src","test_dest","0");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test_dest");
@@ -379,8 +379,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 		Ret = RmDir(App_id,User_id,"test_src");
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 		
-		StringBuilder Dir_Del_Name = new StringBuilder ();
-		Dir_Del_Name.append("test");
+		String Dir_Del_Name = "test";
 		deleteDir(Dir_Del_Name,4,"test");
 	}
 	
@@ -406,8 +405,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 		Ret = RmFile(App_id,User_id,"test/test/test/test/testFile");
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
-		StringBuilder Dir_Del_Name = new StringBuilder ();
-		Dir_Del_Name.append("test");
+		String Dir_Del_Name = "test";
 		deleteDir(Dir_Del_Name,4,"test");
 	}
 	
@@ -426,7 +424,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
 		
 		Ret.clear();
-		Ret = MvDir(App_id,User_id,"test_src","test/test/test/test","0");
+		Ret = MvDir(App_id,User_id,"test_src","test/test/test/test","1");
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
@@ -445,8 +443,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 		Ret = RmDir(App_id,User_id,"test/test/test/test/testDir");
 		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
-		StringBuilder Dir_Del_Name = new StringBuilder ();
-		Dir_Del_Name.append("test");
+		String Dir_Del_Name = "test";
 		deleteDir(Dir_Del_Name,4,"test");
 	}
 	
@@ -465,7 +462,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 		
 		Ret.clear();
 		Ret = MvDir(App_id,User_id,"test_src","test_dest","1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test_src");
@@ -485,7 +482,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 	
 		Ret.clear();
 		Ret = MvDir(App_id,User_id,"","test_dest","1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message403);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test_dest");
@@ -517,7 +514,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 	
 		Ret.clear();
 		Ret = MvDir(App_id,User_id,"       ","test_dest","1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message403);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test_dest");
@@ -563,26 +560,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 	}
 	
 	@Test
-	public void test_26_mvDir_space_destFilePath_recursive()
-	{
-		Map<String, String> Ret = new HashMap<String, String>();
-		ExpectMessage ExpMeg = new ExpectMessage();
-		AssertTool assert_tool = new AssertTool();
-		
-		Ret = CreateDir(App_id,User_id,"test_src","0");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message201);
-		
-		Ret.clear();
-		Ret = MvDir(App_id,User_id,"test_src","        ","1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
-		
-		Ret.clear();
-		Ret = RmDir(App_id,User_id,"test_src");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
-	}
-	
-	@Test
-	public void test_27_mvDir_srcFilePath_same_destFilePath_recursive()
+	public void test_26_mvDir_srcFilePath_same_destFilePath_recursive()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
 		ExpectMessage ExpMeg = new ExpectMessage();
@@ -601,7 +579,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 	}
 	
 	@Test
-	public void test_28_mvDir_circle_recursive()
+	public void test_27_mvDir_circle_recursive()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
 		ExpectMessage ExpMeg = new ExpectMessage();
@@ -616,7 +594,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test1/test2/test3");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message200);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test1/test2");
@@ -628,7 +606,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 	}
 	
 	@Test
-	public void test_29_mvDir_wrong_appid_recursive()
+	public void test_28_mvDir_wrong_appid_recursive()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
 		ExpectMessage ExpMeg = new ExpectMessage();
@@ -651,7 +629,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 	}
 	
 	@Test
-	public void test_30_mvDir_not_exit_srcFilePath_recursive()
+	public void test_29_mvDir_not_exit_srcFilePath_recursive()
 	{
 		Map<String, String> Ret = new HashMap<String, String>();
 		ExpectMessage ExpMeg = new ExpectMessage();
@@ -659,7 +637,7 @@ public class Restful_Web_Service_User_Defined_Name_Mv_Dir extends BaseCase
 		
 		Ret.clear();
 		Ret = MvDir(App_id,User_id,"test_src","test_dest","1");
-		assert_tool.AssertMegEquals(Ret, ExpMeg.Message400);
+		assert_tool.AssertMegEquals(Ret, ExpMeg.Message404);
 		
 		Ret.clear();
 		Ret = RmDir(App_id,User_id,"test_dest");

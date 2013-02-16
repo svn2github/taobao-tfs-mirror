@@ -312,6 +312,8 @@ public class BaseCase
 		Map<String, String> Message = new HashMap<String, String>();
 		
 		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/dir/"+DestDir);
+		if(null!=recursive)
+			ExecuteUrl.AddPara("recursive", recursive);
 		log.info(ExecuteUrl.GetUrl());
 		HttpVerifyTool Tool = new HttpVerifyTool();
 		PostMethod MvMethod = setPostMethod(ExecuteUrl.GetUrl(),null);
@@ -325,6 +327,17 @@ public class BaseCase
 	{
 		Map<String, String> Message = new HashMap<String, String>();
 		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/dir/"+Dir);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setGetMethod(ExecuteUrl.GetUrl()),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
+	public Map<String, String> LsDirNeedAppKey(String Appkey, String Appid, String Uid, String Dir)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		ExecuteUrl.AddUrlDomain("v2/"+Appkey+"/"+Appid+"/"+Uid+"/dir/"+Dir);
 		log.info(ExecuteUrl.GetUrl());
 		HttpVerifyTool Tool = new HttpVerifyTool();
 		Message = Tool.verifyResponse(setGetMethod(ExecuteUrl.GetUrl()),null);
@@ -375,6 +388,8 @@ public class BaseCase
 		Map<String, String> Message = new HashMap<String, String>();
 		
 		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/file/"+DestFile);
+		if(null!=recursive)
+			ExecuteUrl.AddPara("recursive", recursive);
 		log.info(ExecuteUrl.GetUrl());
 		HttpVerifyTool Tool = new HttpVerifyTool();
 		PostMethod MvMethod = setPostMethod(ExecuteUrl.GetUrl(),null);
@@ -396,6 +411,18 @@ public class BaseCase
 		return Message;
 	}
 	
+	public Map<String, String> LsFileNeedAppKey(String Appkey, String Appid, String Uid, String File)
+	{
+		Map<String, String> Message = new HashMap<String, String>();
+		
+		ExecuteUrl.AddUrlDomain("v2/"+Appkey+"/metadata/"+Appid+"/"+Uid+"/file/"+File);
+		log.info(ExecuteUrl.GetUrl());
+		HttpVerifyTool Tool = new HttpVerifyTool();
+		Message = Tool.verifyResponse(setGetMethod(ExecuteUrl.GetUrl()),null);
+		ExecuteUrl.ResetUrl();
+		return Message;
+	}
+	
 	public Map<String, String> IsFileExist(String Appid, String Uid, String File)
 	{
 		Map<String, String> Message = new HashMap<String, String>();
@@ -407,14 +434,12 @@ public class BaseCase
 		return Message;
 	}
 	
-	public Map<String, String> WriteFile(String Appid, String Uid, String File, String LocalFile, String offset, String size)
+	public Map<String, String> WriteFile(String Appid, String Uid, String File, String LocalFile, String offset)
 	{
 		Map<String, String> Message = new HashMap<String, String>();
 		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/file/"+File);
 		if(null!=offset)
 			ExecuteUrl.AddPara("offset", offset);
-		if(null!=size)
-			ExecuteUrl.AddPara("size", size);
 		log.info(ExecuteUrl.GetUrl());
 		HttpVerifyTool Tool = new HttpVerifyTool();
 		Message = Tool.verifyResponse(setPutMethod(ExecuteUrl.GetUrl(),LocalFile),null);
@@ -422,7 +447,7 @@ public class BaseCase
 		return Message;
 	}
 	
-	public Map<String, String> ReadFile(String Appid, String Uid, String File, String LocalFile, String offset, String size)
+	public Map<String, String> ReadFile(String Appid, String Uid, String File, String LocalFile, String size, String offset)
 	{
 		Map<String, String> Message = new HashMap<String, String>();
 		ExecuteUrl.AddUrlDomain("v2/"+App_key+"/"+Appid+"/"+Uid+"/file/"+File);
