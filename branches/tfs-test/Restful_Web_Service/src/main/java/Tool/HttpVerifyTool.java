@@ -21,7 +21,7 @@ public class HttpVerifyTool
 		HttpClient client = new HttpClient();
 		HttpConnectionManagerParams managerParams = client.getHttpConnectionManager().getParams();
 		managerParams.setConnectionTimeout(30000);
-		managerParams.setSoTimeout(120000);
+		managerParams.setSoTimeout(0);
 		int status;
 		Map<String, String> Message = new HashMap<String, String>();
 		try 
@@ -31,30 +31,33 @@ public class HttpVerifyTool
 			{	
 				String BodyString = method.getResponseBodyAsString();
 				Message.put("status", String.valueOf(status));
-				Message.put("body", BodyString);
-				StringBuffer JsonStr = new StringBuffer(BodyString);
-				if(JsonStr.length()!=0)
+				if(null!=BodyString&&!BodyString.isEmpty())
 				{
-					if(JsonStr.substring(0,1).equals("{"))
+					Message.put("body", BodyString);
+					StringBuffer JsonStr = new StringBuffer(BodyString);
+					System.out.println(BodyString);
+					if(JsonStr.length()!=0)
 					{
-						JSONObject  jsonResponse = new JSONObject(BodyString);
-						if(!jsonResponse.isNull("TFS_FILE_NAME"))
-							Message.put("TFS_FILE_NAME", jsonResponse.getString("TFS_FILE_NAME"));
-						if(!jsonResponse.isNull("SIZE"))
-							Message.put("SIZE", jsonResponse.getString("SIZE"));
-						if(!jsonResponse.isNull("STATUS"))
-							Message.put("STATUS", jsonResponse.getString("STATUS"));
-						if(!jsonResponse.isNull("CRC"))
-							Message.put("CRC", jsonResponse.getString("CRC"));
-						if(!jsonResponse.isNull("APP_ID"))
-							Message.put("APP_ID", jsonResponse.getString("APP_ID"));
-						if(!jsonResponse.isNull("NAME"))
-							Message.put("NAME", jsonResponse.getString("NAME"));
-						if(!jsonResponse.isNull("IS_FILE"))
-							Message.put("IS_FILE", jsonResponse.getString("IS_FILE"));
+						if(JsonStr.substring(0,1).equals("{"))
+						{
+							JSONObject  jsonResponse = new JSONObject(BodyString);
+							if(!jsonResponse.isNull("TFS_FILE_NAME"))
+								Message.put("TFS_FILE_NAME", jsonResponse.getString("TFS_FILE_NAME"));
+							if(!jsonResponse.isNull("SIZE"))
+								Message.put("SIZE", jsonResponse.getString("SIZE"));
+							if(!jsonResponse.isNull("STATUS"))
+								Message.put("STATUS", jsonResponse.getString("STATUS"));
+							if(!jsonResponse.isNull("CRC"))
+								Message.put("CRC", jsonResponse.getString("CRC"));
+							if(!jsonResponse.isNull("APP_ID"))
+								Message.put("APP_ID", jsonResponse.getString("APP_ID"));
+							if(!jsonResponse.isNull("NAME"))
+								Message.put("NAME", jsonResponse.getString("NAME"));
+							if(!jsonResponse.isNull("IS_FILE"))
+								Message.put("IS_FILE", jsonResponse.getString("IS_FILE"));
+						}
 					}
 				}
-			
 				method.releaseConnection();
 				client.getHttpConnectionManager().closeIdleConnections(0);
 			}

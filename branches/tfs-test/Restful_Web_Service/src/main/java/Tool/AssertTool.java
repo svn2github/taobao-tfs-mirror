@@ -26,6 +26,11 @@ public class AssertTool
 		{
 			Assert.assertTrue(Meg.get("STATUS").equals(ExpectMeg.get("STATUS")));
 		}
+		
+		if(ExpectMeg.containsKey("APP_ID"))
+		{
+			Assert.assertTrue(Meg.get("APP_ID").equals(ExpectMeg.get("APP_ID")));
+		}
 	}
 	public void AssertCRCEquals(String localfile,String file)
 	{
@@ -57,6 +62,7 @@ public class AssertTool
 	
 	public int[] dealWithLsDir(String LsDirRet)
 	{
+		System.out.println(LsDirRet);
 		StringBuffer Str = new StringBuffer(LsDirRet);
 	
 		int allNum=0;
@@ -91,6 +97,8 @@ public class AssertTool
 	{
 		int [] Ret = new int [2];
 		Ret = dealWithLsDir(LsDirRet);
+		System.out.println(Ret[0]);
+		System.out.println(Ret[1]);
 		Assert.assertArrayEquals(Ret, ExpectNum);
 	}
 }
