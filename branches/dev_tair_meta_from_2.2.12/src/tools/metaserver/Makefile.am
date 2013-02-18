@@ -5,7 +5,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(MYSQL_LDFLAGS)
 
-bin_PROGRAMS = meta_transfer
+bin_PROGRAMS = meta_transfer txt2new
 
 LDADD =	$(top_builddir)/src/name_meta_server/libnamemetaserver.a\
         $(TAIR_CACHE_LDFLAGS) \
@@ -15,4 +15,5 @@ LDADD =	$(top_builddir)/src/name_meta_server/libnamemetaserver.a\
         $(TBLIB_ROOT)/lib/libtbsys.a
 
 meta_transfer_SOURCES = trans_meta.cpp
+txt2new_SOURCES = txt2newmeta.cpp
 

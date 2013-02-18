@@ -31,6 +31,13 @@ using namespace tfs::common;
 using namespace tfs::namemetaserver;
 
 MetaStoreManager g_store_manager;
+const int MAX_OBJECT_NAME_LEN = 256;
+
+const int MAGIC_NUMBER0 = 0x4f264975;
+const int MAGIC_NUMBER1 = 0x5f375a86;
+const int MAGIC_NUMBER2 = 0x60486b97;
+const int MAGIC_NUMBER3 = 0x71597ca8;
+const int MAGIC_NUMBER4 = 0x826a8db9;
 
 int stop = 0;
 void sign_handler(int32_t sig)
@@ -52,17 +59,32 @@ int deal_file(const int64_t app_id, const int64_t uid, const vector<MetaInfo> &v
     const string& full_name, FILE *d_fd)
 {
   int ret = TFS_SUCCESS;
-  UNUSED(d_fd);
   vector<MetaInfo>::const_iterator it = v_meta_info.begin();
   for (; it != v_meta_info.end(); it++)
   {
-    //TODO transfer this info to new meta, we just printed it for now
-    TBSYS_LOG(INFO, "full_name %s name =%*s ct %d, mt %d, sz %lu",
-        full_name.c_str(),
-        it->get_name_len() - 1, it->get_name() + 1,
-        it->file_info_.create_time_,
-        it->file_info_.modify_time_,
-        it->file_info_.size_);
+    int full_name_len = full_name.length() + it->get_name_len() -1;
+    if (full_name_len > MAX_OBJECT_NAME_LEN)
+    {
+      TBSYS_LOG(ERROR, "object name len out of range");
+      TBSYS_LOG(INFO, "full_name %s name =%*s ct %d, mt %d, sz %lu",
+          full_name.c_str(),
+          it->get_name_len() - 1, it->get_name() + 1,
+          it->file_info_.create_time_,
+          it->file_info_.modify_time_,
+          it->file_info_.size_);
+      continue;
+    }
+    else
+    {
+      fwrite(&MAGIC_NUMBER1, sizeof(MAGIC_NUMBER1), 1, d_fd); //magic number
+      fwrite(&full_name_len, sizeof(full_name_len), 1, d_fd); //ful name len
+      fwrite(full_name.c_str(), full_name.length(), 1, d_fd);
+      fwrite(it->get_name() + 1, it->get_name_len() - 1, 1, d_fd);  //name end
+      fwrite(&(it->file_info_.create_time_), sizeof(it->file_info_.create_time_), 1, d_fd);//ct
+      fwrite(&(it->file_info_.modify_time_), sizeof(it->file_info_.modify_time_), 1, d_fd);//mt
+      fwrite(&(it->file_info_.size_), sizeof(it->file_info_.size_), 1, d_fd);//size
+      fwrite(&MAGIC_NUMBER2, sizeof(MAGIC_NUMBER2), 1, d_fd); //magic number
+    }
     int32_t cluster_id = 0;
     int64_t last_offset = 0;
     vector<MetaInfo> tmp_v_meta_info;
@@ -74,13 +96,19 @@ int deal_file(const int64_t app_id, const int64_t uid, const vector<MetaInfo> &v
       vector<FragMeta>::const_iterator frag_it = tmp_v_meta_info[i].frag_info_.v_frag_meta_.begin();
       for (; frag_it != tmp_v_meta_info[i].frag_info_.v_frag_meta_.end(); frag_it++)
       {
-        TBSYS_LOG(INFO, "off_set %ld cluster_id %d lock_id %d file_id %ld size %d",
-            frag_it->offset_,
-            cluster_id,
-            frag_it->block_id_, frag_it->file_id_, frag_it->size_);
+        fwrite(&MAGIC_NUMBER3, sizeof(MAGIC_NUMBER3), 1, d_fd); //magic number
+        //TBSYS_LOG(INFO, "off_set %ld cluster_id %d lock_id %d file_id %ld size %d",
+        //    frag_it->offset_,
+        //    cluster_id,
+        //    frag_it->block_id_, frag_it->file_id_, frag_it->size_);
+        fwrite(&(frag_it->offset_), sizeof(frag_it->offset_), 1, d_fd);
+        fwrite(&(cluster_id), sizeof(cluster_id), 1, d_fd);
+        fwrite(&(frag_it->block_id_), sizeof(frag_it->block_id_), 1, d_fd);
+        fwrite(&(frag_it->file_id_), sizeof(frag_it->file_id_), 1, d_fd);
+        fwrite(&(frag_it->size_), sizeof(frag_it->size_), 1, d_fd);
       }
     }
-
+    fwrite(&MAGIC_NUMBER4, sizeof(MAGIC_NUMBER3), 1, d_fd); //magic number
   }
   return ret;
 }
@@ -96,12 +124,15 @@ int transfer_dir(const int64_t app_id, const int64_t uid, const int64_t pid,
   MetaInfo last_meta_info;
   vector<MetaInfo> tmp_v_meta_info;
   vector<MetaInfo>::iterator tmp_v_meta_info_it;
-  TBSYS_LOG(INFO, "transerfer dir name %s", full_name.c_str());
+  //TBSYS_LOG(INFO, "transerfer dir name %s", full_name.c_str());
 
+  name[0] = '\0';
+  name_len = 1;       //continue get files
   do
   {
     tmp_v_meta_info.clear();
     still_have = false;
+
     ret = g_store_manager.ls(app_id, uid, pid, name, name_len, NULL, 0, is_file,
         tmp_v_meta_info, still_have);
     if (!tmp_v_meta_info.empty())
@@ -133,7 +164,12 @@ int transfer_dir(const int64_t app_id, const int64_t uid, const int64_t pid,
     if (!still_have && is_file)
     {
       //deal all files in v_meta_info;
+      if (!full_name.empty() && full_name[full_name.length() -1] != '/')
+        full_name += '/';
+
       deal_file(app_id, uid, v_meta_info, full_name, d_fd);
+      fflush(d_fd);
+      TBSYS_LOG(DEBUG, "we will ls dir's dir");
 
       file_count = v_meta_info.size();
       v_meta_info.clear();
@@ -148,15 +184,21 @@ int transfer_dir(const int64_t app_id, const int64_t uid, const int64_t pid,
   TBSYS_LOG(INFO, "app_id:%ld uid:%ld pid:%ld file_count = %d, dir_count %d",
       app_id, uid, pid, file_count, v_meta_info.size());
 
-  if (0 != pid)
-    if (full_name.length() > 1)
-      full_name += "/";
   for (size_t i = 0; i < v_meta_info.size() && TFS_SUCCESS == ret; i++)
   {
     name_len = v_meta_info[i].get_name_len();
     memcpy(name, v_meta_info[i].get_name(), name_len);
+    if (full_name.empty() || full_name[full_name.length() -1] != '/')
+      full_name += '/';
     string sub_full_name(full_name);
-    sub_full_name.append(name + 1, name_len - 1);
+    if (name_len == 2 && *(name +1) == '/')
+    {
+      ;
+    }
+    else
+    {
+      sub_full_name.append(name + 1, name_len - 1);
+    }
 
     ret = transfer_dir(app_id, uid, v_meta_info[i].file_info_.id_,
         name, name_len, sub_full_name, d_fd);
@@ -214,6 +256,9 @@ void transfer(const string &source_file_name, const string &out_file_name)
     name[0]=1;
     int32_t name_len = 2;
     string full_name;
+    fwrite(&MAGIC_NUMBER0, sizeof(MAGIC_NUMBER0), 1, d_fd); //magic number
+    fwrite(&app_id, sizeof(app_id), 1, d_fd);
+    fwrite(&uid, sizeof(uid), 1, d_fd);
     ret = transfer_dir(app_id, uid, 0, name, name_len, full_name, d_fd);
   }
   fclose(s_fd);
@@ -230,7 +275,7 @@ int main(int argc, char *argv[])
   std::string source_file_name;
   std::string out_file_name;
   std::string log_file_name;
-  while ((i = getopt(argc, argv, "f:s:l:")) != EOF)
+  while ((i = getopt(argc, argv, "f:s:l:o:")) != EOF)
   {
     switch (i)
     {
@@ -251,7 +296,6 @@ int main(int argc, char *argv[])
         return TFS_ERROR;
     }
   }
-  out_file_name = "out.txt";
   if (config_file_name.empty() || source_file_name.empty())
   {
     usage(argv[0]);
