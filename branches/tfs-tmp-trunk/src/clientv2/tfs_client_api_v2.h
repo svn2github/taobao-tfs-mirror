@@ -23,12 +23,12 @@ namespace tfs
 {
   namespace clientv2
   {
-    class TfsClient
+    class TfsClientV2
     {
     public:
-      static TfsClient* Instance()
+      static TfsClientV2* Instance()
       {
-        static TfsClient tfs_client_;
+        static TfsClientV2 tfs_client_;
         return &tfs_client_;
       }
 
@@ -47,10 +47,22 @@ namespace tfs
       int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0);
       int unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action = common::DELETE);
 
+      int stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix = NULL,
+          const common::TfsStatType stat_type = common::NORMAL_STAT);
+      int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+          const char* local_file, const int32_t mode, const char* suffix = NULL);
+      int fetch_file(const char* local_file, const char* file_name, const char* suffix = NULL);
+      int unlink(int64_t& file_size, const char* file_name, const char* suffix = NULL,
+          const common::TfsUnlinkType action = common::DELETE,
+          const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
+
+      int64_t get_server_id();
+      int32_t get_cluster_id();
+
     private:
-      TfsClient();
-      DISALLOW_COPY_AND_ASSIGN(TfsClient);
-      ~TfsClient();
+      TfsClientV2();
+      DISALLOW_COPY_AND_ASSIGN(TfsClientV2);
+      ~TfsClientV2();
     };
   }
 }

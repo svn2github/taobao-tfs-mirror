@@ -18,8 +18,8 @@
 #include "common/base_packet_streamer.h"
 #include "common/client_manager.h"
 #include "message/message_factory.h"
-#include "tfs_client_impl.h"
 #include "tfs_file.h"
+#include "tfs_client_impl_v2.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
@@ -29,14 +29,14 @@ namespace tfs
 {
   namespace clientv2
   {
-    TfsClientImpl::TfsClientImpl() : is_init_(false), fd_(0),
+    TfsClientImplV2::TfsClientImplV2() : is_init_(false), fd_(0),
     packet_factory_(NULL), packet_streamer_(NULL)
     {
       packet_factory_ = new MessageFactory();
       packet_streamer_ = new BasePacketStreamer(packet_factory_);
     }
 
-    TfsClientImpl::~TfsClientImpl()
+    TfsClientImplV2::~TfsClientImplV2()
     {
       for (FILE_MAP::iterator it = tfs_file_map_.begin(); it != tfs_file_map_.end(); ++it)
       {
@@ -48,7 +48,7 @@ namespace tfs
       tbsys::gDelete(packet_streamer_);
     }
 
-    int TfsClientImpl::initialize(const char* ns_addr)
+    int TfsClientImplV2::initialize(const char* ns_addr)
     {
       int ret = TFS_SUCCESS;
 
@@ -89,7 +89,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsClientImpl::destroy()
+    int TfsClientImplV2::destroy()
     {
       tbutil::Mutex::Lock lock(mutex_);
       if (is_init_)
@@ -99,7 +99,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int TfsClientImpl::open(const char* file_name, const char* suffix, const int mode)
+    int TfsClientImplV2::open(const char* file_name, const char* suffix, const int mode)
     {
       int ret_fd = EXIT_INVALIDFD_ERROR;
       int ret = TFS_SUCCESS;
@@ -137,7 +137,7 @@ namespace tfs
       return ret_fd;
     }
 
-    int64_t TfsClientImpl::read(const int fd, void* buf, const int64_t count)
+    int64_t TfsClientImplV2::read(const int fd, void* buf, const int64_t count)
     {
       int64_t ret = EXIT_INVALIDFD_ERROR;
       TfsFile* tfs_file = get_file(fd);
@@ -148,7 +148,20 @@ namespace tfs
       return ret;
     }
 
-    int64_t TfsClientImpl::write(const int fd, const void* buf, const int64_t count)
+    int64_t TfsClientImplV2::readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info)
+    {
+      int64_t ret = EXIT_INVALIDFD_ERROR;
+      TfsFile* tfs_file = get_file(fd);
+      if (NULL != tfs_file)
+      {
+        tfs_file->read(buf, count, file_info);
+      }
+      return ret;
+
+      return TfsClientImplV2::Instance()->readv2(fd, buf, count, file_info);
+    }
+
+    int64_t TfsClientImplV2::write(const int fd, const void* buf, const int64_t count)
     {
       int64_t ret = EXIT_INVALIDFD_ERROR;
       TfsFile* tfs_file = get_file(fd);
@@ -159,7 +172,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t TfsClientImpl::lseek(const int fd, const int64_t offset, const int whence)
+    int64_t TfsClientImplV2::lseek(const int fd, const int64_t offset, const int whence)
     {
       int64_t ret = EXIT_INVALIDFD_ERROR;
       TfsFile* tfs_file = get_file(fd);
@@ -170,7 +183,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsClientImpl::fstat(const int fd, TfsFileStat* buf)
+    int TfsClientImplV2::fstat(const int fd, TfsFileStat* buf)
     {
       int ret = EXIT_INVALIDFD_ERROR;
       TfsFile* tfs_file = get_file(fd);
@@ -181,7 +194,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsClientImpl::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len)
+    int TfsClientImplV2::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len)
     {
       int ret = EXIT_INVALIDFD_ERROR;
       TfsFile* tfs_file = get_file(fd);
@@ -210,7 +223,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsClientImpl::unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action)
+    int TfsClientImplV2::unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action)
     {
       int ret = EXIT_INVALIDFD_ERROR;
       TfsFile* tfs_file = get_file(fd);
@@ -221,7 +234,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsClientImpl::set_option_flag(const int fd, const int option_flag)
+    int TfsClientImplV2::set_option_flag(const int fd, const int option_flag)
     {
       int ret = EXIT_INVALIDFD_ERROR;
       TfsFile* tfs_file = get_file(fd);
@@ -233,7 +246,147 @@ namespace tfs
       return ret;
     }
 
-    TfsFile* TfsClientImpl::get_file(const int fd)
+    int TfsClientImplV2::stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix,
+        const common::TfsStatType stat_type)
+    {
+      int ret = TFS_SUCCESS;
+      int fd = open(file_name, suffix, T_READ);
+      if (fd < 0)
+      {
+        ret = EXIT_INVALIDFD_ERROR;
+      }
+      else
+      {
+        set_option_flag(fd, stat_type);
+        ret = fstat(fd, file_stat);
+        close(fd);
+      }
+      return ret;
+    }
+
+
+    int64_t TfsClientImplV2::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+        const char* local_file, const int32_t mode, const char* suffix)
+    {
+      int ret = TFS_SUCCESS;
+      int local_fd = 0;  // local file desp
+      int fd = 0;        // tfs file desp
+
+      local_fd = ::open(local_file, O_RDONLY);
+      if (local_fd < 0)
+      {
+        ret = -errno;
+        TBSYS_LOG(ERROR, "open local file fail. %s", strerror(errno));
+      }
+      else
+      {
+        fd = open((char*)NULL, suffix, T_WRITE | mode);
+        if (fd < 0)
+        {
+          ret = EXIT_INVALIDFD_ERROR;
+          TBSYS_LOG(ERROR, "open local file fail.");
+        }
+        else
+        {
+          char buf[MAX_READ_SIZE];
+          int rlen = 0;
+          while (1)
+          {
+            rlen = ::read(local_fd, buf, MAX_READ_SIZE);
+            if (rlen > 0)
+            {
+              ::write(fd, buf, rlen);
+            }
+
+            if (rlen < MAX_READ_SIZE)  // error happens or read the end
+            {
+              break;
+            }
+          }
+          close(fd, ret_tfs_name, ret_tfs_name_len);
+        }
+
+        ::close(local_fd);
+      }
+
+      return ret;
+    }
+
+    int TfsClientImplV2::fetch_file(const char* local_file, const char* file_name, const char* suffix)
+    {
+      int ret = TFS_SUCCESS;
+      int local_fd = 0;  // local file desp
+      int fd = 0;        // tfs file desp
+
+      local_fd = ::open(local_file, O_RDWR);
+      if (local_fd < 0)
+      {
+        ret = -errno;
+        TBSYS_LOG(ERROR, "open local file fail. %s", strerror(errno));
+      }
+      else
+      {
+        fd = open(file_name, suffix, T_READ);
+        if (fd < 0)
+        {
+          ret = EXIT_INVALIDFD_ERROR;
+          TBSYS_LOG(ERROR, "open local file fail.");
+        }
+        else
+        {
+          char buf[MAX_READ_SIZE];
+          int rlen = 0;
+          while (1)
+          {
+            rlen = read(fd, buf, MAX_READ_SIZE);
+            if (rlen > 0)
+            {
+              ::write(local_fd, buf, rlen);
+            }
+
+            if (rlen < MAX_READ_SIZE)  // error happens or read the end
+            {
+              break;
+            }
+          }
+          close(fd);
+        }
+
+        ::close(local_fd);
+      }
+
+      return ret;
+
+    }
+    int TfsClientImplV2::unlink(int64_t& file_size, const char* file_name, const char* suffix,
+        const common::TfsUnlinkType action, const common::OptionFlag option_flag)
+    {
+      int ret = TFS_SUCCESS;
+      int fd = open(file_name, suffix, T_UNLINK);
+      if (fd < 0)
+      {
+        ret = EXIT_INVALIDFD_ERROR;
+      }
+      else
+      {
+        set_option_flag(fd, option_flag);
+        ret = unlink(file_size, fd, action);
+        close(fd);
+      }
+      return ret;
+    }
+
+    int64_t TfsClientImplV2::get_server_id()
+    {
+      return ns_addr_;
+    }
+
+    int32_t TfsClientImplV2::get_cluster_id()
+    {
+      return cluster_id_;
+    }
+
+    TfsFile* TfsClientImplV2::get_file(const int fd)
     {
       tbutil::Mutex::Lock lock(mutex_);
       FILE_MAP::iterator it = tfs_file_map_.find(fd);
@@ -245,7 +398,7 @@ namespace tfs
       return it->second;
     }
 
-    int TfsClientImpl::get_fd()
+    int TfsClientImplV2::get_fd()
     {
       int ret_fd = EXIT_INVALIDFD_ERROR;
 
@@ -286,7 +439,7 @@ namespace tfs
       return ret_fd;
     }
 
-    int TfsClientImpl::insert_file(const int fd, TfsFile* tfs_file)
+    int TfsClientImplV2::insert_file(const int fd, TfsFile* tfs_file)
     {
       int ret = TFS_ERROR;
 
@@ -300,7 +453,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsClientImpl::erase_file(const int fd)
+    int TfsClientImplV2::erase_file(const int fd)
     {
       tbutil::Mutex::Lock lock(mutex_);
       FILE_MAP::iterator it = tfs_file_map_.find(fd);
@@ -314,7 +467,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int TfsClientImpl::initialize_cluster_id()
+    int TfsClientImplV2::initialize_cluster_id()
     {
       ClientCmdMessage cc_message;
       cc_message.set_cmd(CLIENT_CMD_SET_PARAM);

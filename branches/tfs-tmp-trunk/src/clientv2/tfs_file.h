@@ -93,8 +93,13 @@ namespace tfs
         }
         else if(common::INVALID_FAMILY_ID != family_info_.family_id_)
         {
-          int32_t index = GET_MASTER_INDEX(family_info_.family_aid_info_);
-          server_id = family_info_.members_[index].first;
+          // request to the first alive nodes
+          int32_t target = 0;
+          while (common::INVALID_SERVER_ID == family_info_.members_[target].second)
+          {
+            target++;
+          }
+          server_id = family_info_.members_[target].second;
         }
         return server_id;
       }
@@ -114,7 +119,7 @@ namespace tfs
         int open(const char* file_name, const char* suffix, const int32_t mode);
         int64_t lseek(const int64_t offset, const int whence);
         int64_t stat(common::TfsFileStat& file_stat);
-        int64_t read(void* buf, const int64_t count);
+        int64_t read(void* buf, const int64_t count, common::TfsFileStat* file_stat = NULL);
         int64_t write(const void* buf, const int64_t count);
         int close();
         int unlink(const common::TfsUnlinkType action, int64_t& file_size);
@@ -126,7 +131,8 @@ namespace tfs
       private:
         int do_open();
         int do_stat(common::TfsFileStat& file_stat);
-        int do_read(char* buf, const int64_t count, int64_t& read_len);
+        int do_read(char* buf, const int64_t count, int64_t& read_len,
+            common::TfsFileStat* file_stat = NULL);
         int do_write(const char* buf, int64_t count);
         int do_close();
         int do_unlink(const int32_t action, int64_t& file_size);

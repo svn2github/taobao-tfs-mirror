@@ -28,8 +28,9 @@ namespace tfs
   namespace clientv2
   {
     TfsFile::TfsFile(const uint64_t ns_addr, const int32_t cluster_id):
-      ns_addr_(ns_addr), cluster_id_(cluster_id)
+      ns_addr_(ns_addr)
     {
+      fsname_.set_cluster_id(cluster_id);
     }
 
     TfsFile::~TfsFile()
@@ -122,7 +123,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t TfsFile::read(void* buf, const int64_t count)
+    int64_t TfsFile::read(void* buf, const int64_t count, common::TfsFileStat* file_stat)
     {
       int ret = TFS_SUCCESS;
       int64_t done = 0;
@@ -140,7 +141,7 @@ namespace tfs
           read_len = ((count - done) < MAX_READ_SIZE) ? (count - done) : MAX_READ_SIZE;
           while (retry--)
           {
-            ret = do_read((char*)buf + done, read_len, real_read_len);
+            ret = do_read((char*)buf + done, read_len, real_read_len, file_stat);
             if (TFS_SUCCESS != ret)
             {
               file_.set_next_read_ds();
@@ -332,6 +333,7 @@ namespace tfs
       {
         StatFileMessageV2 msg;
         msg.set_block_id(fsname_.get_block_id());
+        msg.set_attach_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
         msg.set_flag(file_.opt_flag_);
         if (file_.has_family())
@@ -368,7 +370,8 @@ namespace tfs
       return ret;
     }
 
-    int TfsFile::do_read(char* buf, const int64_t count, int64_t& read_len)
+    int TfsFile::do_read(char* buf, const int64_t count, int64_t& read_len,
+        common::TfsFileStat* file_stat)
     {
       int ret = TFS_SUCCESS;
       tbnet::Packet* resp_msg = NULL;
@@ -386,17 +389,25 @@ namespace tfs
           file_.offset_ += FILEINFO_EXT_SIZE;
         }
 
+        // read or readv2
+        int32_t real_flag = file_.opt_flag_;
+        if (NULL != file_stat)
+        {
+          real_flag |= READ_DATA_OPTION_WITH_FINFO;
+        }
+
         ReadFileMessageV2 msg;
         msg.set_block_id(fsname_.get_block_id());
+        msg.set_attach_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
         msg.set_offset(file_.offset_);
         msg.set_length(count);
-        msg.set_flag(file_.opt_flag_);
-        TBSYS_LOG(DEBUG, "family id: %"PRI64_PREFIX"d", file_.family_info_.family_id_);
+        msg.set_flag(real_flag);
         if (file_.has_family())
         {
           msg.set_family_info(file_.family_info_);
         }
+        TBSYS_LOG(DEBUG, "family id: %"PRI64_PREFIX"d", file_.family_info_.family_id_);
         ret = send_msg_to_server(file_.get_read_ds(), client, &msg, resp_msg);
       }
 
@@ -421,6 +432,10 @@ namespace tfs
           read_len = response->get_length();
           memcpy(buf, response->get_data(), read_len);
           file_.offset_ += read_len;
+          if (NULL != file_stat)
+          {
+            wrap_file_info(*file_stat, response->get_file_info());
+          }
         }
       }
       NewClientManager::get_instance().destroy_client(client);
@@ -442,6 +457,7 @@ namespace tfs
       {
         WriteFileMessageV2 msg;
         msg.set_block_id(fsname_.get_block_id());
+        msg.set_attach_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
         msg.set_offset(file_.offset_);
         msg.set_length(count);
@@ -451,6 +467,10 @@ namespace tfs
         msg.set_flag(file_.opt_flag_);
         msg.set_ds(file_.ds_);
         msg.set_data(buf);
+        if (file_.has_family())
+        {
+          msg.set_family_info(file_.family_info_);
+        }
         ret = send_msg_to_server(file_.get_write_ds(), client, &msg, resp_msg);
       }
 
@@ -495,11 +515,16 @@ namespace tfs
       {
         CloseFileMessageV2 msg;
         msg.set_block_id(fsname_.get_block_id());
+        msg.set_attach_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
         msg.set_lease_id(file_.lease_id_);
         msg.set_master_id(file_.get_write_ds());
         msg.set_ds(file_.ds_);
         msg.set_crc(file_.crc_);
+        if (file_.has_family())
+        {
+          msg.set_family_info(file_.family_info_);
+        }
         ret = send_msg_to_server(file_.get_write_ds(), client, &msg, resp_msg);
       }
 
@@ -535,6 +560,7 @@ namespace tfs
       {
         UnlinkFileMessageV2 msg;
         msg.set_block_id(fsname_.get_block_id());
+        msg.set_attach_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
         msg.set_lease_id(file_.lease_id_);
         msg.set_master_id(file_.get_write_ds());

@@ -6,8 +6,8 @@ AM_LDFLAGS=-lrt -lpthread -ldl -luuid
 
 lib_LTLIBRARIES= libtfsclientv2.la 
 
-api_source_list = tfs_client_api_v2.cpp tfs_client_impl.cpp tfs_file.cpp fsname.cpp \
-									tfs_client_api_v2.h tfs_client_impl.h tfs_file.h fsname.h
+api_source_list = tfs_client_api_v2.cpp tfs_client_impl_v2.cpp tfs_file.cpp fsname.cpp \
+									tfs_client_api_v2.h tfs_client_impl_v2.h tfs_file.h fsname.h
 
 ld_fg = $(AM_LDFLAGS) \
         $(top_srcdir)/src/message/libtfsmessage.a \

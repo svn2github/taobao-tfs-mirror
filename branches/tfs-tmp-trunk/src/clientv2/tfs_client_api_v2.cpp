@@ -12,7 +12,7 @@
  *
  */
 
-#include "tfs_client_impl.h"
+#include "tfs_client_impl_v2.h"
 #include "tfs_client_api_v2.h"
 
 namespace tfs
@@ -21,63 +21,101 @@ namespace tfs
   {
     using namespace common;
 
-    TfsClient::TfsClient()
+    TfsClientV2::TfsClientV2()
     {
     }
 
-    TfsClient::~TfsClient()
+    TfsClientV2::~TfsClientV2()
     {
     }
 
-    int TfsClient::initialize(const char* ns_addr)
+    int TfsClientV2::initialize(const char* ns_addr)
     {
-      return TfsClientImpl::Instance()->initialize(ns_addr);
+      return TfsClientImplV2::Instance()->initialize(ns_addr);
     }
 
-    int TfsClient::destroy()
+    int TfsClientV2::destroy()
     {
-      return TfsClientImpl::Instance()->destroy();
+      return TfsClientImplV2::Instance()->destroy();
     }
 
-    int TfsClient::open(const char* file_name, const char* suffix, const int mode)
+    int TfsClientV2::open(const char* file_name, const char* suffix, const int mode)
     {
-      return TfsClientImpl::Instance()->open(file_name, suffix, mode);
+      return TfsClientImplV2::Instance()->open(file_name, suffix, mode);
     }
 
-    int TfsClient::set_option_flag(const int fd, const int option_flag)
+    int TfsClientV2::set_option_flag(const int fd, const int option_flag)
     {
-      return TfsClientImpl::Instance()->set_option_flag(fd, option_flag);
+      return TfsClientImplV2::Instance()->set_option_flag(fd, option_flag);
     }
 
-    int64_t TfsClient::read(const int fd, void* buf, const int64_t count)
+    int64_t TfsClientV2::read(const int fd, void* buf, const int64_t count)
     {
-      return TfsClientImpl::Instance()->read(fd, buf, count);
+      return TfsClientImplV2::Instance()->read(fd, buf, count);
     }
 
-    int64_t TfsClient::write(const int fd, const void* buf, const int64_t count)
+    int64_t TfsClientV2::readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info)
     {
-      return TfsClientImpl::Instance()->write(fd, buf, count);
+      return TfsClientImplV2::Instance()->readv2(fd, buf, count, file_info);
     }
 
-    int64_t TfsClient::lseek(const int fd, const int64_t offset, const int whence)
+    int64_t TfsClientV2::write(const int fd, const void* buf, const int64_t count)
     {
-      return TfsClientImpl::Instance()->lseek(fd, offset, whence);
+      return TfsClientImplV2::Instance()->write(fd, buf, count);
     }
 
-    int TfsClient::fstat(const int fd, TfsFileStat* buf)
+    int64_t TfsClientV2::lseek(const int fd, const int64_t offset, const int whence)
     {
-      return TfsClientImpl::Instance()->fstat(fd, buf);
+      return TfsClientImplV2::Instance()->lseek(fd, offset, whence);
     }
 
-    int TfsClient::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len)
+    int TfsClientV2::fstat(const int fd, TfsFileStat* buf)
     {
-      return TfsClientImpl::Instance()->close(fd, ret_tfs_name, ret_tfs_name_len);
+      return TfsClientImplV2::Instance()->fstat(fd, buf);
     }
 
-    int TfsClient::unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action)
+    int TfsClientV2::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len)
     {
-      return TfsClientImpl::Instance()->unlink(file_size, fd, action);
+      return TfsClientImplV2::Instance()->close(fd, ret_tfs_name, ret_tfs_name_len);
     }
 
+    int TfsClientV2::unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action)
+    {
+      return TfsClientImplV2::Instance()->unlink(file_size, fd, action);
+    }
+
+    int TfsClientV2::stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix,
+        const common::TfsStatType stat_type)
+    {
+      return TfsClientImplV2::Instance()->stat_file(file_stat, file_name, suffix, stat_type);
+    }
+
+    int64_t TfsClientV2::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+        const char* local_file, const int32_t mode, const char* suffix)
+    {
+      return TfsClientImplV2::Instance()->save_file(ret_tfs_name, ret_tfs_name_len,
+          local_file, mode, suffix);
+    }
+
+    int TfsClientV2::fetch_file(const char* local_file, const char* file_name, const char* suffix)
+    {
+      return TfsClientImplV2::Instance()->fetch_file(local_file, file_name, suffix);
+    }
+
+    int TfsClientV2::unlink(int64_t& file_size, const char* file_name, const char* suffix,
+        const common::TfsUnlinkType action, const common::OptionFlag option_flag)
+    {
+      return TfsClientImplV2::Instance()->unlink(file_size, file_name, suffix, action, option_flag);
+    }
+
+    int64_t TfsClientV2::get_server_id()
+    {
+      return TfsClientImplV2::Instance()->get_server_id();
+    }
+
+    int32_t TfsClientV2::get_cluster_id()
+    {
+      return TfsClientImplV2::Instance()->get_cluster_id();
+    }
   }
 }

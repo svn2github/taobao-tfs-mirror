@@ -6,15 +6,13 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: tfs_client_impl.h 868 2011-09-29 05:07:38Z duanfei@taobao.com $
- *
  * Authors:
  *   linqing <linqing.zyd@taobao.com>
  *      - initial release
  *
  */
-#ifndef TFS_CLIENTV2_TFSCLIENTIMPL_H_
-#define TFS_CLIENTV2_TFSCLIENTIMPL_H_
+#ifndef TFS_CLIENTV2_TFSCLIENTIMPLV2_H_
+#define TFS_CLIENTV2_TFSCLIENTIMPLV2_H_
 
 #include <Mutex.h>
 #include <stdio.h>
@@ -35,12 +33,12 @@ namespace tfs
     class TfsFile;
     typedef std::map<int, TfsFile*> FILE_MAP;
 
-    class TfsClientImpl
+    class TfsClientImplV2
     {
     public:
-      static TfsClientImpl* Instance()
+      static TfsClientImplV2* Instance()
       {
-        static TfsClientImpl tfs_client_impl;
+        static TfsClientImplV2 tfs_client_impl;
         return &tfs_client_impl;
       }
 
@@ -48,7 +46,7 @@ namespace tfs
       int destroy();
       int set_option_flag(const int fd, const int opt_flag);
 
-      int open(const char* file_name, const char* suffix, const int mode);
+      int open(const char* file_name, const char* suffix, const int mode = 0);
       int64_t read(const int fd, void* buf, const int64_t count);
       int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info);
       int64_t write(const int fd, const void* buf, const int64_t count);
@@ -59,6 +57,18 @@ namespace tfs
       int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0);
       int unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action = common::DELETE);
 
+      int stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix = NULL,
+          const common::TfsStatType stat_type = common::NORMAL_STAT);
+      int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+          const char* local_file, const int32_t mode, const char* suffix = NULL);
+      int fetch_file(const char* local_file, const char* file_name, const char* suffix = NULL);
+      int unlink(int64_t& file_size, const char* file_name, const char* suffix = NULL,
+          const common::TfsUnlinkType action = common::DELETE,
+          const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
+
+      int64_t get_server_id();
+      int32_t get_cluster_id();
+
     private:
       int get_fd();
       TfsFile* get_file(const int fd);
@@ -67,9 +77,9 @@ namespace tfs
       int initialize_cluster_id();
 
    private:
-      TfsClientImpl();
-      DISALLOW_COPY_AND_ASSIGN(TfsClientImpl);
-      ~TfsClientImpl();
+      TfsClientImplV2();
+      DISALLOW_COPY_AND_ASSIGN(TfsClientImplV2);
+      ~TfsClientImplV2();
 
       bool is_init_;
       int fd_;
