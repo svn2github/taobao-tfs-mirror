@@ -284,7 +284,7 @@ namespace tfs
         if (fd < 0)
         {
           ret = EXIT_INVALIDFD_ERROR;
-          TBSYS_LOG(ERROR, "open local file fail.");
+          TBSYS_LOG(ERROR, "open new tfs file fail.");
         }
         else
         {
@@ -330,7 +330,7 @@ namespace tfs
         if (fd < 0)
         {
           ret = EXIT_INVALIDFD_ERROR;
-          TBSYS_LOG(ERROR, "open local file fail.");
+          TBSYS_LOG(ERROR, "open tfs file %s fail", file_name);
         }
         else
         {
