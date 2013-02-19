@@ -22,8 +22,11 @@
 
 #include "common/parameter.h"
 #include "common/config_item.h"
+#include "common/client_manager.h"
+#include "common/new_client.h"
 #include "name_meta_server/meta_store_manager.h"
 #include "name_meta_server/meta_server_service.h"
+#include "new_client/tfs_kv_meta_helper.h"
 
 using namespace std;
 using namespace __gnu_cxx;
@@ -39,6 +42,11 @@ const int MAGIC_NUMBER3 = 0x71597ca8;
 const int MAGIC_NUMBER4 = 0x826a8db9;
 
 int stop = 0;
+int64_t server_id = 0;
+
+static tfs::message::MessageFactory gfactory;
+static tfs::common::BasePacketStreamer gstreamer;
+
 void sign_handler(int32_t sig)
 {
   switch (sig)
@@ -66,7 +74,8 @@ void transfer(const string &source_file_name, const string &s3_server)
     printf(" open file %s for read error\n", source_file_name.c_str());
     ret =  TFS_ERROR;
   }
-  char buff[MAX_OBJECT_NAME_LEN * 2];
+  char buff[MAX_OBJECT_NAME_LEN];
+  char bucket_name[MAX_OBJECT_NAME_LEN];
   int magic_number;
   string object_name;
   int full_name_len;
@@ -74,6 +83,13 @@ void transfer(const string &source_file_name, const string &s3_server)
   int read_len = 0;
   int64_t app_id = 0;
   int64_t uid = 0;
+  TfsFileInfo tfs_file_info_u;
+  ObjectInfo obj_info;
+  UserInfo user_info;
+  BucketMetaInfo bucket_meta_info;
+
+  obj_info.v_tfs_file_info_.clear();
+  obj_info.v_tfs_file_info_.push_back(tfs_file_info_u);
 
   while(TFS_SUCCESS == ret && 1 != stop)
   {
@@ -84,16 +100,26 @@ void transfer(const string &source_file_name, const string &s3_server)
       fread(&app_id, sizeof(app_id), 1, s_fd);
       fread(&uid, sizeof(uid), 1, s_fd);
       TBSYS_LOG(INFO, "deal appid:%ld uid:%ld", app_id, uid);
+      sprintf(bucket_name, "%ld^%ld", app_id, uid);
+      user_info.owner_id_ = app_id;
+
+      ret = tfs::client::KvMetaHelper::do_put_bucket(server_id, bucket_name,
+          bucket_meta_info, user_info);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "put bucket error |%s|", bucket_name);
+      }
+
       continue;
     }else if (magic_number != MAGIC_NUMBER1)
     {
-      TBSYS_LOG(INFO, "magic number error");
+      TBSYS_LOG(ERROR, "magic number error");
       break;
     }
     fread(&full_name_len, sizeof(full_name_len), 1, s_fd);
     if (full_name_len > MAX_OBJECT_NAME_LEN || full_name_len < 0)
     {
-      TBSYS_LOG(INFO, "full name len error %d", full_name_len);
+      TBSYS_LOG(ERROR, "full name len error %d", full_name_len);
       break;
     }
     fread(buff, full_name_len, 1, s_fd);
@@ -107,11 +133,19 @@ void transfer(const string &source_file_name, const string &s3_server)
       TBSYS_LOG(INFO, "magic number error");
       break;
     }
-      TBSYS_LOG(INFO, "full_name %*s ct %d, mt %d, sz %lu",
-          object_name.length(), object_name.c_str(),
-          meta_info.file_info_.create_time_,
-          meta_info.file_info_.modify_time_,
-          meta_info.file_info_.size_);
+    //TBSYS_LOG(INFO, "full_name %*s ct %d, mt %d, sz %lu",
+    //    object_name.length(), object_name.c_str(),
+    //    meta_info.file_info_.create_time_,
+    //    meta_info.file_info_.modify_time_,
+    //    meta_info.file_info_.size_);
+
+
+    obj_info.has_meta_info_ = true;
+    obj_info.has_customize_info_ = false;
+    obj_info.meta_info_.create_time_ = meta_info.file_info_.create_time_;
+    obj_info.meta_info_.modify_time_ = meta_info.file_info_.modify_time_;
+    obj_info.meta_info_.max_tfs_file_size_ = -1; //TODO this is a tricky in server
+
     FragMeta frag_it;
     int32_t cluster_id;
 
@@ -121,7 +155,7 @@ void transfer(const string &source_file_name, const string &s3_server)
       if (magic_number == MAGIC_NUMBER4) break;
       if (magic_number != MAGIC_NUMBER3)
       {
-        TBSYS_LOG(INFO, "magic number error");
+        TBSYS_LOG(ERROR, "magic number error");
         break;
       }
       fread(&(frag_it.offset_), sizeof(frag_it.offset_), 1, s_fd);
@@ -129,10 +163,29 @@ void transfer(const string &source_file_name, const string &s3_server)
       fread(&(frag_it.block_id_), sizeof(frag_it.block_id_), 1, s_fd);
       fread(&(frag_it.file_id_), sizeof(frag_it.file_id_), 1, s_fd);
       fread(&(frag_it.size_), sizeof(frag_it.size_), 1, s_fd);
+
+      TfsFileInfo& tfs_file_info = obj_info.v_tfs_file_info_[0];
+
+      tfs_file_info.block_id_ = frag_it.block_id_;
+      tfs_file_info.file_id_ = frag_it.file_id_;
+      tfs_file_info.cluster_id_ = cluster_id;
+      tfs_file_info.file_size_ = frag_it.size_;
+      tfs_file_info.offset_ = frag_it.offset_;
+
+      ret = TFS_SUCCESS;
+      ret = tfs::client::KvMetaHelper::do_put_object(server_id, bucket_name,
+          object_name.c_str(), obj_info, user_info);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "put object error");
         TBSYS_LOG(INFO, "off_set %ld cluster_id %d lock_id %d file_id %ld size %d",
             frag_it.offset_,
             cluster_id,
             frag_it.block_id_, frag_it.file_id_, frag_it.size_);
+      }
+
+      obj_info.meta_info_.max_tfs_file_size_ = 0;
+
     }
 
 
@@ -144,6 +197,10 @@ void transfer(const string &source_file_name, const string &s3_server)
 
 int main(int argc, char *argv[])
 {
+  gstreamer.set_packet_factory(&gfactory);
+
+  tfs::common::NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
+
   int i;
   std::string source_file_name;
   std::string s3_server;
@@ -171,6 +228,7 @@ int main(int argc, char *argv[])
     usage(argv[0]);
     return TFS_ERROR;
   }
+  server_id = Func::get_host_ip(s3_server.c_str());
   TBSYS_LOGGER.setFileName(log_file_name.c_str());
   TBSYS_LOGGER.setLogLevel("info");
   signal(SIGINT, sign_handler);

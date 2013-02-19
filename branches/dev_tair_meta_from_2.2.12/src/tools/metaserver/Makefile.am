@@ -7,7 +7,8 @@ AM_LDFLAGS=-lrt -lpthread -ldl $(MYSQL_LDFLAGS)
 
 bin_PROGRAMS = meta_transfer txt2new
 
-LDADD =	$(top_builddir)/src/name_meta_server/libnamemetaserver.a\
+LDADD =	$(top_builddir)/src/new_client/.libs/libtfsclient.a \
+				$(top_builddir)/src/name_meta_server/libnamemetaserver.a \
         $(TAIR_CACHE_LDFLAGS) \
 				$(top_builddir)/src/message/libtfsmessage.a\
         $(top_builddir)/src/common/libtfscommon.a\
