@@ -147,7 +147,7 @@ AC_ARG_WITH([release],
     [use optimize (default is NO)]),
     [
       if test "$withval" = "yes"; then
-        CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -Wno-deprecated -Wno-unused-result -fPIC -D__STDC_LIMIT_MACROS -D_NO_EXCEPTION"
+        CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -Wno-deprecated -fPIC -D__STDC_LIMIT_MACROS -D_NO_EXCEPTION"
       fi
     ],
     [CXXFLAGS="-g -D__STDC_LIMIT_MACROS -Wall -Werror -Wextra -Wunused-parameter -Wformat -Wconversion -Wdeprecated "]
