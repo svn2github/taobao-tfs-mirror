@@ -187,10 +187,10 @@ namespace tfs
           del_report_block_server_(server);
 
         SERVER_TABLE_ITER iter = wait_report_block_servers_.find(server);
-        SERVER_TABLE_ITER it   = current_reporting_block_servers_.find(server);
         bool insert = iter == wait_report_block_servers_.end();
         if (insert)
         {
+          SERVER_TABLE_ITER it   = current_reporting_block_servers_.find(server);
           if (it != current_reporting_block_servers_.end())
           {
             result = *it;
@@ -227,6 +227,11 @@ namespace tfs
         if (iter != current_reporting_block_servers_.end())
         {
           current_reporting_block_servers_.erase((*iter));
+        }
+        iter = wait_report_block_servers_.find(server);
+        if (iter != wait_report_block_servers_.end())
+        {
+          wait_report_block_servers_.erase((*iter));
         }
       }
       return ret;
