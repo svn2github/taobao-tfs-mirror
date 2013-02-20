@@ -47,6 +47,9 @@ namespace tfs
         int64_t pwrite_object(const char *bucket_name, const char *object_name,
             const void *buffer, int64_t offset, int64_t length, const common::UserInfo &user_info);
 
+        int64_t pread_object(const char *bucket_name, const char *object_name,
+            void *buffer, int64_t offset, int64_t length, const common::UserInfo &user_info);
+
         int64_t put_object_to_buf(const char *bucket_name, const char *object_name,
             const void *buffer, int64_t offset, int64_t length, const common::UserInfo &user_info);
         int64_t get_object_to_buf(const char *bucket_name, const char *object_name,

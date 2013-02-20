@@ -293,6 +293,19 @@ namespace tfs
       return ret;
     }
 
+    int64_t KvMetaClientImpl::pread_object(const char *bucket_name, const char *object_name,
+        void *buffer, int64_t offset, int64_t length, const UserInfo &user_info)
+    {
+      int64_t ret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_object_to_buf(bucket_name, object_name, buffer, offset, length, NULL, NULL, user_info);
+      }
+
+      return ret;
+    }
+
     int KvMetaClientImpl::unlink_file(const vector<FragMeta> &v_frag_meta, const char* ns_addr, int32_t cluster_id)
     {
       int ret = TFS_SUCCESS;
