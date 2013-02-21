@@ -50,7 +50,14 @@ namespace tfs
           ret = EXIT_PARAMETER_ERROR;
         }
       }
-      else if ((mode & T_CREATE) || (mode & T_UNLINK))
+      else if (mode & T_WRITE)
+      {
+        if ((mode & T_NEWBLK) == 0)
+        {
+          file_.mode_ |= T_CREATE;
+        }
+      }
+      else if (mode & T_UNLINK)
       {
         file_.mode_ |= T_WRITE;
       }

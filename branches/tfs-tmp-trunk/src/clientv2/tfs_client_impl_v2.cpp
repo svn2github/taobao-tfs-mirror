@@ -295,7 +295,7 @@ namespace tfs
             rlen = ::read(local_fd, buf, MAX_READ_SIZE);
             if (rlen > 0)
             {
-              ::write(fd, buf, rlen);
+              write(fd, buf, rlen);
             }
 
             if (rlen < MAX_READ_SIZE)  // error happens or read the end
@@ -318,7 +318,7 @@ namespace tfs
       int local_fd = 0;  // local file desp
       int fd = 0;        // tfs file desp
 
-      local_fd = ::open(local_file, O_RDWR);
+      local_fd = ::open(local_file, O_CREAT | O_RDWR);
       if (local_fd < 0)
       {
         ret = -errno;
