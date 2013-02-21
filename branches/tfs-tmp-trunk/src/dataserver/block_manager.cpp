@@ -685,21 +685,21 @@ namespace tfs
             BaseLogicBlock* logic_block = NULL;
             if (TFS_SUCCESS == ret)
             {
-              if (get_logic_block_manager().exist(index.logic_block_id_))
+              if (get_logic_block_manager().exist(index.logic_block_id_, !complete))
               {
-                logic_block = get_logic_block_manager().get(index.logic_block_id_);
+                logic_block = get_logic_block_manager().get(index.logic_block_id_, !complete);
               }
               else
               {
                 std::stringstream index_path;
                 index_path << info->mount_point_ << INDEX_DIR_PREFIX << index.physical_block_id_;
-                logic_block = insert_logic_block_(index.logic_block_id_, index_path.str(), complete);
+                logic_block = insert_logic_block_(index.logic_block_id_, index_path.str(), !complete);
               }
             }
 
             if (!complete && TFS_SUCCESS == ret)
             {
-              ret = del_block(index.logic_block_id_);
+              ret = del_block(index.logic_block_id_, !complete);
             }
 
             if (complete && TFS_SUCCESS == ret)
@@ -907,13 +907,13 @@ namespace tfs
     {
       BaseLogicBlock* logic_block = NULL;
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id && !index_path.empty()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret && !get_logic_block_manager().exist(logic_block_id))
+      if (TFS_SUCCESS == ret && !get_logic_block_manager().exist(logic_block_id, tmp))
       {
         ret = get_logic_block_manager().insert(logic_block_id, index_path, tmp);
       }
       if (TFS_SUCCESS == ret)
       {
-        logic_block = get_logic_block_manager().get(logic_block_id);
+        logic_block = get_logic_block_manager().get(logic_block_id, tmp);
       }
       return logic_block;
     }

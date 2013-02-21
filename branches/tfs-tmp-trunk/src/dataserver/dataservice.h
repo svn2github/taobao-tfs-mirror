@@ -105,6 +105,7 @@ namespace tfs
       inline BlockManager& get_block_manager() { return *block_manager_;}
       inline DataManager& get_data_manager() { return data_manager_;}
       inline DataHelper&  get_data_helper() { return data_helper_;}
+      inline TaskManager&  get_task_manager() { return task_manager_;}
       inline TrafficControl& get_traffic_control() { return traffic_control_;}
       inline std::vector<SyncBase*>& get_sync_mirror() { return sync_mirror_; }
 

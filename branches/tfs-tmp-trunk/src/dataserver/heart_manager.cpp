@@ -37,7 +37,8 @@ namespace tfs
       service_(service)
     {
       assert(!ns_ip_port.empty());
-      data_server_info_.status_ = DATASERVER_STATUS_DEAD;
+      DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
+      info.status_ = DATASERVER_STATUS_DEAD;
       std::vector<uint64_t>::const_iterator iter = ns_ip_port.begin();
       for (int32_t index = 0; iter != ns_ip_port.end(); ++iter,++index)
         ns_ip_port_[index] = (*iter);
@@ -52,8 +53,9 @@ namespace tfs
 
     int DataServerHeartManager::initialize()
     {
-      data_server_info_.startup_time_ = time(NULL);
-      IpAddr* adr = reinterpret_cast<IpAddr*>(&data_server_info_.id_);
+      DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
+      info.startup_time_ = time(NULL);
+      IpAddr* adr = reinterpret_cast<IpAddr*>(&info.id_);
       adr->ip_ = tbsys::CNetUtil::getAddr(service_.get_ip_addr());
       adr->port_ = service_.get_listen_port();
       for (int32_t index = 0; index < MAX_SINGLE_CLUSTER_NS_NUM; ++index)
@@ -61,7 +63,7 @@ namespace tfs
         heart_beat_thread_[index] = new (std::nothrow)HeartBeatThreadHelper(*this, index);
         assert(0 != heart_beat_thread_[index]);
       }
-      data_server_info_.status_ = DATASERVER_STATUS_ALIVE;
+      info.status_ = DATASERVER_STATUS_ALIVE;
       return TFS_SUCCESS;
     }
 
@@ -87,12 +89,20 @@ namespace tfs
       //sleep for a while, waiting for listen port establish
       sleep(heart_interval);
       TBSYS_LOG(INFO, "start heartbeat,nameserver: %s", tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str());
+
       DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
+      // every thread will exec this code once to avoid sending uninitialized
+      // DataServerStatInfo to nameserver
+      service_.get_block_manager().get_space(info.total_capacity_, info.use_capacity_);
+      info.block_count_ = service_.get_block_manager().get_all_logic_block_count();
+      info.current_load_ = Func::get_load_avg();
+      info.current_time_ = time(NULL);
+
       while (!DsRuntimeGlobalInformation::instance().is_destroyed())
       {
         if (0 == who % MAX_SINGLE_CLUSTER_NS_NUM)
         {
-          service_.get_block_manager().get_space(info.total_capacity_, info.total_capacity_);
+          service_.get_block_manager().get_space(info.total_capacity_, info.use_capacity_);
           info.block_count_ = service_.get_block_manager().get_all_logic_block_count();
           info.current_load_ = Func::get_load_avg();
           info.current_time_ = time(NULL);
@@ -123,8 +133,9 @@ namespace tfs
       int ret = who < 0 || who >= MAX_SINGLE_CLUSTER_NS_NUM ? SEND_BLOCK_TO_NS_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
+        DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
         SetDataserverMessage req_msg;
-        req_msg.set_dataserver_information(data_server_info_);
+        req_msg.set_dataserver_information(info);
         tbnet::Packet* message = NULL;
         NewClient* client = NewClientManager::get_instance().create_client();
         ret = NULL != client ? TFS_SUCCESS : SEND_BLOCK_TO_NS_CREATE_NETWORK_CLIENT_ERROR;
@@ -150,7 +161,7 @@ namespace tfs
               if (HEART_MESSAGE_OK != status)
               {
                 TBSYS_LOG(WARN, "dataserver:%s keepalive failed,  nameserver: %s",
-                    tbsys::CNetUtil::addrToString(data_server_info_.id_).c_str(), tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str());
+                    tbsys::CNetUtil::addrToString(info.information_.id_).c_str(), tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str());
               }
             }
           }

@@ -349,7 +349,7 @@ namespace tfs
       return ret;
     }
 
-    int TaskManager::run_task()
+    void TaskManager::run_task()
     {
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       while (!ds_info.is_destroyed())
@@ -406,10 +406,16 @@ namespace tfs
         tbsys::gDelete(task);
       }
       task_monitor_.unlock();
-      return TFS_SUCCESS;
     }
 
-    int TaskManager::expire_task()
+    void TaskManager::stop_task()
+    {
+      task_monitor_.lock();
+      task_monitor_.notifyAll();
+      task_monitor_.unlock();
+    }
+
+    void TaskManager::expire_task()
     {
       running_task_mutex_.lock();
       map<int64_t, Task*>::iterator iter = running_task_.begin();
@@ -432,8 +438,6 @@ namespace tfs
       running_task_mutex_.unlock();
 
       TBSYS_LOG(DEBUG, "task manager expire task, old: %u, new: %u", old_size, new_size);
-
-      return TFS_SUCCESS;
     }
 
     int TaskManager::check_family(const int64_t family_id, const int32_t family_aid_info)

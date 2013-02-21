@@ -277,6 +277,11 @@ namespace tfs
       {
         heart_manager_    = new (std::nothrow)DataServerHeartManager(*this, ns_ip_port);
         assert(NULL != heart_manager_);
+        ret = heart_manager_->initialize();
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         task_thread_      = new (std::nothrow)RunTaskThreadHelper(*this);
         assert(0 != task_thread_);
         timeout_thread_  = new (std::nothrow)TimeoutThreadHelper(*this);
@@ -288,7 +293,6 @@ namespace tfs
     int DataService::initialize_sync_mirror_()
     {
       int32_t ret = (!SYSPARAM_DATASERVER.local_ns_ip_.empty()
-                    && !SYSPARAM_DATASERVER.slave_ns_ip_.empty()
                     &&  SYSPARAM_DATASERVER.local_ns_port_ > 1024
                     &&  SYSPARAM_DATASERVER.local_ns_port_ < 65535) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -377,7 +381,10 @@ namespace tfs
          heart_manager_->wait_for_shut_down();
 
       if (0 != task_thread_)
+      {
+        get_task_manager().stop_task();
         task_thread_->join();
+      }
 
       if (0 != timeout_thread_)
         timeout_thread_->join();

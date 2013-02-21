@@ -40,9 +40,9 @@ namespace tfs
         int handle(BaseTaskMessage* packet);
         int handle_complete(BaseTaskMessage* packet);
 
-        int run_task();
-        int expire_task();
-        void stop();
+        void run_task();
+        void stop_task();
+        void expire_task();
 
       private:
         DISALLOW_COPY_AND_ASSIGN(TaskManager);

@@ -50,7 +50,6 @@ namespace tfs
       void run_(const int32_t who);
       int keepalive(int8_t& heart_interval, const int32_t who, const int64_t timeout);
       uint64_t ns_ip_port_[common::MAX_SINGLE_CLUSTER_NS_NUM];
-      common::DataServerStatInfo data_server_info_; //dataserver info
       HeartBeatThreadHelperPtr heart_beat_thread_[common::MAX_SINGLE_CLUSTER_NS_NUM];
       DataService& service_;
     };
