@@ -177,8 +177,7 @@ namespace tfs
     class BlockBase
     {
       public:
-        int64_t family_id_;
-        common::BlockInfo info_;
+        common::BlockInfoV2 info_;
         std::vector<ServerInfo> server_list_;
 
         BlockBase();

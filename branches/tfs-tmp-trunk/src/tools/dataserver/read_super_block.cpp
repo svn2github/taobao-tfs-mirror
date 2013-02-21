@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include "common/parameter.h"
 #include "dataserver/block_manager.h"
-#include "dataserver/version.h"
+#include "common/version.h"
 
 using namespace tfs::dataserver;
 using namespace tfs::common;
@@ -39,7 +39,7 @@ void dump_super_block(const SuperBlockInfo& info)
   printf("%-25s%d\n", "used main block count:", info.used_main_block_count_);
   printf("%-25s%d\n", "used extend block count:", info.used_extend_block_count_);
   printf("%-25s%d\n", "max main block size:", info.max_main_block_size_);
-  printf("%-25s%d\n", "max extend block size:", info.max_main_block_size_);
+  printf("%-25s%d\n", "max extend block size:", info.max_extend_block_size_);
   printf("%-25s%d\n", "hash bucket count:", info.hash_bucket_count_);
   printf("%-25s%lf\n", "max use block ratio:", info.max_use_block_ratio_);
   printf("%-25s%lf\n", "max use hash ratio:", info.max_use_hash_bucket_ratio_);
@@ -48,24 +48,30 @@ void dump_super_block(const SuperBlockInfo& info)
 
 void dump_block_index_header()
 {
-  printf("%-18s%-15s%-15s%-15s%-15s%-8s\n",
-      "LOGIC ID",
-      "PHYSICAL ID",
-      "BLOCKFILE ID",
+  printf("%-15s%-10s%-10s%-10s%-10s%-8s%-6s%-6s%-6s\n",
+      "LOGIC_ID",
+      "PHY_ID",
+      "NAME_ID",
       "NEXT",
       "PREV",
-      "INDEX");
+      "INDEX",
+      "STAT",
+      "FLAG",
+      "OVER");
 }
 
 void dump_block_index(const BlockIndex& index)
 {
-  printf("%-18"PRI64_PREFIX"u%-15d%-15d%-15d%-15d%-8d\n",
+  printf("%-15"PRI64_PREFIX"u%-10d%-10d%-10d%-10d%-8d%-6d%-6d%-6d\n",
       index.logic_block_id_,
       index.physical_block_id_,
       index.physical_file_name_id_,
       index.next_index_,
       index.prev_index_,
-      index.index_);
+      index.index_,
+      index.status_,
+      index.split_flag_,
+      index.split_status_);
 }
 
 int main(int argc, char* argv[])

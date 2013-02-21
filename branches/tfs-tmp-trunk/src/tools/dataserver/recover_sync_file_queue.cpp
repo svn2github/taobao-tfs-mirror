@@ -25,7 +25,7 @@
 #include "common/directory_op.h"
 #include "message/client_cmd_message.h"
 #include "new_client/fsname.h"
-#include "dataserver/version.h"
+#include "common/version.h"
 #include "dataserver/blockfile_manager.h"
 #include "dataserver/sync_backup.h"
 

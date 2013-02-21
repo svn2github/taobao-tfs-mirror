@@ -34,7 +34,7 @@
 #include "message/write_data_message.h"
 #include "message/close_file_message.h"
 #include "message/crc_error_message.h"
-#include "dataserver/bit_map.h"
+// #include "dataserver/bit_map.h"
 #include "new_client/tfs_file.h"
 #include "new_client/fsname.h"
 
@@ -42,7 +42,7 @@
 
 using namespace tfs::common;
 using namespace tfs::message;
-using namespace tfs::dataserver;
+// using namespace tfs::dataserver;
 using namespace std;
 
 namespace tfs
@@ -1014,6 +1014,7 @@ namespace tfs
       }
       return ret_status;
     }
+    /*
     void print_bitmap(const int32_t map_len, const int32_t used_len, const char* data)
     {
       printf("LsBitMap. MapLen : %u,UsedLen : %u\n", map_len, used_len);
@@ -1089,5 +1090,6 @@ namespace tfs
       NewClientManager::get_instance().destroy_client(client);
       return ret_status;
     }
+  */
   }
 }

@@ -23,7 +23,7 @@
 #include "message/server_status_message.h"
 #include "new_client/tfs_client_impl.h"
 #include "new_client/fsname.h"
-#include "dataserver/version.h"
+#include "common/version.h"
 #include "dataserver/blockfile_manager.h"
 #include "tools/util/tool_util.h"
 

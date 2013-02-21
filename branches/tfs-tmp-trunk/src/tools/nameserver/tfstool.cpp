@@ -40,14 +40,16 @@
 #include "new_client/tfs_client_impl.h"
 #include "new_client/tfs_rc_client_api_impl.h"
 #include "new_client/tfs_meta_client_api_impl.h"
+#include "clientv2/tfs_client_impl_v2.h"
 
 using namespace std;
 using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::tools;
 
-static TfsClientImpl* g_tfs_client = NULL;
+static TfsClientImplV2* g_tfs_client = NULL;
 static STR_FUNC_MAP g_cmd_map;
 static int64_t app_id = 1;
 static int64_t uid = 1234;
@@ -205,8 +207,9 @@ int main(int argc, char* argv[])
 
   if (nsip != NULL)
   {
-    g_tfs_client = TfsClientImpl::Instance();
-    ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
+    g_tfs_client = TfsClientImplV2::Instance();
+    // ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
+    ret = g_tfs_client->initialize(nsip);
     if (ret != TFS_SUCCESS)
     {
       fprintf(stderr, "init tfs client fail, ret: %d\n", ret);
@@ -521,6 +524,7 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
     }
   }
 
+  /*
   if (unique)
   {
     // TODO: save unique
@@ -546,6 +550,10 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
           TFS_ERROR : TFS_SUCCESS;
     }
   }
+  */
+
+  UNUSED(unique);
+  ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix);
 
   //printf("tfs_name: %s, ret_tfs_name: %s\n", tfs_name, ret_tfs_name);
   ToolUtil::print_info(ret, "put %s => %s", local_file, tfs_name != NULL ? FSName(tfs_name, suffix).get_name() : ret_tfs_name);

@@ -255,7 +255,7 @@ namespace tfs
         if (info_.size_ != block_b.info_.size_) { flag_.set(b + 2);  block_b.flag_.set(b + 2); }
         if (info_.del_file_count_ != block_b.info_.del_file_count_) { flag_.set(b + 3);  block_b.flag_.set(b + 3); }
         if (info_.del_size_ != block_b.info_.del_size_) { flag_.set(b + 4);  block_b.flag_.set(b + 4); }
-        if (info_.seq_no_ != block_b.info_.seq_no_) { flag_.set(b + 5); block_b.flag_.set(b + 5); }
+        // if (info_.seq_no_ != block_b.info_.seq_no_) { flag_.set(b + 5); block_b.flag_.set(b + 5); }
         if (server_list_.size() != block_b.server_list_.size()) { flag_.set(b + 6);  block_b.flag_.set(b + 6); }
       }
 
@@ -290,23 +290,21 @@ namespace tfs
       int b = 0;
       if (type & BLOCK_CMP_PART_INFO)
       {
-        printf("%-10u %6d%c %10d%c %10d%c %5Zd%c\n",
+        printf("%-10"PRI64_PREFIX"u %6d%c %10d%c %10d%c %5Zd%c\n",
           info_.block_id_, info_.version_, suffix(flag_[b]), info_.file_count_, suffix(flag_[b]),
           info_.size_, suffix(flag_[b]), server_list_.size(), suffix(flag_[b])
           );
       }
       if (type & BLOCK_CMP_ALL_INFO)
       {
-        printf("%-10u %6d%c %10d%c %10d%c %8d%c %10d%c %5u%c %5Zd%c\n",
+        printf("%-10"PRI64_PREFIX"u %6d%c %10d%c %10d%c %8d%c %10d%c %5Zd%c\n",
           info_.block_id_, info_.version_, suffix(flag_[b]), info_.file_count_, suffix(flag_[b+1]),
           info_.size_,  suffix(flag_[b+2]), info_.del_file_count_, suffix(flag_[b+3]),
-          info_.del_size_, suffix(flag_[b+4]), info_.seq_no_, suffix(flag_[b+5]),
-          server_list_.size(), suffix(flag_[b+6])
-          );
+          info_.del_size_, suffix(flag_[b+4]), server_list_.size(), suffix(flag_[b+6]));
       }
       if (type & BLOCK_CMP_SERVER)
       {
-        printf("%-10u", info_.block_id_);
+        printf("%-10"PRI64_PREFIX"u", info_.block_id_);
         print_container(server_list_, flag_);
       }
     }
