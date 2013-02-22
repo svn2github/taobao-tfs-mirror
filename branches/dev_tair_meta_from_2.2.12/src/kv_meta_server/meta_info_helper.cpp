@@ -1061,8 +1061,19 @@ namespace tfs
       pkey.key_size_ = bucket_name.length();
       pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
 
-      ret = list_objects(pkey, prefix, start_key, delimiter, limit,
+      // check bucket whether exist
+      if (TFS_SUCCESS == ret)
+      {
+        BucketMetaInfo bucket_meta_info;
+        ret = head_bucket(bucket_name, &bucket_meta_info);
+        TBSYS_LOG(INFO, "head bucket: %s, ret: %d", bucket_name.c_str(), ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = list_objects(pkey, prefix, start_key, delimiter, limit,
           v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
+      }
 
       return ret;
     }
