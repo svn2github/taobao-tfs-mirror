@@ -27,10 +27,8 @@ namespace tfs
     using namespace common;
     using namespace message;
 
-    int Requester::init(const uint64_t dataserver_id, const uint64_t ns_ip_port, DataManagement* data_management)
+    int Requester::init(DataManagement* data_management)
     {
-      dataserver_id_ = dataserver_id;
-      ns_ip_port_ = ns_ip_port;
       data_management_ = data_management;
       return TFS_SUCCESS;
     }
@@ -56,15 +54,16 @@ namespace tfs
         }
       }
 
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       int ret = TFS_ERROR;
       UpdateBlockInfoMessage ub_msg;
       ub_msg.set_block_id(block_id);
       ub_msg.set_block(&blk);
-      ub_msg.set_server_id(dataserver_id_);
+      ub_msg.set_server_id(ds_info.information_.id_);
       ub_msg.set_repair(tmp_repair);
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* return_msg = NULL;
-      ret = send_msg_to_server(ns_ip_port_, client, &ub_msg, return_msg);
+      ret = send_msg_to_server(ds_info.ns_vip_port_, client, &ub_msg, return_msg);
       if (TFS_SUCCESS != ret)
       {
         NewClientManager::get_instance().destroy_client(client);
@@ -127,10 +126,11 @@ namespace tfs
       }
       */
 
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       BlockWriteCompleteMessage bwc_msg;
       // bwc_msg.set_block(&tmpblk);
       bwc_msg.set_block(&blk);
-      bwc_msg.set_server_id(dataserver_id_);
+      bwc_msg.set_server_id(ds_info.information_.id_);
       bwc_msg.set_lease_id(lease_id);
       WriteCompleteStatus wc_status = WRITE_COMPLETE_STATUS_YES;
       if (TFS_SUCCESS != success)
@@ -142,7 +142,7 @@ namespace tfs
 
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* return_msg = NULL;
-      ret = send_msg_to_server(ns_ip_port_, client, &bwc_msg, return_msg);
+      ret = send_msg_to_server(ds_info.ns_vip_port_, client, &bwc_msg, return_msg);
 
       if (TFS_SUCCESS != ret)
       {
@@ -161,7 +161,7 @@ namespace tfs
         {
           ret = TFS_ERROR;
           TBSYS_LOG(ERROR, "req block write complete, nsip: %s, error desc: %s, id: %u\n",
-              tbsys::CNetUtil::addrToString(ns_ip_port_).c_str(), sm->get_error(), block_id);
+              tbsys::CNetUtil::addrToString(ds_info.ns_vip_port_).c_str(), sm->get_error(), block_id);
         }
       }
       else

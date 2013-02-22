@@ -976,14 +976,14 @@ namespace tfs
     int BlockFileInfoMessage::deserialize(common::Stream& input)
     {
       int32_t size = 0;
-      int32_t ret = input.get_int32(reinterpret_cast<int32_t*> (&block_id_));
+      int32_t ret = input.get_int64(reinterpret_cast<int64_t*> (&block_id_));
       if (common::TFS_SUCCESS == ret)
       {
         ret = input.get_int32(&size);
       }
       if (common::TFS_SUCCESS == ret)
       {
-        common::FileInfo info;
+        common::FileInfoV2 info;
         for (int32_t i = 0; i < size; ++i)
         {
           int64_t pos = 0;
@@ -1004,20 +1004,20 @@ namespace tfs
 
     int64_t BlockFileInfoMessage::length() const
     {
-      common::FileInfo info;
-      return common::INT_SIZE * 2 + fileinfo_list_.size() * info.length();
+      common::FileInfoV2 info;
+      return common::INT_SIZE + common::INT64_SIZE + fileinfo_list_.size() * info.length();
     }
 
     int BlockFileInfoMessage::serialize(common::Stream& output)  const
     {
-      int32_t ret = output.set_int32(block_id_);
+      int32_t ret = output.set_int64(block_id_);
       if (common::TFS_SUCCESS == ret)
       {
         ret = output.set_int32(fileinfo_list_.size());
       }
       if (common::TFS_SUCCESS == ret)
       {
-        common::FILE_INFO_LIST::const_iterator iter = fileinfo_list_.begin();
+        common::FILE_INFO_LIST_V2::const_iterator iter = fileinfo_list_.begin();
         for (; iter != fileinfo_list_.end(); ++iter)
         {
           int64_t pos = 0;

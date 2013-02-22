@@ -309,7 +309,7 @@ void init()
     g_cmd_map["stat"] = CmdNode("stat tfsname", "stat tfs file", 1, 1, cmd_stat_file);
     g_cmd_map["statblk"] = CmdNode("statblk blockid [serverip:port]", "stat a block", 1, 2, cmd_stat_blk);
     g_cmd_map["vcblk"] = CmdNode("vcblk serverip:port count", "visit count block", 2, 2, cmd_visit_count_blk);
-    g_cmd_map["lsf"] = CmdNode("lsf blockid [detail] [serverip:port]" , "list file list in block", 1, 3, cmd_list_file_info);
+    g_cmd_map["lsf"] = CmdNode("lsf blockid [attach_block_id] [detail] [serverip:port]" , "list file list in block", 1, 4, cmd_list_file_info);
     g_cmd_map["listblock"] = CmdNode("listblock blockid", "list block server list", 1, 1, cmd_list_block);
     g_cmd_map["cfi"] = CmdNode("cfi tfsname", "check file info", 1, 1, cmd_check_file_info);
   }
@@ -890,11 +890,11 @@ int cmd_stat_blk(const VSTRING& param)
   int ret = TFS_ERROR;
 
   uint64_t server_id = 0;
-  uint32_t block_id = 0;
+  uint64_t block_id = 0;
 
-  if ((block_id = atoi(param[0].c_str())) <= 0)
+  if ((block_id = atol(param[0].c_str())) <= 0)
   {
-    fprintf(stderr, "invalid blockid: %u\n", block_id);
+    fprintf(stderr, "invalid blockid: %"PRI64_PREFIX"u\n", block_id);
   }
 
   if (param.size() > 2)
@@ -904,10 +904,10 @@ int cmd_stat_blk(const VSTRING& param)
   else
   {
     VUINT64 ds_list;
-    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list);
+    ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list);
     if (ret != TFS_SUCCESS)
     {
-      fprintf(stderr, "get ds list failed. block_id: %u, ret: %d\n", block_id, ret);
+      fprintf(stderr, "get ds list failed. block_id: %"PRI64_PREFIX"u, ret: %d\n", block_id, ret);
       return ret;
     }
     server_id = ds_list[0];
@@ -945,29 +945,30 @@ int cmd_visit_count_blk(const VSTRING& param)
 
 int cmd_list_file_info(const VSTRING& param)
 {
-  uint32_t block_id = 0;
+  uint64_t block_id = 0;
+  uint64_t attach_block_id = 0;
   uint64_t server_id = 0;
 
   int32_t show_detail = 0;
 
   int ret = TFS_ERROR;
-  if ((block_id = atoi(param[0].c_str())) <= 0)
+  if ((block_id = atol(param[0].c_str())) <= 0)
   {
-    fprintf(stderr, "invalid blockid: %u\n", block_id);
+    fprintf(stderr, "invalid blockid: %"PRI64_PREFIX"u\n", block_id);
     return ret;
   }
 
-  if (param.size() > 2)
+  if (param.size() > 3)
   {
-    server_id = Func::get_host_ip(param[2].c_str());
+    server_id = Func::get_host_ip(param[3].c_str());
   }
   else
   {
     VUINT64 ds_list;
-    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list);
+    ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list);
     if (ret != TFS_SUCCESS)
     {
-      fprintf(stderr, "get ds list failed. block_id: %u, ret: %d\n", block_id, ret);
+      fprintf(stderr, "get ds list failed. block_id: %"PRI64_PREFIX"u, ret: %d\n", block_id, ret);
       return ret;
     }
     server_id = ds_list[0];
@@ -975,12 +976,23 @@ int cmd_list_file_info(const VSTRING& param)
 
   if (0 != server_id)
   {
-    if (param.size() > 1 && 0 == strcmp(param[1].c_str(), "detail"))
+    if (param.size() > 2 && 0 == strcmp(param[2].c_str(), "detail"))
     {
       show_detail = 1;
     }
+
+    if (param.size() > 1)
+    {
+      attach_block_id = atol(param[1].c_str());
+    }
+    else
+    {
+      attach_block_id = block_id;
+    }
+
     DsTask ds_task(server_id, g_tfs_client->get_cluster_id());
     ds_task.block_id_ = block_id;
+    ds_task.attach_block_id_ = attach_block_id;
     ds_task.mode_ = show_detail;
     ret = DsLib::list_file(ds_task);
   }
@@ -990,26 +1002,26 @@ int cmd_list_file_info(const VSTRING& param)
 
 int cmd_list_block(const VSTRING& param)
 {
-  uint32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = atol(param[0].c_str());
   int ret = TFS_ERROR;
 
   if (block_id <= 0)
   {
-    fprintf(stderr, "invalid block id: %u\n", block_id);
+    fprintf(stderr, "invalid block id: %"PRI64_PREFIX"u\n", block_id);
   }
   else
   {
     VUINT64 ds_list;
-    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list);
+    ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list);
     ToolUtil::print_info(ret, "list block %u", block_id);
 
     if (TFS_SUCCESS == ret)
     {
       int32_t ds_size = ds_list.size();
-      fprintf(stdout, "------block: %u, has %d replicas------\n", block_id, ds_size);
+      fprintf(stdout, "------block: %"PRI64_PREFIX"u, has %d replicas------\n", block_id, ds_size);
       for (int32_t i = 0; i < ds_size; ++i)
       {
-        fprintf(stdout, "block: %u, (%d)th server: %s \n", block_id, i, tbsys::CNetUtil::addrToString(ds_list[i]).c_str());
+        fprintf(stdout, "block: %"PRI64_PREFIX"u, (%d)th server: %s \n", block_id, i, tbsys::CNetUtil::addrToString(ds_list[i]).c_str());
       }
     }
   }
@@ -1028,7 +1040,7 @@ int cmd_check_file_info(const VSTRING& param)
   else
   {
     VUINT64 ds_list;
-    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), fsname.get_block_id(), ds_list);
+    ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), fsname.get_block_id(), ds_list);
     if (ret != TFS_SUCCESS)
     {
       fprintf(stderr, "get block info fail, ret: %d\n", ret);

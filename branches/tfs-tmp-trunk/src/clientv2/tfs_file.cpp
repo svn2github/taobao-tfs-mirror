@@ -322,6 +322,7 @@ namespace tfs
           }
         }
       }
+      NewClientManager::get_instance().destroy_client(client);
 
       return ret;
     }

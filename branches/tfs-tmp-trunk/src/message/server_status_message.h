@@ -21,7 +21,7 @@ namespace tfs
 {
   namespace message
   {
-    class GetServerStatusMessage: public common::BasePacket 
+    class GetServerStatusMessage: public common::BasePacket
     {
       public:
         GetServerStatusMessage();
@@ -55,11 +55,11 @@ namespace tfs
         }
       protected:
         int32_t status_type_;
-        int32_t from_row_;
-        int32_t return_row_;
+        int64_t from_row_;
+        int64_t return_row_;
     };
 
-    class AccessStatInfoMessage: public common::BasePacket 
+    class AccessStatInfoMessage: public common::BasePacket
     {
       public:
         typedef __gnu_cxx ::hash_map<uint32_t, common::Throughput> COUNTER_TYPE;
@@ -126,7 +126,7 @@ namespace tfs
         mutable int32_t has_next_;
     };
 
-    class ShowServerInformationMessage : public common::BasePacket 
+    class ShowServerInformationMessage : public common::BasePacket
     {
     public:
       ShowServerInformationMessage();

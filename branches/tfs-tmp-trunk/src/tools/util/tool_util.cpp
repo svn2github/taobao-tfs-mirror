@@ -16,6 +16,7 @@
 #include "common/client_manager.h"
 #include "common/status_message.h"
 #include "message/block_info_message.h"
+#include "message/block_info_message_v2.h"
 
 #include "tool_util.h"
 
@@ -65,6 +66,54 @@ namespace tfs
 
       return ret;
     }
+
+    int ToolUtil::get_block_ds_list_v2(const uint64_t server_id, const uint64_t block_id, VUINT64& ds_list, const int32_t flag)
+    {
+      int ret = TFS_ERROR;
+      if (0 == server_id)
+      {
+        TBSYS_LOG(ERROR, "server is is invalid: %"PRI64_PREFIX"u", server_id);
+      }
+      else
+      {
+        GetBlockInfoMessageV2 gbi_message;
+        gbi_message.set_block_id(block_id);
+        gbi_message.set_mode(flag);
+
+        tbnet::Packet* rsp = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        ret = send_msg_to_server(server_id, client, &gbi_message, rsp);
+
+        if (rsp != NULL)
+        {
+          if (rsp->getPCode() == GET_BLOCK_INFO_RESP_MESSAGE_V2)
+          {
+            GetBlockInfoRespMessageV2* msg = dynamic_cast<GetBlockInfoRespMessageV2* >(rsp);
+            BlockMeta& block_meta = msg->get_block_meta();
+            for (int i = 0; i < block_meta.size_; i++)
+            {
+              ds_list.push_back(block_meta.ds_[i]);
+            }
+          }
+          else if (rsp->getPCode() == STATUS_MESSAGE)
+          {
+            ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
+            fprintf(stderr, "get block info fail, error: %s\n,", dynamic_cast<StatusMessage*>(rsp)->get_error());
+            ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
+          }
+        }
+        else
+        {
+          fprintf(stderr, "get NULL response message, ret: %d\n", ret);
+        }
+
+        NewClientManager::get_instance().destroy_client(client);
+      }
+
+      return ret;
+    }
+
+
 
     int ToolUtil::show_help(const STR_FUNC_MAP& cmd_map)
     {

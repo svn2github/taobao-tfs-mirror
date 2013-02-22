@@ -233,6 +233,8 @@ namespace tfs
         IpAddr adr;
         adr.ip_ = tbsys::CNetUtil::getAddr(get_ip_addr());
         adr.port_ = get_listen_port();
+
+        //init file number to management
         uint64_t file_number = ((adr.ip_ & 0xFFFFFF00) | (adr.port_ & 0xFF));
         file_number = file_number << 32;
         data_management_.set_file_number(file_number);
@@ -240,6 +242,9 @@ namespace tfs
         string sb_path = string(SYSPARAM_FILESYSPARAM.mount_name_) + SUPERBLOCK_NAME;
         block_manager_ = new (std::nothrow) BlockManager(sb_path);
         assert(NULL != block_manager_);
+
+        // init ds requester
+        ret = ds_requester_.init(&data_management_);
       }
 
       //load all blocks
@@ -1358,73 +1363,39 @@ namespace tfs
 
     int DataService::get_server_status(GetServerStatusMessage *message)
     {
+      int ret = TFS_SUCCESS;
       int32_t type = message->get_status_type();
-      // int32_t ret_row = message->get_return_row();
 
       if (GSS_MAX_VISIT_COUNT == type)
       {
-        /*
-        //get max visit count block
-        CarryBlockMessage* resp_cb_msg = new CarryBlockMessage();
-        // TODO
-        vector<LogicBlock*> block_vecs;
-        data_management_.get_visit_sorted_blockids(block_vecs);
-        for (int32_t i = 0; i < ret_row && i < static_cast<int32_t>(block_vecs.size()); ++i)
-        {
-          resp_cb_msg->add_expire_id(block_vecs[i]->get_block_info()->block_id_);
-          resp_cb_msg->add_new_id(block_vecs[i]->get_visit_count());
-        }
-        message->reply(resp_cb_msg);
-
-        */
-        return TFS_SUCCESS;
+        // no longer has MAX_VISIT_COUNT information
       }
       else if (GSS_BLOCK_FILE_INFO == type)
       {
-        /*
-        uint32_t block_id = ret_row;
+        uint64_t block_id = message->get_return_row();
+        uint64_t attach_block_id = message->get_from_row();
         //get block file list
-        vector <FileInfo> fileinfos;
-        int ret = data_management_.get_block_file_list(block_id, fileinfos);
+        IndexHeaderV2 header;
+        BlockFileInfoMessage* resp_bfi_msg = new BlockFileInfoMessage();
+        FILE_INFO_LIST_V2* fileinfos = resp_bfi_msg->get_fileinfo_list();
+        int ret = get_block_manager().traverse(header, *fileinfos, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
         {
-          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+          tbsys::gDelete(resp_bfi_msg);
+          ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
               "GSS_BLOCK_FILE_INFO fail, blockid: %u, ret: %d", block_id, ret);
         }
-
-        BlockFileInfoMessage* resp_bfi_msg = new BlockFileInfoMessage();
-        FILE_INFO_LIST* v = resp_bfi_msg->get_fileinfo_list();
-        for (uint32_t i = 0; i < fileinfos.size(); ++i)
+        else
         {
-          v->push_back((fileinfos[i]));
+          ret = message->reply(resp_bfi_msg);
         }
-        message->reply(resp_bfi_msg);
-        */
-        return TFS_SUCCESS;
       }
       else if (GSS_BLOCK_RAW_META_INFO == type)
       {
-        //get block inode info
-        /*
-        uint32_t block_id = ret_row;
-        RawMetaVec meta_vec;
-        int ret = data_management_.get_block_meta_info(block_id, meta_vec);
-        if (TFS_SUCCESS != ret)
-        {
-          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
-              "GSS_BLOCK_RAW_META_INFO fail, blockid: %u, ret: %d", block_id, ret);
-        }
-
-        BlockRawMetaMessage* resp_brm_msg = new BlockRawMetaMessage();
-        RawMetaVec* v = resp_brm_msg->get_raw_meta_list();
-        v->assign(meta_vec.begin(), meta_vec.end());
-        message->reply(resp_brm_msg);
-        */
-        return TFS_SUCCESS;
+        // meta will be included in FileInfoV2
       }
 
-      return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), STATUS_MESSAGE_ERROR,
-          "get server status type unsupport: %d", type);
+      return ret;
     }
 
     int32_t DataService::client_command(ClientCmdMessage* message)

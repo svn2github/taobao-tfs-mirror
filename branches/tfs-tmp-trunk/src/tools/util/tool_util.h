@@ -56,6 +56,8 @@ namespace tfs
     public:
       static int get_block_ds_list(const uint64_t server_id, const uint32_t block_id,
                                    common::VUINT64& ds_list, const int32_t flag = common::T_READ);
+      static int get_block_ds_list_v2(const uint64_t server_id, const uint64_t block_id,
+                                   common::VUINT64& ds_list, const int32_t flag = common::T_READ);
       static int show_help(const STR_FUNC_MAP& cmd_map);
       static void print_info(const int status, const char* fmt, ...);
     };

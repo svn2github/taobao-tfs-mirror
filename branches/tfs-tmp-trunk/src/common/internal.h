@@ -839,7 +839,8 @@ namespace tfs
       uint64_t old_file_id_;
       uint64_t new_file_id_;
       int32_t cluster_id_;
-      uint32_t block_id_;
+      uint64_t block_id_;
+      uint64_t attach_block_id_;
       int32_t num_row_;
       //data member, used in list block
       int32_t list_block_type_;
@@ -1254,6 +1255,7 @@ namespace tfs
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;
+    typedef std::vector<FileInfoV2> FILE_INFO_LIST_V2;
     typedef std::map<uint64_t, FileInfo*> FILE_INFO_MAP;
     typedef FILE_INFO_MAP::iterator FILE_INFO_MAP_ITER;
 
