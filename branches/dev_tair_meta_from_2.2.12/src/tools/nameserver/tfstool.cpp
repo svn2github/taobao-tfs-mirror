@@ -31,9 +31,11 @@
 #include "common/status_message.h"
 #include "common/meta_server_define.h"
 #include "common/kv_meta_define.h"
+#include "common/kv_rts_define.h"
 #include "message/server_status_message.h"
 #include "message/client_cmd_message.h"
 #include "message/message_factory.h"
+#include "message/kv_rts_message.h"
 #include "common/base_packet_streamer.h"
 #include "tools/util/tool_util.h"
 #include "tools/util/ds_lib.h"
@@ -42,6 +44,7 @@
 #include "new_client/tfs_rc_client_api_impl.h"
 #include "new_client/tfs_meta_client_api_impl.h"
 #include "new_client/tfs_kv_meta_client_impl.h"
+
 
 
 using namespace std;
@@ -175,10 +178,57 @@ int cmd_head_object(const VSTRING& param);
 const char* rc_addr = NULL;
 const char* nsip = NULL;
 const char* kms_addr = NULL;
+const char* krs_addr = NULL;
 MetaType g_meta_type = META_RAW;
 
 static tfs::common::BasePacketStreamer gstreamer;
 static tfs::message::MessageFactory gfactory;
+
+int get_kvmeta_from_kvroot(std::string &kvmeta_addr)
+{
+  uint64_t ms_id;
+  uint64_t server = Func::get_host_ip(krs_addr);
+  GetTableFromKvRtsMessage msg;
+
+  NewClient* client = NULL;
+
+  int32_t iret = TFS_SUCCESS;
+  tbnet::Packet* rsp = NULL;
+
+  client = NewClientManager::get_instance().create_client();
+
+  iret = send_msg_to_server(server, client, &msg, rsp, ClientConfig::wait_timeout_);
+
+  if (TFS_SUCCESS != iret)
+  {
+    ToolUtil::print_info(iret, "call kvroot fail");
+    iret = EXIT_NETWORK_ERROR;
+  }
+  else if (RSP_KV_RT_GET_TABLE_MESSAGE == rsp->getPCode())
+  {
+    GetTableFromKvRtsResponseMessage* rsp_get_table = dynamic_cast<GetTableFromKvRtsResponseMessage*>(rsp);
+    std::vector<KvMetaServerBaseInformation>& base_infos = rsp_get_table->get_mutable_table();
+
+    for(size_t i = 0; i < base_infos.size(); ++i)
+    {
+      kvmeta_addr = Func::addr_to_str(base_infos[i].id_, true);
+      ToolUtil::print_info(iret, "num : %d   ipport : %s", i, kvmeta_addr.c_str());
+    }
+    if (base_infos.size() != 0)
+    {
+      ms_id = base_infos[random() % base_infos.size()].id_;
+      kvmeta_addr = Func::addr_to_str(ms_id, true);
+    }
+  }
+  else
+  {
+    iret = EXIT_UNKNOWN_MSGTYPE;
+    ToolUtil::print_info(iret, "call kvroot fail,msg type: %d", rsp->getPCode());
+  }
+  NewClientManager::get_instance().destroy_client(client);
+  return iret;
+}
+
 int main(int argc, char* argv[])
 {
   int32_t i;
@@ -187,7 +237,7 @@ int main(int argc, char* argv[])
   bool set_log_level = false;
 
   // analyze arguments
-  while ((i = getopt(argc, argv, "s:r:k:nih")) != EOF)
+  while ((i = getopt(argc, argv, "s:r:k:v:nih")) != EOF)
   {
     switch (i)
     {
@@ -202,6 +252,9 @@ int main(int argc, char* argv[])
         break;
       case 'k':
         kms_addr = optarg;
+        break;
+      case 'v':
+        krs_addr = optarg;
         break;
       case 'i':
         directly = true;
@@ -240,6 +293,35 @@ int main(int argc, char* argv[])
       return TFS_ERROR;
     }
     g_meta_type = META_KV;
+
+    ret = g_kv_meta_client.initialize(kms_addr, nsip);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(DEBUG, "kv meta client init failed, ret: %d", ret);
+      return ret;
+    }
+  }
+  else if (krs_addr != NULL)
+  {
+    string kvmeta_addr;
+    if (nsip == NULL)
+    {
+      usage(argv[0]);
+      return TFS_ERROR;
+    }
+    g_meta_type = META_KV;
+
+    if (TFS_SUCCESS == ret)
+    {
+
+      ret = get_kvmeta_from_kvroot(kvmeta_addr);
+      kms_addr = kvmeta_addr.c_str();
+    }
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(DEBUG, "kv root client failed, ret: %d", ret);
+      return ret;
+    }
 
     ret = g_kv_meta_client.initialize(kms_addr, nsip);
     if (TFS_SUCCESS != ret)
@@ -302,13 +384,15 @@ static void usage(const char* name)
           "Usage: a) %s -s nsip [-n] [-i] [-h] raw tfs client interface(without rc). \n"
           "       b) %s -r rcip [-n] [-i] [-h] name meta client interface(with rc). \n"
           "       c) %s -k kmsip -s nsip [-n] [-i] [-h] kv meta client interface. \n"
+          "       d) %s -v krsip -s nsip [-n] [-i] [-h] kv root client interface. \n"
           "       -s nameserver ip port\n"
           "       -r rcserver ip port\n"
           "       -k kvmetaserver ip port\n"
+          "       -v kvrootserver ip port\n"
           "       -n set log level\n"
           "       -i directly execute the command\n"
           "       -h help\n",
-          name, name, name);
+          name, name, name, name);
 }
 
 static void sign_handler(const int32_t sig)

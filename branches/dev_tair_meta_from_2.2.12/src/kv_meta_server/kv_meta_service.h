@@ -24,6 +24,7 @@
 #include "message/message_factory.h"
 
 #include "meta_info_helper.h"
+#include "kv_meta_heart_manager.h"
 namespace tfs
 {
   namespace kvmetaserver
@@ -58,14 +59,18 @@ namespace tfs
     private:
       DISALLOW_COPY_AND_ASSIGN(KvMetaService);
 
-      //ObjectHelper object_helper_;
+      uint64_t kvroot_ipport_id_;
+      uint64_t local_ipport_id_;
+      int64_t server_start_time_;
       MetaInfoHelper meta_info_helper_;
-      //TODO add stat
+
       //global stat
       tbutil::TimerPtr timer_;
       common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
       std::string tfs_kv_meta_stat_;
       //StatInfoHelper stat_info_helper_;
+
+      HeartManager heart_manager_;
     };
   }
 }

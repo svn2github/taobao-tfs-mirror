@@ -47,6 +47,7 @@
 #include "update_table_message.h"
 #include "checkserver_message.h"
 #include "kv_meta_message.h"
+#include "kv_rts_message.h"
 
 namespace tfs
 {

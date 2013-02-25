@@ -312,6 +312,18 @@ namespace tfs
           case common::RSP_KVMETA_HEAD_BUCKET_MESSAGE:
             packet = new RspKvMetaHeadBucketMessage();
             break;
+          case common::REQ_KV_RT_MS_KEEPALIVE_MESSAGE:
+            packet = new KvRtsMsHeartMessage();
+            break;
+          case common::RSP_KV_RT_MS_KEEPALIVE_MESSAGE:
+            packet = new KvRtsMsHeartResponseMessage();
+            break;
+          case common::REQ_KV_RT_GET_TABLE_MESSAGE:
+            packet = new GetTableFromKvRtsMessage();
+            break;
+          case common::RSP_KV_RT_GET_TABLE_MESSAGE:
+            packet = new GetTableFromKvRtsResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;

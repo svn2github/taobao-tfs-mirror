@@ -219,6 +219,8 @@ namespace tfs
       std::string tair_group_;
       int tair_object_area_;
       int32_t dump_stat_info_interval_;
+      uint64_t rs_ip_port_;
+      uint64_t ms_ip_port_;
 
       int initialize(const std::string& config_file);
 
@@ -226,6 +228,22 @@ namespace tfs
       static KvMetaParameter& instance()
       {
         return kv_meta_parameter_;
+      }
+    };
+
+    struct KvRtServerParameter
+    {
+      int32_t kv_mts_rts_lease_expired_time_;//4s
+      int32_t kv_rts_check_lease_interval_;//1s
+      int32_t kv_mts_rts_heart_interval_;//2s
+      int32_t safe_mode_time_;
+
+      int initialize(void);
+
+      static KvRtServerParameter kv_rt_parameter_;
+      static KvRtServerParameter& instance()
+      {
+        return kv_rt_parameter_;
       }
     };
 
@@ -237,6 +255,7 @@ namespace tfs
 #define SYSPARAM_RTSERVER RtServerParameter::instance()
 #define SYSPARAM_CHECKSERVER CheckServerParameter::instance()
 #define SYSPARAM_KVMETA KvMetaParameter::instance()
+#define SYSPARAM_KVRTSERVER KvRtServerParameter::instance()
   }/** common **/
 }/** tfs **/
 #endif //TFS_COMMON_SYSPARAM_H_

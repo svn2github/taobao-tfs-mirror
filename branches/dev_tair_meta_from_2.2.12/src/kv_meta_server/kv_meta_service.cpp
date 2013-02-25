@@ -127,6 +127,31 @@ namespace tfs
         stat_ptr->add_sub_key("head_object");
         stat_mgr_.add_entry(stat_ptr, SYSPARAM_KVMETA.dump_stat_info_interval_);
       }
+
+      //init heart
+      if (TFS_SUCCESS == ret)
+      {
+
+        bool ms_ip_same_flag = false;
+        ms_ip_same_flag = tbsys::CNetUtil::isLocalAddr(SYSPARAM_KVMETA.ms_ip_port_);
+
+        if (true == ms_ip_same_flag)
+        {
+          local_ipport_id_ = SYSPARAM_KVMETA.ms_ip_port_;
+          kvroot_ipport_id_ = SYSPARAM_KVMETA.rs_ip_port_;
+          server_start_time_ = time(NULL);
+          ret = heart_manager_.initialize(kvroot_ipport_id_, local_ipport_id_, server_start_time_);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "init heart_manager error");
+          }
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "is not local ip ret: %d", ret);
+          ret = TFS_ERROR;
+        }
+      }
       return ret;
     }
 
@@ -134,6 +159,7 @@ namespace tfs
     {
       //global stat destroy
       stat_mgr_.destroy();
+      heart_manager_.destroy();
       return TFS_SUCCESS;
     }
 
