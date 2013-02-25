@@ -53,6 +53,8 @@ namespace tfs
           SYSPARAM_NAMESERVER.object_dead_max_time_ = 1;
           SYSPARAM_NAMESERVER.group_count_ = 1;
           SYSPARAM_NAMESERVER.group_seq_ = 0;
+          NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+          ngi.owner_role_= NS_ROLE_MASTER;
         }
 
         ~BlockCollectTest()
@@ -72,7 +74,7 @@ namespace tfs
     TEST_F(BlockCollectTest, add)
     {
       srand(time(NULL));
-      ServerCollect* invalid_server = NULL;
+      uint64_t invalid_server_id = INVALID_SERVER_ID;
       DataServerStatInfo info;
       memset(&info, 0, sizeof(info));
       info.status_ = DATASERVER_STATUS_ALIVE;
@@ -81,48 +83,39 @@ namespace tfs
       BlockCollect block(100, now);
       bool master   = false;
       bool writable = false;
-      EXPECT_FALSE(block.add(writable, master, invalid_server, NULL));
+      EXPECT_EQ(EXIT_PARAMETER_ERROR,block.add(writable, master, invalid_server_id,now));
       EXPECT_FALSE(master);
       EXPECT_FALSE(writable);
 
-      ServerCollect server(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server));
+      EXPECT_EQ(TFS_SUCCESS,block.add(writable, master, info.id_,now));
       EXPECT_TRUE(writable);
 
-      ServerCollect** result = block.get_(&server);
-      EXPECT_TRUE(&server == *result);
-      EXPECT_TRUE(server.id() == (*result)->id());
-      EXPECT_TRUE(block.exist(&server));
+      uint64_t result = block.get_server();
+      EXPECT_TRUE(result == info.id_);
+      EXPECT_TRUE(block.exist(info.id_));
       EXPECT_EQ(1, block.get_servers_size());
       EXPECT_EQ(now, block.last_update_time_);
 
       //已经存在了
-      EXPECT_FALSE(block.add(writable, master, invalid_server, &server));
-      result = block.get_(&server);
-      EXPECT_TRUE(&server == *result);
-      EXPECT_TRUE(server.id() == (*result)->id());
-      EXPECT_TRUE(block.exist(&server));
+      EXPECT_EQ(EXIT_SERVER_EXISTED,block.add(writable, master, info.id_,now));
+      result = block.get_server();
+      EXPECT_TRUE(result == info.id_);
+      EXPECT_TRUE(block.exist(info.id_));
       EXPECT_EQ(1, block.get_servers_size());
       EXPECT_EQ(now, block.last_update_time_);
 
-      info.id_++;
-      ServerCollect other(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &other));
+      ++info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, info.id_, now));
       EXPECT_EQ(2, block.get_servers_size());
-      result = block.get_(&other);
-      EXPECT_TRUE(&other== *result);
-      EXPECT_TRUE(other.id() == (*result)->id());
-      EXPECT_TRUE(block.exist(&other));
+      EXPECT_TRUE(block.exist(info.id_));
       EXPECT_EQ(now, block.last_update_time_);
-
-      EXPECT_FALSE(block.add(writable, master, invalid_server, &other));
+      EXPECT_EQ(EXIT_SERVER_EXISTED,block.add(writable, master, info.id_,now));
     }
 
     TEST_F(BlockCollectTest, remove)
     {
       srand(time(NULL));
       DataServerStatInfo info;
-      ServerCollect* invalid_server = NULL;
       memset(&info, 0, sizeof(info));
       info.status_ = DATASERVER_STATUS_ALIVE;
       info.id_ = 0xfffffff0;
@@ -130,23 +123,22 @@ namespace tfs
       BlockCollect block(100, now);
       bool master   = false;
       bool writable = false;
-      ServerCollect server(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server));
+
+      uint64_t server = info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, server, now));
       EXPECT_TRUE(writable);
-      ServerCollect** result = block.get_(&server);
-      EXPECT_TRUE(&server == *result);
-      EXPECT_TRUE(server.id() == (*result)->id());
-      EXPECT_TRUE(block.exist(&server));
+      uint64_t result = block.get_server();
+      EXPECT_TRUE(server == result);
+      EXPECT_TRUE(block.exist(server));
       EXPECT_EQ(1, block.get_servers_size());
       EXPECT_EQ(now, block.last_update_time_);
 
-      EXPECT_TRUE(block.remove(&server, now, BLOCK_COMPARE_SERVER_BY_POINTER));
-      EXPECT_EQ(0, block.get_servers_size());
-      EXPECT_FALSE(block.exist(&server));
 
-      EXPECT_TRUE(block.remove(&server, now, BLOCK_COMPARE_SERVER_BY_POINTER));
+      uint64_t server2 = ++info.id_;
+      EXPECT_EQ(EXIT_DATASERVER_NOT_FOUND, block.remove(server2, now));
+      EXPECT_EQ(TFS_SUCCESS, block.remove(server, now));
       EXPECT_EQ(0, block.get_servers_size());
-      EXPECT_FALSE(block.exist(&server));
+      EXPECT_FALSE(block.exist(server));
     }
 
     TEST_F(BlockCollectTest, exist)
@@ -154,30 +146,24 @@ namespace tfs
       srand(time(NULL));
       DataServerStatInfo info;
       memset(&info, 0, sizeof(info));
-      ServerCollect* invalid_server = NULL;
       info.status_ = DATASERVER_STATUS_ALIVE;
       info.id_ = 0xfffffff0;
       time_t now = Func::get_monotonic_time();
       BlockCollect block(100, now);
       bool master   = false;
       bool writable = false;
-      ServerCollect server(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server));
+
+      uint64_t server = info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, server, now));
       EXPECT_TRUE(writable);
-      ServerCollect** result = block.get_(&server);
-      EXPECT_TRUE(&server == *result);
-      EXPECT_TRUE(server.id() == (*result)->id());
-      EXPECT_TRUE(block.exist(&server));
+
+      EXPECT_TRUE(block.exist(server));
       EXPECT_EQ(1, block.get_servers_size());
       EXPECT_EQ(now, block.last_update_time_);
 
-      EXPECT_TRUE(block.remove(&server, now, BLOCK_COMPARE_SERVER_BY_POINTER));
+      EXPECT_EQ(TFS_SUCCESS, block.remove(server, now));
       EXPECT_EQ(0, block.get_servers_size());
-      EXPECT_FALSE(block.exist(&server));
-
-      EXPECT_TRUE(block.remove(&server, now, BLOCK_COMPARE_SERVER_BY_POINTER));
-      EXPECT_EQ(0, block.get_servers_size());
-      EXPECT_FALSE(block.exist(&server));
+      EXPECT_FALSE(block.exist(server));
     }
 
     TEST_F(BlockCollectTest, check_version)
@@ -185,111 +171,55 @@ namespace tfs
       srand(time(NULL));
       DataServerStatInfo info;
       memset(&info, 0, sizeof(info));
-      ServerCollect* invalid_server = NULL;
       info.status_ = DATASERVER_STATUS_ALIVE;
       info.id_ = 0xfffffff0;
       time_t now = Func::get_monotonic_time();
       BlockCollect block(100, now);
-      bool master   = false;
-      bool writable = false;
-      ServerCollect server(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server));
-      EXPECT_EQ(1, block.get_servers_size());
+      bool isnew = false, master = false, writable = false;
+      uint64_t server = info.id_;
 
       // construct block info
-      BlockInfo block_info;
-      bool isnew = false;
-      bool expire_self;
-      NameServer ns;
-      LayoutManager manager(ns);
-      NsRole role = NS_ROLE_MASTER;
-
-      ServerCollect* removes[SYSPARAM_NAMESERVER.max_replication_];
-      ArrayHelper<ServerCollect*> helper1(SYSPARAM_NAMESERVER.max_replication_, removes);
-
-      ServerCollect* other_expired[SYSPARAM_NAMESERVER.max_replication_];
-      ArrayHelper<ServerCollect*> helper2(SYSPARAM_NAMESERVER.max_replication_, other_expired);
-
-      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, NULL, role, isnew, block_info, now));
-
-      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, &server, role, isnew, block_info, now));
-
-      info.id_++;
-      ServerCollect other(info, now);
+      BlockInfoV2 block_info;
+      memset(&block_info, 0, sizeof(block_info));
       block_info.block_id_ = 100;
       block_info.file_count_ = 10;
       block_info.version_ = 100;
       block_info.size_ = 110;
+      NameServer ns;
+      LayoutManager manager(ns);
 
-      //新的版本比nameserver上的版本高，接受新的版本并失效老的版本
-      EXPECT_TRUE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, &other, role, isnew, block_info, now));
-      EXPECT_EQ(1, helper1.get_array_index());
-      EXPECT_EQ(1, helper2.get_array_index());
+      uint64_t expires[SYSPARAM_NAMESERVER.max_replication_];
+      ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, expires);
+      EXPECT_EQ(EXIT_PARAMETER_ERROR, block.check_version(manager, helper, INVALID_SERVER_ID, isnew, block_info, now));
+
+      //当前没任何dataserver在列表，接受当前版本
+      helper.clear();
+      EXPECT_EQ(TFS_SUCCESS, block.check_version(manager, helper, server, isnew, block_info, now));
+      EXPECT_TRUE(block_info.version_ == block.version());
+      EXPECT_TRUE(block_info.size_ ==  block.size());
+      EXPECT_EQ(0, helper.get_array_index());
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, server, now));
+
+      //当前DATASERVER已经存存了，并且版本比有更新，更新BLOCKINFO
+      block_info.version_+=1;
+      EXPECT_EQ(EXIT_SERVER_EXISTED, block.check_version(manager, helper, server, isnew, block_info, now));
+      EXPECT_EQ(0, helper.get_array_index());
       EXPECT_TRUE(block_info.version_== block.version());
       EXPECT_TRUE(block_info.size_ == block.size());
 
-      //当前没任何dataserver在列表，接受当前版本
-      block_info.version_ = block_info.version_ - BlockCollect::VERSION_AGREED_MASK - 1;
-      helper1.clear();
-      helper2.clear();
-      EXPECT_TRUE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, &other, role, isnew, block_info, now));
-      EXPECT_TRUE(block_info.version_ == block.version());
-      EXPECT_TRUE(block_info.size_ ==  block.size());
-      EXPECT_EQ(0, helper1.get_array_index());
-      EXPECT_EQ(0, helper2.get_array_index());
-
-
-      //当前ataserver在列表，失效前版本
-      block_info.version_ = block_info.version_ - BlockCollect::VERSION_AGREED_MASK - 1;
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server));
-      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, &other, role, isnew, block_info, now));
-      EXPECT_TRUE(block_info.version_ != block.version());
-      EXPECT_EQ(0, helper1.get_array_index());
-      EXPECT_EQ(0, helper2.get_array_index());
-
+      //新的版本比nameserver上的版本高，接受新的版本
+      uint64_t server2 = ++info.id_;
       block_info.version_ += 2;
-      EXPECT_TRUE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, &other, role, isnew, block_info, now));
-      EXPECT_TRUE(block_info.version_ != block.version());//nameserver版本
+      EXPECT_EQ(TFS_SUCCESS, block.check_version(manager, helper, server2, isnew, block_info, now));
+      EXPECT_EQ(1, helper.get_array_index());
+      EXPECT_TRUE(block_info.version_== block.version());
+      EXPECT_TRUE(block_info.size_ == block.size());
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, server2, now));
 
-      block_info.version_ = block_info.version_ + BlockCollect::VERSION_AGREED_MASK  + 1;
-      EXPECT_TRUE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, &other, role, isnew, block_info, now));
-      EXPECT_TRUE(block_info.version_ == block.version());//新版本
-
-      block.remove(&server, now, BLOCK_COMPARE_SERVER_BY_POINTER);
-      block_info.version_ = block_info.version_ + BlockCollect::VERSION_AGREED_MASK  + 1;
-      EXPECT_TRUE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, &other, role, isnew, block_info, now));
-      EXPECT_TRUE(block_info.version_ == block.version());//新版本
-
-
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server));
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &other));
-
-      info.id_++;
-      ServerCollect other2(info, now);
-      block_info.block_id_ = 100;
-      block_info.file_count_ = 10;
-      block_info.version_ = 100;
-      block_info.size_ = 110;
-
-      block_info.file_count_ -= 1;
-      helper1.clear();
-      helper2.clear();
-      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, &other2, role, isnew, block_info, now));
-      EXPECT_EQ(0, helper1.get_array_index());
-      EXPECT_EQ(0, helper2.get_array_index());
-
-      block_info.file_count_ += 1;
-      block_info.size_ -= 1;
-      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, &other2, role, isnew, block_info, now));
-      EXPECT_EQ(0, helper1.get_array_index());
-      EXPECT_EQ(0, helper2.get_array_index());
-
-      expire_self = false;
-      block_info.file_count_ -= 10;
-      TBSYS_LOG(DEBUG, "expire_self: %d", expire_self);
-      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, invalid_server, &other2, role, isnew, block_info, now));
-      TBSYS_LOG(DEBUG, "expire_self: %d", expire_self);
-      EXPECT_TRUE(expire_self == true);
+      //新的版本比nameserver上的版本低，失效当前版本
+      uint64_t server3  = ++info.id_;
+      block_info.version_ -= 3;
+      EXPECT_EQ(EXIT_EXPIRE_SELF_ERROR, block.check_version(manager, helper, server3, isnew, block_info, now));
     }
 
     TEST_F(BlockCollectTest, check_replicate)
@@ -304,31 +234,27 @@ namespace tfs
       BlockCollect block(100, now);
       bool master   = false;
       bool writable = false;
-      ServerCollect* invalid_server = NULL;
 
       EXPECT_EQ(PLAN_PRIORITY_NONE, block.check_replicate(now));
 
-      ServerCollect server(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server));
+      uint64_t server = ++info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, server, now));
       EXPECT_EQ(1, block.get_servers_size());
       EXPECT_EQ(PLAN_PRIORITY_EMERGENCY, block.check_replicate(now));
 
-      info.id_++;
-      ServerCollect server2(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server2));
+      uint64_t server2 = ++info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, server2, now));
       EXPECT_EQ(2, block.get_servers_size());
       EXPECT_EQ(PLAN_PRIORITY_NORMAL, block.check_replicate(now));
 
-      info.id_++;
-      ServerCollect server3(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server3));
+      uint64_t server3 = ++info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, server3, now));
       TBSYS_LOG(DEBUG, "SIZE = %d", block.get_servers_size());
       EXPECT_EQ(3, block.get_servers_size());
       EXPECT_EQ(PLAN_PRIORITY_NORMAL, block.check_replicate(now));
 
-      info.id_++;
-      ServerCollect server4(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server4));
+      uint64_t server4 = ++info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, server4, now));
       EXPECT_EQ(4, block.get_servers_size());
       EXPECT_EQ(PLAN_PRIORITY_NONE, block.check_replicate(now));
 
@@ -338,7 +264,6 @@ namespace tfs
     TEST_F(BlockCollectTest, check_compact)
     {
       srand(time(NULL));
-      ServerCollect* invalid_server = NULL;
       DataServerStatInfo info;
       memset(&info, 0, sizeof(info));
       info.status_ = DATASERVER_STATUS_ALIVE;
@@ -348,18 +273,18 @@ namespace tfs
       bool master   = false;
       bool writable = false;
 
-      ServerCollect server(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server));
+      uint64_t server = info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, server, now));
       EXPECT_EQ(1, block.get_servers_size());
       EXPECT_FALSE(block.check_compact());
 
-      info.id_++;
-      ServerCollect server2(info, now);
-      EXPECT_TRUE(block.add(writable, master, invalid_server, &server2));
+      uint64_t server2 = ++info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block.add(writable, master, server2, now));
       EXPECT_EQ(2, block.get_servers_size());
       EXPECT_FALSE(block.check_compact());
 
-      BlockInfo block_info;
+      BlockInfoV2 block_info;
+      memset(&block_info, 0, sizeof(block_info));
       block_info.block_id_ = 100;
       block_info.file_count_ = 0;
       block_info.version_ = 100;

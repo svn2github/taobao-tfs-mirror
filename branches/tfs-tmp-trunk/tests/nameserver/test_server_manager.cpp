@@ -90,12 +90,12 @@ namespace tfs
       info.last_update_time_ = now;
       info.current_time_ = now;
       info.status_ = DATASERVER_STATUS_ALIVE;
-      info.total_tp_.write_byte_ = 0xffffffff;
-      info.total_tp_.write_file_count_ = 0xfff;
-      info.total_tp_.read_byte_ = 0xffffffff;
-      info.total_tp_.read_file_count_ = 0xfffff;
+      info.write_bytes_[0] = 0xffffffff;
+      info.write_file_count_[0] = 0xfff;
+      info.read_bytes_[0] = 0xffffffff;
+      info.read_file_count_[0] = 0xffff;
 
-      ServerCollect query(info.id_);
+      ServerCollect query(layout_manager_,info.id_);
       ServerCollect* server = server_manager_.get(info.id_);
       EXPECT_TRUE(NULL == server);
 

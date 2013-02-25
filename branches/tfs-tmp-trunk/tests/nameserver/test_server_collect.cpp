@@ -42,7 +42,9 @@ namespace tfs
 
         }
 
-        ServerCollectTest()
+        ServerCollectTest():
+          layout_manager_(ns_),
+          block_manager_(layout_manager_)
         {
           SYSPARAM_NAMESERVER.max_replication_ = 2;
           SYSPARAM_NAMESERVER.compact_delete_ratio_ = 50;
@@ -69,6 +71,10 @@ namespace tfs
         {
 
         }
+        protected:
+        NameServer ns_;
+        LayoutManager layout_manager_;
+        BlockManager block_manager_;
     };
 
     TEST_F(ServerCollectTest, add)
@@ -83,14 +89,14 @@ namespace tfs
       bool master   = false;
       bool writable = false;
 
-      ServerCollect server(info, now);
+      ServerCollect server(layout_manager_, info, now);
 
-      EXPECT_FALSE(server.add(NULL, writable, master));
+      EXPECT_EQ(EXIT_PARAMETER_ERROR, server.add(INVALID_BLOCK_ID, writable, master));
       EXPECT_EQ(0, server.writable_->size());
       EXPECT_EQ(0, server.hold_master_->size());
       EXPECT_EQ(0, server.hold_->size());
 
-      EXPECT_TRUE(server.add(&block, writable, master));
+      EXPECT_EQ(TFS_SUCCESS, server.add(block.id(), writable, master));
       EXPECT_EQ(0, server.writable_->size());
       EXPECT_EQ(0, server.hold_master_->size());
       EXPECT_EQ(1, server.hold_->size());
@@ -98,7 +104,7 @@ namespace tfs
       master = true;
       writable = true;
       server.hold_->clear();
-      EXPECT_TRUE(server.add(&block, writable, master));
+      EXPECT_EQ(TFS_SUCCESS, server.add(block.id(), writable, master));
       EXPECT_EQ(1, server.writable_->size());
       EXPECT_EQ(0, server.hold_master_->size());
       EXPECT_EQ(1, server.hold_->size());
@@ -108,8 +114,8 @@ namespace tfs
       server.hold_->clear();
       server.writable_->clear();
       BlockCollect block1(101, now);
-      EXPECT_TRUE(server.add(&block1, writable, master));
-      EXPECT_EQ(0, server.writable_->size());
+      EXPECT_EQ(TFS_SUCCESS, server.add(block.id(), writable, master));
+      EXPECT_EQ(1, server.writable_->size());
       EXPECT_EQ(0, server.hold_master_->size());
       EXPECT_EQ(1, server.hold_->size());
     }
@@ -125,12 +131,12 @@ namespace tfs
       BlockCollect block(100, now);
       bool master   = true;
       bool writable = true;
-      ServerCollect server(info, now);
-      EXPECT_TRUE(server.add(&block, writable, master));
+      ServerCollect server(layout_manager_, info, now);
+      EXPECT_EQ(TFS_SUCCESS, server.add(block.id(), writable, master));
       EXPECT_EQ(1, server.writable_->size());
       EXPECT_EQ(0, server.hold_master_->size());
       EXPECT_EQ(1, server.hold_->size());
-      EXPECT_TRUE(server.remove(&block));
+      EXPECT_EQ(TFS_SUCCESS, server.remove(block.id()));
       EXPECT_EQ(0, server.writable_->size());
       EXPECT_EQ(0, server.hold_master_->size());
       EXPECT_EQ(0, server.hold_->size());
@@ -146,7 +152,7 @@ namespace tfs
       time_t now = Func::get_monotonic_time();
       bool master   = true;
       bool writable = true;
-      ServerCollect server(info, now);
+      ServerCollect server(layout_manager_, info, now);
       const int32_t BLOCK_COUNT = random() % 10000 + 40960;
       BlockCollect* blocks[BLOCK_COUNT];
       for (int32_t i = 0; i < BLOCK_COUNT; ++i)
@@ -154,7 +160,7 @@ namespace tfs
 
       for (int32_t k = 0; k < BLOCK_COUNT; ++k)
       {
-        EXPECT_TRUE(server.add(blocks[k], writable, master));
+        EXPECT_EQ(TFS_SUCCESS, server.add(blocks[k]->id(), writable, master));
       }
 
       for (int32_t j = 0; j < BLOCK_COUNT; ++j)
@@ -162,9 +168,8 @@ namespace tfs
       EXPECT_EQ(BLOCK_COUNT, server.hold_->size());
 
       const int32_t MAX_QUERY_NUMS = random() % 512 + 1024;
-      BlockCollect* pblock = NULL;
-      BlockCollect* tmp[MAX_QUERY_NUMS];
-      ArrayHelper<BlockCollect*> helper(MAX_QUERY_NUMS, tmp);
+      uint64_t tmp[MAX_QUERY_NUMS];
+      ArrayHelper<uint64_t> helper(MAX_QUERY_NUMS, tmp);
       int32_t actual = 0;
       uint32_t begin = 0;
       bool complete = true;
@@ -175,8 +180,7 @@ namespace tfs
         if (!helper.empty())
         {
           actual += helper.get_array_index();
-          pblock = *helper.at(helper.get_array_index() - 1);
-          begin = pblock->id();
+          begin = *helper.at(helper.get_array_index() - 1);
         }
       }
       while (!complete);
@@ -195,22 +199,17 @@ namespace tfs
       time_t now = Func::get_monotonic_time();
       bool master   = true;
       bool writable = true;
-      ServerCollect server(info, now);
+      ServerCollect server(layout_manager_, info, now);
       info.id_++;
-      ServerCollect server2(info,now);
-      ServerCollect* invalid_server = NULL;
+      ServerCollect server2(layout_manager_, info,now);
       const int32_t BLOCK_COUNT = random() % 10000 + 40960;
-      BlockCollect* blocks[BLOCK_COUNT];
-      int32_t i = 0;
-      for (i = 0; i < BLOCK_COUNT; ++i)
-        blocks[i] = new BlockCollect(100 + i, now);
-
-      for (i = 0; i < BLOCK_COUNT; ++i)
+      for (int32_t i = 0; i < BLOCK_COUNT; ++i)
       {
-        blocks[i]->add(writable, master, invalid_server, &server);
-        EXPECT_TRUE(server.add(blocks[i], writable, master));
+        BlockCollect* block = layout_manager_.get_block_manager().insert(100 + i, now);
+        EXPECT_TRUE(NULL != block);
+        block->add(writable, master, server.id(), now);
+        EXPECT_EQ(TFS_SUCCESS, server.add(block->id(), writable, master));
       }
-
       EXPECT_TRUE(server.writable_->size() > 0);
       EXPECT_EQ(0, server.hold_master_->size());
       EXPECT_EQ(BLOCK_COUNT, server.hold_->size());
@@ -229,18 +228,17 @@ namespace tfs
       EXPECT_TRUE(server.touch(promote, count, average_used_capacity));
       EXPECT_EQ(3, count);
 
-      for (i = 0; i < BLOCK_COUNT; ++i)
+      for (int32_t i = 0; i < BLOCK_COUNT; ++i)
       {
-        blocks[i]->add(writable, master, invalid_server, &server2);
-        server2.add(blocks[i], writable, master);
+        BlockCollect* block = layout_manager_.get_block_manager().get(100 + i);
+        EXPECT_TRUE(NULL != block);
+        block->add(writable, master, server2.id(), now);
+        server2.add(block->id(), writable, master);
       }
 
       EXPECT_TRUE(server2.touch(promote, count, average_used_capacity));
       EXPECT_EQ(0, count);
       EXPECT_TRUE(server2.hold_master_->size() == 3);
-
-      for (i = 0; i < BLOCK_COUNT; ++i)
-        tbsys::gDelete(blocks[i]);
       EXPECT_EQ(BLOCK_COUNT, server.hold_->size());
     }
   }/** end namespace nameserver **/

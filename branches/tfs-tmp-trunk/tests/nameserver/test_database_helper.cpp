@@ -103,7 +103,7 @@ namespace tfs
         for (; iter != info.end(); ++iter)
         {
           std::ostringstream str;
-          std::vector<std::pair<uint32_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
+          std::vector<std::pair<uint64_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
           for (; it != (*iter).family_member_.end(); ++it)
             str << " " << (*it).first << ":" << (*it).second << " ";
           TBSYS_LOG(DEBUG, "family id : %ld, family_aid_info: %d, pair: %s",

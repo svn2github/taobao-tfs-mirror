@@ -128,8 +128,8 @@ namespace tfs
         EXPECT_EQ(family.add((100+i), 1), TFS_SUCCESS);
       }
       family.dump(TBSYS_LOG_LEVEL_DEBUG);
-      std::pair<uint32_t , int32_t> members[7];
-      ArrayHelper<std::pair<uint32_t , int32_t> > helper(7, members);
+      std::pair<uint64_t , int32_t> members[7];
+      ArrayHelper<std::pair<uint64_t , int32_t> > helper(7, members);
 
       family.get_members(helper);
       std::ostringstream str;
