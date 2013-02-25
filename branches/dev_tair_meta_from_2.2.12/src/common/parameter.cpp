@@ -566,32 +566,22 @@ namespace tfs
           TBSYS_LOG(INFO, "kv root server ip addr: %s", ips1.c_str());
         }
       }
-
       if (TFS_SUCCESS == ret)
       {
-        std::string ips2 = TBSYS_CONFIG.getString(CONF_SN_KVMETA, CONF_KV_META_IPPORT, "");
-        std::vector<std::string> items2;
-        Func::split_string(ips2.c_str(), ':', items2);
-        if (items2.size() != 2U)
+        std::string ips2 = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_IP_ADDR, "");
+        std::string ports2 = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_PORT, "");
+
+        int32_t port2 = atoi(ports2.c_str());
+        if (port2 <= 1024 || port2 >= 65535)
         {
-          TBSYS_LOG(ERROR, "%s is invalid", ips2.c_str());
+          TBSYS_LOG(ERROR, "%s is invalid", ports2.c_str());
           ret = TFS_ERROR;
         }
         else
         {
-          int32_t port2 = atoi(items2[1].c_str());
-          if (port2 <= 1024 || port2 >= 65535)
-          {
-            TBSYS_LOG(ERROR, "%s is invalid", ips2.c_str());
-            ret = TFS_ERROR;
-          }
-          else
-          {
-            ms_ip_port_ = tbsys::CNetUtil::strToAddr(items2[0].c_str(), atoi(items2[1].c_str()));
-          }
-          TBSYS_LOG(INFO, "kv meta server ip addr: %s", ips2.c_str());
-
+          ms_ip_port_ = tbsys::CNetUtil::strToAddr(ips2.c_str(), port2);
         }
+        TBSYS_LOG(INFO, "kv meta server ip addr: %s:%d", ips2.c_str(), port2);
       }
       return ret;
     }

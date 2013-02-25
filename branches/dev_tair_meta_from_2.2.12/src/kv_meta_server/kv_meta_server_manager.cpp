@@ -50,9 +50,9 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         need_move_ = false;
+        wait_time_check_ = SYSPARAM_KVRTSERVER.kv_rts_check_lease_interval_;
         check_ms_lease_thread_ = new CheckKvMetaServerLeaseThreadHelper(*this);
         initialize_ = true;
-        wait_time_check_ = SYSPARAM_KVRTSERVER.kv_rts_check_lease_interval_;
         tbutil::Time now = tbutil::Time::now(tbutil::Time::Monotonic);
         root_start_time_ = now.toSeconds();
       }
