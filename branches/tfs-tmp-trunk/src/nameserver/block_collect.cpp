@@ -163,6 +163,12 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = exist(server) ? EXIT_SERVER_EXISTED : TFS_SUCCESS;
+        if (TFS_SUCCESS != ret)
+        {
+          if (info.version_ >= info_.version_)
+            info_ = info;
+        }
+
         if (TFS_SUCCESS == ret)
         {
           if (info.version_ == info_.version_)//version argeed

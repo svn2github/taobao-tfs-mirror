@@ -139,9 +139,14 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             ReportBlocksToNsResponseMessage* msg = dynamic_cast<ReportBlocksToNsResponseMessage*>(message);
-            TBSYS_LOG(INFO, "nameserver %s ask for expire block\n",
-                tbsys::CNetUtil::addrToString(msg->get_server()).c_str());//TODO
-            // data_management_.add_new_expire_block(&msg->get_blocks(), NULL, NULL);
+            std::vector<uint64_t>& cleanup_family_id_array = msg->get_blocks();
+            TBSYS_LOG(INFO, "nameserver %s ask for cleanup family id blocks, count: %zd",
+                tbsys::CNetUtil::addrToString(msg->get_server()).c_str(), cleanup_family_id_array.size());//TODO
+            std::vector<uint64_t>::const_iterator iter = cleanup_family_id_array.begin();
+            for (; iter != cleanup_family_id_array.end(); ++iter)
+            {
+              service_.get_block_manager().set_family_id(INVALID_FAMILY_ID, (*iter));
+            }
           }
         }
         NewClientManager::get_instance().destroy_client(client);
@@ -1142,8 +1147,7 @@ namespace tfs
 
       return ret;
     }
-
-  }
-}
+  }/** end namespace dataserver **/
+}/** end namespace tfs **/
 
 

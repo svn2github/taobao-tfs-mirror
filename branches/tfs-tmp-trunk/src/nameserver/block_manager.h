@@ -102,7 +102,7 @@ namespace tfs
         bool exist(const BlockCollect* block, const ServerCollect* server) const;
 
         int update_relation(std::vector<uint64_t>& expires, ServerCollect* server,
-            const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now, const int8_t type);
+            const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now);
         int build_relation(BlockCollect* block, bool& writable, bool& master, const uint64_t server,
             const time_t now, const bool set =false);
         int relieve_relation(BlockCollect* block, const uint64_t server, const time_t now);
@@ -149,7 +149,7 @@ namespace tfs
 
         int get_servers_(common::ArrayHelper<uint64_t>& server, const BlockCollect* block) const;
 
-        int update_relation_(std::vector<uint64_t>& expires, ServerCollect* server,
+        int update_relation_(std::vector<uint64_t>& cleanup_family_id_array, ServerCollect* server,
             const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now);
         int relieve_relation_(ServerCollect* server, const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now);
 

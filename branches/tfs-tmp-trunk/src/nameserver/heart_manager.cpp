@@ -199,14 +199,14 @@ namespace tfs
         time_t now = Func::get_monotonic_time();
         ArrayHelper<BlockInfoV2> blocks(message->get_block_count(), message->get_blocks_ext(), message->get_block_count());
 			  result = ret = manager_.get_layout_manager().get_client_request_server().report_block(
-          result_msg->get_blocks(), server, now, blocks, message->get_type());
+          result_msg->get_blocks(), server, now, blocks);
         result_msg->set_status(HEART_MESSAGE_OK);
         block_nums = message->get_block_count();
         expire_nums= result_msg->get_blocks().size();
         consume = (tbutil::Time::now() - begin).toMicroSeconds();
 			  ret = message->reply(result_msg);
       }
-      TBSYS_LOG(INFO, "dataserver: %s report block %s, ret: %d, blocks: %d, expire blocks: %d,consume time: %"PRI64_PREFIX"u(us)",
+      TBSYS_LOG(INFO, "dataserver: %s report block %s, ret: %d, blocks: %d, cleanup family id blocks: %d,consume time: %"PRI64_PREFIX"u(us)",
          CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed",
          result , block_nums, expire_nums, consume);
       return ret;

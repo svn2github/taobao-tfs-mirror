@@ -82,7 +82,7 @@ namespace tfs
       inline FamilyManager& get_family_manager() { return family_manager_;}
 
       int update_relation(std::vector<uint64_t>& expires, ServerCollect* server,
-          const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now, const int8_t type);
+          const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now);
       int build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set = false);
       bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now);
       bool relieve_relation(BlockCollect* block, const uint64_t server, const time_t now);

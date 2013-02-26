@@ -47,7 +47,7 @@ namespace tfs
 
         int keepalive(const common::DataServerStatInfo& info, const time_t now);
         int report_block(std::vector<uint64_t>& expires, const uint64_t server, const time_t now,
-            const common::ArrayHelper<common::BlockInfoV2>& blocks, const int8_t type);
+            const common::ArrayHelper<common::BlockInfoV2>& blocks);
         int open(uint64_t& block_id, uint64_t& lease_id, int32_t& version, common::ArrayHelper<uint64_t>& servers,
               common::FamilyInfoExt& family_info,const int32_t mode, const time_t now);
         int batch_open(const common::ArrayHelper<uint64_t>& blocks, const int32_t mode,

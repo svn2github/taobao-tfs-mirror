@@ -77,21 +77,20 @@ namespace tfs
     }
 
     int ClientRequestServer::report_block(std::vector<uint64_t>& expires, const uint64_t server, const time_t now,
-        const ArrayHelper<common::BlockInfoV2>& blocks, const int8_t type)
+        const ArrayHelper<common::BlockInfoV2>& blocks)
     {
       int32_t ret = TFS_ERROR;
       ServerCollect* pserver = manager_.get_server_manager().get(server);
       ret = NULL == pserver ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(INFO, "kkkkkkkkkkkkkkkkkkkkk %ld", blocks.get_array_index());
         //update all relations of blocks belongs to it
-        ret = manager_.update_relation(expires, pserver, blocks, now, type);
+        ret = manager_.update_relation(expires, pserver, blocks, now);
         if (TFS_SUCCESS == ret)
         {
           pserver = manager_.get_server_manager().get(server);
           ret = (NULL == pserver) ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
-          if (TFS_SUCCESS == ret && REPORT_BLOCK_TYPE_ALL == type)
+          if (TFS_SUCCESS == ret)
           {
             pserver->set_report_block_status(REPORT_BLOCK_STATUS_COMPLETE);
             pserver->set_next_report_block_time(now, random() % 0xFFFFFFF, false);

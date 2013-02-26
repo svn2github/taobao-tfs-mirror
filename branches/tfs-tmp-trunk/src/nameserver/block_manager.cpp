@@ -388,35 +388,34 @@ namespace tfs
     }
 
     int BlockManager::update_relation(std::vector<uint64_t>& expires, ServerCollect* server,
-        const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now, const int8_t type)
+        const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now)
     {
       int32_t ret = (NULL != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        if (REPORT_BLOCK_TYPE_ALL == type)
-          server->clear(manager_, now);
-        if (REPORT_BLOCK_TYPE_RELIEVE == type)
-            ret = relieve_relation_(server, blocks, now);
-        else
-            ret = update_relation_(expires, server, blocks, now);
+        server->clear(manager_, now);
+        ret = update_relation_(expires, server, blocks, now);
       }
       return ret;
     }
 
-    int BlockManager::update_relation_(std::vector<uint64_t>& expires, ServerCollect* server,
+    int BlockManager::update_relation_(std::vector<uint64_t>& cleanup_family_id_array, ServerCollect* server,
         const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now)
     {
       int32_t ret = (NULL != server && server->is_alive()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        cleanup_family_id_array.clear();
         uint64_t servers[MAX_REPLICATION_NUM];
         ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         for (int64_t i= 0; i < blocks.get_array_index(); ++i)
         {
           helper.clear();
+          int8_t all_server_size = 0;
+          int64_t family_id = INVALID_FAMILY_ID;
           bool writable = false, master = false;
-          const BlockInfoV2& info = (*blocks.at(i));
+          BlockInfoV2& info = (*blocks.at(i));
 
           // check block version, rebuilding relation.
           get_mutex_(info.block_id_).wrlock();
@@ -429,25 +428,36 @@ namespace tfs
           ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
           if (TFS_SUCCESS == ret)
           {
-            if (INVALID_FAMILY_ID == block->get_family_id())
+            family_id = block->get_family_id();
+            if (INVALID_FAMILY_ID == family_id)
             {
-              ret = (INVALID_FAMILY_ID != info.family_id_) ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;
+              if (INVALID_FAMILY_ID != info.family_id_)
+                cleanup_family_id_array.push_back(info.block_id_);
+              info.family_id_ = INVALID_FAMILY_ID;
+              ret = IS_VERFIFY_BLOCK(info.block_id_) ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;
               if (TFS_SUCCESS == ret)
               {
                 ret = block->check_version(manager_, helper, server->id(), isnew, info, now);
                 if (TFS_SUCCESS == ret)//build relation
                   ret = build_relation_(block, writable, master, server->id(),now);
               }
+              else
+              {
+                block = remove_(info.block_id_);
+                tbsys::gDelete(block);
+              }
             }
             else
             {
-              ret =  (info.family_id_ == block->get_family_id()) ? TFS_SUCCESS : EXIT_EXPIRE_SELF_ERROR ;
+              ret =  (info.family_id_ == family_id) ? TFS_SUCCESS : EXIT_EXPIRE_SELF_ERROR ;
               if (TFS_SUCCESS == ret)
               {
-                ret = (info.version_ <= block->version()
-                      && !block->exist(server->id())
-                      && block->get_servers_size() > 0) ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;
-                if (TFS_SUCCESS == ret)
+                if (info.version_ == block->version())
+                {
+                  ret = (block->get_servers_size() > 0 && !block->exist(server->id())) ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;
+                }
+
+                if (info.version_ > block->version())
                 {
                   block->update(info);
                   if (!block->exist(server->id()))
@@ -456,15 +466,21 @@ namespace tfs
                     ret = build_relation_(block, writable, master, server->id(),now);
                   }
                 }
+
+                if (info.version_ < block->version())
+                {
+                  ret = (block->get_servers_size() > 0 && !block->exist(server->id())) ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;
+                  if (TFS_SUCCESS == ret)
+                  {
+                    block->cleanup(helper);
+                    ret = build_relation_(block, writable, master, server->id(),now);
+                  }
+                }
               }
             }
+            all_server_size = block->get_servers_size();
           }
           get_mutex_(info.block_id_).unlock();
-
-          if (EXIT_EXPIRE_SELF_ERROR == ret)
-          {
-            expires.push_back(info.block_id_);
-          }
 
           if (TFS_SUCCESS == ret)
           {
@@ -475,8 +491,13 @@ namespace tfs
           {
             uint64_t id = *helper.at(index);
             manager_.get_server_manager().relieve_relation(*helper.at(index), block->id());
-            if (ngi.is_master())//i'm master, we're going to expire blocks
+            if (ngi.is_master() && all_server_size > 0)//i'm master, we're going to expire blocks
               push_to_delete_queue(info.block_id_, id);
+          }
+
+          if (EXIT_EXPIRE_SELF_ERROR == ret && ngi.is_master())
+          {
+            push_to_delete_queue(info.block_id_, server->id());
           }
         }
       }

@@ -79,7 +79,6 @@ namespace tfs
         int commit_ec_meta(message::CommitEcMetaMessage* message);
 
         /** tool support interface */
-
       private:
         DataService& service_;
     };

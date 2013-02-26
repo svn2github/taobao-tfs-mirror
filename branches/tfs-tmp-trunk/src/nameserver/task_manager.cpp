@@ -751,7 +751,7 @@ namespace tfs
 
     bool TaskManager::is_insert_block_(const int32_t type, const int32_t member_num, const int32_t index) const
     {
-      return (PLAN_TYPE_EC_DISSOLVE == type) ? (index > member_num / 2) : true;
+      return (PLAN_TYPE_EC_DISSOLVE == type) ? (index >= member_num / 2) : true;
     }
 
     bool TaskManager::is_insert_server_(const int32_t type, const int32_t data_member_num, const int32_t index) const

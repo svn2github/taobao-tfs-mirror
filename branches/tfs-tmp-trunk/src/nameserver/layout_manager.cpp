@@ -168,12 +168,12 @@ namespace tfs
      * @return success or failure
      */
     int LayoutManager::update_relation(std::vector<uint64_t>& expires, ServerCollect* server,
-        const common::ArrayHelper<BlockInfoV2>& blocks, const time_t now, const int8_t type)
+        const common::ArrayHelper<BlockInfoV2>& blocks, const time_t now)
     {
       int32_t ret = ((NULL != server) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = get_block_manager().update_relation(expires, server, blocks, now, type);
+        ret = get_block_manager().update_relation(expires, server, blocks, now);
       }
       return ret;
     }
@@ -958,7 +958,6 @@ namespace tfs
           {
             CallDsReportBlockRequestMessage req;
             req.set_server(ngi.owner_ip_port_);
-            req.set_flag(REPORT_BLOCK_EXT);
             client = NewClientManager::get_instance().create_client();
             if (NULL != client)
               ret = post_msg_to_server(last->id(), client, &req, ns_async_callback);
