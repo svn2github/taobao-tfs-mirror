@@ -534,7 +534,7 @@ namespace tfs
       int fd = -1;
       int64_t cur_length = 0;
       int64_t read_len = 0, write_len = 0;
-      int64_t offset = req_offset;
+      int64_t offset = 0;
       int64_t left_length = req_length;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
       {
