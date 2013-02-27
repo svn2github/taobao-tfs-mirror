@@ -12,7 +12,7 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 
 noinst_LIBRARIES=libkvmetaserver.a libkvrootserver.a
 
-kvmetaserver_INCLUDE=kv_meta_service.h meta_info_helper.h kv_meta_heart_manager.h
+kvmetaserver_INCLUDE=kvengine_helper.h        kv_meta_server_manager.h  kv_root_server.h    tairengine_helper.h kv_meta_heart_manager.h  kv_meta_service.h         meta_info_helper.h
 
 if WITH_KV_META
 tair_kv_source=tairengine_helper.cpp tairengine_helper.h
