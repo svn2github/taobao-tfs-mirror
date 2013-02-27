@@ -98,7 +98,7 @@ namespace tfs
                         const std::string &file_name, const int64_t offset,
                         KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
       protected:
-        int match_objects(const std::string &k, const std::string &v, const std::string &prefix, const char delimiter,
+        int group_objects(const std::string &k, const std::string &v, const std::string &prefix, const char delimiter,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,
             std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix);
 

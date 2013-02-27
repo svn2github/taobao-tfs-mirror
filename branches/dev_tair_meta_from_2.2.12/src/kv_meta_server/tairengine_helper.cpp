@@ -470,8 +470,6 @@ namespace tfs
       tair::tair_dataentry_set skey_set;
       tair::key_code_map_t key_code_map;
 
-      TBSYS_LOG(DEBUG, "READY removes is %d", ret);
-
       std::vector<KvKey>::const_iterator iter = vec_keys.begin();
       for(; iter != vec_keys.end(); ++iter)
       {
@@ -483,7 +481,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = prefix_removes_from_tair(object_area_, pkey, skey_set, key_code_map);
-        TBSYS_LOG(DEBUG, "ret removes is %d", ret);
+        TBSYS_LOG(DEBUG, "removes %d keys, ret: %d", skey_set.size(), ret);
       }
       std::vector<tair::data_entry* >::const_iterator iter_skey = v_skey.begin();
       for(; iter_skey != v_skey.end(); ++iter_skey)
@@ -577,7 +575,7 @@ namespace tfs
         tair_ret = tair_client_->prefix_get(area, pkey, skey, value);
       } while (TAIR_RETURN_TIMEOUT == tair_ret && --retry_count > 0);
 
-      if(TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+      if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
       {
         ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
       }

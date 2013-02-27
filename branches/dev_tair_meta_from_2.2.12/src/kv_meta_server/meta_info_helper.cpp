@@ -310,7 +310,6 @@ namespace tfs
         const int64_t length,
         ObjectInfo &object_info, const UserInfo &user_info)
     {
-      UNUSED(user_info);
       int ret = (bucket_name.size() > 0 && file_name.size() > 0 &&
           offset >= 0  && length >= 0) ? TFS_SUCCESS : TFS_ERROR;
 
@@ -597,7 +596,6 @@ namespace tfs
               &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
       }
 
-
       int32_t limit = SCAN_LIMIT;
       int32_t i;
       int32_t first = 0;
@@ -802,7 +800,7 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::match_objects(const string &k, const string &v, const string &prefix, const char delimiter,
+    int MetaInfoHelper::group_objects(const string &k, const string &v, const string &prefix, const char delimiter,
         vector<ObjectMetaInfo> *v_object_meta_info, vector<string> *v_object_name, set<string> *s_common_prefix)
     {
       int ret = TFS_SUCCESS;
@@ -814,7 +812,6 @@ namespace tfs
       string object_name;
       int64_t offset = -1;
       int64_t version = -1;
-
 
       //deserialze from object_name/offset/version
       ret = deserialize_key(k.c_str(), k.length(), &bucket_name, &object_name, &offset, &version);
@@ -871,7 +868,6 @@ namespace tfs
         v_object_name->clear();
         s_common_prefix->clear();
 
-        bool first_loop = true;
         int32_t limit_size = limit;
         *is_truncated = 0;
 
@@ -880,8 +876,9 @@ namespace tfs
 
         string temp_start_key(start_key);
 
-        bool need_out = true;
-        while (need_out)
+        bool loop = true;
+        bool first_loop = true;
+        do
         {
           int32_t res_size = -1;
           int32_t actual_size = static_cast<int32_t>(v_object_name->size()) +
@@ -898,29 +895,42 @@ namespace tfs
             break;
           }
 
+          TBSYS_LOG(DEBUG, "get range once, res_size: %d", res_size);
+
           if (res_size == 0)
           {
             break;
           }
-
-          for (int i = 0; need_out && i < res_size; i++)
+          else if (res_size < limit_size + 1)
           {
-            need_out = static_cast<int32_t>(s_common_prefix->size()) +
-              static_cast<int32_t>(v_object_name->size()) < limit;
-            if (need_out)
+            loop = false;
+          }
+
+          for (int i = 0; i < res_size; i++)
+          {
+            string k(kv_value_keys[i]->get_data(), kv_value_keys[i]->get_size());
+            string v(kv_value_values[i]->get_data(), kv_value_values[i]->get_size());
+            ret = group_objects(k, v, prefix, delimiter, v_object_meta_info, v_object_name, s_common_prefix);
+            if (TFS_SUCCESS != ret)
             {
-              string k(kv_value_keys[i]->get_data(), kv_value_keys[i]->get_size());
-              string v(kv_value_values[i]->get_data(), kv_value_values[i]->get_size());
-              match_objects(k, v, prefix, delimiter, v_object_meta_info, v_object_name, s_common_prefix);
+              TBSYS_LOG(ERROR, "group objects fail, ret: %d", ret);
+              loop = false;
+              break;
             }
-            else if (i < res_size -1)
+
+            if (static_cast<int32_t>(s_common_prefix->size()) +
+              static_cast<int32_t>(v_object_name->size()) >= limit)
             {
-              *is_truncated = 1;
+              loop = false;
+              if (i < res_size - 1)
+              {
+                *is_truncated = 1;
+              }
               break;
             }
           }
 
-          if (need_out)
+          if (loop)
           {
             first_loop = false;
             temp_start_key = string(kv_value_keys[res_size-1]->get_data(), kv_value_keys[res_size-1]->get_size());
@@ -934,7 +944,7 @@ namespace tfs
           }
           kv_value_keys.clear();
           kv_value_values.clear();
-        }// end of while
+        } while (loop);// end of while
       }// end of if
       return ret;
     }// end of func
