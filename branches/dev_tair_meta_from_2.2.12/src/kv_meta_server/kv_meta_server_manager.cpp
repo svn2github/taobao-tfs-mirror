@@ -64,7 +64,7 @@ namespace tfs
       initialize_ = false;
       destroy_ = true;
       servers_.clear();
-      servers_for_get_.clear();
+      meta_table_.v_meta_table_.clear();
       if (0 != check_ms_lease_thread_ )
       {
         check_ms_lease_thread_ ->join();
@@ -165,26 +165,25 @@ namespace tfs
     void KvMetaServerManager::move_table()
     {
       tbutil::Mutex::Lock lock(mutex_for_get_);
-      servers_for_get_.clear();
+      meta_table_.v_meta_table_.clear();
       KV_META_SERVER_MAPS::iterator iter = servers_.begin();
       for(; iter != servers_.end(); ++iter)
       {
-        servers_for_get_.push_back(iter->second.base_info_);
+        meta_table_.v_meta_table_.push_back(iter->first);
       }
       need_move_ = false;
     }
 
-    int KvMetaServerManager::get_tables(std::vector<common::KvMetaServerBaseInformation>& base_infos )
+    int KvMetaServerManager::get_table(KvMetaTable &meta_table)
     {
       int32_t iret = TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
         tbutil::Mutex::Lock lock(mutex_for_get_);
-        base_infos = servers_for_get_;
+        meta_table.v_meta_table_ = meta_table_.v_meta_table_;
       }
       return iret;
     }
-
 
     void KvMetaServerManager::CheckKvMetaServerLeaseThreadHelper::run()
     {

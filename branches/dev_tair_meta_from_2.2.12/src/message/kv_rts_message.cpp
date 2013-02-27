@@ -102,65 +102,29 @@ namespace tfs
 
     int GetTableFromKvRtsResponseMessage::deserialize(common::Stream& input)
     {
-      int32_t count = 0;
-      int32_t iret = TFS_SUCCESS;
+      int64_t pos = 0;
+      int32_t iret = kv_meta_table_.deserialize(input.get_data(), input.get_data_length(), pos);
       if (TFS_SUCCESS == iret)
       {
-        iret = input.get_int32(&count);
-      }
-      if (TFS_SUCCESS == iret)
-      {
-        common::KvMetaServerBaseInformation tmp_kv_meta_base_info_;
-        for (int32_t i = 0; i < count; i++)
-        {
-          int64_t pos = 0;
-          iret = tmp_kv_meta_base_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-          if (iret == TFS_SUCCESS)
-          {
-            input.drain(tmp_kv_meta_base_info_.length());
-          }
-          if (iret != TFS_SUCCESS)
-          {
-            break;
-          }
-          v_kv_meta_base_info_.push_back(tmp_kv_meta_base_info_);
-        }
+        input.drain(kv_meta_table_.length());
       }
       return iret;
     }
 
     int GetTableFromKvRtsResponseMessage::serialize(common::Stream& output) const
     {
-      int32_t iret = TFS_SUCCESS;
+      int64_t pos = 0;
+      int32_t iret = kv_meta_table_.serialize(output.get_free(), output.get_free_length(), pos);
       if (TFS_SUCCESS == iret)
       {
-        iret = output.set_int32(v_kv_meta_base_info_.size());
-      }
-      if (TFS_SUCCESS == iret)
-      {
-        for (std::vector<common::KvMetaServerBaseInformation>::const_iterator it = v_kv_meta_base_info_.begin();
-            TFS_SUCCESS == iret && it != v_kv_meta_base_info_.end(); it++)
-        {
-          int64_t pos = 0;
-          iret = it->serialize(output.get_free(), output.get_free_length(), pos);
-          if (common::TFS_SUCCESS == iret)
-          {
-            output.pour(it->length());
-          }
-        }
+        output.pour(kv_meta_table_.length());
       }
       return iret;
     }
 
     int64_t GetTableFromKvRtsResponseMessage::length() const
     {
-      int64_t len = INT_SIZE;
-      for (std::vector<common::KvMetaServerBaseInformation>::const_iterator it = v_kv_meta_base_info_.begin();
-          it != v_kv_meta_base_info_.end(); it++)
-      {
-        len += it->length();
-      }
-      return len;
+      return kv_meta_table_.length();
     }
 
     GetTableFromKvRtsMessage::GetTableFromKvRtsMessage():

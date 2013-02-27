@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <tbsys.h>
 #include "common/kv_meta_define.h"
+#include "common/kv_rts_define.h"
 #include "tfs_meta_manager.h"
 #include "tfs_kv_meta_client_api.h"
 
@@ -32,8 +33,11 @@ namespace tfs
         KvMetaClientImpl();
         ~KvMetaClientImpl();
 
-        int initialize(const char *kms_addr, const char *ns_addr);
-        int initialize(const int64_t kms_addr, const char *ns_addr);
+        int initialize(const char *rs_addr, const char *ns_addr);
+        int initialize(const int64_t rs_addr, const char *ns_addr);
+        bool need_update_table(const int ret_status);
+        int update_table_from_rootserver();
+        uint64_t get_meta_server_id();
 
         TfsRetType put_bucket(const char *bucket_name, const common::UserInfo &user_info);
         TfsRetType get_bucket(const char *bucket_name, const char *prefix,
@@ -102,7 +106,10 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClientImpl);
-        uint64_t kms_id_;
+        tbsys::CRWLock meta_table_mutex_;
+        uint64_t rs_id_;
+        uint32_t access_count_;
+        common::KvMetaTable meta_table_;
         std::string ns_addr_;
         common::BasePacketFactory* packet_factory_;
         common::BasePacketStreamer* packet_streamer_;

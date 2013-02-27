@@ -74,6 +74,7 @@ namespace tfs
       static int64_t wait_timeout_;
       static int64_t client_retry_count_;
       static bool client_retry_flag_;
+      static uint32_t update_kmt_interval_count_;
     };
   }
 }

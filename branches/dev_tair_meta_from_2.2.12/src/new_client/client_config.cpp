@@ -59,3 +59,4 @@ int64_t ClientConfig::gc_interval_ = DEFAULT_GC_INTERNAL;
 int64_t ClientConfig::expired_time_ = MIN_GC_EXPIRED_TIME * 4;
 int64_t ClientConfig::batch_timeout_ = DEFAULT_NETWORK_CALL_TIMEOUT; // wait several response timeout
 int64_t ClientConfig::wait_timeout_ = DEFAULT_NETWORK_CALL_TIMEOUT;  // wait single response timeout
+uint32_t ClientConfig::update_kmt_interval_count_ = DEFAULT_UPDATE_KMT_INTERVAL_COUNT;  // kv meta table

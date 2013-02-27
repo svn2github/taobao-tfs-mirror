@@ -35,14 +35,14 @@ namespace tfs
       impl_ = NULL;
     }
 
-    int KvMetaClient::initialize(const char *kms_addr, const char *ns_addr)
+    int KvMetaClient::initialize(const char *kv_rs_addr, const char *ns_addr)
     {
-      return impl_->initialize(kms_addr, ns_addr);
+      return impl_->initialize(kv_rs_addr, ns_addr);
     }
 
-    int KvMetaClient::initialize(const int64_t kms_addr, const char *ns_addr)
+    int KvMetaClient::initialize(const int64_t kv_rs_addr, const char *ns_addr)
     {
-      return impl_->initialize(kms_addr, ns_addr);
+      return impl_->initialize(kv_rs_addr, ns_addr);
     }
 
     TfsRetType KvMetaClient::put_bucket(const char *bucket_name, const common::UserInfo &user_info)

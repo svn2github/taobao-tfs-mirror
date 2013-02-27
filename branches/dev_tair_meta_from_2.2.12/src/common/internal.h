@@ -125,6 +125,7 @@ namespace tfs
 
     // client config
     static const int64_t DEFAULT_CLIENT_RETRY_COUNT = 3;
+    static const int64_t DEFAULT_UPDATE_KMT_INTERVAL_COUNT = 100;
     // unit ms
     static const int64_t DEFAULT_STAT_INTERNAL = 60000; // 1min
     static const int64_t DEFAULT_GC_INTERNAL = 43200000; // 12h
@@ -857,6 +858,47 @@ namespace tfs
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
     static const int32_t RAW_META_SIZE = sizeof(RawMeta);
+
+    enum identify_id
+    {
+      //TfsFileInfo struct
+      TFS_FILE_INFO_CLUSTER_ID_TAG = 101,
+      TFS_FILE_INFO_BLOCK_ID_TAG = 102,
+      TFS_FILE_INFO_FILE_ID_TAG = 103,
+      TFS_FILE_INFO_OFFSET_TAG = 104,
+      TFS_FILE_INFO_FILE_SIZE_TAG = 105,
+
+      //ObjectMetaInfo struct
+      OBJECT_META_INFO_CREATE_TIME_TAG = 201,
+      OBJECT_META_INFO_MODIFY_TIME_TAG = 202,
+      OBJECT_META_INFO_MAX_TFS_FILE_SIZE_TAG = 203,
+      OBJECT_META_INFO_BIG_FILE_SIZE_TAG = 204,
+      OBJECT_META_INFO_OWNER_ID_TAG = 205,
+
+      //CustomizeInfo struct
+      CUSTOMIZE_INFO_OTAG_TAG = 301,
+
+      //ObjectInfo struct
+      OBJECT_INFO_HAS_META_INFO_TAG = 401,
+      OBJECT_INFO_HAS_CUSTOMIZE_INFO_TAG = 402,
+      OBJECT_INFO_META_INFO_TAG = 403,
+      OBJECT_INFO_V_TFS_FILE_INFO_TAG = 404,
+      OBJECT_INFO_CUSTOMIZE_INFO_TAG = 405,
+
+      //BucketMetaInfo struct
+      BUCKET_META_INFO_CREATE_TIME_TAG = 501,
+      BUCKET_META_INFO_OWNER_ID_TAG = 502,
+
+      //KvMetaTable
+      KV_META_TABLE_V_META_TABLE_TAG = 601,
+
+      //UserInfo
+      USER_INFO_OWNER_ID_TAG = 801,
+
+      //End TAG
+      END_TAG = 999
+    };
+
   }/** end namespace common*/
 }/** end namespace tfs **/
 

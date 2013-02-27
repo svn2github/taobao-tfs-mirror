@@ -32,8 +32,8 @@ namespace tfs
         KvMetaClient();
         ~KvMetaClient();
 
-        int initialize(const char *kms_addr, const char *ns_addr);
-        int initialize(const int64_t kms_addr, const char *ns_addr);
+        int initialize(const char *kv_rs_addr, const char *ns_addr);
+        int initialize(const int64_t kv_rs_addr, const char *ns_addr);
 
         TfsRetType put_bucket(const char *bucket_name, const common::UserInfo &user_info);
         TfsRetType get_bucket(const char *bucket_name, const char *prefix,

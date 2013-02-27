@@ -76,10 +76,10 @@ namespace tfs
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        std::vector<common::KvMetaServerBaseInformation>& get_mutable_table() { return v_kv_meta_base_info_;}
+        common::KvMetaTable& get_mutable_table() { return kv_meta_table_;}
 
       private:
-        std::vector<common::KvMetaServerBaseInformation> v_kv_meta_base_info_;
+        common::KvMetaTable kv_meta_table_;
     };
 
 

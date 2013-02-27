@@ -24,44 +24,6 @@ namespace tfs
 {
   namespace common
   {
-    enum identify_id
-    {
-      //TfsFileInfo struct
-      TFS_FILE_INFO_BLOCK_ID_TAG = 101,
-      TFS_FILE_INFO_FILE_ID_TAG = 102,
-      TFS_FILE_INFO_CLUSTER_ID_TAG = 103,
-      TFS_FILE_INFO_OFFSET_TAG = 104,
-      TFS_FILE_INFO_FILE_SIZE_TAG = 105,
-
-
-      //ObjectMetaInfo struct
-      OBJECT_META_INFO_CREATE_TIME_TAG = 201,
-      OBJECT_META_INFO_MODIFY_TIME_TAG = 202,
-      OBJECT_META_INFO_MAX_TFS_FILE_SIZE_TAG = 203,
-      OBJECT_META_INFO_BIG_FILE_SIZE_TAG = 204,
-      OBJECT_META_INFO_OWNER_ID_TAG = 205,
-
-      //CustomizeInfo struct
-      CUSTOMIZE_INFO_OTAG_TAG = 301,
-
-      //ObjectInfo struct
-      OBJECT_INFO_HAS_META_INFO_TAG = 401,
-      OBJECT_INFO_HAS_CUSTOMIZE_INFO_TAG = 402,
-      OBJECT_INFO_META_INFO_TAG = 403,
-      OBJECT_INFO_V_TFS_FILE_INFO_TAG = 404,
-      OBJECT_INFO_CUSTOMIZE_INFO_TAG = 405,
-
-      //BucketMetaInfo struct
-      BUCKET_META_INFO_CREATE_TIME_TAG = 501,
-      BUCKET_META_INFO_OWNER_ID_TAG = 502,
-
-      //UserInfo
-      USER_INFO_OWNER_ID_TAG = 801,
-
-      //End TAG
-      END_TAG = 999
-    };
-
     const char PERIOD = '.';
     const char DASH = '-';
     const char DEFAULT_CHAR = 7;
@@ -77,15 +39,15 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       void dump() const;
 
+      int32_t cluster_id_;
+
       int64_t block_id_;
 
       int64_t file_id_;
 
-      int32_t cluster_id_;
+      int64_t offset_;
 
       int64_t file_size_;
-
-      int64_t offset_;
     };
 
     struct ObjectMetaInfo

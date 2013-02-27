@@ -19,6 +19,7 @@
 #include <vector>
 #include <set>
 #include "common/kv_meta_define.h"
+#include "common/kv_rts_define.h"
 
 namespace tfs
 {
@@ -29,6 +30,7 @@ namespace tfs
     public:
       static int do_put_bucket(const uint64_t server_id, const char *bucket_name, const common::BucketMetaInfo& bucket_meta_info,
                                const common::UserInfo &user_info);
+      static int get_table(const uint64_t server_id, common::KvMetaTable& table);
       // TODO: parameter
       static int do_get_bucket(const uint64_t server_id, const char *bucket_name,
                                const char *prefix, const char *start_key, char delimiter, const int32_t limit,

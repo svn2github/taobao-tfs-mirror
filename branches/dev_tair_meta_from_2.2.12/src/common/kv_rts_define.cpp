@@ -140,5 +140,76 @@ namespace tfs
       return lease_.length() + base_info_.length();
     }
 
+    // KvMetaTable
+    KvMetaTable::KvMetaTable()
+    {
+    }
+    int64_t KvMetaTable::length() const
+    {
+      return INT_SIZE + INT64_SIZE * v_meta_table_.size() + INT_SIZE * 2;
+    }
+
+    int KvMetaTable::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, KV_META_TABLE_V_META_TABLE_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_vint64(data, data_len, pos, v_meta_table_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
+      return ret;
+    }
+
+    int KvMetaTable::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    {
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
+
+      while (TFS_SUCCESS == ret)
+      {
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
+
+        if (TFS_SUCCESS == ret)
+        {
+          switch (type_tag)
+          {
+            case KV_META_TABLE_V_META_TABLE_TAG:
+              ret = Serialization::get_vint64(data, data_len, pos, v_meta_table_);
+              break;
+            case END_TAG:
+              ;
+              break;
+            default:
+              TBSYS_LOG(ERROR, "kv meta table: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
+          }
+        }
+
+        if (END_TAG == type_tag)
+        {
+          break;
+        }
+      }
+
+      return ret;
+    }
+
+    void KvMetaTable::dump()
+    {
+      VUINT64::iterator iter = v_meta_table_.begin();
+      for(; iter != v_meta_table_.end(); iter++)
+      {
+        TBSYS_LOG(DEBUG, "kv meta server addr: %s", tbsys::CNetUtil::addrToString(*iter).c_str());
+      }
+    }
+
   } /** nameserver **/
 }/** tfs **/

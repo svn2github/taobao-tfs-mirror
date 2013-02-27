@@ -224,7 +224,7 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         GetTableFromKvRtsResponseMessage* reply_msg = new GetTableFromKvRtsResponseMessage();
-        iret = manager_.get_tables(reply_msg->get_mutable_table());
+        iret = manager_.get_table(reply_msg->get_mutable_table());
         if (TFS_SUCCESS == iret)
         {
           iret = packet->reply(reply_msg);

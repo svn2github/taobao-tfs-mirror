@@ -177,57 +177,13 @@ int cmd_head_object(const VSTRING& param);
 
 const char* rc_addr = NULL;
 const char* nsip = NULL;
-const char* kms_addr = NULL;
 const char* krs_addr = NULL;
 MetaType g_meta_type = META_RAW;
 
 static tfs::common::BasePacketStreamer gstreamer;
 static tfs::message::MessageFactory gfactory;
 
-int get_kvmeta_from_kvroot(std::string &kvmeta_addr)
-{
-  uint64_t ms_id;
-  uint64_t server = Func::get_host_ip(krs_addr);
-  GetTableFromKvRtsMessage msg;
 
-  NewClient* client = NULL;
-
-  int32_t iret = TFS_SUCCESS;
-  tbnet::Packet* rsp = NULL;
-
-  client = NewClientManager::get_instance().create_client();
-
-  iret = send_msg_to_server(server, client, &msg, rsp, ClientConfig::wait_timeout_);
-
-  if (TFS_SUCCESS != iret)
-  {
-    ToolUtil::print_info(iret, "call kvroot fail");
-    iret = EXIT_NETWORK_ERROR;
-  }
-  else if (RSP_KV_RT_GET_TABLE_MESSAGE == rsp->getPCode())
-  {
-    GetTableFromKvRtsResponseMessage* rsp_get_table = dynamic_cast<GetTableFromKvRtsResponseMessage*>(rsp);
-    std::vector<KvMetaServerBaseInformation>& base_infos = rsp_get_table->get_mutable_table();
-
-    for(size_t i = 0; i < base_infos.size(); ++i)
-    {
-      kvmeta_addr = Func::addr_to_str(base_infos[i].id_, true);
-      ToolUtil::print_info(iret, "num : %d   ipport : %s", i, kvmeta_addr.c_str());
-    }
-    if (base_infos.size() != 0)
-    {
-      ms_id = base_infos[random() % base_infos.size()].id_;
-      kvmeta_addr = Func::addr_to_str(ms_id, true);
-    }
-  }
-  else
-  {
-    iret = EXIT_UNKNOWN_MSGTYPE;
-    ToolUtil::print_info(iret, "call kvroot fail,msg type: %d", rsp->getPCode());
-  }
-  NewClientManager::get_instance().destroy_client(client);
-  return iret;
-}
 
 int main(int argc, char* argv[])
 {
@@ -237,7 +193,7 @@ int main(int argc, char* argv[])
   bool set_log_level = false;
 
   // analyze arguments
-  while ((i = getopt(argc, argv, "s:r:k:v:nih")) != EOF)
+  while ((i = getopt(argc, argv, "s:r:k:nih")) != EOF)
   {
     switch (i)
     {
@@ -251,9 +207,6 @@ int main(int argc, char* argv[])
         rc_addr = optarg;
         break;
       case 'k':
-        kms_addr = optarg;
-        break;
-      case 'v':
         krs_addr = optarg;
         break;
       case 'i':
@@ -271,7 +224,7 @@ int main(int argc, char* argv[])
     TBSYS_LOGGER.setLogLevel("ERROR");
   }
 
-  if (NULL == nsip && NULL == rc_addr & NULL == kms_addr)
+  if (NULL == nsip && NULL == rc_addr & NULL == krs_addr)
   {
     usage(argv[0]);
     return TFS_ERROR;
@@ -285,25 +238,8 @@ int main(int argc, char* argv[])
     strcpy(app_key, default_app_key);
     g_meta_type = META_NAME;
   }
-  else if (kms_addr != NULL)
-  {
-    if (nsip == NULL)
-    {
-      usage(argv[0]);
-      return TFS_ERROR;
-    }
-    g_meta_type = META_KV;
-
-    ret = g_kv_meta_client.initialize(kms_addr, nsip);
-    if (TFS_SUCCESS != ret)
-    {
-      TBSYS_LOG(DEBUG, "kv meta client init failed, ret: %d", ret);
-      return ret;
-    }
-  }
   else if (krs_addr != NULL)
   {
-    string kvmeta_addr;
     if (nsip == NULL)
     {
       usage(argv[0]);
@@ -311,19 +247,7 @@ int main(int argc, char* argv[])
     }
     g_meta_type = META_KV;
 
-    if (TFS_SUCCESS == ret)
-    {
-
-      ret = get_kvmeta_from_kvroot(kvmeta_addr);
-      kms_addr = kvmeta_addr.c_str();
-    }
-    if (TFS_SUCCESS != ret)
-    {
-      TBSYS_LOG(DEBUG, "kv root client failed, ret: %d", ret);
-      return ret;
-    }
-
-    ret = g_kv_meta_client.initialize(kms_addr, nsip);
+    ret = g_kv_meta_client.initialize(krs_addr, nsip);
     if (TFS_SUCCESS != ret)
     {
       TBSYS_LOG(DEBUG, "kv meta client init failed, ret: %d", ret);
@@ -383,16 +307,14 @@ static void usage(const char* name)
   fprintf(stderr,
           "Usage: a) %s -s nsip [-n] [-i] [-h] raw tfs client interface(without rc). \n"
           "       b) %s -r rcip [-n] [-i] [-h] name meta client interface(with rc). \n"
-          "       c) %s -k kmsip -s nsip [-n] [-i] [-h] kv meta client interface. \n"
-          "       d) %s -v krsip -s nsip [-n] [-i] [-h] kv root client interface. \n"
+          "       c) %s -k krsip -s nsip [-n] [-i] [-h] kv meta client interface. \n"
           "       -s nameserver ip port\n"
           "       -r rcserver ip port\n"
-          "       -k kvmetaserver ip port\n"
-          "       -v kvrootserver ip port\n"
+          "       -k kvrootserver ip port\n"
           "       -n set log level\n"
           "       -i directly execute the command\n"
           "       -h help\n",
-          name, name, name, name);
+          name, name, name);
 }
 
 static void sign_handler(const int32_t sig)
@@ -2051,12 +1973,12 @@ int cmd_put_object(const VSTRING& param)
   int64_t length = strtoll(param[3].c_str(), NULL, 10);
   const char* local_file = expand_path(const_cast<string&>(param[4]));
   int64_t owner_id = strtoll(param[5].c_str(), NULL, 10);
-  int rett =0;
-  ToolUtil::print_info(rett, "put object: %s, object: %s => %s offset: %"PRI64_PREFIX"d length: %"PRI64_PREFIX"d  owner_id: %"PRI64_PREFIX"d",
+  int ret = 0;
+  ToolUtil::print_info(ret, "put object: %s, object: %s => %s offset: %"PRI64_PREFIX"d length: %"PRI64_PREFIX"d  owner_id: %"PRI64_PREFIX"d",
                        bucket_name, object_name, local_file, offset, length, owner_id);
   UserInfo user_info;
   user_info.owner_id_ = owner_id;
-  int ret = g_kv_meta_client.put_object(bucket_name, object_name, local_file, offset, length, user_info);
+  ret = g_kv_meta_client.put_object(bucket_name, object_name, local_file, offset, length, user_info);
   ToolUtil::print_info(ret, "put object: %s, object: %s => %s offset: %"PRI64_PREFIX"d length: %"PRI64_PREFIX"d  owner_id: %"PRI64_PREFIX"d",
                        bucket_name, object_name, local_file, offset, length, owner_id);
   return ret;
@@ -2075,7 +1997,6 @@ int cmd_get_object(const VSTRING& param)
   UserInfo user_info;
   int ret = g_kv_meta_client.get_object(bucket_name, object_name, local_file, offset, length,
                                         &object_meta_info, &customize_info, user_info);
-  if (TFS_SUCCESS == ret)
   ToolUtil::print_info(ret, "get object: %s, object: %s => %s offset: %"PRI64_PREFIX"d length: %"PRI64_PREFIX"d",
                        bucket_name, object_name, local_file, offset, length);
 

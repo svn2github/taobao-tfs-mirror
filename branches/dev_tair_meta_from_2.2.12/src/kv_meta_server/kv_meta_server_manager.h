@@ -42,7 +42,7 @@ namespace tfs
         void destroy();
         int keepalive(common::KvMetaServerBaseInformation& base_info);
         int check_ms_lease_expired(void);
-        int get_tables(std::vector<common::KvMetaServerBaseInformation>& base_infos);
+        int get_table(common::KvMetaTable& meta_table);
 
 
       private:
@@ -64,7 +64,7 @@ namespace tfs
         typedef tbutil::Handle<CheckKvMetaServerLeaseThreadHelper> CheckKvMetaServerLeaseThreadHelperPtr;
       private:
         common::KV_META_SERVER_MAPS servers_;
-        std::vector<common::KvMetaServerBaseInformation> servers_for_get_;
+        common::KvMetaTable meta_table_;
         volatile uint64_t lease_id_factory_;
 
         CheckKvMetaServerLeaseThreadHelperPtr check_ms_lease_thread_;

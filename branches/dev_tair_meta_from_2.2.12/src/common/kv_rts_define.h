@@ -67,6 +67,20 @@ namespace tfs
     typedef std::map<uint64_t, KvMetaServer> KV_META_SERVER_MAPS;
     typedef KV_META_SERVER_MAPS::iterator KV_META_SERVER_MAPS_ITER;
     typedef KV_META_SERVER_MAPS::const_iterator KV_META_SERVER_MAPS_CONST_ITER;
+
+    struct KvMetaTable
+    {
+      KvMetaTable();
+
+      int64_t length() const;
+      int serialize(char *data, const int64_t data_len, int64_t &pos) const;
+      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
+
+      common::VUINT64 v_meta_table_;
+
+      void dump();
+    };
+
   } /** common **/
 } /** tfs **/
 

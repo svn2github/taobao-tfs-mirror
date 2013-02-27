@@ -30,7 +30,7 @@ namespace tfs
     using namespace std;
 
     KvMetaClientImpl::KvMetaClientImpl()
-    :kms_id_(0)
+    :rs_id_(0), access_count_(0)
     {
       packet_factory_ = new message::MessageFactory();
       packet_streamer_ = new common::BasePacketStreamer(packet_factory_);
@@ -42,32 +42,87 @@ namespace tfs
       tbsys::gDelete(packet_streamer_);
     }
 
-    int KvMetaClientImpl::initialize(const char *kms_addr, const char *ns_addr)
+    int KvMetaClientImpl::initialize(const char *rs_addr, const char *ns_addr)
     {
       int ret = TFS_SUCCESS;
-      if (NULL == kms_addr || NULL == ns_addr)
+      if (NULL == rs_addr || NULL == ns_addr)
       {
-        TBSYS_LOG(WARN, "kms_addr or ns_addr is null");
+        TBSYS_LOG(WARN, "rs_addr or ns_addr is null");
         ret = EXIT_INVALID_ARGU_ERROR;
       }
       else
       {
-        ret = initialize(Func::get_host_ip(kms_addr), ns_addr);
+        ret = initialize(Func::get_host_ip(rs_addr), ns_addr);
       }
       return ret;
     }
 
-    int KvMetaClientImpl::initialize(const int64_t kms_addr, const char *ns_addr)
+    int KvMetaClientImpl::initialize(const int64_t rs_addr, const char *ns_addr)
     {
       int ret = TFS_SUCCESS;
       ret = NewClientManager::get_instance().initialize(packet_factory_, packet_streamer_);
       if (TFS_SUCCESS == ret)
       {
-        kms_id_ = kms_addr;
+        rs_id_ = rs_addr;
         ns_addr_ = ns_addr;
+        update_table_from_rootserver();
         ret = tfs_meta_manager_.initialize();
       }
       return ret;
+    }
+
+    bool KvMetaClientImpl::need_update_table(const int ret_status)
+    {
+      return (ret_status == EXIT_INVALID_KV_META_SERVER
+          || ++access_count_ >= ClientConfig::update_kmt_interval_count_);
+    }
+
+    int KvMetaClientImpl::update_table_from_rootserver()
+    {
+      int ret = TFS_ERROR;
+      KvMetaTable new_table;
+      if ((ret = KvMetaHelper::get_table(rs_id_, new_table)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "get table from rootserver failed. ret: %d", ret);
+      }
+      else
+      {
+        if (new_table.v_meta_table_.size() == 0)
+        {
+          TBSYS_LOG(ERROR, "get empty kv meta table from rootserver");
+        }
+        else
+        {
+          tbsys::CWLockGuard guard(meta_table_mutex_);
+          meta_table_.v_meta_table_.clear();
+          meta_table_.v_meta_table_ = new_table.v_meta_table_;
+          meta_table_.dump();
+          access_count_ = 0;
+          ret = TFS_SUCCESS;
+        }
+      }
+
+      return ret;
+    }
+
+    uint64_t KvMetaClientImpl::get_meta_server_id()
+    {
+      uint64_t meta_server_id = 0;
+      {
+        tbsys::CRLockGuard guard(meta_table_mutex_);
+        int32_t table_size = meta_table_.v_meta_table_.size();
+        if (table_size <= 0)
+        {
+          TBSYS_LOG(WARN, "no kv meta server is available");
+        }
+        else
+        {
+          meta_server_id = meta_table_.v_meta_table_.at(random() % table_size);
+          TBSYS_LOG(DEBUG, "select kv meta server: %s",
+              tbsys::CNetUtil::addrToString(meta_server_id).c_str());
+        }
+      }
+      return meta_server_id;
     }
 
     TfsRetType KvMetaClientImpl::put_bucket(const char *bucket_name, const UserInfo &user_info)
@@ -742,10 +797,23 @@ namespace tfs
       return ret;
     }
 
-
     int KvMetaClientImpl::do_put_bucket(const char *bucket_name, const BucketMetaInfo& bucket_meta_info, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_put_bucket(kms_id_, bucket_name, bucket_meta_info, user_info);
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = 3;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_put_bucket(meta_server_id, bucket_name, bucket_meta_info, user_info);
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while(ret == EXIT_NETWORK_ERROR && --retry);
+
+      return ret;
     }
 
     // TODO
@@ -755,43 +823,139 @@ namespace tfs
                                         vector<string> *v_object_name, set<string> *s_common_prefix,
                                         int8_t *is_truncated, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_get_bucket(kms_id_, bucket_name, prefix, start_key, delimiter, limit,
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = 3;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_get_bucket(meta_server_id, bucket_name, prefix, start_key, delimiter, limit,
           v_object_meta_info, v_object_name, s_common_prefix, is_truncated, user_info);
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while(ret == EXIT_NETWORK_ERROR && --retry);
+
+      return ret;
     }
 
     int KvMetaClientImpl::do_del_bucket(const char *bucket_name, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_del_bucket(kms_id_, bucket_name, user_info);
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = 3;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_del_bucket(meta_server_id, bucket_name, user_info);
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while(ret == EXIT_NETWORK_ERROR && --retry);
+
+      return ret;
     }
 
     int KvMetaClientImpl::do_head_bucket(const char *bucket_name, BucketMetaInfo *bucket_meta_info, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_head_bucket(kms_id_, bucket_name, bucket_meta_info, user_info);
-    }
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = 3;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_head_bucket(meta_server_id, bucket_name, bucket_meta_info, user_info);
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while(ret == EXIT_NETWORK_ERROR && --retry);
 
+      return ret;
+    }
 
     int KvMetaClientImpl::do_put_object(const char *bucket_name,
         const char *object_name, const ObjectInfo &object_info, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_put_object(kms_id_, bucket_name, object_name, object_info, user_info);
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = 3;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_put_object(meta_server_id, bucket_name, object_name, object_info, user_info);
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while(ret == EXIT_NETWORK_ERROR && --retry);
+
+      return ret;
     }
 
     int KvMetaClientImpl::do_get_object(const char *bucket_name,
         const char *object_name, const int64_t offset, const int64_t length, ObjectInfo *object_info, bool *still_have, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_get_object(kms_id_, bucket_name, object_name, offset, length, object_info, still_have, user_info);
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = 3;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_get_object(meta_server_id, bucket_name, object_name, offset, length, object_info, still_have, user_info);
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while(ret == EXIT_NETWORK_ERROR && --retry);
+
+      return ret;
     }
 
     int KvMetaClientImpl::do_del_object(const char *bucket_name, const char *object_name, ObjectInfo *object_info, bool *still_have, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_del_object(kms_id_, bucket_name, object_name, object_info, still_have, user_info);
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = 3;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_del_object(meta_server_id, bucket_name, object_name, object_info, still_have, user_info);
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while(ret == EXIT_NETWORK_ERROR && --retry);
+
+      return ret;
     }
 
     int KvMetaClientImpl::do_head_object(const char *bucket_name, const char *object_name, ObjectInfo *object_info, const UserInfo &user_info)
     {
-      return KvMetaHelper::do_head_object(kms_id_, bucket_name, object_name, object_info, user_info);
-    }
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = 3;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_head_object(meta_server_id, bucket_name, object_name, object_info, user_info);
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while(ret == EXIT_NETWORK_ERROR && --retry);
 
+      return ret;
+    }
 
     // TODO
     bool KvMetaClientImpl::is_valid_bucket_name(const char *bucket_name)
