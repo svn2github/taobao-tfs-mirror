@@ -15,14 +15,14 @@
 
 
 
-#define a1G       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/1g.jpg"
-#define a100M     "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/100m.jpg"
-#define a6M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/6m.jpg"
-#define a3M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/3m.jpg"
-#define a2M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/2m.jpg"
-#define a100K     "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/100k.jpg"
-#define a10K      "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/10k.jpg"
-#define a1B       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/1b.jpg"
+#define a1G       "/home/admin/hudson/workspace/TFS_C++_CLIENT_Meta_TEST/metaTestV2/resource/1g.jpg"
+#define a100M     "/home/admin/hudson/workspace/TFS_C++_CLIENT_Meta_TEST/metaTestV2/resource/100m.jpg"
+#define a6M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_Meta_TEST/metaTestV2/resource/6m.jpg"
+#define a3M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_Meta_TEST/metaTestV2/resource/3m.jpg"
+#define a2M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_Meta_TEST/metaTestV2/resource/2m.jpg"
+#define a100K     "/home/admin/hudson/workspace/TFS_C++_CLIENT_Meta_TEST/metaTestV2/resource/100k.jpg"
+#define a10K      "/home/admin/hudson/workspace/TFS_C++_CLIENT_Meta_TEST/metaTestV2/resource/10k.jpg"
+#define a1B       "/home/admin/hudson/workspace/TFS_C++_CLIENT_Meta_TEST/metaTestV2/resource/1b.jpg"
 
 
 using namespace std;
@@ -50,7 +50,7 @@ class TfsInit: public testing::Test
      virtual void SetUp()
      {
 
-        std::string config_file_="/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/conf/test.conf";
+        std::string config_file_="/home/admin/hudson/workspace/TFS_C++_CLIENT_Meta_TEST/conf/test.conf";
         TBSYS_CONFIG.load(config_file_.c_str());
         cache_time = 1800;
         cache_items = 50000;
