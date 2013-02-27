@@ -203,6 +203,7 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/adminserver/Makefile
                  src/new_client/Makefile
+                 src/clientv2/Makefile
                  src/common/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
