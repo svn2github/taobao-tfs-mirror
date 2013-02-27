@@ -623,7 +623,7 @@ namespace tfs
         TBSYS_LOG(ERROR, "req_offset : %"PRI64_PREFIX"d or req_length : %"PRI64_PREFIX"d is INVALID", req_offset, req_length);
         ret = EXIT_INVALID_ARGU_ERROR;
       }
-      else if ((fd = ::open(local_file, O_WRONLY|O_CREAT, 0644)) < 0)
+      else if ((fd = ::open(local_file, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0)
       {
         TBSYS_LOG(ERROR, "open local file %s to write fail: %s", local_file, strerror(errno));
         ret = EXIT_INVALID_ARGU_ERROR;
