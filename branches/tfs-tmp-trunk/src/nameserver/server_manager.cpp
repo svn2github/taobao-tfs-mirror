@@ -712,12 +712,17 @@ namespace tfs
     int ServerManager::calc_single_process_max_network_bandwidth(int32_t& max_mr_network_bandwith,
         int32_t& max_rw_network_bandwith, const DataServerStatInfo& info) const
     {
-      if (info.total_network_bandwith_ > 0)
+      UNUSED(info);
+      /*if (info.total_network_bandwith_ > 0)
       {
         int32_t capacity = info.total_network_bandwith_ / 12;
         max_mr_network_bandwith = capacity * SYSPARAM_NAMESERVER.max_mr_network_bandwith_ratio_ / 100;
         max_rw_network_bandwith = capacity * SYSPARAM_NAMESERVER.max_rw_network_bandwith_ratio_ / 100;
-      }
+      }*/
+
+      int32_t capacity = SYSPARAM_NAMESERVER.max_single_machine_network_bandwith_ / 12;
+      max_mr_network_bandwith = capacity * SYSPARAM_NAMESERVER.max_mr_network_bandwith_ratio_ / 100;
+      max_rw_network_bandwith = capacity * SYSPARAM_NAMESERVER.max_rw_network_bandwith_ratio_ / 100;
       max_mr_network_bandwith = std::max(max_mr_network_bandwith, 2);
       max_rw_network_bandwith = std::max(max_rw_network_bandwith, 4);
       return TFS_SUCCESS;
