@@ -1801,7 +1801,11 @@ namespace tfs
         {
 
         }
-        //ret = ((!ret) && compact_time && get_family_manager().check_need_compact());
+        ret = ((!ret) && get_family_manager().check_need_compact(family, now));
+        if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_DISSOLVE)))
+        {
+
+        }
       }
       return over;
     }

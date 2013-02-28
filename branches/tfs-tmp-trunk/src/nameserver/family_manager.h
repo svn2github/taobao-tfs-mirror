@@ -115,7 +115,7 @@ namespace tfs
           const FamilyCollect* family, const time_t now) const;
       bool check_need_dissolve(const FamilyCollect* family,
           const common::ArrayHelper<common::FamilyMemberInfo>& need_reinstate_members) const;
-      bool check_need_compact() const;//TODO
+      bool check_need_compact(const FamilyCollect* family, const time_t now) const;
       void dump_marshalling_queue(const int32_t level, const char* format = NULL) const;
     private:
       DISALLOW_COPY_AND_ASSIGN(FamilyManager);

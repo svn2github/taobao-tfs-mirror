@@ -322,7 +322,7 @@ namespace tfs
           }
           else
           {
-            //block->update(info);//TODO
+            block->update(info);
             time_t now = Func::get_monotonic_time();
             for (iter = result.begin(); iter != result.end(); ++iter)
             {

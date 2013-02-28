@@ -248,10 +248,11 @@ namespace tfs
      * to check a block if compact
      * @return: return true if need compact
      */
-    bool BlockCollect::check_compact() const
+    bool BlockCollect::check_compact(const bool check_in_family) const
     {
       bool ret = false;
-      if (!is_creating() && !is_in_family() && !in_replicate_queue())
+      bool check = check_in_family ? !is_in_family() : true;
+      if (!is_creating() && check && !in_replicate_queue())
       {
         if ((server_size_ == SYSPARAM_NAMESERVER.max_replication_) && is_full())
         {

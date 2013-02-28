@@ -301,9 +301,6 @@ namespace tfs
             case REQ_EC_DISSOLVE_COMMIT_MESSAGE:
               ret = layout_manager_.get_client_request_server().handle(msg);
               break;
-            case UPDATE_BLOCK_INFO_MESSAGE:
-              //ret = update_block_info(msg);
-              break;
             case SHOW_SERVER_INFORMATION_MESSAGE:
               ret = show_server_information(msg);
               break;
@@ -613,53 +610,6 @@ namespace tfs
       }
       return ret;
     }
-
-    /*int NameServer::update_block_info(common::BasePacket* msg)
-    {
-      int32_t ret = ((NULL != msg) && (msg->getPCode() == UPDATE_BLOCK_INFO_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        UpdateBlockInfoMessage* message = dynamic_cast<UpdateBlockInfoMessage*>(msg);
-        uint64_t block = message->get_block_id();
-        if (0 == block)
-        {
-          ret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_BLOCK_NOT_FOUND,
-              "repair block: %"PRI64_PREFIX"u, block object not found", block);
-        }
-        else
-        {
-          time_t now = Func::get_monotonic_time();
-          int32_t repair_flag = message->get_repair();
-          uint64_t dest_server = message->get_server_id();
-          if (UPDATE_BLOCK_NORMAL == repair_flag)
-          {
-            const BlockInfo* info = message->get_block();
-            if (NULL == info)
-            {
-              ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_BLOCK_NOT_FOUND,
-                  "repair block: %"PRI64_PREFIX"u, blockinfo object is null", block);
-            }
-            else
-            {
-              //bool addnew = true;
-              //ret = layout_manager_.update_block_info(*info, dest_server, now, addnew);//TODO
-              if (TFS_SUCCESS == ret)
-                ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK, "update block info successful"));
-              else
-                ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret,
-                  "block: %"PRI64_PREFIX"u, new block info version lower than meta, cannot update", block);
-            }
-          }
-          else
-          {
-            char error_msg[512] = {'\0'};
-            ret = layout_manager_.repair(error_msg, 512, block, dest_server, repair_flag, now);
-            ret = message->reply(new StatusMessage(ret, error_msg));
-          }
-        }
-      }
-      return ret;
-    }*/
 
     int NameServer::show_server_information(common::BasePacket* msg)
     {

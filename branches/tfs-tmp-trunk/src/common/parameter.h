@@ -74,6 +74,8 @@ namespace tfs
       int32_t dissolve_task_expired_time_;
       int32_t max_mr_network_bandwith_ratio_;
       int32_t max_rw_network_bandwith_ratio_;
+      int32_t compact_family_member_ratio_;
+      int32_t max_single_machine_network_bandwith_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

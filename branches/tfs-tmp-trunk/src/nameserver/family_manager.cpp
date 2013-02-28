@@ -781,10 +781,40 @@ namespace tfs
       return ret;
     }
 
-    bool FamilyManager::check_need_compact() const
+    bool FamilyManager::check_need_compact(const FamilyCollect* family, const time_t now) const
     {
-      //TODO
-      return false;
+      bool need_compact = false;
+      bool ret = (NULL != family);
+      if (ret)
+      {
+        ret = !manager_.get_task_manager().exist_family(family->get_family_id());
+      }
+      if (ret)
+      {
+        ret = CHECK_MEMBER_NUM_V2(family->get_data_member_num(),  family->get_check_member_num());
+        if (ret)
+        {
+          int32_t MEMBER_NUM = family->get_data_member_num() + family->get_check_member_num();
+          BlockCollect* blocks[MEMBER_NUM];
+          common::ArrayHelper<BlockCollect*> helper(MEMBER_NUM, blocks);
+          ret = (TFS_SUCCESS == get_members_(helper, family->get_family_id()));
+          if (ret)
+          {
+            int32_t need_compact_count = 0;
+            for (int64_t index = 0; index < helper.get_array_index(); ++index)
+            {
+              BlockCollect* block = *helper.at(index);
+              if ((NULL != block) && (manager_.get_block_manager().need_compact(block, now, true)))
+              {
+                ++need_compact_count;
+              }
+            }
+            int32_t need_compact_ratio = static_cast<int32_t>(((static_cast<float>(need_compact_count) / static_cast<float>(MEMBER_NUM)) * 100));
+            need_compact = (need_compact_ratio >= SYSPARAM_NAMESERVER.compact_family_member_ratio_);
+          }
+        }
+      }
+      return (ret && need_compact);
     }
 
     void FamilyManager::dump_marshalling_queue(const int32_t level, const char* format) const

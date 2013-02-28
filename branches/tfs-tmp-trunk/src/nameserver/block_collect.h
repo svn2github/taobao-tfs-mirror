@@ -61,7 +61,7 @@ namespace tfs
       int check_version(LayoutManager& manager, common::ArrayHelper<uint64_t>& expires,
             const uint64_t server, const bool isnew, const common::BlockInfoV2& info, const time_t now);
       common::PlanPriority check_replicate(const time_t now) const;
-      bool check_compact() const;
+      bool check_compact(const bool check_in_family = true) const;
       bool check_balance() const;
       bool check_reinstate(const time_t now) const;
       bool check_marshalling() const;

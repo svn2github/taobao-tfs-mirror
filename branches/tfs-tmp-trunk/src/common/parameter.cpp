@@ -64,6 +64,8 @@ namespace tfs
       dissolve_task_expired_time_  = 120;
       max_mr_network_bandwith_ratio_ = 50;
       max_rw_network_bandwith_ratio_ = 50;
+      compact_family_member_ratio_   = 30;
+      max_single_machine_network_bandwith_ = 120;//120MB
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
       report_block_time_interval_min_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL_MIN, 0);
       max_write_timeout_= TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_TIMEOUT, 3);

@@ -662,19 +662,19 @@ namespace tfs
       return ret;
     }
 
-    bool BlockManager::need_compact(const BlockCollect* block, const time_t now) const
+    bool BlockManager::need_compact(const BlockCollect* block, const time_t now, const bool check_in_family) const
     {
       RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
-      return (NULL != block) ? (block->check_compact() && (!has_write_(block->id(), now))) : false;
+      return (NULL != block) ? (block->check_compact(check_in_family) && (!has_write_(block->id(), now))) : false;
     }
 
-    bool BlockManager::need_compact(ArrayHelper<uint64_t>& servers, const BlockCollect* block, const time_t now) const
+    bool BlockManager::need_compact(ArrayHelper<uint64_t>& servers, const BlockCollect* block, const time_t now, const bool check_in_family) const
     {
       bool ret = (NULL != block);
       if (ret)
       {
         get_mutex_(block->id()).rdlock();
-        ret = ((block->check_compact()) && (!has_write_(block->id(), now)));
+        ret = ((block->check_compact(check_in_family)) && (!has_write_(block->id(), now)));
         if (ret)
           block->get_servers(servers);
         get_mutex_(block->id()).unlock();
