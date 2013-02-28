@@ -43,7 +43,7 @@ class TfsInit: public testing::Test
      int32_t cache_time;
      int32_t cache_items;
       	
-     static const int64_t appId = 3;
+     static const int64_t appId = 1;
      static const int64_t uid = 103;
 
      
@@ -56,6 +56,7 @@ class TfsInit: public testing::Test
         cache_items = 50000;
         const char* str_rc_ip = TBSYS_CONFIG.getString("public","Rc_Ip","");
         const char* app_key = TBSYS_CONFIG.getString("public","App_Key","");
+       cout<<app_key<<endl;
         const char* str_app_ip = "10.232.36.206";
         
         tfsclient = new RcClient();
