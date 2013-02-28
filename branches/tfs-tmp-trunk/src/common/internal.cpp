@@ -308,7 +308,7 @@ namespace tfs
       return info.length() + INT64_SIZE;
     }*/
 
-    int RawMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    /*int RawMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
 
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
@@ -346,7 +346,7 @@ namespace tfs
     int64_t RawMeta::length() const
     {
       return INT64_SIZE + INT_SIZE * 2;
-    }
+    }*/
 
     int ReplBlock::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
@@ -1321,7 +1321,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[46] = {
+    const char* dynamic_parameter_str[48] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1367,7 +1367,9 @@ namespace tfs
         "dissolve_task_expired_time",
         "compact_update_ratio",
         "max_mr_network_bandwith_ratio",
-        "max_rw_network_bandwith_ratio"
+        "max_rw_network_bandwith_ratio",
+        "compact_family_member_ratio",
+        "max_single_machine_network_bandwith"
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
@@ -1432,7 +1434,7 @@ namespace tfs
 
     int64_t FamilyInfo::length() const
     {
-      return /*INT64_SIZE + INT_SIZE + */(family_member_.size() * INT_SIZE * 2);
+      return /*INT64_SIZE + INT_SIZE + */(family_member_.size() * INT_SIZE + INT64_SIZE);
     }
 
     bool FamilyMemberInfo::operator ==(const FamilyMemberInfo& rhs) const

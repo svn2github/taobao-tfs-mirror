@@ -165,9 +165,6 @@ namespace tfs
 
     static const int32_t MAX_REPLICATION_NUM = 8;
 
-    static const int32_t REPORT_BLOCK_NORMAL = 0;
-    static const int32_t REPORT_BLOCK_EXT = 1;
-
     static const int32_t MAX_DATA_MEMBER_NUM = 8;
     static const int32_t MAX_CHECK_MEMBER_NUM = 4;
     static const int32_t MAX_MARSHALLING_NUM = MAX_DATA_MEMBER_NUM + MAX_CHECK_MEMBER_NUM;
@@ -236,11 +233,11 @@ namespace tfs
       UNLINK_FLAG_YES
     };
 
-    enum HasBlockFlag
+    /*enum HasBlockFlag
     {
       HAS_BLOCK_FLAG_NO = 0x0,
       HAS_BLOCK_FLAG_YES
-    };
+    };*/
 
     enum GetServerStatusType
     {
@@ -283,12 +280,12 @@ namespace tfs
       CLOSE_FILE_SLAVER
     };
 
-    enum SsmType
+    /*enum SsmType
     {
       SSM_BLOCK = 1,
       SSM_SERVER = 2,
       SSM_WBLIST = 4
-    };
+    };*/
 
     enum ServerStatus
     {
@@ -323,12 +320,6 @@ namespace tfs
       CLIENT_CMD_GET_BALANCE_PERCENT,
       CLIENT_CMD_SET_BALANCE_PERCENT,
       CLIENT_CMD_CLEAR_SYSTEM_TABLE
-    };
-
-    enum PlanInterruptFlag
-    {
-      INTERRUPT_NONE= 0x00,
-      INTERRUPT_ALL = 0x01
     };
 
     enum PlanType
@@ -545,7 +536,7 @@ namespace tfs
       }
    };*/
 
-    struct RawMeta
+    /*struct RawMeta
     {
       public:
         RawMeta()
@@ -628,7 +619,7 @@ namespace tfs
           int32_t inner_offset_;
           int32_t size_;
         } location_;
-    };
+    };*/
 
     struct ReplBlock
     {
@@ -655,6 +646,7 @@ namespace tfs
 
       CheckBlockInfo(): block_id_(0), version_(0), file_count_(0), total_size_(0)
       {
+
       }
     };
 
@@ -1008,7 +1000,7 @@ namespace tfs
       }
     };
 
-    struct RawIndex
+    /*struct RawIndex
     {
       uint32_t block_id_;
       char* data_;
@@ -1046,7 +1038,7 @@ namespace tfs
       REPORT_BLOCK_TYPE_ALL = 0,
       REPORT_BLOCK_TYPE_PART,
       REPORT_BLOCK_TYPE_RELIEVE
-    }ReportBlockType;
+    }ReportBlockType;*/
 
     enum RepairType
     {
@@ -1096,7 +1088,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[46];
+    extern const char* dynamic_parameter_str[48];
 
     #pragma pack (1)
     struct FileInfoV2//30
@@ -1259,13 +1251,13 @@ namespace tfs
     typedef std::map<uint64_t, FileInfo*> FILE_INFO_MAP;
     typedef FILE_INFO_MAP::iterator FILE_INFO_MAP_ITER;
 
-    typedef std::vector<RawMeta> RawMetaVec;
-    typedef std::vector<RawMeta>::iterator RawMetaVecIter;
-    typedef std::vector<RawMeta>::const_iterator RawMetaVecConstIter;
+    //typedef std::vector<RawMeta> RawMetaVec;
+    //typedef std::vector<RawMeta>::iterator RawMetaVecIter;
+    //typedef std::vector<RawMeta>::const_iterator RawMetaVecConstIter;
 
-    typedef std::vector<RawIndex> RawIndexVec;
-    typedef std::vector<RawIndex>::iterator RawIndexVecIter;
-    typedef std::vector<RawIndex>::const_iterator RawIndexVecConstIter;
+    //typedef std::vector<RawIndex> RawIndexVec;
+    //typedef std::vector<RawIndex>::iterator RawIndexVecIter;
+    //typedef std::vector<RawIndex>::const_iterator RawIndexVecConstIter;
 
     typedef std::vector<CheckBlockInfo> CheckBlockInfoVec;
     typedef std::vector<CheckBlockInfo>::iterator CheckBlockInfoVecIter;
@@ -1278,7 +1270,7 @@ namespace tfs
     static const int32_t FILEINFO_EXT_SIZE = sizeof(FileInfoInDiskExt);
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
-    static const int32_t RAW_META_SIZE = sizeof(RawMeta);
+    //static const int32_t RAW_META_SIZE = sizeof(RawMeta);
     static const int32_t INDEX_HEADER_V2_LENGTH = sizeof(IndexHeaderV2);
     static const int32_t FILE_INFO_V2_LENGTH    = sizeof(FileInfoV2);
   }/** end namespace common*/
