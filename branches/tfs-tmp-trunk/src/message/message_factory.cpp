@@ -121,13 +121,13 @@ namespace tfs
             packet = new  RespListBlockMessage();
             break;
           case common::BLOCK_RAW_META_MESSAGE:
-            packet = new  BlockRawMetaMessage();
+            //packet = new  BlockRawMetaMessage();
             break;
           case common::WRITE_RAW_DATA_MESSAGE:
-            packet = new  WriteRawDataMessage();
+            //packet = new  WriteRawDataMessage();
             break;
           case common::WRITE_INFO_BATCH_MESSAGE:
-            packet = new  WriteInfoBatchMessage();
+            //packet = new  WriteInfoBatchMessage();
             break;
           case common::BLOCK_COMPACT_COMPLETE_MESSAGE:
             packet = new  DsCommitCompactBlockCompleteToNsMessage();
@@ -286,16 +286,16 @@ namespace tfs
             packet = new ECDissolveCommitMessage();
             break;
           case common::READ_RAW_INDEX_MESSAGE:
-            packet = new ReadRawIndexMessage();
+            //packet = new ReadRawIndexMessage();
             break;
           case common::RSP_READ_RAW_INDEX_MESSAGE:
-            packet = new RespReadRawIndexMessage();
+            //packet = new RespReadRawIndexMessage();
             break;
           case common::WRITE_RAW_INDEX_MESSAGE:
-            packet = new WriteRawIndexMessage();
+            //packet = new WriteRawIndexMessage();
             break;
           case common::DS_COMPACT_BLOCK_MESSAGE:
-            packet = new DsCompactBlockMessage();
+            //packet = new DsCompactBlockMessage();
             break;
           case common::DS_REPLICATE_BLOCK_MESSAGE:
             packet = new DsReplicateBlockMessage();

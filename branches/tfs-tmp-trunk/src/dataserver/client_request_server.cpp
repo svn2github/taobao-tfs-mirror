@@ -141,7 +141,7 @@ namespace tfs
             ReportBlocksToNsResponseMessage* msg = dynamic_cast<ReportBlocksToNsResponseMessage*>(message);
             std::vector<uint64_t>& cleanup_family_id_array = msg->get_blocks();
             TBSYS_LOG(INFO, "nameserver %s ask for cleanup family id blocks, count: %zd",
-                tbsys::CNetUtil::addrToString(msg->get_server()).c_str(), cleanup_family_id_array.size());//TODO
+                tbsys::CNetUtil::addrToString(msg->get_server()).c_str(), cleanup_family_id_array.size());
             std::vector<uint64_t>::const_iterator iter = cleanup_family_id_array.begin();
             for (; iter != cleanup_family_id_array.end(); ++iter)
             {

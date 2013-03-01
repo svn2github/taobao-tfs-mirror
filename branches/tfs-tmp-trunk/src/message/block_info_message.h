@@ -479,7 +479,7 @@ namespace tfs
         common::FILE_INFO_LIST_V2 fileinfo_list_;
     };
 
-    class BlockRawMetaMessage:  public common::BasePacket
+    /*class BlockRawMetaMessage:  public common::BasePacket
     {
       public:
         BlockRawMetaMessage();
@@ -502,7 +502,7 @@ namespace tfs
       protected:
         uint32_t block_id_;
         common::RawMetaVec raw_meta_list_;
-    };
+    };*/
 
     class BlockWriteCompleteMessage:  public common::BasePacket
     {

@@ -1035,7 +1035,7 @@ namespace tfs
       return ret;
     }
 
-    BlockRawMetaMessage::BlockRawMetaMessage() :
+    /*BlockRawMetaMessage::BlockRawMetaMessage() :
       block_id_(0)
     {
       _packetHeader._pcode = common::BLOCK_RAW_META_MESSAGE;
@@ -1106,7 +1106,7 @@ namespace tfs
         }
       }
       return ret;
-    }
+    }*/
 
     BlockWriteCompleteMessage::BlockWriteCompleteMessage() :
       server_id_(0), write_complete_status_(common::WRITE_COMPLETE_STATUS_NO), unlink_flag_(common::UNLINK_FLAG_NO)

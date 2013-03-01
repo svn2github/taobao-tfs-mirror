@@ -83,13 +83,10 @@ namespace tfs
         }
         inline common::BlockInfoV2* get_blocks_ext() { return blocks_ext_;}
         inline int32_t get_block_count() const { return block_count_;}
-        inline int8_t get_type() { return type_;}
-        inline void set_type(const int8_t type) { type_ = type;}
       protected:
         common::BlockInfoV2* blocks_ext_;
         uint64_t server_;
         int32_t  block_count_;
-        int8_t type_;
     };
 
     class ReportBlocksToNsResponseMessage: public common::BasePacket

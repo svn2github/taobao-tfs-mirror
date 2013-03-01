@@ -235,7 +235,7 @@ namespace tfs
         int32_t flag_;
     };
 
-    class WriteInfoBatchMessage:  public common::BasePacket
+    /*class WriteInfoBatchMessage:  public common::BasePacket
     {
       public:
         WriteInfoBatchMessage();
@@ -299,9 +299,9 @@ namespace tfs
         common::BlockInfo block_info_;
         common::RawMetaVec meta_list_;
         int32_t cluster_;
-    };
+    };*/
 
-    class WriteRawIndexMessage: public common::BasePacket
+    /*class WriteRawIndexMessage: public common::BasePacket
     {
       public:
         WriteRawIndexMessage();
@@ -355,7 +355,7 @@ namespace tfs
         int64_t family_id_;
         common::RawIndexOp index_op_;
         common::RawIndexVec index_vec_;
-    };
+    };*/
   }
 }
 #endif

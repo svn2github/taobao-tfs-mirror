@@ -100,8 +100,7 @@ namespace tfs
     ReportBlocksToNsRequestMessage::ReportBlocksToNsRequestMessage():
       blocks_ext_(NULL),
       server_(common::INVALID_SERVER_ID),
-      block_count_(0),
-      type_(common::REPORT_BLOCK_TYPE_ALL)
+      block_count_(0)
     {
       _packetHeader._pcode = common::REQ_REPORT_BLOCKS_TO_NS_MESSAGE;
     }
@@ -130,17 +129,13 @@ namespace tfs
             input.drain(blocks_ext_[index].length());
         }
       }
-      if (common::TFS_SUCCESS == ret)
-      {
-        ret = input.get_int8(&type_);
-      }
       return ret;
     }
 
     int64_t ReportBlocksToNsRequestMessage::length() const
     {
       common::BlockInfoV2 info;
-      return common::INT64_SIZE + common::INT_SIZE + block_count_ * info.length() + common::INT8_SIZE;
+      return common::INT64_SIZE + common::INT_SIZE + block_count_ * info.length();
     }
 
     int ReportBlocksToNsRequestMessage::serialize(common::Stream& output) const
@@ -163,10 +158,6 @@ namespace tfs
           if (common::TFS_SUCCESS == ret)
             output.pour(blocks_ext_[index].length());
         }
-      }
-      if (common::TFS_SUCCESS == ret)
-      {
-        ret = output.set_int8(type_);
       }
       return ret;
     }
