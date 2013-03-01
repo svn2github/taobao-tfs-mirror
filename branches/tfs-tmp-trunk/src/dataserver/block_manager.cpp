@@ -149,7 +149,7 @@ namespace tfs
           }
         }
       }
-      TBSYS_LOG(INFO, "alloc logic block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s, family id: %"PRI64_PREFIX"d, index_num: %d",
+      TBSYS_LOG(INFO, "new block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s, family id: %"PRI64_PREFIX"d, index_num: %d",
         logic_block_id, TFS_SUCCESS == ret ? "successful" : "failed", ret, tmp ? "true" : "false", family_id, index_num);
       return ret;
     }
@@ -162,6 +162,8 @@ namespace tfs
         RWLock::Lock lock(mutex_, WRITE_LOCKER);
         ret = del_block_(logic_block_id, tmp);
       }
+      TBSYS_LOG(INFO, "del block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s",
+          logic_block_id, TFS_SUCCESS == ret ? "successful" : "failed", ret, tmp ? "true" : "false");
       return ret;
     }
 
@@ -169,6 +171,13 @@ namespace tfs
     {
       RWLock::Lock lock(mutex_, READ_LOCKER);
       return logic_block_manager_.get(logic_block_id, tmp);
+    }
+
+    int BlockManager::get_all_block_ids(std::vector<uint64_t>& blocks) const
+    {
+      blocks.clear();
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return logic_block_manager_.get_all_block_ids(blocks);
     }
 
     int BlockManager::get_all_block_info(std::set<BlockInfo>& blocks) const
@@ -654,7 +663,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         BlockIndex index;
-        for (int32_t id = 1; id <= info->total_main_block_count_ && TFS_SUCCESS == ret; ++id)
+        for (int32_t id = 1; id <= info->max_block_index_element_count_ && TFS_SUCCESS == ret; ++id)
         {
           ret = get_super_block_manager().get_block_index(index, id);
           if (TFS_SUCCESS == ret)
@@ -893,7 +902,7 @@ namespace tfs
       {
         //0 == index.index_完整的大数据块(主块，分割的块)
         const int32_t start = (0 == index.index_) ? BLOCK_SPLIT_FLAG_YES == index.split_flag_ ? 0 : BLOCK_RESERVER_LENGTH : (index.index_ - 1) * info.max_extend_block_size_;
-        const int32_t end   = (0 == index.index_) ? info.max_main_block_size_ : info.max_extend_block_size_;
+        const int32_t end   = (0 == index.index_) ? info.max_main_block_size_ : index.index_ * info.max_extend_block_size_;
         ret = get_physical_block_manager().insert(index, physical_block_id, path, start, end);
       }
       if (TFS_SUCCESS == ret)

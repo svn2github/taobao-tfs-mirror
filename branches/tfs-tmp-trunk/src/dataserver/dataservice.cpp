@@ -413,7 +413,7 @@ namespace tfs
     void DataService::timeout_()
     {
       tzset();
-      const int32_t MAX_SLEEP_TIME_US = 1000 * 1000;//1s
+      const int32_t MAX_SLEEP_TIME_US = 1 * 1000 * 1000;//1s
       time_t zonesec = 86400 + timezone, now = 0, last_rotate_log_time = 0;
       while (!DsRuntimeGlobalInformation::instance().is_destroyed())
       {
@@ -732,25 +732,17 @@ namespace tfs
             case REQ_EC_DISSOLVE_MESSAGE:
               ret = task_manager_.handle(dynamic_cast<BaseTaskMessage*>(packet));
               break;
-            case GET_BLOCK_INFO_MESSAGE:
-              ret = get_block_info(dynamic_cast<GetBlockInfoMessage*>(packet));
+            case GET_BLOCK_INFO_MESSAGE_V2:
+              ret = get_block_info(dynamic_cast<GetBlockInfoMessageV2*>(packet));
               break;
             case GET_SERVER_STATUS_MESSAGE:
               ret = get_server_status(dynamic_cast<GetServerStatusMessage*>(packet));
               break;
-            case RELOAD_CONFIG_MESSAGE:
-              break;
-            //case STATUS_MESSAGE:
-              //ret = get_ping_status(dynamic_cast<StatusMessage*>(packet));
+            case STATUS_MESSAGE:
+              ret = get_ping_status(dynamic_cast<StatusMessage*>(packet));
               break;
             case CLIENT_CMD_MESSAGE:
               ret = client_command(dynamic_cast<ClientCmdMessage*>(packet));
-              break;
-            case GET_DATASERVER_INFORMATION_MESSAGE:
-              ret = get_dataserver_information(dynamic_cast<BasePacket*>(packet));
-              break;
-            case REQ_CHECK_BLOCK_MESSAGE:
-              ret = check_blocks(dynamic_cast<BasePacket*>(packet));
               break;
             case REQ_CALL_DS_REPORT_BLOCK_MESSAGE:
             case STAT_FILE_MESSAGE_V2:
@@ -905,9 +897,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(DEBUG, "====================================");
           message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-          TBSYS_LOG(DEBUG, "====================================");
           TIMER_END();
           TBSYS_LOG(
               INFO,
@@ -1324,41 +1314,50 @@ namespace tfs
 
     int DataService::list_blocks(ListBlockMessage* message)
     {
-      UNUSED(message);
-      return EXIT_NOT_SUPPORT_ERROR;
-    }
+      int32_t list_type = message->get_block_type();
+      RespListBlockMessage* resp_lb_msg = new (std::nothrow) RespListBlockMessage();
+      assert(NULL != resp_lb_msg);
 
-    /**
-     * the implement will be changed in the new version
-     * so don't include check related code in this version
-     */
-    int DataService::check_blocks(common::BasePacket* packet)
-    {
-      UNUSED(packet);
-      return EXIT_NOT_SUPPORT_ERROR;
-    }
-
-    int DataService::get_block_info(GetBlockInfoMessage *message)
-    {
-      uint32_t block_id = message->get_block_id();
-      BlockInfo blk;
-      int32_t visit_count = 0;
-
-      int ret = data_management_.get_block_info(block_id, blk, visit_count);
-      if (TFS_SUCCESS != ret)
+      if (list_type & LB_BLOCK)
       {
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
-            "block is not exist, blockid: %u, ret: %d", block_id, ret);
+        common::VUINT64* blocks = resp_lb_msg->get_blocks();
+        get_block_manager().get_all_block_ids(*blocks);
       }
 
-      UpdateBlockInfoMessage* resp_ubi_msg = new UpdateBlockInfoMessage();
-      resp_ubi_msg->set_block(&blk);
-      //serverid has discarded
-      resp_ubi_msg->set_server_id(0);
-      resp_ubi_msg->set_repair(visit_count);
+      if (list_type & LB_PAIRS)
+      {
+        map<uint64_t, std::vector<int32_t> >* pairs = resp_lb_msg->get_pairs();
+        get_block_manager().get_all_logic_block_to_physical_block(*pairs);
+      }
 
-      message->reply(resp_ubi_msg);
-      return TFS_SUCCESS;
+      if (list_type & LB_INFOS)
+      {
+        vector<common::BlockInfoV2>* infos = resp_lb_msg->get_infos();
+        get_block_manager().get_all_block_info(*infos);
+      }
+
+      resp_lb_msg->set_status_type(list_type);
+      return message->reply(resp_lb_msg);
+    }
+
+    int DataService::get_block_info(GetBlockInfoMessageV2 *message)
+    {
+      uint64_t block_id = message->get_block_id();
+      BlockInfoV2 block_info;
+      int ret = get_block_manager().get_block_info(block_info, block_id);
+      if (TFS_SUCCESS != ret)
+      {
+        ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+            "block is not exist, blockid: %"PRI64_PREFIX"u, ret: %d", block_id, ret);
+      }
+      else
+      {
+        UpdateBlockInfoMessageV2* resp_ubi_msg = new (std::nothrow) UpdateBlockInfoMessageV2();
+        assert(NULL != resp_ubi_msg);
+        resp_ubi_msg->set_block_info(block_info);
+        ret = message->reply(resp_ubi_msg);
+      }
+      return ret;
     }
 
     int DataService::get_server_status(GetServerStatusMessage *message)
@@ -1376,7 +1375,8 @@ namespace tfs
         uint64_t attach_block_id = message->get_from_row();
         //get block file list
         IndexHeaderV2 header;
-        BlockFileInfoMessage* resp_bfi_msg = new BlockFileInfoMessage();
+        BlockFileInfoMessage* resp_bfi_msg = new (std::nothrow) BlockFileInfoMessage();
+        assert(NULL != resp_bfi_msg);
         FILE_INFO_LIST_V2* fileinfos = resp_bfi_msg->get_fileinfo_list();
         int ret = get_block_manager().traverse(header, *fileinfos, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
@@ -1395,6 +1395,21 @@ namespace tfs
         // meta will be included in FileInfoV2
       }
 
+      return ret;
+    }
+
+    int DataService::get_ping_status(StatusMessage* message)
+    {
+      int ret = TFS_SUCCESS;
+      if (STATUS_MESSAGE_PING == message->get_status())
+      {
+        StatusMessage *statusmessage = new StatusMessage(STATUS_MESSAGE_PING);
+        message->reply(statusmessage);
+      }
+      else
+      {
+        ret = TFS_ERROR;
+      }
       return ret;
     }
 
@@ -1417,52 +1432,6 @@ namespace tfs
       while (0);
       message->reply(resp);
       return TFS_SUCCESS;
-    }
-
-    int DataService::get_dataserver_information(common::BasePacket* packet)
-    {
-      int32_t ret = NULL != packet ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        /*GetDataServerInformationMessage* message = dynamic_cast<GetDataServerInformationMessage*>(packet);
-        GetDataServerInformationResponseMessage* reply_msg = new GetDataServerInformationResponseMessage();
-        int32_t flag = message->get_flag();
-        char* tmp_data_buffer = NULL;
-        int32_t bit_map_len = 0;
-        int32_t& set_count = reply_msg->get_bit_map_element_count();
-        data_management_.query_bit_map(flag, &tmp_data_buffer, bit_map_len, set_count);
-        char* data = reply_msg->alloc_data(bit_map_len);
-        if (NULL == data)
-        {
-          tbsys::gDeleteA(tmp_data_buffer);
-          tbsys::gDelete(reply_msg);
-          TBSYS_LOG(ERROR, "query bitmap. allocate memory fail. type: %d", flag);
-          ret = TFS_ERROR;
-        }
-        else
-        {
-          TBSYS_LOG(DEBUG, "query bitmap. type: %d, bitmaplen: %u, setcount: %u", flag, bit_map_len, set_count);
-          memcpy(data, tmp_data_buffer, bit_map_len);
-          tbsys::gDeleteA(tmp_data_buffer);
-
-          SuperBlock block;
-          memset(&block, 0, sizeof(block));
-          // TODO query super block
-          // ret = BlockFileManager::get_instance()->query_super_block(block);
-          if (TFS_SUCCESS == ret)
-          {
-            reply_msg->set_super_block(block);
-            reply_msg->set_dataserver_stat_info(data_server_info_);
-            ret = packet->reply(reply_msg);
-          }
-          else
-          {
-            tbsys::gDelete(reply_msg);
-            TBSYS_LOG(ERROR, "query super block information fail. ret: %d", ret);
-          }
-        }*/
-      }
-      return ret;
     }
 
     void DataService::TimeoutThreadHelper::run()

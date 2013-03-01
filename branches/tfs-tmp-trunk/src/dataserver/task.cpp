@@ -458,9 +458,9 @@ namespace tfs
       const char* delim = ", ";
       std::stringstream tmp_stream;
       tmp_stream << Task::dump();
+      tmp_stream << "block id: " << repl_info_.block_id_ << delim;
       tmp_stream << "source id: " << tbsys::CNetUtil::addrToString(repl_info_.source_id_) << delim;
       tmp_stream << "dest id: " << tbsys::CNetUtil::addrToString(repl_info_.destination_id_) << delim;
-      tmp_stream << "block id: " << repl_info_.block_id_ << delim;
       tmp_stream << "move flag: " << (0 == repl_info_.is_move_? "no": "yes");
       return tmp_stream.str();
     }
@@ -578,7 +578,7 @@ namespace tfs
       uint64_t helper[MAX_DATA_MEMBER_NUM];
       ArrayHelper<uint64_t> attach_blocks(MAX_DATA_MEMBER_NUM, helper);
       int ret = get_block_manager().get_attach_blocks(attach_blocks, block_id);
-      for (int i = 0; i < (TFS_SUCCESS == ret) && (attach_blocks.get_array_index()); i++)
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < attach_blocks.get_array_index()); i++)
       {
         IndexDataV2 index_data;
         ret = get_data_helper().read_index(ds_info.information_.id_,

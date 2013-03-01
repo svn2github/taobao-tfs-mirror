@@ -533,7 +533,6 @@ namespace tfs
             memset(&header, 0, sizeof(header));
             header.info_.block_id_ = logic_block_id;
             header.info_.family_id_= INVALID_FAMILY_ID;
-            header.info_.size_     = BLOCK_RESERVER_LENGTH;
             header.throughput_.last_update_time_ = time(NULL);
             header.throughput_.last_statistics_time_ = header.throughput_.last_update_time_;
             header.file_info_bucket_size_ = max_bucket_size;
@@ -670,7 +669,7 @@ namespace tfs
         for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
         {
           FileInfoV2& finfo = (*iter);
-          ret = insert_file_info_(finfo, threshold, false,false);
+          ret = insert_file_info_(finfo, threshold, true, true);
         }
       }
       return ret;
@@ -964,7 +963,6 @@ namespace tfs
             memset(&header, 0, sizeof(header));
             header.info_.block_id_ = logic_block_id;
             header.seq_no_   = 0;
-            header.info_.size_     = BLOCK_RESERVER_LENGTH;
             header.info_.family_id_ = family_id;
             header.throughput_.last_update_time_ = time(NULL);
             header.throughput_.last_statistics_time_ = header.throughput_.last_update_time_;

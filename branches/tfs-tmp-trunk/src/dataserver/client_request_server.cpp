@@ -104,6 +104,7 @@ namespace tfs
             break;
           case COMMIT_EC_META_MESSAGE:
             ret = commit_ec_meta(dynamic_cast<CommitEcMetaMessage*>(packet));
+            break;
           default:
             TBSYS_LOG(WARN, "process packet pcode: %d\n", pcode);
             ret = EXIT_UNKNOWN_MSGTYPE;
@@ -955,6 +956,7 @@ namespace tfs
         char* data = resp_msg->alloc_data(length);
         assert(NULL != data);
         ret = get_block_manager().pread(data, length, offset, block_id);
+        ret = (ret < 0) ? ret : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
           tbsys::gDelete(resp_msg);
@@ -991,6 +993,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = get_block_manager().pwrite(data, length, offset, block_id, true);
+        ret = (ret < 0) ? ret : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write raw data fail. blockid: %"PRI64_PREFIX"u, "

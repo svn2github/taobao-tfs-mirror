@@ -29,6 +29,7 @@ namespace tfs
       length_(0),
       crc_(0)
     {
+      atomic_set(&ref_count_, 0);
       path_ << work_dir << "/tmp/" << fn;
     }
 

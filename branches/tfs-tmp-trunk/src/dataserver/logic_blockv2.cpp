@@ -325,7 +325,7 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = set_used_offset(nbytes + offset);
+          ret = index_handle_->set_used_offset(nbytes + offset);
         }
         mutex_.unlock();
       }

@@ -134,19 +134,16 @@ namespace tfs
       int remove_block(message::RemoveBlockMessage* message);
 
       //get single blockinfo
-      int get_block_info(message::GetBlockInfoMessage* message);
+      int get_block_info(message::GetBlockInfoMessageV2* message);
 
       //get blockinfos on this server
       int list_blocks(message::ListBlockMessage* message);
 
       int get_server_status(message::GetServerStatusMessage* message);
-      //int get_ping_status(common::StatusMessage* message);
+      int get_ping_status(common::StatusMessage* message);
       int client_command(message::ClientCmdMessage* message);
 
       int get_dataserver_information(common::BasePacket* packet);
-
-      // check modified blocks
-      int check_blocks(common::BasePacket* packet);
 
       private:
       int initialize_nameserver_ip_addr_(std::vector<uint64_t>& ns_ip_port);

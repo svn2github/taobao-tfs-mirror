@@ -125,7 +125,6 @@ namespace tfs
       keepalive(heart_interval, who, KEEPALIVE_TIMEOUT_MS);
       TBSYS_LOG(INFO, "stop heartbeat,nameserver: %s", tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str());
 
-
     }
 
     int DataServerHeartManager::keepalive(int8_t& heart_interval, const int32_t who, const int64_t timeout)
@@ -142,14 +141,9 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = send_msg_to_server(ns_ip_port_[who], client, &req_msg, message, timeout);
-          if (TFS_SUCCESS != ret)
+          if (TFS_SUCCESS == ret)
           {
-            TBSYS_LOG(INFO, "send_msg_to_server: %s failed, ret: %d", tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str(), ret);
-            ret = SEND_BLOCK_TO_NS_NETWORK_ERROR;
-          }
-          else
-          {
-            ret = RESP_HEART_MESSAGE == message->getPCode() ? TFS_SUCCESS : SEND_BLOCK_TO_NS_NETWORK_ERROR;
+            ret = RESP_HEART_MESSAGE == message->getPCode() ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
             if (TFS_SUCCESS == ret)
             {
               DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
@@ -160,8 +154,10 @@ namespace tfs
               int32_t status = resp_hb_msg->get_status();
               if (HEART_MESSAGE_OK != status)
               {
+                ret = TFS_ERROR;
                 TBSYS_LOG(WARN, "dataserver:%s keepalive failed,  nameserver: %s",
-                    tbsys::CNetUtil::addrToString(info.information_.id_).c_str(), tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str());
+                    tbsys::CNetUtil::addrToString(info.information_.id_).c_str(),
+                    tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str());
               }
             }
           }

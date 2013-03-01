@@ -329,7 +329,7 @@ namespace tfs
 
         last_gc_data_file_time_ = current_time;
         data_file_mutex_.unlock();
-        TBSYS_LOG(INFO, "datafilemap size. old: %d, new: %d", old_data_file_size, new_data_file_size);
+        TBSYS_LOG(DEBUG, "datafilemap size. old: %d, new: %d", old_data_file_size, new_data_file_size);
       }
 
       return TFS_SUCCESS;

@@ -47,6 +47,7 @@ namespace tfs
       BaseLogicBlock* get(const uint64_t logic_block_id, const bool tmp = false) const;
       int switch_logic_block(const uint64_t logic_block_id, const bool tmp = false);
       bool exist(const uint64_t logic_block_id, const bool tmp = false) const;
+      int get_all_block_ids(std::vector<uint64_t>& blocks) const;
       int get_all_block_info(std::set<common::BlockInfo>& blocks) const;
       int get_all_block_info(std::vector<common::BlockInfoV2>& blocks) const;
       int get_all_block_info(common::ArrayHelper<common::BlockInfoV2>& blocks) const;

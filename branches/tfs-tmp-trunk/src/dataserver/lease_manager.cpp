@@ -299,7 +299,7 @@ namespace tfs
           ++iter;
         }
       }
-      TBSYS_LOG(INFO, "cleanup lease, old size: %u, current size: %zd", total, leases_.size());
+      TBSYS_LOG(DEBUG, "cleanup lease, old: %u, new: %zd", total, leases_.size());
       return total - leases_.size();
     }
 

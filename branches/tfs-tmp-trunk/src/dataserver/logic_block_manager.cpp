@@ -204,6 +204,23 @@ namespace tfs
       return (NULL != logic_block);
     }
 
+    int LogicBlockManager::get_all_block_ids(std::vector<uint64_t>& blocks) const
+    {
+      blocks.clear();
+      int32_t ret = TFS_SUCCESS;
+      BlockInfoV2 block_info;
+      LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
+      for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter)
+      {
+        ret = (*iter)->get_block_info(block_info);
+        if (TFS_SUCCESS == ret)
+        {
+          blocks.push_back(block_info.block_id_);
+        }
+      }
+      return TFS_SUCCESS;
+    }
+
     int LogicBlockManager::get_all_block_info(std::set<common::BlockInfo>& blocks) const
     {
       blocks.clear();

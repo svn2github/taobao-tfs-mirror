@@ -103,7 +103,7 @@ namespace tfs
     {
       int8_t index = input ? 0 : 1;
       int64_t now = Func::get_monotonic_time_us();
-      return ((now - last_rw_traffic_stat_time_us_[index]) <= TRAFFIC_BYTES_STAT_INTERVAL)
+      return ((now - last_rw_traffic_stat_time_us_[index]) < TRAFFIC_BYTES_STAT_INTERVAL)
               && (rw_traffic_bytes_stat_[index] >= (DsRuntimeGlobalInformation::instance().max_rw_network_bandwidth_mb_ * MB));
     }
 
@@ -111,7 +111,7 @@ namespace tfs
     {
       int8_t index = input ? 0 : 1;
       int64_t now = Func::get_monotonic_time_us();
-      return ((now - last_mr_traffic_stat_time_us_[index]) <= TRAFFIC_BYTES_STAT_INTERVAL)
+      return ((now - last_mr_traffic_stat_time_us_[index]) < TRAFFIC_BYTES_STAT_INTERVAL)
               && (mr_traffic_bytes_stat_[index] >= (DsRuntimeGlobalInformation::instance().max_mr_network_bandwidth_mb_ * MB));
     }
   }/** end namespace dataserver **/

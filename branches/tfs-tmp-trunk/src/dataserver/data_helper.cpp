@@ -113,6 +113,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        /*
         int32_t retry = RW_RETRY_TIMES;
         while (retry-- > 0)
         {
@@ -130,6 +131,8 @@ namespace tfs
             break;
           }
         }
+        */
+        ret = read_raw_data_ex(server_id, block_id, data, length, offset);
 
         if (TFS_SUCCESS != ret)
         {
@@ -150,6 +153,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        /*
         int32_t retry = RW_RETRY_TIMES;
         while (retry-- > 0)
         {
@@ -167,7 +171,9 @@ namespace tfs
             break;
           }
         }
+        */
 
+        ret =  write_raw_data_ex(server_id, block_id, data, length, offset);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write raw data fail. server: %s, blockid: %"PRI64_PREFIX"u, "
@@ -246,7 +252,7 @@ namespace tfs
        if (TFS_SUCCESS == ret)
        {
          ret = commit_ec_meta_ex(server_id, block_id, ec_meta, switch_flag);
-         if (TFS_SUCCESS == ret)
+         if (TFS_SUCCESS != ret)
          {
            TBSYS_LOG(WARN, "commit ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u, ret: %d",
                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, ret);
@@ -360,13 +366,6 @@ namespace tfs
         req_msg.set_index_num(index_num);
 
         ret = send_simple_request(server_id, &req_msg);
-        if (TFS_SUCCESS != ret)
-        {
-          ret = EXIT_ADD_NEW_BLOCK_ERROR;
-          TBSYS_LOG(WARN, "new remote block fail. "
-              "blockid: %"PRI64_PREFIX"u, familyid: %"PRI64_PREFIX"u, index_num: %d",
-              block_id, family_id, index_num);
-        }
       }
       return ret;
     }
@@ -604,7 +603,7 @@ namespace tfs
       if (server_id == ds_info.information_.id_)
       {
         // commit family id
-        if ((TFS_SUCCESS == ret) && (ec_meta.family_id_ >= 0))
+        if ((TFS_SUCCESS == ret) && (ec_meta.family_id_ >= INVALID_FAMILY_ID))
         {
           ret = get_block_manager().set_family_id(ec_meta.family_id_, block_id);
         }
@@ -962,6 +961,7 @@ namespace tfs
     int DataHelper::read_file_degrade_ex(const uint64_t block_id, const FileInfoV2& finfo, char* buffer,
         const int32_t length, const int32_t offset, const FamilyInfoExt& family_info, int* erased)
     {
+      int ret = TFS_SUCCESS;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
       const int32_t member_num = data_num + check_num;
@@ -984,18 +984,6 @@ namespace tfs
       char* data[member_num];
       memset(data, 0, member_num * sizeof(char*));
 
-      // config decoder parameter, alloc buffer
-      int ret = decoder.config(data_num, check_num, erased);
-      if (TFS_SUCCESS == ret)
-      {
-        for (int32_t i = 0; i < member_num; i++)
-        {
-          data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
-          assert(NULL != data[i]);
-        }
-        decoder.bind(data, member_num, MAX_READ_SIZE);
-      }
-
       // find read target index
       int32_t target = 0;
       while ((target < data_num) && (family_info.members_[target].first != block_id))
@@ -1003,6 +991,21 @@ namespace tfs
         target++;
       }
       ret = (target >= data_num) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      // config decoder parameter, alloc buffer
+      if (TFS_SUCCESS == ret)
+      {
+        ret = decoder.config(data_num, check_num, erased);
+        if (TFS_SUCCESS == ret)
+        {
+          for (int32_t i = 0; i < member_num; i++)
+          {
+            data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+            assert(NULL != data[i]);
+          }
+          decoder.bind(data, member_num, MAX_READ_SIZE);
+        }
+      }
 
       while ((TFS_SUCCESS == ret) && (real_offset < real_end))
       {

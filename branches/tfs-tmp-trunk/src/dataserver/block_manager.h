@@ -54,6 +54,7 @@ namespace tfs
         int new_block(const uint64_t logic_block_id, const bool tmp = false, const int64_t family_id = common::INVALID_FAMILY_ID, const int8_t index_num = 0);
         int del_block(const uint64_t logic_block_id, const bool tmp = false);
         BaseLogicBlock* get(const uint64_t logic_block_id, const bool tmp = false) const;
+        int get_all_block_ids(std::vector<uint64_t>& blocks) const;
         int get_all_block_info(std::set<common::BlockInfo>& blocks) const;
         int get_all_block_info(std::vector<common::BlockInfoV2>& blocks) const;
         int get_all_block_info(common::ArrayHelper<common::BlockInfoV2>& blocks) const;
