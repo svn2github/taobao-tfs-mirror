@@ -593,20 +593,20 @@ namespace tfs
 
       //op key
       char *start_key_buff = NULL;
-      if(TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret)
       {
         start_key_buff = (char*) malloc(KEY_BUFF_SIZE);
       }
-      if(NULL == start_key_buff)
+      if (NULL == start_key_buff)
       {
         ret = TFS_ERROR;
       }
       char *end_key_buff = NULL;
-      if(ret == TFS_SUCCESS)
+      if (TFS_SUCCESS == ret)
       {
         end_key_buff = (char*) malloc(KEY_BUFF_SIZE);
       }
-      if(NULL == end_key_buff)
+      if (NULL == end_key_buff)
       {
         ret = TFS_ERROR;
       }
@@ -614,12 +614,12 @@ namespace tfs
       KvKey end_key;
       int64_t start_offset = 0;
       int64_t end_offset = INT64_INFI;
-      if(TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret)
       {
         ret = serialize_key(bucket_name, file_name, start_offset,
               &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
       }
-      if(TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret)
       {
         ret = serialize_key(bucket_name, file_name, end_offset,
               &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
@@ -635,7 +635,7 @@ namespace tfs
       vector<KvKey> vec_keys;
 
       int32_t result_size = 0;
-      if(TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret)
       {
         ret = kv_engine_helper_->scan_keys(start_key, end_key, limit, first,
           &kv_value_keys, &kv_value_values, &result_size, scan_type);
@@ -670,6 +670,7 @@ namespace tfs
           }
           TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
         }
+
         //del from tair
         if(TFS_SUCCESS == ret && result_size > 0)
         {
@@ -695,9 +696,13 @@ namespace tfs
         end_key_buff = NULL;
       }
       *still_have = false;
-      if(SCAN_LIMIT == result_size)
+      if (SCAN_LIMIT == result_size)
       {
         *still_have = true;
+      }
+      else if (0 == result_size)
+      {
+        ret = EXIT_OBJECT_NOT_EXIST;
       }
       return ret;
     }
@@ -829,7 +834,8 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::group_objects(const string &k, const string &v, const string &prefix, const char delimiter,
+    int MetaInfoHelper::group_objects(const string &object_name, const string &v,
+        const string &prefix, const char delimiter,
         vector<ObjectMetaInfo> *v_object_meta_info, vector<string> *v_object_name, set<string> *s_common_prefix)
     {
       int ret = TFS_SUCCESS;
@@ -837,13 +843,6 @@ namespace tfs
 
       bool prefix_flag = false;
       bool common_flag = false;
-      string bucket_name;
-      string object_name;
-      int64_t offset = -1;
-      int64_t version = -1;
-
-      //deserialze from object_name/offset/version
-      ret = deserialize_key(k.c_str(), k.length(), &bucket_name, &object_name, &offset, &version);
 
       ret = get_common_prefix(object_name.c_str(), prefix, delimiter, &prefix_flag, &common_flag, &common_pos);
 
@@ -854,7 +853,7 @@ namespace tfs
           string common_prefix(object_name.substr(0, common_pos+1));
           s_common_prefix->insert(common_prefix);
         }
-        else if (prefix_flag && offset == 0)
+        else if (prefix_flag)
         {
           ObjectInfo object_info;
           int64_t pos = 0;
@@ -924,7 +923,7 @@ namespace tfs
             break;
           }
 
-          TBSYS_LOG(DEBUG, "get range once, res_size: %d", res_size);
+          TBSYS_LOG(DEBUG, "get range once, res_size: %d, limit_size: %d", res_size, limit_size);
 
           if (res_size == 0)
           {
@@ -935,20 +934,38 @@ namespace tfs
             loop = false;
           }
 
+          string object_name;
+          string bucket_name;
+          int64_t offset = -1;
+          int64_t version = -1;
+
           for (int i = 0; i < res_size; i++)
           {
             string k(kv_value_keys[i]->get_data(), kv_value_keys[i]->get_size());
             string v(kv_value_values[i]->get_data(), kv_value_values[i]->get_size());
-            ret = group_objects(k, v, prefix, delimiter, v_object_meta_info, v_object_name, s_common_prefix);
+
+            ret = deserialize_key(k.c_str(), k.length(), &bucket_name, &object_name, &offset, &version);
             if (TFS_SUCCESS != ret)
             {
-              TBSYS_LOG(ERROR, "group objects fail, ret: %d", ret);
+              TBSYS_LOG(ERROR, "deserialize from %s fail", k.c_str());
+            }
+            else if (offset == 0)
+            {
+              ret = group_objects(object_name, v, prefix, delimiter, v_object_meta_info, v_object_name, s_common_prefix);
+              if (TFS_SUCCESS != ret)
+              {
+                TBSYS_LOG(ERROR, "group objects fail, ret: %d", ret);
+              }
+            }
+
+            if (TFS_SUCCESS != ret)
+            {
               loop = false;
               break;
             }
 
             if (static_cast<int32_t>(s_common_prefix->size()) +
-              static_cast<int32_t>(v_object_name->size()) >= limit)
+                static_cast<int32_t>(v_object_name->size()) >= limit)
             {
               loop = false;
               if (i < res_size - 1)
@@ -962,7 +979,7 @@ namespace tfs
           if (loop)
           {
             first_loop = false;
-            temp_start_key = string(kv_value_keys[res_size-1]->get_data(), kv_value_keys[res_size-1]->get_size());
+            temp_start_key = object_name;
           }
 
           //delete for tair
