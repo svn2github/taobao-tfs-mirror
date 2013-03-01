@@ -60,7 +60,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int64_t pos = 0;
-        int ret = index_data_.deserialize(input.get_data(), input.get_data_length(), pos);
+        ret = index_data_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (TFS_SUCCESS == ret)
         {
           input.drain(index_data_.length());
