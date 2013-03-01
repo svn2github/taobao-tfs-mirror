@@ -335,32 +335,6 @@ namespace tfs
       return (TFS_SUCCESS == ret) ? (length - left_length) : ret;
     }
 
-    int64_t KvMetaClientImpl::pwrite_object(const char *bucket_name, const char *object_name,
-        const void *buffer, int64_t offset, int64_t length, const UserInfo &user_info)
-    {
-      int64_t ret = TFS_SUCCESS;
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = put_object_to_buf(bucket_name, object_name, buffer, offset, length, user_info);
-      }
-
-      return ret;
-    }
-
-    int64_t KvMetaClientImpl::pread_object(const char *bucket_name, const char *object_name,
-        void *buffer, int64_t offset, int64_t length, const UserInfo &user_info)
-    {
-      int64_t ret = TFS_SUCCESS;
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = get_object_to_buf(bucket_name, object_name, buffer, offset, length, NULL, NULL, user_info);
-      }
-
-      return ret;
-    }
-
     int KvMetaClientImpl::unlink_file(const vector<FragMeta> &v_frag_meta, const char* ns_addr, int32_t cluster_id)
     {
       int ret = TFS_SUCCESS;
@@ -380,7 +354,7 @@ namespace tfs
     }
 
 
-    int64_t KvMetaClientImpl::put_object_to_buf(const char *bucket_name, const char *object_name,
+    int64_t KvMetaClientImpl::pwrite_object(const char *bucket_name, const char *object_name,
         const void *buffer, int64_t offset, int64_t length, const UserInfo &user_info)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
@@ -476,7 +450,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t KvMetaClientImpl::get_object_to_buf(const char *bucket_name, const char *object_name,
+    int64_t KvMetaClientImpl::pread_object(const char *bucket_name, const char *object_name,
         void *buffer, const int64_t offset, int64_t length,
         ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info, const UserInfo &user_info)
     {
@@ -583,14 +557,10 @@ namespace tfs
     }
 
     TfsRetType KvMetaClientImpl::put_object(const char *bucket_name, const char *object_name,
-        const char* local_file, const int64_t req_offset ,const int64_t req_length, const UserInfo &user_info)
+        const char* local_file, const UserInfo &user_info)
     {
       TfsRetType ret = TFS_SUCCESS;
       int fd = -1;
-      int64_t cur_length = 0;
-      int64_t read_len = 0, write_len = 0;
-      int64_t offset = 0;
-      int64_t left_length = req_length;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
       {
         TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
@@ -608,32 +578,26 @@ namespace tfs
       }
       else
       {
-        int64_t local_offset = req_offset;
-        int64_t local_pos = ::lseek(fd, local_offset, SEEK_SET);
-        if (local_pos == -1)
-        {
-          TBSYS_LOG(ERROR, "lseek local file: %s fail", local_file);
-          ret = TFS_ERROR;
-        }
         char* buf = new char[MAX_BATCH_DATA_LENGTH];
+        int64_t read_len = 0, write_len = 0;
+        int64_t offset = 0;
 
         while (TFS_SUCCESS == ret)
         {
-          cur_length = min(MAX_BATCH_DATA_LENGTH, left_length);
-          if ((read_len = ::read(fd, buf, cur_length)) < 0)
+          if ((read_len = ::read(fd, buf, MAX_BATCH_DATA_LENGTH)) < 0)
           {
             ret = EXIT_INVALID_ARGU_ERROR;
             TBSYS_LOG(ERROR, "read local file %s fail, error: %s", local_file, strerror(errno));
             break;
           }
 
-          if (0 == read_len || left_length <= 0)
+          if (0 == read_len)
           {
             break;
           }
           while (read_len > 0)
           {
-            write_len = put_object_to_buf(bucket_name, object_name, buf, offset, read_len, user_info);
+            write_len = pwrite_object(bucket_name, object_name, buf, offset, read_len, user_info);
             if (write_len <= 0)
             {
               TBSYS_LOG(ERROR, "put object fail. bucket: %s, object: %s", bucket_name, object_name);
@@ -643,7 +607,6 @@ namespace tfs
 
             offset += write_len;
             read_len -= write_len;
-            left_length -= write_len;
           }
         }
 
@@ -655,14 +618,11 @@ namespace tfs
     }
 
     TfsRetType KvMetaClientImpl::get_object(const char *bucket_name, const char *object_name,
-        const char* local_file, const int64_t req_offset, const int64_t req_length,
-        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info, const UserInfo &user_info)
+        const char* local_file, ObjectMetaInfo *object_meta_info,
+        CustomizeInfo *customize_info, const UserInfo &user_info)
     {
       TfsRetType ret = TFS_SUCCESS;
       int fd = -1;
-      int64_t offset = req_offset;
-      int64_t length = req_length;
-      int64_t cur_length = 0;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
       {
         TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
@@ -671,11 +631,6 @@ namespace tfs
       else if (NULL == local_file)
       {
         TBSYS_LOG(ERROR, "local file is null");
-        ret = EXIT_INVALID_ARGU_ERROR;
-      }
-      else if (req_offset < 0 || req_length < 0)
-      {
-        TBSYS_LOG(ERROR, "req_offset : %"PRI64_PREFIX"d or req_length : %"PRI64_PREFIX"d is INVALID", req_offset, req_length);
         ret = EXIT_INVALID_ARGU_ERROR;
       }
       else if ((fd = ::open(local_file, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0)
@@ -689,10 +644,11 @@ namespace tfs
 
         char* buf = new char[io_size];
         int64_t read_len = 0, write_len = 0;
+        int64_t offset = 0;
         while (1)
         {
-          cur_length = min(io_size, length);
-          read_len = get_object_to_buf(bucket_name, object_name, buf, offset, cur_length, object_meta_info, customize_info, user_info);
+          read_len = pread_object(bucket_name, object_name, buf, offset,
+              io_size, object_meta_info, customize_info, user_info);
           if (read_len < 0)
           {
             ret = read_len;
@@ -713,13 +669,8 @@ namespace tfs
             break;
           }
           offset += read_len;
-          length -= read_len;
-          if (0 == length)
-          {
-            break;
-          }
-          TBSYS_LOG(DEBUG, "@@ out while once, offset: %ld, length %ld, read_length: %ld",
-                     offset, length, read_len);
+          TBSYS_LOG(DEBUG, "@@ out while once, offset: %ld, read_length: %ld",
+                     offset, read_len);
         }
         tbsys::gDeleteA(buf);
         ::close(fd);

@@ -396,8 +396,8 @@ void init()
     g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name", "delete a bucket", 1, 1, cmd_del_bucket);
     g_cmd_map["head_bucket"] = CmdNode("head_bucket bucket_name", "stat a bucket", 1, 1, cmd_head_bucket);
 
-    g_cmd_map["put_object"] = CmdNode("put_object bucket_name object_name offset length local_file owner_id", "put a object", 6, 6, cmd_put_object);
-    g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name offset length local_file", "get a object", 5, 5, cmd_get_object);
+    g_cmd_map["put_object"] = CmdNode("put_object bucket_name object_name local_file owner_id", "put a object", 4, 4, cmd_put_object);
+    g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name local_file", "get a object", 3, 3, cmd_get_object);
     g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name", "delete a object", 2, 2, cmd_del_object);
     g_cmd_map["head_object"] = CmdNode("head_object bucket_name object_name", "stat a object", 2, 2, cmd_head_object);
     break;
@@ -1956,7 +1956,7 @@ int cmd_head_bucket(const VSTRING& param)
   if (TFS_SUCCESS == ret)
   {
     printf("bucket: %s, create_time: %"PRI64_PREFIX"d, owner_id: %"PRI64_PREFIX"d\n",
-             bucket_name, bucket_meta_info.create_time_, bucket_meta_info.owner_id_);
+        bucket_name, bucket_meta_info.create_time_, bucket_meta_info.owner_id_);
   }
 
   ToolUtil::print_info(ret, "head bucket %s", bucket_name);
@@ -1969,18 +1969,16 @@ int cmd_put_object(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   const char* object_name = param[1].c_str();
-  int64_t offset = strtoll(param[2].c_str(), NULL, 10);
-  int64_t length = strtoll(param[3].c_str(), NULL, 10);
-  const char* local_file = expand_path(const_cast<string&>(param[4]));
-  int64_t owner_id = strtoll(param[5].c_str(), NULL, 10);
+  const char* local_file = expand_path(const_cast<string&>(param[2]));
+  int64_t owner_id = strtoll(param[3].c_str(), NULL, 10);
   int ret = 0;
-  ToolUtil::print_info(ret, "put object: %s, object: %s => %s offset: %"PRI64_PREFIX"d length: %"PRI64_PREFIX"d  owner_id: %"PRI64_PREFIX"d",
-                       bucket_name, object_name, local_file, offset, length, owner_id);
+  ToolUtil::print_info(ret, "put object: %s, object: %s => %s owner_id: %"PRI64_PREFIX"d",
+      bucket_name, object_name, local_file, owner_id);
   UserInfo user_info;
   user_info.owner_id_ = owner_id;
-  ret = g_kv_meta_client.put_object(bucket_name, object_name, local_file, offset, length, user_info);
-  ToolUtil::print_info(ret, "put object: %s, object: %s => %s offset: %"PRI64_PREFIX"d length: %"PRI64_PREFIX"d  owner_id: %"PRI64_PREFIX"d",
-                       bucket_name, object_name, local_file, offset, length, owner_id);
+  ret = g_kv_meta_client.put_object(bucket_name, object_name, local_file, user_info);
+  ToolUtil::print_info(ret, "put object: %s, object: %s => %s owner_id: %"PRI64_PREFIX"d",
+      bucket_name, object_name, local_file, owner_id);
   return ret;
 }
 
@@ -1988,17 +1986,15 @@ int cmd_get_object(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   const char* object_name = param[1].c_str();
-  int64_t offset = strtoll(param[2].c_str(), NULL, 10);
-  int64_t length = strtoll(param[3].c_str(), NULL, 10);
-  const char* local_file = expand_path(const_cast<string&>(param[4]));
+  const char* local_file = expand_path(const_cast<string&>(param[2]));
 
   ObjectMetaInfo object_meta_info;
   CustomizeInfo customize_info;
   UserInfo user_info;
-  int ret = g_kv_meta_client.get_object(bucket_name, object_name, local_file, offset, length,
+  int ret = g_kv_meta_client.get_object(bucket_name, object_name, local_file,
                                         &object_meta_info, &customize_info, user_info);
-  ToolUtil::print_info(ret, "get object: %s, object: %s => %s offset: %"PRI64_PREFIX"d length: %"PRI64_PREFIX"d",
-                       bucket_name, object_name, local_file, offset, length);
+  ToolUtil::print_info(ret, "get object: %s, object: %s => %s",
+      bucket_name, object_name, local_file);
 
   return ret;
 }

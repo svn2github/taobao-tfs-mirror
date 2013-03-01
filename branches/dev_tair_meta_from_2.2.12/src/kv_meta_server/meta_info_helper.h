@@ -53,8 +53,6 @@ namespace tfs
 
         int put_object(const std::string& bucket_name,
                        const std::string& file_name,
-                       const int64_t offset,
-                       const int64_t length,
                        common::ObjectInfo &object_info,
                        const common::UserInfo &user_info);
 
@@ -87,7 +85,7 @@ namespace tfs
         int put_object_ex(const std::string &bucket_name, const std::string &file_name,
             const int64_t offset, const common::ObjectInfo &object_info, const int64_t lock_version = 0);
 
-        int get_single_value(const std::string &bucket_name,
+        int get_object_part(const std::string &bucket_name,
                            const std::string &file_name,
                            const int64_t offset,
                            common::ObjectInfo *object_info,
@@ -102,10 +100,12 @@ namespace tfs
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,
             std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix);
 
-        int put_object_segment(const std::string &bucket_name, const std::string &file_name, const common::ObjectInfo &object_info, common::ObjectInfo *object_info_zero);
+        int put_object_part(const std::string &bucket_name, const std::string &file_name,
+            const common::ObjectInfo &object_info, uint64_t *length);
 
-        int update_object_head(const std::string &bucket_name, const std::string &file_name,
-            common::ObjectInfo *object_info_zero, const int64_t offset, const int64_t length);
+        int put_object_zero(const std::string &bucket_name, const std::string &file_name,
+            common::ObjectInfo *object_info_zero, const int64_t offset,
+            const int64_t length, int64_t version);
 
         int get_range(const KvKey &pkey, const std::string &start_key,
             int32_t offset, const int32_t limit, std::vector<KvValue*> *kv_value_keys,

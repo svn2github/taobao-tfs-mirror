@@ -229,14 +229,8 @@ namespace tfs
       {
         ObjectInfo object_info = req_put_object_msg->get_object_info();
         const UserInfo &user_info = req_put_object_msg->get_user_info();
-        int64_t length = 0;
-        for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
-        {
-          length += object_info.v_tfs_file_info_[i].file_size_;
-        }
         ret = meta_info_helper_.put_object(req_put_object_msg->get_bucket_name(),
-            req_put_object_msg->get_file_name(), object_info.v_tfs_file_info_.front().offset_,
-            length, object_info, user_info);
+            req_put_object_msg->get_file_name(), object_info, user_info);
       }
 
       if (TFS_SUCCESS != ret)
