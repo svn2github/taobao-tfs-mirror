@@ -418,11 +418,11 @@ int switch_cmd(const int cmd, VSTRING & param)
       ret = DsLib::read_file_data(ds_task);
       if (TFS_SUCCESS == ret)
       {
-        printf("download tfs file %u, %"PRI64_PREFIX "u to local file %s success.\n", ds_task.block_id_, ds_task.new_file_id_, ds_task.local_file_);
+        printf("download tfs file %"PRI64_PREFIX"u, %"PRI64_PREFIX"u to local file %s success.\n", ds_task.block_id_, ds_task.new_file_id_, ds_task.local_file_);
       }
       else
       {
-        printf("download tfs file %u, %"PRI64_PREFIX "u to local file %s fail.\n", ds_task.block_id_, ds_task.new_file_id_, ds_task.local_file_);
+        printf("download tfs file %"PRI64_PREFIX"u, %"PRI64_PREFIX "u to local file %s fail.\n", ds_task.block_id_, ds_task.new_file_id_, ds_task.local_file_);
       }
       break;
     }
@@ -564,21 +564,6 @@ int switch_cmd(const int cmd, VSTRING & param)
       ds_task.option_flag_ = ds_error_flag;
       ds_task.failed_servers_ = fail_servers;
       ret = DsLib::send_crc_error(ds_task);
-      break;
-    }
-  case CMD_LIST_BITMAP:
-    {
-      if (param.size() != 1)
-      {
-        printf("Usage:list_bitmap type\n");
-        printf("      type  0|1,  0          => normal bitmap\n\
-                                  1          => error bitmap\n");
-        printf("list the bitmap of the server.\n");
-        break;
-      }
-      int type = atoi(const_cast<char*> (param[0].c_str()));
-      ds_task.list_block_type_ = type;
-      ret = DsLib::list_bitmap(ds_task);
       break;
     }
   case CMD_UNKNOWN:

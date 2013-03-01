@@ -34,6 +34,7 @@
 #include "message/write_data_message.h"
 #include "message/close_file_message.h"
 #include "message/crc_error_message.h"
+#include "message/block_info_message_v2.h"
 // #include "dataserver/bit_map.h"
 #include "new_client/tfs_file.h"
 #include "new_client/fsname.h"
@@ -178,15 +179,15 @@ namespace tfs
       return ret_status;
     }
 
-    void print_block_id(VUINT32* list_blocks)
+    void print_block_id(VUINT64* list_blocks)
     {
       int32_t size = 0;
       printf("Logic Block Nums :%d\n", static_cast<int> (list_blocks->size()));
-      vector<uint32_t>::iterator vit = list_blocks->begin();
+      vector<uint64_t>::iterator vit = list_blocks->begin();
       for (; vit != list_blocks->end(); vit++)
       {
         size++;
-        printf("%d ", *vit);
+        printf("%"PRI64_PREFIX"u ", *vit);
         if (size % 20 == 0)
         {
           printf("\n");
@@ -196,21 +197,20 @@ namespace tfs
       printf("\nLogic Block Nums :%d\n", static_cast<int>(list_blocks->size()));
     }
 
-    void print_block_info(map<uint32_t, BlockInfo>* block_infos)
+    void print_block_info(vector<BlockInfoV2>* block_infos)
     {
       int64_t total_file_count = 0;
       int64_t total_size = 0;
       int64_t total_delfile_count = 0;
       int64_t total_del_size = 0;
-      printf("BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE   SEQ_NO\n");
+      printf("BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE\n");
       printf("---------- ---------- ---------- ---------- ---------- ---------- ----------\n");
-      map<uint32_t, BlockInfo>::iterator it = block_infos->begin();
+      vector<BlockInfoV2>::iterator it = block_infos->begin();
       for (; it != block_infos->end(); it++)
       {
-        BlockInfo* block_info = &(it->second);
-        printf("%-10u %10u %10u %10u %10u %10u %10u\n", block_info->block_id_, block_info->version_,
-               block_info->file_count_, block_info->size_, block_info->del_file_count_, block_info->del_size_,
-               block_info->seq_no_);
+        BlockInfoV2* block_info = &(*it);
+        printf("%10"PRI64_PREFIX"u %10u %10u %10u %10u %10u\n", block_info->block_id_, block_info->version_,
+               block_info->file_count_, block_info->size_, block_info->del_file_count_, block_info->del_size_);
 
         total_file_count += block_info->file_count_;
         total_size += block_info->size_;
@@ -222,20 +222,20 @@ namespace tfs
              Func::format_size(total_del_size).c_str());
     }
 
-    void print_block_pair(map<uint32_t, vector<uint32_t> >* logic_phy_pairs)
+    void print_block_pair(map<uint64_t, vector<int32_t> >* logic_phy_pairs)
     {
-      vector<uint32_t>::iterator vit;
+      vector<int32_t>::iterator vit;
       printf("BLOCK_ID   PHYSICAL_MAIN_ID PHYSICAL_EXT_ID_LIST\n");
       printf("---------- -----------------------------------------------------------------------------------------\n");
-      map<uint32_t, vector<uint32_t> >::iterator it = logic_phy_pairs->begin();
+      map<uint64_t, vector<int32_t> >::iterator it = logic_phy_pairs->begin();
       for (; it != logic_phy_pairs->end(); it++)
       {
-        vector < uint32_t >* v_phy_list = &(it->second);
-        printf("%-10u ", it->first);
+        vector < int32_t >* v_phy_list = &(it->second);
+        printf("%-10"PRI64_PREFIX"u ", it->first);
         vit = v_phy_list->begin();
         for (; vit != v_phy_list->end(); vit++)
         {
-          printf("%-10u ", *vit);
+          printf("%-10d ", *vit);
         }
         printf("\n");
       }
@@ -250,6 +250,11 @@ namespace tfs
       int ret_status = TFS_ERROR;
       ListBlockMessage req_lb_msg;
       int32_t xtype = type;
+
+      if (xtype & 1)
+      {
+        xtype |= LB_BLOCK;
+      }
       if (type & 2)
       {
         xtype |= LB_PAIRS;
@@ -260,10 +265,9 @@ namespace tfs
       }
       req_lb_msg.set_block_type(xtype);
 
-
-      map < uint32_t, vector<uint32_t> >* logic_phy_pairs = NULL;
-      map<uint32_t, BlockInfo>* block_infos = NULL;
-      VUINT32* list_blocks = NULL;
+      map < uint64_t, vector<int32_t> >* logic_phy_pairs = NULL;
+      vector<BlockInfoV2>* block_infos = NULL;
+      VUINT64* list_blocks = NULL;
 
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* ret_msg = NULL;
@@ -271,12 +275,12 @@ namespace tfs
 
       if (TFS_SUCCESS == ret_status && (RESP_LIST_BLOCK_MESSAGE == ret_msg->getPCode()))
       {
-        printf("get message type: %d\n", ret_msg->getPCode());
+        // printf("get message type: %d\n", ret_msg->getPCode());
         RespListBlockMessage* resp_lb_msg = dynamic_cast<RespListBlockMessage*> (ret_msg);
 
-        list_blocks = const_cast<VUINT32*> (resp_lb_msg->get_blocks());
-        logic_phy_pairs = const_cast< map < uint32_t, vector<uint32_t> >* > (resp_lb_msg->get_pairs());
-        block_infos = const_cast<map<uint32_t, BlockInfo>*> (resp_lb_msg->get_infos());
+        list_blocks = const_cast<VUINT64*> (resp_lb_msg->get_blocks());
+        logic_phy_pairs = const_cast< map < uint64_t, vector<int32_t> >* > (resp_lb_msg->get_pairs());
+        block_infos = const_cast< vector<BlockInfoV2>*> (resp_lb_msg->get_infos());
         if (type & 1)
         {
           print_block_id(list_blocks);
@@ -300,9 +304,9 @@ namespace tfs
     int DsLib::get_block_info(DsTask& ds_task)
     {
       uint64_t server_id = ds_task.server_id_;
-      uint32_t block_id = ds_task.block_id_;
+      uint64_t block_id = ds_task.block_id_;
 
-      GetBlockInfoMessage req_gbi_msg;
+      GetBlockInfoMessageV2 req_gbi_msg;
       req_gbi_msg.set_block_id(block_id);
 
       int ret_status = TFS_ERROR;
@@ -310,24 +314,25 @@ namespace tfs
       tbnet::Packet* ret_msg = NULL;
       if(TFS_SUCCESS == send_msg_to_server(server_id, client, &req_gbi_msg, ret_msg))
       {
-        if (UPDATE_BLOCK_INFO_MESSAGE == ret_msg->getPCode())
+        if (UPDATE_BLOCK_INFO_MESSAGE_V2 == ret_msg->getPCode())
         {
-          UpdateBlockInfoMessage *req_ubi_msg = dynamic_cast<UpdateBlockInfoMessage*> (ret_msg);
-          const SdbmStat *db_stat = req_ubi_msg->get_db_stat();
+          UpdateBlockInfoMessageV2 *req_ubi_msg = dynamic_cast<UpdateBlockInfoMessageV2*> (ret_msg);
           if (block_id != 0)
           {
-            const BlockInfo* block_info = req_ubi_msg->get_block();
-            printf("ID:            %u\n", block_info->block_id_);
-            printf("VERSION:       %u\n", block_info->version_);
-            printf("FILE_COUNT:    %d\n", block_info->file_count_);
-            printf("SIZE:          %d\n", block_info->size_);
-            printf("DELFILE_COUNT: %d\n", block_info->del_file_count_);
-            printf("DEL_SIZE:      %d\n", block_info->del_size_);
-            printf("SEQNO:         %d\n", block_info->seq_no_);
-            printf("VISITCOUNT:    %d\n", req_ubi_msg->get_repair());
+            const BlockInfoV2& block_info = req_ubi_msg->get_block_info();
+            printf("ID:            %"PRI64_PREFIX"u\n", block_info.block_id_);
+            printf("FAMILY_ID:     %"PRI64_PREFIX"u\n", block_info.family_id_);
+            printf("VERSION:       %u\n", block_info.version_);
+            printf("FILE_COUNT:    %d\n", block_info.file_count_);
+            printf("SIZE:          %d\n", block_info.size_);
+            printf("DELFILE_COUNT: %d\n", block_info.del_file_count_);
+            printf("DEL_SIZE:      %d\n", block_info.del_size_);
+            printf("UPDATE_COUNT:  %d\n", block_info.update_file_count_);
+            printf("UPDATE_SIZE:   %d\n", block_info.update_size_);
             int32_t value = req_ubi_msg->get_server_id();
             printf("INFO_LOADED:   %d%s\n", value, (value == 1 ? " (ERR)" : ""));
           }
+          /*
           else if (db_stat)
           {
             printf("CACHE_HIT:     %d%%\n", 100 * (db_stat->fetch_count_ - db_stat->miss_fetch_count_)
@@ -339,6 +344,7 @@ namespace tfs
             printf("OVERFLOW:      %d\n", db_stat->overflow_count_);
             printf("ITEM_COUNT:    %d\n", db_stat->item_count_);
           }
+          */
         }
         else if (STATUS_MESSAGE == ret_msg->getPCode())
         {
@@ -450,9 +456,9 @@ namespace tfs
       rd_message.set_offset(offset);
 
       int ret_status = TFS_SUCCESS;
-      NewClient* client = NewClientManager::get_instance().create_client();
       while (TFS_SUCCESS == ret_status)
       {
+        NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* ret_msg = NULL;
         ret_status = send_msg_to_server(server_id, client, &rd_message, ret_msg);
         if (TFS_SUCCESS == ret_status && RESP_READ_DATA_MESSAGE != ret_msg->getPCode())
@@ -507,8 +513,8 @@ namespace tfs
           rd_message.set_length(read_len);
           rd_message.set_offset(offset);
         }
+        NewClientManager::get_instance().destroy_client(client);
       }
-      NewClientManager::get_instance().destroy_client(client);
 
       if (ret_status == TFS_SUCCESS)
       {
@@ -876,7 +882,7 @@ namespace tfs
 
     void DsLib::print_file_info_v2(const char* name, FileInfoV2& file_info)
     {
-      printf("%s %20" PRI64_PREFIX "u %10u %10u %10u %s %s %02d %10u\n", name, file_info.id_, file_info.offset_,
+      printf("%s %20"PRI64_PREFIX"u %10u %10u %10u %s %s %02d %10u\n", name, file_info.id_, file_info.offset_,
              file_info.size_ - FILEINFO_EXT_SIZE, file_info.size_ - FILEINFO_EXT_SIZE,
              Func::time_to_str(file_info.modify_time_).c_str(),
              Func::time_to_str(file_info.create_time_).c_str(), file_info.status_, file_info.crc_);

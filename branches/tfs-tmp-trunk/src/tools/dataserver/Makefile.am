@@ -9,18 +9,11 @@ bin_PROGRAMS = clear_file_system\
                ds_client\
                format_file_system\
                read_super_block\
-               recover_disk_data_to_cluster\
-               recover_sync_file_queue\
 							 convert_name\
                reload_config\
-               read_index_tool\
-               read_block_prefix\
                reverse_name\
-               modify_super_block\
                tfsping\
-               view_local_key\
-							 gen_block_prefix\
-							 verify_block_to_dataserver
+               view_local_key
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
