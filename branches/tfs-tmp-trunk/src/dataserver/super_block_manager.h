@@ -60,7 +60,6 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(SuperBlockManager);
         static const int32_t SUPERBLOCK_RESERVER_LENGTH;
         static const int32_t MAX_INITIALIZE_BLOCK_INDEX_SIZE;
-        static const int32_t PHYSICAL_BLOCK_ID_INIT_VALUE;
         common::MMapFileOperation file_op_;
         mutable int32_t index_;
         mutable int32_t ext_index_;

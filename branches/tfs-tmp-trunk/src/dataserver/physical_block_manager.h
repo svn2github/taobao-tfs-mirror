@@ -56,8 +56,8 @@ namespace tfs
           const int32_t start, const int32_t end);
       int remove(BasePhysicalBlock*& physical_block, const int32_t physcical_block_id);
       bool exist(const int32_t physical_block_id) const;
-      int alloc_block(BlockIndex& index, const int8_t split_flag = BLOCK_SPLIT_FLAG_NO, const bool flush = false);
-      int alloc_ext_block(BlockIndex& index, BlockIndex& ext_index);
+      int alloc_block(BlockIndex& index, const int8_t split_flag = BLOCK_SPLIT_FLAG_NO, const bool flush = false, const bool tmp = false);
+      int alloc_ext_block(BlockIndex& index, BlockIndex& ext_index, const bool tmp);
       int free_ext_block(const BlockIndex& index, bool flush = true);
       BasePhysicalBlock* get(const int32_t physical_block_id) const;
 

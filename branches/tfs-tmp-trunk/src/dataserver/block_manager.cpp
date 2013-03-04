@@ -103,7 +103,7 @@ namespace tfs
         index.logic_block_id_ = logic_block_id;
         BaseLogicBlock*    logic_block = NULL;
         BasePhysicalBlock* physical_block = NULL;
-        ret = get_physical_block_manager().alloc_block(index, BLOCK_SPLIT_FLAG_NO);
+        ret = get_physical_block_manager().alloc_block(index, BLOCK_SPLIT_FLAG_NO, true, tmp);
         if (TFS_SUCCESS == ret)
         {
           physical_block = get_physical_block_manager().get(index.physical_block_id_);
@@ -136,7 +136,6 @@ namespace tfs
           }
           if (TFS_SUCCESS == ret)
           {
-            ++info->used_main_block_count_;
             logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
             ret = get_super_block_manager().flush();
           }
@@ -465,7 +464,7 @@ namespace tfs
         ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          ret = logic_block->pwrite(buf, nbytes, offset);
+          ret = logic_block->pwrite(buf, nbytes, offset, tmp);
         }
       }
       return ret;
@@ -497,7 +496,7 @@ namespace tfs
         ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          ret = logic_block->write(fileid, datafile, attach_logic_block_id);
+          ret = logic_block->write(fileid, datafile, attach_logic_block_id, tmp);
         }
       }
       return ret;
@@ -669,7 +668,8 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             if (INVALID_PHYSICAL_BLOCK_ID != index.physical_block_id_
-                && INVALID_BLOCK_ID == index.logic_block_id_)
+                && INVALID_BLOCK_ID == index.logic_block_id_
+                && BLOCK_SPLIT_FLAG_NO == index.split_flag_)
             {
               TBSYS_LOG(WARN, "physical block %d mybe reuse, physical block file name id : %d", index.physical_block_id_, index.physical_file_name_id_);
               ret = get_super_block_manager().cleanup_block_index(index.physical_block_id_);
@@ -807,11 +807,13 @@ namespace tfs
             info.mmap_option_.max_mmap_size_ = max_count * pagesize * INDEXFILE_SAFE_MULT;
 
           info.used_main_block_count_  = 0;
-          info.used_extend_block_count_ = 0;
           info.total_main_block_count_ = (info.mount_point_use_space_ / (info.max_main_block_size_ + info.mmap_option_.max_mmap_size_)) - 2;
           info.max_block_index_element_count_ = static_cast<int32_t>(info.total_main_block_count_ / parameter.block_type_ratio_) +
             info.total_main_block_count_ + 1;
           ret = info.max_block_index_element_count_ > SuperBlockManager::MAX_BLOCK_INDEX_SIZE ? EXIT_MAX_BLOCK_INDEX_COUNT_INVALID : TFS_SUCCESS;
+
+          info.main_block_id_seq_ = PHYSICAL_BLOCK_ID_INIT_VALUE;
+          info.ext_block_id_seq_ = info.total_main_block_count_ + 1;
         }
 
         if (TFS_SUCCESS == ret)
@@ -974,8 +976,6 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          info->used_main_block_count_ -= 1;
-          info->used_extend_block_count_ -= (physical_blocks.size() - 1);
           ret = get_super_block_manager().flush();
         }
       }

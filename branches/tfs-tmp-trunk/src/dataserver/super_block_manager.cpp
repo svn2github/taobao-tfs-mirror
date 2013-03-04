@@ -30,7 +30,6 @@ namespace tfs
     // ------------------------------------------------------------
     const int32_t SuperBlockManager::SUPERBLOCK_RESERVER_LENGTH = 512;
     const int32_t SuperBlockManager::MAX_BLOCK_INDEX_SIZE = 65535 * (1 + 3);
-    const int32_t SuperBlockManager::PHYSICAL_BLOCK_ID_INIT_VALUE = 1;
     SuperBlockManager::SuperBlockManager(const std::string& path):
       file_op_(path, O_RDWR | O_SYNC | O_LARGEFILE | O_CREAT),
       index_(PHYSICAL_BLOCK_ID_INIT_VALUE),
@@ -171,13 +170,13 @@ namespace tfs
           const int32_t EXT_PHYSICAL_BLOCK_INIT_VALUE = info->total_main_block_count_ + 1;
           while (INVALID_PHYSICAL_BLOCK_ID == physical_block_id && retry_times-- > 0)
           {
-            if (ext_index_ < EXT_PHYSICAL_BLOCK_INIT_VALUE || ext_index_ >= MAX_COUNT)
-                ext_index_ = EXT_PHYSICAL_BLOCK_INIT_VALUE;
-            for (; ext_index_ < MAX_COUNT && INVALID_PHYSICAL_BLOCK_ID == physical_block_id; ++ext_index_)
+            if (info->ext_block_id_seq_ < EXT_PHYSICAL_BLOCK_INIT_VALUE || info->ext_block_id_seq_ >= MAX_COUNT)
+                info->ext_block_id_seq_ = EXT_PHYSICAL_BLOCK_INIT_VALUE;
+            for (; info->ext_block_id_seq_ < MAX_COUNT && INVALID_PHYSICAL_BLOCK_ID == physical_block_id; ++info->ext_block_id_seq_)
             {
-              BlockIndex* current = (pstart + ext_index_);
+              BlockIndex* current = (pstart + info->ext_block_id_seq_);
               if (INVALID_PHYSICAL_BLOCK_ID == current->physical_block_id_)
-                physical_block_id = ext_index_;
+                physical_block_id = info->ext_block_id_seq_;
             }
           }
         }
@@ -185,13 +184,13 @@ namespace tfs
         {
           while (INVALID_PHYSICAL_BLOCK_ID == physical_block_id && retry_times-- > 0)
           {
-            if (index_ < PHYSICAL_BLOCK_ID_INIT_VALUE || index_ > MAX_COUNT)
-                index_ = PHYSICAL_BLOCK_ID_INIT_VALUE;
-            for (; index_ <= MAX_COUNT && INVALID_PHYSICAL_BLOCK_ID == physical_block_id; ++index_)
+            if (info->main_block_id_seq_< PHYSICAL_BLOCK_ID_INIT_VALUE || info->main_block_id_seq_> MAX_COUNT)
+                info->main_block_id_seq_ = PHYSICAL_BLOCK_ID_INIT_VALUE;
+            for (; info->main_block_id_seq_ <= MAX_COUNT && INVALID_PHYSICAL_BLOCK_ID == physical_block_id; ++info->main_block_id_seq_)
             {
-              BlockIndex* current = (pstart + index_);
+              BlockIndex* current = (pstart + info->main_block_id_seq_);
               if (INVALID_PHYSICAL_BLOCK_ID == current->physical_block_id_)
-                physical_block_id = index_;
+                physical_block_id = info->main_block_id_seq_;
             }
           }
         }

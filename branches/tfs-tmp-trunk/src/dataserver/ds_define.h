@@ -78,10 +78,11 @@ namespace tfs
       int32_t max_block_index_element_count_;//block index element count
       int32_t total_main_block_count_;//total count of main block
       int32_t used_main_block_count_; //total count of used main block
-      int32_t used_extend_block_count_;//total count of used extend block
       int32_t max_main_block_size_;//max size of main block
       int32_t max_extend_block_size_;//max size of extend block
       int32_t hash_bucket_count_;//total count of hash bucket
+      int32_t main_block_id_seq_;// generate main block id sequence
+      int32_t ext_block_id_seq_; // generate ext block id sequence
       common::MMapOption mmap_option_;    //mmap option
       double max_use_block_ratio_;//max use block ratio
       double max_use_hash_bucket_ratio_;//hash slot count / file count ratio

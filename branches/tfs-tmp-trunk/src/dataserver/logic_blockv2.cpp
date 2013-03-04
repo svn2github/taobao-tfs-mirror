@@ -254,8 +254,9 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id)
+    int BaseLogicBlock::write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id, const bool tmp)
     {
+      UNUSED(tmp);
       UNUSED(fileid);
       UNUSED(datafile);
       UNUSED(logic_block_id);
@@ -302,13 +303,13 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::pwrite(const char* buf, const int32_t nbytes, const int32_t offset)
+    int BaseLogicBlock::pwrite(const char* buf, const int32_t nbytes, const int32_t offset, const bool tmp)
     {
       int32_t ret = (NULL != buf && nbytes > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         mutex_.wrlock();
-        ret = extend_block_(nbytes, offset);
+        ret = extend_block_(nbytes, offset, tmp);
         if (TFS_SUCCESS == ret)//write data
         {
           int32_t mem_offset = 0;
@@ -446,7 +447,7 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::extend_block_(const int32_t size, const int32_t offset)
+    int BaseLogicBlock::extend_block_(const int32_t size, const int32_t offset, const bool tmp)
     {
       int32_t ret = (size > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -482,12 +483,12 @@ namespace tfs
             if (TFS_SUCCESS == ret)
             {
               # ifdef TFS_GTEST
-                ret = physical_block_manager.alloc_ext_block(index, ext_index);
+                ret = physical_block_manager.alloc_ext_block(index, ext_index, tmp);
                 new_physical_block = physical_block_manager.get(ext_index.physical_block_id_);
               # else
                 mutex_.unlock();
                 get_block_manager_().mutex_.wrlock();
-                ret = physical_block_manager.alloc_ext_block(index, ext_index);
+                ret = physical_block_manager.alloc_ext_block(index, ext_index, tmp);
                 new_physical_block = physical_block_manager.get(ext_index.physical_block_id_);
                 get_block_manager_().mutex_.unlock();
                 mutex_.wrlock();
@@ -509,7 +510,7 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::write_(FileInfoV2& new_finfo, DataFile& datafile, const FileInfoV2& old_finfo, const bool update)
+    int BaseLogicBlock::write_(FileInfoV2& new_finfo, DataFile& datafile, const FileInfoV2& old_finfo, const bool update, const bool tmp)
     {
       time_t now = time(NULL);
       int32_t file_size = datafile.length();
@@ -525,7 +526,7 @@ namespace tfs
       int32_t ret = index_handle_->get_used_offset(new_finfo.offset_);
       if (TFS_SUCCESS == ret)
       {
-        ret = extend_block_(new_finfo.size_, new_finfo.offset_);
+        ret = extend_block_(new_finfo.size_, new_finfo.offset_, tmp);
         if (TFS_SUCCESS == ret)//write data
         {
           char* data = NULL;
@@ -604,7 +605,7 @@ namespace tfs
       return ret;
     }
 
-    int LogicBlock::write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id)
+    int LogicBlock::write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id, const bool tmp)
     {
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -622,7 +623,7 @@ namespace tfs
           if (update)
             TBSYS_LOG(INFO, "file exist, update! block id: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"d", logic_block_id, fileid);
 
-          ret = write_(new_finfo, datafile, old_finfo, update);
+          ret = write_(new_finfo, datafile, old_finfo, update, tmp);
           if (TFS_SUCCESS == ret)
           {
             ret = get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);
@@ -837,7 +838,7 @@ namespace tfs
       return ret;
     }
 
-    int VerifyLogicBlock::write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id)
+    int VerifyLogicBlock::write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id, const bool tmp)
     {
       int32_t ret = (INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -859,7 +860,7 @@ namespace tfs
             old_finfo = *pold_finfo;
             TBSYS_LOG(INFO, "file exist, update! block id: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"d", logic_block_id, fileid );
           }
-          ret = write_(new_finfo, datafile, old_finfo, update);
+          ret = write_(new_finfo, datafile, old_finfo, update, tmp);
           if (TFS_SUCCESS == ret)
           {
             ret = get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);

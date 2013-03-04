@@ -349,7 +349,7 @@ namespace tfs
         {
           if (inner_offset > 0)  // buffer not empty, flush first
           {
-            ret = dest->pwrite(buffer, inner_offset, new_offset);
+            ret = dest->pwrite(buffer, inner_offset, new_offset, true);
             if (TFS_SUCCESS == ret)
             {
               inner_offset = 0;
@@ -412,7 +412,7 @@ namespace tfs
         ret = src->pread(buffer, length, finfo.offset_ + offset);
         if (TFS_SUCCESS == ret)
         {
-          ret = dest->pwrite(buffer, length, new_offset + offset);
+          ret = dest->pwrite(buffer, length, new_offset + offset, true);
           if (TFS_SUCCESS == ret)
           {
             offset += length;
