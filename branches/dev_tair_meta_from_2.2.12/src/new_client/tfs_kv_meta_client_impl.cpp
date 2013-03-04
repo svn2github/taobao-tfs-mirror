@@ -65,9 +65,14 @@ namespace tfs
       {
         rs_id_ = rs_addr;
         ns_addr_ = ns_addr;
-        update_table_from_rootserver();
+        ret = update_table_from_rootserver();
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = tfs_meta_manager_.initialize();
       }
+
       return ret;
     }
 
@@ -591,22 +596,32 @@ namespace tfs
             break;
           }
 
-          if (0 == read_len)
+          if (read_len == 0 && offset != 0)
           {
             break;
           }
-          while (read_len > 0)
+
+          while (read_len >= 0)
           {
             write_len = pwrite_object(bucket_name, object_name, buf, offset, read_len, user_info);
-            if (write_len <= 0)
+            if (write_len < 0)
             {
               TBSYS_LOG(ERROR, "put object fail. bucket: %s, object: %s", bucket_name, object_name);
               ret = TFS_ERROR;
               break;
             }
+            else if (write_len == 0)
+            {
+              break;
+            }
 
             offset += write_len;
             read_len -= write_len;
+          }
+
+          if (offset == 0)
+          {
+            break;
           }
         }
 
