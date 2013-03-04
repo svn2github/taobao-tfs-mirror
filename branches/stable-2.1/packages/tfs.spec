@@ -18,6 +18,7 @@ BuildRequires: boost-devel >= 1.3
 BuildRequires: readline-devel
 BuildRequires: ncurses-devel
 BuildRequires: google-perftools >= 1.3 
+BuildRequires: jemalloc-devel >= 2.2
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}
