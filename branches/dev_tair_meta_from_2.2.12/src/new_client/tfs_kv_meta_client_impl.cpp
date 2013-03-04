@@ -551,7 +551,8 @@ namespace tfs
               cur_offset, cur_length, read_length, left_length);
           cur_offset += read_length;
           cur_pos += read_length;
-        }while(left_length > 0 && still_have);
+        } while(left_length > 0 && still_have);
+
         if (TFS_SUCCESS == ret)
         {
           ret = (length - left_length);
@@ -596,30 +597,20 @@ namespace tfs
             break;
           }
 
-          if (read_len == 0 && offset != 0)
-          {
-            break;
-          }
-
-          while (read_len >= 0)
+          do
           {
             write_len = pwrite_object(bucket_name, object_name, buf, offset, read_len, user_info);
             if (write_len < 0)
             {
-              TBSYS_LOG(ERROR, "put object fail. bucket: %s, object: %s", bucket_name, object_name);
+              TBSYS_LOG(ERROR, "pwrite object fail. bucket: %s, object: %s", bucket_name, object_name);
               ret = TFS_ERROR;
               break;
             }
-            else if (write_len == 0)
-            {
-              break;
-            }
-
             offset += write_len;
             read_len -= write_len;
-          }
+          }while (read_len > 0);
 
-          if (offset == 0)
+          if (read_len == 0)
           {
             break;
           }
