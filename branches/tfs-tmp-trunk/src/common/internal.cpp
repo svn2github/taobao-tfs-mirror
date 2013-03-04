@@ -2001,6 +2001,10 @@ namespace tfs
             finfos_.push_back(finfo);
           }
         }
+        if (finfo_size != static_cast<int32_t>(finfos_.size()))
+        {
+          ret = TFS_ERROR;
+        }
       }
 
       return ret;
@@ -2029,8 +2033,10 @@ namespace tfs
     int64_t IndexDataV2::length() const
     {
       int64_t len = header_.length() + INT_SIZE;
-      FileInfoV2 finfo;
-      len += finfos_.size() * finfo.length();
+      for (uint32_t i = 0; i < finfos_.size(); i++)
+      {
+        len += finfos_[i].length();
+      }
       return len;
     }
 
@@ -2181,7 +2187,7 @@ namespace tfs
     int64_t FileInfoV2::length() const
     {
       int64_t len = INT64_SIZE;
-      if (id_ > 0)
+      if (INVALID_FILE_ID !=  id_)
       {
         len += 5 * INT_SIZE + INT8_SIZE + INT16_SIZE;
       }

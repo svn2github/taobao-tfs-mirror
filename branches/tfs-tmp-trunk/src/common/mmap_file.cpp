@@ -80,7 +80,7 @@ namespace tfs
           }
         }
       }
-      TBSYS_LOG(INFO, "mmap file: ret: %d,%s, fd: %d, length: %d, data: %p",
+      TBSYS_LOG(DEBUG, "mmap file: ret: %d,%s, fd: %d, length: %d, data: %p",
           ret, TFS_SUCCESS == ret ? "successful" : "failed", fd_, length_, data_);
       return ret;
     }
