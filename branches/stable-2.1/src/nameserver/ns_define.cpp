@@ -82,7 +82,7 @@ namespace tfs
 
     void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function ) const
     {
-      TBSYS_LOGGER.logMessage(level, file, line, function,pthread_self(),
+      TBSYS_LOGGER.logMessage(level, file, line, function,
           "use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, total_block_count: %"PRI64_PREFIX"d, total_load: %d, max_load: %d, max_block_count: %d, alive_server_count: %d",
           use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_);
     }
@@ -252,7 +252,6 @@ namespace tfs
           __FILE__,
           __LINE__,
           __FUNCTION__,
-          pthread_self(),
           "%s owner ip port: %s, other side ip port: %s, switch time: %s, vip: %s\
 ,destroy flag: %s, owner role: %s, other side role: %s, owner status: %s, other side status: %s\
 , last owner check time: %s, last push owner check packet time: %s",
