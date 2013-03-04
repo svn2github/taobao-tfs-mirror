@@ -861,9 +861,10 @@ namespace tfs
       return saved_size;
     }
 
-    int RcClientImpl::fetch_file(const char* local_file,
+    int64_t RcClientImpl::fetch_file(const char* local_file,
                        const char* file_name, const char* suffix)
     {
+      int64_t fetched_size = -1;
       int ret = check_init_stat();
       if (TFS_SUCCESS == ret)
       {
@@ -879,12 +880,13 @@ namespace tfs
           ret = fetch_file(ns_addr.c_str(), local_file, file_name, suffix);
         } while(ret != TFS_SUCCESS);
       }
-      return ret;
+      return TFS_SUCCESS != ret? ret: fetched_size;
     }
 
-    int RcClientImpl::fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+    int64_t RcClientImpl::fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix)
     {
+      int64_t fetched_size = -1;
       int ret = check_init_stat();
       if (TFS_SUCCESS == ret)
       {
@@ -900,7 +902,7 @@ namespace tfs
           ret = fetch_buf(ns_addr.c_str(), ret_count, buf, count, file_name, suffix);
         } while(ret != TFS_SUCCESS);
       }
-      return ret;
+      return TFS_SUCCESS != ret? ret: fetched_size;
     }
 
 
