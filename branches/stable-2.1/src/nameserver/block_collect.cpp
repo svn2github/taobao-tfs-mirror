@@ -433,7 +433,7 @@ namespace tfs
             str += "/";
           }
         }
-        TBSYS_LOGGER.logMessage(level, file, line, function,
+        TBSYS_LOGGER.logMessage(level, file, line, function,pthread_self(),
             "block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %d, servers: %s",
             info_.block_id_, info_.version_, info_.file_count_,
             info_.size_, info_.del_file_count_, info_.del_size_,
