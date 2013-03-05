@@ -446,6 +446,7 @@ namespace tfs
           cur_offset += real_write_length;
         }
         while (left_length > 0 && TFS_SUCCESS == ret);
+
         if (TFS_SUCCESS == ret)
         {
           ret = length - left_length;
@@ -597,6 +598,12 @@ namespace tfs
             break;
           }
 
+          // jump for non_local_file
+          if (read_len == 0 && offset != 0)
+          {
+            break;
+          }
+
           do
           {
             write_len = pwrite_object(bucket_name, object_name, buf, offset, read_len, user_info);
@@ -610,7 +617,8 @@ namespace tfs
             read_len -= write_len;
           }while (read_len > 0);
 
-          if (read_len == 0)
+          //jump for empty local_file
+          if (offset == 0)
           {
             break;
           }
