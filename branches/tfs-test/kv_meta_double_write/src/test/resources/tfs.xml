@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<!-- Restful客户端bean初始化。since (V1.0.0).-->
+<beans>
+  <bean id="tfsManager" class="com.taobao.common.tfs.DefaultTfsManager" init-method="init" >
+    <!-- Root Server的地址 (必须配置）-->
+    <property name="rsAddr">
+      <value>10.232.4.11:3800</value>
+    </property>
+    <!-- 应用注册的App Key (必须配置）-->
+    <property name="appKey">
+      <value>tfsNginxB01</value>
+    </property>
+    <property name="connTimeout">
+      <value>30000</value>
+    </property>
+  </bean>
+</beans>
