@@ -38,7 +38,6 @@ using namespace tfs::client;
 
 int64_t old_server_id = 0;
 int64_t new_server_id = 0;
-//NameMetaClientImpl old_client;
 int64_t app_id = 0;
 int64_t uid = 0;
 
@@ -48,15 +47,23 @@ static tfs::common::BasePacketStreamer gstreamer;
 
 int usage(const char* name)
 {
-  printf("-a: means app_id \n");
-  printf("-u: means uid \n");
+  printf("-i: means input_file \n");
   printf("-o: means old_root_addr \n");
   printf("-n: means new_kv_meta_addr \n");
-  printf("-l: means show deepth num \n");
-  printf("Usage: %s -a 1 -u 123 -p /home/qixiao.zs/out.res -o old_root_ipport -n new_kvmeta_ipport -l ./log_file \n", name);
+  printf("-l: means output_file \n");
+  printf("Usage: %s -i input.txt -o old_root_ipport -n new_kvmeta_ipport -l ./log_file \n", name);
   return 0;
 }
-
+int stop = 0;
+void sign_handler(int32_t sig)
+{
+  switch (sig)
+  {
+    case SIGINT:
+      stop = 1;
+      break;
+  }
+}
 int check(NameMetaClientImpl &client ,string path)
 {
 
@@ -71,7 +78,6 @@ int check(NameMetaClientImpl &client ,string path)
   {
     now_name = it->name_;
     new_path = path + now_name;
-
     if(it->id_ == 0)//file
     {
       TBSYS_LOG(DEBUG, "this is file %s", new_path.c_str());
@@ -94,9 +100,9 @@ int check(NameMetaClientImpl &client ,string path)
             offset, length,
             object_info, &still_have,
             *user_info);
-        if (ret != 0)
+        if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "get_obejct_error");
+          TBSYS_LOG(ERROR, "get_obejct |%s|%s| error",bucket_name,new_path.c_str());
         }
         if (offset == 0)
         {
@@ -120,12 +126,12 @@ int check(NameMetaClientImpl &client ,string path)
       //check
       if (it->create_time_ != base_object_info->meta_info_.create_time_)
       {
-        TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s create_time is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
+        TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s create_time is diff old:%d new:%"PRI64_PREFIX"d",
             bucket_name, new_path.c_str(), it->create_time_, base_object_info->meta_info_.create_time_);
       }
       if (it->modify_time_ != base_object_info->meta_info_.modify_time_)
       {
-        TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s modify_time is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
+        TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s modify_time is diff old:%d new:%"PRI64_PREFIX"d",
             bucket_name, new_path.c_str(), it->modify_time_, base_object_info->meta_info_.modify_time_);
       }
       if (it->size_ != base_object_info->meta_info_.big_file_size_)
@@ -210,15 +216,13 @@ int main(int argc, char *argv[])
   std::string old_server;
   std::string new_server;
   std::string log_file_name;
-  while ((i = getopt(argc, argv, "a:u:o:n:l:")) != EOF)
+  std::string input_file_name;
+  while ((i = getopt(argc, argv, "i:o:n:l:")) != EOF)
   {
     switch (i)
     {
-      case 'a':
-        app_id = atoll(optarg);
-        break;
-      case 'u':
-        uid = atoll(optarg);
+      case 'i':
+        input_file_name = optarg;
         break;
       case 'o':
         old_server = optarg;
@@ -234,14 +238,16 @@ int main(int argc, char *argv[])
         return TFS_ERROR;
     }
   }
-  cout << app_id << "  -" << uid << "  -" << old_server << "  -" << new_server << "  -" << log_file_name << endl;
-  if (log_file_name.empty())
+  cout << input_file_name  << "  -" << old_server << "  -" << new_server << "  -" << log_file_name << endl;
+  if (input_file_name.empty() || log_file_name.empty())
   {
     usage(argv[0]);
     return TFS_ERROR;
   }
   TBSYS_LOGGER.setFileName(log_file_name.c_str());
   TBSYS_LOGGER.setLogLevel("info");
+  signal(SIGINT, sign_handler);
+
   NameMetaClientImpl old_client;
   if( TFS_SUCCESS != old_client.initialize( old_server.c_str() ) )
   {
@@ -252,8 +258,46 @@ int main(int argc, char *argv[])
   old_server_id = Func::get_host_ip(old_server.c_str());
   new_server_id = Func::get_host_ip(new_server.c_str());
   string tfs_name = "/";
-  check(old_client, tfs_name);
-
+  int32_t ret = TFS_SUCCESS;
+  FILE *s_fd = NULL;
+  s_fd = fopen(input_file_name.c_str(), "r");
+  if (NULL == s_fd)
+  {
+    printf(" open file %s for read error\n", input_file_name.c_str());
+    ret =  TFS_ERROR;
+  }
+  char buff[128];
+  while(TFS_SUCCESS == ret && 1 != stop)
+  {
+    if (NULL == fgets(buff, 128, s_fd))
+    {
+      break;
+    }
+    buff[127] = 0;
+    char *p = NULL;
+    const char DLIMER = ',';
+    p = strchr(buff, DLIMER);
+    if (NULL == p)
+    {
+      TBSYS_LOG(ERROR, "err input line %s", buff);
+      continue;
+    }
+    app_id = -1;
+    uid = -1;
+    *p = '\0';
+    app_id = strtoll(buff, NULL, 10);
+    uid = strtoll(p + 1, NULL, 10);
+    if (app_id <= 0 || uid <= 0)
+    {
+      *p = DLIMER;
+      TBSYS_LOG(ERROR, "err input line %s", buff);
+      continue;
+    }
+    TBSYS_LOG(INFO, "check app_id %ld uid %ld", app_id, uid);
+    ret = check(old_client, tfs_name);
+  }
+  fclose(s_fd);
+  s_fd = NULL;
   return 0;
 }
 

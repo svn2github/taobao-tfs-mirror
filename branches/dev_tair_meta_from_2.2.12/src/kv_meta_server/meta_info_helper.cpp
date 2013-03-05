@@ -243,14 +243,23 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       int32_t retry = VERSION_ERROR_RETRY_COUNT;
+      bool is_old_data = false;
+      //-5 means transfer data from mysql
+      if (-5 == object_info_zero->meta_info_.max_tfs_file_size_)
+      {
+        is_old_data = true;
+        object_info_zero->meta_info_.max_tfs_file_size_ = 2048;
+      }
       do
       {
         if (length + offset > object_info_zero->meta_info_.big_file_size_ )
         {
           object_info_zero->meta_info_.big_file_size_ = length + offset;
         }
-
-        object_info_zero->meta_info_.modify_time_ = static_cast<int64_t>(time(NULL));
+        if (!is_old_data)
+        {
+          object_info_zero->meta_info_.modify_time_ = static_cast<int64_t>(time(NULL));
+        }
         object_info_zero->has_meta_info_ = true;
 
         ret = put_object_ex(bucket_name, file_name, 0, *object_info_zero, version);
@@ -334,13 +343,26 @@ namespace tfs
           }
         }
       }
-
+      /*trick for transfer data*/
+      if (-5 == object_info.meta_info_.max_tfs_file_size_)
+      {
+        object_info_zero.meta_info_.modify_time_ = object_info.meta_info_.modify_time_;
+        object_info_zero.meta_info_.max_tfs_file_size_ = -5;
+      }
       /* maybe first time put object info zero */
       if (offset == 0)
       {
         object_info_zero.has_meta_info_ = true;
         object_info_zero.meta_info_.owner_id_ = user_info.owner_id_;
-        object_info_zero.meta_info_.create_time_ = static_cast<int64_t>(time(NULL));
+        // identify old data
+        if (-5 == object_info.meta_info_.max_tfs_file_size_)
+        {
+          object_info_zero.meta_info_.create_time_ = object_info.meta_info_.create_time_;
+        }
+        else
+        {
+          object_info_zero.meta_info_.create_time_ = static_cast<int64_t>(time(NULL));
+        }
 
         object_info_zero.has_customize_info_ = object_info.has_customize_info_;
         object_info_zero.customize_info_ = object_info.customize_info_;

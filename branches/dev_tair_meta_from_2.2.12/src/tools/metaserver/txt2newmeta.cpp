@@ -43,7 +43,7 @@ const int MAGIC_NUMBER4 = 0x826a8db9;
 
 int stop = 0;
 int64_t server_id = 0;
-
+int64_t time_point = 0;
 static tfs::message::MessageFactory gfactory;
 static tfs::common::BasePacketStreamer gstreamer;
 
@@ -58,7 +58,7 @@ void sign_handler(int32_t sig)
 }
 int usage (const char* n)
 {
-  printf("%s -f ource_file -d S3_server -l log_file\n", n);
+  printf("%s -f ource_file -d S3_server -t time_point(2362023593) -l log_file\n", n);
   return 0;
 }
 
@@ -86,6 +86,8 @@ void transfer(const string &source_file_name, const string &s3_server)
   TfsFileInfo tfs_file_info_u;
   ObjectInfo obj_info;
   UserInfo user_info;
+  ObjectInfo obj_info_head;
+  UserInfo user_info_head;
   BucketMetaInfo bucket_meta_info;
 
   obj_info.v_tfs_file_info_.clear();
@@ -109,9 +111,14 @@ void transfer(const string &source_file_name, const string &s3_server)
       {
         TBSYS_LOG(ERROR, "put bucket error |%s|", bucket_name);
       }
-
+      if (ret == EXIT_WITH_BUCKET_REPEAT_PUT)
+      {
+        TBSYS_LOG(ERROR, "[conflict] put bucket conflict |%s|", bucket_name);
+        ret = TFS_SUCCESS;
+      }
       continue;
-    }else if (magic_number != MAGIC_NUMBER1)
+    }
+    else if (magic_number != MAGIC_NUMBER1)
     {
       TBSYS_LOG(ERROR, "magic number error");
       break;
@@ -144,14 +151,35 @@ void transfer(const string &source_file_name, const string &s3_server)
     obj_info.has_customize_info_ = false;
     obj_info.meta_info_.create_time_ = meta_info.file_info_.create_time_;
     obj_info.meta_info_.modify_time_ = meta_info.file_info_.modify_time_;
-    obj_info.meta_info_.max_tfs_file_size_ = -1; //TODO this is a tricky in server
+    obj_info.meta_info_.max_tfs_file_size_ = -5; //TODO this is a tricky in server
 
+    bool need = true;
+    if (obj_info.meta_info_.modify_time_ > time_point)
+    {
+      need = false;
+      TBSYS_LOG(INFO, "[time_point] |%s|%s| is no need write to kvmeta", bucket_name, object_name.c_str());
+    }
     FragMeta frag_it;
     int32_t cluster_id;
+    ret = tfs::client::KvMetaHelper::do_head_object(server_id, bucket_name,
+              object_name.c_str(), &obj_info_head, user_info_head);
+    bool exist = true;
+    if (EXIT_OBJECT_NOT_EXIST == ret)
+    {
+      exist = false;
+    }
+    else if (TFS_SUCCESS == ret)
+    {
+      TBSYS_LOG(ERROR, "[conflict] put object conflict |%s|%s|",bucket_name, object_name.c_str());
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "head object error,ret:%d",ret);
+    }
 
     while(1)
     {
-      fread(&magic_number, sizeof(MAGIC_NUMBER2), 1, s_fd); //magic number
+      fread(&magic_number, sizeof(MAGIC_NUMBER3), 1, s_fd); //magic number
       if (magic_number == MAGIC_NUMBER4) break;
       if (magic_number != MAGIC_NUMBER3)
       {
@@ -173,18 +201,20 @@ void transfer(const string &source_file_name, const string &s3_server)
       tfs_file_info.offset_ = frag_it.offset_;
 
       ret = TFS_SUCCESS;
-      ret = tfs::client::KvMetaHelper::do_put_object(server_id, bucket_name,
-          object_name.c_str(), obj_info, user_info);
-      if (TFS_SUCCESS != ret)
+      if (need && !exist)
       {
-        TBSYS_LOG(ERROR, "put object error");
-        TBSYS_LOG(INFO, "off_set %ld cluster_id %d lock_id %d file_id %ld size %d",
-            frag_it.offset_,
-            cluster_id,
-            frag_it.block_id_, frag_it.file_id_, frag_it.size_);
-      }
+        ret = tfs::client::KvMetaHelper::do_put_object(server_id, bucket_name,
+            object_name.c_str(), obj_info, user_info);
 
-      obj_info.meta_info_.max_tfs_file_size_ = 0;
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "put object error,ret:%d",ret);
+          TBSYS_LOG(INFO, "offset %ld cluster_id %d block_id %d file_id %ld size %d",
+              frag_it.offset_,
+              cluster_id,
+              frag_it.block_id_, frag_it.file_id_, frag_it.size_);
+        }
+      }
 
     }
 
@@ -205,7 +235,7 @@ int main(int argc, char *argv[])
   std::string source_file_name;
   std::string s3_server;
   std::string log_file_name;
-  while ((i = getopt(argc, argv, "f:d:l:")) != EOF)
+  while ((i = getopt(argc, argv, "f:d:t:l:")) != EOF)
   {
     switch (i)
     {
@@ -214,6 +244,9 @@ int main(int argc, char *argv[])
         break;
       case 'd':
         s3_server = optarg;
+        break;
+      case 't':
+        time_point = atol(optarg);
         break;
       case 'l':
         log_file_name = optarg;

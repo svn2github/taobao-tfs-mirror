@@ -227,10 +227,13 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        //tbutil::Time start = tbutil::Time::now();
         ObjectInfo object_info = req_put_object_msg->get_object_info();
         const UserInfo &user_info = req_put_object_msg->get_user_info();
         ret = meta_info_helper_.put_object(req_put_object_msg->get_bucket_name(),
             req_put_object_msg->get_file_name(), object_info, user_info);
+        //tbutil::Time end = tbutil::Time::now();
+        //TBSYS_LOG(INFO, "put_object cost: %"PRI64_PREFIX"d", (int64_t)(end - start).toMilliSeconds());
       }
 
       if (TFS_SUCCESS != ret)
