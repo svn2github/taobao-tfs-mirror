@@ -126,7 +126,7 @@ namespace tfs
         TfsRetType put_object(const char *bucket_name, const char *object_name,
             const char* local_file, const common::UserInfo &user_info);
         int64_t pwrite_object(const char *bucket_name, const char *object_name,
-            const void *buf, const int64_t object_offset, const int64_t length,
+            const void *buf, const int64_t offset, const int64_t length,
             const common::UserInfo &user_info);
         int64_t pread_object(const char *bucket_name, const char *object_name,
             void *buf, const int64_t offset, const int64_t length,

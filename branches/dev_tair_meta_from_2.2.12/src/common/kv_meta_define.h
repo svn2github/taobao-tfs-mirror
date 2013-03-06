@@ -16,6 +16,7 @@
 #ifndef TFS_COMMON_KV_META_DEFINE_H_
 #define TFS_COMMON_KV_META_DEFINE_H_
 
+#include <vector>
 #include <string>
 #include "define.h"
 #include "meta_define.h"

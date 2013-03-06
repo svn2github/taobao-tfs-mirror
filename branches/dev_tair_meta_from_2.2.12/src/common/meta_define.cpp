@@ -15,6 +15,7 @@
  */
 
 #include "meta_define.h"
+#include "stream.h"
 
 namespace tfs
 {

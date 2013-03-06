@@ -13,8 +13,10 @@
  *      - initial release
  *
  */
+
 #include "kv_meta_define.h"
 #include "serialization.h"
+#include "stream.h"
 
 namespace tfs
 {

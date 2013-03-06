@@ -1566,20 +1566,20 @@ namespace tfs
       }
 
       int64_t RcClientImpl::pwrite_object(const char *bucket_name, const char *object_name,
-          const void *buf, const int64_t object_offset, const int64_t length,
+          const void *buf, const int64_t offset, const int64_t length,
           const UserInfo &user_info)
       {
         TfsRetType ret = check_init_stat();
         if (TFS_SUCCESS == ret)
         {
           ret = kv_meta_client_->pwrite_object(bucket_name, object_name,
-              buf, object_offset, length, user_info);
+              buf, offset, length, user_info);
         }
         return ret;
       }
 
       int64_t RcClientImpl::pread_object(const char *bucket_name, const char *object_name,
-          void *buf, const int64_t object_offset, const int64_t length,
+          void *buf, const int64_t offset, const int64_t length,
           ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info,
           const UserInfo &user_info)
       {
@@ -1587,7 +1587,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = kv_meta_client_->pread_object(bucket_name, object_name,
-              buf, object_offset, length, object_meta_info, customize_info,
+              buf, offset, length, object_meta_info, customize_info,
               user_info);
         }
         return ret;

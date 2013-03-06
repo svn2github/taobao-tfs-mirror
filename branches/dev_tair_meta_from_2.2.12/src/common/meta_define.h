@@ -17,12 +17,12 @@
 #define TFS_COMMON_META_DEFINE_H_
 
 #include "define.h"
-#include "stream.h"
 
 namespace tfs
 {
   namespace common
   {
+    class Stream;
     struct FragMeta
     {
       FragMeta();
