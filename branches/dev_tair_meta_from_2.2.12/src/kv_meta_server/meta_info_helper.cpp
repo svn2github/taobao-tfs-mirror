@@ -647,7 +647,7 @@ namespace tfs
               &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
       }
 
-      int32_t limit = SCAN_LIMIT;
+      int32_t limit = MESS_LIMIT;
       int32_t i;
       int32_t first = 0;
       short scan_type = CMD_RANGE_ALL;
@@ -718,7 +718,7 @@ namespace tfs
         end_key_buff = NULL;
       }
       *still_have = false;
-      if (SCAN_LIMIT == result_size)
+      if (MESS_LIMIT == result_size)
       {
         *still_have = true;
       }
