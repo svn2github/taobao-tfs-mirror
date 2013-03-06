@@ -5,7 +5,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid $(MYSQL_LDFLAGS)
 
-bin_PROGRAMS = meta_transfer txt2new check_old_new
+bin_PROGRAMS = meta_transfer txt2new check_old_new sync_nginx2kv
 
 LDADD =	$(top_builddir)/src/new_client/.libs/libtfsclient.a \
 				$(top_builddir)/src/name_meta_server/libnamemetaserver.a \
@@ -18,4 +18,5 @@ LDADD =	$(top_builddir)/src/new_client/.libs/libtfsclient.a \
 meta_transfer_SOURCES = trans_meta.cpp
 txt2new_SOURCES = txt2newmeta.cpp
 check_old_new_SOURCES = check_old_new.cpp
+sync_nginx2kv_SOURCES = sync_nginx2kv.cpp
 
