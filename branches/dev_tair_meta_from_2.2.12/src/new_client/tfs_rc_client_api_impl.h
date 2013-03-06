@@ -94,9 +94,9 @@ namespace tfs
         int64_t save_buf(const char* source_data, const int32_t data_len,
             char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL);
 
-        int64_t fetch_file(const char* local_file,
+        int fetch_file(const char* local_file,
                        const char* file_name, const char* suffix = NULL);
-        int64_t fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+        int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix = NULL);
 
         bool is_hit_local_cache(const char* tfs_name);

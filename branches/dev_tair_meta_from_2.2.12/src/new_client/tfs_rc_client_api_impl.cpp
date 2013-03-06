@@ -759,6 +759,7 @@ namespace tfs
           ns_addr = get_ns_addr(file_name, RcClient::CREATE, ns_get_index++);
           if (ns_addr.empty())
           {
+            ret = TFS_ERROR;
             break;
           }
           ret = unlink(ns_addr.c_str(), file_name, suffix, action);
@@ -861,10 +862,9 @@ namespace tfs
       return saved_size;
     }
 
-    int64_t RcClientImpl::fetch_file(const char* local_file,
+    int RcClientImpl::fetch_file(const char* local_file,
                        const char* file_name, const char* suffix)
     {
-      int64_t fetched_size = -1;
       int ret = check_init_stat();
       if (TFS_SUCCESS == ret)
       {
@@ -875,18 +875,18 @@ namespace tfs
           ns_addr = get_ns_addr(file_name, RcClient::READ, ns_get_index++);
           if (ns_addr.empty())
           {
+            ret = TFS_ERROR;
             break;
           }
           ret = fetch_file(ns_addr.c_str(), local_file, file_name, suffix);
         } while(ret != TFS_SUCCESS);
       }
-      return TFS_SUCCESS != ret? ret: fetched_size;
+      return ret;
     }
 
-    int64_t RcClientImpl::fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+    int RcClientImpl::fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix)
     {
-      int64_t fetched_size = -1;
       int ret = check_init_stat();
       if (TFS_SUCCESS == ret)
       {
@@ -897,12 +897,13 @@ namespace tfs
           ns_addr = get_ns_addr(file_name, RcClient::READ, ns_get_index++);
           if (ns_addr.empty())
           {
+            ret = TFS_ERROR;
             break;
           }
           ret = fetch_buf(ns_addr.c_str(), ret_count, buf, count, file_name, suffix);
         } while(ret != TFS_SUCCESS);
       }
-      return TFS_SUCCESS != ret? ret: fetched_size;
+      return ret;
     }
 
 
