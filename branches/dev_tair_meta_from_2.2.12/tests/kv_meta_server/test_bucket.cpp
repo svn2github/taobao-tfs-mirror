@@ -90,21 +90,20 @@ TEST_F(BucketTest, test_del_with_no_object)
   user_info.owner_id_ = 222;
 
   ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 
   string file_name("objectname");
   ObjectInfo object_info;
-  int64_t offset = 0;
-  ret = test_meta_info_helper_->put_object(bucket_name, file_name, offset, 10, object_info, user_info);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, object_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo object_info1;
   bool still_have = false;
   ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 }
 
 TEST_F(BucketTest, test_del_with_object)
@@ -120,14 +119,13 @@ TEST_F(BucketTest, test_del_with_object)
   user_info.owner_id_ = 212;
 
   ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 
   //put obj
   string file_name("objectname");
   ObjectInfo object_info;
-  int64_t offset = 0;
-  ret = test_meta_info_helper_->put_object(bucket_name, file_name, offset, 10, object_info, user_info);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, object_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(ret, EXIT_DELETE_DIR_WITH_FILE_ERROR);
@@ -135,9 +133,9 @@ TEST_F(BucketTest, test_del_with_object)
   ObjectInfo object_info1;
   bool still_have = false;
   ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
   ret = test_meta_info_helper_->del_bucket(bucket_name);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 }
 
 TEST_F(BucketTest, test_with_prefix)
@@ -225,14 +223,13 @@ TEST_F(BucketTest, test_get)
   user_info.owner_id_ = 212;
 
   ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 
   //put obj
   string file_name("objectname/aa/");
   ObjectInfo object_info;
-  int64_t offset = 0;
-  ret = test_meta_info_helper_->put_object(bucket_name, file_name, offset, 10, object_info, user_info);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, object_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 
   // get bucket -> list obj
   string prefix("objectname/aa");
@@ -245,7 +242,7 @@ TEST_F(BucketTest, test_get)
   int8_t is_truncated = -1;
 
   ret = test_meta_info_helper_->get_bucket(bucket_name, prefix, start_key, delimiter, limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
   EXPECT_EQ(0, is_truncated);
   EXPECT_EQ(1, static_cast<int32_t>(s_common_prefix.size()));
   EXPECT_EQ(0, static_cast<int32_t>(v_object_name.size()));
@@ -254,9 +251,9 @@ TEST_F(BucketTest, test_get)
   ObjectInfo object_info1;
   bool still_have = false;
   ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
   ret = test_meta_info_helper_->del_bucket(bucket_name);
-  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 }
 
 int main(int argc, char* argv[])

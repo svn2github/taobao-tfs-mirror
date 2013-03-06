@@ -35,14 +35,19 @@ namespace tfs
       impl_ = NULL;
     }
 
-    int KvMetaClient::initialize(const char *kv_rs_addr, const char *ns_addr)
+    int KvMetaClient::initialize(const char *rs_addr)
     {
-      return impl_->initialize(kv_rs_addr, ns_addr);
+      return impl_->initialize(rs_addr);
     }
 
-    int KvMetaClient::initialize(const int64_t kv_rs_addr, const char *ns_addr)
+    int KvMetaClient::initialize(const uint64_t rs_addr)
     {
-      return impl_->initialize(kv_rs_addr, ns_addr);
+      return impl_->initialize(rs_addr);
+    }
+
+    void KvMetaClient::set_tfs_cluster_manager(TfsClusterManager *tfs_cluster_manager)
+    {
+      impl_->set_tfs_cluster_manager(tfs_cluster_manager);
     }
 
     TfsRetType KvMetaClient::put_bucket(const char *bucket_name,
@@ -74,28 +79,29 @@ namespace tfs
     }
 
 
-    TfsRetType KvMetaClient::put_object(const char *bucket_name, const char *object_name,
-        const char* local_file, const common::UserInfo &user_info)
+    TfsRetType KvMetaClient::put_object(const char *bucket_name,
+        const char *object_name, const char* local_file,
+        const common::UserInfo &user_info)
     {
       return impl_->put_object(bucket_name, object_name, local_file, user_info);
     }
 
-    //pwrite
     int64_t KvMetaClient::pwrite_object(const char *bucket_name,
-        const char *object_name, const void *buf, const int64_t object_offset,
+        const char *object_name, const void *buf, const int64_t offset,
         const int64_t length, const common::UserInfo &user_info)
     {
-      return impl_->pwrite_object(bucket_name, object_name, buf, object_offset,
+      return impl_->pwrite_object(bucket_name, object_name, buf, offset,
           length, user_info);
     }
 
-    //pread
     int64_t KvMetaClient::pread_object(const char *bucket_name,
-        const char *object_name, void *buf, const int64_t object_offset,
-        const int64_t length, const common::UserInfo &user_info)
+        const char *object_name, void *buf, const int64_t offset,
+        const int64_t length, common::ObjectMetaInfo *object_meta_info,
+        common::CustomizeInfo *customize_info,
+        const common::UserInfo &user_info)
     {
-      return impl_->pread_object(bucket_name, object_name, buf, object_offset,
-          length, NULL, NULL, user_info);
+      return impl_->pread_object(bucket_name, object_name, buf, offset,
+          length, object_meta_info, customize_info, user_info);
     }
 
     TfsRetType KvMetaClient::get_object(const char *bucket_name,
@@ -118,7 +124,6 @@ namespace tfs
     {
       return impl_->head_object(bucket_name, object_name, object_info, user_info);
     }
-
 
   }
 }

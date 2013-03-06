@@ -45,6 +45,11 @@ namespace tfs
       return impl_->initialize(rs_addr);
     }
 
+    void NameMetaClient::set_tfs_cluster_manager(TfsClusterManager *tfs_cluster_manager)
+    {
+      impl_->set_tfs_cluster_manager(tfs_cluster_manager);
+    }
+
     TfsRetType NameMetaClient::create_dir(const int64_t app_id, const int64_t uid,
         const char* dir_path)
     {
@@ -69,10 +74,10 @@ namespace tfs
       return impl_->rm_dir(app_id, uid, dir_path);
     }
 
-    TfsRetType NameMetaClient::rm_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
+    TfsRetType NameMetaClient::rm_file(const int64_t app_id, const int64_t uid,
         const char* file_path)
     {
-      return impl_->rm_file(ns_addr, app_id, uid, file_path);
+      return impl_->rm_file(app_id, uid, file_path);
     }
 
     TfsRetType NameMetaClient::mv_dir(const int64_t app_id, const int64_t uid,
@@ -117,34 +122,34 @@ namespace tfs
       return impl_->get_cluster_id(app_id, uid, path);
     }
 
-    int64_t NameMetaClient::read(const char* ns_addr, const int64_t app_id, const int64_t uid,
+    int64_t NameMetaClient::read(const int64_t app_id, const int64_t uid,
         const char* file_path, void* buffer, int64_t offset, int64_t length)
     {
-      return impl_->read(ns_addr, app_id, uid, file_path, buffer, offset, length);
+      return impl_->read(app_id, uid, file_path, buffer, offset, length);
     }
 
-    int64_t NameMetaClient::write(const char* ns_addr, const int64_t app_id, const int64_t uid,
+    int64_t NameMetaClient::write(const int64_t app_id, const int64_t uid,
         const char* file_path, const void* buffer, const int64_t length)
     {
-      return impl_->write(ns_addr, app_id, uid, file_path, buffer, length);
+      return impl_->write(app_id, uid, file_path, buffer, length);
     }
 
-    int64_t NameMetaClient::write(const char* ns_addr, const int64_t app_id, const int64_t uid,
+    int64_t NameMetaClient::write(const int64_t app_id, const int64_t uid,
         const char* file_path, const void* buffer, const int64_t offset, const int64_t length)
     {
-      return impl_->write(ns_addr, app_id, uid, file_path, buffer, offset, length);
+      return impl_->write(app_id, uid, file_path, buffer, offset, length);
     }
 
-    int64_t NameMetaClient::save_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
+    int64_t NameMetaClient::save_file(const int64_t app_id, const int64_t uid,
         const char* local_file, const char* tfs_name)
     {
-      return impl_->save_file(ns_addr, app_id, uid, local_file, tfs_name);
+      return impl_->save_file(app_id, uid, local_file, tfs_name);
     }
 
-    int64_t NameMetaClient::fetch_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
+    int64_t NameMetaClient::fetch_file(const int64_t app_id, const int64_t uid,
         const char* local_file, const char* tfs_name)
     {
-      return impl_->fetch_file(ns_addr, app_id, uid, local_file, tfs_name);
+      return impl_->fetch_file(app_id, uid, local_file, tfs_name);
     }
   }
 }

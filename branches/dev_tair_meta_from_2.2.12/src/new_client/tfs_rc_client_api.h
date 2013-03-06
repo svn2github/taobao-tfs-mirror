@@ -18,6 +18,7 @@
 #include <string>
 #include "common/define.h"
 #include "common/meta_server_define.h"
+#include "common/kv_meta_define.h"
 
 namespace tfs
 {

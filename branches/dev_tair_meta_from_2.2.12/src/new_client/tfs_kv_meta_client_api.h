@@ -26,14 +26,16 @@ namespace tfs
   {
     typedef int TfsRetType;
     class KvMetaClientImpl;
+    class TfsClusterManager;
     class KvMetaClient
     {
       public:
         KvMetaClient();
         ~KvMetaClient();
 
-        int initialize(const char *kv_rs_addr, const char *ns_addr);
-        int initialize(const int64_t kv_rs_addr, const char *ns_addr);
+        int initialize(const char *rs_addr);
+        int initialize(const uint64_t rs_addr);
+        void set_tfs_cluster_manager(TfsClusterManager *tfs_cluster_manager);
 
         TfsRetType put_bucket(const char *bucket_name,
             const common::UserInfo &user_info);
@@ -48,23 +50,22 @@ namespace tfs
             common::BucketMetaInfo *bucket_meta_info,
             const common::UserInfo &user_info);
 
-        TfsRetType put_object(const char *bucket_name, const char *object_name,
-            const char* local_file, const common::UserInfo &user_info);
-
-        //pwrite
-        int64_t pwrite_object(const char *bucket_name, const char *object_name,
-            const void *buf, const int64_t object_offset, const int64_t length,
+        TfsRetType put_object(const char *bucket_name,
+            const char *object_name, const char* local_file,
             const common::UserInfo &user_info);
-
-        //pread
-        int64_t pread_object(const char *bucket_name, const char *object_name,
-            void *buf, const int64_t object_offset, const int64_t length,
+        int64_t pwrite_object(const char *bucket_name,
+            const char *object_name, const void *buf,
+            const int64_t offset, const int64_t length,
             const common::UserInfo &user_info);
-
-        TfsRetType get_object(const char *bucket_name, const char *object_name,
-            const char* local_file, const common::UserInfo &user_info);
-        TfsRetType del_object(const char *bucket_name, const char *object_name,
+        int64_t pread_object(const char *bucket_name,
+            const char *object_name, void *buf, const int64_t offset,
+            const int64_t length, common::ObjectMetaInfo *object_meta_info,
+            common::CustomizeInfo *customize_info, const common::UserInfo &user_info);
+        TfsRetType get_object(const char *bucket_name,
+            const char *object_name, const char* local_file,
             const common::UserInfo &user_info);
+        TfsRetType del_object(const char *bucket_name,
+            const char *object_name, const common::UserInfo &user_info);
         TfsRetType head_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info, const common::UserInfo &user_info);
 

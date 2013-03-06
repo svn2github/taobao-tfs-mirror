@@ -22,6 +22,7 @@
 #include "common/kv_rts_define.h"
 #include "tfs_meta_manager.h"
 #include "tfs_kv_meta_client_api.h"
+#include "tfs_cluster_manager.h"
 
 namespace tfs
 {
@@ -33,11 +34,15 @@ namespace tfs
         KvMetaClientImpl();
         ~KvMetaClientImpl();
 
-        int initialize(const char *rs_addr, const char *ns_addr);
-        int initialize(const int64_t rs_addr, const char *ns_addr);
+        int initialize(const char *rs_addr);
+        int initialize(const uint64_t rs_addr);
         bool need_update_table(const int ret_status);
         int update_table_from_rootserver();
         uint64_t get_meta_server_id();
+        void set_tfs_cluster_manager(TfsClusterManager *tfs_cluster_manager)
+        {
+          tfs_cluster_manager_ = tfs_cluster_manager;
+        }
 
         TfsRetType put_bucket(const char *bucket_name, const common::UserInfo &user_info);
         TfsRetType get_bucket(const char *bucket_name, const char *prefix,
@@ -50,18 +55,17 @@ namespace tfs
             common::BucketMetaInfo *bucket_meta_info, const common::UserInfo &user_info);
 
         int64_t pwrite_object(const char *bucket_name, const char *object_name,
-            const void *buffer, int64_t offset, int64_t length, const common::UserInfo &user_info);
+            const void *buffer, int64_t offset, int64_t length,
+            const common::UserInfo &user_info);
         int64_t pread_object(const char *bucket_name, const char *object_name,
             void *buffer, const int64_t offset, int64_t length,
             common::ObjectMetaInfo *object_meta_info, common::CustomizeInfo *customize_info,
             const common::UserInfo &user_info);
-
         TfsRetType put_object(const char *bucket_name, const char *object_name,
             const char* local_file, const common::UserInfo &user_info);
         TfsRetType get_object(const char *bucket_name, const char *object_name,
             const char* local_file, common::ObjectMetaInfo *object_meta_info,
             common::CustomizeInfo *customize_info, const common::UserInfo &user_info);
-
         TfsRetType del_object(const char *bucket_name, const char *object_name,
             const common::UserInfo &user_info);
         TfsRetType head_object(const char *bucket_name, const char *object_name,
@@ -78,7 +82,6 @@ namespace tfs
         int do_del_bucket(const char *bucket_name, const common::UserInfo &user_info);
         int do_head_bucket(const char *bucket_name, common::BucketMetaInfo *bucket_meta_info,
             const common::UserInfo &user_info);
-
 
         int do_put_object(const char *bucket_name, const char *object_name,
             const common::ObjectInfo &object_info, const common::UserInfo &user_info);
@@ -101,10 +104,8 @@ namespace tfs
         int64_t read_data(const char* ns_addr,
             const std::vector<common::FragMeta> &v_frag_meta,
             void *buffer, int64_t offset, int64_t length);
-        int unlink_file(const std::vector<common::FragMeta> &v_frag_meta,
-            const char *ns_addr, int32_t cluster_id);
-        int del_file(const std::vector< std::pair <common::FragMeta, int32_t> > &v_frag_pair,
-            const char* ns_addr);
+        int unlink_file(const int32_t cluster_id,
+            const std::vector<common::FragMeta> &v_frag_meta);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClientImpl);
@@ -112,10 +113,10 @@ namespace tfs
         uint64_t rs_id_;
         uint32_t access_count_;
         common::KvMetaTable meta_table_;
-        std::string ns_addr_;
         common::BasePacketFactory* packet_factory_;
         common::BasePacketStreamer* packet_streamer_;
         TfsMetaManager tfs_meta_manager_;
+        TfsClusterManager *tfs_cluster_manager_;
     };
   }
 }

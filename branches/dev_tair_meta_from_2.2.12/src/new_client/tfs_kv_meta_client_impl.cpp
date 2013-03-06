@@ -42,29 +42,28 @@ namespace tfs
       tbsys::gDelete(packet_streamer_);
     }
 
-    int KvMetaClientImpl::initialize(const char *rs_addr, const char *ns_addr)
+    int KvMetaClientImpl::initialize(const char *rs_addr)
     {
       int ret = TFS_SUCCESS;
-      if (NULL == rs_addr || NULL == ns_addr)
+      if (NULL == rs_addr)
       {
-        TBSYS_LOG(WARN, "rs_addr or ns_addr is null");
+        TBSYS_LOG(WARN, "rs_addr is null");
         ret = EXIT_INVALID_ARGU_ERROR;
       }
       else
       {
-        ret = initialize(Func::get_host_ip(rs_addr), ns_addr);
+        ret = initialize(Func::get_host_ip(rs_addr));
       }
       return ret;
     }
 
-    int KvMetaClientImpl::initialize(const int64_t rs_addr, const char *ns_addr)
+    int KvMetaClientImpl::initialize(const uint64_t rs_addr)
     {
       int ret = TFS_SUCCESS;
       ret = NewClientManager::get_instance().initialize(packet_factory_, packet_streamer_);
       if (TFS_SUCCESS == ret)
       {
         rs_id_ = rs_addr;
-        ns_addr_ = ns_addr;
         ret = update_table_from_rootserver();
       }
 
@@ -340,16 +339,30 @@ namespace tfs
       return (TFS_SUCCESS == ret) ? (length - left_length) : ret;
     }
 
-    int KvMetaClientImpl::unlink_file(const vector<FragMeta> &v_frag_meta, const char* ns_addr, int32_t cluster_id)
+    int KvMetaClientImpl::unlink_file(const int32_t cluster_id,
+        const vector<FragMeta> &v_frag_meta)
     {
       int ret = TFS_SUCCESS;
       int tmp_ret = TFS_ERROR;
       int64_t file_size = 0;
+      string ns_addr;
+
+      if (v_frag_meta.size() > 0)
+      {
+        uint32_t block_id = v_frag_meta.front().block_id_;
+        ns_addr = tfs_cluster_manager_->get_unlink_ns_addr_ex(cluster_id, block_id, 0);
+        if (ns_addr.empty())
+        {
+          TBSYS_LOG(ERROR, "select unlink ns failed");
+          ret = TFS_ERROR;
+        }
+      }
+
       vector<FragMeta>::const_iterator iter = v_frag_meta.begin();
       for(; iter != v_frag_meta.end(); iter++)
       {
-        FSName fsname(iter->block_id_, iter->file_id_, cluster_id);
-        if ((tmp_ret = TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, ns_addr)) != TFS_SUCCESS)
+        FSName fsname(iter->block_id_, iter->file_id_, 0);
+        if ((tmp_ret = TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, ns_addr.c_str())) != TFS_SUCCESS)
         {
           ret = TFS_ERROR;
           TBSYS_LOG(ERROR, "unlink tfs file failed, file: %s, ret: %d", fsname.get_name(), tmp_ret);
@@ -358,9 +371,9 @@ namespace tfs
       return ret;
     }
 
-
-    int64_t KvMetaClientImpl::pwrite_object(const char *bucket_name, const char *object_name,
-        const void *buffer, int64_t offset, int64_t length, const UserInfo &user_info)
+    int64_t KvMetaClientImpl::pwrite_object(const char *bucket_name,
+        const char *object_name, const void *buffer, int64_t offset,
+        int64_t length, const UserInfo &user_info)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
@@ -375,90 +388,111 @@ namespace tfs
       }
       else
       {
-        int64_t left_length = length;
-        int64_t cur_offset = offset;
-        int64_t cur_pos = 0;
-        // TODO cluster id
-        int32_t cluster_id = tfs_meta_manager_.get_cluster_id(ns_addr_.c_str());
-        do
+        int ns_get_index = 0;
+        string ns_addr;
+        ns_addr = tfs_cluster_manager_->get_write_ns_addr(ns_get_index++);
+        if (ns_addr.empty())
         {
-          // write MAX_BATCH_DATA_LENGTH(8M) to tfs cluster
-          int64_t write_length = min(left_length, MAX_BATCH_DATA_LENGTH);
+          TBSYS_LOG(ERROR, "select write ns failed");
+        }
+        else
+        {
+          int32_t cluster_id = tfs_meta_manager_.get_cluster_id(ns_addr.c_str());
+          int64_t left_length = length;
+          int64_t cur_offset = offset;
+          int64_t cur_pos = 0;
           vector<FragMeta> v_frag_meta;
-          int64_t real_write_length = write_data(ns_addr_.c_str(), reinterpret_cast<const char*>(buffer) + cur_pos,
-              cur_offset, write_length, &v_frag_meta);
-          if (real_write_length != write_length)
+          do
           {
-            TBSYS_LOG(ERROR, "write tfs data error, cur_pos: %"PRI64_PREFIX"d"
-                "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d)",
-                cur_pos, write_length, real_write_length);
-            break;
-          }
-          TBSYS_LOG(DEBUG, "write tfs data, cluster_id: %d, cur_offset: %"PRI64_PREFIX"d, write_length: %"PRI64_PREFIX"d",
-              cluster_id, cur_offset, write_length);
+            // write MAX_BATCH_DATA_LENGTH(8M) to tfs cluster
+            int64_t write_length = min(left_length, MAX_BATCH_DATA_LENGTH);
+            v_frag_meta.clear();
 
-          vector<FragMeta>::iterator iter = v_frag_meta.begin();
-          for (; v_frag_meta.end() != iter; iter++)
-          {
-            ObjectInfo object_info;
-            if (0 == iter->offset_)
+            int64_t real_write_length = write_data(ns_addr.c_str(),
+                reinterpret_cast<const char*>(buffer) + cur_pos,
+                cur_offset, write_length, &v_frag_meta);
+            if (real_write_length != write_length)
             {
-              object_info.has_meta_info_ = true;
-              object_info.has_customize_info_ = true;
-              object_info.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
-              TBSYS_LOG(DEBUG, "first object info, will put meta info.");
-              object_info.meta_info_.dump();
+              TBSYS_LOG(ERROR, "write ns %s failed error, cur_pos: %"PRI64_PREFIX"d"
+                  "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d)",
+                  ns_addr.c_str(), cur_pos, write_length, real_write_length);
+              ns_addr = tfs_cluster_manager_->get_write_ns_addr(ns_get_index++);
+              if (ns_addr.empty())
+              {
+                TBSYS_LOG(ERROR, "select write ns failed");
+                break;
+              }
+              cluster_id = tfs_meta_manager_.get_cluster_id(ns_addr.c_str());
+              continue;
             }
-            else
-            {
-              object_info.has_meta_info_ = false;
-              object_info.has_customize_info_ = false;
-            }
-            TfsFileInfo tmp_tfs_info;
-            tmp_tfs_info.offset_ = iter->offset_;
-            tmp_tfs_info.block_id_ = iter->block_id_;
-            tmp_tfs_info.file_id_ = iter->file_id_;
-            tmp_tfs_info.cluster_id_ = cluster_id;
-            tmp_tfs_info.file_size_ = iter->size_;
-            object_info.v_tfs_file_info_.push_back(tmp_tfs_info);
 
-            ret = do_put_object(bucket_name, object_name, object_info, user_info);
+            TBSYS_LOG(DEBUG, "write tfs data, cluster_id: %d, cur_offset: %"PRI64_PREFIX"d, write_length: %"PRI64_PREFIX"d",
+                cluster_id, cur_offset, write_length);
+
+            vector<FragMeta>::iterator iter = v_frag_meta.begin();
+            for (; v_frag_meta.end() != iter; iter++)
+            {
+              ObjectInfo object_info;
+              if (0 == iter->offset_)
+              {
+                object_info.has_meta_info_ = true;
+                object_info.has_customize_info_ = true;
+                object_info.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
+                TBSYS_LOG(DEBUG, "first object info, will put meta info.");
+                object_info.meta_info_.dump();
+              }
+              else
+              {
+                object_info.has_meta_info_ = false;
+                object_info.has_customize_info_ = false;
+              }
+              TfsFileInfo tmp_tfs_info;
+              tmp_tfs_info.offset_ = iter->offset_;
+              tmp_tfs_info.block_id_ = iter->block_id_;
+              tmp_tfs_info.file_id_ = iter->file_id_;
+              tmp_tfs_info.cluster_id_ = cluster_id;
+              tmp_tfs_info.file_size_ = iter->size_;
+              object_info.v_tfs_file_info_.push_back(tmp_tfs_info);
+
+              ret = do_put_object(bucket_name, object_name, object_info, user_info);
+              if (TFS_SUCCESS != ret)
+              {
+                TBSYS_LOG(ERROR, "do put object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %d",
+                    bucket_name, object_name, iter->offset_, ret);
+                if (TFS_ERROR == ret)
+                {
+                  ret = EXIT_GENERAL_ERROR;
+                }
+                break;
+              }
+            }
+
             if (TFS_SUCCESS != ret)
             {
-              TBSYS_LOG(ERROR, "do put object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %d",
-                  bucket_name, object_name, iter->offset_, ret);
-              if (TFS_ERROR == ret)
-              {
-                ret = EXIT_GENERAL_ERROR;
-              }
+              unlink_file(cluster_id, v_frag_meta);
               break;
             }
-          }
 
-          if (TFS_SUCCESS != ret)
+            left_length -= real_write_length;
+            cur_pos += real_write_length;
+            cur_offset += real_write_length;
+          }
+          while (left_length > 0 && TFS_SUCCESS == ret);
+
+          if (TFS_SUCCESS == ret)
           {
-            unlink_file(v_frag_meta, ns_addr_.c_str(), cluster_id);
-            break;
+            ret = length - left_length;
           }
-
-          left_length -= real_write_length;
-          cur_pos += real_write_length;
-          cur_offset += real_write_length;
-        }
-        while (left_length > 0 && TFS_SUCCESS == ret);
-
-        if (TFS_SUCCESS == ret)
-        {
-          ret = length - left_length;
         }
       }
 
       return ret;
     }
 
-    int64_t KvMetaClientImpl::pread_object(const char *bucket_name, const char *object_name,
-        void *buffer, const int64_t offset, int64_t length,
-        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info, const UserInfo &user_info)
+    int64_t KvMetaClientImpl::pread_object(const char *bucket_name,
+        const char *object_name, void *buffer, const int64_t offset,
+        int64_t length, ObjectMetaInfo *object_meta_info,
+        CustomizeInfo *customize_info, const UserInfo &user_info)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
@@ -481,13 +515,19 @@ namespace tfs
         int64_t cur_length = 0;
         int64_t cur_pos = 0;
 
+        int32_t cluster_id = 0;
+        int ns_get_index = 0;
+        string ns_addr;
+
         do
         {
           // get object
           ObjectInfo object_info;
-          ret = do_get_object(bucket_name, object_name, cur_offset, left_length, &object_info, &still_have, user_info);
+          ret = do_get_object(bucket_name, object_name, cur_offset,
+              left_length, &object_info, &still_have, user_info);
           TBSYS_LOG(DEBUG, "bucket_name %s object_name %s "
-          "cur_offset %ld left_length %ld still_have %d", bucket_name, object_name, cur_offset, left_length, still_have);
+              "cur_offset %ld left_length %ld still_have %d",
+              bucket_name, object_name, cur_offset, left_length, still_have);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(ERROR, "do get object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %d",
@@ -503,7 +543,7 @@ namespace tfs
             if (!object_info.has_meta_info_ || !object_info.has_customize_info_)
             {
               TBSYS_LOG(WARN, "invalid object, no meta info or customize info, bucket: %s, object: %s",
-                        bucket_name, object_name);
+                  bucket_name, object_name);
               //ret = EXIT_INVALID_OBJECT;
               //break;
             }
@@ -517,31 +557,60 @@ namespace tfs
               *customize_info = object_info.customize_info_;
             }
           }
+
+          TBSYS_LOG(DEBUG, "vector size ================= is: %d", object_info.v_tfs_file_info_.size());
+          if (object_info.v_tfs_file_info_.empty())
+          {
+            break;
+          }
+
           vector<FragMeta> v_frag_meta;
           size_t i = 0;
-          TBSYS_LOG(DEBUG, "vector size ================= is: %d",object_info.v_tfs_file_info_.size());
-            for(; i < object_info.v_tfs_file_info_.size(); ++i)
-            {
-              FragMeta frag_meta(object_info.v_tfs_file_info_[i].block_id_,
-                object_info.v_tfs_file_info_[i].file_id_,
-                object_info.v_tfs_file_info_[i].offset_,
-                object_info.v_tfs_file_info_[i].file_size_);
-              v_frag_meta.push_back(frag_meta);
-            }
+          for(; i < object_info.v_tfs_file_info_.size(); ++i)
+          {
+            FragMeta frag_meta(object_info.v_tfs_file_info_[i].block_id_,
+              object_info.v_tfs_file_info_[i].file_id_,
+              object_info.v_tfs_file_info_[i].offset_,
+              object_info.v_tfs_file_info_[i].file_size_);
+            v_frag_meta.push_back(frag_meta);
+          }
 
           cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_), left_length);
 
-          // read tfs
-          read_length = read_data(ns_addr_.c_str(), v_frag_meta,
-              reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length);
-          // tfs error occurs
-          if (read_length < 0)
+          // TODO: deal tfs_file_info with different cluster id
+          cluster_id = object_info.v_tfs_file_info_.front().cluster_id_;
+          if (ns_addr.empty())
           {
-            TBSYS_LOG(ERROR, "read data from tfs failed, read_length: %"PRI64_PREFIX"d", read_length);
-            ret = read_length;
-            //break;
+            ns_addr = tfs_cluster_manager_->get_read_ns_addr_ex(cluster_id, ns_get_index++);
+            if (ns_addr.empty())
+            {
+              TBSYS_LOG(ERROR, "select read ns failed");
+              ret = EXIT_GENERAL_ERROR;
+              break;
+            }
           }
-          // one tfs file read data error, should break
+
+          do
+          {
+            // read tfs
+            read_length = read_data(ns_addr.c_str(), v_frag_meta,
+                reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length);
+            if (read_length < 0)
+            {
+              TBSYS_LOG(ERROR, "read data from ns %s failed, read_length: %"PRI64_PREFIX"d",
+                  ns_addr.c_str(), read_length);
+              ns_addr = tfs_cluster_manager_->get_read_ns_addr_ex(cluster_id, ns_get_index++);
+              if (ns_addr.empty())
+              {
+                TBSYS_LOG(ERROR, "select read ns failed");
+                ret = read_length;
+                read_length = 0;
+                break;
+              }
+            }
+          }
+          while (read_length < 0);
+
           if (0 == read_length)
           {
             break;
@@ -563,8 +632,8 @@ namespace tfs
       return ret;
     }
 
-    TfsRetType KvMetaClientImpl::put_object(const char *bucket_name, const char *object_name,
-        const char* local_file, const UserInfo &user_info)
+    TfsRetType KvMetaClientImpl::put_object(const char *bucket_name,
+        const char *object_name, const char* local_file, const UserInfo &user_info)
     {
       TfsRetType ret = TFS_SUCCESS;
       int fd = -1;
@@ -631,9 +700,10 @@ namespace tfs
       return ret;
     }
 
-    TfsRetType KvMetaClientImpl::get_object(const char *bucket_name, const char *object_name,
-        const char* local_file, ObjectMetaInfo *object_meta_info,
-        CustomizeInfo *customize_info, const UserInfo &user_info)
+    TfsRetType KvMetaClientImpl::get_object(const char *bucket_name,
+        const char *object_name, const char* local_file,
+        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info,
+        const UserInfo &user_info)
     {
       TfsRetType ret = TFS_SUCCESS;
       int fd = -1;
@@ -693,7 +763,8 @@ namespace tfs
       return ret;
     }
 
-    TfsRetType KvMetaClientImpl::del_object(const char *bucket_name, const char *object_name, const UserInfo &user_info)
+    TfsRetType KvMetaClientImpl::del_object(const char *bucket_name,
+        const char *object_name, const UserInfo &user_info)
     {
       TfsRetType ret = TFS_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
@@ -703,8 +774,7 @@ namespace tfs
       }
       else
       {
-        std::vector< std::pair<FragMeta,int32_t> > v_frag_pair;
-        pair<FragMeta,int32_t> tmp_frag_pair;
+        vector<FragMeta> v_frag_meta;
         bool still_have = false;
         do
         {
@@ -712,26 +782,27 @@ namespace tfs
           still_have = false;
           ret = do_del_object(bucket_name, object_name, &object_info, &still_have, user_info);
           TBSYS_LOG(DEBUG, "bucket_name %s object_name %s "
-                    " still_have %d", bucket_name, object_name, still_have);
-          TBSYS_LOG(DEBUG, "del vector size ================= is: %d",object_info.v_tfs_file_info_.size());
-          v_frag_pair.clear();
+              " still_have %d", bucket_name, object_name, still_have);
+          TBSYS_LOG(DEBUG, "del vector size ================= is: %d",
+              object_info.v_tfs_file_info_.size());
 
+          v_frag_meta.clear();
           for(size_t i = 0; i < object_info.v_tfs_file_info_.size(); ++i)
           {
             FragMeta frag_meta(object_info.v_tfs_file_info_[i].block_id_,
                 object_info.v_tfs_file_info_[i].file_id_,
                 object_info.v_tfs_file_info_[i].offset_,
                 object_info.v_tfs_file_info_[i].file_size_);
-            tmp_frag_pair = make_pair(frag_meta, object_info.v_tfs_file_info_[i].cluster_id_);
-            v_frag_pair.push_back(tmp_frag_pair);
+            v_frag_meta.push_back(frag_meta);
           }
 
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS == ret && v_frag_meta.size() > 0)
           {
-            ret = del_file(v_frag_pair, ns_addr_.c_str());
+            ret = unlink_file(object_info.v_tfs_file_info_.front().cluster_id_,
+                v_frag_meta);
           }
 
-        }while(still_have);
+        } while(still_have);
 
         if (TFS_SUCCESS != ret)
         {
@@ -1028,23 +1099,6 @@ namespace tfs
       return is_valid;
     }
 
-    int KvMetaClientImpl::del_file(const std::vector< std::pair < common::FragMeta,int32_t > > &v_frag_pair, const char* ns_addr)
-    {
-      int ret = TFS_SUCCESS;
-
-      int64_t file_size = 0;
-      std::vector< std::pair<FragMeta,int32_t> >::const_iterator iter = v_frag_pair.begin();
-      for(; iter != v_frag_pair.end(); iter++)
-      {
-        FSName fsname(iter->first.block_id_, iter->first.file_id_, iter->second);
-        if ( TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, ns_addr) != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "unlink tfs file failed, file: %s, ret: %d", fsname.get_name(), ret);
-          ret = TFS_ERROR;
-        }
-      }
-      return ret;
-    }
   }
 }
 

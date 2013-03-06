@@ -43,8 +43,6 @@
 #include "new_client/tfs_client_impl.h"
 #include "new_client/tfs_rc_client_api_impl.h"
 #include "new_client/tfs_meta_client_api_impl.h"
-#include "new_client/tfs_kv_meta_client_impl.h"
-
 
 
 using namespace std;
@@ -54,7 +52,6 @@ using namespace tfs::message;
 using namespace tfs::tools;
 
 static TfsClientImpl* g_tfs_client = NULL;
-static KvMetaClientImpl g_kv_meta_client;
 static STR_FUNC_MAP g_cmd_map;
 static int64_t app_id = 1;
 static int64_t uid = 1234;
@@ -233,26 +230,20 @@ int main(int argc, char* argv[])
   gstreamer.set_packet_factory(&gfactory);
   NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
 
-  if (rc_addr != NULL)
+  if (krs_addr != NULL)
   {
-    strcpy(app_key, default_app_key);
-    g_meta_type = META_NAME;
-  }
-  else if (krs_addr != NULL)
-  {
-    if (nsip == NULL)
+    if (rc_addr == NULL)
     {
       usage(argv[0]);
       return TFS_ERROR;
     }
+    strcpy(app_key, default_app_key);
     g_meta_type = META_KV;
-
-    ret = g_kv_meta_client.initialize(krs_addr, nsip);
-    if (TFS_SUCCESS != ret)
-    {
-      TBSYS_LOG(DEBUG, "kv meta client init failed, ret: %d", ret);
-      return ret;
-    }
+  }
+  else if (rc_addr != NULL)
+  {
+    strcpy(app_key, default_app_key);
+    g_meta_type = META_NAME;
   }
   else if (nsip != NULL)
   {
@@ -307,7 +298,7 @@ static void usage(const char* name)
   fprintf(stderr,
           "Usage: a) %s -s nsip [-n] [-i] [-h] raw tfs client interface(without rc). \n"
           "       b) %s -r rcip [-n] [-i] [-h] name meta client interface(with rc). \n"
-          "       c) %s -k krsip -s nsip [-n] [-i] [-h] kv meta client interface. \n"
+          "       c) %s -k krsip -r rcip [-n] [-i] [-h] kv meta client interface. \n"
           "       -s nameserver ip port\n"
           "       -r rcserver ip port\n"
           "       -k kvrootserver ip port\n"
@@ -1861,7 +1852,17 @@ int cmd_put_bucket(const VSTRING& param)
   UserInfo user_info;
   user_info.owner_id_ = owner_id;
 
-  int ret = g_kv_meta_client.put_bucket(bucket_name, user_info);
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.put_bucket(bucket_name, user_info);
+  }
   if (TFS_SUCCESS == ret)
   {
     ToolUtil::print_info(ret, "put bucket %s owner_id : %ld", bucket_name, owner_id);
@@ -1908,8 +1909,18 @@ int cmd_get_bucket(const VSTRING& param)
   int8_t is_truncated = 0;
   UserInfo user_info;
 
-  ret = g_kv_meta_client.get_bucket(bucket_name, prefix, start_key, delimiter, limit,
-      &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated, user_info);
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  ret = impl.initialize(rc_addr, app_key, app_ip);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.get_bucket(bucket_name, prefix, start_key, delimiter, limit,
+        &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated, user_info);
+  }
 
   if (TFS_SUCCESS == ret)
   {
@@ -1939,7 +1950,20 @@ int cmd_del_bucket(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   UserInfo user_info;
-  int ret = g_kv_meta_client.del_bucket(bucket_name, user_info);
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.del_bucket(bucket_name, user_info);
+  }
+
   ToolUtil::print_info(ret, "del bucket %s", bucket_name);
 
   return ret;
@@ -1951,15 +1975,27 @@ int cmd_head_bucket(const VSTRING& param)
 
   BucketMetaInfo bucket_meta_info;
   UserInfo user_info;
-  int ret = g_kv_meta_client.head_bucket(bucket_name, &bucket_meta_info, user_info);
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.head_bucket(bucket_name, &bucket_meta_info, user_info);
+  }
+
+  ToolUtil::print_info(ret, "head bucket %s", bucket_name);
 
   if (TFS_SUCCESS == ret)
   {
     printf("bucket: %s, create_time: %"PRI64_PREFIX"d, owner_id: %"PRI64_PREFIX"d\n",
         bucket_name, bucket_meta_info.create_time_, bucket_meta_info.owner_id_);
   }
-
-  ToolUtil::print_info(ret, "head bucket %s", bucket_name);
 
   return ret;
 }
@@ -1971,14 +2007,23 @@ int cmd_put_object(const VSTRING& param)
   const char* object_name = param[1].c_str();
   const char* local_file = expand_path(const_cast<string&>(param[2]));
   int64_t owner_id = strtoll(param[3].c_str(), NULL, 10);
-  int ret = 0;
-  ToolUtil::print_info(ret, "put object: %s, object: %s => %s owner_id: %"PRI64_PREFIX"d",
-      bucket_name, object_name, local_file, owner_id);
   UserInfo user_info;
   user_info.owner_id_ = owner_id;
-  ret = g_kv_meta_client.put_object(bucket_name, object_name, local_file, user_info);
-  ToolUtil::print_info(ret, "put object: %s, object: %s => %s owner_id: %"PRI64_PREFIX"d",
-      bucket_name, object_name, local_file, owner_id);
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.put_object(bucket_name, object_name, local_file, user_info);
+    ToolUtil::print_info(ret, "put object: %s, object: %s => %s owner_id: %"PRI64_PREFIX"d",
+        bucket_name, object_name, local_file, owner_id);
+  }
   return ret;
 }
 
@@ -1988,11 +2033,20 @@ int cmd_get_object(const VSTRING& param)
   const char* object_name = param[1].c_str();
   const char* local_file = expand_path(const_cast<string&>(param[2]));
 
-  ObjectMetaInfo object_meta_info;
-  CustomizeInfo customize_info;
   UserInfo user_info;
-  int ret = g_kv_meta_client.get_object(bucket_name, object_name, local_file,
-                                        &object_meta_info, &customize_info, user_info);
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.get_object(bucket_name, object_name, local_file, user_info);
+  }
   ToolUtil::print_info(ret, "get object: %s, object: %s => %s",
       bucket_name, object_name, local_file);
 
@@ -2005,7 +2059,18 @@ int cmd_del_object(const VSTRING& param)
   const char* object_name = param[1].c_str();
   UserInfo user_info;
 
-  int ret = g_kv_meta_client.del_object(bucket_name, object_name, user_info);
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.del_object(bucket_name, object_name, user_info);
+  }
   ToolUtil::print_info(ret, "del bucket: %s, object: %s", bucket_name, object_name);
 
   return ret;
@@ -2018,7 +2083,19 @@ int cmd_head_object(const VSTRING& param)
 
   ObjectInfo object_info;
   UserInfo user_info;
-  int ret = g_kv_meta_client.head_object(bucket_name, object_name, &object_info, user_info);
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.head_object(bucket_name, object_name, &object_info, user_info);
+  }
 
   if (TFS_SUCCESS == ret)
   {

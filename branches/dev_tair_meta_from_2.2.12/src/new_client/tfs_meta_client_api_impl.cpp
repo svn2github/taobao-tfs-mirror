@@ -189,7 +189,7 @@ namespace tfs
       return ret;
     }
 
-    int NameMetaClientImpl::rm_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
+    int NameMetaClientImpl::rm_file(const int64_t app_id, const int64_t uid,
         const char* file_path)
     {
       FragInfo frag_info;
@@ -213,7 +213,7 @@ namespace tfs
           }
           else
           {
-            unlink_file(frag_info, ns_addr);
+            unlink_file(frag_info);
           }
         }
       }
@@ -320,7 +320,7 @@ namespace tfs
       return bRet;
     }
 
-    int64_t NameMetaClientImpl::read(const char* ns_addr, int64_t app_id, int64_t uid,
+    int64_t NameMetaClientImpl::read(int64_t app_id, int64_t uid,
         const char* file_path, void* buffer, const int64_t offset, const int64_t length)
     {
       int64_t ret = TFS_SUCCESS;
@@ -341,6 +341,9 @@ namespace tfs
         int64_t cur_length = 0;
         int64_t cur_pos = 0;
         uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+
+        int ns_get_index = 0;
+        string ns_addr;
 
         do
         {
@@ -377,15 +380,37 @@ namespace tfs
 
           cur_length = min(frag_info.get_last_offset() - cur_offset, left_length);
 
-          read_length = read_data(ns_addr, frag_info, reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length);
-          // tfs error occurs, maybe server is down, break and return error
-          if (read_length < 0)
+          if (ns_addr.empty())
           {
-            TBSYS_LOG(WARN, "read data from tfs failed, read_length: %"PRI64_PREFIX"d", read_length);
-            ret = read_length;
-            break;
+            ns_addr = tfs_cluster_manager_->get_read_ns_addr_ex(frag_info.cluster_id_, ns_get_index++);
+            if (ns_addr.empty())
+            {
+              TBSYS_LOG(ERROR, "select read ns failed");
+              ret = EXIT_GENERAL_ERROR;
+              break;
+            }
           }
-          // one tfs file read data error, should break
+
+          do
+          {
+            read_length = read_data(ns_addr.c_str(), frag_info,
+                reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length);
+            if (read_length < 0)
+            {
+              TBSYS_LOG(WARN, "read data from ns %s failed, read_length: %"PRI64_PREFIX"d",
+                  ns_addr.c_str(), read_length);
+              ns_addr = tfs_cluster_manager_->get_read_ns_addr_ex(frag_info.cluster_id_, ns_get_index++);
+              if (ns_addr.empty())
+              {
+                TBSYS_LOG(ERROR, "select read ns failed");
+                ret = read_length;
+                read_length = 0;
+                break;
+              }
+            }
+          }
+          while (read_length < 0);
+
           if (read_length == 0)
           {
             break;
@@ -406,7 +431,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t NameMetaClientImpl::write(const char* ns_addr, int64_t app_id, int64_t uid,
+    int64_t NameMetaClientImpl::write(int64_t app_id, int64_t uid,
         const char* file_path, const void* buffer, const int64_t length)
     {
       int64_t ret = 0;
@@ -416,13 +441,14 @@ namespace tfs
       }
       else
       {
-        ret = write(ns_addr, app_id, uid, file_path, buffer, -1, length);
+        ret = write(app_id, uid, file_path, buffer, -1, length);
       }
       return ret;
     }
 
-    int64_t NameMetaClientImpl::write(const char* ns_addr, int64_t app_id, int64_t uid,
-        const char* file_path, const void* buffer, const int64_t offset, const int64_t length)
+    int64_t NameMetaClientImpl::write(int64_t app_id, int64_t uid,
+        const char* file_path, const void* buffer, const int64_t offset,
+        const int64_t length)
     {
       int64_t ret = TFS_SUCCESS;
       if (NULL == file_path)
@@ -431,9 +457,7 @@ namespace tfs
       }
       else
       {
-
         int32_t cluster_id = -1;
-        int64_t left_length = length;
         uint64_t meta_server_id = get_meta_server_id(app_id, uid);
         if (!is_valid_file_path(file_path) || (offset < 0 && offset != -1))
         {
@@ -452,65 +476,85 @@ namespace tfs
         }
         else
         {
-          int64_t cur_offset = offset;
-          int64_t cur_pos = 0;
-          do
+          int ns_get_index = 0;
+          string ns_addr;
+          ns_addr = tfs_cluster_manager_->get_write_ns_addr(ns_get_index++);
+          if (ns_addr.empty())
           {
-            // write MAX_BATCH_DATA_LENGTH(8M) to tfs cluster
-            int64_t write_length = min(left_length, MAX_BATCH_DATA_LENGTH);
-            FragInfo frag_info;
-            int64_t real_write_length = write_data(ns_addr, cluster_id, reinterpret_cast<const char*>(buffer) + cur_pos,
-                cur_offset, write_length, frag_info);
-            if (real_write_length != write_length)
-            {
-              TBSYS_LOG(ERROR, "write tfs data error, cur_pos: %"PRI64_PREFIX"d"
-                  "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d)",
-                  cur_pos, write_length, real_write_length);
-              unlink_file(frag_info, ns_addr);
-              break;
-            }
-            TBSYS_LOG(DEBUG, "write tfs data, cluster_id: %d, cur_offset: %"PRI64_PREFIX"d, write_length: %"PRI64_PREFIX"d",
-                cluster_id, cur_offset, write_length);
-            frag_info.dump();
-
-            // then write to meta server
-            int32_t retry = 3;
+            TBSYS_LOG(ERROR, "select write ns failed");
+          }
+          else
+          {
+            int64_t left_length = length;
+            int64_t cur_offset = offset;
+            int64_t cur_pos = 0;
             do
             {
-              if ((ret = do_write(meta_server_id, app_id, uid, file_path, frag_info)) != TFS_SUCCESS)
+              // write MAX_BATCH_DATA_LENGTH(8M) to tfs cluster
+              int64_t write_length = min(left_length, MAX_BATCH_DATA_LENGTH);
+              FragInfo frag_info;
+              int64_t real_write_length = write_data(ns_addr.c_str(),
+                  cluster_id, reinterpret_cast<const char*>(buffer) + cur_pos,
+                  cur_offset, write_length, frag_info);
+              if (real_write_length != write_length)
               {
-                TBSYS_LOG(ERROR, "write meta info error, cur_pos: %"PRI64_PREFIX"d, "
-                    "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d), ret: %"PRI64_PREFIX"d",
-                    cur_pos, write_length, real_write_length, ret);
+                TBSYS_LOG(ERROR, "write tfs data error, cur_pos: %"PRI64_PREFIX"d"
+                    "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d)",
+                    cur_pos, write_length, real_write_length);
+                unlink_file(frag_info);
+                ns_addr = tfs_cluster_manager_->get_write_ns_addr(ns_get_index++);
+                if (ns_addr.empty())
+                {
+                  TBSYS_LOG(ERROR, "select write ns failed");
+                  break;
+                }
+                continue;
               }
-            }
-            while(ret == EXIT_NETWORK_ERROR && --retry);
 
-            if (need_update_table(ret))
-            {
-              update_table_from_rootserver();
-            }
+              TBSYS_LOG(DEBUG, "write tfs data, cluster_id: %d, cur_offset: %"PRI64_PREFIX"d, write_length: %"PRI64_PREFIX"d",
+                  cluster_id, cur_offset, write_length);
+              frag_info.dump();
 
-            if (ret != TFS_SUCCESS)
-            {
-              unlink_file(frag_info, ns_addr);
-              break;
+              // then write to meta server
+              int32_t retry = 3;
+              do
+              {
+                if ((ret = do_write(meta_server_id, app_id, uid, file_path, frag_info)) != TFS_SUCCESS)
+                {
+                  TBSYS_LOG(ERROR, "write meta info error, cur_pos: %"PRI64_PREFIX"d, "
+                      "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d), ret: %"PRI64_PREFIX"d",
+                      cur_pos, write_length, real_write_length, ret);
+                }
+              }
+              while(ret == EXIT_NETWORK_ERROR && --retry);
+
+              if (need_update_table(ret))
+              {
+                update_table_from_rootserver();
+              }
+
+              if (ret != TFS_SUCCESS)
+              {
+                unlink_file(frag_info);
+                break;
+              }
+              cur_pos += real_write_length;
+              cur_offset += (offset == -1 ? 0 : real_write_length);
+              left_length -= real_write_length;
             }
-            cur_pos += real_write_length;
-            cur_offset += (offset == -1 ? 0 : real_write_length);
-            left_length -= real_write_length;
+            while(left_length > 0);
+
+            if (TFS_SUCCESS == ret)
+            {
+              ret = length - left_length;
+            }
           }
-          while(left_length > 0);
-        }
-        if (TFS_SUCCESS == ret)
-        {
-          ret = length - left_length;
         }
       }
       return ret;
     }
 
-    int64_t NameMetaClientImpl::save_file(const char* ns_addr, int64_t app_id, int64_t uid, const char* local_file, const char* tfs_name)
+    int64_t NameMetaClientImpl::save_file(int64_t app_id, int64_t uid, const char* local_file, const char* tfs_name)
     {
       int ret = TFS_ERROR;
       int fd = -1;
@@ -554,7 +598,7 @@ namespace tfs
           }
           while (read_len > 0)
           {
-            write_len = write(ns_addr, app_id, uid, tfs_name, buf, offset, read_len);
+            write_len = write(app_id, uid, tfs_name, buf, offset, read_len);
             if (write_len <= 0)
             {
               TBSYS_LOG(ERROR, "write to tfs fail");
@@ -568,7 +612,7 @@ namespace tfs
 
         if (TFS_SUCCESS != ret)
         {
-          rm_file(ns_addr, app_id, uid, tfs_name);
+          rm_file(app_id, uid, tfs_name);
         }
         tbsys::gDeleteA(buf);
       }
@@ -581,7 +625,7 @@ namespace tfs
       return ret != TFS_SUCCESS ? ret : offset;
     }
 
-    int64_t NameMetaClientImpl::fetch_file(const char* ns_addr, int64_t app_id, int64_t uid, const char* local_file, const char* tfs_name)
+    int64_t NameMetaClientImpl::fetch_file(int64_t app_id, int64_t uid, const char* local_file, const char* tfs_name)
     {
       int ret = TFS_ERROR;
       int fd = -1;
@@ -609,7 +653,7 @@ namespace tfs
         ret = TFS_SUCCESS;
         while (1)
         {
-          if ((read_len = read(ns_addr, app_id, uid, tfs_name, buf, off_set, io_size)) < 0)
+          if ((read_len = read(app_id, uid, tfs_name, buf, off_set, io_size)) < 0)
           {
             ret = EXIT_INVALID_ARGU_ERROR;
             TBSYS_LOG(ERROR, "read tfs file fail. tfsname: %s", tfs_name);
@@ -918,16 +962,29 @@ namespace tfs
       return cluster_id;
     }
 
-    int NameMetaClientImpl::unlink_file(FragInfo& frag_info, const char* ns_addr)
+    int NameMetaClientImpl::unlink_file(FragInfo& frag_info)
     {
       int ret = TFS_SUCCESS;
       int tmp_ret = TFS_ERROR;
       int64_t file_size = 0;
+      string ns_addr;
+
+      if (frag_info.v_frag_meta_.size() > 0)
+      {
+        uint32_t block_id = frag_info.v_frag_meta_.front().block_id_;
+        ns_addr = tfs_cluster_manager_->get_unlink_ns_addr_ex(frag_info.cluster_id_, block_id, 0);
+        if (ns_addr.empty())
+        {
+          TBSYS_LOG(ERROR, "select unlink ns failed");
+          ret = TFS_ERROR;
+        }
+      }
+
       std::vector<FragMeta>::iterator iter = frag_info.v_frag_meta_.begin();
       for(; iter != frag_info.v_frag_meta_.end(); iter++)
       {
         FSName fsname(iter->block_id_, iter->file_id_, frag_info.cluster_id_);
-        if ((tmp_ret = TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, ns_addr)) != TFS_SUCCESS)
+        if ((tmp_ret = TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, ns_addr.c_str())) != TFS_SUCCESS)
         {
           ret = TFS_ERROR;
           TBSYS_LOG(ERROR, "unlink tfs file failed, file: %s, ret: %d", fsname.get_name(), tmp_ret);
