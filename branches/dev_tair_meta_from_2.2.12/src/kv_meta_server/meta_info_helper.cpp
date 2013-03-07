@@ -523,19 +523,6 @@ namespace tfs
           }
 
           //op value
-          int32_t limit = 0;
-          int32_t limit_mode = 0;
-          int32_t limit_res = MESS_LIMIT;
-          if(SCAN_LIMIT >= MESS_LIMIT)
-          {
-            limit = MESS_LIMIT;
-            limit_mode = MODE_REQ_LIMIT;
-          }
-          else
-          {
-            limit = SCAN_LIMIT;
-            limit_mode = MODE_KV_LIMIT;
-          }
 
           int32_t i;
           int32_t first = 0;
@@ -544,11 +531,13 @@ namespace tfs
           vector<KvValue*> kv_value_keys;
           vector<KvValue*> kv_value_values;
           object_info->v_tfs_file_info_.clear();
+          int32_t valid_result = 0;
 
           while(go_on == true)
           {
             int32_t result_size = 0;
-            ret = kv_engine_helper_->scan_keys(start_key, end_key, limit, first,
+            int64_t last_offset = 0;
+            ret = kv_engine_helper_->scan_keys(start_key, end_key, SCAN_LIMIT, first,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
             for(i = 0; i < result_size; ++i)
             {
@@ -557,24 +546,27 @@ namespace tfs
               int64_t pos = 0;
               tmp_object_info.deserialize(kv_value_values[i]->get_data(),
                                        kv_value_values[i]->get_size(), pos);
-              //j now max == 1
-              for (size_t j = 0; j < tmp_object_info.v_tfs_file_info_.size(); j++)
+              if (tmp_object_info.v_tfs_file_info_.size() > 0)
               {
-                object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[j]);
+                last_offset = tmp_object_info.v_tfs_file_info_[0].offset_;
+                if (tmp_object_info.v_tfs_file_info_[0].offset_ + tmp_object_info.v_tfs_file_info_[0].file_size_ <= offset)
+                {//invalid frag
+                  continue;
+                }
+                // now vector max == 1
+                object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[0]);
+                valid_result++;
+                if (valid_result >= MESS_LIMIT)
+                {
+                  break;
+                }
               }
-
             }
             TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
-            if(result_size >= limit && limit_mode == MODE_KV_LIMIT)
+            if(result_size == SCAN_LIMIT && valid_result < MESS_LIMIT)
             {
               first = 1;
-              limit_res -= result_size;
-              limit = min(limit_res, limit);
-              if(0 == limit)//message full
-              {
-                go_on = false;
-              }
-              ret = serialize_key(bucket_name, file_name, object_info->v_tfs_file_info_.back().offset_,
+              ret = serialize_key(bucket_name, file_name, last_offset,
                                   &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
             }
             else
