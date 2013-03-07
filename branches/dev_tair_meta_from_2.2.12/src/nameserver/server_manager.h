@@ -82,6 +82,7 @@ namespace tfs
       bool report_block_server_queue_empty() const;
       bool has_report_block_server() const;
       void clear_report_block_server_table();
+      int64_t get_report_block_server_queue_size() const;
 
       int get_alive_servers(std::vector<uint64_t>& servers) const;
       int get_dead_servers(common::ArrayHelper<uint64_t>& servers, NsGlobalStatisticsInfo& info, const time_t now) const;
