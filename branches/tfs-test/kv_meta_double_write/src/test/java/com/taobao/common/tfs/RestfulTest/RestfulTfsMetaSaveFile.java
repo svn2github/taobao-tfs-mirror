@@ -113,7 +113,7 @@ public class RestfulTfsMetaSaveFile extends RestfulTfsBaseCase
 		Assert.assertTrue(HeadObject(buecket_name,"test/test",100*(1<<10)));
 		
 		tfsManager.rmFile(appId, userId, "/test/test");
-		Assert.assertTrue(HeadObject(buecket_name,"test/test"));
+		Assert.assertFalse(HeadObject(buecket_name,"test/test"));
 		tfsManager.rmDir(appId, userId, "/test");
 	}
 
@@ -124,12 +124,11 @@ public class RestfulTfsMetaSaveFile extends RestfulTfsBaseCase
 		boolean bRet;
 		String File_name = "textsaveFile11";
         tfsManager.createDir(appId, userId, "/"+File_name);
-        Assert.assertTrue(HeadObject(buecket_name,File_name,0));
         
         bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/"+File_name);
 		Assert.assertTrue("Save File with the same name Dir should be true", bRet);
 		Assert.assertTrue(HeadObject(buecket_name,File_name,100*(1<<10)));
-		
+
 		tfsManager.rmDir(appId, userId, "/"+File_name);
 		tfsManager.rmFile(appId, userId, "/"+File_name);
 		Assert.assertFalse(HeadObject(buecket_name,File_name));

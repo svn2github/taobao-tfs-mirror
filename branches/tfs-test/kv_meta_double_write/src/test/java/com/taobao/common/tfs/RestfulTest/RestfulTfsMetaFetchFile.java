@@ -171,7 +171,7 @@ public class RestfulTfsMetaFetchFile extends RestfulTfsBaseCase
 	{  
 		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		boolean bRet;
-		String File_name = "textcreateFile";
+		String File_name = "textfetchFile";
 		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100M.jpg","/textfetchFile");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		Assert.assertTrue(HeadObject(buecket_name,File_name,100*(1<<20)));

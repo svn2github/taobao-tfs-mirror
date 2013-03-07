@@ -43,7 +43,7 @@ public class RestfulTfsBaseCase
     
     public static String tfstool = "/home/yiming.czw/tfs_bin/bin/tfstool";
     public static String Kv_Meta_Root = " -k 10.232.36.210:7201";
-    public static String Name_Server = " -s 10.232.36.202:5202";
+    public static String Name_Server = " -s 10.232.36.210:8210";
     public static String TempFile = "/tmp/Temp";
     public static ProcessHandler PH = new ProcessHandlerSTAFImpl();
     
