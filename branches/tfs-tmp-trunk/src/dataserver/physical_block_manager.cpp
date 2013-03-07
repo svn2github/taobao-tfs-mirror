@@ -139,6 +139,10 @@ namespace tfs
             ret = free_ext_block(index, false);
           }
         }
+        if (TFS_SUCCESS == ret && 0 == index.index_)
+        {
+          --info->used_main_block_count_;
+        }
         if (TFS_SUCCESS == ret)
         {
           ret = supber_block_manager.flush();
@@ -163,7 +167,7 @@ namespace tfs
           ret = supber_block_manager.get_legal_physical_block_id(physical_block_id);
           if (TFS_SUCCESS == ret)
           {
-            ret = (INVALID_PHYSICAL_BLOCK_ID == index.physical_block_id_) ? EXIT_PHYSICAL_ID_INVALID : TFS_SUCCESS;
+            ret = (INVALID_PHYSICAL_BLOCK_ID == physical_block_id) ? EXIT_PHYSICAL_ID_INVALID : TFS_SUCCESS;
           }
           if (TFS_SUCCESS == ret)
           {
@@ -181,7 +185,7 @@ namespace tfs
             index.status_     =  tmp ? BLOCK_CREATE_COMPLETE_STATUS_UNCOMPLETE : BLOCK_CREATE_COMPLETE_STATUS_COMPLETE;
             std::stringstream path;
             path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << index.physical_file_name_id_;
-            const int32_t start = BLOCK_SPLIT_FLAG_YES != split_flag ? BLOCK_RESERVER_LENGTH : 0;
+            const int32_t start = BLOCK_SPLIT_FLAG_YES != split_flag ? BLOCK_RESERVER_LENGTH : AllocPhysicalBlock::STORE_ALLOC_BIT_MAP_SIZE;
             const int32_t end   = info->max_main_block_size_;
             ret = insert_(index, index.physical_block_id_, path.str(), start, end);
           }
@@ -260,8 +264,6 @@ namespace tfs
             ret = (NULL == physical_block) ? EXIT_PHYSICAL_BLOCK_NOT_FOUND : TFS_SUCCESS;
             if (TFS_SUCCESS != ret)
             {
-              memset(&alloc_block_index, 0, sizeof(alloc_block_index));
-              alloc_block_index.logic_block_id_ = INVALID_BLOCK_ID;
               ret = alloc_block(alloc_block_index, BLOCK_SPLIT_FLAG_YES, true, false);
               if (TFS_SUCCESS == ret)
               {

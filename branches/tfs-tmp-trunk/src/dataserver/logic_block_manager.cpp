@@ -15,6 +15,7 @@
  */
 #include "common/error_msg.h"
 #include "logic_block_manager.h"
+#include "block_manager.h"
 
 using namespace tfs::common;
 namespace tfs
@@ -156,6 +157,10 @@ namespace tfs
           ret = (tmp_logic_blocks_.end() != iter) ? TFS_SUCCESS : EXIT_LOGIC_BLOCK_NOT_EXIST_ERROR;
           if (TFS_SUCCESS == ret)
           {
+            ret = change_create_block_complete_flag_(logic_block_id, BLOCK_CREATE_COMPLETE_STATUS_COMPLETE, true, false);
+          }
+          if (TFS_SUCCESS == ret)
+          {
             BaseLogicBlock query(logic_block_id);
             LOGIC_BLOCK_MAP_ITER it =  logic_blocks_.find(&query);
             if (logic_blocks_.end() != it)
@@ -167,6 +172,7 @@ namespace tfs
               logic_blocks_.insert_unique(result, iter->second);
               tmp_logic_blocks_.erase(iter);
               tmp_logic_blocks_.insert(TMP_LOGIC_BLOCK_MAP::value_type(logic_block_id, tmp_logic_block));
+              change_create_block_complete_flag_(logic_block_id, BLOCK_CREATE_COMPLETE_STATUS_UNCOMPLETE, false, false);
             }
             else
             {
@@ -174,6 +180,10 @@ namespace tfs
               logic_blocks_.insert_unique(result, iter->second);
               tmp_logic_blocks_.erase(iter);
             }
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            ret = block_manager_.get_super_block_manager().flush();
           }
         }
         /*  won't happen ??
@@ -307,6 +317,63 @@ namespace tfs
           expired_blocks.push_back(iter->second->id());
       }
       return TFS_SUCCESS;
+    }
+
+    int LogicBlockManager::change_create_block_complete_flag_(const uint64_t logic_block_id, const int8_t status,
+        const bool tmp,const bool flush)
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        std::vector<int32_t> physical_block_ids;
+        BaseLogicBlock* logic_block = NULL;
+        if (tmp)
+        {
+          TMP_LOGIC_BLOCK_MAP_ITER iter = tmp_logic_blocks_.find(logic_block_id);
+          ret = (tmp_logic_blocks_.end() != iter) ? TFS_SUCCESS : EXIT_LOGIC_BLOCK_NOT_EXIST_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            logic_block = iter->second;
+            ret = logic_block->get_all_physical_blocks(physical_block_ids);
+          }
+        }
+        else
+        {
+          BaseLogicBlock query(logic_block_id);
+          LOGIC_BLOCK_MAP_ITER it =  logic_blocks_.find(&query);
+          ret = (logic_blocks_.end() != it) ? TFS_SUCCESS : EXIT_LOGIC_BLOCK_NOT_EXIST_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            logic_block = (*it);
+            ret = logic_block->get_all_physical_blocks(physical_block_ids);
+          }
+        }
+
+        BlockIndex index;
+        index.index_ = -1;
+        index.logic_block_id_ = INVALID_BLOCK_ID;
+        int32_t main_physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
+        ret = physical_block_ids.empty() ? EXIT_PHYSICAL_BLOCK_EXIST_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          main_physical_block_id = (*physical_block_ids.begin());
+          assert(main_physical_block_id > INVALID_PHYSICAL_BLOCK_ID);
+          ret = block_manager_.get_super_block_manager().get_block_index(index, main_physical_block_id);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          assert(index.logic_block_id_ == logic_block_id);
+          assert(index.index_ == 0);
+          index.status_ = status;
+          ret = block_manager_.get_super_block_manager().update_block_index(index, main_physical_block_id);
+        }
+
+        if (TFS_SUCCESS == ret && flush)
+        {
+          ret = block_manager_.get_super_block_manager().flush();
+        }
+      }
+      return ret;
     }
   }/** end namespace dataserver**/
 }/** end namespace tfs **/

@@ -123,6 +123,7 @@ namespace tfs
       int8_t   reserve_:3;//reserve
       int dump(tbnet::DataBuffer& buf) const;
       int dump(std::stringstream& stream) const;
+      BlockIndex();
     };
 
     struct DsRuntimeGlobalInformation

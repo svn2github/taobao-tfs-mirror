@@ -59,6 +59,8 @@ namespace tfs
       int remove_(BaseLogicBlock*& object, const uint64_t logic_block_id, const bool tmp = false);
       BaseLogicBlock* get_(const uint64_t logic_block_id, const bool tmp = false) const;
       int switch_logic_block_(const uint64_t logic_block_id, const bool tmp = false);
+      int change_create_block_complete_flag_(const uint64_t logic_block_id, const int8_t status,
+        const bool tmp = false,const bool flush = false);
       private:
       BlockManager& block_manager_;
       LOGIC_BLOCK_MAP logic_blocks_;

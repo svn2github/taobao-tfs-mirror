@@ -15,6 +15,7 @@
  */
 #include <Time.h>
 #include "ds_define.h"
+#include "common/internal.h"
 #include "common/error_msg.h"
 #include "common/new_client.h"
 #include "common/client_manager.h"
@@ -35,6 +36,20 @@ namespace tfs
         << ",first_mmap_size: " << mmap_option_.first_mmap_size_ << ",per_mmap_size: " << mmap_option_.per_mmap_size_
         << ",max_use_block_ratio: " << max_use_block_ratio_ << ",max_use_hash_bucket_ratio: " <<max_use_hash_bucket_ratio_ <<std::endl;
       return common::TFS_SUCCESS;
+    }
+
+    BlockIndex::BlockIndex():
+      logic_block_id_(common::INVALID_BLOCK_ID),
+      physical_block_id_(common::INVALID_PHYSICAL_BLOCK_ID),
+      next_index_(0),
+      prev_index_(0),
+      index_(-1),
+      status_(BLOCK_CREATE_COMPLETE_STATUS_UNCOMPLETE),
+      split_flag_(BLOCK_SPLIT_FLAG_NO),
+      split_status_(BLOCK_SPLIT_STATUS_UNCOMPLETE),
+      reserve_(0)
+    {
+
     }
 
     DsRuntimeGlobalInformation::DsRuntimeGlobalInformation():ns_vip_port_(0)

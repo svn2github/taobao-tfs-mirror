@@ -106,6 +106,7 @@ namespace tfs
         int load_super_block_(const common::FileSystemParameter& fs_param);
         int load_index_(const common::FileSystemParameter& fs_param);
         int cleanup_dirty_index_(const common::FileSystemParameter& fs_param);
+        int cleanup_dirty_index_single_logic_block_(const BlockIndex& index);
 
         int create_file_system_superblock_(const common::FileSystemParameter& parameter);
         int create_file_system_dir_(const common::FileSystemParameter& parameter);
