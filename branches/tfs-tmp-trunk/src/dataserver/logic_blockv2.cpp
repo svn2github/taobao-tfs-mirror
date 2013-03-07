@@ -468,7 +468,7 @@ namespace tfs
           int32_t retry_times = (total_need_length / super_info->max_extend_block_size_) + 1;
           while (TFS_SUCCESS == ret && avail_size < total_offset && retry_times-- > 0)
           {
-            TBSYS_LOG(INFO, "logic block: %"PRI64_PREFIX"u,avail_size: %d, total_offset: %d",
+            TBSYS_LOG(INFO, "extend logic block: %"PRI64_PREFIX"u,avail_size: %d, total_offset: %d",
               id(), avail_size, total_offset);
             BlockIndex index, ext_index;
             BasePhysicalBlock* new_physical_block = NULL;

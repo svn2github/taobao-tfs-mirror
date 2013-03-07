@@ -143,8 +143,6 @@ namespace tfs
         ret = dispatch_sub_task();
       }
 
-      TBSYS_LOG(INFO, "handle compact task, seqno: %"PRI64_PREFIX"d, ret: %d\n", seqno_, ret );
-
       return ret;
     }
 
@@ -261,9 +259,10 @@ namespace tfs
       req_cpt_msg.set_seqno(seqno_);
       req_cpt_msg.set_block_id(block_id_);
       req_cpt_msg.set_source_id(ds_info.information_.id_);
+      req_cpt_msg.set_expire_time(expire_time_);
       for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers_.size()); i++)
       {
-        int ret = get_data_helper().send_simple_request(servers_[i], &req_cpt_msg);
+        ret = get_data_helper().send_simple_request(servers_[i], &req_cpt_msg);
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to compact, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(servers_[i]).c_str(), ret);
       }
@@ -317,22 +316,13 @@ namespace tfs
       char* buffer = new (std::nothrow) char[MAX_COMPACT_READ_SIZE];
       assert(NULL != buffer);
 
-      int32_t new_offset = -1;  // offset to write new file
+      int32_t new_offset = 0;  // offset to write new file
       int32_t inner_offset = 0; // offset in compact buffer
       int32_t mem_offset = 0;   // where to read data in Iterator
       IndexHeaderV2 header;
       FileInfoV2* finfo = NULL;
       vector<FileInfoV2> finfos_vec;
-      int ret = src->get_index_header(header);
-      if (TFS_SUCCESS == ret)
-      {
-        header.info_.file_count_ = 0;
-        header.info_.size_ = 0;
-        header.info_.del_file_count_ = 0;
-        header.info_.del_size_ = 0;
-        // clear update info ???
-      }
-
+      int ret = dest->get_index_header(header);
       while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == iter->next(mem_offset, finfo)))
       {
         if (finfo->status_ & FI_DELETED)
@@ -340,20 +330,16 @@ namespace tfs
           continue;  // ignore deleted file
         }
 
-        if (new_offset < 0)  // got the first undeleted file, update new offset
-        {
-          new_offset = finfo->offset_;
-        }
-
         if (inner_offset + finfo->size_ > MAX_COMPACT_READ_SIZE)
         {
           if (inner_offset > 0)  // buffer not empty, flush first
           {
             ret = dest->pwrite(buffer, inner_offset, new_offset, true);
+            ret = (ret >= 0) ? TFS_SUCCESS : ret;
             if (TFS_SUCCESS == ret)
             {
-              inner_offset = 0;
               new_offset += inner_offset;
+              inner_offset = 0;
             }
           }
         }
@@ -386,6 +372,13 @@ namespace tfs
         }
       }
 
+      // still has data in buffer, flush it
+      if (inner_offset > 0)
+      {
+        ret = dest->pwrite(buffer, inner_offset, new_offset, true);
+        ret = (ret >= 0) ? TFS_SUCCESS : ret;
+      }
+
       // write new header and index to dest
       if (TFS_SUCCESS == ret)
       {
@@ -405,20 +398,24 @@ namespace tfs
       int offset = 0;
       int length = 0;
       int ret = TFS_SUCCESS;
-      char buffer[MAX_READ_SIZE]; // use stack space
+      char *buffer = new (std::nothrow) char[MAX_COMPACT_READ_SIZE];
+      assert(NULL != buffer);
       while ((TFS_SUCCESS == ret) && (offset < finfo.size_))
       {
-        length = std::min(finfo.size_ - offset, MAX_READ_SIZE);
+        length = std::min(finfo.size_ - offset, MAX_COMPACT_READ_SIZE);
         ret = src->pread(buffer, length, finfo.offset_ + offset);
+        ret = (ret >= 0) ? TFS_SUCCESS : ret;
         if (TFS_SUCCESS == ret)
         {
           ret = dest->pwrite(buffer, length, new_offset + offset, true);
+          ret = (ret >= 0) ? TFS_SUCCESS : ret;
           if (TFS_SUCCESS == ret)
           {
             offset += length;
           }
         }
       }
+      tbsys::gDeleteA(buffer);
       return ret;
     }
 
@@ -447,8 +444,6 @@ namespace tfs
       {
         ret = report_to_ns(status);
       }
-
-      TBSYS_LOG(INFO, "handle replicate task, seqno: %"PRI64_PREFIX"d, ret: %d\n", seqno_, ret );
 
       return ret;
     }
@@ -625,7 +620,8 @@ namespace tfs
       }
 
       // add local version first, it will be copied to remote block
-      if (TFS_SUCCESS == ret)
+      // NOTICE: only suitable for 2 replicas  TODO: more replicas support
+      if ((TFS_SUCCESS == ret) && (!repl_info_.is_move_))
       {
         ret = get_block_manager().update_block_version(VERSION_INC_STEP_REPLICATE, block_id);
       }

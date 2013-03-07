@@ -944,7 +944,7 @@ namespace tfs
       int ret = ((INVALID_BLOCK_ID == block_id) || (length <= 0) || (offset < 0)) ?
         EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
-      if (get_traffic_control().mr_traffic_out_of_threshold(false))
+      if ((TFS_SUCCESS == ret) && get_traffic_control().mr_traffic_out_of_threshold(false))
       {
         ret = EXIT_NETWORK_BUSY_ERROR;
       }

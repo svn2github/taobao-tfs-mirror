@@ -30,12 +30,10 @@ namespace tfs
   {
     using namespace std;
     using namespace tfs::common;
-    static const int32_t MB = 1 * 1024 * 1024;
-    static const int32_t TRAFFIC_BYTES_STAT_INTERVAL = 1 * 1000 * 1000;//1s
     TrafficControl::TrafficControl()
     {
       memset(last_rw_traffic_stat_time_us_, 0, sizeof(last_rw_traffic_stat_time_us_));
-      memset(last_rw_traffic_stat_time_us_, 0, sizeof(last_mr_traffic_stat_time_us_));
+      memset(last_mr_traffic_stat_time_us_, 0, sizeof(last_mr_traffic_stat_time_us_));
       memset(rw_traffic_bytes_stat_, 0, sizeof(rw_traffic_bytes_stat_));
       memset(mr_traffic_bytes_stat_, 0, sizeof(mr_traffic_bytes_stat_));
     }
@@ -45,7 +43,7 @@ namespace tfs
 
     }
 
-    int TrafficControl::rw_stat(const int32_t type,const int32_t ret, const int32_t bytes, const bool first)
+    int TrafficControl::rw_stat(const int32_t type,const int32_t ret, const bool first, const int32_t bytes)
     {
       int32_t result = (type >= RW_STAT_TYPE_READ && type <= RW_STAT_TYPE_UNLINK) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == result)

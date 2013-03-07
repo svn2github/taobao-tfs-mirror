@@ -87,7 +87,7 @@ namespace tfs
             start = start_ + retry_times * max_ext_block_size;
             if (1 == index)
               start += AllocPhysicalBlock::STORE_ALLOC_BIT_MAP_SIZE;
-            end   = start  + max_ext_block_size;
+            end   = index *  max_ext_block_size;
             alloc_bit_map_ |= (1 << retry_times);
             ret = file_op_.pwrite(reinterpret_cast<char*>(&alloc_bit_map_), STORE_ALLOC_BIT_MAP_SIZE, 0);
             ret = ret >= STORE_ALLOC_BIT_MAP_SIZE ? TFS_SUCCESS : EXIT_WRITE_ALLOC_BIT_MAP_ERROR;

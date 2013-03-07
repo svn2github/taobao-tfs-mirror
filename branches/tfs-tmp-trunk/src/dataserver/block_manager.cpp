@@ -714,7 +714,11 @@ namespace tfs
                   index_path << info->mount_point_ << INDEX_DIR_PREFIX << index.physical_block_id_;
                   BaseLogicBlock* logic_block = insert_logic_block_(index.logic_block_id_, index_path.str(), !complete);
                   assert(NULL != logic_block);
-                  ret = logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
+                  ret = logic_block->load_index(info->mmap_option_);
+                  if (TFS_SUCCESS == ret)
+                  {
+                    ret = logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
+                  }
                   if (TFS_SUCCESS == ret)
                   {
                     int32_t next_physical_block_id = index.next_index_;
@@ -728,8 +732,9 @@ namespace tfs
                         {
                           next_physical_block_id = next_block_index.next_index_;
                           std::stringstream physical_block_path;
-                          physical_block_path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << index.physical_file_name_id_;
-                          physical_block = insert_physical_block_(*info, index, index.physical_block_id_, physical_block_path.str());
+                          physical_block_path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << next_block_index.physical_file_name_id_;
+                          physical_block = insert_physical_block_(*info, next_block_index,
+                              next_block_index.physical_block_id_, physical_block_path.str());
                           assert(NULL != physical_block);
                           ret = logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
                         }
@@ -737,10 +742,6 @@ namespace tfs
                     }
                   }
 
-                  if (TFS_SUCCESS == ret)
-                  {
-                    ret = logic_block->load_index(info->mmap_option_);
-                  }
                   TBSYS_LOG(INFO, "load logic block: %"PRI64_PREFIX"u,ret: %d", index.logic_block_id_, ret);
                 }//end if (get_logic_block_manager().exist(logic_block_id, false))
               }// end if (BLOCK_SPLIT_FLAG_YES == index.split_flag_)
@@ -967,7 +968,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         //0 == index.index_完整的大数据块(主块，分割的块)
-        int32_t start = (0 == index.index_) ? BLOCK_SPLIT_FLAG_YES == index.split_flag_ ? AllocPhysicalBlock::STORE_ALLOC_BIT_MAP_SIZE : BLOCK_RESERVER_LENGTH : (index.index_ - 1) * info.max_extend_block_size_;
+        int32_t start = (0 == index.index_) ? BLOCK_SPLIT_FLAG_YES == index.split_flag_ ? 0 : BLOCK_RESERVER_LENGTH : (index.index_ - 1) * info.max_extend_block_size_;
         if (1 == index.index_)//第一个扩展块要比其他的少8个字节，这8个字节主要用于存储bitmap
           start += AllocPhysicalBlock::STORE_ALLOC_BIT_MAP_SIZE;
         const int32_t end   = (0 == index.index_) ? info.max_main_block_size_ : index.index_ * info.max_extend_block_size_;
@@ -1021,7 +1022,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = get_logic_block_manager().remove(logic_block, logic_block_id);//remove logic block form logic block map, but not free pointer
+        ret = get_logic_block_manager().remove(logic_block, logic_block_id, tmp);//remove logic block form logic block map, but not free pointer
       }
       if (TFS_SUCCESS == ret)
       {

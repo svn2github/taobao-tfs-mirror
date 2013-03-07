@@ -111,37 +111,50 @@ namespace tfs
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (NULL == data) || (length <= 0) || (offset < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
-      if (TFS_SUCCESS == ret)
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if ((TFS_SUCCESS == ret) && (server_id == ds_info.information_.id_))
       {
-        /*
-        int32_t retry = RW_RETRY_TIMES;
+        ret = read_raw_data_ex(server_id, block_id, data, length, offset);
+      }
+      else if ((TFS_SUCCESS == ret) && (server_id != ds_info.information_.id_))
+      {
+        int32_t retry = BUSY_RETRY_TIMES;
+        int64_t interval = TRAFFIC_BYTES_STAT_INTERVAL / 2;
         while (retry-- > 0)
         {
-          ret = read_raw_data_ex(server_id, block_id, data, length, offset);
-          if (EXIT_NETWORK_BUSY_ERROR == ret)
+          if (get_traffic_control().mr_traffic_out_of_threshold(true))
           {
-            usleep(RW_RETRY_SLEEP_MS * 1000);
+            TBSYS_LOG(DEBUG, "input network busy, will retry: %d", retry);
+            ret = EXIT_NETWORK_BUSY_ERROR;
+            usleep(interval);
           }
           else
           {
-            if (TFS_SUCCESS == ret)
+            ret = read_raw_data_ex(server_id, block_id, data, length, offset);
+            if (EXIT_NETWORK_BUSY_ERROR == ret)
             {
-              get_traffic_control().mr_traffic_stat(true, length);
+              usleep(interval);
             }
-            break;
+            else
+            {
+              if (TFS_SUCCESS == ret)
+              {
+                get_traffic_control().mr_traffic_stat(true, length);
+              }
+              break;
+            }
           }
         }
-        */
-        ret = read_raw_data_ex(server_id, block_id, data, length, offset);
-
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(WARN, "read raw data fail. server: %s, blockid: %"PRI64_PREFIX"u, "
-              "length: %d, offset: %d, ret: %d",
-              tbsys::CNetUtil::addrToString(server_id).c_str(),
-              block_id, length, offset, ret);
-        }
       }
+
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "read raw data fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+            "length: %d, offset: %d, ret: %d",
+            tbsys::CNetUtil::addrToString(server_id).c_str(),
+            block_id, length, offset, ret);
+      }
+
       return ret;
     }
 
@@ -151,15 +164,22 @@ namespace tfs
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (NULL == data) || (length <= 0) || (offset < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
-      if (TFS_SUCCESS == ret)
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if ((TFS_SUCCESS == ret) && (server_id == ds_info.information_.id_))
       {
-        /*
-        int32_t retry = RW_RETRY_TIMES;
+        ret =  write_raw_data_ex(server_id, block_id, data, length, offset);
+      }
+      else if ((TFS_SUCCESS == ret) && (server_id != ds_info.information_.id_))
+      {
+        int32_t retry = BUSY_RETRY_TIMES;
+        int64_t interval = TRAFFIC_BYTES_STAT_INTERVAL / 2;
         while (retry-- > 0)
         {
           if (get_traffic_control().mr_traffic_out_of_threshold(false))
           {
-            usleep(RW_RETRY_SLEEP_MS * 1000);
+            TBSYS_LOG(DEBUG, "output network busy, will retry: %d", retry);
+            ret = EXIT_NETWORK_BUSY_ERROR;
+            usleep(interval);
           }
           else
           {
@@ -171,17 +191,16 @@ namespace tfs
             break;
           }
         }
-        */
-
-        ret =  write_raw_data_ex(server_id, block_id, data, length, offset);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(WARN, "write raw data fail. server: %s, blockid: %"PRI64_PREFIX"u, "
-              "length: %d, offset: %d, ret: %d",
-              tbsys::CNetUtil::addrToString(server_id).c_str(),
-              block_id, length, offset, ret);
-        }
       }
+
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "write raw data fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+            "length: %d, offset: %d, ret: %d",
+            tbsys::CNetUtil::addrToString(server_id).c_str(),
+            block_id, length, offset, ret);
+      }
+
       return ret;
     }
 

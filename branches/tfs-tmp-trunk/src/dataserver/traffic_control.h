@@ -42,7 +42,7 @@ namespace tfs
       public:
         TrafficControl();
         virtual ~TrafficControl();
-        int rw_stat(const int32_t type, const int32_t ret, const int32_t bytes, const bool first);
+        int rw_stat(const int32_t type, const int32_t ret, const bool first, const int32_t bytes);
         void rw_traffic_stat(const bool input, const int32_t bytes);
         void mr_traffic_stat(const bool input, const int32_t bytes);
         bool rw_traffic_out_of_threshold(const bool input) const;

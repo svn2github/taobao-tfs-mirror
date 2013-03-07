@@ -97,6 +97,8 @@ namespace tfs
       info.block_count_ = service_.get_block_manager().get_all_logic_block_count();
       info.current_load_ = Func::get_load_avg();
       info.current_time_ = time(NULL);
+      TBSYS_LOG(DEBUG, "data server total capacity: %"PRI64_PREFIX"d, "
+          "used capacity: %"PRI64_PREFIX"d", info.total_capacity_, info.use_capacity_);
 
       while (!DsRuntimeGlobalInformation::instance().is_destroyed())
       {

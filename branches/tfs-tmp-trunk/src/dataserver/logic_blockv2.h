@@ -140,7 +140,7 @@ namespace tfs
             const common::FileInfoV2& get_file_info() const;
             const char* get_data(int32_t& mem_offset, const int32_t size) const;
           private:
-            static const int32_t MAX_DATA_SIZE = 1 * 1024 * 1024;
+            static const int32_t MAX_DATA_SIZE = 4 * 1024 * 1024;
             LogicBlock& logic_block_;
             BaseIndexHandle::iterator iter_;
             int32_t used_offset_;//磁盘文件大小(这里的offset是最后一个文件的起始位置)
