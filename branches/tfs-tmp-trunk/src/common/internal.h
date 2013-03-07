@@ -968,10 +968,19 @@ namespace tfs
       int64_t length() const;
 
       // get block by server
-      uint64_t get_block(uint64_t server_id);
+      uint64_t get_block(uint64_t server_id) const;
+
+      // get server by block
+      uint64_t get_server(uint64_t block_id) const;
 
       // get parity server list
-      void get_check_servers(std::vector<uint64_t>& servers);
+      void get_check_servers(std::vector<uint64_t>& servers) const;
+
+      // get alive data num
+      int32_t get_alive_data_num() const;
+
+      // get alive check num
+      int32_t get_alive_check_num() const;
 
       FamilyInfoExt()
       {

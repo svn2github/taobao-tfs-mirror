@@ -1492,7 +1492,7 @@ namespace tfs
     }
 
 
-    uint64_t FamilyInfoExt::get_block(uint64_t server_id)
+    uint64_t FamilyInfoExt::get_block(uint64_t server_id) const
     {
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
@@ -1509,7 +1509,24 @@ namespace tfs
       return block_id;
     }
 
-    void FamilyInfoExt::get_check_servers(std::vector<uint64_t>& servers)
+    uint64_t FamilyInfoExt::get_server(uint64_t block_id) const
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      uint64_t server_id = INVALID_SERVER_ID;
+      for (int i = member_num - 1; (INVALID_BLOCK_ID == server_id) && (i >= 0); i--)
+      {
+        if (members_[i].first == block_id)
+        {
+          server_id = members_[i].second;
+        }
+      }
+      return server_id;
+    }
+
+    void FamilyInfoExt::get_check_servers(std::vector<uint64_t>& servers) const
     {
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
@@ -1520,6 +1537,38 @@ namespace tfs
       {
         servers.push_back(members_[i].first);
       }
+    }
+
+    int32_t FamilyInfoExt::get_alive_data_num() const
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+
+      int32_t count = 0;
+      for (int32_t i = 0; i < data_num; i++)
+      {
+        if (INVALID_SERVER_ID != members_[i].second)
+        {
+          count++;
+        }
+      }
+      return count;
+    }
+
+    int32_t FamilyInfoExt::get_alive_check_num() const
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      int32_t count = 0;
+      for (int32_t i = data_num; i < member_num; i++)
+      {
+        if (INVALID_SERVER_ID != members_[i].second)
+        {
+          count++;
+        }
+      }
+      return count;
     }
 
     int FamilyInfoExt::deserialize(const char* data, const int64_t data_len, int64_t& pos)
