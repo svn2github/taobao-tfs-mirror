@@ -30,7 +30,7 @@ namespace tfs
     using namespace std;
 
     KvMetaClientImpl::KvMetaClientImpl()
-    :rs_id_(0), access_count_(0)
+    :rs_id_(0), access_count_(0), fail_count_(0)
     {
       packet_factory_ = new message::MessageFactory();
       packet_streamer_ = new common::BasePacketStreamer(packet_factory_);
@@ -77,8 +77,9 @@ namespace tfs
 
     bool KvMetaClientImpl::need_update_table(const int ret_status)
     {
-      return (ret_status == EXIT_INVALID_KV_META_SERVER
-          || ++access_count_ >= ClientConfig::update_kmt_interval_count_);
+      return (++access_count_ >= ClientConfig::update_kmt_interval_count_
+         || fail_count_ >= ClientConfig::update_kmt_fail_count_
+         || EXIT_INVALID_KV_META_SERVER == ret_status);
     }
 
     int KvMetaClientImpl::update_table_from_rootserver()
@@ -102,6 +103,7 @@ namespace tfs
           meta_table_.v_meta_table_ = new_table.v_meta_table_;
           meta_table_.dump();
           access_count_ = 0;
+          fail_count_ = 0;
           ret = TFS_SUCCESS;
         }
       }
@@ -540,9 +542,9 @@ namespace tfs
           }
           if (0 == cur_offset)
           {
-            if (!object_info.has_meta_info_ || !object_info.has_customize_info_)
+            if (!object_info.has_meta_info_)
             {
-              TBSYS_LOG(WARN, "invalid object, no meta info or customize info, bucket: %s, object: %s",
+              TBSYS_LOG(WARN, "invalid object, no meta info, bucket: %s, object: %s",
                   bucket_name, object_name);
               //ret = EXIT_INVALID_OBJECT;
               //break;
@@ -837,42 +839,52 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
-      int32_t retry = 3;
+      int32_t retry = ClientConfig::meta_retry_count_;
       do
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_put_bucket(meta_server_id, bucket_name, bucket_meta_info, user_info);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
         if (need_update_table(ret))
         {
           update_table_from_rootserver();
         }
       }
-      while(ret == EXIT_NETWORK_ERROR && --retry);
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
     }
 
     // TODO
     int KvMetaClientImpl::do_get_bucket(const char *bucket_name, const char *prefix,
-                                        const char *start_key, const char delimiter, const int32_t limit,
-                                        vector<ObjectMetaInfo> *v_object_meta_info,
-                                        vector<string> *v_object_name, set<string> *s_common_prefix,
-                                        int8_t *is_truncated, const UserInfo &user_info)
+        const char *start_key, const char delimiter, const int32_t limit,
+        vector<ObjectMetaInfo> *v_object_meta_info,
+        vector<string> *v_object_name, set<string> *s_common_prefix,
+        int8_t *is_truncated, const UserInfo &user_info)
     {
       int ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
-      int32_t retry = 3;
+      int32_t retry = ClientConfig::meta_retry_count_;
       do
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_get_bucket(meta_server_id, bucket_name, prefix, start_key, delimiter, limit,
-          v_object_meta_info, v_object_name, s_common_prefix, is_truncated, user_info);
+            v_object_meta_info, v_object_name, s_common_prefix, is_truncated, user_info);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
         if (need_update_table(ret))
         {
           update_table_from_rootserver();
         }
       }
-      while(ret == EXIT_NETWORK_ERROR && --retry);
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
     }
@@ -881,17 +893,22 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
-      int32_t retry = 3;
+      int32_t retry = ClientConfig::meta_retry_count_;
       do
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_del_bucket(meta_server_id, bucket_name, user_info);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
         if (need_update_table(ret))
         {
           update_table_from_rootserver();
         }
       }
-      while(ret == EXIT_NETWORK_ERROR && --retry);
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
     }
@@ -900,17 +917,22 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
-      int32_t retry = 3;
+      int32_t retry = ClientConfig::meta_retry_count_;
       do
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_head_bucket(meta_server_id, bucket_name, bucket_meta_info, user_info);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
         if (need_update_table(ret))
         {
           update_table_from_rootserver();
         }
       }
-      while(ret == EXIT_NETWORK_ERROR && --retry);
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
     }
@@ -920,17 +942,22 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
-      int32_t retry = 3;
+      int32_t retry = ClientConfig::meta_retry_count_;
       do
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_put_object(meta_server_id, bucket_name, object_name, object_info, user_info);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
         if (need_update_table(ret))
         {
           update_table_from_rootserver();
         }
       }
-      while(ret == EXIT_NETWORK_ERROR && --retry);
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
     }
@@ -940,17 +967,22 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
-      int32_t retry = 3;
+      int32_t retry = ClientConfig::meta_retry_count_;
       do
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_get_object(meta_server_id, bucket_name, object_name, offset, length, object_info, still_have, user_info);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
         if (need_update_table(ret))
         {
           update_table_from_rootserver();
         }
       }
-      while(ret == EXIT_NETWORK_ERROR && --retry);
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
     }
@@ -959,17 +991,22 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
-      int32_t retry = 3;
+      int32_t retry = ClientConfig::meta_retry_count_;
       do
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_del_object(meta_server_id, bucket_name, object_name, object_info, still_have, user_info);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
         if (need_update_table(ret))
         {
           update_table_from_rootserver();
         }
       }
-      while(ret == EXIT_NETWORK_ERROR && --retry);
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
     }
@@ -978,17 +1015,22 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
-      int32_t retry = 3;
+      int32_t retry = ClientConfig::meta_retry_count_;
       do
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_head_object(meta_server_id, bucket_name, object_name, object_info, user_info);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
         if (need_update_table(ret))
         {
           update_table_from_rootserver();
         }
       }
-      while(ret == EXIT_NETWORK_ERROR && --retry);
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
     }

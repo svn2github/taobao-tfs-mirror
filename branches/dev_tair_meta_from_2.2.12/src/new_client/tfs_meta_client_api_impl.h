@@ -103,22 +103,17 @@ namespace tfs
         //meta server related
         int do_file_action(const int64_t app_id, const int64_t uid,
             common::MetaActionOp action, const char* path, const char* new_path = NULL);
-        int ls_dir(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
+        int ls_dir(const int64_t app_id, const int64_t uid,
             const char* dir_path, const int64_t pid,
             std::vector<common::FileMetaInfo>& v_file_meta_info, bool is_recursive = false);
-        int do_ls_ex(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
+        int do_ls_ex(const int64_t app_id, const int64_t uid,
             const char* file_path, const common::FileType file_type, const int64_t pid,
             std::vector<common::FileMetaInfo>& v_file_meta_info, bool is_chk_exist = false);
-        int do_read(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
+        int do_read(uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
             const char* path, const int64_t offset, const int64_t size,
             common::FragInfo& frag_info, bool& still_have);
-        int do_write(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
+        int do_write(uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
             const char* path, common::FragInfo& frag_info);
-
-        int read_frag_info(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
-            const char* file_path, common::FragInfo& frag_info);
-        int32_t get_cluster_id(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
-            const char* path);
 
         // tfs cluster related
         int unlink_file(common::FragInfo& frag_info);
@@ -141,6 +136,7 @@ namespace tfs
         tbsys::CRWLock meta_table_mutex_;
         MetaTable meta_table_;
         uint64_t rs_id_;
+        uint32_t fail_count_;
         common::BasePacketFactory* packet_factory_;
         common::BasePacketStreamer* packet_streamer_;
         TfsMetaManager tfs_meta_manager_;

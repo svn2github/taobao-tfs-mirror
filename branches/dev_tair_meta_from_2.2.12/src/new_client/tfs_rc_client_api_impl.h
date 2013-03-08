@@ -62,9 +62,7 @@ namespace tfs
             const char* rs_addr = NULL);
 
         int64_t get_app_id() const { return app_id_;}
-#ifdef WITH_TAIR_CACHE
         void set_remote_cache_info(const char * remote_cache_info);
-#endif
         void set_client_retry_count(const int64_t count);
         int64_t get_client_retry_count() const;
         void set_client_retry_flag(bool retry_flag);

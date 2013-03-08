@@ -112,6 +112,7 @@ namespace tfs
         tbsys::CRWLock meta_table_mutex_;
         uint64_t rs_id_;
         uint32_t access_count_;
+        uint32_t fail_count_;
         common::KvMetaTable meta_table_;
         common::BasePacketFactory* packet_factory_;
         common::BasePacketStreamer* packet_streamer_;

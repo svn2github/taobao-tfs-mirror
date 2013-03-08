@@ -43,6 +43,7 @@ namespace tfs
     }
 
     NameMetaClientImpl::NameMetaClientImpl()
+    :rs_id_(0), fail_count_(0)
     {
       packet_factory_ = new message::MessageFactory();
       packet_streamer_ = new common::BasePacketStreamer(packet_factory_);
@@ -200,8 +201,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
-        if ((ret = read_frag_info(meta_server_id, app_id, uid, file_path, frag_info)) != TFS_SUCCESS)
+        if ((ret = read_frag_info(app_id, uid, file_path, frag_info)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "read frag info error, ret: %d", ret);
         }
@@ -231,9 +231,8 @@ namespace tfs
       }
       else
       {
-        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
         v_file_meta_info.clear();
-        ret = ls_dir(meta_server_id, app_id, uid, dir_path, -1, v_file_meta_info, is_recursive);
+        ret = ls_dir(app_id, uid, dir_path, -1, v_file_meta_info, is_recursive);
       }
       return ret;
     }
@@ -249,9 +248,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         vector<FileMetaInfo> v_file_meta_info;
-        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
-        TBSYS_LOG(DEBUG, "meta server is %s",tbsys::CNetUtil::addrToString(meta_server_id).c_str());
-        if ((ret = do_ls_ex(meta_server_id, app_id, uid, file_path, NORMAL_FILE, -1, v_file_meta_info)) != TFS_SUCCESS)
+        if ((ret = do_ls_ex(app_id, uid, file_path, NORMAL_FILE, -1, v_file_meta_info)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "ls file failed, file_path: %s, ret: %d", file_path, ret);
         }
@@ -277,9 +274,8 @@ namespace tfs
       int bRet = false;
       if (NULL != dir_path)
       {
-        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
         std::vector<common::FileMetaInfo> v_file_meta_info;
-        int ret = do_ls_ex(meta_server_id, app_id, uid, dir_path, DIRECTORY, -1, v_file_meta_info, true);
+        int ret = do_ls_ex(app_id, uid, dir_path, DIRECTORY, -1, v_file_meta_info, true);
 
         if(TFS_SUCCESS == ret)
         {
@@ -299,9 +295,8 @@ namespace tfs
       int bRet = false;
       if (NULL != file_path)
       {
-        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
         vector<FileMetaInfo> v_file_meta_info;
-        int ret = do_ls_ex(meta_server_id, app_id, uid, file_path, NORMAL_FILE, -1, v_file_meta_info, true);
+        int ret = do_ls_ex(app_id, uid, file_path, NORMAL_FILE, -1, v_file_meta_info, true);
         if (TFS_SUCCESS != ret)
         {
           if (EXIT_TARGET_EXIST_ERROR != ret && EXIT_PARENT_EXIST_ERROR != ret)
@@ -340,29 +335,41 @@ namespace tfs
         int64_t cur_offset = offset;
         int64_t cur_length = 0;
         int64_t cur_pos = 0;
-        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
 
         int ns_get_index = 0;
         string ns_addr;
+        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
 
         do
         {
           FragInfo frag_info;
-          int32_t retry = 3;
+          int32_t retry = ClientConfig::meta_retry_count_;
           int tmp_ret = TFS_SUCCESS;
+          bool table_updated_retry = false;
           do
           {
+            table_updated_retry = false;
             if ((tmp_ret = do_read(meta_server_id, app_id, uid, file_path, cur_offset, left_length, frag_info, still_have))
                 != TFS_SUCCESS)
             {
               TBSYS_LOG(ERROR, "read file failed, path: %s, ret: %d, retry: %d", file_path, tmp_ret, retry);
             }
+            if (EXIT_NETWORK_ERROR == tmp_ret)
+            {
+              fail_count_++;
+            }
+            if (need_update_table(tmp_ret))
+            {
+              update_table_from_rootserver();
+              meta_server_id = get_meta_server_id(app_id, uid);
+              if (TFS_SUCCESS != tmp_ret)
+              {
+                table_updated_retry = true;
+              }
+            }
           }
-          while(tmp_ret == EXIT_NETWORK_ERROR && --retry);
-          if (need_update_table(tmp_ret))
-          {
-            update_table_from_rootserver();
-          }
+          while ((EXIT_NETWORK_ERROR == tmp_ret || table_updated_retry) && --retry);
+
           // file not exist
           if (tmp_ret != TFS_SUCCESS && left_length == length)
           {
@@ -458,7 +465,6 @@ namespace tfs
       else
       {
         int32_t cluster_id = -1;
-        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
         if (!is_valid_file_path(file_path) || (offset < 0 && offset != -1))
         {
           ret = EXIT_INVALID_ARGU_ERROR;
@@ -469,7 +475,7 @@ namespace tfs
           ret = EXIT_INVALID_ARGU_ERROR;
           TBSYS_LOG(ERROR, "invalid buffer, length %"PRI64_PREFIX"d", length);
         }
-        else if((cluster_id = get_cluster_id(meta_server_id, app_id, uid, file_path)) == -1)
+        else if((cluster_id = get_cluster_id(app_id, uid, file_path)) == -1)
         {
           ret = EXIT_INVALID_FILE_NAME;
           TBSYS_LOG(ERROR, "get cluster id error, cluster_id: %d", cluster_id);
@@ -488,6 +494,7 @@ namespace tfs
             int64_t left_length = length;
             int64_t cur_offset = offset;
             int64_t cur_pos = 0;
+            uint64_t meta_server_id = get_meta_server_id(app_id, uid);
             do
             {
               // write MAX_BATCH_DATA_LENGTH(8M) to tfs cluster
@@ -516,22 +523,32 @@ namespace tfs
               frag_info.dump();
 
               // then write to meta server
-              int32_t retry = 3;
+              int32_t retry = ClientConfig::meta_retry_count_;
+              bool table_updated_retry = false;
               do
               {
+                table_updated_retry = false;
                 if ((ret = do_write(meta_server_id, app_id, uid, file_path, frag_info)) != TFS_SUCCESS)
                 {
                   TBSYS_LOG(ERROR, "write meta info error, cur_pos: %"PRI64_PREFIX"d, "
                       "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d), ret: %"PRI64_PREFIX"d",
                       cur_pos, write_length, real_write_length, ret);
                 }
+                if (EXIT_NETWORK_ERROR == ret)
+                {
+                  fail_count_++;
+                }
+                if (need_update_table(ret))
+                {
+                  update_table_from_rootserver();
+                  meta_server_id = get_meta_server_id(app_id, uid);
+                  if (TFS_SUCCESS != ret)
+                  {
+                    table_updated_retry = true;
+                  }
+                }
               }
-              while(ret == EXIT_NETWORK_ERROR && --retry);
-
-              if (need_update_table(ret))
-              {
-                update_table_from_rootserver();
-              }
+              while ((EXIT_NETWORK_ERROR == ret || table_updated_retry) && --retry);
 
               if (ret != TFS_SUCCESS)
               {
@@ -681,18 +698,9 @@ namespace tfs
       return ret != TFS_SUCCESS ? ret : off_set;
     }
 
-    int NameMetaClientImpl::read_frag_info(const int64_t app_id, const int64_t uid,
-        const char* file_path, FragInfo& frag_info)
-    {
-      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
-      return read_frag_info(meta_server_id, app_id, uid, file_path, frag_info);
-    }
-
-
     int NameMetaClientImpl::do_file_action(const int64_t app_id, const int64_t uid, MetaActionOp action, const char* path, const char* new_path)
     {
       int ret = TFS_ERROR;
-      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
       if (!is_valid_file_path(path) || ((new_path != NULL) && !is_valid_file_path(new_path)))
       {
         TBSYS_LOG(WARN, "path is invalid, old_path: %s, new_path: %s", path == NULL? "null":path, new_path == NULL? "null":new_path);
@@ -703,31 +711,43 @@ namespace tfs
       }
       else
       {
-        int32_t retry = 3;
+        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+        int32_t retry = ClientConfig::meta_retry_count_;
+        bool table_updated_retry = false;
         do
         {
+          table_updated_retry = false;
           if ((ret = NameMetaHelper::do_file_action(meta_server_id, app_id, uid, action, path, new_path, meta_table_.version_id_)) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "do file action error occured, path: %s, new_path: %s, action: %d, ret: %d, retry: %d",
                 path, (new_path == NULL? "null":new_path), action, ret, retry);
           }
+          if (EXIT_NETWORK_ERROR == ret)
+          {
+            fail_count_++;
+          }
+          if (need_update_table(ret))
+          {
+            update_table_from_rootserver();
+            meta_server_id = get_meta_server_id(app_id, uid);
+            if (TFS_SUCCESS != ret)
+            {
+              table_updated_retry = true;
+            }
+          }
         }
-        while (ret == EXIT_NETWORK_ERROR && --retry);
+        while ((EXIT_NETWORK_ERROR == ret || table_updated_retry) && --retry);
 
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
       }
       return ret;
     }
 
-    int NameMetaClientImpl::ls_dir(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
+    int NameMetaClientImpl::ls_dir(const int64_t app_id, const int64_t uid,
         const char* dir_path, int64_t pid, vector<FileMetaInfo>& v_file_meta_info, bool is_recursive)
     {
       int ret = TFS_SUCCESS;
       v_file_meta_info.clear();
-      if ((ret = do_ls_ex(meta_server_id, app_id, uid, dir_path, DIRECTORY, pid, v_file_meta_info)) != TFS_SUCCESS)
+      if ((ret = do_ls_ex(app_id, uid, dir_path, DIRECTORY, pid, v_file_meta_info)) != TFS_SUCCESS)
       {
         TBSYS_LOG(WARN, "ls directory failed, dir_path: %s", dir_path);
       }
@@ -742,7 +762,7 @@ namespace tfs
           {
             vector<FileMetaInfo> tmp_v_file_meta_info;
             tmp_v_file_meta_info.clear();
-            if ((ret = ls_dir(meta_server_id, app_id, uid, NULL, iter->id_, tmp_v_file_meta_info, is_recursive)) != TFS_SUCCESS)
+            if ((ret = ls_dir(app_id, uid, NULL, iter->id_, tmp_v_file_meta_info, is_recursive)) != TFS_SUCCESS)
             {
               TBSYS_LOG(WARN, "ls sub directory failed, pid: %"PRI64_PREFIX"d", iter->pid_);
               break;
@@ -768,7 +788,7 @@ namespace tfs
       return ret;
     }
 
-    int NameMetaClientImpl::do_ls_ex(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
+    int NameMetaClientImpl::do_ls_ex(const int64_t app_id, const int64_t uid,
         const char* file_path, const FileType file_type, const int64_t pid,
         std::vector<FileMetaInfo>& v_file_meta_info, bool is_chk_exist)
     {
@@ -791,27 +811,38 @@ namespace tfs
         strcpy(last_file_path, file_path);
       }
 
+      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
       do
       {
         std::vector<MetaInfo> tmp_v_meta_info;
         std::vector<MetaInfo>::iterator iter;
 
-        int32_t retry = 3;
+        int32_t retry = ClientConfig::meta_retry_count_;
+        bool table_updated_retry = false;
         do
         {
+          table_updated_retry = false;
           if ((ret = NameMetaHelper::do_ls(meta_server_id, app_id, uid, last_file_path, last_file_type, last_pid,
                   meta_table_.version_id_, tmp_v_meta_info, still_have)) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "do ls info failed, file_path: %s, file_type: %d, ret: %d, retry: %d",
                 last_file_path, last_file_type, ret, retry);
           }
+          if (EXIT_NETWORK_ERROR == ret)
+          {
+            fail_count_++;
+          }
+          if (need_update_table(ret))
+          {
+            update_table_from_rootserver();
+            meta_server_id = get_meta_server_id(app_id, uid);
+            if (TFS_SUCCESS != ret)
+            {
+              table_updated_retry = true;
+            }
+          }
         }
-        while (ret == EXIT_NETWORK_ERROR && --retry);
-
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
+        while ((EXIT_NETWORK_ERROR == ret || table_updated_retry) && --retry);
 
         if (ret != TFS_SUCCESS)
         {
@@ -887,7 +918,7 @@ namespace tfs
       return meta_server_id;
     }
 
-    int NameMetaClientImpl::read_frag_info(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
+    int NameMetaClientImpl::read_frag_info(const int64_t app_id, const int64_t uid,
         const char* file_path, FragInfo& frag_info)
     {
       int ret = TFS_SUCCESS;
@@ -900,24 +931,35 @@ namespace tfs
         bool still_have = true;
         FragInfo tmp_frag_info;
         int64_t offset = 0;
+        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
         do
         {
           tmp_frag_info.v_frag_meta_.clear();
-          int32_t retry = 3;
+          int32_t retry = ClientConfig::meta_retry_count_;
+          bool table_updated_retry = false;
           do
           {
+            table_updated_retry = false;
             if ((ret = NameMetaHelper::do_read_file(meta_server_id, app_id, uid, file_path,
                     offset, MAX_READ_FRAG_SIZE, meta_table_.version_id_, tmp_frag_info, still_have)) != TFS_SUCCESS)
             {
               TBSYS_LOG(ERROR, "read frag info error, ret: %d, retry: %d", ret, retry);
             }
+            if (EXIT_NETWORK_ERROR == ret)
+            {
+              fail_count_++;
+            }
+            if (need_update_table(ret))
+            {
+              update_table_from_rootserver();
+              meta_server_id = get_meta_server_id(app_id, uid);
+              if (TFS_SUCCESS != ret)
+              {
+                table_updated_retry = true;
+              }
+            }
           }
-          while(ret == EXIT_NETWORK_ERROR && --retry);
-
-          if (need_update_table(ret))
-          {
-            update_table_from_rootserver();
-          }
+          while ((EXIT_NETWORK_ERROR == ret || table_updated_retry) && --retry);
 
           offset = tmp_frag_info.get_last_offset();
           frag_info.cluster_id_ = tmp_frag_info.cluster_id_;
@@ -928,32 +970,38 @@ namespace tfs
       return ret;
     }
 
-    int32_t NameMetaClientImpl::get_cluster_id(const int64_t app_id, const int64_t uid, const char* path)
-    {
-      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
-      return get_cluster_id(meta_server_id, app_id, uid, path);
-    }
-    int32_t NameMetaClientImpl::get_cluster_id(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
+    int32_t NameMetaClientImpl::get_cluster_id(const int64_t app_id, const int64_t uid,
         const char* path)
     {
       FragInfo frag_info;
       bool still_have = false;
       int ret = TFS_SUCCESS;
       int32_t cluster_id = -1;
-      int32_t retry = 3;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+      bool table_updated_retry = false;
       do
       {
+        table_updated_retry = false;
         if ((ret = do_read(meta_server_id, app_id, uid, path, 0, 0, frag_info, still_have)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "get cluster id failed, ret: %d, retry: %d", ret, retry);
         }
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+          meta_server_id = get_meta_server_id(app_id, uid);
+          if (TFS_SUCCESS != ret)
+          {
+            table_updated_retry = true;
+          }
+        }
       }
-      while (ret == EXIT_NETWORK_ERROR && --retry);
-
-      if (need_update_table(ret))
-      {
-        update_table_from_rootserver();
-      }
+      while ((EXIT_NETWORK_ERROR == ret || table_updated_retry) && --retry);
 
       if (TFS_SUCCESS == ret)
       {
@@ -1114,9 +1162,9 @@ namespace tfs
 
     bool NameMetaClientImpl::need_update_table(const int ret_status)
     {
-      return (ret_status == EXIT_TABLE_VERSION_ERROR
-          || ret_status == EXIT_LEASE_EXPIRED
-          || ret_status == EXIT_NETWORK_ERROR);
+      return (EXIT_TABLE_VERSION_ERROR == ret_status
+          || EXIT_LEASE_EXPIRED == ret_status
+          || fail_count_ >= ClientConfig::update_kmt_fail_count_);
     }
 
     int NameMetaClientImpl::update_table_from_rootserver()
@@ -1143,6 +1191,7 @@ namespace tfs
           uint64_t* meta_servers = reinterpret_cast<uint64_t*> (table_info);
           meta_table_.v_meta_table_.assign(meta_servers, meta_servers + table_size);
           meta_table_.version_id_ = version_id;
+          fail_count_ = 0;
           //meta_table_.dump();
           ret = TFS_SUCCESS;
         }

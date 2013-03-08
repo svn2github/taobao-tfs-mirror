@@ -288,7 +288,6 @@ namespace tfs
       return ret;
     }
 
-#ifdef WITH_TAIR_CACHE
     void RcClientImpl::set_remote_cache_info(const char * remote_cache_info)
     {
       std::vector<std::string> tair_addr;
@@ -302,7 +301,6 @@ namespace tfs
         TfsClientImpl::Instance()->set_use_remote_cache(true);
       }
     }
-#endif
 
     void RcClientImpl::set_client_retry_count(const int64_t count)
     {

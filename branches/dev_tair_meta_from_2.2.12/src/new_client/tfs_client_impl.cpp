@@ -676,7 +676,6 @@ bool TfsClientImpl::is_hit_local_cache(const char* ns_addr, const char* tfs_name
   return ret;
 }
 
-#ifdef WITH_TAIR_CACHE
 void TfsClientImpl::set_remote_cache_info(const char* remote_cache_master_addr, const char* remote_cache_slave_addr,
        const char* remote_cache_group_name, const int32_t remote_cache_area)
 {
@@ -686,6 +685,7 @@ void TfsClientImpl::set_remote_cache_info(const char* remote_cache_master_addr, 
   ClientConfig::remote_cache_area_ = remote_cache_area;
 }
 
+#ifdef WITH_TAIR_CACHE
 void TfsClientImpl::insert_remote_block_cache(const char* ns_addr, const uint32_t block_id,
        const common::VUINT64& ds_list)
 {
@@ -926,20 +926,20 @@ int64_t TfsClientImpl::get_wait_timeout() const
   return ClientConfig::wait_timeout_;
 }
 
-void TfsClientImpl::set_client_retry_count(const int64_t count)
+void TfsClientImpl::set_client_retry_count(const int32_t count)
 {
   if (count > 0)
   {
     ClientConfig::client_retry_count_ = count;
-    TBSYS_LOG(INFO, "set client retry count: %" PRI64_PREFIX "d", ClientConfig::client_retry_count_);
+    TBSYS_LOG(INFO, "set client retry count: %d", ClientConfig::client_retry_count_);
   }
   else
   {
-    TBSYS_LOG(WARN, "set client retry count %"PRI64_PREFIX"d <= 0", count);
+    TBSYS_LOG(WARN, "set client retry count %d <= 0", count);
   }
 }
 
-int64_t TfsClientImpl::get_client_retry_count() const
+int32_t TfsClientImpl::get_client_retry_count() const
 {
   return ClientConfig::client_retry_count_;
 }

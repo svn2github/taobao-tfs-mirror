@@ -124,8 +124,10 @@ namespace tfs
     static const int64_t INVALID_FILE_SIZE = -1;
 
     // client config
-    static const int64_t DEFAULT_CLIENT_RETRY_COUNT = 3;
-    static const int64_t DEFAULT_UPDATE_KMT_INTERVAL_COUNT = 100;
+    static const int32_t DEFAULT_CLIENT_RETRY_COUNT = 3;
+    static const int32_t DEFAULT_META_RETRY_COUNT = 3;
+    static const uint32_t DEFAULT_UPDATE_KMT_INTERVAL_COUNT = 100;
+    static const uint32_t DEFAULT_UPDATE_KMT_FAIL_COUNT = 10;
     // unit ms
     static const int64_t DEFAULT_STAT_INTERNAL = 60000; // 1min
     static const int64_t DEFAULT_GC_INTERNAL = 43200000; // 12h

@@ -55,12 +55,10 @@ namespace tfs
       return impl_->get_app_id();
     }
 
-#ifdef WITH_TAIR_CACHE
     void RcClient::set_remote_cache_info(const char * remote_cache_info)
     {
       impl_->set_remote_cache_info(remote_cache_info);
     }
-#endif
 
     void RcClient::set_client_retry_count(const int64_t count)
     {
