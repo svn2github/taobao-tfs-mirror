@@ -177,6 +177,12 @@ namespace tfs
       impl_->set_kv_rs_addr(rs_addr);
     }
 
+    TfsRetType RcClient::put_bucket(const char *bucket_name,
+        const UserInfo &user_info)
+    {
+      return impl_->put_bucket(bucket_name, user_info);
+    }
+
     TfsRetType RcClient::get_bucket(const char *bucket_name, const char *prefix,
         const char *start_key, const char delimiter, const int32_t limit,
         vector<ObjectMetaInfo> *v_object_meta_info,
