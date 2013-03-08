@@ -132,7 +132,7 @@ namespace tfs
       }
       else
       {
-        ReplicateTask* task = new ReplicateTask(service_, seqno,
+        ReplicateTask* task = new (std::nothrow) ReplicateTask(service_, seqno,
             ds_info.ns_vip_port_, expire_time, *repl_info);
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
@@ -153,7 +153,7 @@ namespace tfs
           IS_VERFIFY_BLOCK(block_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        CompactTask* task = new CompactTask(service_, seqno,
+        CompactTask* task = new (std::nothrow) CompactTask(service_, seqno,
             ds_info.ns_vip_port_, expire_time, block_id);
         task->set_servers(message->get_servers());
         ret = add_task_queue(task);
@@ -183,7 +183,7 @@ namespace tfs
       }
       else
       {
-        ReplicateTask* task = new ReplicateTask(service_, seqno, source_id, expire_time, *repl_info);
+        ReplicateTask* task = new (std::nothrow) ReplicateTask(service_, seqno, source_id, expire_time, *repl_info);
         task->set_task_from_ds();
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
@@ -206,7 +206,7 @@ namespace tfs
           EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        CompactTask* task = new CompactTask(service_, seqno, source_id, expire_time, block_id);
+        CompactTask* task = new (std::nothrow) CompactTask(service_, seqno, source_id, expire_time, block_id);
         task->set_task_from_ds();
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
@@ -232,7 +232,7 @@ namespace tfs
         ret = check_marshalling(family_id, family_aid_info, family_members);
         if (TFS_SUCCESS == ret)
         {
-          MarshallingTask* task = new MarshallingTask(service_, seqno,
+          MarshallingTask* task = new (std::nothrow) MarshallingTask(service_, seqno,
               ds_info.ns_vip_port_, expire_time, family_id);
           ret = task->set_family_info(family_members, family_aid_info);
           if (TFS_SUCCESS == ret)
@@ -265,7 +265,7 @@ namespace tfs
         ret = check_reinstate(family_id, family_aid_info, family_members, erased);
         if (TFS_SUCCESS == ret)
         {
-          ReinstateTask* task = new ReinstateTask(service_, seqno,
+          ReinstateTask* task = new (std::nothrow) ReinstateTask(service_, seqno,
               ds_info.ns_vip_port_, expire_time, family_id);
           ret = task->set_family_info(family_members, family_aid_info, erased);
           if (TFS_SUCCESS == ret)
@@ -297,7 +297,7 @@ namespace tfs
         ret = check_dissolve(family_id, family_aid_info, family_members);
         if (TFS_SUCCESS == ret)
         {
-          DissolveTask* task = new DissolveTask(service_, seqno,
+          DissolveTask* task = new (std::nothrow) DissolveTask(service_, seqno,
               ds_info.ns_vip_port_, expire_time, family_id);
           ret = task->set_family_info(family_members, family_aid_info);
           if (TFS_SUCCESS == ret)
@@ -337,14 +337,13 @@ namespace tfs
       {
         ret = TFS_ERROR;
       }
-      task_monitor_.unlock();
 
-      if (false == exist)
+      if (!exist)
       {
-        task_monitor_.lock();
         task_monitor_.notify();
-        task_monitor_.unlock();
       }
+
+      task_monitor_.unlock();
 
       return ret;
     }
@@ -397,7 +396,7 @@ namespace tfs
         }
       }
 
-      // when stoped, clear the left tasks
+      // when stoped, clear tasks in queue
       task_monitor_.lock();
       while (!task_queue_.empty())
       {
@@ -406,6 +405,16 @@ namespace tfs
         tbsys::gDelete(task);
       }
       task_monitor_.unlock();
+
+      // clear running tasks
+      running_task_mutex_.lock();
+      map<int64_t, Task*>::iterator iter = running_task_.begin();
+      for ( ; iter != running_task_.end(); )
+      {
+        tbsys::gDelete(iter->second);
+        running_task_.erase(iter++);
+      }
+      running_task_mutex_.unlock();
     }
 
     void TaskManager::stop_task()

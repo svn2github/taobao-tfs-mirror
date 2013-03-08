@@ -88,7 +88,7 @@ namespace tfs
             if (1 == index)
               start += AllocPhysicalBlock::STORE_ALLOC_BIT_MAP_SIZE;
             end   = index *  max_ext_block_size;
-            alloc_bit_map_ |= (1 << retry_times);
+            alloc_bit_map_ |= BIT_MAP_MASK[retry_times];
             ret = file_op_.pwrite(reinterpret_cast<char*>(&alloc_bit_map_), STORE_ALLOC_BIT_MAP_SIZE, 0);
             ret = ret >= STORE_ALLOC_BIT_MAP_SIZE ? TFS_SUCCESS : EXIT_WRITE_ALLOC_BIT_MAP_ERROR;
             if (TFS_SUCCESS == ret)
@@ -106,9 +106,9 @@ namespace tfs
       int32_t ret = (index > 0 && index <= max_alloc_ext_block_count) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        if (alloc_bit_map_ & BIT_MAP_MASK[index])
+        if (alloc_bit_map_ & BIT_MAP_MASK[index-1])
         {
-          alloc_bit_map_ &= ~(1 << (index - 1));
+          alloc_bit_map_ &= ~BIT_MAP_MASK[index-1];
           ret = file_op_.pwrite(reinterpret_cast<char*>(&alloc_bit_map_), STORE_ALLOC_BIT_MAP_SIZE, 0);
           ret = ret >= STORE_ALLOC_BIT_MAP_SIZE ? TFS_SUCCESS : EXIT_WRITE_ALLOC_BIT_MAP_ERROR;
           if (TFS_SUCCESS == ret)

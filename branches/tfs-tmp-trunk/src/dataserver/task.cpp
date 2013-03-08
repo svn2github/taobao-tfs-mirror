@@ -914,9 +914,9 @@ namespace tfs
         ret = (NULL == erased) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          const int32_t DATA_NUM = GET_DATA_MEMBER_NUM(family_aid_info);
+          const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) +
             GET_CHECK_MEMBER_NUM(family_aid_info);
-          memcpy(erased_, erased, DATA_NUM * sizeof(int));
+          memcpy(erased_, erased, MEMBER_NUM * sizeof(int));
         }
       }
       return ret;
@@ -1068,9 +1068,8 @@ namespace tfs
 
           if (offset < ec_metas[i].mars_offset_)
           {
-            int32_t ret_len = 0;
             ret = get_data_helper().read_raw_data(family_members_[i].server_,
-                family_members_[i].block_, data[i], ret_len, offset);
+                family_members_[i].block_, data[i], length, offset);
           }
         }
 
@@ -1246,7 +1245,7 @@ namespace tfs
             family_members_[pi].block_, family_members_[i].block_, index_data);
         for (int j = data_num; (TFS_SUCCESS == ret) && (j < member_num); j++)
         {
-          if (ErasureCode::NODE_DEAD != erased_[j]) continue;
+          if (ErasureCode::NODE_DEAD != erased_[j])
           {
             continue; // we need find dead node to recover
           }

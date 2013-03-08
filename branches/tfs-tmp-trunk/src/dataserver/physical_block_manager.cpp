@@ -133,8 +133,8 @@ namespace tfs
             ret = supber_block_manager.cleanup_block_index(physcical_block_id);
           }
           if (TFS_SUCCESS == ret
-              && (0 != index.index_)
-              || (BLOCK_SPLIT_FLAG_YES == index.split_flag_))
+              && ((0 != index.index_)
+              || (BLOCK_SPLIT_FLAG_YES == index.split_flag_)))
           {
             ret = free_ext_block(index, false);
           }
@@ -368,12 +368,15 @@ namespace tfs
             cleanup = physical_block->empty(info->max_main_block_size_, info->max_extend_block_size_);
             if (cleanup)
             {
-              BasePhysicalBlock* result = NULL;
-              ret = remove(result, physical_block->id());
+              BasePhysicalBlock* result = physical_blocks_.erase(&query);
+              ret = supber_block_manager.cleanup_block_index(index.physical_file_name_id_);
               if (TFS_SUCCESS == ret)
               {
+                --info->used_main_block_count_;
                 if (alloc_physical_blocks_.end() != iter)
                   alloc_physical_blocks_.erase(physical_block);
+                if (flush)
+                  ret = supber_block_manager.flush();
               }
               tbsys::gDelete(result);//TODO
             }
