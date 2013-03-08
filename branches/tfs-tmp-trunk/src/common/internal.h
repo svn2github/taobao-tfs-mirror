@@ -627,10 +627,11 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint64_t block_id_;
-      uint64_t source_id_;
+      uint64_t source_id_[MAX_REPLICATION_NUM];
       uint64_t destination_id_;
       int32_t start_time_;
       int32_t is_move_;
+      int32_t source_num_;
     };
 
     struct CheckBlockInfo

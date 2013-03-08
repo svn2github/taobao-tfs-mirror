@@ -140,17 +140,21 @@ namespace tfs
       {
         ReplicateBlockMessage msg;
         ReplBlock block;
-        memset(&block, 0, sizeof(block));
         block.block_id_ = block_;
-        block.source_id_ = servers_[0];
+        for (int32_t index = 0; index < server_num_; ++index)
+        {
+          if (1 != index)
+            block.source_id_[index] = servers_[index];
+        }
         block.destination_id_ = servers_[1];
         block.start_time_ = Func::get_monotonic_time();
         block.is_move_ = PLAN_TYPE_MOVE  == type_;
+        block.source_num_ = (server_num_ - 1);
         msg.set_repl_block(&block);
         msg.set_status(PLAN_STATUS_BEGIN);
         msg.set_seqno(seqno_);
         msg.set_expire_time(SYSPARAM_NAMESERVER.move_task_expired_time_ - MAX_TASK_RESERVE_TIME);
-        ret = send_msg_to_server(block.source_id_, &msg);
+        ret = send_msg_to_server(block.source_id_[0], &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
       last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.move_task_expired_time_;
@@ -216,7 +220,7 @@ namespace tfs
           if (status_ == PLAN_STATUS_END)
           {
             ServerCollect* dest   = manager_.get_manager().get_server_manager().get(blocks.destination_id_);// find destination dataserver
-            ServerCollect* source = manager_.get_manager().get_server_manager().get(blocks.source_id_);// find source dataserver
+            ServerCollect* source = manager_.get_manager().get_server_manager().get(blocks.source_id_[0]);// find source dataserver
             BlockCollect* block = manager_.get_manager().get_block_manager().get(blocks.block_id_);
             if ((NULL != block) && (NULL != dest))
             {

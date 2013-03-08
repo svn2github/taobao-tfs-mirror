@@ -357,7 +357,12 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int64(data, data_len, pos, source_id_);
+        ret = Serialization::set_int32(data, data_len, pos, source_num_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t index = 0; index < source_num_ && TFS_SUCCESS == ret; ++index)
+          ret = Serialization::set_int64(data, data_len, pos, source_id_[index]);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -383,7 +388,12 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&source_id_));
+        ret = Serialization::get_int32(data, data_len, pos, &source_num_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t index = 0; index < source_num_ && TFS_SUCCESS == ret; ++index)
+          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&source_id_[index]));
       }
       if (TFS_SUCCESS == ret)
       {
@@ -402,7 +412,7 @@ namespace tfs
 
     int64_t ReplBlock::length() const
     {
-      return  INT_SIZE * 2 + INT64_SIZE * 4;
+      return  INT_SIZE * 3 + INT64_SIZE * (2 + source_num_);
     }
 
     int CheckBlockInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const

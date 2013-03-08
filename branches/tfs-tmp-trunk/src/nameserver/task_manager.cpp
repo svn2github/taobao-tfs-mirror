@@ -128,7 +128,7 @@ namespace tfs
             for (index = 0; index < servers.get_array_index() && TFS_SUCCESS == ret; ++index)
             {
               server = *servers.at(index);
-              if (task->type_ != PLAN_TYPE_COMPACT)
+              if (task->type_ != PLAN_TYPE_COMPACT && index < 2)
               {
                 std::pair<MACHINE_TO_TASK_ITER, bool> mrs;
                 uint64_t machine_ip = (server & 0xFFFFFFFF);
@@ -139,9 +139,9 @@ namespace tfs
                   mit = mrs.first;
                 }
                 ret = mit->second.add(server, task, is_target(index));
+                if (TFS_SUCCESS == ret)
+                  helper.push_back(std::make_pair(server, is_target(index)));
               }
-              if (TFS_SUCCESS == ret)
-                 helper.push_back(std::make_pair(server, is_target(index)));
             }
 
             //rollback

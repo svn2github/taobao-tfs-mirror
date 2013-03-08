@@ -1371,8 +1371,10 @@ namespace tfs
       if (ret)
       {
         PlanPriority priority = PLAN_PRIORITY_NONE;
-        uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-        ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+        uint64_t tmp_servers[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, tmp_servers);
+        uint64_t servers[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> result_array(MAX_REPLICATION_NUM, servers);
         if ((ret = get_block_manager().need_replicate(helper, priority, block, now)))
         {
           std::string result;
@@ -1397,10 +1399,15 @@ namespace tfs
           ret = ((NULL != source) && (NULL != target));
           if (ret)
           {
-            helper.clear();
-            helper.push_back(source->id());
-            helper.push_back(target->id());
-            ret = TFS_SUCCESS == get_task_manager().add(block->id(), helper, PLAN_TYPE_REPLICATE, now);
+            result_array.push_back(source->id());
+            result_array.push_back(target->id());
+            for (int64_t index = 0; index < helper.get_array_index(); ++index)
+            {
+              uint64_t server = *helper.get(index);
+              if (server != source->id())
+                result_array.push_back(server);
+            }
+            ret = TFS_SUCCESS == get_task_manager().add(block->id(), result_array, PLAN_TYPE_REPLICATE, now);
           }
         }
       }
