@@ -188,7 +188,7 @@ namespace tfs
 
       if ((TFS_SUCCESS == ret) && (remote_version >= 0))  // remote version < 0, don't check
       {
-        ret = get_block_manager().check_block_version(local, remote_version, block_id);
+        ret = get_block_manager().check_block_version(local, remote_version, block_id, block_id);//TODO
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
@@ -267,7 +267,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = get_block_manager().check_block_version(local, remote_version, block_id);
+        ret = get_block_manager().check_block_version(local, remote_version, block_id, block_id);//TODO
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "

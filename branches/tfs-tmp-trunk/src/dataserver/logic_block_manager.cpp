@@ -308,7 +308,7 @@ namespace tfs
 
     int LogicBlockManager::timeout(std::vector<uint64_t>& expired_blocks, const time_t now)
     {
-      const int32_t EXPIRED_TIME_MS = 5 * 60 * 1000;
+      const int32_t EXPIRED_TIME_MS = 3 * 60 * 1000;
       expired_blocks.clear();
       TMP_LOGIC_BLOCK_MAP_ITER iter = tmp_logic_blocks_.begin();
       for (; iter != tmp_logic_blocks_.end(); ++iter)
@@ -357,7 +357,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           main_physical_block_id = (*physical_block_ids.begin());
-          assert(main_physical_block_id > INVALID_PHYSICAL_BLOCK_ID);
+          assert(main_physical_block_id != INVALID_PHYSICAL_BLOCK_ID);
           ret = block_manager_.get_super_block_manager().get_block_index(index, main_physical_block_id);
         }
         if (TFS_SUCCESS == ret)

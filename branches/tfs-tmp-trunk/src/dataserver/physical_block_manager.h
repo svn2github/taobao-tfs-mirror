@@ -65,7 +65,7 @@ namespace tfs
 
       private:
       BasePhysicalBlock* get_(const int32_t physical_block_id) const;
-      bool exist_(const int32_t physcical_block_id) const;
+      //bool exist_(const int32_t physical_block_id) const;
       int insert_(const BlockIndex& index, const int32_t physical_block_id, const std::string& path,
           const int32_t start, const int32_t end);
       private:

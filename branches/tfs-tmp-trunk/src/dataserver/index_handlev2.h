@@ -51,7 +51,7 @@ namespace tfs
         int get_block_info(common::BlockInfoV2& info) const;
         int get_index_header(common::IndexHeaderV2& header) const;
         int set_index_header(const common::IndexHeaderV2& header);
-        int check_block_version(common::BlockInfoV2& info, const int32_t remote_version) const;
+        virtual int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const;
         int update_used_offset(const int32_t size);
         int get_used_offset(int32_t& offset) const;
         int set_used_offset(const int32_t size);
@@ -158,6 +158,7 @@ namespace tfs
       int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
       int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const;
       int get_index_num(int32_t& index_num) const;
+      int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const;
 
       private:
       static const int32_t INDEX_DATA_START_OFFSET = sizeof(common::IndexHeaderV2) + common::MAX_MARSHALLING_NUM * sizeof(InnerIndex);

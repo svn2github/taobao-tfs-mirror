@@ -51,7 +51,7 @@ namespace tfs
       int add_physical_block(PhysicalBlock* block);
       int get_all_physical_blocks(std::vector<int32_t>& physical_blocks) const;
       int choose_physic_block(PhysicalBlock*& block, int32_t& length, int32_t& inner_offset, const int32_t offset) const;
-      int check_block_version(common::BlockInfoV2& info, const int32_t remote_version) const;
+      virtual int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const;
       int update_block_info(const common::BlockInfoV2& info) const;
       int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT);
       int get_block_info(common::BlockInfoV2& info) const;

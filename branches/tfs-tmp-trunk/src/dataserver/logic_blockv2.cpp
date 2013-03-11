@@ -58,7 +58,7 @@ namespace tfs
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       int32_t ret = index_handle_->remove_self(id());
-      if (TFS_SUCCESS == ret)
+      /*if (TFS_SUCCESS == ret)//TODO
       {
         SuperBlockManager& supber_block_manager = get_block_manager_().get_super_block_manager();
         PHYSICAL_BLOCK_LIST_CONST_ITER iter = physical_block_list_.begin();
@@ -66,7 +66,7 @@ namespace tfs
         {
           ret = supber_block_manager.cleanup_block_index((*iter)->id());
         }
-      }
+      }*/
       return ret;
     }
 
@@ -139,10 +139,10 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::check_block_version(common::BlockInfoV2& info, const int32_t remote_version) const
+    int BaseLogicBlock::check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const
     {
       RWLock::Lock lock(mutex_, READ_LOCKER);
-      return index_handle_->check_block_version(info, remote_version);
+      return index_handle_->check_block_version(info, remote_version, logic_block_id);
     }
 
     int BaseLogicBlock::get_block_info(BlockInfoV2& info) const

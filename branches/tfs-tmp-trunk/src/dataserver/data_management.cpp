@@ -84,7 +84,7 @@ namespace tfs
       if (0 == write_info.offset_)
       {
         BlockInfoV2 none;  // not used in old version
-        ret = get_block_manager().check_block_version(none, version, write_info.block_id_);
+        ret = get_block_manager().check_block_version(none, version, write_info.block_id_, write_info.block_id_);//TODO
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(DEBUG, "check_block_version error. blockid: %u, ret: %d", write_info.block_id_, ret);

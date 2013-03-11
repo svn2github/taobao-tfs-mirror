@@ -78,6 +78,7 @@ namespace tfs
           break;
         default:
           ret = TFS_ERROR;
+          TBSYS_LOG(WARN, "unknown pcode : %d",  pcode);
           break;
       }
 

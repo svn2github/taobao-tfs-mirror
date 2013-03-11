@@ -379,7 +379,8 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const
+    int BlockManager::check_block_version(common::BlockInfoV2& info, const int32_t remote_version,
+        const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const
     {
       int32_t ret = (remote_version >= 0 && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -388,7 +389,7 @@ namespace tfs
         ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          ret = logic_block->check_block_version(info, remote_version);
+          ret = logic_block->check_block_version(info, remote_version, attach_logic_block_id);
         }
       }
       return ret;
@@ -670,7 +671,7 @@ namespace tfs
                 && INVALID_BLOCK_ID == index.logic_block_id_
                 && BLOCK_SPLIT_FLAG_NO == index.split_flag_)
             {
-              TBSYS_LOG(WARN, "physical block %d mybe reuse, physical block file name id : %d", index.physical_block_id_, index.physical_file_name_id_);
+              TBSYS_LOG(WARN, "physical block %d maybe reuse, physical block file name id : %d", index.physical_block_id_, index.physical_file_name_id_);
               ret = get_super_block_manager().cleanup_block_index(index.physical_block_id_);
               if (TFS_SUCCESS == ret)
                 ret = get_super_block_manager().flush();
@@ -722,22 +723,19 @@ namespace tfs
                   if (TFS_SUCCESS == ret)
                   {
                     int32_t next_physical_block_id = index.next_index_;
-                    if (TFS_SUCCESS == ret)
+                    while (INVALID_PHYSICAL_BLOCK_ID != next_physical_block_id && TFS_SUCCESS == ret)
                     {
-                      while (INVALID_PHYSICAL_BLOCK_ID != next_physical_block_id && TFS_SUCCESS == ret)
+                      BlockIndex next_block_index;
+                      ret = get_super_block_manager().get_block_index(next_block_index, next_physical_block_id);
+                      if (TFS_SUCCESS == ret)
                       {
-                        BlockIndex next_block_index;
-                        ret = get_super_block_manager().get_block_index(next_block_index, next_physical_block_id);
-                        if (TFS_SUCCESS == ret)
-                        {
-                          next_physical_block_id = next_block_index.next_index_;
-                          std::stringstream physical_block_path;
-                          physical_block_path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << next_block_index.physical_file_name_id_;
-                          physical_block = insert_physical_block_(*info, next_block_index,
-                              next_block_index.physical_block_id_, physical_block_path.str());
-                          assert(NULL != physical_block);
-                          ret = logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
-                        }
+                        next_physical_block_id = next_block_index.next_index_;
+                        std::stringstream physical_block_path;
+                        physical_block_path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << next_block_index.physical_file_name_id_;
+                        physical_block = insert_physical_block_(*info, next_block_index,
+                            next_block_index.physical_block_id_, physical_block_path.str());
+                        assert(NULL != physical_block);
+                        ret = logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
                       }
                     }
                   }
