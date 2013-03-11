@@ -1218,9 +1218,10 @@ namespace tfs
       int64_t family_id_;
       int32_t used_offset_;
       int32_t mars_offset_;
+      int32_t version_step_;
 
-      ECMeta(): family_id_(0),
-        used_offset_(0), mars_offset_(0)
+      ECMeta(): family_id_(-1),
+        used_offset_(0), mars_offset_(0), version_step_(0)
       {
 
       }

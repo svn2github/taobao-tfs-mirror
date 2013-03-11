@@ -2117,6 +2117,11 @@ namespace tfs
         ret = Serialization::get_int32(data, data_len, pos, &mars_offset_);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &version_step_);
+      }
+
       return ret;
     }
 
@@ -2138,12 +2143,17 @@ namespace tfs
         ret = Serialization::set_int32(data, data_len, pos, mars_offset_);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, version_step_);
+      }
+
       return ret;
     }
 
     int64_t ECMeta::length() const
     {
-      return INT64_SIZE + INT_SIZE * 2;
+      return INT64_SIZE + INT_SIZE * 3;
     }
 
     int FileInfoV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
