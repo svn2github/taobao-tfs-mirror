@@ -445,35 +445,37 @@ namespace tfs
                                    common::ObjectInfo *object_info, bool* still_have)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0 && length >= 0
-          && offset >= 0 && object_info != NULL) ? TFS_SUCCESS : TFS_ERROR;
+          && offset >= 0 && object_info != NULL && still_have != NULL) ? TFS_SUCCESS : TFS_ERROR;
 
       common::ObjectInfo object_info_zero;
-      if(TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret)
       {
         int64_t version = 0;
         int64_t offset_zero = 0;
         ret = get_object_part(bucket_name, file_name, offset_zero, &object_info_zero, &version);
         *object_info = object_info_zero;
         *still_have = false;
-        if(TFS_SUCCESS != ret)
+        if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "object is noexist");
         }
       }
-      if(TFS_SUCCESS == ret)
+
+      if (TFS_SUCCESS == ret)
       {
-        if(offset > object_info_zero.meta_info_.big_file_size_)
+        if (offset > object_info_zero.meta_info_.big_file_size_)
         {
           TBSYS_LOG(ERROR, "req offset is out of big_file_size_");
           ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
         }
       }
-      if(TFS_SUCCESS == ret)
+
+      if (TFS_SUCCESS == ret)
       {
         bool is_big_file = false;
-        if(object_info_zero.v_tfs_file_info_.size() > 0)
+        if (object_info_zero.v_tfs_file_info_.size() > 0)
         {
-          if(offset + length <= object_info_zero.v_tfs_file_info_[0].file_size_)
+          if (offset + length <= object_info_zero.v_tfs_file_info_[0].file_size_)
           {
             is_big_file = false;
           }
@@ -486,24 +488,25 @@ namespace tfs
         {
           is_big_file = true;
         }
-        if(is_big_file == true )//big file
+
+        if (is_big_file)//big file
         {
           //op key
           char *start_key_buff = NULL;
-          if(TFS_SUCCESS == ret)
+          if (TFS_SUCCESS == ret)
           {
             start_key_buff = (char*) malloc(KEY_BUFF_SIZE);
           }
-          if(NULL == start_key_buff)
+          if (NULL == start_key_buff)
           {
             ret = TFS_ERROR;
           }
           char *end_key_buff = NULL;
-          if(ret == TFS_SUCCESS)
+          if (ret == TFS_SUCCESS)
           {
             end_key_buff = (char*) malloc(KEY_BUFF_SIZE);
           }
-          if(NULL == end_key_buff)
+          if (NULL == end_key_buff)
           {
             ret = TFS_ERROR;
           }
@@ -511,12 +514,12 @@ namespace tfs
           KvKey end_key;
           int64_t start_offset = offset - MAX_SEGMENT_SIZE > 0 ? offset - MAX_SEGMENT_SIZE : 0;
           int64_t end_offset = offset + length;
-          if(TFS_SUCCESS == ret)
+          if (TFS_SUCCESS == ret)
           {
             ret = serialize_key(bucket_name, file_name, start_offset,
                   &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
           }
-          if(TFS_SUCCESS == ret)
+          if (TFS_SUCCESS == ret)
           {
             ret = serialize_key(bucket_name, file_name, end_offset,
                   &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
@@ -533,7 +536,7 @@ namespace tfs
           object_info->v_tfs_file_info_.clear();
           int32_t valid_result = 0;
 
-          while(go_on == true)
+          while (go_on)
           {
             int32_t result_size = 0;
             int64_t last_offset = 0;
@@ -563,6 +566,7 @@ namespace tfs
               }
             }
             TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
+
             if(result_size == SCAN_LIMIT && valid_result < MESS_LIMIT)
             {
               first = 1;
@@ -580,18 +584,20 @@ namespace tfs
             }
             kv_value_values.clear();
           }//end while
-          if(NULL != start_key_buff)
+
+          if (NULL != start_key_buff)
           {
             free(start_key_buff);
             start_key_buff = NULL;
           }
-          if(NULL != end_key_buff)
+          if (NULL != end_key_buff)
           {
             free(end_key_buff);
             end_key_buff = NULL;
           }
           int32_t vec_tfs_size = static_cast<int32_t>(object_info->v_tfs_file_info_.size());
-          if(MESS_LIMIT == vec_tfs_size)
+
+          if (MESS_LIMIT == vec_tfs_size)
           {
             *still_have = true;
           }
@@ -982,7 +988,7 @@ namespace tfs
                 static_cast<int32_t>(v_object_name->size()) >= limit)
             {
               loop = false;
-              if (i < res_size - 1)
+              if (i < res_size)
               {
                 *is_truncated = 1;
               }
