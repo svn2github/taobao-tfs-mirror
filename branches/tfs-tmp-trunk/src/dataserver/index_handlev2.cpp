@@ -98,8 +98,9 @@ namespace tfs
       return ret;
     }
 
-    int BaseIndexHandle::check_block_version(common::BlockInfoV2& info, const int32_t remote_version) const
+    int BaseIndexHandle::check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const
     {
+      UNUSED(logic_block_id);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
@@ -361,7 +362,7 @@ namespace tfs
           uint32_t key = file_id & 0xFFFFFFFF;//lower 32 bit
           slot = key % header->file_info_bucket_size_;
           current =  (finfos + slot);//force这部份逻辑，在create_file_number流程删除时可以删除这部份逻辑
-          bool successful = (force ? (0 == current->id_ || file_id == current->id_) : file_id == current->id_);
+          bool successful = (force ? (INVALID_FILE_ID == current->id_ || file_id == current->id_) : file_id == current->id_);
           ret  = (successful) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           get_prev_(prev, current, TFS_SUCCESS == ret);
           if (TFS_SUCCESS != ret)
@@ -370,7 +371,7 @@ namespace tfs
             {
               slot = current->next_;
               current =  (finfos + slot);
-              successful = (force ? 0 == current->id_ : file_id == current->id_);
+              successful = (force ? (INVALID_FILE_ID == current->id_ || file_id == current->id_) : file_id == current->id_);
               ret  = (successful) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
               get_prev_(prev, current, TFS_SUCCESS == ret);
             }
@@ -526,7 +527,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           if (file_size > 0)
-            TBSYS_LOG(WARN, "index file %s mybe reuse!", file_op_.get_path().c_str());
+            TBSYS_LOG(WARN, "index file %s maybe reuse!", file_op_.get_path().c_str());
           if (0 == file_size)
           {
             IndexHeaderV2 header;
@@ -1186,6 +1187,32 @@ namespace tfs
         IndexHeaderV2* pheader = get_index_header_();
         assert(NULL != pheader);
         index_num = pheader->index_num_;
+      }
+      return ret;
+    }
+
+    int VerifyIndexHandle::check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS :  EXIT_PARAMETER_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        char* data = NULL;
+        InnerIndex inner_index;
+        inner_index.logic_block_id_ = logic_block_id;
+        ret = malloc_index_mem_(data, inner_index);
+        if (TFS_SUCCESS == ret)
+        {
+          IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
+          assert(NULL != data);
+          info = header->info_;
+          ret = (remote_version == info.version_) ? TFS_SUCCESS : EXIT_VERSION_CONFLICT_ERROR;
+        }
+        if (NULL != data)
+          free_index_mem_(data, inner_index, false);
       }
       return ret;
     }
