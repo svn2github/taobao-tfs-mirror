@@ -1115,22 +1115,31 @@ namespace tfs
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
+        BaseLogicBlock* logic_block = get_block_manager().get(block_id, switch_flag);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+
         // commit family id
         if ((TFS_SUCCESS == ret) && (ec_meta.family_id_ >= 0))
         {
-          ret = get_block_manager().set_family_id(ec_meta.family_id_, block_id);
+          ret = logic_block->set_family_id(ec_meta.family_id_);
         }
 
         // commit marshalling length
         if ((TFS_SUCCESS == ret) && (ec_meta.mars_offset_ > 0))
         {
-          ret = get_block_manager().set_marshalling_offset(ec_meta.mars_offset_, block_id);
+          ret = logic_block->set_marshalling_offset(ec_meta.mars_offset_);
+        }
+
+        // update block version
+        if ((TFS_SUCCESS == ret) && (ec_meta.version_step_ > 0))
+        {
+          ret = logic_block->update_block_version(ec_meta.version_step_);
         }
 
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "commit ec meta fail. blockid: %"PRI64_PREFIX"u, ret: %d",
-              block_id, ret);
+          TBSYS_LOG(WARN, "commit ec meta fail. blockid: %"PRI64_PREFIX"u, switch flag: %d, ret: %d",
+              block_id, switch_flag, ret);
         }
         else if (switch_flag) // if need, switch block
         {

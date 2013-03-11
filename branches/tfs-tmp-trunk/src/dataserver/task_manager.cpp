@@ -126,12 +126,16 @@ namespace tfs
       if ((NULL == repl_info) ||
           (seqno < 0) || (expire_time <= 0) ||
           (INVALID_BLOCK_ID == repl_info->block_id_) ||
-          (INVALID_SERVER_ID == repl_info->source_id_) ||
           (INVALID_SERVER_ID == repl_info->destination_id_))
       {
         ret = EXIT_PARAMETER_ERROR;
       }
       else
+      {
+        ret = check_source(repl_info->source_id_, repl_info->source_num_);
+      }
+
+      if (TFS_SUCCESS == ret)
       {
         ReplicateTask* task = new (std::nothrow) ReplicateTask(service_, seqno,
             ds_info.ns_vip_port_, expire_time, *repl_info);
@@ -176,7 +180,6 @@ namespace tfs
       if ((NULL == repl_info) ||
           (seqno < 0) || (expire_time <= 0) ||
           (INVALID_BLOCK_ID == repl_info->block_id_) ||
-          (INVALID_SERVER_ID == repl_info->source_id_) ||
           (INVALID_SERVER_ID == repl_info->destination_id_) ||
           (INVALID_SERVER_ID == source_id))
       {
@@ -184,7 +187,13 @@ namespace tfs
       }
       else
       {
-        ReplicateTask* task = new (std::nothrow) ReplicateTask(service_, seqno, source_id, expire_time, *repl_info);
+        ret = check_source(repl_info->source_id_, repl_info->source_num_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ReplicateTask* task = new (std::nothrow) ReplicateTask(service_,
+            seqno, source_id, expire_time, *repl_info);
         task->set_task_from_ds();
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
@@ -381,8 +390,8 @@ namespace tfs
 
         int64_t end_time = Func::get_monotonic_time_us();
 
-        TBSYS_LOG(INFO, "finish task, seqno: %"PRI64_PREFIX"d, type: %d, cost time: %"PRI64_PREFIX"d",
-          task->get_seqno(), task->get_type(), end_time - start_time);
+        TBSYS_LOG(INFO, "finish task, seqno: %"PRI64_PREFIX"d, type: %d, cost time: %"PRI64_PREFIX"d, ret: %d",
+          task->get_seqno(), task->get_type(), end_time - start_time, ret);
 
         if (task->is_completed())
         {
@@ -448,6 +457,23 @@ namespace tfs
       running_task_mutex_.unlock();
 
       TBSYS_LOG(DEBUG, "task manager expire task, old: %u, new: %u", old_size, new_size);
+    }
+
+    int TaskManager::check_source(const uint64_t* servers, const int32_t source_num)
+    {
+      int ret = ((NULL != servers) && (source_num > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t i = 0; i < source_num; i++)
+        {
+          if (INVALID_SERVER_ID == servers[i])
+          {
+            ret = EXIT_PARAMETER_ERROR;
+            break;
+          }
+        }
+      }
+      return ret;
     }
 
     int TaskManager::check_family(const int64_t family_id, const int32_t family_aid_info)

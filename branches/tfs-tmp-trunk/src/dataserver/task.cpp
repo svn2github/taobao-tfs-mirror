@@ -454,7 +454,11 @@ namespace tfs
       std::stringstream tmp_stream;
       tmp_stream << Task::dump();
       tmp_stream << "block id: " << repl_info_.block_id_ << delim;
-      tmp_stream << "source id: " << tbsys::CNetUtil::addrToString(repl_info_.source_id_) << delim;
+      tmp_stream << "source id: ";
+      for (int i = 0; i < repl_info_.source_num_; i++)
+      {
+        tmp_stream << tbsys::CNetUtil::addrToString(repl_info_.source_id_[i]) << " ";
+      }
       tmp_stream << "dest id: " << tbsys::CNetUtil::addrToString(repl_info_.destination_id_) << delim;
       tmp_stream << "move flag: " << (0 == repl_info_.is_move_? "no": "yes");
       return tmp_stream.str();
@@ -543,7 +547,7 @@ namespace tfs
       int32_t length = 0;
       int32_t offset = 0;
       uint64_t block_id = repl_info_.block_id_;
-      uint64_t source_id = repl_info_.source_id_;
+      uint64_t source_id = repl_info_.source_id_[0];
       uint64_t dest_id = repl_info_.destination_id_;
       char data[MAX_READ_SIZE];  // just use 1M stack space
       int ret = TFS_SUCCESS;
@@ -619,24 +623,28 @@ namespace tfs
         ret = replicate_data(block_size);
       }
 
-      // add local version first, it will be copied to remote block
-      // NOTICE: only suitable for 2 replicas  TODO: more replicas support
-      if ((TFS_SUCCESS == ret) && (!repl_info_.is_move_))
-      {
-        ret = get_block_manager().update_block_version(VERSION_INC_STEP_REPLICATE, block_id);
-      }
-
       // replicate index
       if (TFS_SUCCESS == ret)
       {
         ret = replicate_index();
       }
 
-      // commit block
+      ECMeta ec_meta;
+      ec_meta.version_step_ = VERSION_INC_STEP_REPLICATE;
+
+      // update source block version
+      if ((TFS_SUCCESS == ret) && (!repl_info_.is_move_))
+      {
+        for (int i = 0;  (i < repl_info_.source_num_) && (TFS_SUCCESS == ret); i++)
+        {
+          ret = get_data_helper().commit_ec_meta(repl_info_.source_id_[i],
+              block_id, ec_meta, SWITCH_BLOCK_NO);
+        }
+      }
+
+      // commit block, update version and switch
       if (TFS_SUCCESS == ret)
       {
-        ECMeta ec_meta;
-        ec_meta.family_id_ = -1; // not update family id
         ret = get_data_helper().commit_ec_meta(dest_id, block_id, ec_meta, SWITCH_BLOCK_YES);
       }
 
@@ -1456,10 +1464,11 @@ namespace tfs
 
         DsReplicateBlockMessage repl_msg;
         ReplBlock repl_block;
-        memset(&repl_block, 0, sizeof(ReplBlock));
         repl_block.block_id_ = family_members_[i].block_;
-        repl_block.source_id_ = family_members_[i].server_;
+        repl_block.source_id_[0] = family_members_[i].server_;
+        repl_block.source_num_ = 1;  // when dissolve happens, there will be only one source
         repl_block.destination_id_ = family_members_[i+total_num].server_;
+        repl_block.is_move_ = 0;
 
         repl_msg.set_seqno(seqno_);
         repl_msg.set_expire_time(expire_time_);

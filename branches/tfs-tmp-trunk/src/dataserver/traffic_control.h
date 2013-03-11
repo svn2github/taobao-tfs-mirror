@@ -42,6 +42,8 @@ namespace tfs
       public:
         TrafficControl();
         virtual ~TrafficControl();
+        int64_t get_last_rw_traffic_stat_time_us(const bool input);
+        int64_t get_last_mr_traffic_stat_time_us(const bool input);
         int rw_stat(const int32_t type, const int32_t ret, const bool first, const int32_t bytes);
         void rw_traffic_stat(const bool input, const int32_t bytes);
         void mr_traffic_stat(const bool input, const int32_t bytes);

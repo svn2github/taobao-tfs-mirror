@@ -58,7 +58,7 @@ namespace tfs
         ret = send_msg_to_server(server_id, message, status);
         if (TFS_SUCCESS == ret)
         {
-          ret = (STATUS_MESSAGE_OK != status) ? TFS_ERROR : TFS_SUCCESS;
+          ret = (STATUS_MESSAGE_OK != status) ? status : TFS_SUCCESS;
         }
       }
 
@@ -118,33 +118,37 @@ namespace tfs
       }
       else if ((TFS_SUCCESS == ret) && (server_id != ds_info.information_.id_))
       {
-        int32_t retry = BUSY_RETRY_TIMES;
-        int64_t interval = TRAFFIC_BYTES_STAT_INTERVAL / 2;
-        while (retry-- > 0)
+        if (get_traffic_control().mr_traffic_out_of_threshold(true))
         {
-          if (get_traffic_control().mr_traffic_out_of_threshold(true))
+          int64_t now = Func::get_monotonic_time_us();
+          int64_t last = get_traffic_control().get_last_mr_traffic_stat_time_us(true);
+          int64_t wait_time = last + TRAFFIC_BYTES_STAT_INTERVAL - now;
+          TBSYS_LOG(DEBUG, "read data need wait %"PRI64_PREFIX"d us", wait_time);
+          if (wait_time > 0)
           {
-            TBSYS_LOG(DEBUG, "input network busy, will retry: %d", retry);
-            ret = EXIT_NETWORK_BUSY_ERROR;
-            usleep(interval);
+            // after sleep, we think it's ok to send read request, though it maybe not
+            usleep(wait_time);
+          }
+        }
+
+        int retry = 0;
+        do
+        {
+          ret = read_raw_data_ex(server_id, block_id, data, length, offset);
+          if (EXIT_NETWORK_BUSY_ERROR == ret)
+          {
+            TBSYS_LOG(DEBUG, "peer network busy, need retry: %d", retry + 1);
+            usleep(TRAFFIC_BYTES_STAT_INTERVAL/2);
           }
           else
           {
-            ret = read_raw_data_ex(server_id, block_id, data, length, offset);
-            if (EXIT_NETWORK_BUSY_ERROR == ret)
+            if (TFS_SUCCESS == ret)
             {
-              usleep(interval);
+              get_traffic_control().mr_traffic_stat(true, length);
             }
-            else
-            {
-              if (TFS_SUCCESS == ret)
-              {
-                get_traffic_control().mr_traffic_stat(true, length);
-              }
-              break;
-            }
+            break;
           }
-        }
+        } while (++retry < BUSY_RETRY_TIMES);
       }
 
       if (TFS_SUCCESS != ret)
@@ -171,25 +175,22 @@ namespace tfs
       }
       else if ((TFS_SUCCESS == ret) && (server_id != ds_info.information_.id_))
       {
-        int32_t retry = BUSY_RETRY_TIMES;
-        int64_t interval = TRAFFIC_BYTES_STAT_INTERVAL / 2;
-        while (retry-- > 0)
+        if (get_traffic_control().mr_traffic_out_of_threshold(false))
         {
-          if (get_traffic_control().mr_traffic_out_of_threshold(false))
+          int64_t now = Func::get_monotonic_time_us();
+          int64_t last = get_traffic_control().get_last_mr_traffic_stat_time_us(false);
+          int64_t wait_time = last + TRAFFIC_BYTES_STAT_INTERVAL - now;
+          TBSYS_LOG(DEBUG, "write data need wait %"PRI64_PREFIX"d us", wait_time);
+          if (wait_time > 0)
           {
-            TBSYS_LOG(DEBUG, "output network busy, will retry: %d", retry);
-            ret = EXIT_NETWORK_BUSY_ERROR;
-            usleep(interval);
+            usleep(wait_time);
           }
-          else
-          {
-            ret =  write_raw_data_ex(server_id, block_id, data, length, offset);
-            if (TFS_SUCCESS == ret)
-            {
-              get_traffic_control().mr_traffic_stat(false, length);
-            }
-            break;
-          }
+        }
+
+        ret = write_raw_data_ex(server_id, block_id, data, length, offset);
+        if (TFS_SUCCESS == ret)
+        {
+          get_traffic_control().mr_traffic_stat(false, length);
         }
       }
 
@@ -253,7 +254,7 @@ namespace tfs
        if (TFS_SUCCESS == ret)
        {
          ret = query_ec_meta_ex(server_id, block_id, ec_meta);
-         if (TFS_SUCCESS == ret)
+         if (TFS_SUCCESS != ret)
          {
            TBSYS_LOG(WARN, "query ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u, ret: %d",
                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, ret);
@@ -273,8 +274,9 @@ namespace tfs
          ret = commit_ec_meta_ex(server_id, block_id, ec_meta, switch_flag);
          if (TFS_SUCCESS != ret)
          {
-           TBSYS_LOG(WARN, "commit ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u, ret: %d",
-               tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, ret);
+           TBSYS_LOG(WARN, "commit ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+               "switch_flag: %d, ret: %d",
+               tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, switch_flag, ret);
          }
        }
        return ret;
@@ -631,6 +633,12 @@ namespace tfs
         if ((TFS_SUCCESS == ret) && (ec_meta.mars_offset_ > 0))
         {
           ret = get_block_manager().set_marshalling_offset(ec_meta.mars_offset_, block_id);
+        }
+
+        // update block version
+        if ((TFS_SUCCESS == ret) && (ec_meta.version_step_ > 0))
+        {
+          ret = get_block_manager().update_block_version(ec_meta.version_step_, block_id);
         }
       }
       else

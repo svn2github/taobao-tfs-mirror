@@ -56,6 +56,7 @@ namespace tfs
         int add_reinstate_task(ECReinstateMessage* message);
         int add_dissolve_task(ECDissolveMessage* message);
 
+        int check_source(const uint64_t* servers, const int32_t source_num);
         int check_family(const int64_t family_id, const int32_t family_aid_info);
         int check_marshalling(const int64_t family_id, const int32_t family_aid_info,
             common::FamilyMemberInfo* family_members);

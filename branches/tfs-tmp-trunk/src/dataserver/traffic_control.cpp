@@ -43,6 +43,18 @@ namespace tfs
 
     }
 
+    int64_t TrafficControl::get_last_rw_traffic_stat_time_us(const bool input)
+    {
+      int index = input ? 0 : 1;
+      return last_rw_traffic_stat_time_us_[index];
+    }
+
+    int64_t TrafficControl::get_last_mr_traffic_stat_time_us(const bool input)
+    {
+      int index = input ? 0 : 1;
+      return last_mr_traffic_stat_time_us_[index];
+    }
+
     int TrafficControl::rw_stat(const int32_t type,const int32_t ret, const bool first, const int32_t bytes)
     {
       int32_t result = (type >= RW_STAT_TYPE_READ && type <= RW_STAT_TYPE_UNLINK) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
