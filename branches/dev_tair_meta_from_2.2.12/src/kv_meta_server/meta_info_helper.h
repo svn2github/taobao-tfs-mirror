@@ -101,11 +101,11 @@ namespace tfs
             std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix);
 
         int put_object_part(const std::string &bucket_name, const std::string &file_name,
-            const common::ObjectInfo &object_info, uint64_t *length);
+            const common::ObjectInfo &object_info);
 
         int put_object_zero(const std::string &bucket_name, const std::string &file_name,
-            common::ObjectInfo *object_info_zero, const int64_t offset,
-            const int64_t length, int64_t version);
+            common::ObjectInfo *object_info_zero, int64_t *offset,
+            const int64_t length, int64_t version, bool is_append);
 
         int get_range(const KvKey &pkey, const std::string &start_key,
             int32_t offset, const int32_t limit, std::vector<KvValue*> *kv_value_keys,

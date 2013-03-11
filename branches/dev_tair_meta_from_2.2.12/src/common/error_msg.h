@@ -189,7 +189,7 @@ namespace tfs
 
     const int32_t EXIT_OBJECT_OVERLAP = -16004;// pwrite object overlap
     const int32_t EXIT_OBJECT_NOT_EXIST = -16006; //get_key(key not exist, object type)
-    const int32_t EXIT_WITH_BUCKET_REPEAT_PUT = -16007;// repeat put bucket
+    const int32_t EXIT_BUCKET_EXIST = -16007;// bucket already exist
     const int32_t EXIT_INVALID_KV_META_SERVER = -16008;// no kv meta server
   }
 }
