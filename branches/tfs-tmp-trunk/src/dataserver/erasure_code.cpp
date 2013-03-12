@@ -57,18 +57,12 @@ namespace tfs
       pn_ = pn;
 
       matrix_ = new (std::nothrow) int[dn_*pn_];
-      if (NULL == matrix_)
+      assert(matrix_);
+      for (int i = 0; i < pn_; i++)
       {
-        ret = EXIT_NO_MEMORY;
-      }
-      else
-      {
-        for (int i = 0; i < pn_; i++)
+        for (int j = 0; j < dn_; j++)
         {
-          for (int j = 0; j < dn_; j++)
-          {
-            matrix_[i*dn_+j] = galois_single_divide(1, i ^ (pn_ + j), ws_);
-          }
+          matrix_[i*dn_+j] = galois_single_divide(1, i ^ (pn_ + j), ws_);
         }
       }
       int* bitmatrix = jerasure_matrix_to_bitmatrix(dn_, pn_, ws_, matrix_);
@@ -80,35 +74,29 @@ namespace tfs
       if (NULL != erased)
       {
         de_matrix_ = new (std::nothrow) int[dn_*dn_*ws_*ws_];
-        if (NULL == de_matrix_)
+        assert(de_matrix_);
+        int alive = 0;
+        for (int i = 0; i < dn_ + pn_; i++)
         {
-          ret = EXIT_NO_MEMORY;
+          erased_[i] = erased[i];
+          if (0 == erased[i])
+          {
+            alive++;
+          }
+        }
+
+        if (alive < dn_)
+        {
+          ret = EXIT_NO_ENOUGH_DATA;
+          TBSYS_LOG(ERROR, "no enough alive data for decode, alive: %d, ret: %d", alive, ret);
         }
         else
         {
-          int alive = 0;
-          for (int i = 0; i < dn_ + pn_; i++)
-          {
-            erased_[i] = erased[i];
-            if (0 == erased[i])
-            {
-              alive++;
-            }
-          }
-
-          if (alive < dn_)
-          {
-            ret = EXIT_NO_ENOUGH_DATA;
-            TBSYS_LOG(ERROR, "no enough alive data for decode, alive: %d, ret: %d", alive, ret);
-          }
-          else
-          {
-            if (jerasure_make_decoding_bitmatrix(dn_, pn_, ws_,
+          if (jerasure_make_decoding_bitmatrix(dn_, pn_, ws_,
                 matrix_, erased, de_matrix_, dm_ids_) < 0)
-            {
-              ret = EXIT_MATRIX_INVALID;
-              TBSYS_LOG(ERROR, "can't make decoding bitmatrix, ret: %d", ret);
-            }
+          {
+            ret = EXIT_MATRIX_INVALID;
+            TBSYS_LOG(ERROR, "can't make decoding bitmatrix, ret: %d", ret);
           }
         }
       }

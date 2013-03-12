@@ -90,7 +90,7 @@ namespace tfs
           ret = logic_blocks_.insert_unique(result, logic_block);
         }
         if (TFS_SUCCESS != ret)
-          tbsys::gDelete(logic_block);
+          block_manager_.get_gc_manager().add(logic_block);
       }
       return ret;
     }

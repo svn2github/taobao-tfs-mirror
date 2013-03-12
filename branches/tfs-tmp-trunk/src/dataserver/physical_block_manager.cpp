@@ -79,7 +79,7 @@ namespace tfs
             physical_block = palloc_physical_block;
             ret = palloc_physical_block->load_alloc_bit_map_();
             if (TFS_SUCCESS != ret)
-              tbsys::gDelete(physical_block);
+              manager_.get_gc_manager().add(physical_block);
           }
           else
           {
@@ -89,7 +89,7 @@ namespace tfs
           {
             ret = physical_blocks_.insert_unique(result, physical_block);
             if (TFS_SUCCESS != ret)
-              tbsys::gDelete(physical_block);
+              manager_.get_gc_manager().add(physical_block);
             if (EXIT_ELEMENT_EXIST == ret)
               assert(NULL != result);
           }
@@ -154,12 +154,12 @@ namespace tfs
 
     int PhysicalBlockManager::alloc_block(BlockIndex& index, const int8_t split_flag, const bool flush, const bool tmp)
     {
-      int32_t retry_times = 3;
       SuperBlockInfo* info = NULL;
       SuperBlockManager& supber_block_manager = get_block_manager().get_super_block_manager();
       int32_t ret = supber_block_manager.get_super_block_info(info);
       if (TFS_SUCCESS == ret)
       {
+        int32_t retry_times = info->total_main_block_count_;
         do
         {
           int32_t physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
@@ -201,7 +201,7 @@ namespace tfs
             ++info->used_main_block_count_;  // a main block used here
           }
         }
-        while (TFS_SUCCESS != ret && retry_times -- > 0);
+        while (TFS_SUCCESS != ret && retry_times-- > 0);
       }
       TBSYS_LOG(INFO, "alloc physical block: %d %s %d, logic block id: %"PRI64_PREFIX"u",
           index.physical_block_id_, TFS_SUCCESS == ret ? "successful" : "failed", ret, index.logic_block_id_);
@@ -226,7 +226,7 @@ namespace tfs
       int32_t ret = supber_block_manager.get_super_block_info(info);
       if (TFS_SUCCESS == ret)
       {
-        int32_t retry_times = 3;
+        int32_t retry_times = info->max_block_index_element_count_ - info->total_main_block_count_;
         do
         {
           std::vector<AllocPhysicalBlock*> alloc_complete_array;
@@ -320,7 +320,7 @@ namespace tfs
                 {
                   BasePhysicalBlock* result = NULL;
                   ret = remove(result, ext_index.physical_block_id_);
-                  tbsys::gDelete(result);//TODO
+                  manager_.get_gc_manager().add(result);
                 }
               }
             }
@@ -373,7 +373,7 @@ namespace tfs
                 if (flush)
                   ret = supber_block_manager.flush();
               }
-              tbsys::gDelete(result);//TODO
+              manager_.get_gc_manager().add(result);
             }
             else
             {

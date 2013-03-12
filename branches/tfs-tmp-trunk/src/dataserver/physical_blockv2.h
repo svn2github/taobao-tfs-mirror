@@ -33,7 +33,7 @@ namespace tfs
   namespace dataserver
   {
     //class PhysicalBlockManager;
-    class BasePhysicalBlock
+    class BasePhysicalBlock : public GCObject
     {
       public:
         BasePhysicalBlock(const int32_t physical_block_id, const int32_t start, const int32_t end);

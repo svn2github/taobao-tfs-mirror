@@ -156,21 +156,18 @@ namespace tfs
     {
     public:
       explicit GCObject(const time_t now):
-        dead_time_(now) {}
+        last_update_time_(now) {}
       virtual ~GCObject() {}
-      virtual void callback(){}
+      virtual void callback() {}
       inline void free(){ delete this;}
-      inline void set_dead_time(const time_t now = time(NULL)) {dead_time_ = now;}
-      inline bool can_be_clear(const time_t now = time(NULL)) const
+      inline time_t get_last_update_time() const { return last_update_time_;}
+      inline void update_last_time(const time_t now = common::Func::get_monotonic_time()) { last_update_time_ = now;}
+      inline bool can_be_free(const time_t now) const
       {
-        return now >= (dead_time_ + common::SYSPARAM_DATASERVER.object_clear_max_time_);
+        return now >= (last_update_time_ + common::SYSPARAM_DATASERVER.object_dead_max_time_);
       }
-      inline bool is_dead(const time_t now = time(NULL)) const
-      {
-        return now >= (dead_time_ + common::SYSPARAM_DATASERVER.object_dead_max_time_);
-      }
-    private:
-      time_t dead_time_;
+    protected:
+      time_t last_update_time_;
     };
 
     struct ReplBlockExt

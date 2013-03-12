@@ -35,7 +35,7 @@ namespace tfs
   {
     class BlockManager;
     class LogicBlockIterator;
-    class BaseLogicBlock
+    class BaseLogicBlock : public GCObject
     {
       public:
       typedef std::vector<PhysicalBlock*> PHYSICAL_BLOCK_LIST;
@@ -77,8 +77,7 @@ namespace tfs
       int pread(char* buf, int32_t& nbytes, const int32_t offset);
       int stat(common::FileInfoV2& info, const int8_t flag, const uint64_t logic_block_id) const;
       virtual int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
-
-      int64_t get_last_update_time() const { return 0;}//TODO
+      virtual void callback();
 
       BlockManager& get_block_manager_() { return *manager_;}
 

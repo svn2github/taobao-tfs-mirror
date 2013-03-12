@@ -13,6 +13,7 @@
  *
  */
 
+#include <bitset>
 #include <dirent.h>
 #include "common/internal.h"
 #include "common/error_msg.h"
@@ -117,7 +118,7 @@ namespace tfs
           if (TFS_SUCCESS != ret)
           {
             get_physical_block_manager().remove(physical_block, index.physical_block_id_);
-            tbsys::gDelete(physical_block);//TODO, add object to gc map
+            get_gc_manager().add(physical_block);
           }
         }
         if (TFS_SUCCESS == ret)
@@ -142,8 +143,8 @@ namespace tfs
           {
             get_logic_block_manager().remove(logic_block, index.logic_block_id_, tmp);
             get_physical_block_manager().remove(physical_block, index.physical_block_id_);
-            tbsys::gDelete(logic_block);//TODO, add object to gc map
-            tbsys::gDelete(physical_block);//TODO, add object to gc map
+            get_gc_manager().add(physical_block);
+            get_gc_manager().add(logic_block);
           }
         }
       }
@@ -257,6 +258,8 @@ namespace tfs
           }
         }
       }
+
+      get_gc_manager().gc(now);
       return ret;
     }
 
@@ -791,6 +794,9 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
+        std::stringstream index_path;
+        index_path << info->mount_point_ << INDEX_DIR_PREFIX << index.physical_block_id_;
+        ::unlink(index_path.str().c_str());
         int32_t next_physical_block_id = index.next_index_;
         ret = get_super_block_manager().cleanup_block_index(index.physical_block_id_);
         if (TFS_SUCCESS == ret)
@@ -1036,9 +1042,9 @@ namespace tfs
           assert(TFS_SUCCESS == ret);
           ret = get_super_block_manager().cleanup_block_index((*iter));//cleanup block index
           assert(TFS_SUCCESS == ret);
-          tbsys::gDelete(physical_block);//TODO, add physical block object to gc object map
+          get_gc_manager().add(physical_block);
         }
-        tbsys::gDelete(logic_block);//TODO, add logic block object to gc object map
+        get_gc_manager().add(logic_block);
 
         if (TFS_SUCCESS == ret)
         {

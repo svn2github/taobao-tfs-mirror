@@ -36,6 +36,7 @@ namespace tfs
     };
 
     BasePhysicalBlock::BasePhysicalBlock(const int32_t physical_block_id, const int32_t start, const int32_t end):
+      GCObject(Func::get_monotonic_time()),
       physical_block_id_(physical_block_id),
       start_(start),
       end_(end)
@@ -49,6 +50,7 @@ namespace tfs
     }
 
     BasePhysicalBlock::BasePhysicalBlock(const int32_t physical_block_id):
+      GCObject(Func::get_monotonic_time()),
       physical_block_id_(physical_block_id),
       start_(0),
       end_(0)

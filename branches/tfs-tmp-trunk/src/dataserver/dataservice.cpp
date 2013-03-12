@@ -255,14 +255,6 @@ namespace tfs
           TBSYS_LOG(ERROR, "load all blocks failed, ret: %d", ret);
       }
 
-      //init gcobject manager
-      if (TFS_SUCCESS == ret)
-      {
-        ret = GCObjectManager::instance().initialize(get_timer());
-        if (TFS_SUCCESS != ret)
-          TBSYS_LOG(ERROR, "%s", "initialize gcobject manager fail");
-      }
-
       // sync mirror should init after bootstrap
       if (TFS_SUCCESS == ret)
       {
@@ -393,9 +385,6 @@ namespace tfs
 
       if (0 != timeout_thread_)
         timeout_thread_->join();
-
-      GCObjectManager::instance().destroy();
-      GCObjectManager::instance().wait_for_shut_down();
       return TFS_SUCCESS;
     }
 

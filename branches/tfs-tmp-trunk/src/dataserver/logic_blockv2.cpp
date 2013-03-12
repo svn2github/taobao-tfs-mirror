@@ -29,6 +29,7 @@ namespace tfs
   namespace dataserver
   {
     BaseLogicBlock::BaseLogicBlock(BlockManager* manager, const uint64_t logic_block_id, const std::string& index_path):
+      GCObject(Func::get_monotonic_time()),
       manager_(manager),
       logic_block_id_(logic_block_id),
       data_handle_(*this),
@@ -41,6 +42,7 @@ namespace tfs
     }
 
     BaseLogicBlock::BaseLogicBlock(const uint64_t logic_block_id):
+      GCObject(Func::get_monotonic_time()),
       manager_(NULL),
       logic_block_id_(logic_block_id),
       data_handle_(*this),
@@ -391,6 +393,11 @@ namespace tfs
       UNUSED(action);
       UNUSED(logic_block_id);
       return TFS_SUCCESS;
+    }
+
+    void BaseLogicBlock::callback()
+    {
+      remove_self_file();
     }
 
     int BaseLogicBlock::transfer_file_status_(int32_t& oper_type, FileInfoV2& finfo, const int32_t action,

@@ -21,6 +21,7 @@
 #include "common/parameter.h"
 
 #include "ds_define.h"
+#include "gc.h"
 #include "logic_blockv2.h"
 #include "super_block_manager.h"
 #include "logic_block_manager.h"
@@ -102,6 +103,7 @@ namespace tfs
         SuperBlockManager& get_super_block_manager() { return super_block_manager_;}
         LogicBlockManager& get_logic_block_manager() { return logic_block_manager_;}
         PhysicalBlockManager& get_physical_block_manager() { return physical_block_manager_;}
+        GCObjectManager& get_gc_manager() { return gc_manager_;}
 
       private:
         int load_super_block_(const common::FileSystemParameter& fs_param);
@@ -123,6 +125,7 @@ namespace tfs
         SuperBlockManager super_block_manager_;
         LogicBlockManager logic_block_manager_;
         PhysicalBlockManager physical_block_manager_;
+        GCObjectManager   gc_manager_;
         mutable common::RWLock mutex_;
     };
   }/** end namespace dataserver **/
