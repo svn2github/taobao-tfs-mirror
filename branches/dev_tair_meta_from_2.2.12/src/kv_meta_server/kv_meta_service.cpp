@@ -311,11 +311,7 @@ namespace tfs
                                            &object_info, &still_have);
       }
 
-      if (TFS_SUCCESS != ret)
-      {
-        ret = req_del_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "del object fail");
-      }
-      else
+      if (TFS_SUCCESS == ret)
       {
         RspKvMetaDelObjectMessage* rsp_del_object_msg = new(std::nothrow) RspKvMetaDelObjectMessage();
           assert(NULL != rsp_del_object_msg);
@@ -325,6 +321,10 @@ namespace tfs
 
           req_del_object_msg->reply(rsp_del_object_msg);
         stat_mgr_.update_entry(tfs_kv_meta_stat_, "del_object", 1);
+      }
+      else
+      {
+        ret = req_del_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "del object fail");
       }
       return ret;
     }

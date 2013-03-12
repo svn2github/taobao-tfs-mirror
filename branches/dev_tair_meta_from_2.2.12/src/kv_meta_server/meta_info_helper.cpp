@@ -491,12 +491,12 @@ namespace tfs
         ret = get_object_part(bucket_name, file_name, offset_zero, &object_info_zero, &version);
         *object_info = object_info_zero;
         *still_have = false;
-        if (TFS_SUCCESS != ret)
+        if (TAIR_RETURN_DATA_NOT_EXIST == ret)
         {
           TBSYS_LOG(ERROR, "object not exist");
+          ret = EXIT_OBJECT_NOT_EXIST;
         }
       }
-
       if (TFS_SUCCESS == ret)
       {
         if (offset > object_info_zero.meta_info_.big_file_size_)
@@ -578,6 +578,10 @@ namespace tfs
             int64_t last_offset = 0;
             ret = kv_engine_helper_->scan_keys(start_key, end_key, SCAN_LIMIT, first,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
+            if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+            {//metainfo exist but data not exist
+              ret = TFS_SUCCESS;
+            }
             for(i = 0; i < result_size; ++i)
             {
               common::ObjectInfo tmp_object_info;
@@ -646,7 +650,7 @@ namespace tfs
         common::ObjectInfo *object_info, bool* still_have)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
-
+      *still_have = false;
       //op key
       char *start_key_buff = NULL;
       if (TFS_SUCCESS == ret)
@@ -693,9 +697,17 @@ namespace tfs
       int32_t result_size = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit, first,
+        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit + 1, first,
           &kv_value_keys, &kv_value_values, &result_size, scan_type);
-
+        if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+        {
+          ret = EXIT_OBJECT_NOT_EXIST;
+        }
+        if (result_size == limit + 1)
+        {
+          result_size -= 1;
+          *still_have = true;
+        }
         if(TFS_SUCCESS == ret)
         {
           for(i = 0; i < result_size; ++i)
@@ -750,15 +762,6 @@ namespace tfs
       {
         free(end_key_buff);
         end_key_buff = NULL;
-      }
-      *still_have = false;
-      if (MESS_LIMIT == result_size)
-      {
-        *still_have = true;
-      }
-      else if (0 == result_size)
-      {
-        ret = EXIT_OBJECT_NOT_EXIST;
       }
       return ret;
     }
