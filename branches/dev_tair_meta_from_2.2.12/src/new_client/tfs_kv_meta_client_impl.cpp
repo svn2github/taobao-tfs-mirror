@@ -274,7 +274,7 @@ namespace tfs
 
     int64_t KvMetaClientImpl::read_data(const char* ns_addr,
         const vector<FragMeta> &v_frag_meta,
-        void *buffer, int64_t offset, int64_t length)
+        void *buffer, int64_t offset, int64_t length, bool still_have)
     {
       int32_t ret = TFS_SUCCESS;
       int64_t cur_offset = offset;
@@ -339,7 +339,7 @@ namespace tfs
         }
       }
       //deal the hole
-      if (left_length > 0)
+      if (left_length > 0 && !still_have)
       {
         memset(reinterpret_cast<char*>(buffer) + cur_pos, 0, left_length);
         cur_offset += left_length;
@@ -395,6 +395,24 @@ namespace tfs
       {
         TBSYS_LOG(ERROR, "invalid buffer, length: %"PRI64_PREFIX"d", length);
         ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else if (offset == 0 && length == 0)
+      {
+        ObjectInfo object_info_null;
+        object_info_null.has_meta_info_ = true;
+        object_info_null.has_customize_info_ = true;
+        object_info_null.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
+
+        ret = do_put_object(bucket_name, object_name, object_info_null, user_info);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "do put object fail, bucket: %s, object: %s, ret: %d",
+              bucket_name, object_name, ret);
+          if (TFS_ERROR == ret)
+          {
+            ret = EXIT_GENERAL_ERROR;
+          }
+        }
       }
       else
       {
@@ -612,7 +630,7 @@ namespace tfs
           {
             // read tfs
             read_length = read_data(ns_addr.c_str(), v_frag_meta,
-                reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length);
+                reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length, still_have);
             if (read_length < 0)
             {
               TBSYS_LOG(ERROR, "read data from ns %s failed, read_length: %"PRI64_PREFIX"d",
@@ -683,7 +701,6 @@ namespace tfs
             TBSYS_LOG(ERROR, "read local file %s fail, error: %s", local_file, strerror(errno));
             break;
           }
-
           // jump for non_local_file
           if (read_len == 0 && offset != 0)
           {
