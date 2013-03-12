@@ -1597,8 +1597,10 @@ namespace tfs
         TfsRetType ret = check_init_stat();
         if (TFS_SUCCESS == ret)
         {
+          ObjectMetaInfo object_meta_info;
+          CustomizeInfo customize_info;
           ret = kv_meta_client_->get_object(bucket_name, object_name,
-              local_file, NULL, NULL, user_info);
+              local_file, &object_meta_info, &customize_info, user_info);
         }
         return ret;
       }

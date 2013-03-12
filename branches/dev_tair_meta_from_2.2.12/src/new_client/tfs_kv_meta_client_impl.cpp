@@ -293,7 +293,7 @@ namespace tfs
 
         }
 
-        // deal with the hole
+        // deal with the front hole or mid hole
         if (cur_offset < iter->offset_)
         {
           int32_t diff = min(offset + length - cur_offset, iter->offset_ - cur_offset);
@@ -338,6 +338,14 @@ namespace tfs
           break;
         }
       }
+      //deal the hole
+      if (left_length > 0)
+      {
+        memset(reinterpret_cast<char*>(buffer) + cur_pos, 0, left_length);
+        cur_offset += left_length;
+        left_length = 0;
+      }
+
       return (TFS_SUCCESS == ret) ? (length - left_length) : ret;
     }
 
@@ -561,10 +569,12 @@ namespace tfs
           }
 
           TBSYS_LOG(DEBUG, "vector size ================= is: %d", object_info.v_tfs_file_info_.size());
+          /*
           if (object_info.v_tfs_file_info_.empty())
           {
             break;
           }
+          */
 
           vector<FragMeta> v_frag_meta;
           size_t i = 0;
@@ -578,20 +588,26 @@ namespace tfs
           }
 
           cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_), left_length);
-
-          // TODO: deal tfs_file_info with different cluster id
-          cluster_id = object_info.v_tfs_file_info_.front().cluster_id_;
-          if (ns_addr.empty())
+          if (object_info.v_tfs_file_info_.size() > 0)
           {
-            ns_addr = tfs_cluster_manager_->get_read_ns_addr_ex(cluster_id, ns_get_index++);
+            // TODO: deal tfs_file_info with different cluster id
+            cluster_id = object_info.v_tfs_file_info_.front().cluster_id_;
+
             if (ns_addr.empty())
             {
-              TBSYS_LOG(ERROR, "select read ns failed");
-              ret = EXIT_GENERAL_ERROR;
-              break;
+              ns_addr = tfs_cluster_manager_->get_read_ns_addr_ex(cluster_id, ns_get_index++);
+              if (ns_addr.empty())
+              {
+                TBSYS_LOG(ERROR, "select read ns failed");
+                ret = EXIT_GENERAL_ERROR;
+                break;
+              }
             }
           }
-
+          else
+          {
+            TBSYS_LOG(WARN, "v_tfs_file_info_.size is zero");
+          }
           do
           {
             // read tfs
@@ -630,7 +646,6 @@ namespace tfs
           ret = (length - left_length);
         }
       }
-
       return ret;
     }
 
@@ -731,10 +746,18 @@ namespace tfs
         char* buf = new char[io_size];
         int64_t read_len = 0, write_len = 0;
         int64_t offset = 0;
+        int64_t length = io_size;
+        int64_t cur_length = 0;
         while (1)
         {
+          cur_length = min(io_size, length);
           read_len = pread_object(bucket_name, object_name, buf, offset,
-              io_size, object_meta_info, customize_info, user_info);
+              cur_length, object_meta_info, customize_info, user_info);
+          if (0 == offset)
+          {
+            length = object_meta_info->big_file_size_;
+            TBSYS_LOG(DEBUG, "big file size is %"PRI64_PREFIX"d",length);
+          }
           if (read_len < 0)
           {
             ret = read_len;
@@ -755,6 +778,11 @@ namespace tfs
             break;
           }
           offset += read_len;
+          length -= read_len;
+          if (0 == length)
+          {
+            break;
+          }
           TBSYS_LOG(DEBUG, "@@ out while once, offset: %ld, read_length: %ld",
                      offset, read_len);
         }

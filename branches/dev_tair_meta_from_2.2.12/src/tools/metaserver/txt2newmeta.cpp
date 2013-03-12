@@ -111,7 +111,7 @@ void transfer(const string &source_file_name, const string &s3_server)
       {
         TBSYS_LOG(ERROR, "put bucket error |%s|", bucket_name);
       }
-      if (ret == EXIT_WITH_BUCKET_REPEAT_PUT)
+      if (ret == EXIT_BUCKET_EXIST)
       {
         TBSYS_LOG(ERROR, "[conflict] put bucket conflict |%s|", bucket_name);
         ret = TFS_SUCCESS;
