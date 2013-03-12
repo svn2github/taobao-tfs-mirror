@@ -33,8 +33,9 @@ namespace tfs
 
     struct File
     {
-      uint64_t lease_id_;
+      common::FamilyInfoExt family_info_;
       common::VUINT64 ds_;
+      uint64_t lease_id_;
       int64_t offset_;
       int32_t version_;
       uint32_t crc_;
@@ -42,73 +43,18 @@ namespace tfs
       int32_t opt_flag_;
       FileStatus status_;
       int32_t read_index_;
-      common::FamilyInfoExt family_info_;
 
-      File()
-      {
-        memset(this, 0, sizeof(*this));
-      }
-
-      ~File()
-      {
-      }
-
-      bool is_valid() const
-      {
-        return has_ds() || has_family();
-      }
-
-      bool has_ds() const
-      {
-        return ds_.size() > 0;
-      }
-
-      bool has_family() const
-      {
-        return common::INVALID_FAMILY_ID != family_info_.family_id_;
-      }
-
-      int32_t get_retry_time() const
-      {
-        return ds_.size() > 0 ? ds_.size() : 1;
-      }
-
-      uint64_t get_write_ds()
-      {
-        uint64_t server_id = 0;
-        if (ds_.size() > 0)
-        {
-          server_id = ds_[0];
-        }
-        return server_id;
-      }
-
-      uint64_t get_read_ds()
-      {
-        uint64_t server_id = 0;
-        if (ds_.size() > 0)
-        {
-          read_index_ %= ds_.size();
-          server_id = ds_[read_index_];
-        }
-        else if(common::INVALID_FAMILY_ID != family_info_.family_id_)
-        {
-          // request to the first alive nodes
-          int32_t target = 0;
-          while (common::INVALID_SERVER_ID == family_info_.members_[target].second)
-          {
-            target++;
-          }
-          server_id = family_info_.members_[target].second;
-        }
-        return server_id;
-      }
-
-      void set_next_read_ds()
-      {
-        read_index_++;
-      }
-    };
+      File();
+      ~File();
+      bool has_family() const;
+      bool check_read();
+      bool check_write();
+      uint64_t get_write_ds() const;
+      int32_t get_read_retry_time() const;
+      void set_read_index(const int32_t read_index);
+      void set_next_read_index();
+      uint64_t get_read_ds() const;
+   };
 
     class TfsFile
     {

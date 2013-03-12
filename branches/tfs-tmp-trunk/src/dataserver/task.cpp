@@ -786,9 +786,8 @@ namespace tfs
 
           if (offset < ec_metas[i].used_offset_)
           {
-            int ret_len = 0;
             ret = get_data_helper().read_raw_data(family_members_[i].server_,
-                family_members_[i].block_, data[i], ret_len, offset);
+                family_members_[i].block_, data[i], length, offset);
           }
         }
 
@@ -1290,6 +1289,9 @@ namespace tfs
         {
           continue;  // we need find updated files
         }
+
+        TBSYS_LOG(DEBUG, "recovery updated file. blockid: %"PRI64_PREFIX"u, fileid: "
+            "%"PRI64_PREFIX"u, offset: %d", block_id, finfos[i].id_, finfos[i].offset_);
 
         char *data = new (std::nothrow) char[finfos[i].size_];
         assert(NULL != data);

@@ -151,10 +151,12 @@ namespace tfs
     int DsLib::remove_block(DsTask& ds_task)
     {
       uint64_t server_id = ds_task.server_id_;
-      uint32_t block_id = ds_task.block_id_;
+      uint64_t block_id = ds_task.block_id_;
 
-      RemoveBlockMessage req_rb_msg;
-      req_rb_msg.set(block_id);
+      RemoveBlockMessageV2 req_rb_msg;
+      req_rb_msg.set_block_id(block_id);
+      req_rb_msg.set_tmp_flag(false);
+
       int ret_status = TFS_ERROR;
       int32_t status_value = 0;
       ret_status = send_msg_to_server(server_id, &req_rb_msg, status_value);
@@ -507,7 +509,6 @@ namespace tfs
         if (TFS_SUCCESS == ret_status)
         {
           offset += write_len;
-          read_len -= write_len;
           rd_message.set_block_id(block_id);
           rd_message.set_file_id(file_id);
           rd_message.set_length(read_len);

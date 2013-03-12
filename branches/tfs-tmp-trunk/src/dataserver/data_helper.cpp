@@ -106,7 +106,7 @@ namespace tfs
     }
 
     int DataHelper::read_raw_data(const uint64_t server_id, const uint64_t block_id,
-        char* data, int32_t& length, const int32_t offset)
+        char* data, int32_t length, const int32_t offset)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (NULL == data) || (length <= 0) || (offset < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -134,7 +134,9 @@ namespace tfs
         int retry = 0;
         do
         {
-          ret = read_raw_data_ex(server_id, block_id, data, length, offset);
+          // we don't care real read length in this function
+          int32_t real_read_length = length;
+          ret = read_raw_data_ex(server_id, block_id, data, real_read_length, offset);
           if (EXIT_NETWORK_BUSY_ERROR == ret)
           {
             TBSYS_LOG(DEBUG, "peer network busy, need retry: %d", retry + 1);
@@ -430,8 +432,8 @@ namespace tfs
         }
         else
         {
-          ReadDataMessageV2 req_msg;
-          tbnet::Packet* ret_msg;
+          ReadRawdataMessageV2 req_msg;
+          tbnet::Packet* ret_msg = NULL;
           req_msg.set_block_id(block_id);
           req_msg.set_length(length);
           req_msg.set_offset(offset);
@@ -469,7 +471,7 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       if (server_id == ds_info.information_.id_)
       {
-        ret = get_block_manager().pwrite(data, length, offset, block_id);
+        ret = get_block_manager().pwrite(data, length, offset, block_id, true);
         ret = (ret < 0) ? ret : TFS_SUCCESS;
       }
       else
@@ -498,7 +500,7 @@ namespace tfs
       else
       {
         ReadIndexMessageV2 req_msg;
-        tbnet::Packet* ret_msg;
+        tbnet::Packet* ret_msg = NULL;
 
         req_msg.set_block_id(block_id);
         req_msg.set_attach_block_id(attach_block_id);
@@ -513,7 +515,7 @@ namespace tfs
           ret = send_msg_to_server(server_id, new_client, &req_msg, ret_msg);
           if (TFS_SUCCESS == ret)
           {
-            if (READ_INDEX_MESSAGE_V2 == ret_msg->getPCode())
+            if (READ_INDEX_RESP_MESSAGE_V2 == ret_msg->getPCode())
             {
               ReadIndexRespMessageV2* resp_msg = dynamic_cast<ReadIndexRespMessageV2* >(ret_msg);
               index_data = resp_msg->get_index_data();
@@ -543,7 +545,7 @@ namespace tfs
       if (server_id == ds_info.information_.id_)
       {
         ret = get_block_manager().write_file_infos(index_data.header_, index_data.finfos_,
-            block_id, attach_block_id);
+            block_id, attach_block_id, true);
       }
       else
       {
@@ -582,7 +584,7 @@ namespace tfs
       else
       {
         QueryEcMetaMessage req_msg;
-        tbnet::Packet* ret_msg;
+        tbnet::Packet* ret_msg = NULL;
         req_msg.set_block_id(block_id);
         NewClient* new_client = NewClientManager::get_instance().create_client();
         if (NULL == new_client)
@@ -623,22 +625,40 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       if (server_id == ds_info.information_.id_)
       {
+        BaseLogicBlock* logic_block = get_block_manager().get(block_id, switch_flag);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+
         // commit family id
-        if ((TFS_SUCCESS == ret) && (ec_meta.family_id_ >= INVALID_FAMILY_ID))
+        if ((TFS_SUCCESS == ret) && (ec_meta.family_id_ >= 0))
         {
-          ret = get_block_manager().set_family_id(ec_meta.family_id_, block_id);
+          ret = logic_block->set_family_id(ec_meta.family_id_);
         }
 
         // commit marshalling length
         if ((TFS_SUCCESS == ret) && (ec_meta.mars_offset_ > 0))
         {
-          ret = get_block_manager().set_marshalling_offset(ec_meta.mars_offset_, block_id);
+          ret = logic_block->set_marshalling_offset(ec_meta.mars_offset_);
         }
 
         // update block version
         if ((TFS_SUCCESS == ret) && (ec_meta.version_step_ > 0))
         {
-          ret = get_block_manager().update_block_version(ec_meta.version_step_, block_id);
+          ret = logic_block->update_block_version(ec_meta.version_step_);
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "commit ec meta fail. blockid: %"PRI64_PREFIX"u, switch flag: %d, ret: %d",
+              block_id, switch_flag, ret);
+        }
+        else if (switch_flag) // if need, switch block
+        {
+          ret = get_block_manager().switch_logic_block(block_id, true);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(WARN, "switch logic block fail. blockid: %"PRI64_PREFIX"u, "
+                "ret: %d", block_id, ret);
+          }
         }
       }
       else
@@ -673,7 +693,7 @@ namespace tfs
         else
         {
           StatFileMessageV2 req_msg;
-          tbnet::Packet* ret_msg;
+          tbnet::Packet* ret_msg = NULL;
           req_msg.set_block_id(block_id);
           req_msg.set_attach_block_id(attach_block_id);
           req_msg.set_file_id(file_id);
@@ -727,7 +747,7 @@ namespace tfs
         else
         {
           ReadFileMessageV2 req_msg;
-          tbnet::Packet* ret_msg;
+          tbnet::Packet* ret_msg = NULL;
           req_msg.set_block_id(block_id);
           req_msg.set_attach_block_id(attach_block_id);
           req_msg.set_file_id(file_id);
@@ -774,7 +794,7 @@ namespace tfs
       else
       {
         WriteFileMessageV2 req_msg;
-        tbnet::Packet* ret_msg;
+        tbnet::Packet* ret_msg = NULL;
 
         vector<uint64_t> dslist;
         dslist.push_back(server_id);

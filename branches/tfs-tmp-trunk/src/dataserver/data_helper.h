@@ -48,7 +48,7 @@ namespace tfs
             const bool tmp = false);
 
         int read_raw_data(const uint64_t server_id, const uint64_t block_id,
-            char* data, int32_t& length, const int32_t offset);
+            char* data, int32_t length, const int32_t offset);
         int write_raw_data(const uint64_t server_id, const uint64_t block_id,
             const char* data, const int32_t length, const int32_t offset);
         int read_index(const uint64_t server_id, const uint64_t block_id,

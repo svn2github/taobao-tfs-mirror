@@ -789,10 +789,12 @@ namespace tfs
         if (EXIT_NO_LOGICBLOCK_ERROR == ret) //need to update BlockInfo
         {
           TBSYS_LOG(ERROR, "create file: blockid: %u is lost. ask master to update.", block_id);
+          /*  this inter face is not supported by namserver any more
           if (TFS_SUCCESS != ds_requester_.req_update_block_info(block_id, UPDATE_BLOCK_MISSING))
           {
             TBSYS_LOG(ERROR, "create file: blockid: %u is null. req update BlockInfo failed", block_id);
           }
+          */
         }
         message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d.", block_id, file_id, ret);
@@ -846,10 +848,12 @@ namespace tfs
             TBSYS_LOG_LEVEL(ERROR), ret,
             "write data failed. block version error. blockid: %u, fileid: %" PRI64_PREFIX "u, error ret: %d, repair: %d",
             write_info.block_id_, write_info.file_id_, ret, repair);
+        /*  this inter face is not supported by namserver any more
         if (TFS_SUCCESS != ds_requester_.req_update_block_info(write_info.block_id_, repair))
         {
           TBSYS_LOG(ERROR, "req update block info failed. blockid: %u, repair: %d", write_info.block_id_, repair);
         }
+        */
       }
       else if (EXIT_DATAFILE_OVERLOAD == ret || EXIT_DATA_FILE_ERROR == ret)
       {

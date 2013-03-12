@@ -295,7 +295,7 @@ namespace tfs
             //packet = new WriteRawIndexMessage();
             break;
           case common::DS_COMPACT_BLOCK_MESSAGE:
-            //packet = new DsCompactBlockMessage();
+            packet = new DsCompactBlockMessage();
             break;
           case common::DS_REPLICATE_BLOCK_MESSAGE:
             packet = new DsReplicateBlockMessage();

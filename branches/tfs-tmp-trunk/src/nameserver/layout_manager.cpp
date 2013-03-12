@@ -565,7 +565,7 @@ namespace tfs
       {
         if (!get_block_manager().exist(block_id))
           break;
-        block_id = oplog_sync_mgr_.generation();
+        block_id = oplog_sync_mgr_.generation(verify);
       }
       return block_id;
     }
@@ -796,13 +796,11 @@ namespace tfs
       const int32_t MAX_REDUNDNAT_NUMS = 128;
       const int32_t MAX_SLEEP_TIME_US  = 500000;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      int32_t hour = common::SYSPARAM_NAMESERVER.report_block_time_upper_ - common::SYSPARAM_NAMESERVER.report_block_time_lower_ ;
-      const int32_t SAFE_MODE_TIME = hour > 0 ? hour * 3600 : SYSPARAM_NAMESERVER.safe_mode_time_ * 4;
       while (!ngi.is_destroyed())
       {
         now = Func::get_monotonic_time();
         if (ngi.in_safe_mode_time(now))
-          Func::sleep(SAFE_MODE_TIME, ngi.destroy_flag_);
+          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ * 4, ngi.destroy_flag_);
         need = MAX_REDUNDNAT_NUMS;
         while ((get_block_manager().delete_queue_empty() && !ngi.is_destroyed()))
           Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
@@ -912,6 +910,12 @@ namespace tfs
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
+        if (get_server_manager().size() < SYSPARAM_NAMESERVER.max_replication_)
+        {
+          Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
+          continue;
+        }
+
         helper.clear();
         now = Func::get_monotonic_time();
         complete = get_server_manager().get_range_servers(helper, last, MAX_SLOT_NUMS);

@@ -106,7 +106,7 @@ namespace tfs
         count_ = 0;
       }
       mutex_.unlock();
-      int32_t ret = common::TFS_ERROR;
+      int32_t ret = common::TFS_SUCCESS;
       if (flush_flag)
       {
         ret = flush_(id);

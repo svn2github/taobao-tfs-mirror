@@ -12,8 +12,7 @@ bin_PROGRAMS = clear_file_system\
 							 convert_name\
                reload_config\
                reverse_name\
-               tfsping\
-               view_local_key
+               tfsping
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\

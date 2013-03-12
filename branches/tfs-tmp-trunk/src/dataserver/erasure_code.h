@@ -104,8 +104,8 @@ namespace tfs
       public:
         enum
         {
-          NODE_DEAD = 0,
-          NODE_ALIVE = 1,
+          NODE_ALIVE = 0,
+          NODE_DEAD = 1,
           NODE_UNUSED = -1
         };
 

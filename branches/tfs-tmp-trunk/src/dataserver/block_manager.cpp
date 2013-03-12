@@ -249,6 +249,7 @@ namespace tfs
         std::vector<uint64_t>::const_iterator iter = expired_blocks.begin();
         for (; iter != expired_blocks.end(); ++iter)
         {
+          TBSYS_LOG(DEBUG, "timeout logic block %"PRI64_PREFIX"u", *iter);
           ret = del_block_((*iter), true);
           if (TFS_SUCCESS != ret)
           {
@@ -794,7 +795,7 @@ namespace tfs
         ret = get_super_block_manager().cleanup_block_index(index.physical_block_id_);
         if (TFS_SUCCESS == ret)
         {
-          --info->total_main_block_count_;
+          --info->used_main_block_count_;
           while (INVALID_PHYSICAL_BLOCK_ID != next_physical_block_id && TFS_SUCCESS == ret)
           {
             BlockIndex next_block_index;
@@ -1044,7 +1045,7 @@ namespace tfs
           ret = get_super_block_manager().flush();
         }
       }
-      TBSYS_LOG(INFO, "free logic block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s",
+      TBSYS_LOG(INFO, "del logic block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s",
           logic_block_id, TFS_SUCCESS == ret ? "successful" : "failed", ret, tmp ? "true" : "false");
       return ret;
     }

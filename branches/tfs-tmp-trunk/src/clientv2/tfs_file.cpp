@@ -27,6 +27,137 @@ namespace tfs
 {
   namespace clientv2
   {
+    File::File(): lease_id_(0), offset_(0), version_(0),
+    crc_(0), mode_(0), opt_flag_(0), status_(TFS_FILE_OPEN_NO), read_index_(0)
+    {
+    }
+
+    File::~File()
+    {
+    }
+
+    bool File::has_family() const
+    {
+      return INVALID_FAMILY_ID != family_info_.family_id_;
+    }
+
+    bool File::check_read()
+    {
+      bool read_ok = false;
+      if (ds_.size() > 0)
+      {
+        read_ok = true;
+      }
+      else if (has_family())
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info_.family_aid_info_);
+        int32_t alive_data_num = family_info_.get_alive_data_num();
+        int32_t alive_check_num = family_info_.get_alive_check_num();
+
+        // if all data_num are alive, we should't got here
+        // something must be wrong, let client retry to nameserver to get
+        // correct information
+        if ((alive_data_num + alive_check_num >= data_num) && (alive_data_num < data_num))
+        {
+          read_ok = true;
+        }
+      }
+
+      return read_ok;
+    }
+
+    bool File::check_write()
+    {
+      bool write_ok = false;
+      if (ds_.size() > 0)
+      {
+        if (!has_family())
+        {
+          write_ok = true;
+        }
+        else
+        {
+          const int32_t data_num = GET_DATA_MEMBER_NUM(family_info_.family_aid_info_);
+          const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info_.family_aid_info_);
+          const int32_t member_num = data_num + check_num;
+          int32_t alive_data_num = family_info_.get_alive_data_num();
+          int32_t alive_check_num = family_info_.get_alive_check_num();
+
+          // only the family members are all alive, write will be permitted
+          if (alive_data_num + alive_check_num == member_num)
+          {
+            write_ok = true;
+          }
+        }
+      }
+
+      return write_ok;
+    }
+
+    int32_t File::get_read_retry_time() const
+    {
+      return ds_.size() > 0 ? ds_.size() : 1;
+    }
+
+    uint64_t File::get_write_ds() const
+    {
+      uint64_t server_id = 0;
+      if (ds_.size() > 0)
+      {
+        server_id = ds_[0];
+      }
+      return server_id;
+    }
+
+    void File::set_read_index(const int32_t read_index)
+    {
+      if (ds_.size() > 0)
+      {
+        read_index_ = read_index;
+        read_index_ %= ds_.size();
+      }
+   }
+
+    void File::set_next_read_index()
+    {
+      if (ds_.size() > 0)
+      {
+        read_index_++;
+        read_index_ %= ds_.size();
+      }
+    }
+
+    uint64_t File::get_read_ds() const
+    {
+      uint64_t server_id = 0;
+      if (ds_.size() > 0)
+      {
+        server_id = ds_[read_index_%ds_.size()];
+      }
+      else if(common::INVALID_FAMILY_ID != family_info_.family_id_)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info_.family_aid_info_);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info_.family_aid_info_);
+        const int32_t member_num = data_num + check_num;
+
+        // random choose an alive node to do degraded read
+        if (member_num > 0)
+        {
+          int32_t target = rand() % member_num;
+          for (int32_t i = 0; i < member_num; i++, target++)
+          {
+            target = target % member_num;
+            if (common::INVALID_SERVER_ID != family_info_.members_[target].second)
+            {
+              server_id = family_info_.members_[target].second;
+              break;
+            }
+          }
+        }
+      }
+      return server_id;
+    }
+
     TfsFile::TfsFile(const uint64_t ns_addr, const int32_t cluster_id):
       ns_addr_(ns_addr)
     {
@@ -116,7 +247,19 @@ namespace tfs
       }
       else
       {
-        int32_t retry = file_.get_retry_time();
+        if (!file_.check_read())
+        {
+          ret = EXIT_READ_FILE_ERROR;
+        }
+        else if (file_.ds_.size() > 0)
+        {
+          file_.set_read_index(fsname_.get_file_id() % file_.ds_.size());
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t retry = file_.get_read_retry_time();
         while (retry--)
         {
           ret = do_stat(file_stat);
@@ -140,18 +283,30 @@ namespace tfs
       }
       else
       {
+        if (!file_.check_read())
+        {
+          ret = EXIT_READ_FILE_ERROR;
+        }
+        else if (file_.ds_.size() > 0)
+        {
+          file_.set_read_index(fsname_.get_file_id() % file_.ds_.size());
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         int64_t read_len = 0;
         int64_t real_read_len = 0;
         while (done < count)
         {
-          int32_t retry = file_.get_retry_time();
+          int32_t retry = file_.get_read_retry_time();
           read_len = ((count - done) < MAX_READ_SIZE) ? (count - done) : MAX_READ_SIZE;
           while (retry--)
           {
             ret = do_read((char*)buf + done, read_len, real_read_len, file_stat);
             if (TFS_SUCCESS != ret)
             {
-              file_.set_next_read_ds();
+              file_.set_next_read_index();
             }
             else
             {
@@ -177,7 +332,7 @@ namespace tfs
         }
       }
 
-      return done > 0 ? done : ret;
+      return (ret != TFS_SUCCESS) ? ret : done;
     }
 
     int64_t TfsFile::write(const void* buf, const int64_t count)
@@ -188,6 +343,10 @@ namespace tfs
       if (TFS_FILE_OPEN_YES != file_.status_)
       {
         ret = EXIT_NOT_OPEN_ERROR;
+      }
+      else if(!file_.check_write())
+      {
+        ret = EXIT_WRITE_FILE_ERROR;
       }
       else
       {
@@ -205,7 +364,7 @@ namespace tfs
         }
       }
 
-      return done > 0 ? done : ret;
+      return (ret != TFS_SUCCESS) ? ret : done;
     }
 
     int TfsFile::close()
@@ -219,7 +378,14 @@ namespace tfs
       else if(!(file_.mode_ & T_READ) && !(file_.mode_ & T_UNLINK))
       {
         // only create & update need real close to ds
-        ret = do_close();
+        if (!file_.check_write())
+        {
+          ret = EXIT_CLOSE_FILE_ERROR;
+        }
+        else
+        {
+          ret = do_close();
+        }
       }
 
       return ret;
@@ -232,6 +398,10 @@ namespace tfs
       if (TFS_FILE_OPEN_YES != file_.status_)
       {
         ret = EXIT_NOT_OPEN_ERROR;
+      }
+      else if (!file_.check_write())
+      {
+        ret = EXIT_UNLINK_FILE_ERROR;
       }
       else
       {
@@ -314,11 +484,6 @@ namespace tfs
           if (INVALID_FAMILY_ID != meta.family_info_.family_id_)
           {
             file_.family_info_ = meta.family_info_;
-          }
-
-          if (file_.is_valid())
-          {
-            file_.status_ = TFS_FILE_OPEN_YES;
           }
         }
       }
