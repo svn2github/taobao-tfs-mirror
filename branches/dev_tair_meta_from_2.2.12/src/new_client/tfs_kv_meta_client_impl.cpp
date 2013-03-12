@@ -832,15 +832,17 @@ namespace tfs
               " still_have %d", bucket_name, object_name, still_have);
           TBSYS_LOG(DEBUG, "del vector size ================= is: %d",
               object_info.v_tfs_file_info_.size());
-
-          v_frag_meta.clear();
-          for(size_t i = 0; i < object_info.v_tfs_file_info_.size(); ++i)
+          if (TFS_SUCCESS == ret)
           {
-            FragMeta frag_meta(object_info.v_tfs_file_info_[i].block_id_,
-                object_info.v_tfs_file_info_[i].file_id_,
-                object_info.v_tfs_file_info_[i].offset_,
-                object_info.v_tfs_file_info_[i].file_size_);
-            v_frag_meta.push_back(frag_meta);
+            v_frag_meta.clear();
+            for(size_t i = 0; i < object_info.v_tfs_file_info_.size(); ++i)
+            {
+              FragMeta frag_meta(object_info.v_tfs_file_info_[i].block_id_,
+                  object_info.v_tfs_file_info_[i].file_id_,
+                  object_info.v_tfs_file_info_[i].offset_,
+                  object_info.v_tfs_file_info_[i].file_size_);
+              v_frag_meta.push_back(frag_meta);
+            }
           }
 
           if (TFS_SUCCESS == ret && v_frag_meta.size() > 0)

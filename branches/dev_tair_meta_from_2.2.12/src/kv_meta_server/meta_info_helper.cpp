@@ -699,7 +699,7 @@ namespace tfs
       {
         ret = kv_engine_helper_->scan_keys(start_key, end_key, limit + 1, first,
           &kv_value_keys, &kv_value_values, &result_size, scan_type);
-        if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+        if (TFS_SUCCESS == ret && result_size == 0)
         {
           ret = EXIT_OBJECT_NOT_EXIST;
         }
