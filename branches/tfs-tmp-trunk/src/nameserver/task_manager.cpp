@@ -590,7 +590,7 @@ namespace tfs
         {
           ReplicateTask* ptask = dynamic_cast<ReplicateTask*>(task);
           block_to_tasks_.erase(ptask->block_);
-          for (int8_t index = 0; index < ptask->server_num_; ++index)
+          for (int8_t index = 0; index < ptask->server_num_ && index < 2; ++index)
           {
             if (PLAN_TYPE_COMPACT != type)
               remove_(ptask->servers_[index], is_target(index));

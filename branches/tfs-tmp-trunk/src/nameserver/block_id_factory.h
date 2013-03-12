@@ -30,10 +30,11 @@ namespace tfs
         virtual ~BlockIdFactory();
         int initialize(const std::string& path);
         int destroy();
-        uint64_t generation(const uint64_t id = 0);
+        uint64_t generation(const bool verify);
+        int update(const uint64_t id);
         uint64_t skip(const int32_t num = SKIP_BLOCK_NUMBER);
       private:
-        int update(const uint64_t id) const;
+        int flush_(const uint64_t id) const;
         DISALLOW_COPY_AND_ASSIGN(BlockIdFactory);
         static BlockIdFactory instance_;
         tbutil::Mutex mutex_;

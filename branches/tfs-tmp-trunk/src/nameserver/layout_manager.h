@@ -107,10 +107,10 @@ namespace tfs
 
       void switch_role(const time_t now = common::Func::get_monotonic_time());
 
-      uint64_t get_alive_block_id();
+      uint64_t get_alive_block_id(const bool verify);
       private:
       void rotate_(const time_t now);
-      uint64_t get_alive_block_id_();
+      uint64_t get_alive_block_id_(const bool verify);
       void build_();
       void balance_();
       void timeout_();

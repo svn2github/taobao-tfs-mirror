@@ -88,44 +88,66 @@ namespace tfs
       int32_t ret = common::TFS_SUCCESS;
       if (fd_ > 0)
       {
-        ret = update(global_id_);
+        ret = flush_(global_id_);
         ::close(fd_);
       }
       return ret;
     }
 
-    uint64_t BlockIdFactory::generation(const uint64_t id)
+    uint64_t BlockIdFactory::generation(const bool verify)
     {
-      bool update_flag = false;
-      uint64_t ret_id = common::INVALID_BLOCK_ID;
+      mutex_.lock();
+      ++count_;
+      uint64_t id = ++global_id_;
+      bool flush_flag = false;
+      if (count_ >= SKIP_BLOCK_NUMBER)
+      {
+        flush_flag = true;
+        count_ = 0;
+      }
+      mutex_.unlock();
+      int32_t ret = common::TFS_ERROR;
+      if (flush_flag)
+      {
+        ret = flush_(id);
+        if (common::TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "update global block id failed, id: %"PRI64_PREFIX"u, ret: %d", id, ret);
+        }
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        if (verify)
+          id |= 0x8000000000000000;
+      }
+      return id;
+    }
+
+    int BlockIdFactory::update(const uint64_t id)
+    {
+      bool flush_flag = false;
+      uint64_t tmp_id = IS_VERFIFY_BLOCK(id) ? id & 0x7FFFFFFFFFFFFFFF : id;
+      int32_t ret = (common::INVALID_BLOCK_ID == id) ? common::EXIT_PARAMETER_ERROR : common::TFS_SUCCESS;
+      if (common::TFS_SUCCESS == ret)
       {
         tbutil::Mutex::Lock lock(mutex_);
         ++count_;
-        if (id == 0)
-        {
-          ret_id = ++global_id_;
-        }
-        else
-        {
-          ret_id = id;
-          global_id_ = std::max(global_id_, id);
-        }
+        global_id_ = std::max(global_id_, tmp_id);
         if (count_ >= SKIP_BLOCK_NUMBER)
         {
-          update_flag = true;
+          flush_flag = true;
           count_ = 0;
         }
       }
-      if (update_flag)
+      if (common::TFS_SUCCESS == ret && flush_flag)
       {
-        int32_t ret = update(ret_id);
+        ret = flush_(tmp_id);
         if (common::TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "update global block id failed, id: %"PRI64_PREFIX"u, ret: %d", ret_id, ret);
-          ret_id = common::INVALID_BLOCK_ID;
+          TBSYS_LOG(WARN, "flush global block id failed, id: %"PRI64_PREFIX"u, ret: %d", tmp_id, ret);
         }
       }
-      return ret_id;
+      return ret;
     }
 
     uint64_t BlockIdFactory::skip(const int32_t num)
@@ -142,7 +164,7 @@ namespace tfs
       return id;
     }
 
-    int BlockIdFactory::update(const uint64_t id) const
+    int BlockIdFactory::flush_(const uint64_t id) const
     {
       assert(fd_ != -1);
       char data[common::INT64_SIZE];

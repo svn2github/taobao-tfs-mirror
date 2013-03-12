@@ -435,11 +435,10 @@ namespace tfs
           else if (OPLOG_INSERT == oplog.cmd_)
           {
               BlockCollect* block = NULL;
-              uint64_t tmp_block_id = id_factory_.generation(oplog.info_.block_id_);
-              ret = INVALID_BLOCK_ID != tmp_block_id ? TFS_SUCCESS : TFS_ERROR;
+              ret = id_factory_.update(oplog.info_.block_id_);
               if (TFS_SUCCESS != ret)
               {
-                TBSYS_LOG(INFO, "generation block id: %"PRI64_PREFIX"u failed, ret: %d", oplog.info_.block_id_, ret);
+                TBSYS_LOG(INFO, "update block id: %"PRI64_PREFIX"u failed, ret: %d", oplog.info_.block_id_, ret);
               }
               else
               {

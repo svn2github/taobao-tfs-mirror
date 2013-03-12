@@ -558,9 +558,9 @@ namespace tfs
       }
     }
 
-    uint64_t LayoutManager::get_alive_block_id_()
+    uint64_t LayoutManager::get_alive_block_id_( const bool verify)
     {
-      uint64_t block_id = oplog_sync_mgr_.generation();
+      uint64_t block_id = oplog_sync_mgr_.generation(verify);
       while (true)
       {
         if (!get_block_manager().exist(block_id))
@@ -570,9 +570,9 @@ namespace tfs
       return block_id;
     }
 
-    uint64_t LayoutManager::get_alive_block_id()
+    uint64_t LayoutManager::get_alive_block_id(const bool verify)
     {
-      return get_alive_block_id_();
+      return get_alive_block_id_(verify);
     }
 
     static bool in_hour_range(const time_t now, int32_t& min, int32_t& max)
@@ -1225,7 +1225,7 @@ namespace tfs
         if (NULL != server)
           helper.push_back(server->id());
 
-        block_id = get_alive_block_id_();
+        block_id = get_alive_block_id_(false);
         ret = (INVALID_BLOCK_ID == block_id) ? EXIT_BLOCK_ID_INVALID_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
@@ -1403,7 +1403,7 @@ namespace tfs
             result_array.push_back(target->id());
             for (int64_t index = 0; index < helper.get_array_index(); ++index)
             {
-              uint64_t server = *helper.get(index);
+              uint64_t server = *helper.at(index);
               if (server != source->id())
                 result_array.push_back(server);
             }

@@ -639,7 +639,7 @@ namespace tfs
             uint64_t server = *helper.at(index);
             if (manager_.get_task_manager().has_space_do_task_in_machine(server))
             {
-              uint64_t block = manager_.get_alive_block_id();
+              uint64_t block = manager_.get_alive_block_id(true);
               members.push_back(std::make_pair(server, block));
             }
           }
