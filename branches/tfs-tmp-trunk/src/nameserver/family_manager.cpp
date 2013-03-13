@@ -580,7 +580,9 @@ namespace tfs
         std::pair<uint64_t, uint64_t> result;
         const int32_t MAX_LOOP_NUM = data_member_num * 2;
         uint32_t lans[data_member_num];
+        uint64_t blocks[data_member_num];
         common::ArrayHelper<uint32_t> helper(data_member_num, lans);
+        common::ArrayHelper<uint64_t> arrays(data_member_num, blocks);
         do
         {
           time_t now = Func::get_monotonic_time();
@@ -601,8 +603,8 @@ namespace tfs
             UNUSED(now);
             #else
             bool valid = (manager_.get_block_manager().need_marshalling(result.second, now)
-                        && !helper.exist(lan)
                         && !members.exist(result)
+                        && !arrays.exist(result.second)
                         && !manager_.get_task_manager().exist_block(result.second)
                         && !manager_.get_task_manager().exist_server(result.first)
                         && manager_.get_task_manager().has_space_do_task_in_machine(result.first)
@@ -610,6 +612,7 @@ namespace tfs
             #endif
             if (valid)
             {
+              arrays.push_back(result.second);
               members.push_back(result);
               helper.push_back(lan);
             }

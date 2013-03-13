@@ -67,7 +67,8 @@ namespace tfs
 
       private:
         int open_read_mode_(common::ArrayHelper<uint64_t>& servers, common::FamilyInfoExt& family_info, const uint64_t block) const;
-        int open_write_mode_(uint64_t& block_id, uint64_t& lease_id, int32_t& version, common::ArrayHelper<uint64_t>& servers, const int32_t mode, const time_t now);
+        int open_write_mode_(uint64_t& block_id, uint64_t& lease_id, int32_t& version, common::ArrayHelper<uint64_t>& servers,
+              common::FamilyInfoExt& family_info, const int32_t mode, const time_t now);
         int batch_open_read_mode_(common::ArrayHelper<common::BlockMeta>& out, const common::ArrayHelper<uint64_t>& blocks) const;
         int batch_open_write_mode_(common::ArrayHelper<common::BlockMeta>& out,const int32_t mode, const int32_t block_count);
 

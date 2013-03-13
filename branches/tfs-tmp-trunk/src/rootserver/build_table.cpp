@@ -262,7 +262,6 @@ namespace tfs
     {
       int64_t i = 0;
       NEW_TABLE_ITER iter;
-      std::pair<NEW_TABLE_ITER, bool> res;
       std::set<uint64_t>::const_iterator it;
       for (i = 0; i < header_->bucket_item_ ; ++i)
       {

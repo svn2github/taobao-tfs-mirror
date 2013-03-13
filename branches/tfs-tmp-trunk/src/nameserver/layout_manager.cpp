@@ -992,7 +992,7 @@ namespace tfs
       int64_t use_capacity = GFactory::get_global_info().use_capacity_ <= 0
         ? 0 : GFactory::get_global_info().use_capacity_;
       if (total_capacity <= 0)
-        total_capacity = 0;
+        total_capacity = 1;
       double average_used_capacity = use_capacity / total_capacity;
       int32_t count = SYSPARAM_NAMESERVER.add_primary_block_count_;
       for (int64_t i = 0; i < servers.get_array_index(); ++i)
@@ -1421,7 +1421,7 @@ namespace tfs
     int LayoutManager::build_compact_task_(const BlockCollect* block, const time_t now)
     {
       int ret = ((NULL != block) && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (ret)
+      if (TFS_SUCCESS == ret)
       {
         uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
         ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
@@ -1607,8 +1607,8 @@ namespace tfs
                   for (; index < MEMBER_NUM; ++index)
                   {
                     next_index = index + MEMBER_NUM;
-                    members[index].status_ = FAMILY_MEMBER_STATUS_ABNORMAL;
-                    members[index].version_= INVALID_VERSION;
+                    //members[index].status_ = FAMILY_MEMBER_STATUS_ABNORMAL;
+                    //members[index].version_= INVALID_VERSION;
                     members[next_index].server_ = INVALID_SERVER_ID;
                     members[next_index].block_  = members[index].block_;
                     members[next_index].status_ = members[index].status_;
@@ -1620,6 +1620,8 @@ namespace tfs
                 if (TFS_SUCCESS == ret)
                 {
                   ret = members[master_index].server_ == INVALID_SERVER_ID ? EXIT_DATASERVER_NOT_FOUND: TFS_SUCCESS;
+                  if (TFS_SUCCESS != ret)
+                    TBSYS_LOG(WARN, "all members in family : %"PRI64_PREFIX"d,are lost", family->get_family_id());
                 }
                 if (TFS_SUCCESS == ret)
                 {

@@ -131,7 +131,7 @@ namespace tfs
 
           if (TFS_SUCCESS == ret)
           {
-            ret = open_write_mode_(block_id, lease_id, version, servers, mode, now);
+            ret = open_write_mode_(block_id, lease_id, version, servers, family_info,mode, now);
           }
         }
       }
@@ -268,7 +268,7 @@ namespace tfs
      * @return: success or failure
      */
     int ClientRequestServer::open_write_mode_(uint64_t& block_id, uint64_t& lease_id, int32_t& version,
-          common::ArrayHelper<uint64_t>& servers, const int32_t mode, const time_t now)
+          common::ArrayHelper<uint64_t>& servers, FamilyInfoExt& family_info, const int32_t mode, const time_t now)
     {
       int32_t ret = (mode & T_WRITE) ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
       if (TFS_SUCCESS != ret)
@@ -278,6 +278,7 @@ namespace tfs
       else
       {
         //nameserver assign a new write block
+        family_info.family_id_ = INVALID_FAMILY_ID;
         BlockCollect* block = NULL;
         if (mode & T_CREATE)
         {
@@ -347,6 +348,34 @@ namespace tfs
             }
           }
         }
+        if ((TFS_SUCCESS == ret)
+            && !(mode & T_CREATE)
+            && !(mode & T_NEWBLK)
+            && (NULL != block))
+        {
+          int64_t family_id = block->get_family_id();
+          if (INVALID_FAMILY_ID != family_id)
+          {
+            common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MAX_MARSHALLING_NUM, family_info.members_);
+            ret = open(family_info.family_aid_info_, helper, T_READ, family_id);
+            if (TFS_SUCCESS == ret)
+            {
+              int32_t index = 0;
+              const int32_t DATA_MEMBER = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+              for (int32_t i = 0; i < helper.get_array_index(); ++i)
+              {
+                std::pair<uint64_t, uint64_t>* item = helper.at(i);
+                if (item->second != INVALID_SERVER_ID)
+                  ++index;
+              }
+              ret = index >= DATA_MEMBER ? TFS_SUCCESS: EXIT_BLOCK_CANNOT_REINSTATE;
+              if (TFS_SUCCESS == ret)
+              {
+                family_info.family_id_ = family_id;
+              }
+            }
+          }
+        }
 
         if (TFS_SUCCESS == ret)
         {
@@ -390,7 +419,7 @@ namespace tfs
           out.push_back(BlockMeta());
           BlockMeta* meta = out.at(index);
           common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, meta->ds_);
-          ret = open_write_mode_(meta->block_id_, meta->lease_id_, meta->version_, helper, mode, now);
+          ret = open_write_mode_(meta->block_id_, meta->lease_id_, meta->version_, helper, meta->family_info_,mode, now);
         }
       }
       return ret;

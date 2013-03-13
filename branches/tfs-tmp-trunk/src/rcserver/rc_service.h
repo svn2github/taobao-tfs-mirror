@@ -81,6 +81,7 @@ namespace tfs
         SessionManager* session_manager_;
 
         tbutil::Mutex mutex_;
+        volatile bool is_inited_;
     };
 
   }

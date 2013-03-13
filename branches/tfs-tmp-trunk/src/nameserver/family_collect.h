@@ -67,7 +67,7 @@ namespace tfs
       inline int get_check_member_num() const { return GET_CHECK_MEMBER_NUM(family_aid_info_);}
       inline int get_code_type() const { return GET_MARSHALLING_TYPE(family_aid_info_);}
       inline int get_master_index() const { return GET_MASTER_INDEX(family_aid_info_);}
-      inline int get_family_aid_info() const { return family_aid_info_;}
+      inline int32_t get_family_aid_info() const { return family_aid_info_;}
       inline bool in_reinstate_or_dissolve_queue() const { return FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES == in_reinstate_or_dissolve_queue_;}
       inline void set_in_reinstate_or_dissolve_queue(const int8_t falg = FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES) { in_reinstate_or_dissolve_queue_ = falg;}
     private:

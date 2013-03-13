@@ -455,6 +455,8 @@ namespace tfs
                 if (info.version_ == block->version())
                 {
                   ret = (block->get_servers_size() > 0 && !block->exist(server->id())) ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;
+                  if (TFS_SUCCESS == ret)
+                    ret = build_relation_(block, writable, master, server->id(),now);
                 }
 
                 if (info.version_ > block->version())
@@ -478,7 +480,8 @@ namespace tfs
                 }
               }
             }
-            all_server_size = block->get_servers_size();
+            if (NULL != block)
+              all_server_size = block->get_servers_size();
           }
           get_mutex_(info.block_id_).unlock();
 

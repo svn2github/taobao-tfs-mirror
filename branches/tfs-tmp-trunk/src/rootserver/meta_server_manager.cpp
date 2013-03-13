@@ -36,7 +36,7 @@ namespace tfs
       lease_id_factory_(INVALID_LEASE_ID),
       build_table_thread_(0),
       check_ms_lease_thread_(0),
-      interrupt_(INTERRUPT_NONE),
+      interrupt_(0),
       initialize_(false),
       destroy_(false)
     {

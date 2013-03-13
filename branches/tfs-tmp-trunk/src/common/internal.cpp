@@ -1400,7 +1400,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        uint32_t block = 0;
+        uint64_t block = 0;
         int32_t version = 0;
         for (int32_t i = 0; i < size && TFS_SUCCESS == ret; ++i)
         {
@@ -1444,7 +1444,7 @@ namespace tfs
 
     int64_t FamilyInfo::length() const
     {
-      return /*INT64_SIZE + INT_SIZE + */(family_member_.size() * INT_SIZE + INT64_SIZE);
+      return /*INT64_SIZE + INT_SIZE + */INT_SIZE + (family_member_.size() * INT_SIZE + INT64_SIZE);
     }
 
     bool FamilyMemberInfo::operator ==(const FamilyMemberInfo& rhs) const
