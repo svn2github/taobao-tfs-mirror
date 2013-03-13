@@ -1,13 +1,14 @@
 #!/bin/bash
 
-if [ $# -lt 4 ];then
-  echo "usage: $0 mysql_host mysql_user mysql_pwd mysql_dbname"
+if [ $# -lt 5 ];then
+  echo "usage: $0 mysql_host mysql_port mysql_user mysql_pwd mysql_dbname"
   exit 1
 else
   HOST=$1
-  DB_USER=$2
-  DB_PASS=$3
-  DB_NAME=$4
+  DB_PORT=$2
+  DB_USER=$3
+  DB_PASS=$4
+  DB_NAME=$5
 fi
 
 mysql_op()
@@ -15,7 +16,7 @@ mysql_op()
   sql_express=$1
   #printf "$sql_express\n"
   #/usr/bin/mysql -h$HOST -u$DB_USER -p$DB_PASS -D$DB_NAME << EOF
-  /usr/bin/mysql -u$DB_USER -p$DB_PASS -D$DB_NAME << EOF
+  /usr/bin/mysql -h$HOST -P$DB_PORT -u$DB_USER -p$DB_PASS -D$DB_NAME << EOF
   $sql_express;
   QUIT
 EOF
@@ -45,6 +46,7 @@ do
   for app_id in $data
   do
     #get uid by spec appid
+    start_uid=0
     while true
     do
       res=`mysql_op "select distinct uid from t_meta_info where app_id = $app_id and uid > $start_uid order by uid asc limit $ROW_LIMIT;" | awk 'NR > 1{print $0}'`
