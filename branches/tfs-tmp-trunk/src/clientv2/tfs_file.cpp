@@ -171,15 +171,52 @@ namespace tfs
     int TfsFile::open(const char* file_name, const char* suffix, const int32_t mode)
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
+      transfer_mode(mode);
       int ret = TFS_SUCCESS;
+      if (((file_.mode_ |= T_READ) || (file_.mode_ |= T_UNLINK)) &&
+        ((NULL == file_name) || (file_name[0] == '\0')))
+      {
+        ret = EXIT_PARAMETER_ERROR;
+      }
+      else
+      {
+        fsname_.set_name(file_name, suffix);
+        ret = fsname_.is_valid() ? TFS_SUCCESS : EXIT_INVALID_FILE_NAME;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = do_open();
+        }
+      }
+
+      return ret;
+    }
+
+    int TfsFile::open(const uint64_t block_id, const uint64_t file_id, const int32_t mode)
+    {
+      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
+      transfer_mode(mode);
+      int ret = TFS_SUCCESS;
+      if (((file_.mode_ |= T_READ) || (file_.mode_ |= T_UNLINK)) &&
+        ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id)))
+      {
+        ret = EXIT_PARAMETER_ERROR;
+      }
+      else
+      {
+        fsname_.set_block_id(block_id);
+        fsname_.set_file_id(file_id);
+        ret = do_open();
+      }
+
+      return ret;
+    }
+
+    void TfsFile::transfer_mode(const int32_t mode)
+    {
       file_.mode_ = mode;
       if ((mode & T_READ) || (mode & T_STAT))
       {
         file_.mode_ = T_READ;
-        if ((NULL == file_name) || (file_name[0] == '\0'))
-        {
-          ret = EXIT_PARAMETER_ERROR;
-        }
       }
       else if (mode & T_WRITE)
       {
@@ -192,18 +229,6 @@ namespace tfs
       {
         file_.mode_ |= T_WRITE;
       }
-
-      if (TFS_SUCCESS == ret)
-      {
-        fsname_.set_name(file_name, suffix);
-        ret = fsname_.is_valid() ? TFS_SUCCESS : EXIT_INVALID_FILE_NAME;
-        if (TFS_SUCCESS == ret)
-        {
-          ret = do_open();
-        }
-      }
-
-      return ret;
     }
 
     int64_t TfsFile::lseek(const int64_t offset, const int whence)

@@ -63,6 +63,7 @@ namespace tfs
         ~TfsFile();
 
         int open(const char* file_name, const char* suffix, const int32_t mode);
+        int open(const uint64_t block_id, const uint64_t file_id, const int32_t mode);
         int64_t lseek(const int64_t offset, const int whence);
         int64_t stat(common::TfsFileStat& file_stat);
         int64_t read(void* buf, const int64_t count, common::TfsFileStat* file_stat = NULL);
@@ -82,6 +83,7 @@ namespace tfs
         int do_write(const char* buf, int64_t count);
         int do_close();
         int do_unlink(const int32_t action, int64_t& file_size);
+        void transfer_mode(const int32_t mode);
 
       private:
         File file_;

@@ -137,6 +137,47 @@ namespace tfs
       return ret_fd;
     }
 
+    int TfsClientImplV2::open(const uint64_t block_id, const uint64_t file_id, const int mode)
+    {
+      int ret_fd = EXIT_INVALIDFD_ERROR;
+      int ret = TFS_SUCCESS;
+      if (!is_init_)
+      {
+        ret = EXIT_NOT_INIT_ERROR;
+        TBSYS_LOG(ERROR, "tfs client not init");
+      }
+      else if ((ret_fd = get_fd()) <= 0)
+      {
+        TBSYS_LOG(ERROR, "can not get fd. ret: %d", ret_fd);
+      }
+      else
+      {
+        TfsFile* tfs_file = new TfsFile(ns_addr_, cluster_id_);
+        ret = tfs_file->open(block_id, file_id, mode);
+
+        if (ret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "open tfsfile fail, blockid: %"PRI64_PREFIX"u, "
+              "fileid: %"PRI64_PREFIX"u, mode: %d, ret: %d",
+              block_id, file_id, mode, ret);
+        }
+        else if ((ret = insert_file(ret_fd, tfs_file)) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "add fd fail: %d", ret_fd);
+        }
+
+        if (ret != TFS_SUCCESS)
+        {
+          ret_fd = (ret < 0) ? ret : EXIT_INVALIDFD_ERROR; // return true error code except TFS_ERROR
+          tbsys::gDelete(tfs_file);
+        }
+      }
+
+      return ret_fd;
+    }
+
+
+
     int64_t TfsClientImplV2::read(const int fd, void* buf, const int64_t count)
     {
       int64_t ret = TFS_SUCCESS;

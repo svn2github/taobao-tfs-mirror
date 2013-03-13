@@ -44,6 +44,11 @@ namespace tfs
       return TfsClientImplV2::Instance()->open(file_name, suffix, mode);
     }
 
+    int TfsClientV2::open(const uint64_t block_id, const uint64_t file_id, const int mode)
+    {
+      return TfsClientImplV2::Instance()->open(block_id, file_id, mode);
+    }
+
     int TfsClientV2::set_option_flag(const int fd, const int option_flag)
     {
       return TfsClientImplV2::Instance()->set_option_flag(fd, option_flag);

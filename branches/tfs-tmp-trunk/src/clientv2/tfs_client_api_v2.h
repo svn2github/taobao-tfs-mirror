@@ -37,6 +37,7 @@ namespace tfs
       int set_option_flag(const int fd, const int opt_flag);
 
       int open(const char* file_name, const char* suffix, const int mode);
+      int open(const uint64_t block_id, const uint64_t file_id, const int mode);
       int64_t read(const int fd, void* buf, const int64_t count);
       int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info);
       int64_t write(const int fd, const void* buf, const int64_t count);
