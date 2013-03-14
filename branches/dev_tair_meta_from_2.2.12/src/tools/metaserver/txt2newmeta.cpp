@@ -107,13 +107,14 @@ void transfer(const string &source_file_name, const string &s3_server)
 
       ret = tfs::client::KvMetaHelper::do_put_bucket(server_id, bucket_name,
           bucket_meta_info, user_info);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "put bucket error |%s|", bucket_name);
-      }
       if (ret == EXIT_BUCKET_EXIST)
       {
         TBSYS_LOG(ERROR, "[conflict] put bucket conflict |%s|", bucket_name);
+        ret = TFS_SUCCESS;
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "put bucket error |%s|", bucket_name);
         ret = TFS_SUCCESS;
       }
       continue;
@@ -176,7 +177,7 @@ void transfer(const string &source_file_name, const string &s3_server)
     {
       TBSYS_LOG(ERROR, "head object error,ret:%d",ret);
     }
-
+    ret = TFS_SUCCESS;
     while(1)
     {
       fread(&magic_number, sizeof(MAGIC_NUMBER3), 1, s_fd); //magic number
@@ -213,13 +214,13 @@ void transfer(const string &source_file_name, const string &s3_server)
               frag_it.offset_,
               cluster_id,
               frag_it.block_id_, frag_it.file_id_, frag_it.size_);
+          ret = TFS_SUCCESS;
         }
       }
 
     }
-
-
   }
+  TBSYS_LOG(INFO, "ret = %d", ret);
   fclose(s_fd);
   s_fd = NULL;
   return ;
@@ -235,6 +236,7 @@ int main(int argc, char *argv[])
   std::string source_file_name;
   std::string s3_server;
   std::string log_file_name;
+  std::string date_time;
   while ((i = getopt(argc, argv, "f:d:t:l:")) != EOF)
   {
     switch (i)
@@ -246,7 +248,7 @@ int main(int argc, char *argv[])
         s3_server = optarg;
         break;
       case 't':
-        time_point = atol(optarg);
+        date_time = optarg;
         break;
       case 'l':
         log_file_name = optarg;
@@ -261,10 +263,12 @@ int main(int argc, char *argv[])
     usage(argv[0]);
     return TFS_ERROR;
   }
+  time_point = tbsys::CTimeUtil::strToTime(const_cast<char*>(date_time.c_str()));
   server_id = Func::get_host_ip(s3_server.c_str());
   TBSYS_LOGGER.setFileName(log_file_name.c_str());
   TBSYS_LOGGER.setLogLevel("info");
   signal(SIGINT, sign_handler);
+  TBSYS_LOG(INFO, "date %s num_time %ld",date_time.c_str(), time_point);
   transfer(source_file_name, s3_server);
 
   return 0;
