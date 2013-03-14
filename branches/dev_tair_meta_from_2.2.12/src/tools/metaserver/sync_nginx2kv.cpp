@@ -384,7 +384,13 @@ int main(int argc, char *argv[])
     char *p = NULL;
     char *q = NULL;
     const char DLIMER = ',';
+
     q = buff;
+    //guolv
+    p = strchr(q, '#');
+    q = p;
+    p = strchr(q, ':');
+    q = p + 2;
     //appid
     p = strchr(q, DLIMER);
     if (NULL == p)
@@ -395,7 +401,7 @@ int main(int argc, char *argv[])
     app_id = -1;
     *p = '\0';
     app_id = strtoll(q, NULL, 10);
-    q = p + 1;
+    q = p + 2;
     //uid
     p = strchr(q, DLIMER);
     if (NULL == p)
@@ -406,7 +412,7 @@ int main(int argc, char *argv[])
     uid = -1;
     *p = '\0';
     uid = strtoll(q, NULL, 10);
-    q = p + 1;
+    q = p + 2;
     if (app_id <= 0 || uid <= 0)
     {
       TBSYS_LOG(ERROR, "err input line %s", buff);
@@ -421,7 +427,7 @@ int main(int argc, char *argv[])
     }
     *p = '\0';
     bucket_name = q;
-    q = p + 1;
+    q = p + 2;
     //objectname
     p = strchr(q, '\n');
     if (*p == '\n')
