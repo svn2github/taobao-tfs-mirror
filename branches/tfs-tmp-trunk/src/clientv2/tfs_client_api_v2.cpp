@@ -52,6 +52,12 @@ namespace tfs
           local_file, mode, suffix, ns_addr);
     }
 
+    int64_t TfsClientV2::save_file_update(const char* local_file, const int32_t mode,
+        const char* tfs_name, const char* suffix, const char* ns_addr)
+    {
+      return TfsClientImplV2::Instance()->save_file_update(local_file, mode, tfs_name, suffix, ns_addr);
+    }
+
     int TfsClientV2::fetch_file(const char* local_file, const char* file_name, const char* suffix, const char* ns_addr)
     {
       return TfsClientImplV2::Instance()->fetch_file(local_file, file_name, suffix, ns_addr);

@@ -399,13 +399,34 @@ namespace tfs
       return ret;
     }
 
-
     int64_t TfsClientImplV2::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
         const char* local_file, const int32_t mode, const char* suffix, const char* ns_addr)
+    {
+      return save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, mode, NULL, suffix, ns_addr);
+    }
+
+    int64_t TfsClientImplV2::save_file_update(const char* local_file, const int32_t mode,
+        const char* tfs_name, const char* suffix, const char* ns_addr)
+    {
+      int64_t ret = TFS_SUCCESS;
+      if ((NULL == tfs_name) || (static_cast<int32_t>(strlen(tfs_name)) < FILE_NAME_LEN))
+      {
+        ret = EXIT_PARAMETER_ERROR;
+      }
+      else
+      {
+        ret = save_file_ex(NULL, 0, local_file, mode, tfs_name, suffix, ns_addr);
+      }
+      return ret;
+    }
+
+    int64_t TfsClientImplV2::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+        const char* local_file, const int32_t mode, const char* tfs_name, const char* suffix, const char* ns_addr)
     {
       int ret = TFS_SUCCESS;
       int local_fd = 0;  // local file desp
       int fd = 0;        // tfs file desp
+      int64_t done = 0;
 
       local_fd = ::open(local_file, O_RDONLY);
       if (local_fd < 0)
@@ -415,7 +436,7 @@ namespace tfs
       }
       else
       {
-        fd = open((char*)NULL, suffix, ns_addr, T_WRITE | mode);
+        fd = open(tfs_name, suffix, ns_addr, T_WRITE | mode);
         if (fd < 0)
         {
           ret = EXIT_INVALIDFD_ERROR;
@@ -425,12 +446,25 @@ namespace tfs
         {
           char buf[MAX_READ_SIZE];
           int rlen = 0;
+          int wlen = 0;
           while (1)
           {
             rlen = ::read(local_fd, buf, MAX_READ_SIZE);
-            if (rlen > 0)
+            if (rlen < 0)
             {
-              write(fd, buf, rlen);
+              ret = -errno;
+            }
+            else if (rlen > 0)
+            {
+              wlen = write(fd, buf, rlen);
+              if (wlen < 0)
+              {
+                ret = wlen;
+              }
+              else
+              {
+                done += wlen;
+              }
             }
 
             if (rlen < MAX_READ_SIZE)  // error happens or read the end
@@ -438,13 +472,14 @@ namespace tfs
               break;
             }
           }
-          close(fd, ret_tfs_name, ret_tfs_name_len);
+
+          ret = close(fd, ret_tfs_name, ret_tfs_name_len);
         }
 
         ::close(local_fd);
       }
 
-      return ret;
+      return ret < 0 ? ret : done;
     }
 
     int TfsClientImplV2::fetch_file(const char* local_file, const char* file_name, const char* suffix, const char* ns_addr)
@@ -471,12 +506,21 @@ namespace tfs
         {
           char buf[MAX_READ_SIZE];
           int rlen = 0;
+          int wlen = 0;
           while (1)
           {
             rlen = read(fd, buf, MAX_READ_SIZE);
-            if (rlen > 0)
+            if (rlen < 0)
             {
-              ::write(local_fd, buf, rlen);
+              ret = rlen;
+            }
+            else if (rlen > 0)
+            {
+              ret = ::write(local_fd, buf, rlen);
+              if (ret < 0)
+              {
+                wlen = -errno;
+              }
             }
 
             if (rlen < MAX_READ_SIZE)  // error happens or read the end
@@ -484,15 +528,16 @@ namespace tfs
               break;
             }
           }
-          close(fd);
+
+          ret = close(fd);
         }
 
         ::close(local_fd);
       }
 
-      return ret;
-
+      return ret < 0 ? ret : TFS_SUCCESS;
     }
+
     int TfsClientImplV2::unlink(int64_t& file_size, const char* file_name, const char* suffix,
         const common::TfsUnlinkType action, const common::OptionFlag option_flag, const char* ns_addr)
     {

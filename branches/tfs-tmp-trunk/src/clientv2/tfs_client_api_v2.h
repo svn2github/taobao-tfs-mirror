@@ -32,21 +32,109 @@ namespace tfs
         return &tfs_client_;
       }
 
+      /**
+       * @brief initialize a tfs client object
+       *
+       * @param ns_addr: the cluster's ns address
+       *
+       * @return TFS_SUCCESS on success, errno on fail.
+       */
       int initialize(const char* ns_addr = NULL);
+
+      /**
+       * @brief destroy a tfs client object
+       *
+       * @return TFS_SUCCESS on success, errno on fail.
+       */
       int destroy();
+
+      /**
+       * @brief get a tfs file's status
+       *
+       * @param file_stat: where to save file status
+       * @param file_name: tfs file name
+       * @param suffix: file suffix specified when save this file
+       * @param stat_type: stat flag (NORMAL_STAT or FORCE_STAT)
+       * @param ns_addr: nameserver address
+       *
+       * @return TFS_SUCCESS on success, errno on fail.
+       */
       int stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix = NULL,
           const common::TfsStatType stat_type = common::NORMAL_STAT, const char* ns_addr = NULL);
+
+      /**
+       * @brief save local file to tfs
+       *
+       * @param ret_tfs_name: tfs file name for this saved file
+       * @param ret_tfs_name_len: tfs file length
+       * @param local_file: local file to save
+       * @param mode: save mode
+       * @param suffix: file suffix, can be NULL
+       * @param ns_addr: nameserver address
+       *
+       * @return bytes saved on success, errno on fail.
+       */
       int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
           const char* local_file, const int32_t mode, const char* suffix = NULL,
           const char* ns_addr = NULL);
+
+      /**
+       * @brief update a tfs file
+       *
+       * @param local_file: the new content of file
+       * @param mode: save mode
+       * @param tfs_name: tfs file name
+       * @param suffix: file suffix, can be NULL
+       * @param ns_addr: nameserver address
+       *
+       * @return bytes saved on success, or errno on fail.
+       */
+      int64_t save_file_update(const char* local_file, const int32_t mode,
+        const char* tfs_name, const char* suffix, const char* ns_addr = NULL);
+
+      /**
+       * @brief fetch a tfs file to local file
+       *
+       * @param local_file: local file name
+       * @param file_name: tfs file name
+       * @param suffix: file suffix specified when save this file
+       * @param ns_addr: nameserver address
+       *
+       * @return  TFS_SUCCESS on success, errno on fail.
+       */
       int fetch_file(const char* local_file, const char* file_name, const char* suffix = NULL,
           const char* ns_addr = NULL);
+
+      /**
+       * @brief unlink a tfs file
+       *
+       * @param file_size: the file size of unlinked file
+       * @param file_name: tfs file name to unlink
+       * @param suffix: file suffix specified when save this file
+       * @param action: unlink action: 0-delete, 2-undelete, 4-hide, 6-unhide
+       * @param option_flag: extra flag
+       * @param ns_addr: nameserver address
+       *
+       * @return TFS_SUCCESS on success, errno on fail.
+       */
       int unlink(int64_t& file_size, const char* file_name, const char* suffix = NULL,
           const common::TfsUnlinkType action = common::DELETE,
           const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION,
           const char* ns_addr = NULL);
-      int64_t get_server_id();  // get default ns addr, which passed in initialize
-      int32_t get_cluster_id(); // get default cluster id, which passed in initialize
+
+      /**
+       * @brief  get default ns addr, which passed in initialize
+       *
+       * @return default ns address
+       */
+      int64_t get_server_id();
+
+      /**
+       * @brief get default cluster id, which passed in intialize
+       *
+       * @return default cluster id
+       */
+      int32_t get_cluster_id();
 
     private:
       TfsClientV2();

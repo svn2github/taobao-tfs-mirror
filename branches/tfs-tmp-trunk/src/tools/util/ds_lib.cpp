@@ -715,9 +715,9 @@ namespace tfs
           if (mode != 0)
           {
             printf(
-              "FILE_NAME                  FILE_ID           OFFSET       SIZE        USIZE    M_TIME               C_TIME      FLAG       CRC\n");
+              "FILE_NAME                  FILE_ID           OFFSET       SIZE     M_TIME               C_TIME      FLAG       CRC\n");
             printf(
-              "---------- ---------- ---------- ---------- ----------  ---------- ---------- ---------- ---------- ---------- ---------- ----------\n");
+              "---------- ---------- ---------- ---------- ----------  ---------- ---------- ---------- ---------- ---------- ----------\n");
 
             for (i = 0; i < list_size; i++)
             {
@@ -883,8 +883,8 @@ namespace tfs
 
     void DsLib::print_file_info_v2(const char* name, FileInfoV2& file_info)
     {
-      printf("%s %20"PRI64_PREFIX"u %10u %10u %10u %s %s %02d %10u\n", name, file_info.id_, file_info.offset_,
-             file_info.size_ - FILEINFO_EXT_SIZE, file_info.size_ - FILEINFO_EXT_SIZE,
+      printf("%s %20"PRI64_PREFIX"u %10u %10u %s %s %02d %10u\n", name, file_info.id_, file_info.offset_,
+             file_info.size_ - FILEINFO_EXT_SIZE,
              Func::time_to_str(file_info.modify_time_).c_str(),
              Func::time_to_str(file_info.create_time_).c_str(), file_info.status_, file_info.crc_);
     }

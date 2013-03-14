@@ -63,6 +63,8 @@ namespace tfs
       int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
           const char* local_file, const int32_t mode, const char* suffix = NULL,
           const char* ns_addr = NULL);
+      int64_t save_file_update(const char* local_file, const int32_t flag,
+        const char* tfs_name, const char* suffix, const char* ns_addr = NULL);
       int fetch_file(const char* local_file, const char* file_name, const char* suffix = NULL,
           const char* ns_addr = NULL);
       int unlink(int64_t& file_size, const char* file_name, const char* suffix = NULL,
@@ -80,7 +82,8 @@ namespace tfs
       int erase_file(const int fd);
       int initialize_cluster_id();
       uint64_t ipport_to_addr(const char* addr);
-
+      int64_t save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* local_file,
+          const int32_t mode, const char* tfs_name, const char* suffix, const char* ns_addr);
 
    private:
       TfsClientImplV2();

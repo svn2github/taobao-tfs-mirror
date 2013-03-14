@@ -554,11 +554,20 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
 
   UNUSED(unique);
 
-  if (NULL != tfs_name)
+  if (NULL != tfs_name)  // update
   {
-    strncpy(ret_tfs_name, tfs_name, TFS_FILE_LEN);
+    ret = g_tfs_client->save_file_update(local_file, flag, tfs_name, suffix);
   }
-  ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix);
+  else
+  {
+    ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix);
+  }
+
+  if (ret >= 0)
+  {
+    TBSYS_LOG(DEBUG, "save %d bytes data to tfs", ret);
+  }
+  ret = (ret < 0) ? ret : TFS_SUCCESS;
 
   //printf("tfs_name: %s, ret_tfs_name: %s\n", tfs_name, ret_tfs_name);
   ToolUtil::print_info(ret, "put %s => %s", local_file, tfs_name != NULL ? FSName(tfs_name, suffix).get_name() : ret_tfs_name);
