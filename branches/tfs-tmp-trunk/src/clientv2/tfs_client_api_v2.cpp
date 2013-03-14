@@ -39,56 +39,6 @@ namespace tfs
       return TfsClientImplV2::Instance()->destroy();
     }
 
-    int TfsClientV2::open(const char* file_name, const char* suffix, const char* ns_addr, const int mode)
-    {
-      return TfsClientImplV2::Instance()->open(file_name, suffix, ns_addr, mode);
-    }
-
-    int TfsClientV2::open(const uint64_t block_id, const uint64_t file_id, const char* ns_addr, const int mode)
-    {
-      return TfsClientImplV2::Instance()->open(block_id, file_id, ns_addr, mode);
-    }
-
-    int TfsClientV2::set_option_flag(const int fd, const int option_flag)
-    {
-      return TfsClientImplV2::Instance()->set_option_flag(fd, option_flag);
-    }
-
-    int64_t TfsClientV2::read(const int fd, void* buf, const int64_t count)
-    {
-      return TfsClientImplV2::Instance()->read(fd, buf, count);
-    }
-
-    int64_t TfsClientV2::readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info)
-    {
-      return TfsClientImplV2::Instance()->readv2(fd, buf, count, file_info);
-    }
-
-    int64_t TfsClientV2::write(const int fd, const void* buf, const int64_t count)
-    {
-      return TfsClientImplV2::Instance()->write(fd, buf, count);
-    }
-
-    int64_t TfsClientV2::lseek(const int fd, const int64_t offset, const int whence)
-    {
-      return TfsClientImplV2::Instance()->lseek(fd, offset, whence);
-    }
-
-    int TfsClientV2::fstat(const int fd, TfsFileStat* buf)
-    {
-      return TfsClientImplV2::Instance()->fstat(fd, buf);
-    }
-
-    int TfsClientV2::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len)
-    {
-      return TfsClientImplV2::Instance()->close(fd, ret_tfs_name, ret_tfs_name_len);
-    }
-
-    int TfsClientV2::unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action)
-    {
-      return TfsClientImplV2::Instance()->unlink(file_size, fd, action);
-    }
-
     int TfsClientV2::stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix,
         const common::TfsStatType stat_type, const char* ns_addr)
     {
