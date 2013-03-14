@@ -28,7 +28,7 @@ namespace tfs
   namespace clientv2
   {
     File::File(): lease_id_(0), offset_(0), version_(0),
-    crc_(0), mode_(0), opt_flag_(0), status_(TFS_FILE_OPEN_NO), read_index_(0)
+    crc_(0), mode_(0), opt_flag_(0), read_index_(0)
     {
     }
 
@@ -173,7 +173,7 @@ namespace tfs
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       transfer_mode(mode);
       int ret = TFS_SUCCESS;
-      if (((file_.mode_ |= T_READ) || (file_.mode_ |= T_UNLINK)) &&
+      if (((file_.mode_ & T_READ) || (file_.mode_ & T_UNLINK)) &&
         ((NULL == file_name) || (file_name[0] == '\0')))
       {
         ret = EXIT_PARAMETER_ERROR;
@@ -196,7 +196,7 @@ namespace tfs
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       transfer_mode(mode);
       int ret = TFS_SUCCESS;
-      if (((file_.mode_ |= T_READ) || (file_.mode_ |= T_UNLINK)) &&
+      if (((file_.mode_ & T_READ) || (file_.mode_ & T_UNLINK)) &&
         ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id)))
       {
         ret = EXIT_PARAMETER_ERROR;
@@ -235,11 +235,7 @@ namespace tfs
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
-      if (TFS_FILE_OPEN_YES != file_.status_)
-      {
-        ret = EXIT_NOT_OPEN_ERROR;
-      }
-      else if (0 == (file_.mode_ & (T_READ | T_WRITE)))
+      if (0 == (file_.mode_ & (T_READ | T_WRITE)))
       {
         ret = EXIT_NOT_PERM_OPER;
       }
@@ -266,20 +262,13 @@ namespace tfs
     {
       ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);
       int ret = TFS_SUCCESS;
-      if (TFS_FILE_OPEN_YES != file_.status_)
+      if (!file_.check_read())
       {
-        ret = EXIT_NOT_OPEN_ERROR;
+        ret = EXIT_READ_FILE_ERROR;
       }
-      else
+      else if (file_.ds_.size() > 0)
       {
-        if (!file_.check_read())
-        {
-          ret = EXIT_READ_FILE_ERROR;
-        }
-        else if (file_.ds_.size() > 0)
-        {
-          file_.set_read_index(fsname_.get_file_id() % file_.ds_.size());
-        }
+        file_.set_read_index(fsname_.get_file_id() % file_.ds_.size());
       }
 
       if (TFS_SUCCESS == ret)
@@ -302,20 +291,13 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       int64_t done = 0;
-      if (TFS_FILE_OPEN_YES != file_.status_)
+      if (!file_.check_read())
       {
-        ret = EXIT_NOT_OPEN_ERROR;
+        ret = EXIT_READ_FILE_ERROR;
       }
-      else
+      else if (file_.ds_.size() > 0)
       {
-        if (!file_.check_read())
-        {
-          ret = EXIT_READ_FILE_ERROR;
-        }
-        else if (file_.ds_.size() > 0)
-        {
-          file_.set_read_index(fsname_.get_file_id() % file_.ds_.size());
-        }
+        file_.set_read_index(fsname_.get_file_id() % file_.ds_.size());
       }
 
       if (TFS_SUCCESS == ret)
@@ -365,11 +347,7 @@ namespace tfs
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
       int64_t done = 0;
-      if (TFS_FILE_OPEN_YES != file_.status_)
-      {
-        ret = EXIT_NOT_OPEN_ERROR;
-      }
-      else if(!file_.check_write())
+      if(!file_.check_write())
       {
         ret = EXIT_WRITE_FILE_ERROR;
       }
@@ -396,11 +374,7 @@ namespace tfs
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
-      if (TFS_FILE_OPEN_YES != file_.status_)
-      {
-        ret = EXIT_NOT_OPEN_ERROR;
-      }
-      else if(!(file_.mode_ & T_READ) && !(file_.mode_ & T_UNLINK))
+      if (!(file_.mode_ & T_READ) && !(file_.mode_ & T_UNLINK))
       {
         // only create & update need real close to ds
         if (!file_.check_write())
@@ -420,11 +394,7 @@ namespace tfs
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
-      if (TFS_FILE_OPEN_YES != file_.status_)
-      {
-        ret = EXIT_NOT_OPEN_ERROR;
-      }
-      else if (!file_.check_write())
+      if (!file_.check_write())
       {
         ret = EXIT_UNLINK_FILE_ERROR;
       }

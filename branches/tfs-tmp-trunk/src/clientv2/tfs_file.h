@@ -24,13 +24,6 @@ namespace tfs
 {
   namespace clientv2
   {
-    enum FileStatus
-    {
-      TFS_FILE_OPEN_NO = 0,
-      TFS_FILE_OPEN_YES,
-      TFS_FILE_WRITE_ERROR
-    };
-
     struct File
     {
       common::FamilyInfoExt family_info_;
@@ -41,7 +34,6 @@ namespace tfs
       uint32_t crc_;
       int32_t mode_;
       int32_t opt_flag_;
-      FileStatus status_;
       int32_t read_index_;
 
       File();
