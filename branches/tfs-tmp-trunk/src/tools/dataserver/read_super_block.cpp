@@ -18,6 +18,8 @@
  *
  */
 #include <stdio.h>
+#include <vector>
+#include <algorithm>
 #include "common/parameter.h"
 #include "dataserver/block_manager.h"
 #include "common/version.h"
@@ -37,7 +39,6 @@ void dump_super_block(const SuperBlockInfo& info)
   printf("%-25s%d\n", "max block element:", info.max_block_index_element_count_);
   printf("%-25s%d\n", "total main block count:", info.total_main_block_count_);
   printf("%-25s%d\n", "used main block count:", info.used_main_block_count_);
-  printf("%-25s%d\n", "used extend block count:", info.used_extend_block_count_);
   printf("%-25s%d\n", "max main block size:", info.max_main_block_size_);
   printf("%-25s%d\n", "max extend block size:", info.max_extend_block_size_);
   printf("%-25s%d\n", "hash bucket count:", info.hash_bucket_count_);
@@ -72,6 +73,24 @@ void dump_block_index(const BlockIndex& index)
       index.status_,
       index.split_flag_,
       index.split_status_);
+}
+
+bool compare_by_logic_id(const BlockIndex& left, const BlockIndex& right)
+{
+  bool res = false;
+  if (left.logic_block_id_ < right.logic_block_id_)
+  {
+    res = true;
+  }
+  else if (left.logic_block_id_ > right.logic_block_id_)
+  {
+    res = false;
+  }
+  else
+  {
+    res = left.physical_block_id_ < right.physical_block_id_;
+  }
+  return res;
 }
 
 int main(int argc, char* argv[])
@@ -141,11 +160,22 @@ int main(int argc, char* argv[])
     printf("\n\n");
 
     dump_block_index_header();
+
+    vector<BlockIndex> index_vecs;
     for (int i = 1; i < info->max_block_index_element_count_; i++)
     {
       BlockIndex index;
       block_manager.get_super_block_manager().get_block_index(index, i);
-      dump_block_index(index);
+      if (0 != index.physical_block_id_)
+      {
+        index_vecs.push_back(index);
+      }
+    }
+
+    sort(index_vecs.begin(), index_vecs.end(), compare_by_logic_id);
+    for (unsigned i = 1; i < index_vecs.size(); i++)
+    {
+      dump_block_index(index_vecs[i]);
     }
   }
 

@@ -9,6 +9,7 @@ bin_PROGRAMS = clear_file_system\
                ds_client\
                format_file_system\
                read_super_block\
+							 read_index_tool\
 							 convert_name\
                reload_config\
                reverse_name\

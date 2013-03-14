@@ -326,7 +326,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("delete a block in dataserver.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ret = DsLib::remove_block(ds_task);
       break;
@@ -355,7 +355,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("get the information of a block in the dataserver.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ret = DsLib::get_block_info(ds_task);
       break;
@@ -368,7 +368,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("reset the version of the block in dataserver.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ret = DsLib::reset_block_version(ds_task);
       break;
@@ -381,8 +381,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("add a new file_id.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_new_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_new_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ds_task.new_file_id_ = ds_new_file_id;
       ret = DsLib::create_file_id(ds_task);
@@ -396,7 +396,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("list all the files in a block.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ds_task.mode_ = 1;
       ret = DsLib::list_file(ds_task);
@@ -410,7 +410,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("download a tfs file to local.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ds_task.new_file_id_ = ds_file_id;
@@ -434,8 +434,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("upload a local file to this dataserver.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ds_task.new_file_id_ = ds_file_id;
       snprintf(ds_task.local_file_, MAX_PATH_LENGTH, "%s", param[2].c_str());
@@ -454,8 +454,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("delete a file.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       int32_t unlink_type = 0;
       int32_t option_flag = 0;
       int32_t is_master = 0;
@@ -487,9 +487,9 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("rename file id.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_old_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_new_file_id = strtoul(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_old_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_new_file_id = strtoull(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ds_task.old_file_id_ = ds_old_file_id;
       ds_task.new_file_id_ = ds_new_file_id;
@@ -506,7 +506,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("get the file information.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       int32_t ds_mode = 1;
       if (3 == param.size())
@@ -530,7 +530,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         break;
       }
 
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint32_t ds_crc = strtoul(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
 

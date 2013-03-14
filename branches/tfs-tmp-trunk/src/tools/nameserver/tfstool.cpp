@@ -553,6 +553,11 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
   */
 
   UNUSED(unique);
+
+  if (NULL != tfs_name)
+  {
+    strncpy(ret_tfs_name, tfs_name, TFS_FILE_LEN);
+  }
   ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix);
 
   //printf("tfs_name: %s, ret_tfs_name: %s\n", tfs_name, ret_tfs_name);
@@ -892,7 +897,7 @@ int cmd_stat_blk(const VSTRING& param)
   uint64_t server_id = 0;
   uint64_t block_id = 0;
 
-  if ((block_id = atol(param[0].c_str())) <= 0)
+  if ((block_id = strtoull(param[0].c_str(), (char**)NULL, 10)) <= 0)
   {
     fprintf(stderr, "invalid blockid: %"PRI64_PREFIX"u\n", block_id);
   }
@@ -952,7 +957,7 @@ int cmd_list_file_info(const VSTRING& param)
   int32_t show_detail = 0;
 
   int ret = TFS_ERROR;
-  if ((block_id = atol(param[0].c_str())) <= 0)
+  if ((block_id = strtoull(param[0].c_str(), (char**)NULL, 10)) <= 0)
   {
     fprintf(stderr, "invalid blockid: %"PRI64_PREFIX"u\n", block_id);
     return ret;
@@ -983,7 +988,7 @@ int cmd_list_file_info(const VSTRING& param)
 
     if (param.size() > 1)
     {
-      attach_block_id = atol(param[1].c_str());
+      attach_block_id = strtoull(param[1].c_str(), (char**)NULL, 10);
     }
     else
     {
@@ -1002,7 +1007,7 @@ int cmd_list_file_info(const VSTRING& param)
 
 int cmd_list_block(const VSTRING& param)
 {
-  uint64_t block_id = atol(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), (char**)NULL, 10);
   int ret = TFS_ERROR;
 
   if (block_id <= 0)
@@ -1165,11 +1170,11 @@ int cmd_stat_file_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    app_id = strtoll(param[2].c_str(), NULL, 10);
+    app_id = strtoull(param[2].c_str(), NULL, 10);
   }
   if (size > 3)
   {
-    uid = strtoll(param[3].c_str(), NULL, 10);
+    uid = strtoull(param[3].c_str(), NULL, 10);
   }
 
   NameMetaClientImpl impl;
@@ -1228,11 +1233,11 @@ int cmd_ls_dir_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    app_id = strtoll(param[2].c_str(), NULL, 10);
+    app_id = strtoull(param[2].c_str(), NULL, 10);
   }
   if (size > 3)
   {
-    uid = strtoll(param[3].c_str(), NULL, 10);
+    uid = strtoull(param[3].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1287,11 +1292,11 @@ int cmd_ls_file_meta(const VSTRING& param)
 
     if (size > 2)
     {
-      app_id = strtoll(param[2].c_str(), NULL, 10);
+      app_id = strtoull(param[2].c_str(), NULL, 10);
     }
     if (size > 3)
     {
-      uid = strtoll(param[3].c_str(), NULL, 10);
+      uid = strtoull(param[3].c_str(), NULL, 10);
     }
 
     RcClientImpl impl;
@@ -1337,7 +1342,7 @@ int cmd_create_dir_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    uid = strtoll(param[2].c_str(), NULL, 10);
+    uid = strtoull(param[2].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1372,7 +1377,7 @@ int cmd_create_file_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    uid = strtoll(param[2].c_str(), NULL, 10);
+    uid = strtoull(param[2].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1407,7 +1412,7 @@ int cmd_rm_dir_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    uid = strtoll(param[2].c_str(), NULL, 10);
+    uid = strtoull(param[2].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1492,7 +1497,7 @@ int cmd_rm_file_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    uid = strtoll(param[2].c_str(), NULL, 10);
+    uid = strtoull(param[2].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1540,11 +1545,11 @@ int cmd_put_file_meta(const VSTRING& param)
 
   if (size > 3)
   {
-    app_id = strtoll(param[3].c_str(), NULL, 10);
+    app_id = strtoull(param[3].c_str(), NULL, 10);
   }
   if (size > 4)
   {
-    uid = strtoll(param[4].c_str(), NULL, 10);
+    uid = strtoull(param[4].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1639,11 +1644,11 @@ int cmd_get_file_meta(const VSTRING& param)
 
   if (size > 3)
   {
-    app_id = strtoll(param[3].c_str(), NULL, 10);
+    app_id = strtoull(param[3].c_str(), NULL, 10);
   }
   if (size > 4)
   {
-    uid = strtoll(param[4].c_str(), NULL, 10);
+    uid = strtoull(param[4].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1757,11 +1762,11 @@ int cmd_is_dir_exist_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    app_id = strtoll(param[2].c_str(), NULL, 10);
+    app_id = strtoull(param[2].c_str(), NULL, 10);
   }
   if (size > 3)
   {
-    uid = strtoll(param[3].c_str(), NULL, 10);
+    uid = strtoull(param[3].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1800,11 +1805,11 @@ int cmd_is_file_exist_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    app_id = strtoll(param[2].c_str(), NULL, 10);
+    app_id = strtoull(param[2].c_str(), NULL, 10);
   }
   if (size > 3)
   {
-    uid = strtoll(param[3].c_str(), NULL, 10);
+    uid = strtoull(param[3].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
