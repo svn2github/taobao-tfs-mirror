@@ -30,7 +30,7 @@ namespace tfs
   namespace clientv2
   {
     TfsClientImplV2::TfsClientImplV2() : is_init_(false), fd_(0),
-    packet_factory_(NULL), packet_streamer_(NULL)
+    ns_addr_(0), cluster_id_(0), packet_factory_(NULL), packet_streamer_(NULL)
     {
       packet_factory_ = new MessageFactory();
       packet_streamer_ = new BasePacketStreamer(packet_factory_);
@@ -61,28 +61,17 @@ namespace tfs
       {
         TBSYS_LOG(ERROR, "initialize NewClientManager fail, must exit, ret: %d", ret);
       }
-      else if ((NULL == ns_addr) || ('0' == ns_addr[0]))
-      {
-        TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
-        ret = TFS_ERROR;
-      }
       else
       {
-        vector<string> fields;
-        Func::split_string(ns_addr, ':', fields);
-        if (2 != fields.size())
+        ns_addr_ = ipport_to_addr(ns_addr);
+        if (0 != ns_addr_)
         {
-          TBSYS_LOG(ERROR, "invalid ns ip");
-          ret = TFS_ERROR;
-        }
-        else
-        {
-          ns_addr_ = Func::str_to_addr(fields[0].c_str(), atoi(fields[1].c_str()));
           ret = initialize_cluster_id();
-          if (TFS_SUCCESS == ret)
-          {
-            is_init_ = true;
-          }
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          is_init_ = true;
         }
       }
 
@@ -99,7 +88,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int TfsClientImplV2::open(const char* file_name, const char* suffix, const int mode)
+    int TfsClientImplV2::open(const char* file_name, const char* suffix, const char* ns_addr, const int mode)
     {
       int ret_fd = EXIT_INVALIDFD_ERROR;
       int ret = TFS_SUCCESS;
@@ -114,8 +103,18 @@ namespace tfs
       }
       else
       {
-        TfsFile* tfs_file = new TfsFile(ns_addr_, cluster_id_);
-        ret = tfs_file->open(file_name, suffix, mode);
+        TfsFile* tfs_file = NULL;
+        uint64_t real_nsaddr = ipport_to_addr(ns_addr);
+        real_nsaddr = (0 != real_nsaddr) ? real_nsaddr : ns_addr_;
+        if (0 == real_nsaddr)
+        {
+          ret = EXIT_PARAMETER_ERROR;
+        }
+        else
+        {
+          tfs_file = new TfsFile(real_nsaddr, cluster_id_);
+          ret = tfs_file->open(file_name, suffix, mode);
+        }
 
         if (ret != TFS_SUCCESS)
         {
@@ -137,7 +136,7 @@ namespace tfs
       return ret_fd;
     }
 
-    int TfsClientImplV2::open(const uint64_t block_id, const uint64_t file_id, const int mode)
+    int TfsClientImplV2::open(const uint64_t block_id, const uint64_t file_id, const char* ns_addr, const int mode)
     {
       int ret_fd = EXIT_INVALIDFD_ERROR;
       int ret = TFS_SUCCESS;
@@ -152,8 +151,18 @@ namespace tfs
       }
       else
       {
-        TfsFile* tfs_file = new TfsFile(ns_addr_, cluster_id_);
-        ret = tfs_file->open(block_id, file_id, mode);
+        TfsFile* tfs_file = NULL;
+        uint64_t real_nsaddr = ipport_to_addr(ns_addr);
+        real_nsaddr = (0 != real_nsaddr) ? real_nsaddr : ns_addr_;
+        if (0 == real_nsaddr)
+        {
+          ret = EXIT_PARAMETER_ERROR;
+        }
+        else
+        {
+          tfs_file = new TfsFile(real_nsaddr, cluster_id_);
+          ret = tfs_file->open(block_id, file_id, mode);
+        }
 
         if (ret != TFS_SUCCESS)
         {
@@ -373,10 +382,10 @@ namespace tfs
     }
 
     int TfsClientImplV2::stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix,
-        const common::TfsStatType stat_type)
+        const common::TfsStatType stat_type, const char* ns_addr)
     {
       int ret = TFS_SUCCESS;
-      int fd = open(file_name, suffix, T_READ);
+      int fd = open(file_name, suffix, ns_addr, T_READ);
       if (fd < 0)
       {
         ret = EXIT_INVALIDFD_ERROR;
@@ -392,7 +401,7 @@ namespace tfs
 
 
     int64_t TfsClientImplV2::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
-        const char* local_file, const int32_t mode, const char* suffix)
+        const char* local_file, const int32_t mode, const char* suffix, const char* ns_addr)
     {
       int ret = TFS_SUCCESS;
       int local_fd = 0;  // local file desp
@@ -406,7 +415,7 @@ namespace tfs
       }
       else
       {
-        fd = open((char*)NULL, suffix, T_WRITE | mode);
+        fd = open((char*)NULL, suffix, ns_addr, T_WRITE | mode);
         if (fd < 0)
         {
           ret = EXIT_INVALIDFD_ERROR;
@@ -438,7 +447,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsClientImplV2::fetch_file(const char* local_file, const char* file_name, const char* suffix)
+    int TfsClientImplV2::fetch_file(const char* local_file, const char* file_name, const char* suffix, const char* ns_addr)
     {
       int ret = TFS_SUCCESS;
       int local_fd = 0;  // local file desp
@@ -452,7 +461,7 @@ namespace tfs
       }
       else
       {
-        fd = open(file_name, suffix, T_READ);
+        fd = open(file_name, suffix, ns_addr, T_READ);
         if (fd < 0)
         {
           ret = EXIT_INVALIDFD_ERROR;
@@ -485,10 +494,10 @@ namespace tfs
 
     }
     int TfsClientImplV2::unlink(int64_t& file_size, const char* file_name, const char* suffix,
-        const common::TfsUnlinkType action, const common::OptionFlag option_flag)
+        const common::TfsUnlinkType action, const common::OptionFlag option_flag, const char* ns_addr)
     {
       int ret = TFS_SUCCESS;
-      int fd = open(file_name, suffix, T_UNLINK);
+      int fd = open(file_name, suffix, ns_addr, T_UNLINK);
       if (fd < 0)
       {
         ret = EXIT_INVALIDFD_ERROR;
@@ -599,6 +608,21 @@ namespace tfs
         tfs_file_map_.erase(it);
       }
       return ret;
+    }
+
+    uint64_t TfsClientImplV2::ipport_to_addr(const char* addr)
+    {
+      uint64_t result = 0;
+      if (NULL != addr)
+      {
+        vector<string> fields;
+        Func::split_string(addr, ':', fields);
+        if (2 == fields.size())
+        {
+          result = Func::str_to_addr(fields[0].c_str(), atoi(fields[1].c_str()));
+        }
+      }
+      return result;
     }
 
     int TfsClientImplV2::initialize_cluster_id()

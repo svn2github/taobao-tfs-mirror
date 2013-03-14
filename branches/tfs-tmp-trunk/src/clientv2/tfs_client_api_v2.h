@@ -32,12 +32,12 @@ namespace tfs
         return &tfs_client_;
       }
 
-      int initialize(const char* ns_addr);
+      int initialize(const char* ns_addr = NULL);
       int destroy();
       int set_option_flag(const int fd, const int opt_flag);
 
-      int open(const char* file_name, const char* suffix, const int mode);
-      int open(const uint64_t block_id, const uint64_t file_id, const int mode);
+      int open(const char* file_name, const char* suffix, const char* ns_addr, const int mode);
+      int open(const uint64_t block_id, const uint64_t file_id, const char* ns_addr, const int mode);
       int64_t read(const int fd, void* buf, const int64_t count);
       int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info);
       int64_t write(const int fd, const void* buf, const int64_t count);
@@ -49,13 +49,16 @@ namespace tfs
       int unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action = common::DELETE);
 
       int stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix = NULL,
-          const common::TfsStatType stat_type = common::NORMAL_STAT);
+          const common::TfsStatType stat_type = common::NORMAL_STAT, const char* ns_addr = NULL);
       int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
-          const char* local_file, const int32_t mode, const char* suffix = NULL);
-      int fetch_file(const char* local_file, const char* file_name, const char* suffix = NULL);
+          const char* local_file, const int32_t mode, const char* suffix = NULL,
+          const char* ns_addr = NULL);
+      int fetch_file(const char* local_file, const char* file_name, const char* suffix = NULL,
+          const char* ns_addr = NULL);
       int unlink(int64_t& file_size, const char* file_name, const char* suffix = NULL,
           const common::TfsUnlinkType action = common::DELETE,
-          const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
+          const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION,
+          const char* ns_addr = NULL);
 
       int64_t get_server_id();
       int32_t get_cluster_id();
