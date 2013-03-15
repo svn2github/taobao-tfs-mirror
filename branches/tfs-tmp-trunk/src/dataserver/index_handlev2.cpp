@@ -1045,30 +1045,55 @@ namespace tfs
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
-        IndexHeaderV2* pheader = get_index_header_();
-        InnerIndex* inner_index = get_inner_index_array_();
-        assert(NULL != inner_index);
-        InnerIndex* index = &inner_index[pheader->index_num_++];
-        InnerIndex* last_index = (1 == pheader->index_num_) ? &inner_index[0] : &inner_index[pheader->index_num_ - 2];
-        index->logic_block_id_ = logic_block_id;
-        index->offset_ = (1 == pheader->index_num_) ? INDEX_DATA_START_OFFSET : last_index->offset_ + last_index->size_;
-        const int32_t ALL_TOTAL_SIZE = INDEX_HEADER_V2_LENGTH + header.file_info_bucket_size_ * FILE_INFO_V2_LENGTH;
-        index->size_   = ALL_TOTAL_SIZE;
-        header.used_file_info_bucket_size_ = infos.size();
-        const int32_t TOTAL_SIZE = INDEX_HEADER_V2_LENGTH + infos.size() * FILE_INFO_V2_LENGTH;
-        char* data  = new (std::nothrow) char[ TOTAL_SIZE];
-        memcpy(data, &header, INDEX_HEADER_V2_LENGTH);
         int32_t offset = INDEX_HEADER_V2_LENGTH;
-        std::vector<common::FileInfoV2>::const_iterator iter = infos.begin();
-        for (; iter != infos.end(); ++iter)
+        InnerIndex* index = get_inner_index_(header.info_.block_id_);
+        if (NULL == index)
         {
-          memcpy((data+offset), &(*iter), FILE_INFO_V2_LENGTH);
-          offset += FILE_INFO_V2_LENGTH;
+          assert(!infos.empty());
+          IndexHeaderV2* pheader = get_index_header_();
+          InnerIndex* inner_index = get_inner_index_array_();
+          assert(NULL != inner_index);
+          InnerIndex* index = &inner_index[pheader->index_num_++];
+          InnerIndex* last_index = (1 == pheader->index_num_) ? &inner_index[0] : &inner_index[pheader->index_num_ - 2];
+          index->logic_block_id_ = logic_block_id;
+          index->offset_ = (1 == pheader->index_num_) ? INDEX_DATA_START_OFFSET : last_index->offset_ + last_index->size_;
+          index->size_ = INDEX_HEADER_V2_LENGTH + (header.file_info_bucket_size_ * FILE_INFO_V2_LENGTH);
+          header.used_file_info_bucket_size_ = infos.size();
+          char* data  = new (std::nothrow) char[index->size_];
+          memset(data , 0, index->size_);
+          memcpy(data, &header, INDEX_HEADER_V2_LENGTH);
+          std::vector<common::FileInfoV2>::iterator iter = infos.begin();
+          for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
+          {
+            FileInfoV2& info = (*iter);
+            ret = insert_file_info_(info, data, index->size_, INVALID_FILE_ID != info.id_, true);
+            offset += FILE_INFO_V2_LENGTH;
+          }
+          ret = file_op_.pwrite(data, offset, index->offset_);
+          ret = (offset == ret) ? TFS_SUCCESS : ret;
+          tbsys::gDeleteA(data);
         }
-
-        ret = file_op_.pwrite(data, offset, index->offset_);
-        ret = (offset == ret) ? TFS_SUCCESS : ret;
-        tbsys::gDeleteA(data);
+        else
+        {
+          char* data = NULL;
+          ret = malloc_index_mem_(data, *index);
+          if (TFS_SUCCESS == ret)
+          {
+            memcpy(data, &header, INDEX_HEADER_V2_LENGTH);
+            IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
+            assert(NULL != header);
+            if (!infos.empty())
+              header->used_file_info_bucket_size_ = infos.size();
+            std::vector<common::FileInfoV2>::iterator iter = infos.begin();
+            for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
+            {
+              FileInfoV2& info = (*iter);
+              ret = insert_file_info_(info, data, index->size_, INVALID_FILE_ID != info.id_, true);
+            }
+          }
+          if (NULL != data)
+            ret = free_index_mem_(data, *index, TFS_SUCCESS == ret);
+        }
       }
       return ret;
     }
@@ -1090,7 +1115,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
           ret = insert_file_info_(info, data, inner_index.size_, INVALID_FILE_ID != info.id_, true);
         if (NULL != data)
-          free_index_mem_(data, inner_index, TFS_SUCCESS == ret);
+          ret = free_index_mem_(data, inner_index, TFS_SUCCESS == ret);
       }
       return ret;
     }
@@ -1118,7 +1143,7 @@ namespace tfs
             info = *current;
         }
         if (NULL != data)
-          free_index_mem_(data, inner_index, TFS_SUCCESS == ret);
+          ret = free_index_mem_(data, inner_index, TFS_SUCCESS == ret);
       }
       return ret;
     }
@@ -1143,7 +1168,7 @@ namespace tfs
           vheader = *header;
           FileInfoV2* finfos  = reinterpret_cast<FileInfoV2*>(data + INDEX_HEADER_V2_LENGTH);
           assert(NULL != finfos);
-          int32_t total = header->used_file_info_bucket_size_ * FILE_INFO_V2_LENGTH;
+          int32_t total = header->file_info_bucket_size_ * FILE_INFO_V2_LENGTH;
           ret = (inner_index.size_ >= total) ? TFS_SUCCESS : EXIT_INDEX_DATA_INVALID_ERROR;
           if (TFS_SUCCESS == ret)
           {
@@ -1157,7 +1182,7 @@ namespace tfs
         }
 
         if (NULL != data)
-          free_index_mem_(data, inner_index, false);
+          ret = free_index_mem_(data, inner_index, false);
       }
       return ret;
     }
@@ -1212,7 +1237,7 @@ namespace tfs
           ret = (remote_version == info.version_) ? TFS_SUCCESS : EXIT_VERSION_CONFLICT_ERROR;
         }
         if (NULL != data)
-          free_index_mem_(data, inner_index, false);
+          ret = free_index_mem_(data, inner_index, false);
       }
       return ret;
     }
