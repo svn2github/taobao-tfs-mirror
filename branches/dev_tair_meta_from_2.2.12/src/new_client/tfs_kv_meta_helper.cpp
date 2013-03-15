@@ -155,6 +155,14 @@ int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_nam
       *s_common_prefix = *(rsp_gb_msg->get_mutable_s_common_prefix());
       *is_truncated = *(rsp_gb_msg->get_mutable_truncated());
     }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "get bucket return error, ret: %d", ret);
+      }
+    }
     else
     {
       ret = EXIT_UNKNOWN_MSGTYPE;
