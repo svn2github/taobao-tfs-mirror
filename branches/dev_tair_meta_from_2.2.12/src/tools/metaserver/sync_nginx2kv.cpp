@@ -105,7 +105,7 @@ int write_to_kv(NameMetaClientImpl &client, int64_t app_id, int64_t uid, const s
     tfs_file_info.offset_ = frag_info.v_frag_meta_[i].offset_;
 
     ret = tfs::client::KvMetaHelper::do_put_object(new_server_id, bucket_name.c_str(),
-            object_name.c_str(), obj_info, user_info);
+            object_name.c_str() + 1, obj_info, user_info);
     if (TFS_SUCCESS != ret)
     {
       TBSYS_LOG(ERROR, "[SYNC_LOG] put object error,ret:%d",ret);
@@ -116,7 +116,7 @@ int write_to_kv(NameMetaClientImpl &client, int64_t app_id, int64_t uid, const s
     }
     else
     {
-      TBSYS_LOG(INFO, "[SYNC_LOG] write to kv put object success,offst:%"PRI64_PREFIX"d size:%"PRI64_PREFIX"d",
+      TBSYS_LOG(INFO, "[SYNC_LOG] write to kv put object success,offst:%"PRI64_PREFIX"d size:%d",
                 frag_info.v_frag_meta_[i].offset_, frag_info.v_frag_meta_[i].size_);
     }
   }
@@ -137,11 +137,11 @@ int diff_info(NameMetaClientImpl &client, int64_t app_id, int64_t uid, const str
   bool still_have = false;
   int64_t offset = 0;
   int64_t length = file_meta_info.size_;
-  int64_t read_size = 0;
   do
   {
+    int64_t read_size = 0;
     int ret = tfs::client::KvMetaHelper::do_get_object(new_server_id,
-        bucket_name.c_str(), object_name.c_str(),
+        bucket_name.c_str(), object_name.c_str() + 1,
         offset, length,
         object_info, &still_have,
         *user_info);
@@ -168,12 +168,12 @@ int diff_info(NameMetaClientImpl &client, int64_t app_id, int64_t uid, const str
     length -= read_size;
   }while(still_have && length > 0);
 
-  if (file_meta_info.create_time_ != base_object_info->meta_info_.create_time_)
+  if (abs(file_meta_info.create_time_ - base_object_info->meta_info_.create_time_) > 60)
   {
     TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s create_time is diff old:%d new:%"PRI64_PREFIX"d",
         bucket_name.c_str(), object_name.c_str(), file_meta_info.create_time_, base_object_info->meta_info_.create_time_);
   }
-  if (file_meta_info.modify_time_ != base_object_info->meta_info_.modify_time_)
+  if (abs(file_meta_info.modify_time_ != base_object_info->meta_info_.modify_time_) > 60)
   {
     TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s modify_time is diff old:%d new:%"PRI64_PREFIX"d",
         bucket_name.c_str(), object_name.c_str(), file_meta_info.modify_time_, base_object_info->meta_info_.modify_time_);
@@ -250,7 +250,7 @@ int del_from_kv(const string& bucket_name, const string& object_name)
   do
   {
     ret = tfs::client::KvMetaHelper::do_del_object(new_server_id,
-                  bucket_name.c_str(), object_name.c_str(),
+                  bucket_name.c_str(), object_name.c_str() + 1,
                   &object_info, &still_have, user_info);
     if (ret == TFS_SUCCESS)
     {
@@ -272,7 +272,7 @@ int check(NameMetaClientImpl &client, int64_t app_id, int64_t uid, const string&
   UserInfo user_info;
   int iret = -1;
   ret = tfs::client::KvMetaHelper::do_head_object(new_server_id,
-            bucket_name.c_str(), object_name.c_str(),
+            bucket_name.c_str(), object_name.c_str() + 1,
             &object_info, user_info);
   bool new_is_exist = false;
   if (EXIT_OBJECT_NOT_EXIST == ret)
@@ -434,7 +434,10 @@ int main(int argc, char *argv[])
     {
       *p = '\0';
     }
-    object_name = q;
+    string tmp_object;
+    tmp_object = q;
+    object_name = "/";
+    object_name += tmp_object;
     TBSYS_LOG(INFO, "[SYNC_LOG] app_id %ld uid %ld bucketname %s objectname %s", app_id, uid, bucket_name.c_str(), object_name.c_str());
    // ret = check(old_client, tfs_name);
     int iret;

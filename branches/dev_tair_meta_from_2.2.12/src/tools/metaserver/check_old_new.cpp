@@ -92,17 +92,24 @@ int check(NameMetaClientImpl &client ,string path)
       bool still_have = false;
       int64_t offset = 0;
       int64_t length = it->size_;
-      int64_t read_size = 0;
+      int ret = TFS_SUCCESS;
       do
       {
-        int ret = tfs::client::KvMetaHelper::do_get_object(new_server_id,
-            bucket_name, new_path.c_str(),
+        int64_t read_size = 0;
+        ret = tfs::client::KvMetaHelper::do_get_object(new_server_id,
+            bucket_name, new_path.c_str() + 1,
             offset, length,
             object_info, &still_have,
             *user_info);
-        if (ret != TFS_SUCCESS)
+        if (ret == EXIT_OBJECT_NOT_EXIST)
         {
-          TBSYS_LOG(ERROR, "get_obejct |%s|%s| error",bucket_name,new_path.c_str());
+          TBSYS_LOG(ERROR, "get_obejct |%s|%s| object not exist",bucket_name,new_path.c_str());
+          break;
+        }
+        else if (ret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "get_obejct |%s|%s| unknow error",bucket_name,new_path.c_str());
+          break;
         }
         if (offset == 0)
         {
@@ -123,74 +130,77 @@ int check(NameMetaClientImpl &client ,string path)
         offset += read_size;
         length -= read_size;
       }while(still_have && length > 0);
-      //check
-      if (it->create_time_ != base_object_info->meta_info_.create_time_)
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s create_time is diff old:%d new:%"PRI64_PREFIX"d",
-            bucket_name, new_path.c_str(), it->create_time_, base_object_info->meta_info_.create_time_);
-      }
-      if (it->modify_time_ != base_object_info->meta_info_.modify_time_)
-      {
-        TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s modify_time is diff old:%d new:%"PRI64_PREFIX"d",
-            bucket_name, new_path.c_str(), it->modify_time_, base_object_info->meta_info_.modify_time_);
-      }
-      if (it->size_ != base_object_info->meta_info_.big_file_size_)
-      {
-        TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s object_size is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
-            bucket_name, new_path.c_str(), it->size_, base_object_info->meta_info_.big_file_size_);
-      }
-
-      if (frag_info->v_frag_meta_.size() == base_object_info->v_tfs_file_info_.size())
-      {
-        TBSYS_LOG(DEBUG, " now size equal is %d",frag_info->v_frag_meta_.size());
-        for(size_t i = 0; i < frag_info->v_frag_meta_.size(); ++i)
+        //check
+        if (abs(it->create_time_ - base_object_info->meta_info_.create_time_) > 60)
         {
-          if (frag_info->cluster_id_ != base_object_info->v_tfs_file_info_[i].cluster_id_)
-          {
-            TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s cluster_id is diff old:%d new:%d",
-                bucket_name, new_path.c_str(), frag_info->cluster_id_, base_object_info->v_tfs_file_info_[i].cluster_id_);
-          }
-          if ((int64_t)(frag_info->v_frag_meta_[i].file_id_) != base_object_info->v_tfs_file_info_[i].file_id_)
-          {
-            TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s file_id is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
-                bucket_name, new_path.c_str(), frag_info->v_frag_meta_[i].file_id_, base_object_info->v_tfs_file_info_[i].file_id_);
-          }
-          if (frag_info->v_frag_meta_[i].offset_ != base_object_info->v_tfs_file_info_[i].offset_)
-          {
-            TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s offset is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
-                bucket_name, new_path.c_str(), frag_info->v_frag_meta_[i].offset_, base_object_info->v_tfs_file_info_[i].offset_);
-          }
-          if (frag_info->v_frag_meta_[i].block_id_ != base_object_info->v_tfs_file_info_[i].block_id_)
-          {
-            TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s block_id is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
-                bucket_name, new_path.c_str(), frag_info->v_frag_meta_[i].block_id_, base_object_info->v_tfs_file_info_[i].block_id_);
-          }
-          if (frag_info->v_frag_meta_[i].size_ != base_object_info->v_tfs_file_info_[i].file_size_)
-          {
-            TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s frag_size is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
-                bucket_name, new_path.c_str(), frag_info->v_frag_meta_[i].size_, base_object_info->v_tfs_file_info_[i].file_size_);
-          }
-          // old_meta
-          TBSYS_LOG(DEBUG,"old_meta-> cluster_id:%d, file_id:%"PRI64_PREFIX"d, offset:%"PRI64_PREFIX"d, block_id:%d, size:%d",
-              frag_info->cluster_id_,
-              frag_info->v_frag_meta_[i].file_id_,
-              frag_info->v_frag_meta_[i].offset_,
-              frag_info->v_frag_meta_[i].block_id_,
-              frag_info->v_frag_meta_[i].size_);
-
-          //new kv_meta
-          TBSYS_LOG(DEBUG,"new_meta-> cluster_id:%d, file_id:%"PRI64_PREFIX"d, offset:%"PRI64_PREFIX"d, block_id:%d, size:%d",
-              base_object_info->v_tfs_file_info_[i].cluster_id_,
-              base_object_info->v_tfs_file_info_[i].file_id_,
-              base_object_info->v_tfs_file_info_[i].offset_,
-              base_object_info->v_tfs_file_info_[i].block_id_,
-              base_object_info->v_tfs_file_info_[i].file_size_);
+          TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s create_time is diff old:%d new:%"PRI64_PREFIX"d",
+              bucket_name, new_path.c_str(), it->create_time_, base_object_info->meta_info_.create_time_);
         }
-      }
-      else
-      {
-        TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s frag_size is diff old:%d new:%d",
-            bucket_name, new_path.c_str(), frag_info->v_frag_meta_.size(), base_object_info->v_tfs_file_info_.size());
+        if (abs(it->modify_time_ - base_object_info->meta_info_.modify_time_) > 60)
+        {
+          TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s modify_time is diff old:%d new:%"PRI64_PREFIX"d",
+              bucket_name, new_path.c_str(), it->modify_time_, base_object_info->meta_info_.modify_time_);
+        }
+        if (it->size_ != base_object_info->meta_info_.big_file_size_)
+        {
+          TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s object_size is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
+              bucket_name, new_path.c_str(), it->size_, base_object_info->meta_info_.big_file_size_);
+        }
+
+        if (frag_info->v_frag_meta_.size() == base_object_info->v_tfs_file_info_.size())
+        {
+          TBSYS_LOG(DEBUG, " now size equal is %d",frag_info->v_frag_meta_.size());
+          for(size_t i = 0; i < frag_info->v_frag_meta_.size(); ++i)
+          {
+            if (frag_info->cluster_id_ != base_object_info->v_tfs_file_info_[i].cluster_id_)
+            {
+              TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s cluster_id is diff old:%d new:%d",
+                  bucket_name, new_path.c_str(), frag_info->cluster_id_, base_object_info->v_tfs_file_info_[i].cluster_id_);
+            }
+            if ((int64_t)(frag_info->v_frag_meta_[i].file_id_) != base_object_info->v_tfs_file_info_[i].file_id_)
+            {
+              TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s file_id is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
+                  bucket_name, new_path.c_str(), frag_info->v_frag_meta_[i].file_id_, base_object_info->v_tfs_file_info_[i].file_id_);
+            }
+            if (frag_info->v_frag_meta_[i].offset_ != base_object_info->v_tfs_file_info_[i].offset_)
+            {
+              TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s offset is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
+                  bucket_name, new_path.c_str(), frag_info->v_frag_meta_[i].offset_, base_object_info->v_tfs_file_info_[i].offset_);
+            }
+            if (frag_info->v_frag_meta_[i].block_id_ != base_object_info->v_tfs_file_info_[i].block_id_)
+            {
+              TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s block_id is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
+                  bucket_name, new_path.c_str(), frag_info->v_frag_meta_[i].block_id_, base_object_info->v_tfs_file_info_[i].block_id_);
+            }
+            if (frag_info->v_frag_meta_[i].size_ != base_object_info->v_tfs_file_info_[i].file_size_)
+            {
+              TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s frag_size is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
+                  bucket_name, new_path.c_str(), frag_info->v_frag_meta_[i].size_, base_object_info->v_tfs_file_info_[i].file_size_);
+            }
+            // old_meta
+            TBSYS_LOG(DEBUG,"old_meta-> cluster_id:%d, file_id:%"PRI64_PREFIX"d, offset:%"PRI64_PREFIX"d, block_id:%d, size:%d",
+                frag_info->cluster_id_,
+                frag_info->v_frag_meta_[i].file_id_,
+                frag_info->v_frag_meta_[i].offset_,
+                frag_info->v_frag_meta_[i].block_id_,
+                frag_info->v_frag_meta_[i].size_);
+
+            //new kv_meta
+            TBSYS_LOG(DEBUG,"new_meta-> cluster_id:%d, file_id:%"PRI64_PREFIX"d, offset:%"PRI64_PREFIX"d, block_id:%d, size:%d",
+                base_object_info->v_tfs_file_info_[i].cluster_id_,
+                base_object_info->v_tfs_file_info_[i].file_id_,
+                base_object_info->v_tfs_file_info_[i].offset_,
+                base_object_info->v_tfs_file_info_[i].block_id_,
+                base_object_info->v_tfs_file_info_[i].file_size_);
+          }
+        }
+        else
+        {
+          TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s frag_size is diff old:%d new:%d",
+              bucket_name, new_path.c_str(), frag_info->v_frag_meta_.size(), base_object_info->v_tfs_file_info_.size());
+        }
       }
       delete user_info;
       delete object_info;

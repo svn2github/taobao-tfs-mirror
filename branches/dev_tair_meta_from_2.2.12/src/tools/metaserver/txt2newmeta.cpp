@@ -131,7 +131,7 @@ void transfer(const string &source_file_name, const string &s3_server)
       break;
     }
     fread(buff, full_name_len, 1, s_fd);
-    object_name.assign(buff, full_name_len);
+    object_name.assign(buff + 1, full_name_len - 1);
     fread(&(meta_info.file_info_.create_time_), sizeof(meta_info.file_info_.create_time_), 1, s_fd);//ct
     fread(&(meta_info.file_info_.modify_time_), sizeof(meta_info.file_info_.modify_time_), 1, s_fd);//mt
     fread(&(meta_info.file_info_.size_), sizeof(meta_info.file_info_.size_), 1, s_fd);//size
