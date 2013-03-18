@@ -258,6 +258,7 @@ namespace tfs
               ret = get_data_helper().read_file_degrade(block_id,
                   file_info, buffer, length, offset, flag, family_info);
             }
+
             if (TFS_SUCCESS != ret)
             {
               // upper layer will reply error packet to client
@@ -1011,7 +1012,7 @@ namespace tfs
     int ClientRequestServer::read_index(message::ReadIndexMessageV2* message)
     {
       uint64_t block_id = message->get_block_id();
-      uint64_t attach_block_id = message->get_block_id();
+      uint64_t attach_block_id = message->get_attach_block_id();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_BLOCK_ID == attach_block_id)) ?
         EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -1041,7 +1042,7 @@ namespace tfs
     int ClientRequestServer::write_index(message::WriteIndexMessageV2* message)
     {
       uint64_t block_id = message->get_block_id();
-      uint64_t attach_block_id = message->get_block_id();
+      uint64_t attach_block_id = message->get_attach_block_id();
       IndexDataV2& index_data = message->get_index_data();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_BLOCK_ID == attach_block_id)) ?

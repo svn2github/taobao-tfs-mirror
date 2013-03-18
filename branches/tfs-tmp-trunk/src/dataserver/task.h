@@ -88,15 +88,9 @@ namespace tfs
         *
         * @return true if expired
         */
-        bool is_expired()
+        bool is_expired(int64_t now)
         {
-          bool expire = false;
-          int32_t now = common::Func::get_monotonic_time();
-          if (now > start_time_ + expire_time_)
-          {
-            expire = true;
-          }
-          return expire;
+          return now >= start_time_ + expire_time_;
         }
 
         /**
@@ -182,7 +176,7 @@ namespace tfs
         common::PlanType type_;
         int64_t seqno_;
         uint64_t source_id_;
-        int32_t start_time_;
+        int64_t start_time_;
         int32_t expire_time_;
         bool task_from_ds_;
     };
@@ -302,10 +296,8 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(ReinstateTask);
         int do_reinstate();
         int decode_data(common::ECMeta* ec_meta, int32_t& marshalling_len);
-        int recover_data_index(const int32_t marshalling_len);
-        int recover_check_index(const int32_t marshalling_len);
-        int recover_check_index_from_dnodes(const int32_t marshalling_len);
-        int recover_check_index_from_cnodes(const int32_t marshalling_len, const int32_t pi);
+        int recover_data_index(common::ECMeta* ec_metas);
+        int recover_check_index(common::ECMeta* ec_metas, const int32_t marshalling_len);
         int recover_updated_files(const common::IndexDataV2& index_data,
           const int32_t marshalling_len, uint64_t block_id, const int32_t src, const int32_t dest);
 

@@ -1045,7 +1045,6 @@ namespace tfs
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
-        int32_t offset = INDEX_HEADER_V2_LENGTH;
         InnerIndex* index = get_inner_index_(header.info_.block_id_);
         if (NULL == index)
         {
@@ -1058,7 +1057,7 @@ namespace tfs
           index->logic_block_id_ = logic_block_id;
           index->offset_ = (1 == pheader->index_num_) ? INDEX_DATA_START_OFFSET : last_index->offset_ + last_index->size_;
           index->size_ = INDEX_HEADER_V2_LENGTH + (header.file_info_bucket_size_ * FILE_INFO_V2_LENGTH);
-          header.used_file_info_bucket_size_ = infos.size();
+          header.used_file_info_bucket_size_ = 0;
           char* data  = new (std::nothrow) char[index->size_];
           memset(data , 0, index->size_);
           memcpy(data, &header, INDEX_HEADER_V2_LENGTH);
@@ -1067,10 +1066,12 @@ namespace tfs
           {
             FileInfoV2& info = (*iter);
             ret = insert_file_info_(info, data, index->size_, INVALID_FILE_ID != info.id_, true);
-            offset += FILE_INFO_V2_LENGTH;
           }
-          ret = file_op_.pwrite(data, offset, index->offset_);
-          ret = (offset == ret) ? TFS_SUCCESS : ret;
+          if (TFS_SUCCESS == ret)
+          {
+            ret = file_op_.pwrite(data, index->size_, index->offset_);
+            ret = (index->size_ == ret) ? TFS_SUCCESS : ret;
+          }
           tbsys::gDeleteA(data);
         }
         else
@@ -1083,12 +1084,14 @@ namespace tfs
             IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
             assert(NULL != header);
             if (!infos.empty())
-              header->used_file_info_bucket_size_ = infos.size();
-            std::vector<common::FileInfoV2>::iterator iter = infos.begin();
-            for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
             {
-              FileInfoV2& info = (*iter);
-              ret = insert_file_info_(info, data, index->size_, INVALID_FILE_ID != info.id_, true);
+              header->used_file_info_bucket_size_ = 0;
+              std::vector<common::FileInfoV2>::iterator iter = infos.begin();
+              for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
+              {
+                FileInfoV2& info = (*iter);
+                ret = insert_file_info_(info, data, index->size_, INVALID_FILE_ID != info.id_, true);
+              }
             }
           }
           if (NULL != data)
@@ -1172,7 +1175,7 @@ namespace tfs
           ret = (inner_index.size_ >= total) ? TFS_SUCCESS : EXIT_INDEX_DATA_INVALID_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            for (uint16_t bucket = 0; bucket < header->file_info_bucket_size_; ++bucket)
+            for (uint16_t bucket = 0; bucket < header->used_file_info_bucket_size_; ++bucket)
             {
               FileInfoV2* current = finfos + bucket;
               if (INVALID_FILE_ID != current->id_)

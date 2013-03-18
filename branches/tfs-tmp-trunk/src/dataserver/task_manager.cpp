@@ -439,9 +439,10 @@ namespace tfs
       running_task_mutex_.lock();
       map<int64_t, Task*>::iterator iter = running_task_.begin();
       uint32_t old_size = running_task_.size();
+      int64_t now = Func::get_monotonic_time();
       for ( ; iter != running_task_.end(); )
       {
-        if (iter->second->is_expired())
+        if (iter->second->is_expired(now))
         {
           TBSYS_LOG(DEBUG, "task expired, seqno: %"PRI64_PREFIX"d", iter->second->get_seqno());
           iter->second->report_to_ns(PLAN_STATUS_TIMEOUT);

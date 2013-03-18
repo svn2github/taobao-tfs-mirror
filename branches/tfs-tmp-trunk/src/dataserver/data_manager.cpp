@@ -349,7 +349,7 @@ namespace tfs
             {
               StatusMessage* smsg = dynamic_cast<StatusMessage*>(ret_msg);
               ret = (STATUS_MESSAGE_OK == smsg->get_status()) ? TFS_SUCCESS : EXIT_COMMIT_BLOCK_UPDATE_ERROR;
-              TBSYS_LOG(INFO, "update block info. blockid: %"PRI64_PREFIX"u, status: %d %s",
+              TBSYS_LOG(DEBUG, "update block info. blockid: %"PRI64_PREFIX"u, status: %d %s",
                   block_id, smsg->get_status(), smsg->get_error());
             }
           }

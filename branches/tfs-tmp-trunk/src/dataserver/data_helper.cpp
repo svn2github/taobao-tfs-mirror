@@ -930,6 +930,7 @@ namespace tfs
         }
         // no check block alive, can't stat degrade
         ret = (target >= member_num) ? EXIT_NO_ENOUGH_DATA : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
         {
           ret = stat_file_ex(family_info.members_[target].second,
               family_info.members_[target].first, block_id, file_id, flag, finfo);
@@ -944,21 +945,6 @@ namespace tfs
     {
       int ret = ((INVALID_BLOCK_ID == block_id) || (NULL == data) || (length <= 0)
           || (offset < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-
-      // degrade read won't call block_manager's read interface
-      // we need to do permission check solely for degrade-read
-      if (TFS_SUCCESS == ret)
-      {
-        if (READ_DATA_OPTION_FLAG_FORCE & flag)
-        {
-          ret = (finfo.status_ & FILE_STATUS_INVALID) ? EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
-        }
-        else
-        {
-          ret = (finfo.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID | FILE_STATUS_CONCEAL)) ?
-            EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
-        }
-      }
 
       if (TFS_SUCCESS == ret)
       {
@@ -1064,9 +1050,8 @@ namespace tfs
             continue; // not alive, just continue
           }
           memset(data[i], 0, len); // must, or member_num times network needed
-          int32_t ret_len = 0;
           ret = read_raw_data(family_info.members_[i].second,
-              family_info.members_[i].first, data[i], ret_len, real_offset);
+              family_info.members_[i].first, data[i], len, real_offset);
           ret = (EXIT_READ_OFFSET_ERROR == ret) ? TFS_SUCCESS : ret; // ignore read offset error
         }
 
@@ -1078,12 +1063,30 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          int32_t this_len = std::min(length - offset_in_buffer, len - offset_in_buffer);
+          int this_len = 0;
+          if (real_offset <= offset)  // first segment
+          {
+            this_len = len - (real_offset - offset);
+          }
+          else if(real_offset + len >= length) // last segment
+          {
+            this_len = real_end - real_offset;
+          }
+          else  // middle segment
+          {
+            this_len = len;
+          }
+
           memcpy(buffer + offset_in_buffer, data[target] + offset_in_read, this_len);
           offset_in_buffer += this_len;
           offset_in_read = 0; // except first read, offset_in_read always be 0
           real_offset += len;
         }
+      }
+
+      for (int i = 0; i < member_num; i++)
+      {
+        tbsys::gDelete(data[i]);
       }
 
       return ret;
