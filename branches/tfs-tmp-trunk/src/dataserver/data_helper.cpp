@@ -999,11 +999,15 @@ namespace tfs
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
       const int32_t member_num = data_num + check_num;
 
-      int32_t unit = ErasureCode::ps_ * ErasureCode::ws_;
-      int32_t real_offset = finfo.offset_ + offset;
-      int32_t real_end = finfo.offset_ + offset + length;
-      int32_t offset_in_read = real_offset % unit;
       int32_t offset_in_buffer = 0;
+      int32_t file_offset = finfo.offset_ + offset;
+      int32_t file_end = finfo.offset_ + offset + length;
+
+      // padding to align to encode/decode unit
+      int32_t unit = ErasureCode::ps_ * ErasureCode::ws_;
+      int32_t max_read_size = MAX_READ_SIZE + unit; // avoid dividing one request into two requests
+      int32_t real_offset = file_offset;
+      int32_t real_end = file_end;
       if (0 != (real_offset % unit))
       {
         real_offset = (real_offset / unit) * unit;
@@ -1033,16 +1037,16 @@ namespace tfs
         {
           for (int32_t i = 0; i < member_num; i++)
           {
-            data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+            data[i] = (char*)malloc(max_read_size * sizeof(char));
             assert(NULL != data[i]);
           }
-          decoder.bind(data, member_num, MAX_READ_SIZE);
+          decoder.bind(data, member_num, max_read_size);
         }
       }
 
       while ((TFS_SUCCESS == ret) && (real_offset < real_end))
       {
-        int len = std::min(real_end - real_offset, MAX_READ_SIZE);
+        int len = std::min(real_end - real_offset, max_read_size);
         for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
         {
           if (ErasureCode::NODE_ALIVE != erased[i])
@@ -1063,23 +1067,22 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          int this_len = 0;
-          if (real_offset <= offset)  // first segment
+          int32_t offset_in_read = 0;
+          int32_t length_in_read = len;
+
+          if (real_offset < file_offset)
           {
-            this_len = len - (real_offset - offset);
-          }
-          else if(real_offset + len >= length) // last segment
-          {
-            this_len = real_end - real_offset;
-          }
-          else  // middle segment
-          {
-            this_len = len;
+            offset_in_read = file_offset - real_offset;
+            length_in_read -= offset_in_read;
           }
 
-          memcpy(buffer + offset_in_buffer, data[target] + offset_in_read, this_len);
-          offset_in_buffer += this_len;
-          offset_in_read = 0; // except first read, offset_in_read always be 0
+          if (real_offset + len > file_end)
+          {
+            length_in_read -= (real_end - file_end);
+          }
+
+          memcpy(buffer + offset_in_buffer, data[target] + offset_in_read, length_in_read);
+          offset_in_buffer += length_in_read;
           real_offset += len;
         }
       }
