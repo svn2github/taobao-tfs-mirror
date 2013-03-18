@@ -290,7 +290,6 @@ namespace tfs
           TBSYS_LOG(DEBUG, "skip a seg, cur_offset: %"PRI64_PREFIX"d, total: %"PRI64_PREFIX"d",
               cur_offset, (iter->offset_ + iter->size_));
           continue;
-
         }
 
         // deal with the front hole or mid hole

@@ -263,14 +263,15 @@ namespace tfs
         ret = put_object_ex(bucket_name, file_name, 0, *object_info_zero, version);
         if (EXIT_KV_RETURN_VERSION_ERROR == ret)
         {
-          TBSYS_LOG(INFO, "update object metainfo version conflict");
+          TBSYS_LOG(INFO, "update object metainfo version conflict, bucket: %s, object: %s",
+              bucket_name.c_str(), file_name.c_str());
           ObjectInfo curr_object_info_zero;
           int tmp_ret = get_object_part(bucket_name, file_name, 0, &curr_object_info_zero, &version);
 
           if (TFS_SUCCESS != tmp_ret)
           {
-            TBSYS_LOG(WARN, "get bucket: %s, object: %s zero fail, ret: %d",
-                bucket_name.c_str(), file_name.c_str(), tmp_ret);
+            TBSYS_LOG(WARN, "get object zero fail, ret: %d, bucket: %s, object: %s",
+                tmp_ret, bucket_name.c_str(), file_name.c_str());
             break;
           }
           else
@@ -330,7 +331,8 @@ namespace tfs
       {
         BucketMetaInfo bucket_meta_info;
         ret = head_bucket(bucket_name, &bucket_meta_info);
-        TBSYS_LOG(INFO, "head bucket: %s, ret: %d", bucket_name.c_str(), ret);
+        TBSYS_LOG(DEBUG, "head object: %s's bucket: %s, ret: %d",
+            file_name.c_str(), bucket_name.c_str(), ret);
       }
 
       ObjectInfo object_info_zero;
@@ -366,6 +368,10 @@ namespace tfs
         {
           length += object_info.v_tfs_file_info_[i].file_size_;
         }
+
+        TBSYS_LOG(DEBUG, "will put object, bucekt: %s, object: %s, "
+            "offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
+            bucket_name.c_str(), file_name.c_str(), offset, length);
 
         object_info_zero.has_meta_info_ = true;
         object_info_zero.meta_info_.big_file_size_ = offset + length;
@@ -417,7 +423,16 @@ namespace tfs
             }
 
             ret = put_object_part(bucket_name, file_name, object_info);
+            TBSYS_LOG(DEBUG, "put object part ret: %d, bucekt_name: %s, object_name: %s, "
+                "offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
+                ret, bucket_name.c_str(), file_name.c_str(), offset, length);
           }
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "put object zero failed, ret: %d, bucekt: %s, object: %s, "
+              "offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
+              ret, bucket_name.c_str(), file_name.c_str(), offset, length);
         }
       }
 
