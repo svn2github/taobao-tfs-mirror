@@ -604,7 +604,7 @@ namespace tfs
             v_frag_meta.push_back(frag_meta);
           }
 
-          cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_), left_length);
+          cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_) - offset, left_length);
           if (object_info.v_tfs_file_info_.size() > 0)
           {
             // TODO: deal tfs_file_info with different cluster id
