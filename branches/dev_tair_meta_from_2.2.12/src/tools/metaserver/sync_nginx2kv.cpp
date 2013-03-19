@@ -74,9 +74,17 @@ int write_to_kv(NameMetaClientImpl &client, int64_t app_id, int64_t uid, const s
 {
   int ret = TFS_SUCCESS;
   FragInfo frag_info;
-  client.read_frag_info(app_id, uid, object_name.c_str(), frag_info);
+  ret = client.read_frag_info(app_id, uid, object_name.c_str(), frag_info);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "read_frag_info,ret:%d",ret);
+  }
   FileMetaInfo file_meta_info;
-  client.ls_file(app_id, uid, object_name.c_str(), file_meta_info);
+  ret = client.ls_file(app_id, uid, object_name.c_str(), file_meta_info);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "ls_file,ret:%d",ret);
+  }
 
   BucketMetaInfo bucket_meta_info;
   UserInfo user_info;
@@ -91,6 +99,19 @@ int write_to_kv(NameMetaClientImpl &client, int64_t app_id, int64_t uid, const s
   obj_info.meta_info_.modify_time_ = file_meta_info.modify_time_;
   obj_info.meta_info_.max_tfs_file_size_ = -5; //TODO this is a tricky in server
 
+  if (frag_info.v_frag_meta_.size() == 0)
+  {
+    ret = tfs::client::KvMetaHelper::do_put_object(new_server_id, bucket_name.c_str(),
+    object_name.c_str() + 1, obj_info, user_info);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "[SYNC_LOG] put object error,ret:%d",ret);
+    }
+    else
+    {
+      TBSYS_LOG(INFO, "[SYNC_LOG] write to kv put object success,offst:0 size:0");
+    }
+  }
   TfsFileInfo tfs_file_info_u;
   obj_info.v_tfs_file_info_.clear();
   obj_info.v_tfs_file_info_.push_back(tfs_file_info_u);
@@ -317,9 +338,10 @@ int main(int argc, char *argv[])
 
   std::string old_server;
   std::string new_server;
+  std::string date_time;
   std::string log_file_name;
   std::string input_file_name;
-  while ((i = getopt(argc, argv, "i:o:n:l:")) != EOF)
+  while ((i = getopt(argc, argv, "i:o:n:t:l:")) != EOF)
   {
     switch (i)
     {
@@ -332,6 +354,9 @@ int main(int argc, char *argv[])
       case 'n':
         new_server = optarg;
         break;
+      case 't':
+        date_time = optarg;
+        break;
       case 'l':
         log_file_name = optarg;
         break;
@@ -340,7 +365,7 @@ int main(int argc, char *argv[])
         return TFS_ERROR;
     }
   }
-  cout << input_file_name  << "  -" << old_server << "  -" << new_server << "  -" << log_file_name << endl;
+  cout << input_file_name  << "  -" << old_server << "  -" << new_server << "  -" << date_time << "  -" << log_file_name << endl;
   if (input_file_name.empty() || log_file_name.empty())
   {
     usage(argv[0]);
@@ -360,11 +385,14 @@ int main(int argc, char *argv[])
   old_server_id = Func::get_host_ip(old_server.c_str());
   new_server_id = Func::get_host_ip(new_server.c_str());
   string tfs_name = "/";
+  int64_t time_point = tbsys::CTimeUtil::strToTime(const_cast<char*>(date_time.c_str()));
 
   int64_t app_id;
   int64_t uid;
   string bucket_name;
   string object_name;
+  string data_time;
+  int64_t time_this = 0;
   int32_t ret = TFS_SUCCESS;
   FILE *s_fd = NULL;
   s_fd = fopen(input_file_name.c_str(), "r");
@@ -384,8 +412,45 @@ int main(int argc, char *argv[])
     char *p = NULL;
     char *q = NULL;
     const char DLIMER = ',';
-
+    data_time.clear();
+    //year
     q = buff;
+    p = strchr(q, '/');
+    *p = '\0';
+    data_time = q;
+    q = p + 1;
+    //month
+    p = strchr(q, '/');
+    *p = '\0';
+    data_time += q;
+    q = p + 1;
+    //day
+    p = strchr(q, ' ');
+    *p = '\0';
+    data_time += q;
+    q = p + 1;
+    //hour
+    p = strchr(q, ':');
+    *p = '\0';
+    data_time += q;
+    q = p + 1;
+    //minute
+    p = strchr(q, ':');
+    *p = '\0';
+    data_time += q;
+    q = p + 1;
+    //second
+    p = strchr(q, ' ');
+    *p = '\0';
+    data_time += q;
+    q = p + 1;
+
+    time_this = tbsys::CTimeUtil::strToTime(const_cast<char*>(data_time.c_str()));
+    if (time_this < time_point)
+    {
+      continue;
+    }
+
     //guolv
     p = strchr(q, '#');
     q = p;
@@ -430,6 +495,10 @@ int main(int argc, char *argv[])
     q = p + 2;
     //objectname
     p = strchr(q, '\n');
+    if (NULL == p)
+    {
+      TBSYS_LOG(ERROR, "err input line %s", q);
+    }
     if (*p == '\n')
     {
       *p = '\0';
@@ -438,8 +507,8 @@ int main(int argc, char *argv[])
     tmp_object = q;
     object_name = "/";
     object_name += tmp_object;
-    TBSYS_LOG(INFO, "[SYNC_LOG] app_id %ld uid %ld bucketname %s objectname %s", app_id, uid, bucket_name.c_str(), object_name.c_str());
-   // ret = check(old_client, tfs_name);
+    TBSYS_LOG(INFO, "[SYNC_LOG]data_time is %s app_id %ld uid %ld bucketname %s objectname %s", data_time.c_str(), app_id, uid, bucket_name.c_str(), object_name.c_str());
+
     int iret;
     iret = check(old_client, app_id, uid, bucket_name, object_name);
     if (iret == YES_NO)
@@ -466,8 +535,8 @@ int main(int argc, char *argv[])
     {
       TBSYS_LOG(INFO, "[SYNC_LOG] sorry check fail");
     }
-
   }
+
   fclose(s_fd);
   s_fd = NULL;
   return 0;

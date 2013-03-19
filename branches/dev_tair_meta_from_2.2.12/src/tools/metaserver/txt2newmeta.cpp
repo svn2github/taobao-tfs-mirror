@@ -40,6 +40,7 @@ const int MAGIC_NUMBER1 = 0x5f375a86;
 const int MAGIC_NUMBER2 = 0x60486b97;
 const int MAGIC_NUMBER3 = 0x71597ca8;
 const int MAGIC_NUMBER4 = 0x826a8db9;
+int magic_number_tmp = 0;
 
 int stop = 0;
 int64_t server_id = 0;
@@ -90,11 +91,11 @@ void transfer(const string &source_file_name, const string &s3_server)
   UserInfo user_info_head;
   BucketMetaInfo bucket_meta_info;
 
-  obj_info.v_tfs_file_info_.clear();
-  obj_info.v_tfs_file_info_.push_back(tfs_file_info_u);
 
   while(TFS_SUCCESS == ret && 1 != stop)
   {
+    obj_info.v_tfs_file_info_.clear();
+    obj_info.v_tfs_file_info_.push_back(tfs_file_info_u);
     read_len = fread(&magic_number, sizeof(magic_number), 1, s_fd);
     if (read_len <= 0) break;
     if (MAGIC_NUMBER0 == magic_number)
@@ -178,15 +179,30 @@ void transfer(const string &source_file_name, const string &s3_server)
       TBSYS_LOG(ERROR, "head object error,ret:%d",ret);
     }
     ret = TFS_SUCCESS;
+    magic_number_tmp = magic_number;
     while(1)
     {
       fread(&magic_number, sizeof(MAGIC_NUMBER3), 1, s_fd); //magic number
+      if (magic_number == MAGIC_NUMBER4 &&  magic_number_tmp == MAGIC_NUMBER2)
+      {
+        if (need && !exist)
+        {
+          obj_info.v_tfs_file_info_.clear();
+          ret = tfs::client::KvMetaHelper::do_put_object(server_id, bucket_name,
+              object_name.c_str(), obj_info, user_info);
+        }
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "put object 0file error,ret:%d",ret);
+        }
+      }
       if (magic_number == MAGIC_NUMBER4) break;
       if (magic_number != MAGIC_NUMBER3)
       {
         TBSYS_LOG(ERROR, "magic number error");
         break;
       }
+      magic_number_tmp = MAGIC_NUMBER3;
       fread(&(frag_it.offset_), sizeof(frag_it.offset_), 1, s_fd);
       fread(&(cluster_id), sizeof(cluster_id), 1, s_fd);
       fread(&(frag_it.block_id_), sizeof(frag_it.block_id_), 1, s_fd);
