@@ -35,6 +35,7 @@
 #include "message/close_file_message.h"
 #include "message/crc_error_message.h"
 #include "message/block_info_message_v2.h"
+#include "message/read_file_message_v2.h"
 // #include "dataserver/bit_map.h"
 #include "new_client/tfs_file.h"
 #include "new_client/fsname.h"
@@ -437,7 +438,8 @@ namespace tfs
     int DsLib::read_file_data(DsTask& ds_task)
     {
       uint64_t server_id = ds_task.server_id_;
-      uint32_t block_id = ds_task.block_id_;
+      uint64_t block_id = ds_task.block_id_;
+      uint64_t attach_block_id = ds_task.attach_block_id_;
       uint64_t file_id = ds_task.new_file_id_;
 
       int fd = open(ds_task.local_file_, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
@@ -448,11 +450,11 @@ namespace tfs
       }
 
       int32_t read_len = MAX_READ_SIZE;
-      static int32_t offset;
-      offset = 0;
+      static int32_t offset = 4;
 
-      static ReadDataMessage rd_message;
+      ReadFileMessageV2 rd_message;
       rd_message.set_block_id(block_id);
+      rd_message.set_attach_block_id(attach_block_id);
       rd_message.set_file_id(file_id);
       rd_message.set_length(read_len);
       rd_message.set_offset(offset);
@@ -463,16 +465,16 @@ namespace tfs
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* ret_msg = NULL;
         ret_status = send_msg_to_server(server_id, client, &rd_message, ret_msg);
-        if (TFS_SUCCESS == ret_status && RESP_READ_DATA_MESSAGE != ret_msg->getPCode())
+        if (TFS_SUCCESS == ret_status && READ_FILE_RESP_MESSAGE_V2 != ret_msg->getPCode())
         {
           fprintf(stderr, "unexpected packet packet id :%d", ret_msg->getPCode());
           ret_status = TFS_ERROR;
         }
-        RespReadDataMessage *resp_rd_msg = NULL;
+        ReadFileRespMessageV2 *resp_rd_msg = NULL;
         int32_t len_tmp = 0;
         if (TFS_SUCCESS == ret_status)
         {
-          resp_rd_msg = (RespReadDataMessage *) ret_msg;
+          resp_rd_msg = (ReadFileRespMessageV2 *) ret_msg;
           len_tmp = resp_rd_msg->get_length();
 
           if (len_tmp < 0)
@@ -519,7 +521,7 @@ namespace tfs
 
       if (ret_status == TFS_SUCCESS)
       {
-        printf("read file successful, block: %u, file: %" PRI64_PREFIX "u\n", block_id, file_id);
+        printf("read file successful, block: %"PRI64_PREFIX"u, %"PRI64_PREFIX"u, file: %" PRI64_PREFIX "u\n", block_id, attach_block_id, file_id);
       }
       close(fd);
       return ret_status;

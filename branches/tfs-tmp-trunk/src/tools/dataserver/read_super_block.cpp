@@ -49,7 +49,7 @@ void dump_super_block(const SuperBlockInfo& info)
 
 void dump_block_index_header()
 {
-  printf("%-15s%-10s%-10s%-10s%-10s%-8s%-6s%-6s%-6s\n",
+  printf("%-22s%-10s%-10s%-10s%-10s%-8s%-6s%-6s%-6s\n",
       "LOGIC_ID",
       "PHY_ID",
       "NAME_ID",
@@ -63,7 +63,7 @@ void dump_block_index_header()
 
 void dump_block_index(const BlockIndex& index)
 {
-  printf("%-15"PRI64_PREFIX"u%-10d%-10d%-10d%-10d%-8d%-6d%-6d%-6d\n",
+  printf("%-22"PRI64_PREFIX"u%-10d%-10d%-10d%-10d%-8d%-6d%-6d%-6d\n",
       index.logic_block_id_,
       index.physical_block_id_,
       index.physical_file_name_id_,

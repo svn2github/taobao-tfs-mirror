@@ -404,21 +404,24 @@ int switch_cmd(const int cmd, VSTRING & param)
     }
   case CMD_READ_FILE_DATA:
     {
-      if (param.size() != 3)
+      if (param.size() != 4)
       {
-        printf("Usage:read_file_data blockid fileid local_file_name\n");
+        printf("Usage:read_file_data blockid attach_blockid fileid local_file_name\n");
         printf("download a tfs file to local.\n");
         break;
       }
       uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+
+      uint64_t ds_attach_block_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_file_id = strtoull(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
+      ds_task.attach_block_id_ = ds_attach_block_id;
       ds_task.new_file_id_ = ds_file_id;
-      snprintf(ds_task.local_file_, MAX_PATH_LENGTH, "%s", param[2].c_str());
+      snprintf(ds_task.local_file_, MAX_PATH_LENGTH, "%s", param[3].c_str());
       ret = DsLib::read_file_data(ds_task);
       if (TFS_SUCCESS == ret)
       {
-        printf("download tfs file %"PRI64_PREFIX"u, %"PRI64_PREFIX"u to local file %s success.\n", ds_task.block_id_, ds_task.new_file_id_, ds_task.local_file_);
+        printf("download tfs file %"PRI64_PREFIX"u, %"PRI64_PREFIX"u, %"PRI64_PREFIX"u ====> local file %s success.\n", ds_task.block_id_, ds_task.attach_block_id_, ds_task.new_file_id_, ds_task.local_file_);
       }
       else
       {
