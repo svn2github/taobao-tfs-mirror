@@ -37,19 +37,19 @@ namespace tfs
         {
           return status_type_;
         }
-        inline void set_from_row(const int32_t row)
+        inline void set_from_row(const int64_t row)
         {
           from_row_ = row;
         }
-        inline int32_t get_from_row() const
+        inline int64_t get_from_row() const
         {
           return from_row_;
         }
-        inline void set_return_row(const int32_t row)
+        inline void set_return_row(const int64_t row)
         {
           return_row_ = row;
         }
-        inline int32_t get_return_row() const
+        inline int64_t get_return_row() const
         {
           return return_row_;
         }

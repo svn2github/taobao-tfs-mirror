@@ -1444,7 +1444,7 @@ namespace tfs
 
     int64_t FamilyInfo::length() const
     {
-      return /*INT64_SIZE + INT_SIZE + */INT_SIZE + (family_member_.size() * INT_SIZE + INT64_SIZE);
+      return /*INT64_SIZE + INT_SIZE + */INT_SIZE + family_member_.size() * (INT_SIZE + INT64_SIZE);
     }
 
     bool FamilyMemberInfo::operator ==(const FamilyMemberInfo& rhs) const
@@ -1545,7 +1545,7 @@ namespace tfs
       servers.clear();
       for (int i = data_num; i < member_num; i++)
       {
-        servers.push_back(members_[i].first);
+        servers.push_back(members_[i].second);
       }
     }
 
