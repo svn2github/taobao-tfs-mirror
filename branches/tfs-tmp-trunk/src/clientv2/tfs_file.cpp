@@ -28,7 +28,7 @@ namespace tfs
   namespace clientv2
   {
     File::File(): lease_id_(0), offset_(0), version_(0),
-    crc_(0), mode_(0), opt_flag_(0), read_index_(0)
+    crc_(0), mode_(0), opt_flag_(0), read_index_(0), write_status_(WRITE_STATUS_OK)
     {
     }
 
@@ -68,30 +68,7 @@ namespace tfs
 
     bool File::check_write()
     {
-      bool write_ok = false;
-      if (ds_.size() > 0)
-      {
-        if (!has_family())
-        {
-          write_ok = true;
-        }
-        else
-        {
-          const int32_t data_num = GET_DATA_MEMBER_NUM(family_info_.family_aid_info_);
-          const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info_.family_aid_info_);
-          const int32_t member_num = data_num + check_num;
-          int32_t alive_data_num = family_info_.get_alive_data_num();
-          int32_t alive_check_num = family_info_.get_alive_check_num();
-
-          // only the family members are all alive, write will be permitted
-          if (alive_data_num + alive_check_num == member_num)
-          {
-            write_ok = true;
-          }
-        }
-      }
-
-      return write_ok;
+      return ds_.size() > 0;
     }
 
     int32_t File::get_read_retry_time() const
@@ -214,6 +191,11 @@ namespace tfs
     void TfsFile::transfer_mode(const int32_t mode)
     {
       file_.mode_ = mode;
+      if (mode & T_FORCE) // force read support
+      {
+        file_.opt_flag_ |= READ_DATA_OPTION_FLAG_FORCE;
+      }
+
       if ((mode & T_READ) || (mode & T_STAT))
       {
         file_.mode_ = T_READ;
@@ -373,8 +355,8 @@ namespace tfs
     int TfsFile::close()
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
-      int ret = TFS_SUCCESS;
-      if (!(file_.mode_ & T_READ) && !(file_.mode_ & T_UNLINK))
+      int ret = (file_.write_status_ == WRITE_STATUS_OK) ? TFS_SUCCESS : EXIT_CLOSE_FILE_ERROR;
+      if ((TFS_SUCCESS == ret) && !(file_.mode_ & T_READ) && !(file_.mode_ & T_UNLINK))
       {
         // only create & update need real close to ds
         if (!file_.check_write())
@@ -478,6 +460,14 @@ namespace tfs
 
           if (INVALID_FAMILY_ID != meta.family_info_.family_id_)
           {
+            const int data_num = GET_DATA_MEMBER_NUM(meta.family_info_.family_aid_info_);
+            const int check_num = GET_CHECK_MEMBER_NUM(meta.family_info_.family_aid_info_);
+            for (int32_t i = 0; i < data_num + check_num; i++)
+            {
+              TBSYS_LOG(DEBUG, "block: %"PRI64_PREFIX"u, server: %s",
+                  meta.family_info_.members_[i].first,
+                  tbsys::CNetUtil::addrToString(meta.family_info_.members_[i].second).c_str());
+            }
             file_.family_info_ = meta.family_info_;
           }
         }
@@ -662,9 +652,16 @@ namespace tfs
           WriteFileRespMessageV2* response = dynamic_cast<WriteFileRespMessageV2*>(resp_msg);
           file_.lease_id_ = response->get_lease_id();
           fsname_.set_file_id(response->get_file_id());
+          TBSYS_LOG(DEBUG, "write file id: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u",
+              fsname_.get_file_id(), file_.lease_id_);
         }
       }
       NewClientManager::get_instance().destroy_client(client);
+
+      if (TFS_SUCCESS != ret)
+      {
+        file_.write_status_ = WRITE_STATUS_FAIL;
+      }
 
       return ret;
     }

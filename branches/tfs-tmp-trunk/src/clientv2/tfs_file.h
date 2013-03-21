@@ -24,6 +24,12 @@ namespace tfs
 {
   namespace clientv2
   {
+    enum WriteStatus
+    {
+      WRITE_STATUS_OK,
+      WRITE_STATUS_FAIL
+    };
+
     struct File
     {
       common::FamilyInfoExt family_info_;
@@ -35,6 +41,7 @@ namespace tfs
       int32_t mode_;
       int32_t opt_flag_;
       int32_t read_index_;
+      WriteStatus write_status_;
 
       File();
       ~File();
