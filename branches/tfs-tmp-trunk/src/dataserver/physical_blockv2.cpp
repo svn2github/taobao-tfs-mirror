@@ -61,6 +61,7 @@ namespace tfs
     AllocPhysicalBlock::AllocPhysicalBlock(const int32_t physical_block_id, const std::string& path,
         const int32_t start, const int32_t end):
       BasePhysicalBlock(physical_block_id, start, end),
+      alloc_bit_map_(0xFFFFFFFFFFFFFFFF),
       file_op_(path)
     {
 

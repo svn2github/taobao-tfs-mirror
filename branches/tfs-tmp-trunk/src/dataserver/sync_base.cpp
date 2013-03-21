@@ -19,7 +19,7 @@
 
 #include "common/parameter.h"
 #include "common/directory_op.h"
-#include "new_client/fsname.h"
+#include "clientv2/fsname.h"
 #include "sync_base.h"
 #include "dataservice.h"
 
@@ -28,7 +28,7 @@ namespace tfs
   namespace dataserver
   {
     using namespace tfs::common;
-    using namespace tfs::client;
+    using namespace tfs::clientv2;
 
     SyncBase::SyncBase(DataService& service, const int32_t type, const int32_t index,
                        const char* src_addr, const char* dest_addr) :
@@ -290,16 +290,8 @@ namespace tfs
         SyncData* sf = reinterpret_cast<SyncData*>(const_cast<char*>(data));
         FSName fsname(sf->block_id_, sf->file_id_);
         ret = backup_->do_sync(sf);
-        if (TFS_SUCCESS == ret)
-        {
-          TBSYS_LOG(INFO, "sync_ok. block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u,action: %d, file name: %s, dest_addr: %s",
-            sf->block_id_, sf->file_id_,sf->cmd_, fsname.get_name(), dest_addr_.c_str());
-        }
-        else
-        {
-          TBSYS_LOG(WARN, "sync_fail. block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u,action: %d, file name: %s, dest_addr: %s, ret: %d",
-            sf->block_id_, sf->file_id_,sf->cmd_, fsname.get_name(), dest_addr_.c_str(), ret);
-        }
+        TBSYS_LOG(INFO, "sync file %s to dest %s %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, ret: %d, action: %d",
+          fsname.get_name(), dest_addr_.c_str(), TFS_SUCCESS == ret ? "successful" : "fail", sf->block_id_, sf->file_id_, ret, sf->cmd_);
       }
       return ret;
     }

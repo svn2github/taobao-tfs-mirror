@@ -43,8 +43,8 @@ namespace tfs
 
     ErasureCode::~ErasureCode()
     {
-      tbsys::gDelete(matrix_);
-      tbsys::gDelete(de_matrix_);
+      tbsys::gFree(matrix_);
+      tbsys::gFree(de_matrix_);
     }
 
     int ErasureCode::config(const int dn, const int pn, int* erased)
@@ -56,7 +56,8 @@ namespace tfs
       dn_ = dn;
       pn_ = pn;
 
-      matrix_ = new (std::nothrow) int[dn_*pn_];
+      matrix_ = (int*)malloc(dn_*pn_ * INT_SIZE);
+      //matrix_ = new (std::nothrow_t)int [dn_*pn];
       assert(matrix_);
       for (int i = 0; i < pn_; i++)
       {
@@ -66,14 +67,15 @@ namespace tfs
         }
       }
       int* bitmatrix = jerasure_matrix_to_bitmatrix(dn_, pn_, ws_, matrix_);
-      tbsys::gDelete(matrix_);
+      tbsys::gFree(matrix_);
       matrix_ = bitmatrix;
 
       // if need decode, cache decode matrix
       // compute decode matrix is a costful work
       if (NULL != erased)
       {
-        de_matrix_ = new (std::nothrow) int[dn_*dn_*ws_*ws_];
+        de_matrix_ = (int*)malloc(dn_*dn_*ws_*ws_*INT_SIZE);
+        //de_matrix_ = new (std::nothrow) int[dn_*dn_*ws_*ws_];
         assert(de_matrix_);
         int alive = 0;
         for (int i = 0; i < dn_ + pn_; i++)
@@ -131,8 +133,8 @@ namespace tfs
     {
       dn_ = -1;
       pn_ = -1;
-      tbsys::gDelete(matrix_);
-      tbsys::gDelete(de_matrix_);
+      tbsys::gFree(matrix_);
+      tbsys::gFree(de_matrix_);
       for (int i = 0; i < MAX_MARSHALLING_NUM; i++)
       {
         data_[i] = NULL;

@@ -1089,7 +1089,7 @@ namespace tfs
 
       for (int i = 0; i < member_num; i++)
       {
-        tbsys::gDelete(data[i]);
+        tbsys::gFree(data[i]);
       }
 
       return ret;

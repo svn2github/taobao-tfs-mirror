@@ -411,8 +411,6 @@ namespace tfs
           ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           while (TFS_SUCCESS != ret && max_loop-- > 0 && header->used_file_info_bucket_size_ < header->file_info_bucket_size_)
           {
-            TBSYS_LOG(INFO, "GET_SLOT_TYPE_INSERT, block_id: %lu, id: %lu, %u, %d, %d",
-                header->info_.block_id_, file_id, key, header->used_file_info_bucket_size_, header->file_info_bucket_size_);
             slot = (key + random()) % header->file_info_bucket_size_;
             current =  (finfos + slot);
             ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
@@ -484,8 +482,6 @@ namespace tfs
             prev->next_ = slot;
           if (!update)
             ++header->used_file_info_bucket_size_;
-          TBSYS_LOG(INFO, "block_id %lu, used_file_bucket_size: %u, update: %d, fileid: %lu, file_info_bucket_size: %d, info.next_: %d, currnet.next_: %d",
-              header->info_.block_id_, header->used_file_info_bucket_size_, update, info.id_, header->file_info_bucket_size_, info.next_, current->next_);
         }
       }
       return ret;
@@ -688,7 +684,6 @@ namespace tfs
         *pheader = header;
         pheader->used_file_info_bucket_size_ = 0;
         pheader->file_info_bucket_size_ = file_info_bucket_size;
-        TBSYS_LOG(INFO, "write_file_infos: %lu, %zd", header.info_.block_id_, infos.size());
         std::vector<common::FileInfoV2>::iterator iter = infos.begin();
         for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
         {
@@ -923,7 +918,6 @@ namespace tfs
                 FileInfoV2* current = (old_buckets + bucket);
                 if (current->id_ != INVALID_FILE_ID)
                 {
-                  TBSYS_LOG(INFO, "REMMAP, block_id: %lu, fileid: %lu, bucket: %u", new_header->info_.block_id_, current->id_, bucket);
                   ret = insert_file_info_(*current, new_data, new_length, false);
                 }
               }
