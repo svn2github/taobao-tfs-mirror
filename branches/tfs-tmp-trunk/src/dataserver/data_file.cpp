@@ -49,24 +49,25 @@ namespace tfs
       int32_t ret = (NULL != data && nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        int32_t real_nbytes = nbytes;
         int32_t real_offset = sizeof(info) + offset;
         int32_t length = real_offset + nbytes;
         if (length <= WRITE_DATA_TMPBUF_SIZE)
         {
           if (0 == offset)
           {
-            real_nbytes += sizeof(info);
-            memcpy(&data_, &info, sizeof(info));
+            memcpy(data_, &info, sizeof(info));
+            memcpy((data_ + real_offset), data, nbytes);
           }
-          memcpy((data_ + real_offset), data, real_nbytes);
+          else
+          {
+            memcpy((data_ + real_offset), data, nbytes);
+          }
           crc_ = Func::crc(crc_, data, nbytes);
         }
         else
         {
           if (fd_ < 0)
           {
-            crc_ = 0;
             fd_ = open(path_.str().c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
             ret = fd_ >= 0 ? TFS_SUCCESS : -errno;
             if (TFS_SUCCESS == ret)
@@ -76,11 +77,7 @@ namespace tfs
                 memcpy(data_, &info, sizeof(info));
                 length_ += sizeof(info);
               }
-              ret = length_ == ::write(fd_, data_, length_) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
-              if (TFS_SUCCESS == ret)
-              {
-                crc_ = Func::crc(crc_, data_, length_);
-              }
+              ret = (length_ == ::pwrite(fd_, data_, length_, 0)) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
             }
           }
           if (TFS_SUCCESS == ret)
@@ -89,11 +86,8 @@ namespace tfs
           }
           if (TFS_SUCCESS == ret)
           {
-            ret = (real_offset == lseek(fd_, real_offset, SEEK_SET)) ? TFS_SUCCESS : -errno;
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            ret = nbytes == ::write(fd_, data, nbytes) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
+            int32_t wnbytes = ::pwrite(fd_, data, nbytes, real_offset);
+            ret = (nbytes == wnbytes) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
             if (TFS_SUCCESS == ret)
             {
               crc_ = Func::crc(crc_, data, nbytes);

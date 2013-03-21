@@ -19,7 +19,7 @@
 #define TFS_DATASERVER_SYNCBACKUP_H_
 
 #include "common/internal.h"
-#include "new_client/tfs_client_impl.h"
+#include "clientv2/tfs_client_impl_v2.h"
 #include <Memory.hpp>
 #include <TbThread.h>
 #include "block_manager.h"
@@ -60,7 +60,7 @@ namespace tfs
 
     protected:
       DISALLOW_COPY_AND_ASSIGN(SyncBackup);
-      client::TfsClientImpl* tfs_client_;
+      clientv2::TfsClientImplV2* tfs_client_;
 
       char src_addr_[common::MAX_SYNC_IPADDR_LENGTH];
       char dest_addr_[common::MAX_SYNC_IPADDR_LENGTH];
@@ -85,7 +85,7 @@ namespace tfs
         int copy_file(const uint64_t block_id, const uint64_t file_id);
         int remove_file(const uint64_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
         int remote_copy_file(const uint64_t block_id, const uint64_t file_id);
-        int get_file_info(const char* nsip, const char* file_name, common::TfsFileStat& buf);
+        int get_file_info(const char* nsip, const uint64_t block_id, const uint64_t file_id, common::TfsFileStat& buf);
 
         /**
         * @brief sync file by stat
