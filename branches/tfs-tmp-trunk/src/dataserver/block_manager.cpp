@@ -862,19 +862,21 @@ namespace tfs
         {
           const int32_t pagesize = getpagesize();
           const int32_t avg_file_count = info.max_main_block_size_ / parameter.avg_segment_size_;
-          info.hash_bucket_count_      = std::min(MAX_INITIALIZE_INDEX_SIZE, avg_file_count);
+          info.hash_bucket_count_      = std::min(parameter.max_init_index_element_nums_, avg_file_count);
           const int32_t mmap_size = INDEX_HEADER_V2_LENGTH + (info.hash_bucket_count_ + 1) * FILE_INFO_V2_LENGTH;
           const int32_t count     = mmap_size / pagesize;
           const int32_t remainder = mmap_size % pagesize;
           const int32_t max_mmap_size = INDEX_HEADER_V2_LENGTH + (avg_file_count + 1) * FILE_INFO_V2_LENGTH;
           const int32_t max_count     = max_mmap_size / pagesize;
           const int32_t max_remainder = max_mmap_size % pagesize;
+          const int32_t max_per_mmap_count = (parameter.max_extend_index_element_nums_ * FILE_INFO_V2_LENGTH) / pagesize;
           info.mmap_option_.first_mmap_size_=  remainder ? (count + 1) * pagesize : count * pagesize;
-          info.mmap_option_.per_mmap_size_  =  pagesize;
+          info.mmap_option_.per_mmap_size_  =  max_per_mmap_count > 0 ? max_per_mmap_count * pagesize : pagesize;
           if (max_remainder)
             info.mmap_option_.max_mmap_size_ = (max_count + 1) * pagesize * INDEXFILE_SAFE_MULT;
           else
             info.mmap_option_.max_mmap_size_ = max_count * pagesize * INDEXFILE_SAFE_MULT;
+          info.mmap_option_.max_mmap_size_ = std::max(MAX_MMAP_SIZE, info.mmap_option_.max_mmap_size_);
 
           info.used_main_block_count_  = 0;
           info.total_main_block_count_ = (info.mount_point_use_space_ / (info.max_main_block_size_ + info.mmap_option_.max_mmap_size_)) - 2;

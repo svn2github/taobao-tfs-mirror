@@ -319,10 +319,14 @@ namespace tfs
       int32_t new_offset = 0;  // offset to write new file
       int32_t inner_offset = 0; // offset in compact buffer
       int32_t mem_offset = 0;   // where to read data in Iterator
-      IndexHeaderV2 header;
+      IndexHeaderV2 header, old_header;
       FileInfoV2* finfo = NULL;
       vector<FileInfoV2> finfos_vec;
-      int ret = dest->get_index_header(header);
+      int32_t ret = dest->get_index_header(header);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = src->get_index_header(old_header);
+      }
       while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == iter->next(mem_offset, finfo)))
       {
         if (finfo->status_ & FI_DELETED)
@@ -382,6 +386,12 @@ namespace tfs
       // write new header and index to dest
       if (TFS_SUCCESS == ret)
       {
+        header.info_.update_size_ = old_header.info_.update_size_;
+        header.info_.update_file_count_ = old_header.info_.update_file_count_;
+        memcpy(&header.throughput_, &old_header.throughput_, sizeof(header.throughput_));
+        header.seq_no_ = old_header.seq_no_;
+        dest->get_used_offset(header.used_offset_);
+        dest->get_avail_offset(header.avail_offset_);
         ret = dest->write_file_infos(header, finfos_vec, block_id_);
         if (TFS_SUCCESS == ret)
         {
@@ -661,7 +671,7 @@ namespace tfs
 
     MarshallingTask::~MarshallingTask()
     {
-      tbsys::gDelete(family_members_);
+      tbsys::gDeleteA(family_members_);
     }
 
     int MarshallingTask::set_family_info(const FamilyMemberInfo* members,
@@ -813,7 +823,7 @@ namespace tfs
 
       for (int32_t i = 0; i < member_num; i++)
       {
-        tbsys::gDelete(data[i]);
+        tbsys::gFree(data[i]);
       }
 
       return ret;
@@ -1094,7 +1104,7 @@ namespace tfs
 
       for (int32_t i = 0; i < member_num; i++)
       {
-        tbsys::gDelete(data[i]);
+        tbsys::gFree(data[i]);
       }
 
       return ret;

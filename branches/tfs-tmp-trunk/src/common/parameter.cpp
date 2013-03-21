@@ -343,6 +343,9 @@ namespace tfs
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }
 
+      max_init_index_element_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_MAX_INIT_INDEX_ELEMENT_NUMS, 8);
+      max_extend_index_element_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_MAX_EXTEND_INDEX_ELEMENT_NUMS, 4);
+
       return TFS_SUCCESS;
     }
     std::string FileSystemParameter::get_real_mount_name(const std::string& mount_name, const std::string& index)

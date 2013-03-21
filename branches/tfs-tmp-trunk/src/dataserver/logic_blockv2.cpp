@@ -636,7 +636,7 @@ namespace tfs
             ret = get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);
             if (TFS_SUCCESS == ret)
             {
-              ret = get_index_handle_()->write_file_info(new_finfo, sbinfo->max_use_hash_bucket_ratio_, logic_block_id);
+              ret = get_index_handle_()->write_file_info(new_finfo, sbinfo->max_use_hash_bucket_ratio_, logic_block_id, update);
               if (TFS_SUCCESS != ret)
               {
                 TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
@@ -689,7 +689,7 @@ namespace tfs
               if (TFS_SUCCESS == ret)
               {
                 finfo.modify_time_ = time(NULL);
-                ret = get_index_handle_()->write_file_info(finfo, sbinfo->max_use_hash_bucket_ratio_, id());
+                ret = get_index_handle_()->write_file_info(finfo, sbinfo->max_use_hash_bucket_ratio_, id(), true);
                 if (TFS_SUCCESS != ret)
                   ret = get_index_handle_()->update_block_statistic_info(oper_type, 0, finfo.size_, true);
                 else
@@ -860,7 +860,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           new_finfo.id_ = old_finfo.id_ = fileid;
-          ret = get_index_handle_()->read_file_info_(pold_finfo, fileid, data, index.size_, true, false);
+          ret = get_index_handle_()->read_file_info_(pold_finfo, fileid, data, index.size_, GET_SLOT_TYPE_QUERY);
           bool update = TFS_SUCCESS == ret;
           if (update)
           {
@@ -873,7 +873,7 @@ namespace tfs
             ret = get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);
             if (TFS_SUCCESS == ret)
             {
-              ret = get_index_handle_()->insert_file_info_(new_finfo, data, index.size_, INVALID_FILE_ID != new_finfo.id_, true);
+              ret = get_index_handle_()->insert_file_info_(new_finfo, data, index.size_, update);
               if (TFS_SUCCESS != ret)
               {
                 TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
@@ -920,7 +920,7 @@ namespace tfs
         ret = get_index_handle_()->malloc_index_mem_(data, index);
         if (TFS_SUCCESS == ret)
         {
-          ret = get_index_handle_()->read_file_info_(finfo, fileid, data, index.size_, true, false);
+          ret = get_index_handle_()->read_file_info_(finfo, fileid, data, index.size_, GET_SLOT_TYPE_QUERY);
         }
 
         if (TFS_SUCCESS == ret)

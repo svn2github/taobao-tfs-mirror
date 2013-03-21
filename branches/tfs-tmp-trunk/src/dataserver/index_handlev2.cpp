@@ -351,113 +351,129 @@ namespace tfs
 
     int BaseIndexHandle::get_slot_(uint16_t& slot, uint64_t& file_id, common::FileInfoV2*& current,
         common::FileInfoV2*& prev, common::FileInfoV2* finfos, common::IndexHeaderV2* header,
-        const bool override, const bool force) const
+        const int8_t type) const
     {
       slot = 0, current = NULL, prev = NULL;
       int32_t ret = (NULL != finfos && NULL != header) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        if (override)
+        int32_t max_loop = header->file_info_bucket_size_;
+        if (GET_SLOT_TYPE_GEN == type)
         {
-          uint32_t key = file_id & 0xFFFFFFFF;//lower 32 bit
-          slot = key % header->file_info_bucket_size_;
-          current =  (finfos + slot);//force这部份逻辑，在create_file_number流程删除时可以删除这部份逻辑
-          bool successful = (force ? (INVALID_FILE_ID == current->id_ || file_id == current->id_) : file_id == current->id_);
-          ret  = (successful) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
-          get_prev_(prev, current, TFS_SUCCESS == ret);
-          if (TFS_SUCCESS != ret)
-          {
-            while (0 != current->next_ && TFS_SUCCESS != ret)
-            {
-              slot = current->next_;
-              current =  (finfos + slot);
-              successful = (force ? (INVALID_FILE_ID == current->id_ || file_id == current->id_) : file_id == current->id_);
-              ret  = (successful) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
-              get_prev_(prev, current, TFS_SUCCESS == ret);
-            }
-          }
-        }
-        else
-        {
+          assert(INVALID_FILE_ID == file_id);
           slot = ++header->seq_no_ % header->file_info_bucket_size_;
           current =  (finfos + slot);
           ret = (0 == current->offset_ && INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_INSERT_INDEX_SLOT_NOT_FOUND_ERROR;
-          get_prev_(prev, current, TFS_SUCCESS != ret);
-          while (TFS_SUCCESS != ret && header->used_file_info_bucket_size_ < header->file_info_bucket_size_)
+          while (TFS_SUCCESS != ret && max_loop-- > 0)
           {
-            slot = (0 == current->next_) ? ++header->seq_no_ % header->file_info_bucket_size_ : current->next_;
+            slot = ++header->seq_no_ % header->file_info_bucket_size_;
             current =  (finfos + slot);
             ret = (0 == current->offset_ && INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_INSERT_INDEX_SLOT_NOT_FOUND_ERROR;
-            get_prev_(prev, current, TFS_SUCCESS != ret);
           }
           if (TFS_SUCCESS == ret)
           {
             file_id = header->seq_no_;
           }
         }
+
+        if (GET_SLOT_TYPE_QUERY  == type)
+        {
+          assert(INVALID_FILE_ID != file_id);
+          uint32_t key = file_id & 0xFFFFFFFF;//lower 32 bit
+          slot = key % header->file_info_bucket_size_;
+          current =  (finfos + slot);
+          ret = (file_id == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
+          if (TFS_SUCCESS != ret && 0 != current->next_)
+            prev = current;
+          while (0 != current->next_ && max_loop -- > 0)
+          {
+            prev = current;
+            slot = current->next_;
+            current =  (finfos + slot);
+            ret = (file_id == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
+          }
+          prev = NULL;
+        }
+
+        if (GET_SLOT_TYPE_INSERT == type)
+        {
+          assert(INVALID_FILE_ID != file_id);
+          uint32_t key = file_id & 0xFFFFFFFF;//lower 32 bit
+          slot = key % header->file_info_bucket_size_;
+          current =  (finfos + slot);
+          ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
+          while (TFS_SUCCESS != ret && 0 != current->next_)
+          {
+            prev = current;
+            slot = current->next_;
+            current =  (finfos + slot);
+          }
+          ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
+          while (TFS_SUCCESS != ret && max_loop-- > 0 && header->used_file_info_bucket_size_ < header->file_info_bucket_size_)
+          {
+            TBSYS_LOG(INFO, "GET_SLOT_TYPE_INSERT, block_id: %lu, id: %lu, %u, %d, %d",
+                header->info_.block_id_, file_id, key, header->used_file_info_bucket_size_, header->file_info_bucket_size_);
+            slot = (key + random()) % header->file_info_bucket_size_;
+            current =  (finfos + slot);
+            ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
+          }
+        }
       }
       return ret;
     }
 
     int BaseIndexHandle::get_slot_(uint16_t& slot, uint64_t& file_id, common::FileInfoV2*& current,
-        common::FileInfoV2*& prev, const char* buf, const int32_t nbytes, const bool override, const bool force) const
+        common::FileInfoV2*& prev, const char* buf, const int32_t nbytes, const int8_t type) const
     {
       slot = 0, current = NULL, prev = NULL;
       int32_t ret = (NULL != buf && nbytes > INDEX_HEADER_V2_LENGTH) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = override ? INVALID_FILE_ID == file_id ? EXIT_INVALID_FILE_ID_ERROR : TFS_SUCCESS : TFS_SUCCESS;
+        char* data = const_cast<char*>(buf);
+        IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
+        assert(NULL != header);
+        FileInfoV2* finfos  = reinterpret_cast<FileInfoV2*>(data + INDEX_HEADER_V2_LENGTH);
+        assert(NULL != finfos);
+        int32_t total = header->used_file_info_bucket_size_ * FILE_INFO_V2_LENGTH + INDEX_HEADER_V2_LENGTH;
+        ret = (nbytes >= total) ? TFS_SUCCESS : EXIT_INDEX_DATA_INVALID_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          char* data = const_cast<char*>(buf);
-          IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
-          assert(NULL != header);
-          FileInfoV2* finfos  = reinterpret_cast<FileInfoV2*>(data + INDEX_HEADER_V2_LENGTH);
-          assert(NULL != finfos);
-          int32_t total = header->used_file_info_bucket_size_ * FILE_INFO_V2_LENGTH + INDEX_HEADER_V2_LENGTH;
-          ret = (nbytes >= total) ? TFS_SUCCESS : EXIT_INDEX_DATA_INVALID_ERROR;
-          if (TFS_SUCCESS == ret)
-          {
-            ret = get_slot_(slot, file_id, current, prev, finfos, header, override, force);
-          }
+          ret = get_slot_(slot, file_id, current, prev, finfos, header, type);
         }
       }
       return ret;
     }
 
     int BaseIndexHandle::get_slot_(uint16_t& slot, uint64_t& file_id, common::FileInfoV2*& current,
-        common::FileInfoV2*& prev, const double threshold, const bool override, const bool force) const
+        common::FileInfoV2*& prev, const double threshold, const int8_t type) const
     {
       slot = 0, current = NULL, prev = NULL;
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
-        ret = override ? INVALID_FILE_ID == file_id ? EXIT_INVALID_FILE_ID_ERROR : TFS_SUCCESS : TFS_SUCCESS;
+        IndexHeaderV2* header = get_index_header_();
+        assert(NULL != header);
+        ret = remmap_(threshold);
         if (TFS_SUCCESS == ret)
         {
-          IndexHeaderV2* header = get_index_header_();
-          assert(NULL != header);
-          ret = remmap_(threshold);
-          if (TFS_SUCCESS == ret)
-          {
-            header  = get_index_header_();
-            FileInfoV2* finfos  = get_file_infos_array_();
-            assert(NULL != finfos);
-            ret = get_slot_(slot, file_id, current, prev, finfos, header, override, force);
-          }
+          header  = get_index_header_();
+          FileInfoV2* finfos  = get_file_infos_array_();
+          assert(NULL != finfos);
+          ret = get_slot_(slot, file_id, current, prev, finfos, header, type);
         }
       }
       return ret;
     }
 
-    int BaseIndexHandle::insert_file_info_(common::FileInfoV2& info, const double threshold, const bool override, const bool force)
+    int BaseIndexHandle::insert_file_info_(common::FileInfoV2& info, const double threshold, const bool update)
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
         uint16_t slot = 0;
+        info.next_ = 0;
         FileInfoV2* current = NULL, *prev = NULL;
-        ret = get_slot_(slot, info.id_, current, prev, threshold, override, force);
+        ret = get_slot_(slot, info.id_, current, prev, threshold, update ? GET_SLOT_TYPE_QUERY : GET_SLOT_TYPE_INSERT);
         if (TFS_SUCCESS == ret)
         {
           IndexHeaderV2* header = get_index_header_();
@@ -466,20 +482,23 @@ namespace tfs
           *current = info;
           if (NULL != prev)
             prev->next_ = slot;
-          ++header->used_file_info_bucket_size_;
+          if (!update)
+            ++header->used_file_info_bucket_size_;
+          TBSYS_LOG(INFO, "block_id %lu, used_file_bucket_size: %u, update: %d, fileid: %lu, file_info_bucket_size: %d, info.next_: %d, currnet.next_: %d",
+              header->info_.block_id_, header->used_file_info_bucket_size_, update, info.id_, header->file_info_bucket_size_, info.next_, current->next_);
         }
       }
       return ret;
     }
 
-    int BaseIndexHandle::insert_file_info_(common::FileInfoV2& info, char* buf, const int32_t nbytes, const bool override, const bool force)
+    int BaseIndexHandle::insert_file_info_(common::FileInfoV2& info, char* buf, const int32_t nbytes, const bool update) const
     {
       int32_t ret = (NULL != buf && nbytes > 0) ? TFS_SUCCESS :  EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         uint16_t slot = 0;
         FileInfoV2* current = NULL, *prev = NULL;
-        ret = get_slot_(slot, info.id_, current, prev, buf, nbytes, override, force);
+        ret = get_slot_(slot, info.id_, current, prev, buf, nbytes, update ? GET_SLOT_TYPE_QUERY : GET_SLOT_TYPE_INSERT);
         if (TFS_SUCCESS == ret)
         {
           char* data = const_cast<char*>(buf);
@@ -489,7 +508,8 @@ namespace tfs
           *current = info;
           if (NULL != prev)
             prev->next_ = slot;
-          ++header->used_file_info_bucket_size_;
+          if (!update)
+            ++header->used_file_info_bucket_size_;
         }
       }
       return ret;
@@ -619,7 +639,7 @@ namespace tfs
       {
         uint16_t slot = 0;
         FileInfoV2* current = NULL, *prev = NULL;
-        ret =get_slot_(slot, file_id, current, prev, threshold, false, false);
+        ret =get_slot_(slot, file_id, current, prev, threshold, GET_SLOT_TYPE_GEN);
       }
       return ret;
     }
@@ -635,7 +655,7 @@ namespace tfs
       {
         uint16_t slot = 0;
         FileInfoV2* prev = NULL, *current = NULL;
-        ret = get_slot_(slot, info.id_, current, prev, threshold, true, false);
+        ret = get_slot_(slot, info.id_, current, prev, threshold,GET_SLOT_TYPE_QUERY);
         if (TFS_SUCCESS == ret)
         {
           assert(NULL != current);
@@ -645,13 +665,13 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id)
+    int IndexHandle::write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id, const bool update)
     {
       UNUSED(logic_block_id);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
-        ret = insert_file_info_(info, threshold, INVALID_FILE_ID != info.id_, true);
+        ret = insert_file_info_(info, threshold, update);
       }
       return ret;
     }
@@ -664,13 +684,16 @@ namespace tfs
       {
         IndexHeaderV2* pheader = get_index_header_();
         assert(NULL != pheader);
+        const int32_t file_info_bucket_size = pheader->file_info_bucket_size_;
         *pheader = header;
         pheader->used_file_info_bucket_size_ = 0;
+        pheader->file_info_bucket_size_ = file_info_bucket_size;
+        TBSYS_LOG(INFO, "write_file_infos: %lu, %zd", header.info_.block_id_, infos.size());
         std::vector<common::FileInfoV2>::iterator iter = infos.begin();
         for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
         {
           FileInfoV2& finfo = (*iter);
-          ret = insert_file_info_(finfo, threshold, true, true);
+          ret = insert_file_info_(finfo, threshold, false);
         }
       }
       return ret;
@@ -884,32 +907,27 @@ namespace tfs
             ret = file_op_.mremap();//只扩大，不减小
             if (TFS_SUCCESS == ret)
             {
-              int32_t use_file_info_bucket = 0;
               int32_t new_length =  file_op_.length();
               char* new_data = file_op_.get_data();
               memset(new_data, 0, new_length);
               memcpy(new_data, old_data, INDEX_HEADER_V2_LENGTH);
               IndexHeaderV2* new_header = reinterpret_cast<IndexHeaderV2*>(new_data);
+              new_header->used_file_info_bucket_size_ = 0;
               new_header->file_info_bucket_size_ = ((new_length - old_length ) / FILE_INFO_V2_LENGTH) + header->file_info_bucket_size_;
               FileInfoV2* old_buckets = reinterpret_cast<FileInfoV2*>(old_data + INDEX_HEADER_V2_LENGTH);
-              FileInfoV2* new_buckets = reinterpret_cast<FileInfoV2*>(new_data + INDEX_HEADER_V2_LENGTH);
-              TBSYS_LOG(INFO, "index file %s remmap, old_length: %d, bucket_size: %d, used bucket size: %d, new_length: %d, new_bucket size: %d, used bucket size: %u",
+              TBSYS_LOG(INFO, "index file %s remmap, old_length: %d, bucket_size: %d, used bucket size: %d, new_length: %d, new_bucket size: %d, used bucket size: %u, block id: %"PRI64_PREFIX"u",
                   file_op_.get_path().c_str(), old_length, header->file_info_bucket_size_, header->used_file_info_bucket_size_,
-                  new_length, new_header->file_info_bucket_size_, new_header->used_file_info_bucket_size_);
-              for (uint16_t bucket = 0; bucket < header->file_info_bucket_size_; ++bucket)
+                  new_length, new_header->file_info_bucket_size_, new_header->used_file_info_bucket_size_, new_header->info_.block_id_);
+              for (uint16_t bucket = 0; bucket < header->file_info_bucket_size_ && TFS_SUCCESS == ret; ++bucket)
               {
-                FileInfoV2* current = old_buckets + bucket;
-                while (INVALID_FILE_ID != current->id_)
+                FileInfoV2* current = (old_buckets + bucket);
+                if (current->id_ != INVALID_FILE_ID)
                 {
-                  ++use_file_info_bucket;
-                  uint16_t new_bucket = (current->id_& 0xFFFFFFFF) % new_header->file_info_bucket_size_;
-                  memcpy((new_buckets + new_bucket), current, sizeof(FileInfoV2));
-                  *(new_buckets + new_bucket) = *current;
-                  current->id_ = INVALID_FILE_ID;
-                  current = old_buckets + current->next_;
+                  TBSYS_LOG(INFO, "REMMAP, block_id: %lu, fileid: %lu, bucket: %u", new_header->info_.block_id_, current->id_, bucket);
+                  ret = insert_file_info_(*current, new_data, new_length, false);
                 }
               }
-              assert(use_file_info_bucket == header->used_file_info_bucket_size_);
+              assert(new_header->used_file_info_bucket_size_ == header->used_file_info_bucket_size_);
               ret = file_op_.flush();
             }
             tbsys::gDeleteA(old_data);
@@ -1065,7 +1083,7 @@ namespace tfs
           for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
           {
             FileInfoV2& info = (*iter);
-            ret = insert_file_info_(info, data, index->size_, INVALID_FILE_ID != info.id_, true);
+            ret = insert_file_info_(info, data, index->size_, false);
           }
           if (TFS_SUCCESS == ret)
           {
@@ -1084,6 +1102,8 @@ namespace tfs
             IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
             assert(NULL != header);
             if (!infos.empty())
+              TBSYS_LOG(WARN, "update verify header, file infos not empty!!!!");
+            /*if (!infos.empty())
             {
               header->used_file_info_bucket_size_ = 0;
               std::vector<common::FileInfoV2>::iterator iter = infos.begin();
@@ -1092,7 +1112,7 @@ namespace tfs
                 FileInfoV2& info = (*iter);
                 ret = insert_file_info_(info, data, index->size_, INVALID_FILE_ID != info.id_, true);
               }
-            }
+            }*/
           }
           if (NULL != data)
             ret = free_index_mem_(data, *index, TFS_SUCCESS == ret);
@@ -1101,13 +1121,13 @@ namespace tfs
       return ret;
     }
 
-    int VerifyIndexHandle::write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id)
+    int VerifyIndexHandle::write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id, const bool update)
     {
       UNUSED(threshold);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
-        ret = (INVALID_FILE_ID != info.id_ && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS :  EXIT_PARAMETER_ERROR;
+        ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS :  EXIT_PARAMETER_ERROR;
       }
       if (TFS_SUCCESS == ret)
       {
@@ -1116,7 +1136,7 @@ namespace tfs
         inner_index.logic_block_id_ = logic_block_id;
         ret = malloc_index_mem_(data, inner_index);
         if (TFS_SUCCESS == ret)
-          ret = insert_file_info_(info, data, inner_index.size_, INVALID_FILE_ID != info.id_, true);
+          ret = insert_file_info_(info, data, inner_index.size_, update);
         if (NULL != data)
           ret = free_index_mem_(data, inner_index, TFS_SUCCESS == ret);
       }
@@ -1141,7 +1161,7 @@ namespace tfs
         {
           uint16_t slot = 0;
           FileInfoV2* current = NULL, *prev = NULL;
-          ret = get_slot_(slot, info.id_, current, prev, data, inner_index.size_, true, false);
+          ret = get_slot_(slot, info.id_, current, prev, data, inner_index.size_,GET_SLOT_TYPE_QUERY);
           if (TFS_SUCCESS == ret)
             info = *current;
         }
@@ -1270,7 +1290,7 @@ namespace tfs
       return result;
     }
 
-    int VerifyIndexHandle::read_file_info_(common::FileInfoV2*& info, const uint64_t fileid, char* buf, const int32_t nbytes, const bool override, const bool force) const
+    int VerifyIndexHandle::read_file_info_(common::FileInfoV2*& info, const uint64_t fileid, char* buf, const int32_t nbytes, const int8_t type) const
     {
       int32_t ret = (NULL != buf && nbytes > 0 && INVALID_FILE_ID != fileid) ? TFS_SUCCESS :  EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -1278,7 +1298,7 @@ namespace tfs
         uint16_t slot = 0;
         uint64_t tmp  = fileid;
         FileInfoV2 *prev = NULL;
-        ret = get_slot_(slot, tmp, info, prev, buf, nbytes, override, force);
+        ret = get_slot_(slot, tmp, info, prev, buf, nbytes, type);
       }
       return ret;
     }

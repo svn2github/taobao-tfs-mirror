@@ -98,6 +98,8 @@ namespace tfs
       float block_type_ratio_;
       int32_t file_system_version_;
       float hash_slot_ratio_; // 0.5
+      int32_t max_init_index_element_nums_;
+      int32_t max_extend_index_element_nums_;
       static FileSystemParameter fs_parameter_;
       static std::string get_real_mount_name(const std::string& mount_name, const std::string& index);
       static FileSystemParameter& instance()
