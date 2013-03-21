@@ -101,11 +101,10 @@ namespace tfs
         int64_t write_data(const char *ns_addr,
             const void *buffer, int64_t offset, int64_t length,
             std::vector<common::FragMeta> *v_frag_meta);
-        int64_t read_data(const char* ns_addr,
-            const std::vector<common::FragMeta> &v_frag_meta,
+        int64_t read_data(
+            const std::vector<common::TfsFileInfo> &v_tfs_info,
             void *buffer, int64_t offset, int64_t length, bool still_have);
-        int unlink_file(const int32_t cluster_id,
-            const std::vector<common::FragMeta> &v_frag_meta);
+        int unlink_file(const std::vector<common::TfsFileInfo> &v_tfs_info);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClientImpl);

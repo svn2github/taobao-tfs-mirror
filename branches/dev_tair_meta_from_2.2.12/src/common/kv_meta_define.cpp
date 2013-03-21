@@ -23,10 +23,12 @@ namespace tfs
   namespace common
   {
     TfsFileInfo::TfsFileInfo()
-      :cluster_id_(0), block_id_(0),
-      file_id_(0), offset_(0),
-      file_size_(0)
+      :cluster_id_(0), block_id_(0), file_id_(0), offset_(0), file_size_(0)
     { }
+
+    TfsFileInfo::TfsFileInfo(int32_t cluster_id, int64_t block_id, int64_t file_id, int64_t offset, int64_t size):
+          cluster_id_(cluster_id), block_id_(block_id), file_id_(file_id), offset_(offset), file_size_(size)
+              {}
 
     int64_t TfsFileInfo::length() const
     {
