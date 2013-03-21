@@ -178,17 +178,24 @@ namespace tfs
       return ret;
     }
 
-    int DataManager::write_file(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
+    int DataManager::write_file(const uint64_t block_id, const uint64_t attach_block_id,
+        const uint64_t file_id, const uint64_t lease_id,
         const char* buffer, const int32_t length, const int32_t offset,
         const int32_t remote_version, BlockInfoV2& local)
     {
-      int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == block_id) ||
-        (INVALID_LEASE_ID == lease_id ) || (NULL == buffer) || (offset < 0) || (length <= 0)) ?
-        EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-
-      if ((TFS_SUCCESS == ret) && (remote_version >= 0))  // remote version < 0, don't check
+      int ret = TFS_SUCCESS;
+      if ((INVALID_BLOCK_ID == block_id) ||
+          (INVALID_BLOCK_ID == attach_block_id) ||
+          (INVALID_FILE_ID == file_id) ||
+          (INVALID_LEASE_ID == lease_id ) ||
+          (NULL == buffer) || (offset < 0) || (length <= 0))
       {
-        ret = get_block_manager().check_block_version(local, remote_version, block_id, block_id);//TODO
+        ret = EXIT_PARAMETER_ERROR;
+      }
+
+      if ((TFS_SUCCESS == ret) && (remote_version >= 0) && !IS_VERFIFY_BLOCK(block_id))
+      {
+        ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
@@ -204,7 +211,7 @@ namespace tfs
         Lease* lease = NULL;
         if (TFS_SUCCESS == ret)
         {
-          LeaseId lid(block_id, file_id, lease_id);
+          LeaseId lid(attach_block_id, file_id, lease_id);
           lease = lease_manager_.get(lid, now_us);
           ret = (NULL == lease)? EXIT_DATA_FILE_ERROR: TFS_SUCCESS;
         }
@@ -229,14 +236,20 @@ namespace tfs
     int DataManager::close_file(const uint64_t block_id, const uint64_t attach_block_id,
         uint64_t& file_id, const uint64_t lease_id, const bool tmp, BlockInfoV2& local)
     {
-      int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
-          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
+      if ((INVALID_BLOCK_ID == block_id) ||
+          (INVALID_BLOCK_ID == attach_block_id) ||
+          (INVALID_FILE_ID == file_id) ||
+          (INVALID_LEASE_ID == lease_id))
+      {
+        ret = EXIT_PARAMETER_ERROR;
+      }
 
       Lease* lease = NULL;
       if (TFS_SUCCESS == ret)
       {
         int64_t now_us = Func::get_monotonic_time_us();
-        LeaseId lid(block_id, file_id, lease_id);
+        LeaseId lid(attach_block_id, file_id, lease_id);
         lease = lease_manager_.get(lid, now_us);
         ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
       }
@@ -249,7 +262,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-          ret = get_block_manager().get_block_info(local, block_id);
+          ret = get_block_manager().get_block_info(local, block_id, tmp);
           lease->update_member_info(ds_info.information_.id_, local, ret);
         }
         lease_manager_.put(lease);
@@ -262,12 +275,18 @@ namespace tfs
         const uint64_t file_id, const int64_t lease_id, const int32_t action,
         const int32_t remote_version, BlockInfoV2& local)
     {
-      int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
-          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
-
-      if (TFS_SUCCESS == ret)
+      int ret = TFS_SUCCESS;
+      if ((INVALID_BLOCK_ID == block_id) ||
+          (INVALID_BLOCK_ID == attach_block_id) ||
+          (INVALID_FILE_ID == file_id) ||
+          (INVALID_LEASE_ID == lease_id))
       {
-        ret = get_block_manager().check_block_version(local, remote_version, block_id, block_id);//TODO
+        ret = EXIT_PARAMETER_ERROR;
+      }
+
+      if ((TFS_SUCCESS == ret) && !IS_VERFIFY_BLOCK(block_id))
+      {
+        ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
@@ -289,7 +308,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        LeaseId lid(block_id, file_id, lease_id);
+        LeaseId lid(attach_block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
         Lease* lease = lease_manager_.get(lid, now_us);
         ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
@@ -308,7 +327,9 @@ namespace tfs
     int DataManager::update_block_info(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
         const common::UnlinkFlag unlink_flag)
     {
-      int ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
+         (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
       Lease* lease = NULL;
       BlockInfoV2 block_info;
       if (TFS_SUCCESS == ret)

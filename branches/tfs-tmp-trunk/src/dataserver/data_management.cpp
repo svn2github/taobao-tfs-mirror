@@ -268,6 +268,7 @@ namespace tfs
         finfo.modify_time_ = finfo_v2.modify_time_;
         finfo.create_time_ = finfo_v2.create_time_;
         finfo.flag_ = finfo_v2.status_;
+        finfo.crc_ = finfo_v2.crc_;
      }
 
       return ret;

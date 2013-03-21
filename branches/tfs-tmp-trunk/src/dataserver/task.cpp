@@ -988,7 +988,7 @@ namespace tfs
         if (i < data_num)  // create data block
         {
           ret = get_data_helper().new_remote_block(family_members_[i].server_,
-            family_members_[i].block_, true, family_id_, 0);
+            family_members_[i].block_, true);
         }
         else // create parity block
         {
@@ -1140,15 +1140,13 @@ namespace tfs
             family_members_[pi].block_, family_members_[i].block_, index_data);
         if (TFS_SUCCESS == ret)
         {
-          // update lost data node's marshalling len
-          ec_metas[i].mars_offset_ = index_data.header_.marshalling_offset_;
           ret = get_data_helper().write_index(family_members_[i].server_,
               family_members_[i].block_, family_members_[i].block_, index_data);
         }
 
         if (TFS_SUCCESS == ret)
         {
-          ret = recover_updated_files(index_data, ec_metas[i].mars_offset_,
+          ret = recover_updated_files(index_data, ec_metas[pi].mars_offset_,
               family_members_[i].block_, pi, i);
         }
       }
@@ -1160,8 +1158,14 @@ namespace tfs
           continue; // we need find dead node to recover
         }
 
+        // update lost data node's marshalling len
+        // set it the same as check block's marshalling offset
+        ec_metas[i].mars_offset_ = ec_metas[pi].mars_offset_;
+
         ECMeta ec_meta;
         ec_meta.family_id_ = family_id_;
+        ec_meta.mars_offset_ = ec_metas[i].mars_offset_;
+
         ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
       }
@@ -1230,7 +1234,7 @@ namespace tfs
           continue;  // we need find updated files
         }
 
-        TBSYS_LOG(DEBUG, "recovery updated file. blockid: %"PRI64_PREFIX"u, fileid: "
+        TBSYS_LOG(DEBUG, "recover updated file. blockid: %"PRI64_PREFIX"u, fileid: "
             "%"PRI64_PREFIX"u, offset: %d", block_id, finfos[i].id_, finfos[i].offset_);
 
         updated = true;
@@ -1244,12 +1248,12 @@ namespace tfs
         {
           ret = get_data_helper().write_file(family_members_[dest].server_,
               family_members_[dest].block_, block_id,
-              finfos[i].id_, data, length);
+              finfos[i].id_, data, length, true);  // write to a temp block
         }
-        tbsys::gDelete(data);
+        tbsys::gDeleteA(data);
       }
 
-      if (updated)
+      if ((TFS_SUCCESS == ret) && updated)
       {
         // we just need update header here
         // because after recover updateed files, block version are changed
@@ -1272,9 +1276,7 @@ namespace tfs
       ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
-        int32_t status = TFS_ERROR;
-        ret = send_msg_to_server(source_id_, &cmit_msg, status);
-        ret = (ret < 0) ? ret : status;
+        ret = get_data_helper().send_simple_request(source_id_, &cmit_msg);
       }
 
       TBSYS_LOG(INFO, "reinstate report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",

@@ -304,7 +304,6 @@ namespace tfs
           {
             header->info_.file_count_ += file_count;
             header->info_.size_       += real_new_size;
-            header->used_offset_      += real_new_size;
             header->throughput_.write_visit_count_ += file_count;
             header->throughput_.write_bytes_ += real_new_size;
           }
@@ -329,7 +328,6 @@ namespace tfs
             header->info_.file_count_     += file_count;;
             header->info_.del_size_       += real_old_size;
             header->info_.size_           += real_new_size;
-            header->used_offset_          += real_new_size;
             header->throughput_.unlink_visit_count_ += file_count;
             header->throughput_.unlink_bytes_ += real_old_size;
             header->throughput_.write_visit_count_ += file_count;
@@ -780,6 +778,14 @@ namespace tfs
           IndexHeaderV2* header = get_index_header_();
           assert(NULL != header);
           ret = update_block_statistic_info_(header, oper_type, new_size, old_size, rollback);
+          if (TFS_SUCCESS == ret)
+          {
+            int32_t real_new_size = rollback ? 0 - new_size : new_size;
+            if ((OPER_INSERT == oper_type) || (OPER_UPDATE == oper_type))
+            {
+              header->used_offset_ += real_new_size;
+            }
+          }
         }
       }
       return ret;
@@ -1004,8 +1010,6 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           is_load_ = true;
-          IndexHeaderV2* header = get_index_header_();
-          header->avail_offset_ = 0;
         }
       }
       TBSYS_LOG(INFO, "create verify block index %s, ret: %d, block id : %"PRI64_PREFIX"u, file_size: %"PRI64_PREFIX"d",
@@ -1041,6 +1045,7 @@ namespace tfs
         is_load_ = true;
         IndexHeaderV2* header = get_index_header_();
         assert(NULL !=header);
+        header->avail_offset_ = 0;
         ret = (INVALID_BLOCK_ID  == header->info_.block_id_
             || logic_block_id != header->info_.block_id_
             || header->index_num_ <= 0) ? EXIT_INDEX_CORRUPT_ERROR : TFS_SUCCESS;
@@ -1109,7 +1114,7 @@ namespace tfs
             }*/
           }
           if (NULL != data)
-            ret = free_index_mem_(data, *index, TFS_SUCCESS == ret);
+            free_index_mem_(data, *index, TFS_SUCCESS == ret);
         }
       }
       return ret;
@@ -1160,7 +1165,7 @@ namespace tfs
             info = *current;
         }
         if (NULL != data)
-          ret = free_index_mem_(data, inner_index, TFS_SUCCESS == ret);
+          free_index_mem_(data, inner_index, TFS_SUCCESS == ret);
       }
       return ret;
     }
@@ -1199,7 +1204,7 @@ namespace tfs
         }
 
         if (NULL != data)
-          ret = free_index_mem_(data, inner_index, false);
+          free_index_mem_(data, inner_index, false);
       }
       return ret;
     }
@@ -1254,7 +1259,7 @@ namespace tfs
           ret = (remote_version == info.version_) ? TFS_SUCCESS : EXIT_VERSION_CONFLICT_ERROR;
         }
         if (NULL != data)
-          ret = free_index_mem_(data, inner_index, false);
+          free_index_mem_(data, inner_index, false);
       }
       return ret;
     }
@@ -1302,9 +1307,18 @@ namespace tfs
       int32_t ret = (NULL != data && nbytes > INDEX_HEADER_V2_LENGTH) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        IndexHeaderV2* main_header = get_index_header_();
         IndexHeaderV2* header =  reinterpret_cast<IndexHeaderV2*>(data);
         assert(NULL != header);
         ret = BaseIndexHandle::update_block_statistic_info_(header, oper_type, new_size, old_size, rollback);
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t real_new_size = rollback ? 0 - new_size : new_size;
+          if ((OPER_INSERT == oper_type) || (OPER_UPDATE == oper_type))
+          {
+            main_header->used_offset_ += real_new_size;
+          }
+        }
       }
       return ret;
     }
@@ -1350,6 +1364,12 @@ namespace tfs
         ret = (index.size_ == ret) ? TFS_SUCCESS : ret;
       }
       tbsys::gDeleteA(data);
+
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "free index mem fail. block id: %"PRI64_PREFIX"u, size: %d, offset: %d",
+            index.logic_block_id_, index.size_, index.offset_);
+      }
       return ret;
     }
   }/** end namespace dataserver **/

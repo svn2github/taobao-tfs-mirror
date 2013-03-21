@@ -414,12 +414,12 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::update_block_version(const int8_t step, const uint64_t logic_block_id)
+    int BlockManager::update_block_version(const int8_t step, const uint64_t logic_block_id, const bool tmp)
     {
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        BaseLogicBlock* logic_block = get(logic_block_id);
+        BaseLogicBlock* logic_block = get(logic_block_id, tmp);
         ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {
@@ -429,12 +429,12 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::get_block_info(common::BlockInfoV2& info, const uint64_t logic_block_id) const
+    int BlockManager::get_block_info(common::BlockInfoV2& info, const uint64_t logic_block_id, const bool tmp) const
     {
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        BaseLogicBlock* logic_block = get(logic_block_id);
+        BaseLogicBlock* logic_block = get(logic_block_id, tmp);
         ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {

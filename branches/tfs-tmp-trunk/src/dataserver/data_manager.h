@@ -53,7 +53,8 @@ namespace tfs
         int remove_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id);
 
         /** update & unlink operations */
-        int write_file(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
+        int write_file(const uint64_t block_id, const uint64_t attach_block_id,
+            const uint64_t file_id, const uint64_t lease_id,
             const char* buffer, const int32_t length, const int32_t offset,
             const int32_t remote_version, common::BlockInfoV2& local);
         int close_file(const uint64_t block_id, const uint64_t attach_block_id,
