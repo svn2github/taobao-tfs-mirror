@@ -200,7 +200,7 @@ namespace tfs
         value_buff = NULL;
       }
 
-      if (NULL != value_buff)
+      if (NULL != key_buff)
       {
         free(key_buff);
         key_buff = NULL;
