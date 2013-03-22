@@ -17,7 +17,7 @@ bin_PROGRAMS = clear_file_system\
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
-				$(top_builddir)/src/new_client/.libs/libtfsclient.a\
+				$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
 				$(UNIQUE_STORE_LDFLAGS)\
         $(TAIR_CACHE_LDFLAGS) \
 				$(top_builddir)/src/message/libtfsmessage.a\
