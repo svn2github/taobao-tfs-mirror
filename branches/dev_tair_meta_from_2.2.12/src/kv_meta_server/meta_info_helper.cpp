@@ -1053,7 +1053,9 @@ namespace tfs
           if (loop)
           {
             first_loop = false;
-            temp_start_key = object_name;
+            /*please fix me next*/
+            temp_start_key = object_name + KvKey::DELIMITER;
+            temp_start_key += '1';
           }
 
           //delete for tair
