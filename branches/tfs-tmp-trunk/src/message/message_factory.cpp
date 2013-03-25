@@ -411,6 +411,9 @@ namespace tfs
           case common::COMMIT_EC_META_MESSAGE:
             packet = new CommitEcMetaMessage();
             break;
+          case common::BLOCK_FILE_INFO_MESSAGE_V2:
+            packet = new BlockFileInfoMessageV2();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;

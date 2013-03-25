@@ -411,5 +411,82 @@ namespace tfs
       return INT_SIZE + 3 * INT64_SIZE;
     }
 
+    BlockFileInfoMessageV2::BlockFileInfoMessageV2() :
+      block_id_(0)
+    {
+      _packetHeader._pcode = common::BLOCK_FILE_INFO_MESSAGE_V2;
+      fileinfo_list_.clear();
+    }
+
+    BlockFileInfoMessageV2::~BlockFileInfoMessageV2()
+    {
+    }
+
+    int BlockFileInfoMessageV2::deserialize(common::Stream& input)
+    {
+      int32_t size = 0;
+      int32_t ret = input.get_int64(reinterpret_cast<int64_t*> (&block_id_));
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&size);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        common::FileInfoV2 info;
+        for (int32_t i = 0; i < size; ++i)
+        {
+          int64_t pos = 0;
+          ret = info.deserialize(input.get_data(), input.get_data_length(), pos);
+          if (common::TFS_SUCCESS == ret)
+          {
+            input.drain(info.length());
+            fileinfo_list_.push_back(info);
+          }
+          else
+          {
+            break;
+          }
+        }
+      }
+      return ret;
+    }
+
+    int64_t BlockFileInfoMessageV2::length() const
+    {
+      int len = common::INT_SIZE + common::INT64_SIZE;
+      for (uint32_t i = 0; i < fileinfo_list_.size(); i++)
+      {
+        len += fileinfo_list_[i].length();
+      }
+      return len;
+    }
+
+    int BlockFileInfoMessageV2::serialize(common::Stream& output)  const
+    {
+      int32_t ret = output.set_int64(block_id_);
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(fileinfo_list_.size());
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        common::FILE_INFO_LIST_V2::const_iterator iter = fileinfo_list_.begin();
+        for (; iter != fileinfo_list_.end(); ++iter)
+        {
+          int64_t pos = 0;
+          ret = (*iter).serialize(output.get_free(), output.get_free_length(), pos);
+          if (common::TFS_SUCCESS == ret)
+          {
+            output.pour((*iter).length());
+          }
+          else
+          {
+            break;
+          }
+        }
+      }
+      return ret;
+    }
+
   }
 }

@@ -20,7 +20,8 @@ namespace tfs
 {
   namespace message
   {
-    WriteIndexMessageV2::WriteIndexMessageV2()
+    WriteIndexMessageV2::WriteIndexMessageV2():
+      tmp_flag_(0), partial_flag_(0), cluster_flag_(0)
     {
       _packetHeader._pcode = WRITE_INDEX_MESSAGE_V2;
     }
@@ -46,6 +47,22 @@ namespace tfs
           output.pour(index_data_.length());
         }
       }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(tmp_flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(partial_flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(cluster_flag_);
+      }
+
       return ret;
     }
 
@@ -67,12 +84,27 @@ namespace tfs
         }
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(&tmp_flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(&partial_flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(&cluster_flag_);
+      }
+
       return ret;
     }
 
     int64_t WriteIndexMessageV2::length() const
     {
-      return INT64_SIZE * 2 + index_data_.length();
+      return INT64_SIZE * 2 + index_data_.length() + 3 * INT8_SIZE;
     }
 
   }

@@ -20,7 +20,7 @@ namespace tfs
   namespace message
   {
     WriteRawdataMessageV2::WriteRawdataMessageV2():
-      data_(NULL)
+      data_(NULL), tmp_flag_(0), new_flag_(0)
     {
       _packetHeader._pcode = WRITE_RAWDATA_MESSAGE_V2;
     }
@@ -43,6 +43,16 @@ namespace tfs
         ret = output.set_bytes(data_, file_seg_.length_);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(tmp_flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(new_flag_);
+      }
+
       return ret;
     }
 
@@ -61,12 +71,22 @@ namespace tfs
         input.drain(file_seg_.length_);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(&tmp_flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(&new_flag_);
+      }
+
       return ret;
     }
 
     int64_t WriteRawdataMessageV2::length() const
     {
-      int64_t len = file_seg_.length();
+      int64_t len = file_seg_.length() + INT8_SIZE * 2;
       if (file_seg_.length_ > 0)
       {
         len += file_seg_.length_;

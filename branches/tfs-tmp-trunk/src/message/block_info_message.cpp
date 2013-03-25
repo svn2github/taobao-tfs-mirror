@@ -975,19 +975,19 @@ namespace tfs
     int BlockFileInfoMessage::deserialize(common::Stream& input)
     {
       int32_t size = 0;
-      int32_t ret = input.get_int64(reinterpret_cast<int64_t*> (&block_id_));
-      if (common::TFS_SUCCESS == ret)
+      int32_t iret = input.get_int32(reinterpret_cast<int32_t*> (&block_id_));
+      if (common::TFS_SUCCESS == iret)
       {
-        ret = input.get_int32(&size);
+        iret = input.get_int32(&size);
       }
-      if (common::TFS_SUCCESS == ret)
+      if (common::TFS_SUCCESS == iret)
       {
-        common::FileInfoV2 info;
+        common::FileInfo info;
         for (int32_t i = 0; i < size; ++i)
         {
           int64_t pos = 0;
-          ret = info.deserialize(input.get_data(), input.get_data_length(), pos);
-          if (common::TFS_SUCCESS == ret)
+          iret = info.deserialize(input.get_data(), input.get_data_length(), pos);
+          if (common::TFS_SUCCESS == iret)
           {
             input.drain(info.length());
             fileinfo_list_.push_back(info);
@@ -998,34 +998,30 @@ namespace tfs
           }
         }
       }
-      return ret;
+      return iret;
     }
 
     int64_t BlockFileInfoMessage::length() const
     {
-      int len = common::INT_SIZE + common::INT64_SIZE;
-      for (uint32_t i = 0; i < fileinfo_list_.size(); i++)
-      {
-        len += fileinfo_list_[i].length();
-      }
-      return len;
+      common::FileInfo info;
+      return common::INT_SIZE * 2 + fileinfo_list_.size() * info.length();
     }
 
     int BlockFileInfoMessage::serialize(common::Stream& output)  const
     {
-      int32_t ret = output.set_int64(block_id_);
-      if (common::TFS_SUCCESS == ret)
+      int32_t iret = output.set_int32(block_id_);
+      if (common::TFS_SUCCESS == iret)
       {
-        ret = output.set_int32(fileinfo_list_.size());
+        iret = output.set_int32(fileinfo_list_.size());
       }
-      if (common::TFS_SUCCESS == ret)
+      if (common::TFS_SUCCESS == iret)
       {
-        common::FILE_INFO_LIST_V2::const_iterator iter = fileinfo_list_.begin();
+        common::FILE_INFO_LIST::const_iterator iter = fileinfo_list_.begin();
         for (; iter != fileinfo_list_.end(); ++iter)
         {
           int64_t pos = 0;
-          ret = (*iter).serialize(output.get_free(), output.get_free_length(), pos);
-          if (common::TFS_SUCCESS == ret)
+          iret = (*iter).serialize(output.get_free(), output.get_free_length(), pos);
+          if (common::TFS_SUCCESS == iret)
           {
             output.pour((*iter).length());
           }
@@ -1035,10 +1031,10 @@ namespace tfs
           }
         }
       }
-      return ret;
+      return iret;
     }
 
-    /*BlockRawMetaMessage::BlockRawMetaMessage() :
+   /*BlockRawMetaMessage::BlockRawMetaMessage() :
       block_id_(0)
     {
       _packetHeader._pcode = common::BLOCK_RAW_META_MESSAGE;

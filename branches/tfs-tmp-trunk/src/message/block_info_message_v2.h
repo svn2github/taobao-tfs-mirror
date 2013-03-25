@@ -338,6 +338,32 @@ namespace tfs
         uint64_t server_id_;
         uint64_t family_id_;
     };
+
+    class BlockFileInfoMessageV2:  public common::BasePacket
+    {
+      public:
+        BlockFileInfoMessageV2();
+        virtual ~BlockFileInfoMessageV2();
+        virtual int serialize(common::Stream& output)  const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        inline void set_block_id(const uint32_t block_id)
+        {
+          block_id_ = block_id;
+        }
+        inline uint32_t get_block_id() const
+        {
+          return block_id_;
+        }
+        inline common::FILE_INFO_LIST_V2* get_fileinfo_list()
+        {
+          return &fileinfo_list_;
+        }
+      protected:
+        uint64_t block_id_;
+        common::FILE_INFO_LIST_V2 fileinfo_list_;
+    };
+
   }
 }
 #endif

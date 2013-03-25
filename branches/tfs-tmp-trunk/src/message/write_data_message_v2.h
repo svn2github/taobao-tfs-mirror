@@ -81,9 +81,31 @@ namespace tfs
           return data_;
         }
 
+        void set_tmp_flag(const bool tmp_flag)
+        {
+          tmp_flag_ = tmp_flag;
+        }
+
+        bool get_tmp_flag()
+        {
+          return tmp_flag_;
+        }
+
+        void set_new_flag(const bool new_flag)
+        {
+          new_flag_ = new_flag;
+        }
+
+        bool get_new_flag()
+        {
+          return new_flag_;
+        }
+
       private:
         common::FileSegment file_seg_;
         const char* data_;
+        int8_t tmp_flag_;
+        int8_t new_flag_;
     };
 
   }

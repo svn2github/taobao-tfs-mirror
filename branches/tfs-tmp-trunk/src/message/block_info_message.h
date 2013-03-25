@@ -465,13 +465,13 @@ namespace tfs
         {
           return block_id_;
         }
-        inline common::FILE_INFO_LIST_V2* get_fileinfo_list()
+        inline common::FILE_INFO_LIST* get_fileinfo_list()
         {
           return &fileinfo_list_;
         }
       protected:
-        uint64_t block_id_;
-        common::FILE_INFO_LIST_V2 fileinfo_list_;
+        uint32_t block_id_;
+        common::FILE_INFO_LIST fileinfo_list_;
     };
 
     /*class BlockRawMetaMessage:  public common::BasePacket
