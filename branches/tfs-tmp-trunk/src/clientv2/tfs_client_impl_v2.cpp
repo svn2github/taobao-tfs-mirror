@@ -467,7 +467,7 @@ namespace tfs
               }
             }
 
-            if (rlen < MAX_READ_SIZE)  // error happens or read the end
+            if ((rlen < MAX_READ_SIZE) || (wlen < 0))  // error happens or read the end
             {
               break;
             }
@@ -523,7 +523,7 @@ namespace tfs
               }
             }
 
-            if (rlen < MAX_READ_SIZE)  // error happens or read the end
+            if ((rlen < MAX_READ_SIZE) || (wlen < 0))  // error happens or read the end
             {
               break;
             }
