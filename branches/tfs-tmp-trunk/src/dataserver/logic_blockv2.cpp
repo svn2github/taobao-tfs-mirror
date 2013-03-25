@@ -144,7 +144,14 @@ namespace tfs
     int BaseLogicBlock::check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const
     {
       RWLock::Lock lock(mutex_, READ_LOCKER);
-      return index_handle_->check_block_version(info, remote_version, logic_block_id);
+      // we don't check the version in erasure code group
+      int64_t family_id = 0;
+      int ret = index_handle_->get_family_id(family_id);
+      if ((TFS_SUCCESS == ret) && (INVALID_FAMILY_ID == family_id))
+      {
+        ret = index_handle_->check_block_version(info, remote_version, logic_block_id);
+      }
+      return ret;
     }
 
     int BaseLogicBlock::get_block_info(BlockInfoV2& info) const
@@ -242,7 +249,7 @@ namespace tfs
       return index_handle_->set_marshalling_offset(size);
     }
 
-    int BaseLogicBlock::write_file_infos(common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const uint64_t logic_block_id)
+    int BaseLogicBlock::write_file_infos(common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const uint64_t logic_block_id, const bool partial)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       SuperBlockInfo* sbinfo = NULL;
@@ -251,7 +258,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = index_handle_->write_file_infos(header, infos,
-            sbinfo->max_use_hash_bucket_ratio_, logic_block_id);
+            sbinfo->max_use_hash_bucket_ratio_, logic_block_id, partial);
       }
       return ret;
     }

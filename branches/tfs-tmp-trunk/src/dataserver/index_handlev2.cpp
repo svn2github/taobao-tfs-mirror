@@ -670,11 +670,19 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id)
+    int IndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id, const bool partial)
     {
       UNUSED(logic_block_id);
       int32_t ret = check_load();
-      if (TFS_SUCCESS == ret)
+      if ((TFS_SUCCESS == ret) && partial)
+      {
+        // only update partial header information
+        IndexHeaderV2* pheader = get_index_header_();
+        assert(NULL != pheader);
+        pheader->info_ = header.info_;
+        pheader->throughput_ = header.throughput_;
+      }
+      else if (TFS_SUCCESS == ret)
       {
         IndexHeaderV2* pheader = get_index_header_();
         assert(NULL != pheader);
@@ -1056,7 +1064,7 @@ namespace tfs
       return ret;
     }
 
-    int VerifyIndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id)
+    int VerifyIndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id, const bool partial)
     {
       UNUSED(threshold);
       int32_t ret = check_load();
@@ -1065,6 +1073,7 @@ namespace tfs
         InnerIndex* index = get_inner_index_(header.info_.block_id_);
         if (NULL == index)
         {
+          assert(!partial);
           assert(!infos.empty());
           IndexHeaderV2* pheader = get_index_header_();
           InnerIndex* inner_index = get_inner_index_array_();
@@ -1091,27 +1100,19 @@ namespace tfs
           }
           tbsys::gDeleteA(data);
         }
-        else
+        else if (partial)
         {
+          // only update partial header information
           char* data = NULL;
           ret = malloc_index_mem_(data, *index);
           if (TFS_SUCCESS == ret)
           {
-            memcpy(data, &header, INDEX_HEADER_V2_LENGTH);
-            IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
-            assert(NULL != header);
+            IndexHeaderV2* pheader = reinterpret_cast<IndexHeaderV2*>(data);
+            assert(NULL != pheader);
+            pheader->info_ = header.info_;
+            pheader->throughput_ = header.throughput_;
             if (!infos.empty())
               TBSYS_LOG(WARN, "update verify header, file infos not empty!!!!");
-            /*if (!infos.empty())
-            {
-              header->used_file_info_bucket_size_ = 0;
-              std::vector<common::FileInfoV2>::iterator iter = infos.begin();
-              for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
-              {
-                FileInfoV2& info = (*iter);
-                ret = insert_file_info_(info, data, index->size_, INVALID_FILE_ID != info.id_, true);
-              }
-            }*/
           }
           if (NULL != data)
             free_index_mem_(data, *index, TFS_SUCCESS == ret);
@@ -1194,7 +1195,7 @@ namespace tfs
           ret = (inner_index.size_ >= total) ? TFS_SUCCESS : EXIT_INDEX_DATA_INVALID_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            for (uint16_t bucket = 0; bucket < header->used_file_info_bucket_size_; ++bucket)
+            for (uint16_t bucket = 0; bucket < header->file_info_bucket_size_; ++bucket)
             {
               FileInfoV2* current = finfos + bucket;
               if (INVALID_FILE_ID != current->id_)

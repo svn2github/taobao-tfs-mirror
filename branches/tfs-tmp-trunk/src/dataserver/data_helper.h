@@ -50,11 +50,12 @@ namespace tfs
         int read_raw_data(const uint64_t server_id, const uint64_t block_id,
             char* data, int32_t length, const int32_t offset);
         int write_raw_data(const uint64_t server_id, const uint64_t block_id,
-            const char* data, const int32_t length, const int32_t offset);
+            const char* data, const int32_t length, const int32_t offset, const bool tmp);
         int read_index(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data);
         int write_index(const uint64_t server_id, const uint64_t block_id,
-            const uint64_t attach_block_id, common::IndexDataV2& index_data);
+            const uint64_t attach_block_id, common::IndexDataV2& index_data,
+            const bool tmp, const bool partial = false);
 
         int query_ec_meta(const uint64_t server_id, const uint64_t block_id,
             common::ECMeta& ec_meta);
@@ -85,11 +86,12 @@ namespace tfs
         int read_raw_data_ex(const uint64_t server_id, const uint64_t block_id,
             char* data, int32_t& length, const int32_t offset);
         int write_raw_data_ex(const uint64_t server_id, const uint64_t block_id,
-            const char* data, const int32_t length, const int32_t offset);
+            const char* data, const int32_t length, const int32_t offset, const bool tmp);
         int read_index_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data);
         int write_index_ex(const uint64_t server_id, const uint64_t block_id,
-            const uint64_t attach_block_id, common::IndexDataV2& index_data);
+            const uint64_t attach_block_id, common::IndexDataV2& index_data,
+            const bool tmp, const bool partial = false);
 
         int query_ec_meta_ex(const uint64_t server_id, const uint64_t block_id,
             common::ECMeta& ec_meta);

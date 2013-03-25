@@ -567,7 +567,7 @@ namespace tfs
         ret = get_data_helper().read_raw_data(source_id, block_id, data, length, offset);
         if (TFS_SUCCESS == ret)
         {
-          ret = get_data_helper().write_raw_data(dest_id, block_id, data, length, offset);
+          ret = get_data_helper().write_raw_data(dest_id, block_id, data, length, offset, true);
           if (TFS_SUCCESS == ret)
           {
             offset += length;
@@ -595,7 +595,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = get_data_helper().write_index(dest_id,
-              block_id, *attach_blocks.at(i), index_data);
+              block_id, *attach_blocks.at(i), index_data, true);
         }
       }
 
@@ -755,6 +755,7 @@ namespace tfs
       ErasureCode encoder;
       int32_t offset = 0;
       int32_t length = 0;
+      int32_t read_len = 0;
       char* data[member_num];
       memset(data, 0, member_num * sizeof(char*));
 
@@ -788,16 +789,20 @@ namespace tfs
         // read data from data node
         for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
         {
+          read_len = length;
+
           // read part of buffer, need memset first to ensure data zero
           if (offset + length > ec_metas[i].used_offset_)
           {
             memset(data[i], 0, length * sizeof(char));
+            // truncate read length to avoid read invalid data
+            read_len = ec_metas[i].used_offset_ - offset;
           }
 
           if (offset < ec_metas[i].used_offset_)
           {
             ret = get_data_helper().read_raw_data(family_members_[i].server_,
-                family_members_[i].block_, data[i], length, offset);
+                family_members_[i].block_, data[i], read_len, offset);
           }
         }
 
@@ -811,7 +816,7 @@ namespace tfs
         for (int32_t i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
         {
           ret = get_data_helper().write_raw_data(family_members_[i].server_,
-              family_members_[i].block_, data[i], length, offset);
+              family_members_[i].block_, data[i], length, offset, true);
         }
 
         // one turn success, update offset
@@ -841,11 +846,17 @@ namespace tfs
         IndexDataV2 index_data;
         ret = get_data_helper().read_index(family_members_[i].server_,
             family_members_[i].block_, family_members_[i].block_, index_data);
+        if (TFS_SUCCESS == ret)
+        {
+          // we need record data block's marshalling len in check block
+          index_data.header_.marshalling_offset_ = index_data.header_.used_offset_;
+          index_data.header_.info_.family_id_ = family_id_;
+        }
         // backup every data block's index to all check blocks
         for (int j = data_num; (TFS_SUCCESS == ret) && (j < member_num); j++)
         {
           ret = get_data_helper().write_index(family_members_[j].server_,
-              family_members_[j].block_, family_members_[i].block_, index_data);
+              family_members_[j].block_, family_members_[i].block_, index_data, true);
         }
       }
       return ret;
@@ -1028,6 +1039,7 @@ namespace tfs
       ErasureCode decoder;
       int32_t offset = 0;
       int32_t length = 0;
+      int32_t read_len = 0;
       char* data[member_num];
       memset(data, 0, member_num * sizeof(char*));
 
@@ -1064,16 +1076,20 @@ namespace tfs
             continue; // not alive, just continue
           }
 
+          read_len = length;
+
           // read part of buffer, need memset first to ensure data zero
           if (length + offset > ec_metas[i].mars_offset_)
           {
             memset(data[i], 0, length);
+            // truncate read length to avoid read invalid data
+            read_len = ec_metas[i].used_offset_ - offset;
           }
 
           if (offset < ec_metas[i].mars_offset_)
           {
             ret = get_data_helper().read_raw_data(family_members_[i].server_,
-                family_members_[i].block_, data[i], length, offset);
+                family_members_[i].block_, data[i], read_len, offset);
           }
         }
 
@@ -1092,7 +1108,7 @@ namespace tfs
           }
 
           ret = get_data_helper().write_raw_data(family_members_[i].server_,
-              family_members_[i].block_, data[i], length, offset);
+              family_members_[i].block_, data[i], length, offset, true);
         }
 
         // all success, update offset
@@ -1140,8 +1156,11 @@ namespace tfs
             family_members_[pi].block_, family_members_[i].block_, index_data);
         if (TFS_SUCCESS == ret)
         {
+          // update lost data node's marshalling len
+          // it's needed when recover check block
+          ec_metas[i].mars_offset_ = index_data.header_.marshalling_offset_;
           ret = get_data_helper().write_index(family_members_[i].server_,
-              family_members_[i].block_, family_members_[i].block_, index_data);
+              family_members_[i].block_, family_members_[i].block_, index_data, true);
         }
 
         if (TFS_SUCCESS == ret)
@@ -1158,14 +1177,8 @@ namespace tfs
           continue; // we need find dead node to recover
         }
 
-        // update lost data node's marshalling len
-        // set it the same as check block's marshalling offset
-        ec_metas[i].mars_offset_ = ec_metas[pi].mars_offset_;
-
         ECMeta ec_meta;
         ec_meta.family_id_ = family_id_;
-        ec_meta.mars_offset_ = ec_metas[i].mars_offset_;
-
         ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
       }
@@ -1193,7 +1206,7 @@ namespace tfs
             continue; // we need find dead node to recove
           }
           ret = get_data_helper().write_index(family_members_[j].server_,
-              family_members_[j].block_, family_members_[i].block_, index_data);
+              family_members_[j].block_, family_members_[i].block_, index_data, true);
           if (TFS_SUCCESS == ret)
           {
             ret = recover_updated_files(index_data, ec_metas[i].mars_offset_,
@@ -1238,12 +1251,13 @@ namespace tfs
             "%"PRI64_PREFIX"u, offset: %d", block_id, finfos[i].id_, finfos[i].offset_);
 
         updated = true;
-        char *data = new (std::nothrow) char[finfos[i].size_];
+        int32_t offset = FILEINFO_EXT_SIZE;  // every file has a header, ignore it
+        int32_t length = finfos[i].size_ - offset;
+        char *data = new (std::nothrow) char[length];
         assert(NULL != data);
-        int32_t length = finfos[i].size_;
         ret = get_data_helper().read_file(family_members_[src].server_,
             family_members_[src].block_, block_id,
-            finfos[i].id_, data, length, 0, READ_DATA_OPTION_FLAG_FORCE);
+            finfos[i].id_, data, length, offset, READ_DATA_OPTION_FLAG_FORCE);
         if (TFS_SUCCESS == ret)
         {
           ret = get_data_helper().write_file(family_members_[dest].server_,
@@ -1257,10 +1271,11 @@ namespace tfs
       {
         // we just need update header here
         // because after recover updateed files, block version are changed
+        // so here we set partial flag true
         IndexDataV2 only_header;
         only_header.header_ = index_data.header_;
         ret = get_data_helper().write_index(family_members_[dest].server_,
-            family_members_[dest].block_, family_members_[dest].block_, only_header);
+            family_members_[dest].block_, family_members_[dest].block_, only_header, true, true);
       }
 
       return ret;

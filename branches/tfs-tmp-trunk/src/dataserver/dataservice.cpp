@@ -1368,7 +1368,7 @@ namespace tfs
         uint64_t attach_block_id = message->get_from_row();
         //get block file list
         IndexHeaderV2 header;
-        BlockFileInfoMessage* resp_bfi_msg = new (std::nothrow) BlockFileInfoMessage();
+        BlockFileInfoMessageV2* resp_bfi_msg = new (std::nothrow) BlockFileInfoMessageV2();
         assert(NULL != resp_bfi_msg);
         FILE_INFO_LIST_V2* fileinfos = resp_bfi_msg->get_fileinfo_list();
         int ret = get_block_manager().traverse(header, *fileinfos, block_id, attach_block_id);

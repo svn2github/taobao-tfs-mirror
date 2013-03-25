@@ -74,7 +74,7 @@ namespace tfs
         int set_marshalling_offset(const int32_t size, const uint64_t logic_block_id);
 
         int get_index_header(common::IndexHeaderV2& header, const uint64_t logic_block_id) const;
-        int set_index_header(const common::IndexHeaderV2& header, const uint64_t logic_block_id);
+        int set_index_header(const common::IndexHeaderV2& header, const uint64_t logic_block_id, const bool tmp = false);
 
         int check_block_version(common::BlockInfoV2& info, const int32_t remote_version,
               const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const;
@@ -93,7 +93,7 @@ namespace tfs
         int unlink(int64_t& size, const uint64_t fileid, const int32_t action,
               const uint64_t logic_block_id, const uint64_t attach_logic_block_id);
 
-        int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, uint64_t attach_logic_block_id, const bool tmp = false);
+        int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, uint64_t attach_logic_block_id, const bool tmp = false, const bool partial = false);
         int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id, uint64_t attach_logic_block_id) const;
         int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks, const uint64_t logic_block_id) const;
         int get_index_num(int32_t& index_num, const uint64_t logic_block_id) const;

@@ -404,6 +404,7 @@ namespace tfs
               attach_block_id, file_id, lease_id, length, offset, version,
               is_master? "master": "slave", ret);
         }
+        get_data_manager().update_lease(attach_block_id, file_id, lease_id, ret, local);
       }
 
       // master check if all successful
@@ -430,7 +431,7 @@ namespace tfs
 
       TIMER_END();
 
-      TBSYS_LOG(DEBUG, "write file %s, blockid: %"PRI64_PREFIX"d, attach_blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(DEBUG, "write file %s, blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, length: %d, offset: %d, "
           "version: %d, role: %s, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
           (TFS_SUCCESS == ret) ? "success" : "fail", block_id, attach_block_id, file_id, lease_id,
@@ -532,6 +533,7 @@ namespace tfs
               "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: %s, ret: %d",
               block_id, attach_block_id, file_id, lease_id, is_master? "master" : "slave", ret);
         }
+        get_data_manager().update_lease(attach_block_id, file_id, lease_id, ret, local);
       }
 
       // master check if all successful
@@ -660,6 +662,7 @@ namespace tfs
               "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, action: %d, role: %s, ret: %d",
             block_id, attach_block_id, file_id, lease_id, action, is_master ? "master" : "slave", ret);
         }
+        get_data_manager().update_lease(attach_block_id, file_id, lease_id, ret, local);
       }
 
       // master check if all successful
@@ -847,7 +850,7 @@ namespace tfs
           message->reply(resp_msg);
         }
 
-        TBSYS_LOG(INFO, "WRITE file %s, blockid: %"PRI64_PREFIX"d, attach_blockid: %"PRI64_PREFIX"u, "
+        TBSYS_LOG(INFO, "WRITE file %s, blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
             "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
             "length: %d, offset: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",
             (TFS_SUCCESS == ret) ? "success": "fail", block_id, attach_block_id,
@@ -1054,6 +1057,8 @@ namespace tfs
       int32_t length = message->get_length();
       int32_t offset = message->get_offset();
       const char* data = message->get_data();
+      bool tmp = message->get_tmp_flag();
+      bool is_new = message->get_new_flag();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (length <= 0) || (offset < 0)
           || (NULL == data)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -1061,14 +1066,20 @@ namespace tfs
       // tbnet already receive this packet from network
       get_traffic_control().mr_traffic_stat(true, length);
 
+      // add this to support transfer tool
+      if ((TFS_SUCCESS == ret) && is_new)
+      {
+        ret = get_block_manager().new_block(block_id, tmp);
+      }
+
       if (TFS_SUCCESS == ret)
       {
-        ret = get_block_manager().pwrite(data, length, offset, block_id, true);
+        ret = get_block_manager().pwrite(data, length, offset, block_id, tmp);
         ret = (ret < 0) ? ret : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write raw data fail. blockid: %"PRI64_PREFIX"u, "
-              "length: %d, offset: %d, ret: %d", block_id, length, offset, ret);
+              "length: %d, offset: %d, tmp: %d, ret: %d", block_id, length, offset, tmp, ret);
         }
         else
         {
@@ -1114,19 +1125,27 @@ namespace tfs
       uint64_t block_id = message->get_block_id();
       uint64_t attach_block_id = message->get_attach_block_id();
       IndexDataV2& index_data = message->get_index_data();
+      bool tmp = message->get_tmp_flag();
+      bool partial = message->get_partial_flag();
+      bool is_cluster = message->get_cluster_flag();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_BLOCK_ID == attach_block_id)) ?
         EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
+      if ((TFS_SUCCESS == ret) && is_cluster)
+      {
+        // TODO , ask nameserver to update block info
+      }
+
       if (TFS_SUCCESS == ret)
       {
         ret = get_block_manager().write_file_infos(index_data.header_,
-            index_data.finfos_, block_id, attach_block_id, true);
+            index_data.finfos_, block_id, attach_block_id, tmp, partial);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write index fail. blockid: %"PRI64_PREFIX"u, "
-              "attach_block_id: %"PRI64_PREFIX"u, ret: %d",
-              block_id, attach_block_id, ret);
+              "attach_block_id: %"PRI64_PREFIX"u, tmp: %d, ret: %d",
+              block_id, attach_block_id, tmp, ret);
         }
         else
         {

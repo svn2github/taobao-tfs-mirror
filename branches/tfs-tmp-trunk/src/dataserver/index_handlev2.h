@@ -40,7 +40,7 @@ namespace tfs
         virtual ~BaseIndexHandle() {}
         virtual int read_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const  = 0;
         virtual int write_file_info(common::FileInfoV2& info,const double threshold, const uint64_t logic_block_id, const bool update) = 0;
-        virtual int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) = 0;
+        virtual int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID, const bool partial = false) = 0;
         virtual int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const = 0;
         virtual int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const = 0;
         virtual int get_index_num(int32_t& index_num) const = 0;
@@ -108,7 +108,7 @@ namespace tfs
         int generation_file_id(uint64_t& file_id, const double threshold);
         int read_file_info(common::FileInfoV2& info,  const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id, const bool update);
-        int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
+        int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID, const bool partial = false);
         int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int traverse(std::vector<common::FileInfo>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const;
@@ -153,7 +153,7 @@ namespace tfs
       int create(const uint64_t logic_block_id, const int64_t family_id, const int16_t index_num);
       int mmap(const uint64_t logic_block_id, const common::MMapOption& map_options);
       int write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id, const bool update);
-      int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
+      int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID, const bool partial = false);
       int read_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
       int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
       int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const;

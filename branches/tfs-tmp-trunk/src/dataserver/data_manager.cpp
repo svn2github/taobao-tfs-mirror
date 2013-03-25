@@ -118,6 +118,29 @@ namespace tfs
       return ret;
     }
 
+    int DataManager::update_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
+        const int32_t error_code, const BlockInfoV2& info)
+    {
+      int ret = ((INVALID_BLOCK_ID == block_id) && (INVALID_FILE_ID == file_id) ||
+          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        LeaseId lid(block_id, file_id, lease_id);
+        int64_t now_us = Func::get_monotonic_time_us();
+        Lease* lease = lease_manager_.get(lid, now_us);
+        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+          ret = lease->update_member_info(ds_info.information_.id_, info, error_code);
+          lease_manager_.put(lease);
+        }
+      }
+
+      return ret;
+    }
+
     bool DataManager::check_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
         int32_t& status, int64_t& req_cost_time, int64_t& file_size, stringstream& err_msg)
     {
@@ -193,7 +216,7 @@ namespace tfs
         ret = EXIT_PARAMETER_ERROR;
       }
 
-      if ((TFS_SUCCESS == ret) && (remote_version >= 0) && !IS_VERFIFY_BLOCK(block_id))
+      if ((TFS_SUCCESS == ret) && (remote_version >= 0))
       {
         ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
@@ -218,13 +241,11 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
           DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
           FileInfoInDiskExt none;
           none.version_ = FILE_INFO_EXT_INIT_VERSION;
           ret = data_file.pwrite(none, buffer, length, offset);
           ret = (ret < 0) ? ret : TFS_SUCCESS; // transform return status
-          lease->update_member_info(ds_info.information_.id_, local, ret);
           lease->update_last_time_us(now_us);
           lease_manager_.put(lease);
         }
@@ -261,9 +282,7 @@ namespace tfs
         ret = (ret < 0) ? ret: TFS_SUCCESS;  // transform return status
         if (TFS_SUCCESS == ret)
         {
-          DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
           ret = get_block_manager().get_block_info(local, block_id, tmp);
-          lease->update_member_info(ds_info.information_.id_, local, ret);
         }
         lease_manager_.put(lease);
       }
@@ -284,7 +303,7 @@ namespace tfs
         ret = EXIT_PARAMETER_ERROR;
       }
 
-      if ((TFS_SUCCESS == ret) && !IS_VERFIFY_BLOCK(block_id))
+      if ((TFS_SUCCESS == ret) && (remote_version >= 0))
       {
         ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
@@ -314,8 +333,6 @@ namespace tfs
         ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-          lease->update_member_info(ds_info.information_.id_, local, ret);
           lease->set_file_size(file_size);
           lease_manager_.put(lease);
         }
@@ -381,9 +398,9 @@ namespace tfs
       return ret;
     }
 
-   int DataManager::resolve_block_version_conflict(const uint64_t block_id,
+    int DataManager::resolve_block_version_conflict(const uint64_t block_id,
        const uint64_t file_id, const uint64_t lease_id)
-   {
+    {
      int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 

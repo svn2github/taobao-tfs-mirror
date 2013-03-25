@@ -165,7 +165,7 @@ namespace tfs
     }
 
     int DataHelper::write_raw_data(const uint64_t server_id, const uint64_t block_id,
-        const char* data, const int32_t length, const int32_t offset)
+        const char* data, const int32_t length, const int32_t offset, const bool tmp)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (NULL == data) || (length <= 0) || (offset < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -173,7 +173,7 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       if ((TFS_SUCCESS == ret) && (server_id == ds_info.information_.id_))
       {
-        ret =  write_raw_data_ex(server_id, block_id, data, length, offset);
+        ret =  write_raw_data_ex(server_id, block_id, data, length, offset, tmp);
       }
       else if ((TFS_SUCCESS == ret) && (server_id != ds_info.information_.id_))
       {
@@ -189,7 +189,7 @@ namespace tfs
           }
         }
 
-        ret = write_raw_data_ex(server_id, block_id, data, length, offset);
+        ret = write_raw_data_ex(server_id, block_id, data, length, offset, tmp);
         if (TFS_SUCCESS == ret)
         {
           get_traffic_control().mr_traffic_stat(false, length);
@@ -199,9 +199,9 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(WARN, "write raw data fail. server: %s, blockid: %"PRI64_PREFIX"u, "
-            "length: %d, offset: %d, ret: %d",
+            "length: %d, offset: %d, tmp: %d, ret: %d",
             tbsys::CNetUtil::addrToString(server_id).c_str(),
-            block_id, length, offset, ret);
+            block_id, length, offset, tmp, ret);
       }
 
       return ret;
@@ -224,24 +224,32 @@ namespace tfs
               block_id, attach_block_id, ret);
         }
       }
+
+      TBSYS_LOG(DEBUG, "read index. block_id: %"PRI64_PREFIX"u, finfos size: %zd",
+        index_data.header_.info_.block_id_, index_data.finfos_.size());
+
       return ret;
     }
 
     int DataHelper::write_index(const uint64_t server_id, const uint64_t block_id,
-        const uint64_t attach_block_id, common::IndexDataV2& index_data)
+        const uint64_t attach_block_id, common::IndexDataV2& index_data,
+        const bool tmp, const bool partial)
     {
+      TBSYS_LOG(DEBUG, "write index. block_id: %"PRI64_PREFIX"u, finfos size: %zd",
+        index_data.header_.info_.block_id_, index_data.finfos_.size());
+
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (INVALID_BLOCK_ID == attach_block_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       if (TFS_SUCCESS == ret)
       {
-        ret = write_index_ex(server_id, block_id, attach_block_id, index_data);
+        ret = write_index_ex(server_id, block_id, attach_block_id, index_data, tmp, partial);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write index fail. server: %s, blockid: %"PRI64_PREFIX"u, "
-              "attach blockid: %"PRI64_PREFIX"u, ret: %d",
+              "attach blockid: %"PRI64_PREFIX"u, tmp: %d, partial: %d, ret: %d",
               tbsys::CNetUtil::addrToString(server_id).c_str(),
-              block_id, attach_block_id, ret);
+              block_id, attach_block_id, tmp, partial, ret);
         }
       }
       return ret;
@@ -296,7 +304,7 @@ namespace tfs
       {
         int32_t offset = off;
         int32_t length = 0;
-        while ((TFS_SUCCESS == ret) && (offset < len))
+        while ((TFS_SUCCESS == ret) && (offset < len + off))
         {
           length = std::min(len + off - offset, MAX_READ_SIZE);
           ret = read_file_ex(server_id, block_id, attach_block_id, file_id,
@@ -305,8 +313,7 @@ namespace tfs
           {
             TBSYS_LOG(INFO, "reinstate read file fail. server: %s ,blockid: %"PRI64_PREFIX"u, "
                 "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
-                "length: %d, offset: %d, ret: %d",
-                tbsys::CNetUtil::addrToString(server_id).c_str(),
+                "length: %d, offset: %d, ret: %d", tbsys::CNetUtil::addrToString(server_id).c_str(),
                 block_id, attach_block_id, file_id, length, offset, ret);
           }
           else
@@ -315,10 +322,6 @@ namespace tfs
           }
         }
 
-        if ((TFS_SUCCESS == ret) && (length != len)) // length must match
-        {
-          ret = EXIT_READ_FILE_ERROR;
-        }
       }
       return ret;
     }
@@ -343,10 +346,9 @@ namespace tfs
               data + offset, length, offset, lease_id);
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(INFO, "reinstate write file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+            TBSYS_LOG(WARN, "reinstate write file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
                 "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
-                "length: %d, offset: %d, ret: %d",
-                tbsys::CNetUtil::addrToString(server_id).c_str(),
+                "length: %d, offset: %d, ret: %d", tbsys::CNetUtil::addrToString(server_id).c_str(),
                 block_id, attach_block_id, file_id, length, offset, ret);
           }
           else
@@ -361,7 +363,7 @@ namespace tfs
         ret = close_file_ex(server_id, block_id, attach_block_id, file_id, lease_id, tmp);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(INFO, "reinstate close file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+          TBSYS_LOG(WARN, "reinstate close file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
               "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, ret: %d",
               tbsys::CNetUtil::addrToString(server_id).c_str(),
               block_id, attach_block_id, file_id, ret);
@@ -465,13 +467,13 @@ namespace tfs
     }
 
     int DataHelper::write_raw_data_ex(const uint64_t server_id, const uint64_t block_id,
-        const char* data, const int32_t length, const int32_t offset)
+        const char* data, const int32_t length, const int32_t offset, const bool tmp)
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       if (server_id == ds_info.information_.id_)
       {
-        ret = get_block_manager().pwrite(data, length, offset, block_id, true);
+        ret = get_block_manager().pwrite(data, length, offset, block_id, tmp);
         ret = (ret < 0) ? ret : TFS_SUCCESS;
       }
       else
@@ -481,6 +483,7 @@ namespace tfs
         req_msg.set_length(length);
         req_msg.set_offset(offset);
         req_msg.set_data(data);
+        req_msg.set_tmp_flag(tmp);
         ret = send_simple_request(server_id, &req_msg);
       }
 
@@ -538,14 +541,16 @@ namespace tfs
     }
 
     int DataHelper::write_index_ex(const uint64_t server_id, const uint64_t block_id,
-        const uint64_t attach_block_id, common::IndexDataV2& index_data)
+        const uint64_t attach_block_id, common::IndexDataV2& index_data,
+        const bool tmp, const bool partial)
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       if (server_id == ds_info.information_.id_)
       {
+        UNUSED(partial);
         ret = get_block_manager().write_file_infos(index_data.header_, index_data.finfos_,
-            block_id, attach_block_id, true);
+            block_id, attach_block_id, tmp, partial);
       }
       else
       {
@@ -553,6 +558,8 @@ namespace tfs
         req_msg.set_block_id(block_id);
         req_msg.set_attach_block_id(attach_block_id);
         req_msg.set_index_data(index_data);
+        req_msg.set_tmp_flag(tmp);
+        req_msg.set_partial_flag(partial);
         ret = send_simple_request(server_id, &req_msg);
       }
 
