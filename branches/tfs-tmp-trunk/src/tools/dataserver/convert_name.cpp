@@ -14,9 +14,9 @@
  *
  */
 #include "tbsys.h"
-#include "new_client/fsname.h"
+#include "clientv2/fsname.h"
 
-using namespace tfs::client;
+using namespace tfs::clientv2;
 
 int main(int argc, char** argv)
 {

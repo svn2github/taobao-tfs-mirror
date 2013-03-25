@@ -37,8 +37,10 @@
 #include "message/block_info_message_v2.h"
 #include "message/read_file_message_v2.h"
 // #include "dataserver/bit_map.h"
-#include "new_client/tfs_file.h"
-#include "new_client/fsname.h"
+// #include "new_client/tfs_file.h"
+// #include "clientv2/tfs_file.h"
+#include "clientv2/fsname.h"
+
 
 #include "ds_lib.h"
 
@@ -650,7 +652,7 @@ namespace tfs
             if (file_info.id_ == file_id)
             {
               ret_status = TFS_SUCCESS;
-              tfs::client::FSName fsname(block_id, file_id, cluster_id);
+              tfs::clientv2::FSName fsname(block_id, file_id, cluster_id);
               printf("  FILE_NAME:     %s\n", fsname.get_name());
               printf("  BLOCK_ID:      %u\n", fsname.get_block_id());
               printf("  FILE_ID:       %" PRI64_PREFIX "u\n", file_info.id_);
@@ -706,9 +708,9 @@ namespace tfs
       //if the information of file can be accessed.
       if ((ret_status == TFS_SUCCESS))
       {
-        if (BLOCK_FILE_INFO_MESSAGE == ret_msg->getPCode())
+        if (BLOCK_FILE_INFO_MESSAGE_V2 == ret_msg->getPCode())
         {
-          FILE_INFO_LIST_V2* file_info_list = (dynamic_cast<BlockFileInfoMessage*> (ret_msg))->get_fileinfo_list();
+          FILE_INFO_LIST_V2* file_info_list = (dynamic_cast<BlockFileInfoMessageV2*> (ret_msg))->get_fileinfo_list();
           int32_t i = 0;
           int32_t list_size = file_info_list->size();
 
@@ -724,7 +726,7 @@ namespace tfs
             for (i = 0; i < list_size; i++)
             {
               FileInfoV2& file_info = file_info_list->at(i);
-              tfs::client::FSName fsname(block_id, file_info.id_, cluster_id);
+              tfs::clientv2::FSName fsname(block_id, file_info.id_, cluster_id);
               print_file_info_v2(fsname.get_name(), file_info);
             }
             printf(
@@ -739,7 +741,7 @@ namespace tfs
             for (i = 0; i < list_size; i++)
             {
               FileInfoV2& file_info = file_info_list->at(i);
-              tfs::client::FSName fsname(block_id, file_info.id_, cluster_id);
+              tfs::clientv2::FSName fsname(block_id, file_info.id_, cluster_id);
               fprintf(stdout, "\n%s", fsname.get_name());
             }
             fprintf(stdout, "\n");
@@ -773,9 +775,9 @@ namespace tfs
 
       if (rsp != NULL)
       {
-        if (rsp->getPCode() == BLOCK_FILE_INFO_MESSAGE)
+        if (rsp->getPCode() == BLOCK_FILE_INFO_MESSAGE_V2)
         {
-          BlockFileInfoMessage* req_bfi_msg = reinterpret_cast<BlockFileInfoMessage*>(rsp);
+          BlockFileInfoMessageV2* req_bfi_msg = reinterpret_cast<BlockFileInfoMessageV2*>(rsp);
           FILE_INFO_LIST_V2* file_list = req_bfi_msg->get_fileinfo_list();
           bool found = false;
           for (int32_t i = 0; i < static_cast<int32_t> (file_list->size()); ++i)
@@ -783,7 +785,7 @@ namespace tfs
             if (file_list->at(i).id_ == ds_task.new_file_id_)
             {
               printf("file found in server: %s\n", tbsys::CNetUtil::addrToString(ds_task.server_id_).c_str());
-              tfs::client::FSName fsname(ds_task.block_id_, ds_task.new_file_id_, ds_task.cluster_id_);
+              tfs::clientv2::FSName fsname(ds_task.block_id_, ds_task.new_file_id_, ds_task.cluster_id_);
               print_file_info_v2(fsname.get_name(), file_list->at(i));
               found = true;
               break;
