@@ -158,9 +158,7 @@ namespace tfs
           int64_t family_id = pblock->get_family_id();
           if (TFS_SUCCESS != ret && INVALID_FAMILY_ID != family_id)
           {
-            const int32_t DATA_MEMBER = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
-            const int32_t MEMBER = DATA_MEMBER + GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
-            common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MEMBER, family_info.members_);
+            common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MAX_MARSHALLING_NUM, family_info.members_);
             ret = open(family_info.family_aid_info_, helper, T_READ, family_id);
             if (TFS_SUCCESS == ret)
             {
@@ -171,6 +169,8 @@ namespace tfs
                 if (item->second != INVALID_SERVER_ID)
                   ++index;
               }
+
+              const int32_t DATA_MEMBER = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
               ret = index >= DATA_MEMBER ? TFS_SUCCESS: EXIT_BLOCK_CANNOT_REINSTATE;
               if (TFS_SUCCESS == ret)
               {
@@ -348,10 +348,7 @@ namespace tfs
             }
           }
         }
-        if ((TFS_SUCCESS == ret)
-            && !(mode & T_CREATE)
-            && !(mode & T_NEWBLK)
-            && (NULL != block))
+        if ((TFS_SUCCESS == ret) && (NULL != block))
         {
           int64_t family_id = block->get_family_id();
           if (INVALID_FAMILY_ID != family_id)

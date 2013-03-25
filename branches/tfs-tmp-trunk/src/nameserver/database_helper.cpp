@@ -304,7 +304,7 @@ namespace tfs
                   MYSQL_BIND rs_bind[1];
                   memset(rs_bind, 0, sizeof(rs_bind));
                   rs_bind[0].buffer_type = MYSQL_TYPE_LONGLONG;
-                  rs_bind[0].is_null = &is_null[1];
+                  rs_bind[0].is_null = &is_null[0];
                   rs_bind[0].buffer = (char *) &mysql_ret;
                   rs_bind[0].buffer_length = sizeof(mysql_ret);
                   ret = mysql_stmt_bind_result(stmt, rs_bind) ?  EXIT_BIND_PARAMETER_ERROR : TFS_SUCCESS;
