@@ -39,6 +39,7 @@ namespace tfs
 
     Task::Task(DataService& service, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time):
+        GCObject(common::Func::get_monotonic_time()),
       service_(service), seqno_(seqno), source_id_(source_id), expire_time_(expire_time)
     {
       start_time_ = common::Func::get_monotonic_time();
@@ -790,19 +791,22 @@ namespace tfs
         for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
         {
           read_len = length;
-
-          // read part of buffer, need memset first to ensure data zero
-          if (offset + length > ec_metas[i].used_offset_)
-          {
-            memset(data[i], 0, length * sizeof(char));
-            // truncate read length to avoid read invalid data
-            read_len = ec_metas[i].used_offset_ - offset;
-          }
-
           if (offset < ec_metas[i].used_offset_)
           {
+            // read part of buffer, need memset first to ensure data zero
+            // and truncate read length to avoid read invalid data
+            if (offset + length > ec_metas[i].used_offset_)
+            {
+              memset(data[i], 0, length * sizeof(char));
+              read_len = ec_metas[i].used_offset_ - offset;
+            }
+
             ret = get_data_helper().read_raw_data(family_members_[i].server_,
                 family_members_[i].block_, data[i], read_len, offset);
+          }
+          else
+          {
+            memset(data[i], 0, length * sizeof(char));
           }
         }
 
@@ -1077,19 +1081,23 @@ namespace tfs
           }
 
           read_len = length;
-
-          // read part of buffer, need memset first to ensure data zero
-          if (length + offset > ec_metas[i].mars_offset_)
-          {
-            memset(data[i], 0, length);
-            // truncate read length to avoid read invalid data
-            read_len = ec_metas[i].used_offset_ - offset;
-          }
-
           if (offset < ec_metas[i].mars_offset_)
           {
+            // read part of buffer, need memset first to ensure data zero
+            // and truncate read length to avoid read invalid data
+            if (length + offset > ec_metas[i].mars_offset_)
+            {
+              memset(data[i], 0, length * sizeof(char));
+              read_len = ec_metas[i].mars_offset_ - offset;
+            }
+
             ret = get_data_helper().read_raw_data(family_members_[i].server_,
                 family_members_[i].block_, data[i], read_len, offset);
+          }
+          else
+          {
+            // no data to read in this block, just set all data to zero
+            memset(data[i], 0, length * sizeof(char));
           }
         }
 

@@ -24,6 +24,7 @@
 #include "dataservice.h"
 #include "erasure_code.h"
 #include "task_manager.h"
+#include "block_manager.h"
 
 namespace tfs
 {
@@ -43,6 +44,11 @@ namespace tfs
     TaskManager::~TaskManager()
     {
 
+    }
+
+    BlockManager& TaskManager::get_block_manager()
+    {
+      return service_.get_block_manager();
     }
 
     int TaskManager::handle(BaseTaskMessage* packet)
@@ -103,13 +109,16 @@ namespace tfs
       if (it != running_task_.end())
       {
         Task* task = it->second;
-        task->handle_complete(packet);
-        if (task->is_completed())
+        if (!task->is_completed())
         {
-          running_task_mutex_.lock();
-          running_task_.erase(seqno);
-          running_task_mutex_.unlock();
-          gDelete(task);
+          task->handle_complete(packet);
+          if (task->is_completed())
+          {
+            running_task_mutex_.lock();
+            running_task_.erase(seqno);
+            running_task_mutex_.unlock();
+            get_block_manager().get_gc_manager().add(task);
+          }
         }
       }
 
@@ -142,7 +151,7 @@ namespace tfs
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
         {
-          tbsys::gDelete(task);
+          get_block_manager().get_gc_manager().add(task);
         }
       }
       return ret;
@@ -164,7 +173,7 @@ namespace tfs
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
         {
-          tbsys::gDelete(task);
+          get_block_manager().get_gc_manager().add(task);
         }
       }
       return ret;
@@ -198,7 +207,7 @@ namespace tfs
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
         {
-          tbsys::gDelete(task);
+          get_block_manager().get_gc_manager().add(task);
         }
       }
       return ret;
@@ -221,7 +230,7 @@ namespace tfs
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
         {
-          tbsys::gDelete(task);
+          get_block_manager().get_gc_manager().add(task);
         }
       }
       return ret;
@@ -252,7 +261,7 @@ namespace tfs
 
           if (TFS_SUCCESS != ret)
           {
-            tbsys::gDelete(task);
+            get_block_manager().get_gc_manager().add(task);
           }
         }
       }
@@ -285,7 +294,7 @@ namespace tfs
 
           if (TFS_SUCCESS != ret)
           {
-            tbsys::gDelete(task);
+            get_block_manager().get_gc_manager().add(task);
           }
         }
       }
@@ -317,7 +326,7 @@ namespace tfs
 
           if (TFS_SUCCESS != ret)
           {
-            tbsys::gDelete(task);
+            get_block_manager().get_gc_manager().add(task);
           }
         }
       }
@@ -395,7 +404,7 @@ namespace tfs
 
         if (task->is_completed())
         {
-          tbsys::gDelete(task);
+          get_block_manager().get_gc_manager().add(task);
         }
         else
         {
@@ -412,7 +421,7 @@ namespace tfs
       {
         Task* task = task_queue_.front();
         task_queue_.pop_front();
-        tbsys::gDelete(task);
+        get_block_manager().get_gc_manager().add(task);
       }
       task_monitor_.unlock();
 
@@ -421,7 +430,7 @@ namespace tfs
       map<int64_t, Task*>::iterator iter = running_task_.begin();
       for ( ; iter != running_task_.end(); )
       {
-        tbsys::gDelete(iter->second);
+        get_block_manager().get_gc_manager().add(iter->second);
         running_task_.erase(iter++);
       }
       running_task_mutex_.unlock();
@@ -436,6 +445,9 @@ namespace tfs
 
     void TaskManager::expire_task()
     {
+      list<Task*> expire_tasks;
+
+      // add all expired task to list
       running_task_mutex_.lock();
       map<int64_t, Task*>::iterator iter = running_task_.begin();
       uint32_t old_size = running_task_.size();
@@ -445,8 +457,7 @@ namespace tfs
         if (iter->second->is_expired(now))
         {
           TBSYS_LOG(DEBUG, "task expired, seqno: %"PRI64_PREFIX"d", iter->second->get_seqno());
-          iter->second->report_to_ns(PLAN_STATUS_TIMEOUT);
-          tbsys::gDelete(iter->second);
+          expire_tasks.push_back(iter->second);
           running_task_.erase(iter++);
         }
         else
@@ -457,7 +468,15 @@ namespace tfs
       uint32_t new_size = running_task_.size();
       running_task_mutex_.unlock();
 
-      TBSYS_LOG(DEBUG, "task manager expire task, old: %u, new: %u", old_size, new_size);
+     // do real expire work for task in list, report status to nameserver
+     list<Task*>::iterator it = expire_tasks.begin();
+     for ( ; it != expire_tasks.end(); )
+     {
+       iter->second->report_to_ns(PLAN_STATUS_TIMEOUT);
+       get_block_manager().get_gc_manager().add(iter->second);
+     }
+
+     TBSYS_LOG(DEBUG, "task manager expire task, old: %u, new: %u", old_size, new_size);
     }
 
     int TaskManager::check_source(const uint64_t* servers, const int32_t source_num)

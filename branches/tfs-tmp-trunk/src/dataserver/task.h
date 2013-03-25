@@ -32,7 +32,7 @@ namespace tfs
     class BlockManager;
     class DataHelper;
     class DataService;
-    class Task
+    class Task : public GCObject
     {
       public:
         Task(DataService& service, const int64_t seqno,

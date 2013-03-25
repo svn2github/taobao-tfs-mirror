@@ -30,6 +30,7 @@ namespace tfs
   {
     using namespace message;
 
+    class BlockMnager;
     class DataService;
     class TaskManager
     {
@@ -43,6 +44,8 @@ namespace tfs
         void run_task();
         void stop_task();
         void expire_task();
+
+        BlockManager& get_block_manager();
 
       private:
         DISALLOW_COPY_AND_ASSIGN(TaskManager);

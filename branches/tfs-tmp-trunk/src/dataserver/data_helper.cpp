@@ -961,7 +961,7 @@ namespace tfs
         const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
         const int32_t member_num = data_num + check_num;
 
-        ECMeta ec_meta;
+        ECMeta ec_metas[MAX_MARSHALLING_NUM];
         int erased[member_num];
         int32_t target = 0;
         ret = prepare_read_degrade(family_info, erased);
@@ -973,17 +973,27 @@ namespace tfs
             target++;
           }
           ret = (target >= member_num) ? EXIT_NO_ENOUGH_DATA : TFS_SUCCESS; // no alive check block
-          if (TFS_SUCCESS == ret)
+
+          // query all 4 nodes' ec metas cost no more than 1ms in test environment
+          // it can be "optimized" to one network interact, but may lead to disk IO
+          TIMER_START();
+          for (int i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
           {
-            ret = query_ec_meta(family_info.members_[target].second,
-                family_info.members_[target].first, ec_meta);
+            if (ErasureCode::NODE_ALIVE != erased[i])
+            {
+              continue;
+            }
+            ret = query_ec_meta(family_info.members_[i].second,
+                family_info.members_[i].first, ec_metas[i]);
           }
+          TIMER_END();
+          TBSYS_LOG(DEBUG, "query all ec meta cost: %"PRI64_PREFIX"d", TIMER_DURATION());
         }
 
         if (TFS_SUCCESS == ret)
         {
           // it's an updated file, read from check block
-          if (finfo.offset_ >= ec_meta.mars_offset_)
+          if (finfo.offset_ >= ec_metas[target].mars_offset_)
           {
             ret = read_file(family_info.members_[target].second,
                 family_info.members_[target].first, block_id, finfo.id_,
@@ -992,7 +1002,7 @@ namespace tfs
           else  // decode from other block's data
           {
             ret = read_file_degrade_ex(block_id,
-                finfo, data, length, offset, family_info, erased);
+                finfo, data, length, offset, family_info, erased, ec_metas);
           }
         }
       }
@@ -1001,7 +1011,8 @@ namespace tfs
     }
 
     int DataHelper::read_file_degrade_ex(const uint64_t block_id, const FileInfoV2& finfo, char* buffer,
-        const int32_t length, const int32_t offset, const FamilyInfoExt& family_info, int* erased)
+        const int32_t length, const int32_t offset, const FamilyInfoExt& family_info,
+        int* erased, ECMeta* ec_metas)
     {
       int ret = TFS_SUCCESS;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
@@ -1055,17 +1066,30 @@ namespace tfs
 
       while ((TFS_SUCCESS == ret) && (real_offset < real_end))
       {
-        int len = std::min(real_end - real_offset, max_read_size);
+        int32_t len = std::min(real_end - real_offset, max_read_size);
         for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
         {
           if (ErasureCode::NODE_ALIVE != erased[i])
           {
             continue; // not alive, just continue
           }
-          memset(data[i], 0, len); // must, or member_num times network needed
-          ret = read_raw_data(family_info.members_[i].second,
-              family_info.members_[i].first, data[i], len, real_offset);
-          ret = (EXIT_READ_OFFSET_ERROR == ret) ? TFS_SUCCESS : ret; // ignore read offset error
+          int32_t read_len = len;
+          if ((real_offset < ec_metas[i].mars_offset_))
+          {
+            // truncate to avoid reading invalid data
+            if (real_offset + len > ec_metas[i].mars_offset_)
+            {
+              memset(data[i], 0, len * sizeof(char));
+              read_len = ec_metas[i].mars_offset_ - real_offset;
+            }
+
+            ret = read_raw_data(family_info.members_[i].second,
+                family_info.members_[i].first, data[i], read_len, real_offset);
+          }
+          else
+          {
+            memset(data[i], 0, len * sizeof(char));
+          }
         }
 
         // decode data to buffer

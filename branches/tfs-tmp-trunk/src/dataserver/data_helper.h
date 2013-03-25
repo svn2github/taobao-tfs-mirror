@@ -113,7 +113,7 @@ namespace tfs
         int prepare_read_degrade(const common::FamilyInfoExt& family_info, int* erased);
         int read_file_degrade_ex(const uint64_t block_id, const common::FileInfoV2& finfo,
             char* buffer, const int32_t length, const int32_t offset,
-            const common::FamilyInfoExt& family_info, int* erased);
+            const common::FamilyInfoExt& family_info, int* erased, common::ECMeta* ec_metas);
 
       private:
         DataService& service_;
