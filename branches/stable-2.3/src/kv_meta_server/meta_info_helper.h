@@ -95,6 +95,9 @@ namespace tfs
         int serialize_key(const std::string &bucket_name,
                         const std::string &file_name, const int64_t offset,
                         KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
+        int serialize_key_ex(const std::string &file_name, const int64_t offset,
+                        KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
+
       protected:
         int group_objects(const std::string &object_name, const std::string &v, const std::string &prefix,
             const char delimiter, std::vector<common::ObjectMetaInfo> *v_object_meta_info,

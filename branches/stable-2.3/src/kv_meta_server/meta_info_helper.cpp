@@ -66,7 +66,6 @@ namespace tfs
     int MetaInfoHelper::serialize_key(const std::string &bucket_name, const std::string &file_name,
                                       const int64_t offset, KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type)
     {
-
       TBSYS_LOG(DEBUG, "part offset: %"PRI64_PREFIX"d", offset);
 
       int ret = (bucket_name.size() > 0 && file_name.size() > 0 && offset >= 0
@@ -137,7 +136,71 @@ namespace tfs
           pos = pos + 8;
         }
       }
-      if(TFS_SUCCESS == ret)
+
+      if (TFS_SUCCESS == ret)
+      {
+        key->key_ = key_buff;
+        key->key_size_ = pos;
+        key->key_type_ = key_type;
+      }
+      return ret;
+    }
+
+    int MetaInfoHelper::serialize_key_ex(const std::string &file_name, const int64_t offset, KvKey *key,
+        char *key_buff, const int32_t buff_size, int32_t key_type)
+    {
+      TBSYS_LOG(DEBUG, "part offset: %"PRI64_PREFIX"d", offset);
+
+      int ret = (file_name.size() > 0 && offset >= 0
+                 && key != NULL &&  key_buff != NULL ) ? TFS_SUCCESS : TFS_ERROR;
+      int64_t pos = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        //filename
+        int64_t file_name_size = static_cast<int64_t>(file_name.size());
+        if(pos + file_name_size < buff_size)
+        {
+          memcpy(key_buff + pos, file_name.data(), file_name.size());
+          pos += file_name_size;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //DELIMITER
+        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
+        {
+          key_buff[pos++] = KvKey::DELIMITER;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //version
+        int64_t version = 0;
+        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
+        {
+          ret = Serialization::int64_to_char(key_buff + pos, buff_size, version);
+          pos = pos + 8;
+        }
+        //DELIMITER
+        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
+        {
+          key_buff[pos++] = KvKey::DELIMITER;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //offset
+        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
+        {
+          ret = Serialization::int64_to_char(key_buff + pos, buff_size, offset);
+          pos = pos + 8;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
       {
         key->key_ = key_buff;
         key->key_size_ = pos;
@@ -1042,10 +1105,7 @@ namespace tfs
                 static_cast<int32_t>(v_object_name->size()) >= limit)
             {
               loop = false;
-              if (i < res_size)
-              {
-                *is_truncated = 1;
-              }
+              *is_truncated = 1;
               break;
             }
           }
@@ -1053,9 +1113,19 @@ namespace tfs
           if (loop)
           {
             first_loop = false;
-            /*please fix me next*/
-            temp_start_key = object_name + KvKey::DELIMITER;
-            temp_start_key += '1';
+            KvKey key;
+            char key_buff[KEY_BUFF_SIZE];
+            offset = INT64_MAX;
+            ret = serialize_key_ex(object_name, offset, &key, key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+            if (TFS_SUCCESS == ret)
+            {
+              temp_start_key.assign(key.key_, key.key_size_);
+            }
+            else
+            {
+              TBSYS_LOG(INFO, "serialize sub key error");
+              loop = false;
+            }
           }
 
           //delete for tair
