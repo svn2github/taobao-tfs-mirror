@@ -329,7 +329,7 @@ namespace tfs
 
         if (read_length < 0)
         {
-          TBSYS_LOG(ERROR, "read tfs data failed, block_id: %u, file_id: %"PRI64_PREFIX"u",
+          TBSYS_LOG(ERROR, "read tfs data failed, block_id: %"PRI64_PREFIX"d, file_id: %"PRI64_PREFIX"u",
               iter->block_id_, iter->file_id_);
           ret = read_length;
           break;
@@ -417,7 +417,7 @@ namespace tfs
         ret = do_put_object(bucket_name, object_name, object_info_null, user_info);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "do put object fail, bucket: %s, object: %s, ret: %d",
+          TBSYS_LOG(ERROR, "do put object fail, bucket: %s, object: %s, ret: %"PRI64_PREFIX"d",
               bucket_name, object_name, ret);
           if (TFS_ERROR == ret)
           {
@@ -499,7 +499,7 @@ namespace tfs
               ret = do_put_object(bucket_name, object_name, object_info, user_info);
               if (TFS_SUCCESS != ret)
               {
-                TBSYS_LOG(ERROR, "do put object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %d",
+                TBSYS_LOG(ERROR, "do put object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
                     bucket_name, object_name, iter->offset_, ret);
                 if (TFS_ERROR == ret)
                 {
@@ -570,7 +570,7 @@ namespace tfs
               bucket_name, object_name, cur_offset, left_length, still_have);
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(ERROR, "do get object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %d",
+            TBSYS_LOG(ERROR, "do get object fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
                 bucket_name, object_name, cur_offset, ret);
             if (TFS_ERROR == ret)
             {
@@ -598,7 +598,7 @@ namespace tfs
             }
           }
 
-          TBSYS_LOG(DEBUG, "vector size ================= is: %d", object_info.v_tfs_file_info_.size());
+          TBSYS_LOG(DEBUG, "vector size ================= is: %lu", object_info.v_tfs_file_info_.size());
           /*
           if (object_info.v_tfs_file_info_.empty())
           {
@@ -822,7 +822,7 @@ namespace tfs
           ret = do_del_object(bucket_name, object_name, &object_info, &still_have, user_info);
           TBSYS_LOG(DEBUG, "bucket_name %s object_name %s "
               " still_have %d", bucket_name, object_name, still_have);
-          TBSYS_LOG(DEBUG, "del vector size ================= is: %d",
+          TBSYS_LOG(DEBUG, "del vector size ================= is: %lu",
               object_info.v_tfs_file_info_.size());
           if (TFS_SUCCESS == ret)
           {

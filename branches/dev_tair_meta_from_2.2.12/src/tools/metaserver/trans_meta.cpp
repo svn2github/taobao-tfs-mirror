@@ -181,7 +181,7 @@ int transfer_dir(const int64_t app_id, const int64_t uid, const int64_t pid,
 
   } while(TFS_SUCCESS == ret && still_have);
 
-  TBSYS_LOG(INFO, "app_id:%ld uid:%ld pid:%ld file_count = %d, dir_count %d",
+  TBSYS_LOG(INFO, "app_id:%ld uid:%ld pid:%ld file_count = %ld, dir_count %lu",
       app_id, uid, pid, file_count, v_meta_info.size());
 
   for (size_t i = 0; i < v_meta_info.size() && TFS_SUCCESS == ret; i++)
