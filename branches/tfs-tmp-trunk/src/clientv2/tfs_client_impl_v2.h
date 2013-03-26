@@ -45,6 +45,8 @@ namespace tfs
       int initialize(const char* ns_addr = NULL);
       int destroy();
       int set_option_flag(const int fd, const int opt_flag);
+      void set_log_level(const char* level);
+      void set_log_file(const char* file);
 
       int open(const char* file_name, const char* suffix, const char* ns_addr, const int mode);
       int open(const uint64_t block_id, const uint64_t file_id, const char* ns_addr, const int mode);

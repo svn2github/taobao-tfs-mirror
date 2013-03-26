@@ -88,6 +88,18 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    void TfsClientImplV2::set_log_level(const char* level)
+    {
+      TBSYS_LOG(INFO, "set log level: %s", level);
+      TBSYS_LOGGER.setLogLevel(level);
+    }
+
+    void TfsClientImplV2::set_log_file(const char* file)
+    {
+      TBSYS_LOG(INFO, "set log file: %s", file);
+      TBSYS_LOGGER.setFileName(file);
+    }
+
     int TfsClientImplV2::open(const char* file_name, const char* suffix, const char* ns_addr, const int mode)
     {
       int ret_fd = EXIT_INVALIDFD_ERROR;
@@ -225,6 +237,7 @@ namespace tfs
         }
         else
         {
+          tfs_file->set_option_flag(READ_DATA_OPTION_WITH_FINFO);
           ret = tfs_file->read(buf, count, file_info);
         }
       }

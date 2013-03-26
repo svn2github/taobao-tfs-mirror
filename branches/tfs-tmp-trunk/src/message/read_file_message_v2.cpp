@@ -280,7 +280,7 @@ namespace tfs
     int ReadFileRespMessageV2::deserialize(common::Stream& input)
     {
       int64_t pos = 0;
-      int ret = file_info_.serialize(input.get_data(), input.get_data_length(), pos);
+      int ret = file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
       if (TFS_SUCCESS == ret)
       {
         input.drain(file_info_.length());

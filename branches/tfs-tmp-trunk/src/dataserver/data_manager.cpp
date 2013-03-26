@@ -50,7 +50,13 @@ namespace tfs
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if ((TFS_SUCCESS == ret) && (0 == (file_id & 0xFFFFFFFF)))
       {
-        ret = get_block_manager().generation_file_id(file_id, block_id);
+        // should keep the high-32 bit of file_id unchanged
+        uint64_t alloc_file_id = 0;
+        ret = get_block_manager().generation_file_id(alloc_file_id, block_id);
+        if (TFS_SUCCESS == ret)
+        {
+          file_id |= (alloc_file_id & 0xFFFFFFFF);
+        }
       }
 
       if (TFS_SUCCESS == ret)

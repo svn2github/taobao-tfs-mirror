@@ -158,6 +158,7 @@ namespace tfs
       else
       {
         fsname_.set_name(file_name, suffix);
+        fsname_.set_suffix(suffix);
         ret = fsname_.is_valid() ? TFS_SUCCESS : EXIT_INVALID_FILE_NAME;
         if (TFS_SUCCESS == ret)
         {
