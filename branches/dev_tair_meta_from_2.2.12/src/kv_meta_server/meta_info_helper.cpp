@@ -1105,10 +1105,7 @@ namespace tfs
                 static_cast<int32_t>(v_object_name->size()) >= limit)
             {
               loop = false;
-              if (i < res_size - 1)
-              {
-                *is_truncated = 1;
-              }
+              *is_truncated = 1;
               break;
             }
           }
@@ -1118,16 +1115,16 @@ namespace tfs
             first_loop = false;
             KvKey key;
             char key_buff[KEY_BUFF_SIZE];
+            offset = INT64_MAX;
             ret = serialize_key_ex(object_name, offset, &key, key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
             if (TFS_SUCCESS == ret)
             {
-              string a(key.key_, key.key_size_);
-              temp_start_key = a;
+              temp_start_key.assign(key.key_, key.key_size_);
             }
             else
             {
               TBSYS_LOG(INFO, "serialize sub key error");
-              break;
+              loop = false;
             }
           }
 
