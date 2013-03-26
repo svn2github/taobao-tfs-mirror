@@ -83,6 +83,9 @@ int fetch_input_opt(int argc, char** argv, ThreadParam& param, int& thread_count
     case 'o':
       param.oper_ratio_ = optarg;
       break;
+    case 'l':
+      param.log_level_ = optarg;
+      break;
     default:
       return EXIT_FAILURE;
     }
@@ -399,7 +402,7 @@ int copy_file_v2(TfsClient* tfsclient, char* tfsname, int local_fd)
   tfsclient->close(fd);
   if (crc != fstat.crc_ || total_size != fstat.size_)
   {
-    fprintf(stderr, "crc error: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d\n", 
+    fprintf(stderr, "crc error: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d\n",
         crc, fstat.crc_, total_size, fstat.size_);
     return EXIT_FAILURE;
   }

@@ -47,15 +47,16 @@ struct ThreadParam
   int64_t fail_time_consumed_;
 
   tbsys::CThreadMutex* locker_;
-  //add 
+  //add
   std::string conf_;
   std::string oper_ratio_;
   std::string sample_file_;
   std::string ns_ip_port_;
+  std::string log_level_;
   ThreadParam() :
     index_(0), file_count_(0), succ_count_(0), file_size_(0), min_size_(0),
-    max_size_(0), profile_(false), random_(false), succ_time_consumed_(0), 
-    fail_time_consumed_(0)
+    max_size_(0), profile_(false), random_(false), succ_time_consumed_(0),
+    fail_time_consumed_(0), log_level_("info")
   {
     oper_ratio_ = "200:8:2:1";
   }
