@@ -309,18 +309,22 @@ namespace tfs
               ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
               if (TFS_SUCCESS == ret)
               {
-                ret = ((block->get_servers_size() <= 0)
+                if ((block->get_servers_size() <= 0)
                       && (!block->is_creating())
-                      && (block->get_last_update_time() + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)) ? TFS_SUCCESS : EXIT_BLOCK_ALREADY_EXIST;
-                if (TFS_SUCCESS == ret)
+                      && (block->get_last_update_time() + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now))
                 {
                   GCObject* pobject = NULL;
                   manager_.get_block_manager().remove(pobject,block_id);
                   if (NULL != pobject)
                     manager_.get_gc_manager().add(pobject, now);
+                  ret = EXIT_BLOCK_NOT_FOUND;
+                }
+                else
+                {
+                  ret = block->get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_ ? TFS_SUCCESS : EXIT_BLOCK_ALREADY_EXIST;
                 }
               }
-              if (TFS_SUCCESS == ret)
+              if (EXIT_BLOCK_NOT_FOUND == ret)
               {
                 //create new block by block_id
                 ret = manager_.open_helper_create_new_block_by_id(block_id);
