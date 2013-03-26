@@ -399,6 +399,8 @@ namespace tfs
           dest->update_block_version(VERSION_INC_STEP_DEFAULT);
         }
       }
+      tbsys::gDeleteA(buffer);
+      tbsys::gDelete(iter);
 
       return ret;
     }

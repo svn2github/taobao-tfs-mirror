@@ -449,7 +449,7 @@ namespace tfs
       {
         IndexHeaderV2* header = get_index_header_();
         assert(NULL != header);
-        ret = remmap_(threshold);
+        ret = GET_SLOT_TYPE_QUERY != type ? remmap_(threshold) : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           header  = get_index_header_();
@@ -476,10 +476,12 @@ namespace tfs
           assert(NULL != header);
           assert(NULL != current);
           *current = info;
-          if (NULL != prev)
-            prev->next_ = slot;
           if (!update)
+          {
             ++header->used_file_info_bucket_size_;
+            if (NULL != prev)
+              prev->next_ = slot;
+          }
         }
       }
       return ret;
@@ -500,10 +502,12 @@ namespace tfs
           assert(NULL != header);
           assert(NULL != current);
           *current = info;
-          if (NULL != prev)
-            prev->next_ = slot;
           if (!update)
+          {
             ++header->used_file_info_bucket_size_;
+            if (NULL != prev)
+              prev->next_ = slot;
+          }
         }
       }
       return ret;

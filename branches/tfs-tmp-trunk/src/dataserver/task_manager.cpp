@@ -43,7 +43,25 @@ namespace tfs
 
     TaskManager::~TaskManager()
     {
+      // when stoped, clear tasks in queue
+      task_monitor_.lock();
+      while (!task_queue_.empty())
+      {
+        Task* task = task_queue_.front();
+        task_queue_.pop_front();
+        tbsys::gDelete(task);
+      }
+      task_monitor_.unlock();
 
+      // clear running tasks
+      running_task_mutex_.lock();
+      map<int64_t, Task*>::iterator iter = running_task_.begin();
+      for ( ; iter != running_task_.end(); )
+      {
+        tbsys::gDelete(iter->second);
+        running_task_.erase(iter++);
+      }
+      running_task_mutex_.unlock();
     }
 
     BlockManager& TaskManager::get_block_manager()
@@ -414,26 +432,6 @@ namespace tfs
           running_task_mutex_.unlock();
         }
       }
-
-      // when stoped, clear tasks in queue
-      task_monitor_.lock();
-      while (!task_queue_.empty())
-      {
-        Task* task = task_queue_.front();
-        task_queue_.pop_front();
-        get_block_manager().get_gc_manager().add(task);
-      }
-      task_monitor_.unlock();
-
-      // clear running tasks
-      running_task_mutex_.lock();
-      map<int64_t, Task*>::iterator iter = running_task_.begin();
-      for ( ; iter != running_task_.end(); )
-      {
-        get_block_manager().get_gc_manager().add(iter->second);
-        running_task_.erase(iter++);
-      }
-      running_task_mutex_.unlock();
     }
 
     void TaskManager::stop_task()

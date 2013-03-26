@@ -460,7 +460,7 @@ namespace tfs
           ret = tfs_client_->fstat(fd, &buf);
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(WARN, "stat file %s failed, ret: %d, block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u", fsname.get_name(),ret, block_id, file_id);
+            TBSYS_LOG(WARN, "stat file %s failed, ret: %d, block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u, addr: %s", fsname.get_name(),ret, block_id, file_id, nsip);
           }
         }
         tfs_client_->close(fd);
@@ -470,9 +470,10 @@ namespace tfs
 
     bool TfsMirrorBackup::file_not_exist(int ret)
     {
-      return (EXIT_BLOCK_NOT_FOUND == ret) ||  // ns cannot find block
+      return ((EXIT_BLOCK_NOT_FOUND == ret) ||  // ns cannot find block
          (EXIT_NO_LOGICBLOCK_ERROR == ret) ||  // ds cannot find logic block
-         (EXIT_META_NOT_FOUND_ERROR == ret);   // ds cannot find file in index
+         (EXIT_META_NOT_FOUND_ERROR == ret) ||
+         (EXIT_NO_BLOCK == ret));// ds cannot find file in index
     }
 
     int TfsMirrorBackup::sync_stat(const uint64_t block_id, const uint64_t file_id)
