@@ -19,16 +19,16 @@
 #include <Memory.hpp>
 #include "common/internal.h"
 #include "common/func.h"
-#include "new_client/tfs_client_api.h"
+#include "clientv2/tfs_client_impl_v2.h"
 #include "util.h"
 #include "thread.h"
 
 using namespace KFS;
 using namespace tfs::common;
-using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace std;
 
-int write_file(ThreadParam& param, TfsClient* tfsclient, const char* tfs_name, vector<std::string>& file_list,
+int write_file(ThreadParam& param, TfsClientImplV2* tfsclient, const char* tfs_name, vector<std::string>& file_list,
     TimeConsumed& write_time_consumed, Stater& write_stater, const char* data, vector<std::string>& read_file_list)
 {
   ++write_time_consumed.total_count_;
@@ -36,7 +36,7 @@ int write_file(ThreadParam& param, TfsClient* tfsclient, const char* tfs_name, v
   uint32_t write_size = param.max_size_;
   Timer timer;
   timer.start();
-  int32_t fd = tfsclient->open(tfs_name, NULL, T_WRITE);
+  int32_t fd = tfsclient->open(tfs_name, NULL, NULL, T_WRITE);
   int32_t ret = fd > 0 ? TFS_SUCCESS : fd;
   if (TFS_SUCCESS == ret)
   {
@@ -76,12 +76,12 @@ int write_file(ThreadParam& param, TfsClient* tfsclient, const char* tfs_name, v
   return ret;
 }
 
-int read_file(TfsClient* tfsclient, const char* tfsname)
+int read_file(TfsClientImplV2* tfsclient, const char* tfsname)
 {
   int32_t ret = (static_cast<int32_t> (strlen(tfsname)) < FILE_NAME_LEN || (tfsname[0] != 'T' && tfsname[0] != 'L')) ? TFS_ERROR : TFS_SUCCESS;
   if (TFS_SUCCESS == ret)
   {
-    int32_t fd = tfsclient->open(tfsname, NULL, T_READ);
+    int32_t fd = tfsclient->open(tfsname, NULL, NULL, T_READ);
     ret = (fd > 0) ? TFS_SUCCESS : fd;
     if (TFS_SUCCESS == ret)
     {
@@ -156,7 +156,7 @@ void* mix_worker(void* arg)
   vector<std::string> update_list, delete_list;
   vector<std::string> read_file_list, write_file_list;
   printf("init connection to nameserver:%s\n", param.ns_ip_port_.c_str());
-  TfsClient *tfsclient = TfsClient::Instance();
+  TfsClientImplV2 *tfsclient = TfsClientImplV2::Instance();
   int64_t time_start = Func::curr_time();
   Timer timer;
   Stater read_stater("read"), write_stater("write"), delete_stater("delete"), update_stater("update");
