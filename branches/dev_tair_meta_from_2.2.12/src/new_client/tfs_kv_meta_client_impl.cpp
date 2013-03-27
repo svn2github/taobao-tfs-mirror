@@ -621,6 +621,7 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "read data failed, read_length: %"PRI64_PREFIX"d", read_length);
             ret = read_length;
+            break;
           }
 
           if (0 == read_length)
