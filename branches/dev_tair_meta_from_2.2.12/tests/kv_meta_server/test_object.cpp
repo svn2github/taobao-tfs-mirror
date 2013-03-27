@@ -421,6 +421,7 @@ TEST_F(ObjectTest, test_pread_out_of_order)
   ret = test_meta_info_helper_->get_object(bucket_name, object_name, 0, 7340032, &new_obj_info1, &still_have1);
   EXPECT_EQ(TFS_SUCCESS, ret);
   EXPECT_EQ(7340032, new_obj_info1.meta_info_.big_file_size_);
+  ASSERT_TRUE(!new_obj_info1.v_tfs_file_info_.empty());
   EXPECT_EQ(232, new_obj_info1.v_tfs_file_info_[0].block_id_);
   EXPECT_EQ(234, new_obj_info1.v_tfs_file_info_[1].block_id_);
   EXPECT_EQ(false, still_have1);
@@ -556,15 +557,14 @@ TEST_F(ObjectTest, test_del_bigfile)
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ObjectInfo new_obj_info;
-  bool still_have1 = true;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have1);
+  bool still_have = true;
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have);
   EXPECT_EQ(TFS_SUCCESS, ret);
   EXPECT_EQ(131, new_obj_info.v_tfs_file_info_[0].block_id_);
   EXPECT_EQ(132, new_obj_info.v_tfs_file_info_[1].block_id_);
   EXPECT_EQ(133, new_obj_info.v_tfs_file_info_[2].block_id_);
-  EXPECT_EQ(false, still_have1);
+  EXPECT_EQ(false, still_have);
 
-  bool still_have = true;
   ret = test_meta_info_helper_->get_object(bucket_name, object_name, 0, 5300000, &new_obj_info, &still_have);
   EXPECT_EQ(EXIT_OBJECT_NOT_EXIST, ret);
 

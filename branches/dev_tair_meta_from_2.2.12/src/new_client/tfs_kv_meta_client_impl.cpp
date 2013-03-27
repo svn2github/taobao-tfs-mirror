@@ -272,8 +272,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t KvMetaClientImpl::read_data(
-        const vector<TfsFileInfo> &v_tfs_info,
+    int64_t KvMetaClientImpl::read_data(const vector<TfsFileInfo> &v_tfs_file_info,
         void *buffer, int64_t offset, int64_t length, bool still_have)
     {
       int32_t ret = TFS_SUCCESS;
@@ -282,9 +281,10 @@ namespace tfs
       int64_t left_length = length;
       int64_t cur_pos = 0;
       string ns_addr;
+      int ns_get_index = 0;
       int32_t cluster_id = -1;
-      vector<TfsFileInfo>::const_iterator iter = v_tfs_info.begin();
-      for(; iter != v_tfs_info.end(); iter++)
+      vector<TfsFileInfo>::const_iterator iter = v_tfs_file_info.begin();
+      for(; iter != v_tfs_file_info.end(); iter++)
       {
         if (cur_offset > iter->offset_ + iter->file_size_)
         {
@@ -311,8 +311,8 @@ namespace tfs
         if (cluster_id != iter->cluster_id_)
         {
           cluster_id = iter->cluster_id_;
+          ns_get_index = 0;
           ns_addr.clear();
-          int ns_get_index = 0;
 
           ns_addr = tfs_cluster_manager_->get_read_ns_addr_ex(cluster_id, ns_get_index++);
 
@@ -324,13 +324,27 @@ namespace tfs
           }
         }
         cur_length = min(iter->file_size_ - (cur_offset - iter->offset_), left_length);
-        int64_t read_length = tfs_meta_manager_.read_data(ns_addr.c_str(), iter->block_id_, iter->file_id_,
-            reinterpret_cast<char*>(buffer) + cur_pos, (cur_offset - iter->offset_), cur_length);
+        int64_t read_length = 0;
+        do
+        {
+          read_length = tfs_meta_manager_.read_data(ns_addr.c_str(), iter->block_id_, iter->file_id_,
+              reinterpret_cast<char*>(buffer) + cur_pos, (cur_offset - iter->offset_), cur_length);
+          if (read_length < 0)
+          {
+            TBSYS_LOG(ERROR, "read tfs data from ns: %s failed, block_id: %"PRI64_PREFIX"d, file_id: %"PRI64_PREFIX"u",
+                ns_addr.c_str(), iter->block_id_, iter->file_id_);
+            ns_addr = tfs_cluster_manager_->get_read_ns_addr_ex(cluster_id, ns_get_index++);
+            if (ns_addr.empty())
+            {
+              TBSYS_LOG(ERROR, "select read ns failed %d", cluster_id);
+              break;
+            }
+          }
+        }
+        while (read_length < 0);
 
         if (read_length < 0)
         {
-          TBSYS_LOG(ERROR, "read tfs data failed, block_id: %"PRI64_PREFIX"d, file_id: %"PRI64_PREFIX"u",
-              iter->block_id_, iter->file_id_);
           ret = read_length;
           break;
         }
@@ -364,15 +378,15 @@ namespace tfs
       return (TFS_SUCCESS == ret) ? (length - left_length) : ret;
     }
 
-    int KvMetaClientImpl::unlink_file(const vector<TfsFileInfo> &v_tfs_info)
+    int KvMetaClientImpl::unlink_file(const vector<TfsFileInfo> &v_tfs_file_info)
     {
       int ret = TFS_SUCCESS;
       int tmp_ret = TFS_ERROR;
       int64_t file_size = 0;
       string ns_addr;
 
-      vector<TfsFileInfo>::const_iterator iter = v_tfs_info.begin();
-      for(; iter != v_tfs_info.end(); iter++)
+      vector<TfsFileInfo>::const_iterator iter = v_tfs_file_info.begin();
+      for(; iter != v_tfs_file_info.end(); iter++)
       {
         ns_addr.clear();
         ns_addr = tfs_cluster_manager_->get_unlink_ns_addr_ex(iter->cluster_id_, iter->block_id_, 0);
@@ -441,7 +455,7 @@ namespace tfs
           int64_t cur_offset = offset;
           int64_t cur_pos = 0;
           vector<FragMeta> v_frag_meta;
-          vector<TfsFileInfo> v_tfs_info;
+          vector<TfsFileInfo> v_tfs_file_info;
           do
           {
             // write MAX_BATCH_DATA_LENGTH(8M) to tfs cluster
@@ -470,7 +484,7 @@ namespace tfs
                 cluster_id, cur_offset, write_length);
 
             vector<FragMeta>::iterator iter = v_frag_meta.begin();
-            v_tfs_info.clear();
+            v_tfs_file_info.clear();
             for (; v_frag_meta.end() != iter; iter++)
             {
               ObjectInfo object_info;
@@ -494,7 +508,7 @@ namespace tfs
               tmp_tfs_info.cluster_id_ = cluster_id;
               tmp_tfs_info.file_size_ = iter->size_;
               object_info.v_tfs_file_info_.push_back(tmp_tfs_info);
-              v_tfs_info.push_back(tmp_tfs_info);
+              v_tfs_file_info.push_back(tmp_tfs_info);
 
               ret = do_put_object(bucket_name, object_name, object_info, user_info);
               if (TFS_SUCCESS != ret)
@@ -511,7 +525,7 @@ namespace tfs
 
             if (TFS_SUCCESS != ret)
             {
-              unlink_file(v_tfs_info);
+              unlink_file(v_tfs_file_info);
               break;
             }
 
@@ -557,8 +571,6 @@ namespace tfs
         int64_t cur_length = 0;
         int64_t cur_pos = 0;
 
-        string ns_addr;
-
         do
         {
           // get object
@@ -599,45 +611,17 @@ namespace tfs
           }
 
           TBSYS_LOG(DEBUG, "vector size ================= is: %lu", object_info.v_tfs_file_info_.size());
-          /*
-          if (object_info.v_tfs_file_info_.empty())
-          {
-            break;
-          }
-          */
-
-          vector<TfsFileInfo> v_tfs_info;
-          size_t i = 0;
-          for(; i < object_info.v_tfs_file_info_.size(); ++i)
-          {
-            TfsFileInfo tfs_info(object_info.v_tfs_file_info_[i].cluster_id_,
-              object_info.v_tfs_file_info_[i].block_id_,
-              object_info.v_tfs_file_info_[i].file_id_,
-              object_info.v_tfs_file_info_[i].offset_,
-              object_info.v_tfs_file_info_[i].file_size_);
-            v_tfs_info.push_back(tfs_info);
-          }
 
           cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_) - offset, left_length);
 
-          do
+          // read tfs
+          read_length = read_data(object_info.v_tfs_file_info_,
+              reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length, still_have);
+          if (read_length < 0)
           {
-            // read tfs
-            read_length = read_data(v_tfs_info,
-                reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length, still_have);
-            if (read_length < 0)
-            {
-              TBSYS_LOG(ERROR, "read data failed, read_length: %"PRI64_PREFIX"d", read_length);
-              if (read_length == EXIT_GENERAL_ERROR)
-              {
-                TBSYS_LOG(ERROR, "select read ns failed");
-                ret = read_length;
-                read_length = 0;
-                break;
-              }
-            }
+            TBSYS_LOG(ERROR, "read data failed, read_length: %"PRI64_PREFIX"d", read_length);
+            ret = read_length;
           }
-          while (read_length < 0);
 
           if (0 == read_length)
           {
@@ -813,7 +797,7 @@ namespace tfs
       }
       else
       {
-        vector<TfsFileInfo> v_tfs_info;
+        vector<TfsFileInfo> v_tfs_file_info;
         bool still_have = false;
         do
         {
@@ -826,7 +810,7 @@ namespace tfs
               object_info.v_tfs_file_info_.size());
           if (TFS_SUCCESS == ret)
           {
-            v_tfs_info.clear();
+            v_tfs_file_info.clear();
             size_t i = 0;
             for(; i < object_info.v_tfs_file_info_.size(); ++i)
             {
@@ -835,13 +819,13 @@ namespace tfs
               object_info.v_tfs_file_info_[i].file_id_,
               object_info.v_tfs_file_info_[i].offset_,
               object_info.v_tfs_file_info_[i].file_size_);
-              v_tfs_info.push_back(tfs_info);
+              v_tfs_file_info.push_back(tfs_info);
             }
           }
 
-          if (TFS_SUCCESS == ret && v_tfs_info.size() > 0)
+          if (TFS_SUCCESS == ret && v_tfs_file_info.size() > 0)
           {
-            ret = unlink_file(v_tfs_info);
+            ret = unlink_file(v_tfs_file_info);
           }
 
         } while(still_have);
