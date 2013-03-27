@@ -315,24 +315,35 @@ namespace tfs
         vector<KvValue*> *values, int32_t* result_size, short scan_type)
     {
       int ret = TFS_SUCCESS;
-      tair::data_entry t_pkey;
+      tair::data_entry t_start_pkey;
+      tair::data_entry t_end_pkey;
       tair::data_entry t_start_skey;
       tair::data_entry t_end_skey;
       vector<tair::data_entry *> tvalues;
 
       if (NULL != start_key.key_)
       {
-        ret = split_key_for_tair(start_key, &t_pkey, &t_start_skey);
+        ret = split_key_for_tair(start_key, &t_start_pkey, &t_start_skey);
       }
       if (TFS_SUCCESS == ret && NULL != end_key.key_)
       {
-        ret = split_key_for_tair(end_key, &t_pkey, &t_end_skey);
+        ret = split_key_for_tair(end_key, &t_end_pkey, &t_end_skey);
+      }
+
+      if (NULL != start_key.key_ && NULL != end_key.key_ && TFS_SUCCESS == ret)
+      {
+        if ( t_start_pkey.get_size() != t_end_pkey.get_size()
+            || memcmp(t_start_pkey.get_data(), t_end_pkey.get_data(), t_start_pkey.get_size()))
+        {
+          TBSYS_LOG(WARN, "start pkey is not the same with end pkey");
+          ret = EXIT_KV_SCAN_ERROR;
+        }
       }
 
       if (TFS_SUCCESS == ret)
       {
         tvalues.clear();
-        ret = prefix_scan_from_tair(object_area_, t_pkey,
+        ret = prefix_scan_from_tair(object_area_, t_start_pkey,
             NULL == start_key.key_ ? "" : t_start_skey, NULL == end_key.key_ ? "" : t_end_skey,
             offset, limit, tvalues, scan_type);
       }
@@ -345,11 +356,11 @@ namespace tfs
           {
             KvMemValue* k_tmp = new (std::nothrow) KvMemValue();
             assert(NULL != k_tmp);
-            char* buff = k_tmp->malloc_data(t_pkey.get_size() + tvalues[i]->get_size());
+            char* buff = k_tmp->malloc_data(t_start_pkey.get_size() + tvalues[i]->get_size());
 
             int64_t pos = 0;
-            memcpy(buff + pos, t_pkey.get_data(), t_pkey.get_size());
-            pos += t_pkey.get_size();
+            memcpy(buff + pos, t_start_pkey.get_data(), t_start_pkey.get_size());
+            pos += t_start_pkey.get_size();
             memcpy(buff + pos, tvalues[i]->get_data(), tvalues[i]->get_size());
             pos += tvalues[i]->get_size();
             keys->push_back(k_tmp);

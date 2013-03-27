@@ -186,6 +186,7 @@ namespace tfs
     const int32_t EXIT_KV_RETURN_DATA_NOT_EXIST = -16001;//no data in kv
     const int32_t EXIT_KV_RETURN_ERROR = -16002;//kv error
     const int32_t EXIT_KV_RETURN_VERSION_ERROR = -16003;
+    const int32_t EXIT_KV_SCAN_ERROR = -16004;
 
     const int32_t EXIT_OBJECT_OVERLAP = -16004;// pwrite object overlap
     const int32_t EXIT_OBJECT_NOT_EXIST = -16006; //get_key(key not exist, object type)
