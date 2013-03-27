@@ -1042,7 +1042,6 @@ namespace tfs
         string temp_start_key(start_key);
 
         bool loop = true;
-        bool first_loop = true;
         do
         {
           int32_t res_size = -1;
@@ -1051,7 +1050,7 @@ namespace tfs
 
           limit_size = limit - actual_size;
 
-          ret = get_range(pkey, temp_start_key,  first_loop ? 0 : 1, limit_size + 1,
+          ret = get_range(pkey, temp_start_key,  0, limit_size + 1,
                           &kv_value_keys, &kv_value_values, &res_size);
           // error
           if (TFS_SUCCESS != ret)
@@ -1112,7 +1111,6 @@ namespace tfs
 
           if (loop)
           {
-            first_loop = false;
             KvKey key;
             char key_buff[KEY_BUFF_SIZE];
             offset = INT64_MAX;
