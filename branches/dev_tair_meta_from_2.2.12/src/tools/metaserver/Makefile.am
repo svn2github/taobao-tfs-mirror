@@ -4,14 +4,14 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 						$(MYSQL_CFLAGS)
 						$(READLINE_INCLUDE)
 
-AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid $(MYSQL_LDFLAGS)
+AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid 
 
 bin_PROGRAMS = meta_transfer txt2new check_old_new sync_nginx2kv go_tair_for_kv
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/new_client/.libs/libtfsclient.a \
 				$(top_builddir)/src/name_meta_server/libnamemetaserver.a \
-        $(TAIR_CACHE_LDFLAGS) \
+        $(TAIR_CACHE_LDFLAGS) $(MYSQL_LDFLAGS)\
 				$(top_builddir)/src/message/libtfsmessage.a\
         $(top_builddir)/src/common/libtfscommon.a\
         $(TBLIB_ROOT)/lib/libtbnet.a\
