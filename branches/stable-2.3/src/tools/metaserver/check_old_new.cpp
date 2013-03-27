@@ -73,7 +73,7 @@ int check(NameMetaClientImpl &client ,string path)
   std::vector<FileMetaInfo> meta_info;
   std::vector<FileMetaInfo>::const_iterator it;
   client.ls_dir(app_id, uid, path.c_str(), meta_info, false);
-  TBSYS_LOG(DEBUG, "vector num %d", meta_info.size());
+  TBSYS_LOG(DEBUG, "vector num %lu", meta_info.size());
   for(it = meta_info.begin(); it != meta_info.end(); ++it)
   {
     now_name = it->name_;
@@ -151,7 +151,7 @@ int check(NameMetaClientImpl &client ,string path)
 
         if (frag_info->v_frag_meta_.size() == base_object_info->v_tfs_file_info_.size())
         {
-          TBSYS_LOG(DEBUG, " now size equal is %d",frag_info->v_frag_meta_.size());
+          TBSYS_LOG(DEBUG, " now size equal is %lu",frag_info->v_frag_meta_.size());
           for(size_t i = 0; i < frag_info->v_frag_meta_.size(); ++i)
           {
             if (frag_info->cluster_id_ != base_object_info->v_tfs_file_info_[i].cluster_id_)
@@ -171,12 +171,12 @@ int check(NameMetaClientImpl &client ,string path)
             }
             if (frag_info->v_frag_meta_[i].block_id_ != base_object_info->v_tfs_file_info_[i].block_id_)
             {
-              TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s block_id is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
+              TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s block_id is diff old:%d new:%"PRI64_PREFIX"d",
                   bucket_name, new_path.c_str(), frag_info->v_frag_meta_[i].block_id_, base_object_info->v_tfs_file_info_[i].block_id_);
             }
             if (frag_info->v_frag_meta_[i].size_ != base_object_info->v_tfs_file_info_[i].file_size_)
             {
-              TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s frag_size is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
+              TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s frag_size is diff old:%d new:%"PRI64_PREFIX"d",
                   bucket_name, new_path.c_str(), frag_info->v_frag_meta_[i].size_, base_object_info->v_tfs_file_info_[i].file_size_);
             }
             // old_meta
@@ -188,7 +188,7 @@ int check(NameMetaClientImpl &client ,string path)
                 frag_info->v_frag_meta_[i].size_);
 
             //new kv_meta
-            TBSYS_LOG(DEBUG,"new_meta-> cluster_id:%d, file_id:%"PRI64_PREFIX"d, offset:%"PRI64_PREFIX"d, block_id:%d, size:%d",
+            TBSYS_LOG(DEBUG,"new_meta-> cluster_id:%d, file_id:%"PRI64_PREFIX"d, offset:%"PRI64_PREFIX"d, block_id:%ld, size:%ld",
                 base_object_info->v_tfs_file_info_[i].cluster_id_,
                 base_object_info->v_tfs_file_info_[i].file_id_,
                 base_object_info->v_tfs_file_info_[i].offset_,
@@ -198,7 +198,7 @@ int check(NameMetaClientImpl &client ,string path)
         }
         else
         {
-          TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s frag_size is diff old:%d new:%d",
+          TBSYS_LOG(INFO, "[DIFF_INFO] bucket:%s object:%s frag_size is diff old:%lu new:%lu",
               bucket_name, new_path.c_str(), frag_info->v_frag_meta_.size(), base_object_info->v_tfs_file_info_.size());
         }
       }

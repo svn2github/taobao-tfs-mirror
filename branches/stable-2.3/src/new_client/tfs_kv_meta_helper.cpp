@@ -40,7 +40,7 @@ int KvMetaHelper::get_table(const uint64_t server_id,
   if (TFS_SUCCESS != iret)
   {
     TBSYS_LOG(ERROR, "call get kv table fail,"
-        "server_addr: %"PRI64_PREFIX"u, ret: %d",
+        "server_addr: %s, ret: %d",
         tbsys::CNetUtil::addrToString(server_id).c_str(), iret);
     iret = EXIT_NETWORK_ERROR;
   }

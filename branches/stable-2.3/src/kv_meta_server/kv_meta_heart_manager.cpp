@@ -110,7 +110,7 @@ namespace tfs
             heart_inter_ = rmsg->get_time();
           }
         }
-        TBSYS_LOG(DEBUG, "MAX_TIMEOUT_MS: %d, cost: %"PRI64_PREFIX"d, inter: %d", MAX_TIMEOUT_MS, (int64_t)(end - start).toMilliSeconds(), heart_inter_);
+        TBSYS_LOG(DEBUG, "MAX_TIMEOUT_MS: %d, cost: %"PRI64_PREFIX"d, inter: %"PRI64_PREFIX"d", MAX_TIMEOUT_MS, (int64_t)(end - start).toMilliSeconds(), heart_inter_);
         if (TFS_SUCCESS != iret)
         {
           usleep(500000);

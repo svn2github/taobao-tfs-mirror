@@ -481,7 +481,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = prefix_removes_from_tair(object_area_, pkey, skey_set, key_code_map);
-        TBSYS_LOG(DEBUG, "removes %d keys, ret: %d", skey_set.size(), ret);
+        TBSYS_LOG(DEBUG, "removes %lu keys, ret: %d", skey_set.size(), ret);
       }
       std::vector<tair::data_entry* >::const_iterator iter_skey = v_skey.begin();
       for(; iter_skey != v_skey.end(); ++iter_skey)
