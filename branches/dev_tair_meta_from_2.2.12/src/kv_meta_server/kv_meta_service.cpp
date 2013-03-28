@@ -317,8 +317,6 @@ namespace tfs
           assert(NULL != rsp_del_object_msg);
           rsp_del_object_msg->set_object_info(object_info);
           rsp_del_object_msg->set_still_have(still_have);
-          object_info.dump();
-
           req_del_object_msg->reply(rsp_del_object_msg);
         stat_mgr_.update_entry(tfs_kv_meta_stat_, "del_object", 1);
       }
