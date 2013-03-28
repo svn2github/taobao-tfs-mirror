@@ -267,6 +267,11 @@ namespace tfs
       return Serialization::get_string_length(otag_) + INT_SIZE * 2;
     }
 
+    void CustomizeInfo::dump() const
+    {
+      // TODO
+    }
+
     int CustomizeInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
@@ -338,8 +343,18 @@ namespace tfs
     {
       TBSYS_LOG(DEBUG, "ObjectInfo: [has_meta_info: %d, "
           "has_customize_info: %d]",  has_meta_info_, has_customize_info_);
-      //tfs_file_info_.dump();
-      meta_info_.dump();
+      if (has_meta_info_)
+      {
+        meta_info_.dump();
+      }
+      if (has_customize_info_)
+      {
+        customize_info_.dump();
+      }
+      for (size_t i = 0; i < v_tfs_file_info_.size(); i++)
+      {
+        v_tfs_file_info_.at(i).dump();
+      }
     }
 
     int ObjectInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const

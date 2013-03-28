@@ -66,8 +66,6 @@ namespace tfs
     int MetaInfoHelper::serialize_key(const std::string &bucket_name, const std::string &file_name,
                                       const int64_t offset, KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type)
     {
-      TBSYS_LOG(DEBUG, "part offset: %"PRI64_PREFIX"d", offset);
-
       int ret = (bucket_name.size() > 0 && file_name.size() > 0 && offset >= 0
                  && key != NULL &&  key_buff != NULL ) ? TFS_SUCCESS : TFS_ERROR;
       int64_t pos = 0;
@@ -289,6 +287,10 @@ namespace tfs
 
         object_info_part.v_tfs_file_info_.clear();
         object_info_part.v_tfs_file_info_.push_back(object_info.v_tfs_file_info_[i]);
+
+        TBSYS_LOG(DEBUG, "will put object part, bucekt_name: %s, object_name: %s",
+            bucket_name.c_str(), file_name.c_str());
+        object_info_part.dump();
         ret = put_object_ex(bucket_name, file_name, offset, object_info_part, 0);
 
         if (TFS_SUCCESS != ret)
@@ -323,10 +325,13 @@ namespace tfs
           object_info_zero->meta_info_.modify_time_ = static_cast<int64_t>(time(NULL));
         }
 
+        TBSYS_LOG(DEBUG, "will put object info zero, bucket: %s, object: %s",
+            bucket_name.c_str(), file_name.c_str());
+        object_info_zero->dump();
         ret = put_object_ex(bucket_name, file_name, 0, *object_info_zero, version);
         if (EXIT_KV_RETURN_VERSION_ERROR == ret)
         {
-          TBSYS_LOG(INFO, "update object metainfo version conflict, bucket: %s, object: %s",
+          TBSYS_LOG(INFO, "put object zero version conflict, bucket: %s, object: %s",
               bucket_name.c_str(), file_name.c_str());
           ObjectInfo curr_object_info_zero;
           int tmp_ret = get_object_part(bucket_name, file_name, 0, &curr_object_info_zero, &version);
@@ -344,7 +349,7 @@ namespace tfs
               // assumption failed
               if (curr_object_info_zero.meta_info_.big_file_size_ > 0)
               {
-                object_info_zero->v_tfs_file_info_.clear();
+                object_info_zero->v_tfs_file_info_ = curr_object_info_zero.v_tfs_file_info_;
               }
               // get real offset
               *offset = curr_object_info_zero.meta_info_.big_file_size_;
@@ -394,8 +399,8 @@ namespace tfs
       {
         BucketMetaInfo bucket_meta_info;
         ret = head_bucket(bucket_name, &bucket_meta_info);
-        TBSYS_LOG(DEBUG, "head object: %s's bucket: %s, ret: %d",
-            file_name.c_str(), bucket_name.c_str(), ret);
+        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
+            bucket_name.c_str(), file_name.c_str(), ret);
       }
 
       ObjectInfo object_info_zero;
@@ -777,6 +782,9 @@ namespace tfs
       {
         ret = kv_engine_helper_->scan_keys(start_key, end_key, limit + 1, first,
           &kv_value_keys, &kv_value_values, &result_size, scan_type);
+        TBSYS_LOG(DEBUG, "del object, bucekt_name: %s, object_name: %s, "
+            "scan ret: %d, limit: %d, result size: %d",
+            bucket_name.c_str(), file_name.c_str(), ret, limit + 1, result_size);
         if (TFS_SUCCESS == ret && result_size == 0)
         {
           ret = EXIT_OBJECT_NOT_EXIST;
@@ -810,11 +818,12 @@ namespace tfs
               //j now max == 1
               for (size_t j = 0; j < tmp_object_info.v_tfs_file_info_.size(); j++)
               {
+                TBSYS_LOG(DEBUG, "del tfs file info:");
+                tmp_object_info.v_tfs_file_info_[j].dump();
                 object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[j]);
               }
             }
           }
-          TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
         }
 
         //del from tair
@@ -1042,7 +1051,6 @@ namespace tfs
         string temp_start_key(start_key);
 
         bool loop = true;
-        bool first_loop = true;
         do
         {
           int32_t res_size = -1;
@@ -1051,7 +1059,7 @@ namespace tfs
 
           limit_size = limit - actual_size;
 
-          ret = get_range(pkey, temp_start_key,  first_loop ? 0 : 1, limit_size + 1,
+          ret = get_range(pkey, temp_start_key,  0, limit_size + 1,
                           &kv_value_keys, &kv_value_values, &res_size);
           // error
           if (TFS_SUCCESS != ret)
@@ -1112,7 +1120,6 @@ namespace tfs
 
           if (loop)
           {
-            first_loop = false;
             KvKey key;
             char key_buff[KEY_BUFF_SIZE];
             offset = INT64_MAX;

@@ -77,6 +77,7 @@ namespace tfs
       int64_t length() const;
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      void dump() const;
 
       std::string otag_;
     };
