@@ -107,7 +107,7 @@ namespace tfs
 
     int64_t DsReplicateBlockMessage::length() const
     {
-      return common::INT_SIZE + 2 * common::INT64_SIZE + sizeof(common::ReplBlock);
+      return common::INT_SIZE + 2 * common::INT64_SIZE + repl_info_.length();
     }
 
     int DsReplicateBlockMessage::serialize(common::Stream& output) const

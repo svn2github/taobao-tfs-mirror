@@ -61,7 +61,8 @@ namespace tfs
             const char* buffer, const int32_t length, const int32_t offset,
             const int32_t remote_version, common::BlockInfoV2& local);
         int close_file(const uint64_t block_id, const uint64_t attach_block_id,
-            uint64_t& file_id, const uint64_t lease_id, const bool tmp, common::BlockInfoV2& local);
+            uint64_t& file_id, const uint64_t lease_id, const uint32_t crc,
+            const bool tmp, common::BlockInfoV2& local);
         int unlink_file(const uint64_t block_id, const uint64_t attach_block_id, const uint64_t file_id,
             const int64_t lease_id, const int32_t action, const int32_t remote_version,
             common::BlockInfoV2& local);

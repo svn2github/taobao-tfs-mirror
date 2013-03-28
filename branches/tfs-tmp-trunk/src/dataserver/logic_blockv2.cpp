@@ -635,7 +635,7 @@ namespace tfs
           ret = get_index_handle_()->read_file_info(old_finfo, sbinfo->max_use_hash_bucket_ratio_, logic_block_id);
           bool update = (TFS_SUCCESS == ret);
           if (update)
-            TBSYS_LOG(INFO, "file exist, update! block id: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"d", logic_block_id, fileid);
+            TBSYS_LOG(INFO, "file exist, update! block id: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u", logic_block_id, fileid);
 
           ret = write_(new_finfo, datafile, old_finfo, update, tmp);
           if (TFS_SUCCESS == ret)

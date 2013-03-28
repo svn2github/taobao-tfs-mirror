@@ -550,6 +550,11 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::get_int64(data, data_len, pos, &stat_file_count_[index]);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
           ret =  Serialization::get_int64(data, data_len, pos, &unlink_file_count_[index]);
       }
       if (TFS_SUCCESS == ret)
@@ -621,6 +626,11 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::set_int64(data, data_len, pos, stat_file_count_[index]);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
           ret =  Serialization::set_int64(data, data_len, pos, unlink_file_count_[index]);
       }
       if (TFS_SUCCESS == ret)
@@ -656,7 +666,7 @@ namespace tfs
 
     int64_t DataServerStatInfo::length() const
     {
-      return  INT64_SIZE * 23  + INT_SIZE * 7;
+      return  INT64_SIZE * 15  + INT_SIZE * 7;
     }
 
     int WriteDataInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)

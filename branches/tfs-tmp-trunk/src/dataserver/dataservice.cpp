@@ -499,7 +499,6 @@ namespace tfs
             ret = bpacket->reply(reply_msg);
             if (TFS_SUCCESS != ret)
             {
-              traffic_control_.rw_stat(RW_STAT_TYPE_WRITE, ret, 0 == write_info.offset_,write_info.length_);
               TBSYS_LOG(
                   ERROR,
                   "write data fail. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, version: %u, leaseid: %u, role: master",
@@ -897,10 +896,6 @@ namespace tfs
               "write data %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, version: %u, leaseid: %u, role: %s, cost time: %" PRI64_PREFIX "d",
               ret >= 0 ? "success": "fail", write_info.file_number_, write_info.block_id_, write_info.file_id_, version, lease_id, Master_Server_Role == write_info.is_server_ ? "master" : "slave", TIMER_DURATION());
 
-          if (TFS_SUCCESS != ret)
-          {
-            traffic_control_.rw_stat(RW_STAT_TYPE_WRITE, ret, 0 == write_info.offset_,write_info.length_);
-          }
         }
       }
       return TFS_SUCCESS;
@@ -986,8 +981,6 @@ namespace tfs
             //if it is master DS. Send to other slave ds
             if (CLOSE_FILE_SLAVER != close_file_info.mode_)
             {
-              traffic_control_.rw_stat(RW_STAT_TYPE_WRITE, ret, true, write_file_size);
-
               message->set_mode(CLOSE_FILE_SLAVER);
               message->set_block(&blk);
 
@@ -1066,7 +1059,6 @@ namespace tfs
                   TFS_SUCCESS == ret ? "success" : "fail", close_file_info.file_number_, close_file_info.block_id_,
                   close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str(),
                   CLOSE_FILE_SLAVER != close_file_info.mode_ ? "master" : "slave", TIMER_DURATION());
-              traffic_control_.rw_stat(RW_STAT_TYPE_WRITE, ret, true, write_file_size);
             }
           }
         }
@@ -1213,6 +1205,7 @@ namespace tfs
       int ret = data_management_.read_file_info(block_id, file_id, mode, finfo);
       if (TFS_SUCCESS != ret)
       {
+        traffic_control_.rw_stat(RW_STAT_TYPE_STAT, ret, true, 0);
         return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "readfileinfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
       }
@@ -1221,6 +1214,7 @@ namespace tfs
       resp_fi_msg->set_file_info(&finfo);
       message->reply(resp_fi_msg);
       TIMER_END();
+      traffic_control_.rw_stat(RW_STAT_TYPE_STAT, ret, true, 0);
       TBSYS_LOG(DEBUG, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, mode, TIMER_DURATION());
       return TFS_SUCCESS;
@@ -1301,7 +1295,7 @@ namespace tfs
       TBSYS_LOG(INFO, "unlink file %s. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d, isserver: %s, peer ip: %s, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, action, is_master ? "master" : "slave",
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
-      traffic_control_.rw_stat(RW_STAT_TYPE_READ, ret, true,0);
+      traffic_control_.rw_stat(RW_STAT_TYPE_UNLINK, ret, true,0);
       return TFS_SUCCESS;
     }
 

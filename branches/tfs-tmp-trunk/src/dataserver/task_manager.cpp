@@ -353,36 +353,12 @@ namespace tfs
 
     int TaskManager::add_task_queue(Task* task)
     {
-      int ret = TFS_SUCCESS;
-      bool exist = false;
+      TBSYS_LOG(INFO, "%s", task->dump().c_str());
       task_monitor_.lock();
-      for (uint32_t i = 0; i < task_queue_.size(); i++)
-      {
-        if (task_queue_[i]->get_seqno() == task->get_seqno())
-        {
-          exist = true;
-          break;
-        }
-      }
-
-      if (false == exist)
-      {
-        TBSYS_LOG(INFO, "%s", task->dump().c_str());
-        task_queue_.push_back(task);
-      }
-      else
-      {
-        ret = TFS_ERROR;
-      }
-
-      if (!exist)
-      {
-        task_monitor_.notify();
-      }
-
+      task_queue_.push_back(task);
+      task_monitor_.notify();
       task_monitor_.unlock();
-
-      return ret;
+      return TFS_SUCCESS;
     }
 
     void TaskManager::run_task()
@@ -468,10 +444,10 @@ namespace tfs
 
      // do real expire work for task in list, report status to nameserver
      list<Task*>::iterator it = expire_tasks.begin();
-     for ( ; it != expire_tasks.end(); )
+     for ( ; it != expire_tasks.end(); it++)
      {
-       iter->second->report_to_ns(PLAN_STATUS_TIMEOUT);
-       get_block_manager().get_gc_manager().add(iter->second);
+       (*it)->report_to_ns(PLAN_STATUS_TIMEOUT);
+       get_block_manager().get_gc_manager().add(*it);
      }
 
      TBSYS_LOG(DEBUG, "task manager expire task, old: %u, new: %u", old_size, new_size);

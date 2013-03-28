@@ -55,7 +55,7 @@ namespace tfs
         file_.block_id_ = id;
       }
 
-      inline uint32_t get_block_id() const
+      inline uint64_t get_block_id() const
       {
         return file_.block_id_;
       }

@@ -675,6 +675,7 @@ namespace tfs
       int64_t write_file_count_[2];
       int64_t read_bytes_[2];
       int64_t read_file_count_[2];
+      int64_t stat_file_count_[2];
       int64_t unlink_file_count_[2];
       int32_t current_load_;
       int32_t block_count_;

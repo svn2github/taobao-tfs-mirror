@@ -350,6 +350,11 @@ namespace tfs
         }
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        file_.crc_ = Func::crc(file_.crc_, static_cast<const char*>(buf), count);
+      }
+
       return (ret != TFS_SUCCESS) ? ret : done;
     }
 
@@ -431,7 +436,14 @@ namespace tfs
         ret = send_msg_to_server(ns_addr_, client, &msg, resp_msg);
       }
 
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "open file %s fail. blockid: %"PRI64_PREFIX"u, "
+            "fileid: %"PRI64_PREFIX"u, server: %s, ret: %d",
+            fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+            tbsys::CNetUtil::addrToString(ns_addr_).c_str(), ret);
+      }
+      else
       {
         if (GET_BLOCK_INFO_RESP_MESSAGE_V2 != resp_msg->getPCode())
         {
@@ -443,7 +455,10 @@ namespace tfs
           {
             StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
             ret = smsg->get_status();
-            TBSYS_LOG(WARN, "open file fail. status: %d", ret);
+            TBSYS_LOG(WARN, "open file %s fail. blockid: %"PRI64_PREFIX"u, "
+                "fileid: %"PRI64_PREFIX"u, server: %s, error msg: %s, ret: %d",
+                fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+                tbsys::CNetUtil::addrToString(ns_addr_).c_str(), smsg->get_error(), ret);
           }
         }
         else
@@ -481,6 +496,7 @@ namespace tfs
     int TfsFile::do_stat(TfsFileStat& file_stat)
     {
       int ret = TFS_SUCCESS;
+      uint64_t server = 0;
       tbnet::Packet* resp_msg = NULL;
       NewClient* client = NewClientManager::get_instance().create_client();
       if (NULL == client)
@@ -499,10 +515,18 @@ namespace tfs
         {
           msg.set_family_info(file_.family_info_);
         }
-        ret = send_msg_to_server(file_.get_read_ds(), client, &msg, resp_msg);
+        server = file_.get_read_ds();
+        ret = send_msg_to_server(server, client, &msg, resp_msg);
       }
 
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "stat file %s fail. blockid: %"PRI64_PREFIX"u, "
+            "fileid: %"PRI64_PREFIX"u, server: %s, ret: %d",
+            fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+            tbsys::CNetUtil::addrToString(server).c_str(), ret);
+      }
+      else
       {
         if (STAT_FILE_RESP_MESSAGE_V2 != resp_msg->getPCode())
         {
@@ -514,7 +538,10 @@ namespace tfs
           {
             StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
             ret = smsg->get_status();
-            TBSYS_LOG(WARN, "stat file fail. status: %d", ret);
+            TBSYS_LOG(WARN, "stat file %s fail. blockid: %"PRI64_PREFIX"u, "
+                "fileid: %"PRI64_PREFIX"u, server: %s, error msg: %s, ret: %d",
+                fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+                tbsys::CNetUtil::addrToString(server).c_str(), smsg->get_error(), ret);
           }
         }
         else
@@ -533,6 +560,7 @@ namespace tfs
         common::TfsFileStat* file_stat)
     {
       int ret = TFS_SUCCESS;
+      uint64_t server = 0;
       tbnet::Packet* resp_msg = NULL;
       NewClient* client = NewClientManager::get_instance().create_client();
       if (NULL == client)
@@ -566,11 +594,18 @@ namespace tfs
         {
           msg.set_family_info(file_.family_info_);
         }
-        TBSYS_LOG(DEBUG, "family id: %"PRI64_PREFIX"d", file_.family_info_.family_id_);
-        ret = send_msg_to_server(file_.get_read_ds(), client, &msg, resp_msg);
+        server = file_.get_read_ds();
+        ret = send_msg_to_server(server, client, &msg, resp_msg);
       }
 
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "read file %s fail. blockid: %"PRI64_PREFIX"u, "
+            "fileid: %"PRI64_PREFIX"u, server: %s, ret: %d",
+            fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+            tbsys::CNetUtil::addrToString(server).c_str(), ret);
+      }
+      else
       {
         if (READ_FILE_RESP_MESSAGE_V2 != resp_msg->getPCode())
         {
@@ -582,7 +617,10 @@ namespace tfs
           {
             StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
             ret = smsg->get_status();
-            TBSYS_LOG(WARN, "read file fail. status: %d", ret);
+            TBSYS_LOG(WARN, "read file %s fail. blockid: %"PRI64_PREFIX"u, "
+                "fileid: %"PRI64_PREFIX"u, server: %s, error msg: %s, ret: %d",
+                fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+                tbsys::CNetUtil::addrToString(server).c_str(), smsg->get_error(), ret);
           }
         }
         else
@@ -605,6 +643,7 @@ namespace tfs
     int TfsFile::do_write(const char* buf, int64_t count)
     {
       int ret = TFS_SUCCESS;
+      uint64_t server = 0;
       tbnet::Packet* resp_msg = NULL;
       NewClient* client = NewClientManager::get_instance().create_client();
       if (NULL == client)
@@ -630,10 +669,18 @@ namespace tfs
         {
           msg.set_family_info(file_.family_info_);
         }
-        ret = send_msg_to_server(file_.get_write_ds(), client, &msg, resp_msg);
+        server = file_.get_write_ds();
+        ret = send_msg_to_server(server, client, &msg, resp_msg);
       }
 
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "write file %s fail. blockid: %"PRI64_PREFIX"u, "
+            "fileid: %"PRI64_PREFIX"u, server: %s, ret: %d",
+           fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+           tbsys::CNetUtil::addrToString(server).c_str(), ret);
+      }
+      else
       {
         if (WRITE_FILE_RESP_MESSAGE_V2 != resp_msg->getPCode())
         {
@@ -645,7 +692,10 @@ namespace tfs
           {
             StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
             ret = smsg->get_status();
-            TBSYS_LOG(WARN, "write file fail. status: %d %s", ret, smsg->get_error());
+            TBSYS_LOG(WARN, "write file %s fail. blockid: %"PRI64_PREFIX"u, "
+                "fileid: %"PRI64_PREFIX"u, server: %s, error msg: %s, ret: %d",
+                fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+                tbsys::CNetUtil::addrToString(server).c_str(), smsg->get_error(), ret);
           }
         }
         else
@@ -653,8 +703,8 @@ namespace tfs
           WriteFileRespMessageV2* response = dynamic_cast<WriteFileRespMessageV2*>(resp_msg);
           file_.lease_id_ = response->get_lease_id();
           fsname_.set_file_id(response->get_file_id());
-          TBSYS_LOG(DEBUG, "write file id: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u",
-              fsname_.get_file_id(), file_.lease_id_);
+          TBSYS_LOG(DEBUG, "write file %s. file id: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u",
+              fsname_.get_name(), fsname_.get_file_id(), file_.lease_id_);
         }
       }
       NewClientManager::get_instance().destroy_client(client);
@@ -670,6 +720,7 @@ namespace tfs
     int TfsFile::do_close()
     {
       int ret = TFS_SUCCESS;
+      uint64_t server = 0;
       tbnet::Packet* resp_msg = NULL;
       NewClient* client = NewClientManager::get_instance().create_client();
       if (NULL == client)
@@ -691,10 +742,18 @@ namespace tfs
         {
           msg.set_family_info(file_.family_info_);
         }
-        ret = send_msg_to_server(file_.get_write_ds(), client, &msg, resp_msg);
+        server = file_.get_write_ds();
+        ret = send_msg_to_server(server, client, &msg, resp_msg);
       }
 
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "close file %s fail. blockid: %"PRI64_PREFIX"u, "
+            "fileid: %"PRI64_PREFIX"u, server: %s, ret: %d",
+            fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+            tbsys::CNetUtil::addrToString(server).c_str(), ret);
+      }
+      else
       {
         if (STATUS_MESSAGE != resp_msg->getPCode())
         {
@@ -704,7 +763,13 @@ namespace tfs
         {
           StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
           ret = smsg->get_status();
-          TBSYS_LOG(DEBUG, "close file status: %d %s", ret, smsg->get_error());
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(WARN, "close file %s fail. blockid: %"PRI64_PREFIX"u, "
+                "fileid: %"PRI64_PREFIX"u, server: %s, error msg: %s, ret: %d",
+                fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+                tbsys::CNetUtil::addrToString(server).c_str(), smsg->get_error(), ret);
+          }
         }
       }
       NewClientManager::get_instance().destroy_client(client);
@@ -715,6 +780,7 @@ namespace tfs
     int TfsFile::do_unlink(const int32_t action, int64_t& file_size)
     {
       int ret = TFS_SUCCESS;
+      uint64_t server = 0;
       tbnet::Packet* resp_msg = NULL;
       NewClient* client = NewClientManager::get_instance().create_client();
       if (NULL == client)
@@ -738,10 +804,18 @@ namespace tfs
         {
           msg.set_family_info(file_.family_info_);
         }
-        ret = send_msg_to_server(file_.get_write_ds(), client, &msg, resp_msg);
+        server = file_.get_write_ds();
+        ret = send_msg_to_server(server, client, &msg, resp_msg);
       }
 
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "unlink file %s fail. blockid: %"PRI64_PREFIX"u, "
+            "fileid: %"PRI64_PREFIX"u, server: %s, ret: %d",
+            fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+            tbsys::CNetUtil::addrToString(server).c_str(), ret);
+      }
+      else
       {
         if (STATUS_MESSAGE != resp_msg->getPCode())
         {
@@ -751,8 +825,17 @@ namespace tfs
         {
           StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
           ret = smsg->get_status();
-          TBSYS_LOG(DEBUG, "unlink file status: %d %s", ret, smsg->get_error());
-          file_size = atol(smsg->get_error());
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(WARN, "unlink file %s fail. blockid: %"PRI64_PREFIX"u, "
+                "fileid: %"PRI64_PREFIX"u, server: %s, error msg: %s, ret: %d",
+                fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
+                tbsys::CNetUtil::addrToString(server).c_str(), smsg->get_error(), ret);
+          }
+          else
+          {
+            file_size = atol(smsg->get_error());
+          }
         }
       }
       NewClientManager::get_instance().destroy_client(client);

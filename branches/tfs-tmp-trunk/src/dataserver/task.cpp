@@ -387,6 +387,7 @@ namespace tfs
       // write new header and index to dest
       if (TFS_SUCCESS == ret)
       {
+        header.info_.version_ = old_header.info_.version_;
         header.info_.update_size_ = old_header.info_.update_size_;
         header.info_.update_file_count_ = old_header.info_.update_file_count_;
         memcpy(&header.throughput_, &old_header.throughput_, sizeof(header.throughput_));

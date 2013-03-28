@@ -261,7 +261,7 @@ namespace tfs
     }
 
     int DataManager::close_file(const uint64_t block_id, const uint64_t attach_block_id,
-        uint64_t& file_id, const uint64_t lease_id, const bool tmp, BlockInfoV2& local)
+        uint64_t& file_id, const uint64_t lease_id, const uint32_t crc, const bool tmp, BlockInfoV2& local)
     {
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
@@ -284,12 +284,23 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
+        if (crc != data_file.crc())
+        {
+          ret = EXIT_DATA_FILE_ERROR;
+          lease_manager_.put(lease);
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
         ret = get_block_manager().write(file_id, data_file, block_id, attach_block_id, tmp);
         ret = (ret < 0) ? ret: TFS_SUCCESS;  // transform return status
         if (TFS_SUCCESS == ret)
         {
           ret = get_block_manager().get_block_info(local, block_id, tmp);
         }
+        lease->set_file_size(data_file.length());
         lease_manager_.put(lease);
       }
 

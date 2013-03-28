@@ -174,7 +174,7 @@ namespace tfs
               {
                 tmp_logic_blocks_.erase(iter);
                 tmp_logic_blocks_.insert(TMP_LOGIC_BLOCK_MAP::value_type(logic_block_id, tmp_logic_block));
-                change_create_block_complete_flag_(logic_block_id, BLOCK_CREATE_COMPLETE_STATUS_UNCOMPLETE, false, false);
+                change_create_block_complete_flag_(logic_block_id, BLOCK_CREATE_COMPLETE_STATUS_UNCOMPLETE, true, false);
               }
               else
               {
