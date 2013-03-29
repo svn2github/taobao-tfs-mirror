@@ -1133,6 +1133,10 @@ namespace tfs
     struct FileInfoInDiskExt//4
     {
     	int32_t  version_;//
+
+      FileInfoInDiskExt(): version_(0)
+      {
+      }
     };
 
     struct BlockInfoV2

@@ -654,7 +654,7 @@ namespace tfs
               ret_status = TFS_SUCCESS;
               tfs::clientv2::FSName fsname(block_id, file_id, cluster_id);
               printf("  FILE_NAME:     %s\n", fsname.get_name());
-              printf("  BLOCK_ID:      %u\n", fsname.get_block_id());
+              printf("  BLOCK_ID:      %" PRI64_PREFIX" u\n", fsname.get_block_id());
               printf("  FILE_ID:       %" PRI64_PREFIX "u\n", file_info.id_);
               printf("  OFFSET:        %d\n", file_info.offset_);
               printf("  SIZE:          %d\n", file_info.size_);

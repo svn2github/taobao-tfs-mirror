@@ -322,6 +322,7 @@ namespace tfs
       int64_t family_id = family_info.family_id_;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
+      bool lease_ok = false;
 
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
@@ -329,10 +330,6 @@ namespace tfs
           (NULL == data) || (offset < 0) || (length <= 0))
       {
         ret = EXIT_PARAMETER_ERROR;
-        if (is_master)
-        {
-          message->reply(new StatusMessage(ret));
-        }
       }
 
       // tbnet already receive this packet from network
@@ -365,6 +362,9 @@ namespace tfs
         }
         else
         {
+          // lease maybe overload, or expired, in this case, master need reply errro msg
+          lease_ok = true;
+
           // callback & slave will use
           message->set_file_id(file_id);
           message->set_lease_id(lease_id);
@@ -417,7 +417,14 @@ namespace tfs
       // slave response to master
       if (is_master)
       {
-        write_file_callback(message);
+        if (lease_ok)
+        {
+          write_file_callback(message);
+        }
+        else
+        {
+          message->reply(new StatusMessage(ret, "master prepare lease fail"));
+        }
       }
       else
       {
@@ -437,7 +444,7 @@ namespace tfs
 
       TIMER_END();
 
-      TBSYS_LOG(DEBUG, "write file %s, blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(INFO, "write file %s, blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, length: %d, offset: %d, "
           "version: %d, role: %s, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
           (TFS_SUCCESS == ret) ? "success" : "fail", block_id, attach_block_id, file_id, lease_id,
@@ -463,6 +470,7 @@ namespace tfs
       uint64_t peer_id = message->get_connection()->getPeerId();
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
+      bool lease_ok = false;
 
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
@@ -470,10 +478,6 @@ namespace tfs
           (INVALID_LEASE_ID == lease_id))
       {
         ret = EXIT_PARAMETER_ERROR;
-        if (is_master)
-        {
-          message->reply(new StatusMessage(ret));
-        }
       }
 
       // transform servers
@@ -499,6 +503,10 @@ namespace tfs
          TBSYS_LOG(WARN, "prepare write lease fail. blockid: %"PRI64_PREFIX"u, "
               "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
               attach_block_id, file_id, lease_id, ret);
+        }
+        else
+        {
+          lease_ok = true;
         }
       }
 
@@ -546,7 +554,14 @@ namespace tfs
       // slave response to master
       if (is_master)
       {
-        close_file_callback(message);
+        if (lease_ok)
+        {
+          close_file_callback(message);
+        }
+        else
+        {
+          message->reply(new StatusMessage(ret, "master prepare lease fail"));
+        }
       }
       else
       {
@@ -562,7 +577,7 @@ namespace tfs
      TIMER_END();
 
      // access log
-     TBSYS_LOG(DEBUG, "close file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
+     TBSYS_LOG(INFO, "close file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
          "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, crc: %u, role: %s, "
          "peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
          TFS_SUCCESS == ret ? "success" : "fail", block_id, attach_block_id, file_id, lease_id, crc,
@@ -588,6 +603,7 @@ namespace tfs
       int64_t family_id = family_info.family_id_;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
+      bool lease_ok = false;
 
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
@@ -595,10 +611,6 @@ namespace tfs
           (INVALID_FILE_ID == file_id))
       {
         ret = EXIT_PARAMETER_ERROR;
-        if (is_master)
-        {
-          message->reply(new StatusMessage(ret));
-        }
       }
 
       // transform servers
@@ -627,6 +639,7 @@ namespace tfs
         }
         else
         {
+          lease_ok = true;
           // callback & slave will use
           message->set_lease_id(lease_id);
         }
@@ -675,7 +688,14 @@ namespace tfs
       // slave response to master
       if (is_master)
       {
-        unlink_file_callback(message);
+        if (lease_ok)
+        {
+          unlink_file_callback(message);
+        }
+        else
+        {
+          message->reply(new StatusMessage(ret, "master prepare lease fail"));
+        }
       }
       else
       {
@@ -691,7 +711,7 @@ namespace tfs
       TIMER_END();
 
       // access log
-      TBSYS_LOG(DEBUG, "unlink file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(INFO, "unlink file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, action: %d, version: %d, role: %s, "
           "peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, attach_block_id, file_id, action, version,

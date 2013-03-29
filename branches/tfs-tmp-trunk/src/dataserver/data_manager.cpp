@@ -172,7 +172,7 @@ namespace tfs
 
             if (TFS_SUCCESS == status)
             {
-              status = lease->check_all_successful() ? TFS_SUCCESS : TFS_ERROR;
+              status = lease->check_all_successful() ? TFS_SUCCESS : EXIT_NOT_ALL_SUCCESS;
             }
 
             // if not all success, get error msg

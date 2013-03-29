@@ -354,6 +354,11 @@ namespace tfs
       {
         file_.crc_ = Func::crc(file_.crc_, static_cast<const char*>(buf), count);
       }
+      else
+      {
+        // tell close should do nothing because write fail
+        file_.write_status_ = WRITE_STATUS_FAIL;
+      }
 
       return (ret != TFS_SUCCESS) ? ret : done;
     }
@@ -703,16 +708,11 @@ namespace tfs
           WriteFileRespMessageV2* response = dynamic_cast<WriteFileRespMessageV2*>(resp_msg);
           file_.lease_id_ = response->get_lease_id();
           fsname_.set_file_id(response->get_file_id());
-          TBSYS_LOG(DEBUG, "write file %s. file id: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u",
+          TBSYS_LOG(DEBUG, "write file %s. fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u",
               fsname_.get_name(), fsname_.get_file_id(), file_.lease_id_);
         }
       }
       NewClientManager::get_instance().destroy_client(client);
-
-      if (TFS_SUCCESS != ret)
-      {
-        file_.write_status_ = WRITE_STATUS_FAIL;
-      }
 
       return ret;
     }
