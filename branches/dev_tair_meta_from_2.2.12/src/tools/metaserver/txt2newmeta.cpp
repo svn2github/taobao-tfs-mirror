@@ -19,6 +19,7 @@
 #include <string.h>
 #include <signal.h>
 #include <Memory.hpp>
+#include <pthread.h>
 
 #include "common/parameter.h"
 #include "common/config_item.h"
@@ -40,14 +41,26 @@ const int MAGIC_NUMBER1 = 0x5f375a86;
 const int MAGIC_NUMBER2 = 0x60486b97;
 const int MAGIC_NUMBER3 = 0x71597ca8;
 const int MAGIC_NUMBER4 = 0x826a8db9;
-int magic_number_tmp = 0;
 
 int stop = 0;
 int64_t server_id = 0;
 int64_t time_point = 0;
+std::string source_file_name;
+int64_t last_appid = -1;
+int64_t last_uid = -1;
 static tfs::message::MessageFactory gfactory;
 static tfs::common::BasePacketStreamer gstreamer;
 
+typedef struct
+{
+  uint32_t tnum;
+  uint32_t ttotal;
+} arg_type;
+typedef struct
+{
+  int64_t appid;
+  int64_t uid;
+} id_type;
 void sign_handler(int32_t sig)
 {
   switch (sig)
@@ -64,9 +77,9 @@ int usage (const char* n)
 }
 
 
-void transfer(const string &source_file_name, const string &s3_server)
+void* transfer(void* param)
 {
-  UNUSED(s3_server);
+  int magic_number_tmp = 0;
   int ret = TFS_SUCCESS;
   FILE *s_fd = NULL;
   s_fd = fopen(source_file_name.c_str(), "r");
@@ -91,6 +104,20 @@ void transfer(const string &source_file_name, const string &s3_server)
   UserInfo user_info_head;
   BucketMetaInfo bucket_meta_info;
 
+  bool go_on_mode_lock = false;
+  if (last_appid == 0 && last_uid == 0)
+  {
+    go_on_mode_lock = true;
+  }
+
+  arg_type* param_t = (arg_type*)(param);
+  TBSYS_LOG(INFO, " num = %d total = %d", param_t->tnum, param_t->ttotal);
+
+  uint32_t tnum = param_t->tnum;
+  uint32_t total = param_t->ttotal;
+  id_type helper;
+  bool doflag_thread = false;
+
 
   while(TFS_SUCCESS == ret && 1 != stop)
   {
@@ -102,21 +129,40 @@ void transfer(const string &source_file_name, const string &s3_server)
     {
       fread(&app_id, sizeof(app_id), 1, s_fd);
       fread(&uid, sizeof(uid), 1, s_fd);
-      TBSYS_LOG(INFO, "deal appid:%ld uid:%ld", app_id, uid);
+      //go on mode open
+      if (last_appid == app_id && last_uid == uid)
+      {
+        go_on_mode_lock = true;
+      }
+      //for hash
+      helper.appid = app_id;
+      helper.uid = uid;
+      doflag_thread = false;
+      if (tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(helper)) % total == tnum)
+      {
+        doflag_thread = true;
+      }
+      if (doflag_thread && go_on_mode_lock)
+      {
+        TBSYS_LOG(INFO, "deal appid:%ld uid:%ld", app_id, uid);
+      }
       sprintf(bucket_name, "%ld^%ld", app_id, uid);
       user_info.owner_id_ = app_id;
 
-      ret = tfs::client::KvMetaHelper::do_put_bucket(server_id, bucket_name,
+      if (doflag_thread && go_on_mode_lock)
+      {
+        ret = tfs::client::KvMetaHelper::do_put_bucket(server_id, bucket_name,
           bucket_meta_info, user_info);
-      if (ret == EXIT_BUCKET_EXIST)
-      {
-        TBSYS_LOG(ERROR, "[conflict] put bucket conflict |%s|", bucket_name);
-        ret = TFS_SUCCESS;
-      }
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "put bucket error |%s|", bucket_name);
-        ret = TFS_SUCCESS;
+        if (ret == EXIT_BUCKET_EXIST)
+        {
+          TBSYS_LOG(ERROR, "[conflict] put bucket conflict |%s|", bucket_name);
+          ret = TFS_SUCCESS;
+        }
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "put bucket error |%s|", bucket_name);
+          ret = TFS_SUCCESS;
+        }
       }
       continue;
     }
@@ -148,7 +194,6 @@ void transfer(const string &source_file_name, const string &s3_server)
     //    meta_info.file_info_.modify_time_,
     //    meta_info.file_info_.size_);
 
-
     obj_info.has_meta_info_ = true;
     obj_info.has_customize_info_ = false;
     obj_info.meta_info_.create_time_ = meta_info.file_info_.create_time_;
@@ -163,20 +208,23 @@ void transfer(const string &source_file_name, const string &s3_server)
     }
     FragMeta frag_it;
     int32_t cluster_id;
-    ret = tfs::client::KvMetaHelper::do_head_object(server_id, bucket_name,
-              object_name.c_str(), &obj_info_head, user_info_head);
     bool exist = true;
-    if (EXIT_OBJECT_NOT_EXIST == ret)
+    if (doflag_thread && go_on_mode_lock)
     {
-      exist = false;
-    }
-    else if (TFS_SUCCESS == ret)
-    {
-      TBSYS_LOG(ERROR, "[conflict] put object conflict |%s|%s|",bucket_name, object_name.c_str());
-    }
-    else
-    {
-      TBSYS_LOG(ERROR, "head object error,ret:%d",ret);
+      ret = tfs::client::KvMetaHelper::do_head_object(server_id, bucket_name,
+                object_name.c_str(), &obj_info_head, user_info_head);
+      if (EXIT_OBJECT_NOT_EXIST == ret)
+      {
+        exist = false;
+      }
+      else if (TFS_SUCCESS == ret)
+      {
+        TBSYS_LOG(ERROR, "[conflict] put object conflict |%s|%s|",bucket_name, object_name.c_str());
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "head object error,ret:%d",ret);
+      }
     }
     ret = TFS_SUCCESS;
     magic_number_tmp = magic_number;
@@ -185,15 +233,18 @@ void transfer(const string &source_file_name, const string &s3_server)
       fread(&magic_number, sizeof(MAGIC_NUMBER3), 1, s_fd); //magic number
       if (magic_number == MAGIC_NUMBER4 &&  magic_number_tmp == MAGIC_NUMBER2)
       {
-        if (need && !exist)
+        if (doflag_thread && go_on_mode_lock)
         {
-          obj_info.v_tfs_file_info_.clear();
-          ret = tfs::client::KvMetaHelper::do_put_object(server_id, bucket_name,
-              object_name.c_str(), obj_info, user_info);
-        }
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "put object 0file error,ret:%d",ret);
+          if (need && !exist)
+          {
+            obj_info.v_tfs_file_info_.clear();
+            ret = tfs::client::KvMetaHelper::do_put_object(server_id, bucket_name,
+                object_name.c_str(), obj_info, user_info);
+          }
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "put object 0file error,ret:%d",ret);
+          }
         }
       }
       if (magic_number == MAGIC_NUMBER4) break;
@@ -218,29 +269,69 @@ void transfer(const string &source_file_name, const string &s3_server)
       tfs_file_info.offset_ = frag_it.offset_;
 
       ret = TFS_SUCCESS;
-      if (need && !exist)
+      if (doflag_thread && go_on_mode_lock)
       {
-        ret = tfs::client::KvMetaHelper::do_put_object(server_id, bucket_name,
-            object_name.c_str(), obj_info, user_info);
-
-        if (TFS_SUCCESS != ret)
+        if (need && !exist)
         {
-          TBSYS_LOG(ERROR, "put object error,ret:%d",ret);
-          TBSYS_LOG(INFO, "offset %ld cluster_id %d block_id %d file_id %ld size %d",
-              frag_it.offset_,
-              cluster_id,
-              frag_it.block_id_, frag_it.file_id_, frag_it.size_);
-          ret = TFS_SUCCESS;
+          ret = tfs::client::KvMetaHelper::do_put_object(server_id, bucket_name,
+              object_name.c_str(), obj_info, user_info);
+
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "put object error,ret:%d",ret);
+            TBSYS_LOG(INFO, "offset %ld cluster_id %d block_id %d file_id %ld size %d",
+                frag_it.offset_,
+                cluster_id,
+                frag_it.block_id_, frag_it.file_id_, frag_it.size_);
+            ret = TFS_SUCCESS;
+          }
         }
       }
 
     }
   }
-  TBSYS_LOG(INFO, "ret = %d", ret);
   fclose(s_fd);
   s_fd = NULL;
-  return ;
+  TBSYS_LOG(INFO, "THIS THREAD EXIT,ret:%d",ret);
+  pthread_exit(NULL);
 }
+void thread_create(pthread_t* thread, arg_type* p_arg, int32_t thread_num)
+{
+  int temp;
+  int i;
+  memset(thread, 0, sizeof(thread));
+  for (i = 0 ; i < thread_num ; ++i)
+  {
+
+    if((temp = pthread_create(thread + i, NULL, transfer, (void*)(p_arg + i))) != 0)
+    {
+      TBSYS_LOG(ERROR,"create thread fails");
+    }
+    else
+    {
+      TBSYS_LOG(INFO,"create thread success");
+    }
+  }
+}
+
+void thread_wait(pthread_t* thread, int32_t thread_num)
+{
+  int i;
+  for (i = 0 ; i < thread_num ; ++i)
+  {
+    if(thread[i] != 0)
+    {
+      //TBSYS_LOG(INFO,"thread %d is start tid is %ld\n", i, thread[i]);
+      pthread_join(thread[i], NULL);
+      //TBSYS_LOG(INFO,"thread %d is end   tid is %ld\n", i, thread[i]);
+    }
+    else
+    {
+      TBSYS_LOG(ERROR,"thread tid is zero is %d", i);
+    }
+  }
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -249,11 +340,11 @@ int main(int argc, char *argv[])
   tfs::common::NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
 
   int i;
-  std::string source_file_name;
   std::string s3_server;
   std::string log_file_name;
   std::string date_time;
-  while ((i = getopt(argc, argv, "f:d:t:l:")) != EOF)
+  uint32_t thread_num;
+  while ((i = getopt(argc, argv, "f:d:t:l:p:a:u:")) != EOF)
   {
     switch (i)
     {
@@ -268,6 +359,15 @@ int main(int argc, char *argv[])
         break;
       case 'l':
         log_file_name = optarg;
+        break;
+      case 'p':
+        thread_num = atoi(optarg);
+        break;
+      case 'a':
+        last_appid = atol(optarg);
+        break;
+      case 'u':
+        last_uid = atol(optarg);
         break;
       default:
         usage(argv[0]);
@@ -285,8 +385,25 @@ int main(int argc, char *argv[])
   TBSYS_LOGGER.setLogLevel("info");
   signal(SIGINT, sign_handler);
   TBSYS_LOG(INFO, "date %s num_time %ld",date_time.c_str(), time_point);
-  transfer(source_file_name, s3_server);
 
+  pthread_t* tid = (pthread_t*) malloc(thread_num * sizeof(pthread_t));
+  arg_type* p_arg = (arg_type*) malloc(thread_num * sizeof(arg_type));
+  for (uint32_t i = 0 ; i < thread_num ; ++i)
+  {
+     p_arg[i].tnum = i;
+     p_arg[i].ttotal = thread_num;
+     TBSYS_LOG(INFO,"i is %d tum is %d, ttotal is %d\n",i, p_arg[i].tnum, p_arg[i].ttotal);
+  }
+
+  thread_create(tid, p_arg, thread_num);
+
+  thread_wait(tid, thread_num);
+
+
+
+  //transfer(source_file_name, s3_server);
+  free(p_arg);
+  free(tid);
   return 0;
 }
 
