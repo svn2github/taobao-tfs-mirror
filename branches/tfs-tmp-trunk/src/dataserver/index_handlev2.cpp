@@ -404,7 +404,6 @@ namespace tfs
           }
           if (TFS_SUCCESS != ret)
             prev = current;
-          ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           while (TFS_SUCCESS != ret && max_loop-- > 0 && header->used_file_info_bucket_size_ < header->file_info_bucket_size_)
           {
             slot = (key + random()) % header->file_info_bucket_size_;
@@ -464,8 +463,9 @@ namespace tfs
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
+        if (!update)
+          info.next_ = 0;
         uint16_t slot = 0;
-        info.next_ = 0;
         FileInfoV2* current = NULL, *prev = NULL;
         ret = get_slot_(slot, info.id_, current, prev, threshold, update ? GET_SLOT_TYPE_QUERY : GET_SLOT_TYPE_INSERT);
         if (TFS_SUCCESS == ret)
@@ -490,6 +490,8 @@ namespace tfs
       int32_t ret = (NULL != buf && nbytes > 0) ? TFS_SUCCESS :  EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        if (!update)
+          info.next_ = 0;
         uint16_t slot = 0;
         FileInfoV2* current = NULL, *prev = NULL;
         ret = get_slot_(slot, info.id_, current, prev, buf, nbytes, update ? GET_SLOT_TYPE_QUERY : GET_SLOT_TYPE_INSERT);

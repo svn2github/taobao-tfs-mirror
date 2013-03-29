@@ -532,10 +532,15 @@ namespace tfs
       new_finfo.modify_time_ = now;
       new_finfo.crc_ = datafile.crc();
       if (update)
+      {
         new_finfo.status_ = old_finfo.status_;
+        new_finfo.next_ = old_finfo.next_;
+      }
       else
+      {
         new_finfo.status_ = FILE_STATUS_NOMARL;
-      new_finfo.next_ = 0;
+        new_finfo.next_ = 0;
+      }
       new_finfo.size_ = file_size;
       int32_t ret = index_handle_->get_used_offset(new_finfo.offset_);
       if (TFS_SUCCESS == ret)

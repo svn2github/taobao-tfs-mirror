@@ -542,7 +542,7 @@ namespace tfs
             }
           }
 
-          ret = close(fd);
+          close(fd);
         }
 
         ::close(local_fd);

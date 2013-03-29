@@ -286,7 +286,7 @@ namespace tfs
         DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
         if (crc != data_file.crc())
         {
-          ret = EXIT_DATA_FILE_ERROR;
+          ret = EXIT_CHECK_CRC_ERROR;
           lease_manager_.put(lease);
         }
       }
