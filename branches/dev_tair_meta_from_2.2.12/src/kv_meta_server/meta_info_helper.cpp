@@ -920,6 +920,16 @@ namespace tfs
       start_obj_key.key_size_ = skey.length();
       start_obj_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
 
+      string ekey(pkey.key_);
+      ekey += KvKey::DELIMITER;
+      char max_int[8];
+      memset(max_int, 0xff, 8);
+      ekey.append(max_int, 8);
+
+      end_obj_key.key_ = ekey.c_str();
+      end_obj_key.key_size_ = ekey.length();
+      end_obj_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
+
       ret = kv_engine_helper_->scan_keys(start_obj_key, end_obj_key, limit, offset, kv_value_keys, kv_value_values, result_size, scan_type);
 
       return ret;
