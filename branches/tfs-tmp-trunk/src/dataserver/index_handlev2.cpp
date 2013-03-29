@@ -376,21 +376,18 @@ namespace tfs
 
         if (GET_SLOT_TYPE_QUERY  == type)
         {
+          prev = NULL;
           assert(INVALID_FILE_ID != file_id);
           uint32_t key = file_id & 0xFFFFFFFF;//lower 32 bit
           slot = key % header->file_info_bucket_size_;
           current =  (finfos + slot);
           ret = (file_id == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
-          if (TFS_SUCCESS != ret && 0 != current->next_)
-            prev = current;
-          while (0 != current->next_ && max_loop -- > 0)
+          while (TFS_SUCCESS != ret && 0 != current->next_ && max_loop -- > 0)
           {
-            prev = current;
             slot = current->next_;
             current =  (finfos + slot);
             ret = (file_id == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           }
-          prev = NULL;
         }
 
         if (GET_SLOT_TYPE_INSERT == type)
@@ -402,10 +399,11 @@ namespace tfs
           ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           while (TFS_SUCCESS != ret && 0 != current->next_)
           {
-            prev = current;
             slot = current->next_;
             current =  (finfos + slot);
           }
+          if (TFS_SUCCESS != ret)
+            prev = current;
           ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           while (TFS_SUCCESS != ret && max_loop-- > 0 && header->used_file_info_bucket_size_ < header->file_info_bucket_size_)
           {
@@ -678,27 +676,30 @@ namespace tfs
     {
       UNUSED(logic_block_id);
       int32_t ret = check_load();
-      if ((TFS_SUCCESS == ret) && partial)
+      if (TFS_SUCCESS == ret)
       {
-        // only update partial header information
-        IndexHeaderV2* pheader = get_index_header_();
-        assert(NULL != pheader);
-        pheader->info_ = header.info_;
-        pheader->throughput_ = header.throughput_;
-      }
-      else if (TFS_SUCCESS == ret)
-      {
-        IndexHeaderV2* pheader = get_index_header_();
-        assert(NULL != pheader);
-        const int32_t file_info_bucket_size = pheader->file_info_bucket_size_;
-        *pheader = header;
-        pheader->used_file_info_bucket_size_ = 0;
-        pheader->file_info_bucket_size_ = file_info_bucket_size;
-        std::vector<common::FileInfoV2>::iterator iter = infos.begin();
-        for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
+        if (partial)
         {
-          FileInfoV2& finfo = (*iter);
-          ret = insert_file_info_(finfo, threshold, false);
+          // only update partial header information
+          IndexHeaderV2* pheader = get_index_header_();
+          assert(NULL != pheader);
+          pheader->info_ = header.info_;
+          pheader->throughput_ = header.throughput_;
+        }
+        else
+        {
+          IndexHeaderV2* pheader = get_index_header_();
+          assert(NULL != pheader);
+          const int32_t file_info_bucket_size = pheader->file_info_bucket_size_;
+          *pheader = header;
+          pheader->used_file_info_bucket_size_ = 0;
+          pheader->file_info_bucket_size_ = file_info_bucket_size;
+          std::vector<common::FileInfoV2>::iterator iter = infos.begin();
+          for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
+          {
+            FileInfoV2& finfo = (*iter);
+            ret = insert_file_info_(finfo, threshold, false);
+          }
         }
       }
       return ret;
