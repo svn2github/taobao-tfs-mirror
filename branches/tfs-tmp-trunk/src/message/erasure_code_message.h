@@ -71,7 +71,15 @@ namespace tfs
       public:
         ECReinstateCommitMessage();
         virtual ~ECReinstateCommitMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        int32_t get_reinstate_num() const;
+        common::BlockInfoV2* get_reinstate_block_info();
+        int set_reinstate_block_info(common::BlockInfoV2* block_infos, const int32_t reinstate_num);
       private:
+        common::BlockInfoV2 block_infos_[common::MAX_MARSHALLING_NUM];
+        int32_t reinstate_num_;
         DISALLOW_COPY_AND_ASSIGN(ECReinstateCommitMessage);
     };
 

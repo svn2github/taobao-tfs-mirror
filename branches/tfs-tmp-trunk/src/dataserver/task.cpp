@@ -958,6 +958,7 @@ namespace tfs
       MarshallingTask(service, seqno, source_id, expire_time, family_id)
     {
       type_ = PLAN_TYPE_EC_REINSTATE;
+      reinstate_num_ = 0;
     }
 
     ReinstateTask::~ReinstateTask()
@@ -1204,6 +1205,11 @@ namespace tfs
           ret = recover_updated_files(index_data, ec_metas[pi].mars_offset_,
               family_members_[i].block_, pi, i);
         }
+
+        if (TFS_SUCCESS == ret)
+        {
+          block_infos_[reinstate_num_++] = index_data.header_.info_;
+        }
       }
 
       for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
@@ -1325,6 +1331,10 @@ namespace tfs
       cmit_msg.set_status(status);
       cmit_msg.set_family_id(family_id_);
       ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = cmit_msg.set_reinstate_block_info(block_infos_, reinstate_num_);
+      }
       if (TFS_SUCCESS == ret)
       {
         ret = get_data_helper().send_simple_request(source_id_, &cmit_msg);

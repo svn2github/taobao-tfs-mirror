@@ -304,6 +304,8 @@ namespace tfs
 
       private:
         int erased_[common::MAX_MARSHALLING_NUM];
+        common::BlockInfoV2 block_infos_[common::MAX_MARSHALLING_NUM];
+        int32_t reinstate_num_;
     };
 
     class DissolveTask: public MarshallingTask
