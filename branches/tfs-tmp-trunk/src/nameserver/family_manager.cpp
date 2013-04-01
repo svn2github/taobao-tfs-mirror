@@ -587,12 +587,16 @@ namespace tfs
         {
           time_t now = Func::get_monotonic_time();
           marshallin_queue_mutex_.rdlock();
-          int32_t random_index = random() % marshalling_queue_.size();
-          MarshallingItem* item = marshalling_queue_.at(random_index);
-          assert(item);
-          result.first = INVALID_SERVER_ID;
-          result.second = INVALID_BLOCK_ID;
-          ret = item->choose_item_random(result);
+          ret = marshalling_queue_.empty() ? EXIT_MARSHALLING_ITEM_QUEUE_EMPTY : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
+          {
+            int32_t random_index = random() % marshalling_queue_.size();
+            MarshallingItem* item = marshalling_queue_.at(random_index);
+            assert(item);
+            result.first = INVALID_SERVER_ID;
+            result.second = INVALID_BLOCK_ID;
+            ret = item->choose_item_random(result);
+          }
           marshallin_queue_mutex_.unlock();
           if (TFS_SUCCESS == ret)
           {
@@ -618,7 +622,7 @@ namespace tfs
             }
           }
         }
-        while (members.get_array_index() < data_member_num && ++choose_num < MAX_LOOP_NUM);
+        while (TFS_SUCCESS == ret && members.get_array_index() < data_member_num && ++choose_num < MAX_LOOP_NUM);
       }
       return ret;
     }
