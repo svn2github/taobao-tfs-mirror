@@ -267,20 +267,20 @@ namespace tfs
           return server_id_;
         }
 
-        inline void set_unlink_flag(const common::UnlinkFlag flag)
+        inline void set_type(const common::UpdateBlockInfoType type)
         {
-          unlink_flag_ = flag;
+          type_ = type;
         }
 
-        inline common::UnlinkFlag get_unlink_flag() const
+        inline common::UpdateBlockInfoType get_type() const
         {
-          return unlink_flag_;
+          return type_;
         }
 
       private:
         common::BlockInfoV2 block_info_;
         uint64_t server_id_;
-        common::UnlinkFlag unlink_flag_;
+        common::UpdateBlockInfoType type_;
     };
 
     class RepairBlockMessageV2: public common::BasePacket

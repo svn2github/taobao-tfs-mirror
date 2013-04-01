@@ -359,7 +359,7 @@ namespace tfs
     }
 
     int DataManager::update_block_info(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
-        const common::UnlinkFlag unlink_flag)
+        const common::UpdateBlockInfoType type)
     {
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -382,34 +382,42 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-        UpdateBlockInfoMessageV2 req_msg;
-        req_msg.set_block_info(block_info);
-        req_msg.set_unlink_flag(unlink_flag);
-        req_msg.set_server_id(ds_info.information_.id_);
+        ret = update_block_info(block_info, type);
+      }
 
-        NewClient* client = NewClientManager::get_instance().create_client();
-        if (NULL == client)
+      return ret;
+    }
+
+    int DataManager::update_block_info(const BlockInfoV2& block_info, const common::UpdateBlockInfoType type)
+    {
+      int ret = TFS_SUCCESS;
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      UpdateBlockInfoMessageV2 req_msg;
+      req_msg.set_block_info(block_info);
+      req_msg.set_type(type);
+      req_msg.set_server_id(ds_info.information_.id_);
+
+      NewClient* client = NewClientManager::get_instance().create_client();
+      if (NULL == client)
+      {
+        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+      }
+      else
+      {
+        tbnet::Packet* ret_msg = NULL;
+        ret = send_msg_to_server(ds_info.ns_vip_port_, client, &req_msg, ret_msg);
+        if (TFS_SUCCESS == ret)
         {
-          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
-        }
-        else
-        {
-          tbnet::Packet* ret_msg = NULL;
-          ret = send_msg_to_server(ds_info.ns_vip_port_, client, &req_msg, ret_msg);
+          ret = (STATUS_MESSAGE == ret_msg->getPCode())? TFS_SUCCESS : EXIT_COMMIT_BLOCK_UPDATE_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            ret = (STATUS_MESSAGE == ret_msg->getPCode())? TFS_SUCCESS : EXIT_COMMIT_BLOCK_UPDATE_ERROR;
-            if (TFS_SUCCESS == ret)
-            {
-              StatusMessage* smsg = dynamic_cast<StatusMessage*>(ret_msg);
-              ret = (STATUS_MESSAGE_OK == smsg->get_status()) ? TFS_SUCCESS : EXIT_COMMIT_BLOCK_UPDATE_ERROR;
-              TBSYS_LOG(DEBUG, "update block info. blockid: %"PRI64_PREFIX"u, status: %d %s",
-                  block_id, smsg->get_status(), smsg->get_error());
-            }
+            StatusMessage* smsg = dynamic_cast<StatusMessage*>(ret_msg);
+            ret = (STATUS_MESSAGE_OK == smsg->get_status()) ? TFS_SUCCESS : EXIT_COMMIT_BLOCK_UPDATE_ERROR;
+            TBSYS_LOG(DEBUG, "update block info. blockid: %"PRI64_PREFIX"u, status: %d %s",
+                block_info.block_id_, smsg->get_status(), smsg->get_error());
           }
-          NewClientManager::get_instance().destroy_client(client);
         }
+        NewClientManager::get_instance().destroy_client(client);
       }
 
       return ret;

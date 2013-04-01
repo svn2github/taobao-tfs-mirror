@@ -227,6 +227,13 @@ namespace tfs
       ERROR_BIT_MAP
     };
 
+    enum UpdateBlockInfoType
+    {
+      UPDATE_BLOCK_INFO_WRITE = 0,
+      UPDATE_BLOCK_INFO_UNLINK,
+      UPDATE_BLOCK_INFO_REPL
+    };
+
     enum UnlinkFlag
     {
       UNLINK_FLAG_NO = 0x0,

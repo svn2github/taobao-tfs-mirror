@@ -913,7 +913,7 @@ namespace tfs
            * commit success, keep ret unchanged
            * commit fail, set ret to error code
            */
-          int tmp_ret = get_data_manager().update_block_info(attach_block_id, file_id, lease_id, UNLINK_FLAG_NO);
+          int tmp_ret = get_data_manager().update_block_info(attach_block_id, file_id, lease_id, UPDATE_BLOCK_INFO_WRITE);
           if (TFS_SUCCESS != tmp_ret)
           {
             ret = tmp_ret;
@@ -981,7 +981,7 @@ namespace tfs
          * commit success, keep ret unchanged
          * commit fail, set ret to error code
          */
-        int tmp_ret = get_data_manager().update_block_info(attach_block_id, file_id, lease_id, UNLINK_FLAG_YES);
+        int tmp_ret = get_data_manager().update_block_info(attach_block_id, file_id, lease_id, UPDATE_BLOCK_INFO_UNLINK);
         if (TFS_SUCCESS != tmp_ret)
         {
           ret = tmp_ret;
@@ -1159,6 +1159,7 @@ namespace tfs
       IndexDataV2& index_data = message->get_index_data();
       bool tmp = message->get_tmp_flag();
       bool partial = message->get_partial_flag();
+      bool is_cluster = message->get_cluster_flag();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_BLOCK_ID == attach_block_id)) ?
         EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -1175,7 +1176,19 @@ namespace tfs
         }
         else
         {
-          ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+          if (is_cluster) // only happened when replicate between cluster
+          {
+            BlockInfoV2 local_info;
+            ret = get_block_manager().get_block_info(local_info, block_id);
+            if (TFS_SUCCESS == ret)
+            {
+              ret = get_data_manager().update_block_info(local_info, UPDATE_BLOCK_INFO_REPL);
+            }
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+          }
         }
       }
 

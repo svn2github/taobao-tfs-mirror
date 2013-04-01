@@ -295,7 +295,7 @@ namespace tfs
     }
 
     UpdateBlockInfoMessageV2::UpdateBlockInfoMessageV2():
-      server_id_(INVALID_SERVER_ID), unlink_flag_(UNLINK_FLAG_NO)
+      server_id_(INVALID_SERVER_ID), type_(UPDATE_BLOCK_INFO_WRITE)
     {
       _packetHeader._pcode = UPDATE_BLOCK_INFO_MESSAGE_V2;
     }
@@ -320,7 +320,7 @@ namespace tfs
 
       if (common::TFS_SUCCESS == ret)
       {
-        ret = output.set_int32(unlink_flag_);
+        ret = output.set_int32(type_);
       }
 
       return ret;
@@ -342,7 +342,7 @@ namespace tfs
 
       if (common::TFS_SUCCESS == ret)
       {
-        ret = input.get_int32(reinterpret_cast<int32_t*> (&unlink_flag_));
+        ret = input.get_int32(reinterpret_cast<int32_t*> (&type_));
       }
 
       return ret;

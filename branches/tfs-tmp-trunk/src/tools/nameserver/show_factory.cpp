@@ -67,7 +67,7 @@ namespace tfs
       {
         if (type & BLOCK_TYPE_BLOCK_INFO)
         {
-          fprintf(fp, "  FAMILY_ID BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE   COPYS\n");
+          fprintf(fp, "  FAMILY_ID BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE   UPDATE    UPDATE_SIZE COPYS\n");
         }
         if (type & BLOCK_TYPE_SERVER_LIST)
         {
@@ -230,8 +230,9 @@ namespace tfs
       if (fp == NULL) { return; }
       if (type & BLOCK_TYPE_BLOCK_INFO)
       {
-        fprintf(fp, "%10"PRI64_PREFIX"d %10"PRI64_PREFIX"u %6d %10d %10d %10d %10d %8Zd", info_.family_id_, info_.block_id_, info_.version_, info_.file_count_, info_.size_,
-            info_.del_file_count_, info_.del_size_, server_list_.size());
+        fprintf(fp, "%10"PRI64_PREFIX"d %10"PRI64_PREFIX"u %6d %10d %10d %10d %10d %10d %10d %8Zd", info_.family_id_, info_.block_id_, info_.version_, info_.file_count_, info_.size_,
+            info_.del_file_count_, info_.del_size_, info_.update_file_count_,
+            info_.update_size_, server_list_.size());
       }
       if (type & BLOCK_TYPE_SERVER_LIST)
       {

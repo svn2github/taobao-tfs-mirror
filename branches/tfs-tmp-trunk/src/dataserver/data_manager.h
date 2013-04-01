@@ -69,7 +69,8 @@ namespace tfs
 
         /** helper functions */
         int update_block_info(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
-            const common::UnlinkFlag unlink_flag);
+            const common::UpdateBlockInfoType type);
+        int update_block_info(const common::BlockInfoV2& block_info, const common::UpdateBlockInfoType type);
         int resolve_block_version_conflict(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id);
         int timeout(const time_t now_us);
 
