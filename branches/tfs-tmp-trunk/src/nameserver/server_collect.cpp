@@ -199,6 +199,8 @@ namespace tfs
         }
       }
       while (!complete);
+
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       hold_->clear();
       writable_->clear();
       hold_master_->clear();

@@ -109,6 +109,7 @@ namespace tfs
         int relieve_relation(const uint64_t block, const uint64_t server, const time_t now);
         int update_block_info(BlockCollect*& output, bool& isnew, bool& writable, bool& master,
             const common::BlockInfoV2& info, const ServerCollect* server, const time_t now, const bool addnew);
+        int update_block_info(const common::BlockInfoV2& info, BlockCollect* block);
 
         int update_family_id(const uint64_t block, const uint64_t family_id);
 

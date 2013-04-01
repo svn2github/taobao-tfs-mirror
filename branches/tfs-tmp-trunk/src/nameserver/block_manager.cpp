@@ -603,6 +603,18 @@ namespace tfs
       return ret;
     }
 
+
+    int BlockManager::update_block_info(const common::BlockInfoV2& info, BlockCollect* block)
+    {
+      int32_t ret = (NULL != block) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        RWLock::Lock lock(get_mutex_(block->id()), WRITE_LOCKER);
+        block->update(info);
+      }
+      return ret;
+    }
+
     int BlockManager::update_family_id(const uint64_t block, const uint64_t family_id)
     {
       RWLock::Lock lock(get_mutex_(block), READ_LOCKER);

@@ -304,6 +304,7 @@ namespace tfs
 
     int CompactTask::handle_complete(common::BasePacket* msg)
     {
+      status_ = PLAN_STATUS_FAILURE;
       int32_t ret = (NULL != msg) && (msg->getPCode() == BLOCK_COMPACT_COMPLETE_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -313,14 +314,16 @@ namespace tfs
         ret = (NULL != block) ? TFS_SUCCESS : EXIT_NO_BLOCK;
         if (TFS_SUCCESS == ret)
         {
-          bool has_successful = false;
+          uint32_t count = 0;
           const std::vector<std::pair<uint64_t, int8_t> >& result = message->get_result();
           std::vector<std::pair<uint64_t, int8_t> >::const_iterator iter = result.begin();
-          for (; iter != result.end() && !has_successful; ++iter)
+          for (; iter != result.end(); ++iter)
           {
-            has_successful = PLAN_STATUS_END == iter->second;
+            if (PLAN_STATUS_END == iter->second)
+              ++count;
           }
-          if (!has_successful)
+          status_ = result.size() == count ? PLAN_STATUS_END : count > 0 ? PLAN_STATUS_PART_END : PLAN_STATUS_FAILURE;
+          if (PLAN_STATUS_FAILURE == status_)
           {
             dump(TBSYS_LOG_LEVEL(INFO), "compact block all failure");
           }
@@ -674,6 +677,19 @@ namespace tfs
                   if (manager_.get_manager().get_block_manager().get_servers_size(member_info[index].block_) <= 0)
                     ret = manager_.get_manager().build_relation(block, server, now);
                 }
+              }
+            }
+
+            const int32_t REINSTATE_NUM = packet->get_reinstate_num();
+            common::BlockInfoV2* blockinfos = packet->get_reinstate_block_info();
+            assert(NULL != blockinfos);
+            for (int32_t index = 0; index < REINSTATE_NUM && TFS_SUCCESS == ret; ++index)
+            {
+              block  = manager_.get_manager().get_block_manager().get(member_info[index].block_);
+              ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+              if (TFS_SUCCESS == ret)
+              {
+                ret = manager_.get_manager().get_block_manager().update_block_info(blockinfos[index], block);
               }
             }
           }
