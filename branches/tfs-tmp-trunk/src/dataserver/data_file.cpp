@@ -49,55 +49,59 @@ namespace tfs
       int32_t ret = (NULL != data && nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        int32_t real_offset = sizeof(info) + offset;
-        int32_t length = real_offset + nbytes;
-        if (length <= WRITE_DATA_TMPBUF_SIZE)
+        ret = (length_ > 0) ? offset >= length_ ? TFS_SUCCESS : EXIT_WRITE_OFFSET_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
         {
-          if (0 == offset)
+          int32_t real_offset = sizeof(info) + offset;
+          int32_t length = real_offset + nbytes;
+          if (length <= WRITE_DATA_TMPBUF_SIZE)
           {
-            memcpy(data_, &info, sizeof(info));
-            memcpy((data_ + real_offset), data, nbytes);
+            if (0 == offset)
+            {
+              memcpy(data_, &info, sizeof(info));
+              memcpy((data_ + real_offset), data, nbytes);
+            }
+            else
+            {
+              memcpy((data_ + real_offset), data, nbytes);
+            }
+            crc_ = Func::crc(crc_, data, nbytes);
           }
           else
           {
-            memcpy((data_ + real_offset), data, nbytes);
-          }
-          crc_ = Func::crc(crc_, data, nbytes);
-        }
-        else
-        {
-          if (fd_ < 0)
-          {
-            fd_ = open(path_.str().c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
-            ret = fd_ >= 0 ? TFS_SUCCESS : -errno;
-            if (TFS_SUCCESS == ret)
+            if (fd_ < 0)
             {
-              if (length_ <= 0)
+              fd_ = open(path_.str().c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
+              ret = fd_ >= 0 ? TFS_SUCCESS : -errno;
+              if (TFS_SUCCESS == ret)
               {
-                memcpy(data_, &info, sizeof(info));
-                length_ += sizeof(info);
+                if (length_ <= 0)
+                {
+                  memcpy(data_, &info, sizeof(info));
+                  length_ += sizeof(info);
+                }
+                ret = (length_ == ::pwrite(fd_, data_, length_, 0)) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
               }
-              ret = (length_ == ::pwrite(fd_, data_, length_, 0)) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
             }
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            ret = fd_ >= 0 ? TFS_SUCCESS : EXIT_NOT_OPEN_ERROR;
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            int32_t wnbytes = ::pwrite(fd_, data, nbytes, real_offset);
-            ret = (nbytes == wnbytes) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
             if (TFS_SUCCESS == ret)
             {
-              crc_ = Func::crc(crc_, data, nbytes);
+              ret = fd_ >= 0 ? TFS_SUCCESS : EXIT_NOT_OPEN_ERROR;
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              int32_t wnbytes = ::pwrite(fd_, data, nbytes, real_offset);
+              ret = (nbytes == wnbytes) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
+              if (TFS_SUCCESS == ret)
+              {
+                crc_ = Func::crc(crc_, data, nbytes);
+              }
             }
           }
-        }
 
-        if (TFS_SUCCESS == ret)
-        {
-          length_ = std::max(length_, length);
+          if (TFS_SUCCESS == ret)
+          {
+            length_ = std::max(length_, length);
+          }
         }
       }
       return TFS_SUCCESS == ret ? nbytes : ret;
@@ -114,18 +118,14 @@ namespace tfs
         {
           if (fd_ >= 0)
           {
-            ret = (offset == lseek(fd_, offset, SEEK_SET)) ? TFS_SUCCESS : -errno;
+            const int32_t max = WRITE_DATA_TMPBUF_SIZE;
+            nbytes = std::min(nbytes, max);
+            int32_t length = ::pread(fd_, data_, nbytes, offset);
+            ret = length >= 0 ? TFS_SUCCESS : EXIT_READ_FILE_ERROR;
             if (TFS_SUCCESS == ret)
             {
-              const int32_t max = WRITE_DATA_TMPBUF_SIZE;
-              nbytes = std::min(nbytes, max);
-              int32_t length = ::read(fd_, data_, nbytes);
-              ret = length >= 0 ? TFS_SUCCESS : EXIT_READ_FILE_ERROR;
-              if (TFS_SUCCESS == ret)
-              {
-                nbytes = length;
-                data   = data_;
-              }
+              nbytes = length;
+              data   = data_;
             }
           }
           else

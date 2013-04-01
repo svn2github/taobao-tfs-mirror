@@ -311,7 +311,7 @@ namespace tfs
     int CompactTask::real_compact(BaseLogicBlock* src, BaseLogicBlock* dest)
     {
       LogicBlock* tmpsrc = dynamic_cast<LogicBlock* >(src);
-      LogicBlock::Iterator* iter = new (std::nothrow) LogicBlock::Iterator(*tmpsrc);
+      LogicBlock::Iterator* iter = new (std::nothrow) LogicBlock::Iterator(tmpsrc);
       assert(NULL != iter);
 
       char* buffer = new (std::nothrow) char[MAX_COMPACT_READ_SIZE];
@@ -319,7 +319,6 @@ namespace tfs
 
       int32_t new_offset = 0;  // offset to write new file
       int32_t inner_offset = 0; // offset in compact buffer
-      int32_t mem_offset = 0;   // where to read data in Iterator
       IndexHeaderV2 header, old_header;
       FileInfoV2* finfo = NULL;
       vector<FileInfoV2> finfos_vec;
@@ -328,23 +327,28 @@ namespace tfs
       {
         ret = src->get_index_header(old_header);
       }
-      while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == iter->next(mem_offset, finfo)))
+      while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == iter->next(finfo)))
       {
         if (finfo->status_ & FI_DELETED)
         {
           continue;  // ignore deleted file
         }
 
+        TBSYS_LOG(DEBUG, "COMPACT: %lu, file_id: %lu, offset: %d, crc: %u, next: %d",
+            src->id(), finfo->id_, finfo->offset_, finfo->crc_, finfo->next_);
+
         if (inner_offset + finfo->size_ > MAX_COMPACT_READ_SIZE)
         {
           if (inner_offset > 0)  // buffer not empty, flush first
           {
-            ret = dest->pwrite(buffer, inner_offset, new_offset, true);
-            ret = (ret >= 0) ? TFS_SUCCESS : ret;
+            ret = get_block_manager().pwrite(buffer, inner_offset, new_offset, dest->id(), true);
+            ret = (ret > 0) ? TFS_SUCCESS : ret;
             if (TFS_SUCCESS == ret)
             {
               new_offset += inner_offset;
               inner_offset = 0;
+              dest->get_used_offset(header.used_offset_);
+              assert(new_offset == header.used_offset_);
             }
           }
         }
@@ -352,8 +356,9 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           // special process big file
-          if (iter->is_big_file())
+          if (is_big_file(finfo->size_))
           {
+            assert(false);
             ret = write_big_file(src, dest, *finfo, new_offset);
             if (TFS_SUCCESS == ret)
             {
@@ -366,8 +371,16 @@ namespace tfs
           }
           else  // the tmp buffer can contains current file, just memcopy it
           {
-            const char* file_data = iter->get_data(mem_offset, finfo->size_);
+            const char* file_data = iter->get_data(finfo->offset_, finfo->size_);
+            assert(NULL != file_data);
             memcpy(buffer + inner_offset, file_data, finfo->size_);
+            uint32_t crc = 0;
+            crc = Func::crc(crc, (buffer + inner_offset + 4), (finfo->size_ - 4));
+            if (crc != finfo->crc_)
+            {
+              Func::hex_dump(file_data, 10, true, TBSYS_LOG_LEVEL_INFO);//TODO
+            }
+            assert(crc == finfo->crc_);
             finfo->offset_ = new_offset + inner_offset; // update fileinfo offset
             finfos_vec.push_back(*finfo);
             header.info_.file_count_++;
@@ -378,10 +391,16 @@ namespace tfs
       }
 
       // still has data in buffer, flush it
-      if (inner_offset > 0)
+      if (TFS_SUCCESS == ret && inner_offset > 0)
       {
-        ret = dest->pwrite(buffer, inner_offset, new_offset, true);
-        ret = (ret >= 0) ? TFS_SUCCESS : ret;
+        ret = get_block_manager().pwrite(buffer, inner_offset, new_offset, dest->id(), true);
+        ret = (ret > 0) ? TFS_SUCCESS : ret;
+        if (TFS_SUCCESS == ret)
+        {
+          new_offset += inner_offset;
+          dest->get_used_offset(header.used_offset_);
+          assert(new_offset == header.used_offset_);
+        }
       }
 
       // write new header and index to dest
@@ -391,6 +410,7 @@ namespace tfs
         header.info_.update_size_ = old_header.info_.update_size_;
         header.info_.update_file_count_ = old_header.info_.update_file_count_;
         memcpy(&header.throughput_, &old_header.throughput_, sizeof(header.throughput_));
+        header.info_.version_ = old_header.info_.version_;
         header.seq_no_ = old_header.seq_no_;
         dest->get_used_offset(header.used_offset_);
         dest->get_avail_offset(header.avail_offset_);
@@ -421,7 +441,7 @@ namespace tfs
         ret = (ret >= 0) ? TFS_SUCCESS : ret;
         if (TFS_SUCCESS == ret)
         {
-          ret = dest->pwrite(buffer, length, new_offset + offset, true);
+          ret = get_block_manager().pwrite(buffer, length, new_offset + offset, dest->id(), true);
           ret = (ret >= 0) ? TFS_SUCCESS : ret;
           if (TFS_SUCCESS == ret)
           {
@@ -431,6 +451,11 @@ namespace tfs
       }
       tbsys::gDeleteA(buffer);
       return ret;
+    }
+
+    bool CompactTask::is_big_file(const int32_t size) const
+    {
+      return size >= LogicBlock::Iterator::MAX_DATA_SIZE;
     }
 
     ReplicateTask::ReplicateTask(DataService& service, const int64_t seqno,

@@ -880,10 +880,10 @@ namespace tfs
           get_traffic_control().rw_stat(RW_STAT_TYPE_WRITE, ret, 0 == offset, length);
         }
 
-        TBSYS_LOG(INFO, "WRITE file %s, blockid: %"PRI64_PREFIX"u, "
+        TBSYS_LOG(INFO, "WRITE file %s, ret: %d, attach_blockid: %"PRI64_PREFIX"u, "
             "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
             "length: %d, offset: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",
-            (TFS_SUCCESS == ret) ? "success": "fail", attach_block_id,
+            (TFS_SUCCESS == ret) ? "success": "fail", ret, attach_block_id,
             file_id, lease_id, length, offset,
             tbsys::CNetUtil::addrToString(peer_id).c_str(), req_cost_time);
       }

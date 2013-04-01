@@ -607,7 +607,6 @@ namespace tfs
             TBSYS_LOG(INFO, "close file %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s, role: master",
                 TFS_SUCCESS == ret ? "success" : "fail", close_file_info.file_number_, close_file_info.block_id_,
                 close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
-            traffic_control_.rw_stat(RW_STAT_TYPE_WRITE, ret, true, 0);
           }
           else if (WRITE_FILE_MESSAGE_V2 == pcode ||
                    CLOSE_FILE_MESSAGE_V2 == pcode ||
@@ -818,8 +817,8 @@ namespace tfs
 
       TBSYS_LOG(
           DEBUG,
-          "write data start, blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, version: %u, leaseid: %u, isserver: %d\n",
-          write_info.block_id_, write_info.file_id_, write_info.file_number_, version, lease_id, write_info.is_server_);
+          "write data start, blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, offset: %d, length: %d, version: %u, leaseid: %u, isserver: %d\n",
+          write_info.block_id_, write_info.file_id_, write_info.file_number_, write_info.offset_, write_info.length_, version, lease_id, write_info.is_server_);
 
       UpdateBlockType repair = UPDATE_BLOCK_NORMAL;
       int ret = data_management_.write_data(write_info, lease_id, version, msg_data, repair);
@@ -893,8 +892,8 @@ namespace tfs
           TIMER_END();
           TBSYS_LOG(
               INFO,
-              "write data %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, version: %u, leaseid: %u, role: %s, cost time: %" PRI64_PREFIX "d",
-              ret >= 0 ? "success": "fail", write_info.file_number_, write_info.block_id_, write_info.file_id_, version, lease_id, Master_Server_Role == write_info.is_server_ ? "master" : "slave", TIMER_DURATION());
+              "write data %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, offset: %d, length: %d, version: %u, leaseid: %u, role: %s, cost time: %" PRI64_PREFIX "d",
+              ret >= 0 ? "success": "fail", write_info.file_number_, write_info.block_id_, write_info.file_id_, write_info.offset_, write_info.length_, version, lease_id, Master_Server_Role == write_info.is_server_ ? "master" : "slave", TIMER_DURATION());
 
         }
       }
@@ -911,9 +910,9 @@ namespace tfs
 
       TBSYS_LOG(
           DEBUG,
-          "close write file, blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, leaseid: %u, from: %s\n",
+          "close write file, blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, leaseid: %u, from: %s, crc: %u\n",
           close_file_info.block_id_, close_file_info.file_id_, close_file_info.file_number_, lease_id,
-          tbsys::CNetUtil::addrToString(peer_id).c_str());
+          tbsys::CNetUtil::addrToString(peer_id).c_str(), close_file_info.crc_);
 
       int ret = TFS_ERROR;
       if ((option_flag & TFS_FILE_CLOSE_FLAG_WRITE_DATA_FAILED))
@@ -1037,13 +1036,13 @@ namespace tfs
                     TFS_SUCCESS == ret ? "success" : "fail", close_file_info.file_number_, close_file_info.block_id_,
                     close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str(),
                     CLOSE_FILE_SLAVER != close_file_info.mode_ ? "master" : "slave", TIMER_DURATION());
-                traffic_control_.rw_stat(RW_STAT_TYPE_WRITE, ret, true, write_file_size);
               }
               else
               {
                 // post success.
                 ret = TFS_SUCCESS;
               }
+              traffic_control_.rw_stat(RW_STAT_TYPE_WRITE, ret, true, write_file_size);
             }
             else
             {

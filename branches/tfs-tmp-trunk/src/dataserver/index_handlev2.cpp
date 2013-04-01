@@ -358,6 +358,7 @@ namespace tfs
         int32_t max_loop = header->file_info_bucket_size_;
         if (GET_SLOT_TYPE_GEN == type)
         {
+          prev = NULL;
           assert(INVALID_FILE_ID == file_id);
           slot = ++header->seq_no_ % header->file_info_bucket_size_;
           current =  (finfos + slot);
@@ -392,6 +393,7 @@ namespace tfs
 
         if (GET_SLOT_TYPE_INSERT == type)
         {
+          prev = NULL;
           assert(INVALID_FILE_ID != file_id);
           uint32_t key = file_id & 0xFFFFFFFF;//lower 32 bit
           slot = key % header->file_info_bucket_size_;
@@ -402,6 +404,7 @@ namespace tfs
             slot = current->next_;
             current =  (finfos + slot);
           }
+          //ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           if (TFS_SUCCESS != ret)
             prev = current;
           while (TFS_SUCCESS != ret && max_loop-- > 0 && header->used_file_info_bucket_size_ < header->file_info_bucket_size_)

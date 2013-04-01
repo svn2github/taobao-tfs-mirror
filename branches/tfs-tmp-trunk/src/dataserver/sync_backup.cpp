@@ -318,10 +318,10 @@ namespace tfs
           {
             uint32_t crc = 0;
             char data[MAX_READ_SIZE];
-            int32_t offset = 0, write_length = 0, length = MAX_READ_SIZE, total_length = 0, dest_fd = -1, result = 0, crc_offset = -1;
+            finfo.size_ -= sizeof(FileInfoInDiskExt);
+            int32_t offset = sizeof(FileInfoInDiskExt), write_length = 0, length = MAX_READ_SIZE, total_length = 0, dest_fd = -1, result = 0;
             while (total_length < finfo.size_ && TFS_SUCCESS == ret)
             {
-              crc_offset = (-1 == crc_offset) ? sizeof(FileInfoInDiskExt) : 0;
               length = ((finfo.size_ - total_length) > MAX_READ_SIZE) ? MAX_READ_SIZE : finfo.size_ - total_length;
               result = get_block_manager().read(data, length, offset, file_id, READ_DATA_OPTION_FLAG_FORCE, block_id, block_id);
               ret = result == length ? TFS_SUCCESS : EXIT_READ_FILE_SIZE_ERROR;
@@ -361,7 +361,7 @@ namespace tfs
                   {
                     offset += length;
                     total_length += length;
-                    crc = Func::crc(crc, data + crc_offset, (length - crc_offset));
+                    crc = Func::crc(crc, data, length);
                   }
                 }
               }
@@ -382,6 +382,7 @@ namespace tfs
               ret = crc != finfo.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS; // check crc
               if (TFS_SUCCESS != ret)
               {
+                Func::hex_dump(data, 8, true, TBSYS_LOG_LEVEL_DEBUG);
                 TBSYS_LOG(WARN, "file crc error. %s, blockid: %"PRI64_PREFIX"u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
                   fsname.get_name(), block_id, file_id, crc, finfo.crc_, total_length, finfo.size_);
               }

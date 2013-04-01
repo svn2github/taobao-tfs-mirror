@@ -34,7 +34,6 @@ namespace tfs
   namespace dataserver
   {
     class BlockManager;
-    class LogicBlockIterator;
     class BaseLogicBlock : public GCObject
     {
       public:
@@ -85,7 +84,7 @@ namespace tfs
       int transfer_file_status_(int32_t& oper_type, common::FileInfoV2& info, const int32_t action,
           const uint64_t logic_block_id, const uint64_t fileid) const;
       int extend_block_(const int32_t size, const int32_t offset, const bool tmp);
-      int write_(common::FileInfoV2& new_finfo, DataFile& data_file, const common::FileInfoV2& old_finfo, const bool update, const bool tmp);
+      int write_(common::FileInfoV2& new_finfo, DataFile& data_file, const common::FileInfoV2& old_finfo, const bool update);
      protected:
       BlockManager* manager_;
       uint64_t logic_block_id_;
@@ -126,24 +125,22 @@ namespace tfs
       public:
         class Iterator
         {
-          public:
-            Iterator(LogicBlock& logic_block):
-              logic_block_(logic_block),
-              iter_(logic_block.get_index_handle_()->begin()),
-              used_offset_(0),
-              mem_valid_size_(0){}
+         public:
+            Iterator(LogicBlock* logic_block);
             virtual ~Iterator() {}
             bool empty() const;
-            bool is_big_file() const;
-            int next(int32_t& mem_offset, common::FileInfoV2*& info);
+            bool check_offset_range(const int32_t offset, const int32_t size) const;
+            int next(common::FileInfoV2*& info);
             const common::FileInfoV2& get_file_info() const;
-            const char* get_data(int32_t& mem_offset, const int32_t size) const;
-          private:
+            const char* get_data(const int32_t offset, const int32_t size) const;
             static const int32_t MAX_DATA_SIZE = 4 * 1024 * 1024;
-            LogicBlock& logic_block_;
-            BaseIndexHandle::iterator iter_;
+          private:
+            std::vector<common::FileInfoV2> finfos_;
+            LogicBlock* logic_block_;
+            std::vector<common::FileInfoV2>::iterator iter_;
             int32_t used_offset_;//磁盘文件大小(这里的offset是最后一个文件的起始位置)
             int32_t mem_valid_size_;
+            int32_t last_read_disk_offset_;
             char data_[MAX_DATA_SIZE];//从磁盘上读出的数据缓存
         };
     };

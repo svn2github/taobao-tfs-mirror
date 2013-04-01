@@ -216,6 +216,7 @@ namespace tfs
             const common::FileInfoV2& finfo, const int32_t new_offset);
         int dispatch_sub_task();
         void add_response(const uint64_t server, const int status, const common::BlockInfoV2& info);
+        bool is_big_file(const int32_t size) const;
 
       protected:
         uint64_t block_id_;

@@ -15,6 +15,7 @@
  */
 
 #include "common/error_msg.h"
+#include "common/atomic.h"
 
 #include "ds_define.h"
 #include "logic_blockv2.h"
@@ -317,8 +318,8 @@ namespace tfs
       int32_t ret = (NULL != buf && nbytes > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        mutex_.wrlock();
         ret = extend_block_(nbytes, offset, tmp);
+        common::RWLock::Lock(mutex_, WRITE_LOCKER);
         if (TFS_SUCCESS == ret)//write data
         {
           int32_t mem_offset = 0;
@@ -337,7 +338,6 @@ namespace tfs
         {
           ret = index_handle_->set_used_offset(nbytes + offset);
         }
-        mutex_.unlock();
       }
       return TFS_SUCCESS == ret ? nbytes : ret;
     }
@@ -463,10 +463,12 @@ namespace tfs
 
     int BaseLogicBlock::extend_block_(const int32_t size, const int32_t offset, const bool tmp)
     {
-      int32_t ret = (size > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (size > 0 && (offset >= 0 || -1 == offset)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        int32_t avail_size = 0;
+        common::RWLock::Lock lock(get_block_manager_().mutex_, WRITE_LOCKER);
+        common::RWLock::Lock this_lock(mutex_, WRITE_LOCKER);
+        int32_t avail_size = 0, real_offset = offset;
         SuperBlockInfo* super_info = NULL;
         SuperBlockManager& supber_block_manager = get_block_manager_().get_super_block_manager();
         PhysicalBlockManager&  physical_block_manager = get_block_manager_().get_physical_block_manager();
@@ -477,13 +479,20 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          const int32_t total_offset      = offset + size;
-          const int32_t total_need_length = (offset + size) - avail_size;
+          if (real_offset < 0)
+          {
+            ret = index_handle_->get_used_offset(real_offset);
+          }
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          const int32_t total_offset      = real_offset + size;
+          const int32_t total_need_length = (real_offset + size) - avail_size;
           int32_t retry_times = (total_need_length / super_info->max_extend_block_size_) + 1;
           while (TFS_SUCCESS == ret && avail_size < total_offset && retry_times-- > 0)
           {
             TBSYS_LOG(INFO, "extend logic block: %"PRI64_PREFIX"u,avail_size: %d, total_offset: %d",
-              id(), avail_size, total_offset);
+                id(), avail_size, total_offset);
             BlockIndex index, ext_index;
             BasePhysicalBlock* new_physical_block = NULL;
             ret = (!physical_block_list_.empty()) ? TFS_SUCCESS : EXIT_PHYSICALBLOCK_NUM_ERROR;
@@ -496,17 +505,8 @@ namespace tfs
             }
             if (TFS_SUCCESS == ret)
             {
-              # ifdef TFS_GTEST
-                ret = physical_block_manager.alloc_ext_block(index, ext_index, tmp);
-                new_physical_block = physical_block_manager.get(ext_index.physical_block_id_);
-              # else
-                mutex_.unlock();
-                get_block_manager_().mutex_.wrlock();
-                ret = physical_block_manager.alloc_ext_block(index, ext_index, tmp);
-                new_physical_block = physical_block_manager.get(ext_index.physical_block_id_);
-                get_block_manager_().mutex_.unlock();
-                mutex_.wrlock();
-              # endif
+              ret = physical_block_manager.alloc_ext_block(index, ext_index, tmp);
+              new_physical_block = physical_block_manager.get(ext_index.physical_block_id_);
               ret = (NULL == new_physical_block) ? EXIT_PHYSICAL_BLOCK_NOT_FOUND : TFS_SUCCESS;
             }
             if (TFS_SUCCESS == ret)
@@ -524,7 +524,7 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::write_(FileInfoV2& new_finfo, DataFile& datafile, const FileInfoV2& old_finfo, const bool update, const bool tmp)
+    int BaseLogicBlock::write_(FileInfoV2& new_finfo, DataFile& datafile, const FileInfoV2& old_finfo, const bool update)
     {
       time_t now = time(NULL);
       int32_t file_size = datafile.length();
@@ -539,48 +539,50 @@ namespace tfs
       else
       {
         new_finfo.status_ = FILE_STATUS_NOMARL;
-        new_finfo.next_ = 0;
+        new_finfo.next_   = 0;
       }
       new_finfo.size_ = file_size;
       int32_t ret = index_handle_->get_used_offset(new_finfo.offset_);
       if (TFS_SUCCESS == ret)
       {
-        ret = extend_block_(new_finfo.size_, new_finfo.offset_, tmp);
-        if (TFS_SUCCESS == ret)//write data
+        char* data = NULL;
+        int32_t read_offset = 0, length = 0, write_offset = 0;
+        int32_t write_length = 0, mem_offset = 0;
+        while (read_offset < new_finfo.size_  && TFS_SUCCESS == ret)
         {
-          char* data = NULL;
-          int32_t read_offset = 0, length = 0, write_offset = 0;
-          int32_t write_length = 0, mem_offset = 0;
-          while (read_offset < new_finfo.size_  && TFS_SUCCESS == ret)
+          length = new_finfo.size_ - read_offset;
+          ret = datafile.pread(data, length, read_offset);
+          ret = (length == ret) ? TFS_SUCCESS : ret;
+          if (TFS_SUCCESS == ret)
           {
-            length = new_finfo.size_ - read_offset;
-            ret = datafile.pread(data, length, read_offset);
-            ret = ret >= 0 ? TFS_SUCCESS : ret;
-            if (TFS_SUCCESS == ret)
+            if (0 == read_offset)
             {
-              assert(NULL != data);
-              read_offset += length;
-              ret = read_offset > new_finfo.size_  ? EXIT_WRITE_OFFSET_ERROR : TFS_SUCCESS;
-              if (TFS_SUCCESS == ret && length > 0)
-              {
-                mem_offset = 0;
-                while (mem_offset < length && TFS_SUCCESS == ret)
-                {
-                  write_length = length - mem_offset;
-                  ret = data_handle_.pwrite((data + mem_offset), write_length, (new_finfo.offset_ + write_offset));
-                  ret = ret >= 0 ? TFS_SUCCESS : ret;
-                  if (TFS_SUCCESS == ret)
-                  {
-                    mem_offset   += write_length;
-                    write_offset += write_length;
-                  }
-                }//end while (write_offset < length && TFS_SUCCESS == ret)
-              }
+              TBSYS_LOG(DEBUG, "write file : blockid: %lu, fileid: %lu, size: %d, crc: %u, offset: %d", id(), new_finfo.id_, file_size, new_finfo.crc_, new_finfo.offset_);
+              Func::hex_dump(data, 10, true, TBSYS_LOG_LEVEL_DEBUG);
             }
-          }//end while (offset < new_finfo.size_  && TFS_SUCCESS == ret)
-          //这里并没有直接将数据刷到磁盘，如果掉电的话，有可能丢数据, 我们需要多个副本来保证数据的正确性
-        }
+            assert(NULL != data);
+            read_offset += length;
+            ret = read_offset > new_finfo.size_  ? EXIT_WRITE_OFFSET_ERROR : TFS_SUCCESS;
+            if (TFS_SUCCESS == ret && length > 0)
+            {
+              mem_offset = 0;
+              while (mem_offset < length && TFS_SUCCESS == ret)
+              {
+                write_length = length - mem_offset;
+                ret = data_handle_.pwrite((data + mem_offset), write_length, (new_finfo.offset_ + write_offset));
+                ret = (ret == write_length) ? TFS_SUCCESS : ret;
+                if (TFS_SUCCESS == ret)
+                {
+                  mem_offset   += write_length;
+                  write_offset += write_length;
+                }
+              }//end while (write_offset < length && TFS_SUCCESS == ret)
+            }
+          }
+        }//end while (offset < new_finfo.size_  && TFS_SUCCESS == ret)
+        //这里并没有直接将数据刷到磁盘，如果掉电的话，有可能丢数据, 我们需要多个副本来保证数据的正确性
       }
+      TBSYS_LOG(DEBUG, "write file : blockid: %lu, fileid: %lu, size: %d, crc: %u, offset: %d", id(), new_finfo.id_, file_size, new_finfo.crc_, new_finfo.offset_);
       return ret;
     }
 
@@ -629,48 +631,51 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        mutex_.wrlock();
-        SuperBlockInfo* sbinfo = NULL;
-        SuperBlockManager& supber_block_manager = get_block_manager_().get_super_block_manager();
-        ret = supber_block_manager.get_super_block_info(sbinfo);
+        ret = extend_block_(datafile.length(), -1, tmp);
         if (TFS_SUCCESS == ret)
         {
-          FileInfoV2 old_finfo, new_finfo;
-          new_finfo.id_ = old_finfo.id_ = fileid;
-          ret = get_index_handle_()->read_file_info(old_finfo, sbinfo->max_use_hash_bucket_ratio_, logic_block_id);
-          bool update = (TFS_SUCCESS == ret);
-          if (update)
-            TBSYS_LOG(INFO, "file exist, update! block id: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u", logic_block_id, fileid);
-
-          ret = write_(new_finfo, datafile, old_finfo, update, tmp);
+          RWLock::Lock lock(mutex_, WRITE_LOCKER);
+          SuperBlockInfo* sbinfo = NULL;
+          SuperBlockManager& supber_block_manager = get_block_manager_().get_super_block_manager();
+          ret = supber_block_manager.get_super_block_info(sbinfo);
           if (TFS_SUCCESS == ret)
           {
-            ret = get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);
+            FileInfoV2 old_finfo, new_finfo;
+            new_finfo.id_ = old_finfo.id_ = fileid;
+            ret = get_index_handle_()->read_file_info(old_finfo, sbinfo->max_use_hash_bucket_ratio_, logic_block_id);
+            bool update = (TFS_SUCCESS == ret);
+            if (update)
+              TBSYS_LOG(INFO, "file exist, update! block id: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u", logic_block_id, fileid);
+
+            ret = write_(new_finfo, datafile, old_finfo, update);
             if (TFS_SUCCESS == ret)
             {
-              ret = get_index_handle_()->write_file_info(new_finfo, sbinfo->max_use_hash_bucket_ratio_, logic_block_id, update);
-              if (TFS_SUCCESS != ret)
+              ret = get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);
+              if (TFS_SUCCESS == ret)
               {
-                TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
-                    ret, id(), fileid);
-                ret = get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
+                ret = get_index_handle_()->write_file_info(new_finfo, sbinfo->max_use_hash_bucket_ratio_, logic_block_id, update);
                 if (TFS_SUCCESS != ret)
                 {
-                  TBSYS_LOG(ERROR, "write file info failed, we'll rollback failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
+                  TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
+                      ret, id(), fileid);
+                  ret = get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
+                  if (TFS_SUCCESS != ret)
+                  {
+                    TBSYS_LOG(ERROR, "write file info failed, we'll rollback failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
+                        ret, id(), fileid);
+                  }
+                }
+                fileid = new_finfo.id_;
+                ret = index_handle_->flush();
+                if (TFS_SUCCESS != ret)
+                {
+                  TBSYS_LOG(INFO, "write file, flush index to disk failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
                       ret, id(), fileid);
                 }
-              }
-              fileid = new_finfo.id_;
-              ret = index_handle_->flush();
-              if (TFS_SUCCESS != ret)
-              {
-                TBSYS_LOG(INFO, "write file, flush index to disk failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
-                    ret, id(), fileid);
               }
             }
           }
         }
-        mutex_.unlock();
       }
       return TFS_SUCCESS == ret ? datafile.length() : ret;
     }
@@ -754,17 +759,42 @@ namespace tfs
       return get_index_handle_()->statistic_visit(throughput, reset);
     }
 
+    bool SortFileInfoByOffset(const common::FileInfoV2& left, const common::FileInfoV2& right)
+    {
+      return left.offset_ < right.offset_;
+    }
+
+    LogicBlock::Iterator::Iterator(LogicBlock* logic_block):
+      logic_block_(logic_block),
+      used_offset_(0),
+      mem_valid_size_(-1),
+      last_read_disk_offset_(-1)
+    {
+      common::IndexHeaderV2 header;
+      BaseLogicBlock* plogic_block = dynamic_cast<BaseLogicBlock*>(logic_block);
+      assert(NULL != plogic_block);
+      int32_t ret = plogic_block->traverse(header, finfos_, plogic_block->id());
+      assert(common::TFS_SUCCESS == ret);
+      std::sort(finfos_.begin(), finfos_.end(), SortFileInfoByOffset);
+      iter_ = finfos_.begin();
+    }
+
     bool LogicBlock::Iterator::empty() const
     {
-      return (iter_ == logic_block_.get_index_handle_()->end());
+      return (iter_ == finfos_.end());
     }
 
-    bool LogicBlock::Iterator::is_big_file() const
+    bool LogicBlock::Iterator::check_offset_range(const int32_t offset, const int32_t size) const
     {
-      return iter_->size_ > MAX_DATA_SIZE;
+      return ( offset >= 0
+            && size > 0
+            && mem_valid_size_ > 0
+            && last_read_disk_offset_ >= 0
+            && (offset >= last_read_disk_offset_)
+            && ((offset + size) <= last_read_disk_offset_ + mem_valid_size_));
     }
 
-    int LogicBlock::Iterator::next(int32_t& mem_offset, FileInfoV2*& info)
+    int LogicBlock::Iterator::next(FileInfoV2*& info)
     {
       info = NULL;
       int32_t ret = EXIT_BLOCK_NO_DATA;
@@ -774,7 +804,7 @@ namespace tfs
         result = empty() ? EXIT_BLOCK_NO_DATA : TFS_SUCCESS;
         if (TFS_SUCCESS == result)
         {
-          result = logic_block_.index_handle_->get_used_offset(used_offset_);
+          result = logic_block_->get_index_handle_()->get_used_offset(used_offset_);
         }
         if (TFS_SUCCESS == result)
         {
@@ -785,9 +815,9 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = EXIT_BLOCK_NO_DATA;
-        for (; iter_ != logic_block_.get_index_handle_()->end() && TFS_SUCCESS != ret; iter_++)
+        for (; iter_ != finfos_.end() && TFS_SUCCESS != ret; iter_++)
         {
-          info = iter_;
+          info = &(*iter_);
           ret = (info->id_ != INVALID_FILE_ID && info->offset_ >= 0 && info->offset_ < used_offset_)? TFS_SUCCESS : EXIT_FILE_EMPTY;
         }
       }
@@ -800,21 +830,21 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        bool update_mem = mem_offset < 0 ? true : (mem_offset + info->size_) > mem_valid_size_ ? true : false;
-        if (update_mem)
+        bool offset_in_range = check_offset_range(info->offset_, info->size_);
+        if (!offset_in_range)
         {
           assert(info->offset_ <= used_offset_);
+          last_read_disk_offset_ = info->offset_;
           int32_t disk_data_length = used_offset_ - info->offset_;
           const int32_t max_data_size = MAX_DATA_SIZE;
           const int32_t MAX_READ_SIZE = std::min(max_data_size, disk_data_length);
           mem_valid_size_ = MAX_READ_SIZE;
-          ret = logic_block_.pread(data_, mem_valid_size_, info->offset_);
+          ret = logic_block_->pread(data_, mem_valid_size_, info->offset_);
           ret = ret >= 0 ? TFS_SUCCESS : ret;
           if (TFS_SUCCESS == ret)
           {
-            ret = (mem_valid_size_ >= MAX_READ_SIZE) ? TFS_SUCCESS : EXIT_READ_FILE_ERROR;
+            ret = (mem_valid_size_ == MAX_READ_SIZE) ? TFS_SUCCESS : EXIT_READ_FILE_ERROR;
           }
-          mem_offset = (TFS_SUCCESS == ret) ? 0 : -1;
         }
       }
       return ret;
@@ -825,15 +855,9 @@ namespace tfs
       return (*iter_);
     }
 
-    const char* LogicBlock::Iterator::get_data(int32_t& mem_offset, const int32_t size) const
+    const char* LogicBlock::Iterator::get_data(const int32_t offset, const int32_t size) const
     {
-      const char* result = NULL;
-      if (mem_valid_size_ > 0 && mem_offset >= 0 && (mem_offset + size) <= mem_valid_size_)
-      {
-        result = (data_ + mem_offset);
-        mem_offset += size;
-      }
-      return result;
+      return check_offset_range(offset, size) ? (data_ + (offset - last_read_disk_offset_)) : NULL;
     }
 
     VerifyLogicBlock::VerifyLogicBlock(BlockManager* manager, const uint64_t logic_block_id, const std::string& index_path):
@@ -862,58 +886,61 @@ namespace tfs
       int32_t ret = (INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        mutex_.wrlock();
-        char* data = NULL;
-        FileInfoV2* pold_finfo = NULL;
-        FileInfoV2  new_finfo, old_finfo;
-        VerifyIndexHandle::InnerIndex index;
-        index.logic_block_id_ = logic_block_id;
-        ret = get_index_handle_()->malloc_index_mem_(data, index);
+        ret = extend_block_(datafile.length(), -1, tmp);
         if (TFS_SUCCESS == ret)
         {
-          new_finfo.id_ = old_finfo.id_ = fileid;
-          ret = get_index_handle_()->read_file_info_(pold_finfo, fileid, data, index.size_, GET_SLOT_TYPE_QUERY);
-          bool update = TFS_SUCCESS == ret;
-          if (update)
-          {
-            old_finfo = *pold_finfo;
-            TBSYS_LOG(INFO, "file exist, update! block id: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"d", logic_block_id, fileid );
-          }
-          ret = write_(new_finfo, datafile, old_finfo, update, tmp);
+          common::RWLock::Lock lock(mutex_, WRITE_LOCKER);
+          char* data = NULL;
+          FileInfoV2* pold_finfo = NULL;
+          FileInfoV2  new_finfo, old_finfo;
+          VerifyIndexHandle::InnerIndex index;
+          index.logic_block_id_ = logic_block_id;
+          ret = get_index_handle_()->malloc_index_mem_(data, index);
           if (TFS_SUCCESS == ret)
           {
-            ret = get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);
+            new_finfo.id_ = old_finfo.id_ = fileid;
+            ret = get_index_handle_()->read_file_info_(pold_finfo, fileid, data, index.size_, GET_SLOT_TYPE_QUERY);
+            bool update = TFS_SUCCESS == ret;
+            if (update)
+            {
+              old_finfo = *pold_finfo;
+              TBSYS_LOG(INFO, "file exist, update! block id: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"d", logic_block_id, fileid );
+            }
+            ret = write_(new_finfo, datafile, old_finfo, update);
             if (TFS_SUCCESS == ret)
             {
-              ret = get_index_handle_()->insert_file_info_(new_finfo, data, index.size_, update);
-              if (TFS_SUCCESS != ret)
+              ret = get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);
+              if (TFS_SUCCESS == ret)
               {
-                TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
-                    ret, logic_block_id, fileid);
-                ret = get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
+                ret = get_index_handle_()->insert_file_info_(new_finfo, data, index.size_, update);
                 if (TFS_SUCCESS != ret)
                 {
-                  TBSYS_LOG(ERROR, "write file info failed, we'll rollback failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
+                  TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
                       ret, logic_block_id, fileid);
+                  ret = get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
+                  if (TFS_SUCCESS != ret)
+                  {
+                    TBSYS_LOG(ERROR, "write file info failed, we'll rollback failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
+                        ret, logic_block_id, fileid);
+                  }
                 }
               }
             }
           }
-        }
 
-        if (NULL != data)
-          get_index_handle_()->free_index_mem_(data, index, TFS_SUCCESS == ret);
+          if (NULL != data)
+            get_index_handle_()->free_index_mem_(data, index, TFS_SUCCESS == ret);
 
-        if (TFS_SUCCESS == ret)
-        {
-          ret = get_index_handle_()->flush();
-          if (TFS_SUCCESS != ret)
+          if (TFS_SUCCESS == ret)
           {
-            TBSYS_LOG(INFO, "write file, flush index to disk failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
-                ret, logic_block_id, fileid);
+            ret = get_index_handle_()->flush();
+            if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(INFO, "write file, flush index to disk failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
+                  ret, logic_block_id, fileid);
+            }
           }
         }
-        mutex_.unlock();
       }
       return TFS_SUCCESS == ret ? datafile.length() : ret;
     }
