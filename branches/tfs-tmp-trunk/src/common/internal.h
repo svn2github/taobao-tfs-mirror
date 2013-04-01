@@ -338,7 +338,8 @@ namespace tfs
       PLAN_STATUS_BEGIN,
       PLAN_STATUS_END,
       PLAN_STATUS_FAILURE,
-      PLAN_STATUS_TIMEOUT
+      PLAN_STATUS_TIMEOUT,
+      PLAN_STATUS_PART_END
     };
 
     enum PlanPriority
@@ -1186,8 +1187,8 @@ namespace tfs
 
     struct IndexHeaderV2
     {
-    	common::BlockInfoV2 info_;//32 + 7 * 8 + 3 *4 = 100
-      ThroughputV2 throughput_;
+    	common::BlockInfoV2 info_;//44
+      ThroughputV2 throughput_;//80 + 24
       int32_t used_offset_;
       int32_t avail_offset_;
       int32_t marshalling_offset_;
