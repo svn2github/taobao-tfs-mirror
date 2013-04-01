@@ -222,7 +222,7 @@ namespace tfs
 
     int64_t ECReinstateCommitMessage::length() const
     {
-      int64_t len = INT_SIZE;
+      int64_t len = ECMarshallingCommitMessage::length() + INT_SIZE;
       if (reinstate_num_ > 0)
       {
         BlockInfoV2 tmp;
