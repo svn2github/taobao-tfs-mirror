@@ -144,6 +144,11 @@ namespace tfs
         delete name_meta_client_;
         name_meta_client_ = NULL;
       }
+      if (NULL != kv_meta_client_)
+      {
+        delete kv_meta_client_;
+        kv_meta_client_ = NULL;
+      }
       if (NULL != tfs_cluster_manager_)
       {
         delete tfs_cluster_manager_;
@@ -154,7 +159,7 @@ namespace tfs
     RcClientImpl::~RcClientImpl()
     {
       destory();
-      TfsClientImpl::Instance()->destroy();
+      //TfsClientImpl::Instance()->destroy();
       logout();
     }
     TfsRetType RcClientImpl::initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
@@ -1550,6 +1555,38 @@ namespace tfs
         }
         return ret;
       }
+
+      TfsRetType RcClientImpl::put_bucket_tag(const char *bucket_name, const MAP_STRING &bucket_tag_map)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->put_bucket_tag(bucket_name, bucket_tag_map);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::get_bucket_tag(const char *bucket_name, MAP_STRING *bucket_tag_map)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->get_bucket_tag(bucket_name, bucket_tag_map);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::del_bucket_tag(const char *bucket_name)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->del_bucket_tag(bucket_name);
+        }
+        return ret;
+      }
+
+
 
       TfsRetType RcClientImpl::put_object(const char *bucket_name, const char *object_name,
           const char* local_file, const common::UserInfo &user_info)

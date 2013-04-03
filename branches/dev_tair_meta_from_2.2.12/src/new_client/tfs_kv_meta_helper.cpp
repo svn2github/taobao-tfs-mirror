@@ -280,6 +280,150 @@ int KvMetaHelper::do_head_bucket(const uint64_t server_id, const char *bucket_na
   return ret;
 }
 
+//for bucket tagging
+int KvMetaHelper::do_put_bucket_tag(const uint64_t server_id, const char *bucket_name,
+    const MAP_STRING &bucket_tag_map)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaPutBucketTagMessage req_pbt_msg;
+    req_pbt_msg.set_bucket_name(bucket_name);
+    req_pbt_msg.set_bucket_tag_map(bucket_tag_map);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_pbt_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call put bucket tag fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "put bucket tag return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "put bucket tag fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_get_bucket_tag(const uint64_t server_id, const char *bucket_name,
+    MAP_STRING *bucket_tag_map)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name || NULL == bucket_tag_map)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaGetBucketTagMessage req_gbt_msg;
+    req_gbt_msg.set_bucket_name(bucket_name);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_gbt_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call get bucket tag fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_GET_BUCKET_TAG_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaGetBucketTagMessage* rsp_gbt_msg = dynamic_cast<RspKvMetaGetBucketTagMessage*>(rsp);
+      *bucket_tag_map = *(rsp_gbt_msg->get_bucket_tag_map());
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "get bucket tag fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_del_bucket_tag(const uint64_t server_id, const char *bucket_name)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaDelBucketTagMessage req_dbt_msg;
+    req_dbt_msg.set_bucket_name(bucket_name);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_dbt_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call del bucket tag fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "get bucket tag return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "get bucket tag fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
 
 int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_name,const char *object_name,
     const ObjectInfo &object_info, const UserInfo &user_info)

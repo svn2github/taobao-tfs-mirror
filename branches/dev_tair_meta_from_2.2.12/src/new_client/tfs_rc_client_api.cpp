@@ -204,6 +204,21 @@ namespace tfs
       return impl_->head_bucket(bucket_name, bucket_meta_info, user_info);
     }
 
+    TfsRetType RcClient::put_bucket_tag(const char *bucket_name, const MAP_STRING &bucket_tag_map)
+    {
+      return impl_->put_bucket_tag(bucket_name, bucket_tag_map);
+    }
+
+    TfsRetType RcClient::get_bucket_tag(const char *bucket_name, MAP_STRING *bucket_tag_map)
+    {
+      return impl_->get_bucket_tag(bucket_name, bucket_tag_map);
+    }
+
+    TfsRetType RcClient::del_bucket_tag(const char *bucket_name)
+    {
+      return impl_->del_bucket_tag(bucket_name);
+    }
+
     TfsRetType RcClient::put_object(const char *bucket_name, const char *object_name,
         const char* local_file, const UserInfo &user_info)
     {

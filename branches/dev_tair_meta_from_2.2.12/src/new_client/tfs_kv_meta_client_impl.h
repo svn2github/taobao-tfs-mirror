@@ -54,6 +54,10 @@ namespace tfs
         TfsRetType head_bucket(const char *bucket_name,
             common::BucketMetaInfo *bucket_meta_info, const common::UserInfo &user_info);
 
+        TfsRetType put_bucket_tag(const char *bucket_name, const common::MAP_STRING &bucket_tag_map);
+        TfsRetType get_bucket_tag(const char *bucket_name, common::MAP_STRING *bucket_tag_map);
+        TfsRetType del_bucket_tag(const char *bucket_name);
+
         int64_t pwrite_object(const char *bucket_name, const char *object_name,
             const void *buffer, int64_t offset, int64_t length,
             const common::UserInfo &user_info);
@@ -71,6 +75,7 @@ namespace tfs
         TfsRetType head_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info, const common::UserInfo &user_info);
 
+        void update_fail_info(const int ret);
         int do_put_bucket(const char *bucket_name,
             const common::BucketMetaInfo& bucket_meta_info, const common::UserInfo &user_info);
         int do_get_bucket(const char *bucket_name, const char *prefix,
@@ -83,6 +88,10 @@ namespace tfs
         int do_head_bucket(const char *bucket_name, common::BucketMetaInfo *bucket_meta_info,
             const common::UserInfo &user_info);
 
+        int do_put_bucket_tag(const char *bucket_name, const common::MAP_STRING &bucket_tag_map);
+        int do_get_bucket_tag(const char *bucket_name, common::MAP_STRING *bucket_tag_map);
+        int do_del_bucket_tag(const char *bucket_name);
+
         int do_put_object(const char *bucket_name, const char *object_name,
             const common::ObjectInfo &object_info, const common::UserInfo &user_info);
         int do_get_object(const char *bucket_name, const char *object_name,
@@ -94,6 +103,8 @@ namespace tfs
         int do_head_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info, const common::UserInfo &user_info);
 
+        static bool is_valid_string(const std::string &str);
+        static bool is_valid_bucket_tag(const common::MAP_STRING &bucket_tag_map);
         static bool is_valid_bucket_name(const char *bucket_name);
         static bool is_valid_object_name(const char *object_name);
 

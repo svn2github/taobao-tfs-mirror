@@ -40,6 +40,7 @@ namespace tfs
     {
       tbsys::gDelete(packet_factory_);
       tbsys::gDelete(packet_streamer_);
+      tfs_meta_manager_.destroy();
     }
 
     int KvMetaClientImpl::initialize(const char *rs_addr)
@@ -131,100 +132,186 @@ namespace tfs
       return meta_server_id;
     }
 
+    void KvMetaClientImpl::update_fail_info(const int ret)
+    {
+      if (EXIT_NETWORK_ERROR == ret)
+      {
+        fail_count_++;
+      }
+      if (need_update_table(ret))
+      {
+        update_table_from_rootserver();
+      }
+    }
+
     TfsRetType KvMetaClientImpl::put_bucket(const char *bucket_name, const UserInfo &user_info)
     {
-       TfsRetType ret = TFS_ERROR;
+      TfsRetType ret = TFS_ERROR;
 
-       if (!is_valid_bucket_name(bucket_name))
-       {
-         TBSYS_LOG(ERROR, "bucket name is invalid");
-       }
-       else
-       {
-         ret = TFS_SUCCESS;
-       }
+      if (!is_valid_bucket_name(bucket_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name is invalid");
+      }
+      else
+      {
+        ret = TFS_SUCCESS;
+      }
 
-       if (TFS_SUCCESS == ret)
-       {
-         BucketMetaInfo bucket_meta_info;
+      if (TFS_SUCCESS == ret)
+      {
+        BucketMetaInfo bucket_meta_info;
 
-         ret = do_put_bucket(bucket_name, bucket_meta_info, user_info);
-       }
+        ret = do_put_bucket(bucket_name, bucket_meta_info, user_info);
+      }
 
-       return ret;
+      return ret;
     }
 
     TfsRetType KvMetaClientImpl::get_bucket(const char *bucket_name, const char *prefix,
-                                            const char *start_key, const char delimiter, const int32_t limit,
-                                            vector<ObjectMetaInfo> *v_object_meta_info,
-                                            vector<string> *v_object_name, set<string> *s_common_prefix,
-                                            int8_t *is_truncated, const UserInfo &user_info)
+        const char *start_key, const char delimiter, const int32_t limit,
+        vector<ObjectMetaInfo> *v_object_meta_info,
+        vector<string> *v_object_name, set<string> *s_common_prefix,
+        int8_t *is_truncated, const UserInfo &user_info)
     {
-       TfsRetType ret = TFS_SUCCESS;
+      TfsRetType ret = TFS_SUCCESS;
 
-       if (!is_valid_bucket_name(bucket_name))
-       {
-         ret = TFS_ERROR;
-         TBSYS_LOG(ERROR, "bucket name is invalid");
-       }
+      if (!is_valid_bucket_name(bucket_name))
+      {
+        ret = TFS_ERROR;
+        TBSYS_LOG(ERROR, "bucket name is invalid");
+      }
 
-       if (TFS_SUCCESS == ret)
-       {
-         ret = do_get_bucket(bucket_name, prefix, start_key, delimiter, limit,
-             v_object_meta_info, v_object_name, s_common_prefix, is_truncated, user_info);
-       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = do_get_bucket(bucket_name, prefix, start_key, delimiter, limit,
+            v_object_meta_info, v_object_name, s_common_prefix, is_truncated, user_info);
+      }
 
-       TBSYS_LOG(INFO, "%d, %d", static_cast<int32_t>(v_object_name->size()), static_cast<int32_t>(s_common_prefix->size()));
+      TBSYS_LOG(INFO, "%d, %d", static_cast<int32_t>(v_object_name->size()), static_cast<int32_t>(s_common_prefix->size()));
 
-       return ret;
+      return ret;
     }
 
     TfsRetType KvMetaClientImpl::del_bucket(const char *bucket_name, const UserInfo &user_info)
     {
-       TfsRetType ret = TFS_ERROR;
+      TfsRetType ret = TFS_ERROR;
 
-       if (!is_valid_bucket_name(bucket_name))
-       {
-         TBSYS_LOG(ERROR, "bucket name is invalid");
-       }
-       else
-       {
-         ret = TFS_SUCCESS;
-       }
+      if (!is_valid_bucket_name(bucket_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name is invalid");
+      }
+      else
+      {
+        ret = TFS_SUCCESS;
+      }
 
-       if (TFS_SUCCESS == ret)
-       {
-         ret = do_del_bucket(bucket_name, user_info);
-       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = do_del_bucket(bucket_name, user_info);
+      }
 
-       return ret;
+      return ret;
     }
 
     TfsRetType KvMetaClientImpl::head_bucket(const char *bucket_name, BucketMetaInfo *bucket_meta_info, const UserInfo &user_info)
     {
-       TfsRetType ret = TFS_ERROR;
+      TfsRetType ret = TFS_ERROR;
 
-       if (!is_valid_bucket_name(bucket_name))
-       {
-         TBSYS_LOG(ERROR, "bucket name is invalid");
-       }
-       else
-       {
-         ret = TFS_SUCCESS;
-       }
+      if (!is_valid_bucket_name(bucket_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name is invalid");
+      }
+      else
+      {
+        ret = TFS_SUCCESS;
+      }
 
-       if (TFS_SUCCESS == ret)
-       {
-         ret = do_head_bucket(bucket_name, bucket_meta_info, user_info);
-         if (TFS_SUCCESS != ret)
-         {
-           TBSYS_LOG(ERROR, "head bucket failed. bucket: %s", bucket_name);
-         }
-       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = do_head_bucket(bucket_name, bucket_meta_info, user_info);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "head bucket failed. bucket: %s", bucket_name);
+        }
+      }
 
-       return ret;
+      return ret;
     }
 
+    TfsRetType KvMetaClientImpl::put_bucket_tag(const char *bucket_name, const MAP_STRING &bucket_tag_map)
+    {
+      TfsRetType ret = TFS_ERROR;
+
+      if (!is_valid_bucket_name(bucket_name) || !is_valid_bucket_tag(bucket_tag_map))
+      {
+        TBSYS_LOG(ERROR, "bucket name is invalid");
+      }
+      else
+      {
+        ret = TFS_SUCCESS;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = do_put_bucket_tag(bucket_name, bucket_tag_map);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "put bucket tag failed. bucket: %s", bucket_name);
+        }
+      }
+
+      return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::get_bucket_tag(const char *bucket_name, MAP_STRING *bucket_tag_map)
+    {
+      TfsRetType ret = TFS_ERROR;
+
+      if (!is_valid_bucket_name(bucket_name) || NULL == bucket_tag_map)
+      {
+        TBSYS_LOG(ERROR, "bucket name is invalid");
+      }
+      else
+      {
+        ret = TFS_SUCCESS;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = do_get_bucket_tag(bucket_name, bucket_tag_map);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "get bucket tag failed. bucket: %s", bucket_name);
+        }
+      }
+
+      return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::del_bucket_tag(const char *bucket_name)
+    {
+      TfsRetType ret = TFS_ERROR;
+
+      if (!is_valid_bucket_name(bucket_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name is invalid");
+      }
+      else
+      {
+        ret = TFS_SUCCESS;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = do_del_bucket_tag(bucket_name);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "del bucket tag failed. bucket: %s", bucket_name);
+        }
+      }
+
+      return ret;
+    }
 
     // copy from NameMetaClientImpl::write_data
     int64_t KvMetaClientImpl::write_data(const char *ns_addr,
@@ -243,13 +330,13 @@ namespace tfs
         write_length = min(left_length, MAX_SEGMENT_SIZE);
         FragMeta frag_meta;
         int64_t real_length = tfs_meta_manager_.write_data(ns_addr,
-          reinterpret_cast<const char*>(buffer) + cur_pos, cur_offset, write_length, frag_meta);
+            reinterpret_cast<const char*>(buffer) + cur_pos, cur_offset, write_length, frag_meta);
 
         if (real_length != write_length)
         {
           TBSYS_LOG(ERROR, "write fragment failed, cur_pos : %"PRI64_PREFIX"d, "
-            "write_length : %"PRI64_PREFIX"d, ret_length: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
-            cur_pos, write_length, real_length, ret);
+              "write_length : %"PRI64_PREFIX"d, ret_length: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
+              cur_pos, write_length, real_length, ret);
           if (real_length < 0)
           {
             ret = real_length;
@@ -870,14 +957,7 @@ namespace tfs
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_put_bucket(meta_server_id, bucket_name, bucket_meta_info, user_info);
 
-        if (EXIT_NETWORK_ERROR == ret)
-        {
-          fail_count_++;
-        }
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
+        update_fail_info(ret);
       }
       while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
@@ -899,15 +979,7 @@ namespace tfs
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_get_bucket(meta_server_id, bucket_name, prefix, start_key, delimiter, limit,
             v_object_meta_info, v_object_name, s_common_prefix, is_truncated, user_info);
-
-        if (EXIT_NETWORK_ERROR == ret)
-        {
-          fail_count_++;
-        }
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
+        update_fail_info(ret);
       }
       while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
@@ -923,15 +995,7 @@ namespace tfs
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_del_bucket(meta_server_id, bucket_name, user_info);
-
-        if (EXIT_NETWORK_ERROR == ret)
-        {
-          fail_count_++;
-        }
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
+        update_fail_info(ret);
       }
       while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
@@ -947,20 +1011,62 @@ namespace tfs
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_head_bucket(meta_server_id, bucket_name, bucket_meta_info, user_info);
-
-        if (EXIT_NETWORK_ERROR == ret)
-        {
-          fail_count_++;
-        }
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
+        update_fail_info(ret);
       }
       while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
     }
+
+    //bucket tag
+    int KvMetaClientImpl::do_put_bucket_tag(const char *bucket_name, const MAP_STRING &bucket_tag_map)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_put_bucket_tag(meta_server_id, bucket_name, bucket_tag_map);
+        update_fail_info(ret);
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    int KvMetaClientImpl::do_get_bucket_tag(const char *bucket_name, MAP_STRING *bucket_tag_map)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_get_bucket_tag(meta_server_id, bucket_name, bucket_tag_map);
+        update_fail_info(ret);
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    int KvMetaClientImpl::do_del_bucket_tag(const char *bucket_name)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_del_bucket_tag(meta_server_id, bucket_name);
+        update_fail_info(ret);
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
 
     int KvMetaClientImpl::do_put_object(const char *bucket_name,
         const char *object_name, const ObjectInfo &object_info, const UserInfo &user_info)
@@ -973,15 +1079,8 @@ namespace tfs
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_put_object(meta_server_id, bucket_name, object_name, object_info, user_info);
 
-        if (EXIT_NETWORK_ERROR == ret)
-        {
-          fail_count_++;
-        }
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
-      }
+        update_fail_info(ret);
+              }
       while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
@@ -997,15 +1096,7 @@ namespace tfs
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_get_object(meta_server_id, bucket_name, object_name, offset, length, object_info, still_have, user_info);
-
-        if (EXIT_NETWORK_ERROR == ret)
-        {
-          fail_count_++;
-        }
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
+        update_fail_info(ret);
       }
       while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
@@ -1021,15 +1112,7 @@ namespace tfs
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_del_object(meta_server_id, bucket_name, object_name, object_info, still_have, user_info);
-
-        if (EXIT_NETWORK_ERROR == ret)
-        {
-          fail_count_++;
-        }
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
+        update_fail_info(ret);
       }
       while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
@@ -1045,22 +1128,13 @@ namespace tfs
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_head_object(meta_server_id, bucket_name, object_name, object_info, user_info);
-
-        if (EXIT_NETWORK_ERROR == ret)
-        {
-          fail_count_++;
-        }
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
+        update_fail_info(ret);
       }
       while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
     }
 
-    // TODO
     bool KvMetaClientImpl::is_valid_bucket_name(const char *bucket_name)
     {
       bool is_valid = true;
@@ -1070,7 +1144,6 @@ namespace tfs
         is_valid = false;
       }
 
-      /*
       int32_t len = -1;
       // len > 3 && len < 256
       if (is_valid)
@@ -1088,15 +1161,19 @@ namespace tfs
       if (is_valid)
       {
         //handle the string like my..aws
-        bool conjoin = false;
+        bool is_period_pre = true;
         for (int32_t i = 0; i < len; i++)
         {
-          if (i == 0 || i == len - 1)
+          if (is_period_pre)
           {
             if (!islower(bucket_name[i]) && !isdigit(bucket_name[i]))
             {
               is_valid = false;
               break;
+            }
+            else
+            {
+              is_period_pre = false;
             }
           }
           else
@@ -1109,20 +1186,13 @@ namespace tfs
             }
             else if (PERIOD == bucket_name[i])
             {
-              if (conjoin)
-              {
-                is_valid = false;
-                break;
-              }
-              else
-              {
-                conjoin = true;
-              }
+              is_period_pre = true;
             }
-            else
-            {
-              conjoin = false;
-            }
+          }
+
+          if (is_valid && i == len - 1 && PERIOD == bucket_name[i])
+          {
+            is_valid = false;
           }
         }
       }
@@ -1149,20 +1219,56 @@ namespace tfs
           is_valid = false;
         }
       }
-      */
 
       return is_valid;
     }
 
-    // TODO
     bool KvMetaClientImpl::is_valid_object_name(const char *object_name)
+    {
+      return ((object_name != NULL) && (strlen(object_name) > 0) && (static_cast<int32_t>(strlen(object_name)) < MAX_FILE_PATH_LEN) && (strstr(object_name, " ") == NULL));
+    }
+
+    bool KvMetaClientImpl::is_valid_string(const string &str)
+    {
+      bool is_valid = true;
+      string tmp = "+-=._:/";
+      for (size_t i = 0; i < str.length(); i++)
+      {
+        if (!isdigit(str[i]) && !isalpha(str[i]) && std::string::npos == tmp.find(str[i]))
+        {
+          is_valid = false;
+          break;
+        }
+      }
+      return is_valid;
+    }
+
+    bool KvMetaClientImpl::is_valid_bucket_tag(const MAP_STRING &bucket_tag_map)
     {
       bool is_valid = true;
 
-      if (NULL == object_name)
+      if (static_cast<int32_t>(bucket_tag_map.size()) > MAX_BUCKET_TAG_SIZE)
       {
         is_valid = false;
       }
+
+      if (is_valid)
+      {
+        MAP_STRING_ITER iter = bucket_tag_map.begin();
+        for (; iter != bucket_tag_map.end(); iter++)
+        {
+          const string& key = iter->first;
+          const string& value = iter->second;
+          if (static_cast<int32_t>(key.length()) > MAX_TAG_KEY_LEN
+              || static_cast<int32_t>(value.length()) > MAX_TAG_VALUE_LEN
+              || !is_valid_string(key) || !is_valid_string(value))
+          {
+            is_valid = false;
+            break;
+          }
+        }
+      }
+
       return is_valid;
     }
 

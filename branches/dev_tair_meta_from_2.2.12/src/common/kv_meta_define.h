@@ -17,6 +17,7 @@
 #define TFS_COMMON_KV_META_DEFINE_H_
 
 #include <vector>
+#include <map>
 #include <string>
 #include "define.h"
 #include "meta_define.h"
@@ -31,6 +32,12 @@ namespace tfs
     const int32_t MAX_LIMIT = 1000;
     const int32_t VERSION_ERROR_RETRY_COUNT = 3;
     const int64_t MAX_VERSION = 1<<15 - 1;
+    const int32_t MAX_BUCKET_TAG_SIZE = 10;
+
+    const int32_t MAX_TAG_KEY_LEN = 128;
+    const int32_t MAX_TAG_VALUE_LEN = 256;
+    typedef std::map<std::string, std::string> MAP_STRING;
+    typedef std::map<std::string, std::string>::const_iterator MAP_STRING_ITER;
 
     struct TfsFileInfo
     {
@@ -115,6 +122,9 @@ namespace tfs
 
       int64_t create_time_;
       int64_t owner_id_;
+
+      bool has_tag_info_;
+      MAP_STRING bucket_tag_map_;
     };
 
     struct UserInfo

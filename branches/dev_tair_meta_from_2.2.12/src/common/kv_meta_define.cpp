@@ -485,12 +485,27 @@ namespace tfs
 
     //bucketmetainfo
     BucketMetaInfo::BucketMetaInfo()
-      :create_time_(0), owner_id_(0)
-    {}
+      :create_time_(0), owner_id_(0), has_tag_info_(false)
+    {
+      bucket_tag_map_.clear();
+    }
 
     int64_t BucketMetaInfo::length() const
     {
-      return INT64_SIZE * 2 + INT_SIZE * 3;
+      int64_t len = INT64_SIZE * 2 + INT_SIZE * 4 + INT8_SIZE;
+
+      if (has_tag_info_)
+      {
+        len += INT_SIZE * 2;
+        MAP_STRING_ITER iter = bucket_tag_map_.begin();
+        for (; iter != bucket_tag_map_.end(); iter++)
+        {
+          len += common::Serialization::get_string_length(iter->first);
+          len += common::Serialization::get_string_length(iter->second);
+        }
+      }
+
+      return len;
     }
 
     int BucketMetaInfo::serialize(char *data, const int64_t data_len, int64_t &pos) const
@@ -512,6 +527,37 @@ namespace tfs
       {
         ret = Serialization::set_int64(data, data_len, pos, owner_id_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKET_META_INFO_HAS_TAG_INFO_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int8(data, data_len, pos, has_tag_info_);
+      }
+      if (TFS_SUCCESS == ret && has_tag_info_)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKET_META_INFO_BUCKET_TAG_MAP_TAG);
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t size = bucket_tag_map_.size();
+          ret = Serialization::set_int32(data, data_len, pos, size);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          MAP_STRING_ITER iter = bucket_tag_map_.begin();
+          for (; iter != bucket_tag_map_.end() && TFS_SUCCESS == ret; iter++)
+          {
+            ret = Serialization::set_string(data, data_len, pos, iter->first);
+            if (TFS_SUCCESS == ret)
+            {
+              ret = Serialization::set_string(data, data_len, pos, iter->second);
+            }
+          }
+        }
+      }
+
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int32(data, data_len, pos, END_TAG);
@@ -538,6 +584,35 @@ namespace tfs
             case BUCKET_META_INFO_OWNER_ID_TAG:
               ret = Serialization::get_int64(data, data_len, pos, &owner_id_);
               break;
+            case BUCKET_META_INFO_HAS_TAG_INFO_TAG:
+              ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&has_tag_info_));
+              break;
+            case BUCKET_META_INFO_BUCKET_TAG_MAP_TAG:
+              if (has_tag_info_)
+              {
+                int32_t size = 0;
+                ret = Serialization::get_int32(data, data_len, pos, &size);
+
+                if (TFS_SUCCESS == ret)
+                {
+                  std::string key;
+                  std::string value;
+                  for (int32_t i = 0; i < size && TFS_SUCCESS == ret; i++)
+                  {
+                    ret = Serialization::get_string(data, data_len, pos, key);
+                    if (TFS_SUCCESS == ret)
+                    {
+                      ret = Serialization::get_string(data, data_len, pos, value);
+                    }
+
+                    if (TFS_SUCCESS == ret)
+                    {
+                      bucket_tag_map_.insert(std::make_pair(key, value));
+                    }
+                  }
+                }
+              }
+              break;
             case END_TAG:
               ;
               break;
@@ -559,7 +634,7 @@ namespace tfs
 
     //userinfo
     UserInfo::UserInfo()
-    :owner_id_(0)
+      :owner_id_(0)
     {}
     int64_t UserInfo::length() const
     {

@@ -121,6 +121,10 @@ namespace tfs
             common::BucketMetaInfo *bucket_meta_info,
             const common::UserInfo &user_info);
 
+        TfsRetType put_bucket_tag(const char *bucket_name, const common::MAP_STRING &bucket_tag_map);
+        TfsRetType get_bucket_tag(const char *bucket_name, common::MAP_STRING *bucket_tag_map);
+        TfsRetType del_bucket_tag(const char *bucket_name);
+
         TfsRetType put_object(const char *bucket_name, const char *object_name,
             const char* local_file, const common::UserInfo &user_info);
         int64_t pwrite_object(const char *bucket_name, const char *object_name,

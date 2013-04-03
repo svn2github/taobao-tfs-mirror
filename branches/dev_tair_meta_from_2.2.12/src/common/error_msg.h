@@ -192,6 +192,10 @@ namespace tfs
     const int32_t EXIT_OBJECT_NOT_EXIST = -16006; //get_key(key not exist, object type)
     const int32_t EXIT_BUCKET_EXIST = -16007;// bucket already exist
     const int32_t EXIT_INVALID_KV_META_SERVER = -16008;// no kv meta server
+
+    const int32_t EXIT_TAG_KEY_OVER_LIMIT = -16009; //over bucket tag key size(10)
+    const int32_t EXIT_TAG_KEY_EXIST = -16010; //bucket has the key
+    const int32_t EXIT_BUCKET_TAG_NOT_EXIST = -16011; //del bucket tag not exist
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_
