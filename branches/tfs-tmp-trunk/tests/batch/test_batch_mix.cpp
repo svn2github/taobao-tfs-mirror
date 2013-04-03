@@ -209,7 +209,7 @@ void* mix_worker(void* arg)
           update_stater, data, read_file_list);
       }
 
-      /*for (index = 0; index < PER_DELETE && !read_file_list.empty(); ++index)
+      for (index = 0; index < PER_DELETE && !read_file_list.empty(); ++index)
       {
         ++delete_time_consumed.total_count_;
         random_index = random() % read_file_list.size();
@@ -229,7 +229,7 @@ void* mix_worker(void* arg)
         {
           ++delete_time_consumed.fail_count_;
         }
-      }*/
+      }
     }
     while (loop_times-- > 0);
     tbsys::gDeleteA(data);
