@@ -48,6 +48,7 @@ namespace tfs
       static int list_file(common::DsTask& ds_task);
       static int check_file_info(common::DsTask& ds_task);
       static int read_file_data(common::DsTask& ds_task);
+      static int verify_file_data(common::DsTask& ds_task);
       static int write_file_data(common::DsTask& ds_task);
       static int unlink_file(common::DsTask& ds_task);
       static int rename_file(common::DsTask& ds_task);

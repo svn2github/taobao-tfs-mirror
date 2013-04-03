@@ -208,13 +208,13 @@ namespace tfs
       int64_t total_size = 0;
       int64_t total_delfile_count = 0;
       int64_t total_del_size = 0;
-      printf("BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE\n");
+      printf("FAMILY_ID BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE\n");
       printf("---------- ---------- ---------- ---------- ---------- ---------- ----------\n");
       vector<BlockInfoV2>::iterator it = block_infos->begin();
       for (; it != block_infos->end(); it++)
       {
         BlockInfoV2* block_info = &(*it);
-        printf("%10"PRI64_PREFIX"u %10u %10u %10u %10u %10u\n", block_info->block_id_, block_info->version_,
+        printf("%10"PRI64_PREFIX"d %10"PRI64_PREFIX"u %10u %10u %10u %10u %10u\n", block_info->family_id_, block_info->block_id_, block_info->version_,
                block_info->file_count_, block_info->size_, block_info->del_file_count_, block_info->del_size_);
 
         total_file_count += block_info->file_count_;
@@ -280,7 +280,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret_status && (RESP_LIST_BLOCK_MESSAGE == ret_msg->getPCode()))
       {
-        // printf("get message type: %d\n", ret_msg->getPCode());
+        printf("get message type: %d\n", ret_msg->getPCode());
         RespListBlockMessage* resp_lb_msg = dynamic_cast<RespListBlockMessage*> (ret_msg);
 
         list_blocks = const_cast<VUINT64*> (resp_lb_msg->get_blocks());
@@ -437,6 +437,72 @@ namespace tfs
       return ret_status;
     }
 
+    int DsLib::verify_file_data(DsTask& ds_task)
+    {
+      uint64_t server_id = ds_task.server_id_;
+      uint64_t block_id = ds_task.block_id_;
+      uint64_t attach_block_id = ds_task.attach_block_id_;
+      uint64_t file_id = ds_task.new_file_id_;
+
+      int32_t read_len = MAX_READ_SIZE;
+      int32_t offset = FILEINFO_EXT_SIZE;
+      uint32_t crc = 0;
+
+      FileInfoV2 file_info;
+
+      ReadFileMessageV2 rd_message;
+      rd_message.set_block_id(block_id);
+      rd_message.set_attach_block_id(attach_block_id);
+      rd_message.set_file_id(file_id);
+      rd_message.set_length(read_len);
+      rd_message.set_offset(offset);
+      rd_message.set_flag(READ_DATA_OPTION_WITH_FINFO);
+
+      int ret = TFS_SUCCESS;
+      do
+      {
+        int length = 0;
+        char* data = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        tbnet::Packet* ret_msg = NULL;
+        ret = send_msg_to_server(server_id, client, &rd_message, ret_msg);
+        if (TFS_SUCCESS == ret)
+        {
+          if (READ_FILE_RESP_MESSAGE_V2 == ret_msg->getPCode())
+          {
+            ReadFileRespMessageV2 *resp_rd_msg = dynamic_cast<ReadFileRespMessageV2*>(ret_msg);
+            length = resp_rd_msg->get_length();
+            file_info = resp_rd_msg->get_file_info();
+            data = resp_rd_msg->get_data();
+          }
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          crc = Func::crc(crc, data, length);
+          offset += length;
+          rd_message.set_length(read_len);
+          rd_message.set_offset(offset);
+        }
+
+        // read error, or reach to the end
+        if ((TFS_SUCCESS != ret) || (length < read_len))
+        {
+          break;
+        }
+
+        NewClientManager::get_instance().destroy_client(client);
+      } while ((TFS_SUCCESS == ret) && (offset < file_info.size_ - FILEINFO_EXT_SIZE));
+
+      ret = (crc == file_info.crc_) ? TFS_SUCCESS : EXIT_CHECK_CRC_ERROR;
+      if (TFS_SUCCESS != ret)
+      {
+        printf("fileinfo crc: %u, filedata crc: %u\n", file_info.crc_, crc);
+      }
+
+      return ret;
+    }
+
     int DsLib::read_file_data(DsTask& ds_task)
     {
       uint64_t server_id = ds_task.server_id_;
@@ -444,7 +510,7 @@ namespace tfs
       uint64_t attach_block_id = ds_task.attach_block_id_;
       uint64_t file_id = ds_task.new_file_id_;
 
-      int fd = open(ds_task.local_file_, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
+      int fd = open(ds_task.local_file_, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd == -1)
       {
         fprintf(stderr, "Open %s fail\n", ds_task.local_file_);
@@ -654,7 +720,7 @@ namespace tfs
               ret_status = TFS_SUCCESS;
               tfs::clientv2::FSName fsname(block_id, file_id, cluster_id);
               printf("  FILE_NAME:     %s\n", fsname.get_name());
-              printf("  BLOCK_ID:      %" PRI64_PREFIX" u\n", fsname.get_block_id());
+              printf("  BLOCK_ID:      %"PRI64_PREFIX"u\n", fsname.get_block_id());
               printf("  FILE_ID:       %" PRI64_PREFIX "u\n", file_info.id_);
               printf("  OFFSET:        %d\n", file_info.offset_);
               printf("  SIZE:          %d\n", file_info.size_);

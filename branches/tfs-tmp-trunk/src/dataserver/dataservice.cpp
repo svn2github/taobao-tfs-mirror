@@ -1098,7 +1098,7 @@ namespace tfs
 
       FileInfo file_info;
       int32_t real_read_len = read_len;
-      ret = data_management_.read_file_info(block_id, file_id, 0, file_info);
+      ret = data_management_.read_file_info(block_id, file_id, FORCE_STAT, file_info);
       if (TFS_SUCCESS == ret)
       {
         if (read_offset + read_len > file_info.size_)
@@ -1154,7 +1154,7 @@ namespace tfs
 
       FileInfo file_info;
       int32_t real_read_len = read_len;
-      ret = data_management_.read_file_info(block_id, file_id, 0, file_info);
+      ret = data_management_.read_file_info(block_id, file_id, FORCE_STAT, file_info);
       if (TFS_SUCCESS == ret)
       {
         if (read_offset + read_len > file_info.size_)

@@ -685,7 +685,7 @@ namespace tfs
             assert(NULL != blockinfos);
             for (int32_t index = 0; index < REINSTATE_NUM && TFS_SUCCESS == ret; ++index)
             {
-              block  = manager_.get_manager().get_block_manager().get(member_info[index].block_);
+              block  = manager_.get_manager().get_block_manager().get(blockinfos[index].block_id_);
               ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
               if (TFS_SUCCESS == ret)
               {

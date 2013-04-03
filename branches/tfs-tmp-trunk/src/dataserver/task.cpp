@@ -669,11 +669,10 @@ namespace tfs
       }
 
       ECMeta ec_meta;
-      ec_meta.version_step_ = VERSION_INC_STEP_REPLICATE;
-
       // update source block version
       if ((TFS_SUCCESS == ret) && (!repl_info_.is_move_))
       {
+        ec_meta.version_step_ = VERSION_INC_STEP_REPLICATE;
         for (int i = 0;  (i < repl_info_.source_num_) && (TFS_SUCCESS == ret); i++)
         {
           ret = get_data_helper().commit_ec_meta(repl_info_.source_id_[i],

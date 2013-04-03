@@ -328,6 +328,8 @@ namespace tfs
             header->info_.file_count_     += file_count;;
             header->info_.del_size_       += real_old_size;
             header->info_.size_           += real_new_size;
+            header->info_.update_size_    += real_new_size;
+            header->info_.update_file_count_ += file_count;
             header->throughput_.unlink_visit_count_ += file_count;
             header->throughput_.unlink_bytes_ += real_old_size;
             header->throughput_.write_visit_count_ += file_count;

@@ -311,7 +311,7 @@ namespace tfs
               data + offset - off, length, offset, flag);
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(INFO, "reinstate read file fail. server: %s ,blockid: %"PRI64_PREFIX"u, "
+            TBSYS_LOG(INFO, "read file fail. server: %s ,blockid: %"PRI64_PREFIX"u, "
                 "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
                 "length: %d, offset: %d, ret: %d", tbsys::CNetUtil::addrToString(server_id).c_str(),
                 block_id, attach_block_id, file_id, length, offset, ret);
@@ -346,7 +346,7 @@ namespace tfs
               data + offset, length, offset, lease_id);
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(WARN, "reinstate write file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+            TBSYS_LOG(WARN, "write file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
                 "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
                 "length: %d, offset: %d, ret: %d", tbsys::CNetUtil::addrToString(server_id).c_str(),
                 block_id, attach_block_id, file_id, length, offset, ret);
@@ -363,7 +363,7 @@ namespace tfs
         ret = close_file_ex(server_id, block_id, attach_block_id, file_id, lease_id, tmp);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "reinstate close file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
+          TBSYS_LOG(WARN, "close file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
               "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, ret: %d",
               tbsys::CNetUtil::addrToString(server_id).c_str(),
               block_id, attach_block_id, file_id, ret);

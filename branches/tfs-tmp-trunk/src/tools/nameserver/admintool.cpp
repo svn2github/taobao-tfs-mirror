@@ -411,7 +411,7 @@ int cmd_set_run_param(const VSTRING& param)
 
 int cmd_add_block(const VSTRING& param)
 {
-  uint64_t block_id = atol(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
 
   if (0 == block_id)
   {
@@ -431,7 +431,7 @@ int cmd_add_block(const VSTRING& param)
 int cmd_remove_block(const VSTRING& param)
 {
   uint32_t flag = 0;
-  uint64_t block_id = atol(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   uint64_t server_id = 0;
   if (param.empty())
   {
@@ -481,7 +481,7 @@ int cmd_remove_block(const VSTRING& param)
 
 int cmd_list_block(const VSTRING& param)
 {
-  uint64_t block_id = atol(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   int ret = TFS_ERROR;
 
   if (block_id <= 0)
@@ -509,7 +509,7 @@ int cmd_list_block(const VSTRING& param)
 
 int cmd_load_block(const VSTRING& param)
 {
-  uint64_t block_id = atol(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   uint64_t server_id = Func::get_host_ip(param[1].c_str());
   if (0 == server_id || 0 == block_id)
   {
@@ -533,7 +533,7 @@ int cmd_load_block(const VSTRING& param)
 
 int cmd_compact_block(const VSTRING& param)
 {
-  uint64_t block_id = atol(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   if (0 == block_id)
   {
     fprintf(stderr, "invalid block id: %"PRI64_PREFIX"u\n", block_id);
@@ -553,7 +553,7 @@ int cmd_compact_block(const VSTRING& param)
 
 int cmd_replicate_block(const VSTRING& param)
 {
-  uint64_t block_id = atol(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   int32_t op_type = atoi(param[1].c_str());
   if (0 == block_id || op_type > 7 || op_type < 1)
   {

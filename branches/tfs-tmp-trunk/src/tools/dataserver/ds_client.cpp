@@ -30,7 +30,9 @@
 #include "common/client_manager.h"
 #include "message/message_factory.h"
 #include "tools/util/ds_lib.h"
+#include "clientv2/fsname.h"
 
+using namespace tfs::clientv2;
 using namespace tfs::common;
 using namespace tfs::tools;
 using namespace std;
@@ -48,6 +50,7 @@ enum CmdSet
   CMD_CREATE_FILE_ID,
   CMD_LIST_FILE,
   CMD_READ_FILE_DATA,
+  CMD_VERIFY_FILE_DATA,
   CMD_WRITE_FILE_DATA,
   CMD_UNLINK_FILE,
   CMD_RENAME_FILE,
@@ -163,7 +166,6 @@ int main(int argc, char* argv[])
     int i = optind;
     if (iex)
     {
-      printf("with i\n");
       for (i = optind; i < argc; i++)
       {
         param.clear();
@@ -173,7 +175,6 @@ int main(int argc, char* argv[])
     }
     else
     {
-      printf("without i\n");
       for (i = optind; i < argc; i++)
       {
         param.clear();
@@ -197,6 +198,7 @@ void init()
   cmd_map["create_file_id"] = CMD_CREATE_FILE_ID;
   cmd_map["list_file"] = CMD_LIST_FILE;
   cmd_map["read_file_data"] = CMD_READ_FILE_DATA;
+  cmd_map["verify_file_data"] = CMD_VERIFY_FILE_DATA;
   cmd_map["write_file_data"] = CMD_WRITE_FILE_DATA;
   cmd_map["unlink_file"] = CMD_UNLINK_FILE;
   cmd_map["rename_file"] = CMD_RENAME_FILE;
@@ -398,6 +400,7 @@ int switch_cmd(const int cmd, VSTRING & param)
       }
       uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
+      ds_task.attach_block_id_ = ds_block_id;
       ds_task.mode_ = 1;
       ret = DsLib::list_file(ds_task);
       break;
@@ -429,6 +432,36 @@ int switch_cmd(const int cmd, VSTRING & param)
       }
       break;
     }
+  case CMD_VERIFY_FILE_DATA:
+    {
+      if (param.size() != 2)
+      {
+        printf("Usage:read_file_data blockid fileid\n");
+        printf("check if tfs data crc match.\n");
+        break;
+      }
+      uint64_t block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+
+      ds_task.block_id_ = block_id;
+      ds_task.attach_block_id_ = block_id;
+      ds_task.new_file_id_ = file_id;
+
+      ret = DsLib::verify_file_data(ds_task);
+      if (TFS_SUCCESS == ret)
+      {
+        printf ("verify file success. blockid: %"PRI64_PREFIX"u, %"PRI64_PREFIX"u\n",
+            block_id, file_id);
+      }
+      else
+      {
+        printf ("verify file fail. blockid: %"PRI64_PREFIX"u, %"PRI64_PREFIX"u\n",
+            block_id, file_id);
+      }
+
+      break;
+    }
+
   case CMD_WRITE_FILE_DATA:
     {
       if (param.size() != 3)
@@ -630,6 +663,7 @@ int show_help(VSTRING &)
     "get_block_info  block_id                                                    get the information of a block in the dataserver.\n"
     "list_file  block_id                                                         list all the files in a block.\n"
     "read_file_data  blockid fileid local_file_name                              download a tfs file to local.\n"
+    "verify_file_data  tfs_file_name                                             check tfs file data crc.\n"
     "write_file_data block_id file_id local_file_name                            upload a local file to tfs\n"
     "unlink_file  block_id file_id [unlink_type] [option_flag] [is_master]       delete a file.\n"
     "read_file_info  block_id file_id [ds_mode]                                  get the file information.\n"

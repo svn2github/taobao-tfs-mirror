@@ -524,6 +524,35 @@ namespace tfs
         {
           manager_.get_block_manager().remove(pobject, info.value3_);
         }
+        else if (info.value4_ & HANDLE_DELETE_BLOCK_FLAG_ONLY_DS)
+        {
+          uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
+          ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+          ret = manager_.get_block_manager().get_servers(helper, info.value3_);
+          if (TFS_SUCCESS != ret)
+          {
+            manager_.get_block_manager().remove(pobject, info.value3_);
+            snprintf(buf, buf_length, " block: %"PRI64_PREFIX"u no exist or dataserver not found, ret: %d", info.value3_, ret);
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            BlockCollect* block = manager_.get_block_manager().get(info.value3_);
+            ret = NULL == block ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
+            if (TFS_SUCCESS != ret)
+            {
+              snprintf(buf, buf_length, " block: %"PRI64_PREFIX"u no exist, ret: %d", info.value3_, ret);
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              for (int64_t index = 0; index < helper.get_array_index(); ++index)
+              {
+                uint64_t server = *helper.at(index);
+                manager_.relieve_relation(block, server, now);
+                manager_.get_task_manager().remove_block_from_dataserver(server, info.value3_, now);
+              }
+            }
+          }
+        }
         else
         {
           BlockCollect* block = manager_.get_block_manager().get(info.value3_);

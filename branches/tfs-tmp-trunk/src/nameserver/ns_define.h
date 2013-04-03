@@ -64,7 +64,8 @@ namespace tfs
     enum HandleDeleteBlockFlag
     {
       HANDLE_DELETE_BLOCK_FLAG_BOTH = 1,
-      HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION = 2
+      HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION = 2,
+      HANDLE_DELETE_BLOCK_FLAG_ONLY_DS = 4,
     };
 
     enum NsKeepAliveType

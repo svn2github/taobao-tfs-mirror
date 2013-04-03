@@ -281,7 +281,7 @@ namespace tfs
         ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
       }
 
-      if (TFS_SUCCESS == ret)
+      if ((TFS_SUCCESS == ret) && !tmp) // write tmp block won't check crc
       {
         DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
         if (crc != data_file.crc())

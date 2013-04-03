@@ -49,7 +49,7 @@ namespace tfs
       int32_t ret = (NULL != data && nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = (length_ > 0) ? offset >= length_ ? TFS_SUCCESS : EXIT_WRITE_OFFSET_ERROR : TFS_SUCCESS;
+        ret = (length_ > 0) ? (offset + static_cast<int32_t>(sizeof(info)) >= length_) ? TFS_SUCCESS : EXIT_WRITE_OFFSET_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           int32_t real_offset = sizeof(info) + offset;
