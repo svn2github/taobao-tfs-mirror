@@ -159,7 +159,8 @@ namespace tfs
       bool operator < (const AppIdUid& right) const;
     };
 
-    const int32_t MAX_FILE_PATH_LEN = 256;
+    const int32_t MIN_FILE_PATH_LEN = 3;
+    const int32_t MAX_FILE_PATH_LEN = 255;
     //const int32_t MAX_META_FILE_NAME_LEN = 255;
     // threshhold count when should split
     //const int32_t SOFT_MAX_FRAG_META_COUNT = 1024;
