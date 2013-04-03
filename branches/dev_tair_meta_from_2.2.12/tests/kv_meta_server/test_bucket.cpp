@@ -70,7 +70,7 @@ TEST_F(BucketTest, test_put)
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   BucketMetaInfo new_meta_info;
-  ret = test_meta_info_helper_->head_bucket(bucket_name, &new_meta_info);
+  ret = test_meta_info_helper_->head_bucket(bucket_name, &new_meta_info, NULL);
   EXPECT_EQ(TFS_SUCCESS, ret);
   EXPECT_EQ(now_time, new_meta_info.create_time_);
   EXPECT_EQ(user_info.owner_id_, new_meta_info.owner_id_);

@@ -890,6 +890,8 @@ namespace tfs
       //BucketMetaInfo struct
       BUCKET_META_INFO_CREATE_TIME_TAG = 501,
       BUCKET_META_INFO_OWNER_ID_TAG = 502,
+      BUCKET_META_INFO_HAS_TAG_INFO_TAG = 503,
+      BUCKET_META_INFO_BUCKET_TAG_MAP_TAG = 504,
 
       //KvMetaTable
       KV_META_TABLE_V_META_TABLE_TAG = 601,
