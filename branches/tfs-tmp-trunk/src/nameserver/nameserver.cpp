@@ -481,7 +481,7 @@ namespace tfs
         param.id_ = message->get_server_id();
         param.lease_id_ = message->get_lease_id();
         param.status_ = message->get_success();
-        param.unlink_flag_ = message->get_unlink_flag();
+        param.type_   = message->get_unlink_flag();
         ret = layout_manager_.get_client_request_server().close(param);
         if (TFS_SUCCESS != ret)
         {
@@ -507,7 +507,7 @@ namespace tfs
         param.lease_id_ = param.block_info_.block_id_;
         param.need_new_ = false;
         param.error_msg_[0] = '\0';
-        param.unlink_flag_ = message->get_unlink_flag();
+        param.type_ = message->get_type();
         ret = layout_manager_.get_client_request_server().close(param);
         if (TFS_SUCCESS != ret)
         {

@@ -32,7 +32,7 @@ namespace tfs
       common::BlockInfoV2 block_info_;
       uint64_t id_;
       uint64_t lease_id_;
-      common::UnlinkFlag unlink_flag_;
+      int32_t  type_;
       common::WriteCompleteStatus status_;
       bool need_new_;
       char error_msg_[256];

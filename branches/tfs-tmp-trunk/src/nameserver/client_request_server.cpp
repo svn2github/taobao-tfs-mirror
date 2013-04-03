@@ -223,34 +223,36 @@ namespace tfs
       else
       {
         BlockCollect* block = manager_.get_block_manager().get(block_id);
-        ret = (NULL == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
-        if (TFS_SUCCESS == ret)//check version
+        if (UPDATE_BLOCK_INFO_REPL != parameter.type_)
         {
-          if (parameter.unlink_flag_ == UNLINK_FLAG_YES)//unlink file
+          ret = (NULL == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)//check version
           {
-            std::vector<stat_int_t> stat(6,0);
-            stat[4] = 0x01;
-            GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
+            if (parameter.type_ == UPDATE_BLOCK_INFO_UNLINK)//unlink file
+            {
+              std::vector<stat_int_t> stat(6,0);
+              stat[4] = 0x01;
+              GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
+            }
+            ret = block->version() >= parameter.block_info_.version_ ? EXIT_COMMIT_ERROR : TFS_SUCCESS;
+            if (TFS_SUCCESS != ret)
+            {
+              snprintf(parameter.error_msg_, 256, "close block: %"PRI64_PREFIX"u failed, version error: %d:%d",
+                  block_id, block->version(),parameter.block_info_.version_);
+            }
           }
-          ret = block->version() >= parameter.block_info_.version_ ? EXIT_COMMIT_ERROR : TFS_SUCCESS;
-          if (TFS_SUCCESS != ret)
+          else
           {
-            snprintf(parameter.error_msg_, 256, "close block: %"PRI64_PREFIX"u failed, version error: %d:%d",
-                block_id, block->version(),parameter.block_info_.version_);
+            snprintf(parameter.error_msg_, 256, "close block: %"PRI64_PREFIX"u failed, block not exist, ret: %d", block_id, ret);
           }
         }
-        else
-        {
-          snprintf(parameter.error_msg_, 256, "close block: %"PRI64_PREFIX"u failed, block not exist, ret: %d", block_id, ret);
-        }
-
         if (TFS_SUCCESS == ret)
         {
           //update block information
-          ret = manager_.update_block_info(parameter.block_info_, parameter.id_, Func::get_monotonic_time(), false);
+          ret = manager_.update_block_info(parameter.block_info_, parameter.id_, Func::get_monotonic_time(), parameter.type_ == UPDATE_BLOCK_INFO_REPL);
           if (TFS_SUCCESS != ret)
           {
-            snprintf(parameter.error_msg_,256,"close block: %"PRI64_PREFIX"u successful, but update block information failed, ret: %d", block_id, ret);
+            snprintf(parameter.error_msg_,256,"close block: %"PRI64_PREFIX"u successful, but update block information failed, ret: %d, type: %d", block_id, ret, parameter.type_);
           }
         }
       }
@@ -404,7 +406,9 @@ namespace tfs
         out.push_back(BlockMeta());
         BlockMeta* meta = out.at(index);
         common::ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, meta->ds_);
-        open_read_mode_(servers, meta->family_info_, server);
+        int32_t ret = open_read_mode_(servers, meta->family_info_, server);
+        if (TFS_SUCCESS == ret)
+          meta->size_ = servers.get_array_index();
       }
       return TFS_SUCCESS;
     }
@@ -421,6 +425,8 @@ namespace tfs
           BlockMeta* meta = out.at(index);
           common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, meta->ds_);
           ret = open_write_mode_(meta->block_id_, meta->lease_id_, meta->version_, helper, meta->family_info_,mode, now);
+          if (TFS_SUCCESS == ret)
+            meta->size_ = helper.get_array_index();
         }
       }
       return ret;
