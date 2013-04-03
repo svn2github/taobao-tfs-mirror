@@ -285,7 +285,7 @@ namespace tfs
 
       TIMER_END();
 
-      get_traffic_control().rw_stat(RW_STAT_TYPE_READ, ret, offset < FILEINFO_EXT_SIZE, length);
+      get_traffic_control().rw_stat(RW_STAT_TYPE_READ, ret, offset <= FILEINFO_EXT_SIZE, length);
 
       // access log
       TBSYS_LOG(INFO, "READ file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "

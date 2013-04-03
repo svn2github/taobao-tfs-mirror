@@ -358,7 +358,6 @@ namespace tfs
           // special process big file
           if (is_big_file(finfo->size_))
           {
-            assert(false);
             ret = write_big_file(src, dest, *finfo, new_offset);
             if (TFS_SUCCESS == ret)
             {
