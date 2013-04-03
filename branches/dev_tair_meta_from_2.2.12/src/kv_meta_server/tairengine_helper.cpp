@@ -164,10 +164,9 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       int tair_ret;
-      UNUSED(version);
       data_entry pkey(key.key_, key.key_size_);
       data_entry pvalue(value.get_data(), value.get_size());
-      tair_ret = tair_client_->put(object_area_, pkey, pvalue, 0, 0);
+      tair_ret = tair_client_->put(object_area_, pkey, pvalue, 0, version);
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
         TBSYS_LOG(INFO, "tair ret: %d", tair_ret);
