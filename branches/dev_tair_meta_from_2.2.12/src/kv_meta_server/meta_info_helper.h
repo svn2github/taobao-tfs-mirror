@@ -67,7 +67,7 @@ namespace tfs
 
         /*----------------------------bucket part-----------------------------*/
 
-        int head_bucket(const std::string& bucket_name, common::BucketMetaInfo *bucket_meta_info);
+        int head_bucket(const std::string& bucket_name, common::BucketMetaInfo *bucket_meta_info, int64_t *version);
         static int get_common_prefix(const char *key, const std::string &prefix, const char delimiter,
             bool *prefix_flag, bool *common_flag, int *common_end_pos);
 
@@ -78,6 +78,10 @@ namespace tfs
             std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
             std::set<std::string>* s_common_prefix, int8_t* is_truncated);
         int del_bucket(const std::string& bucket_name);
+
+        int put_bucket_tag(const std::string &bucket_name, const common::MAP_STRING &bucket_tag_map);
+        int get_bucket_tag(const std::string &bucket_name, common::MAP_STRING *bucket_tag_map);
+        int del_bucket_tag(const std::string &bucket_name);
 
       public:
         int put_bucket_ex(const std::string &bucket_name, const common::BucketMetaInfo &bucket_meta_info,

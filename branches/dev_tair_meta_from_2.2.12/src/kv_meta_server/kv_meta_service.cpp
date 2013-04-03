@@ -200,6 +200,15 @@ namespace tfs
           case REQ_KVMETA_HEAD_BUCKET_MESSAGE:
             ret = head_bucket(dynamic_cast<ReqKvMetaHeadBucketMessage*>(base_packet));
             break;
+          case REQ_KVMETA_PUT_BUCKET_TAG_MESSAGE:
+            ret = put_bucket_tag(dynamic_cast<ReqKvMetaPutBucketTagMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_GET_BUCKET_TAG_MESSAGE:
+            ret = get_bucket_tag(dynamic_cast<ReqKvMetaGetBucketTagMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_DEL_BUCKET_TAG_MESSAGE:
+            ret = del_bucket_tag(dynamic_cast<ReqKvMetaDelBucketTagMessage*>(base_packet));
+            break;
           default:
             ret = EXIT_UNKNOWN_MSGTYPE;
             TBSYS_LOG(ERROR, "unknown msg type: %d", base_packet->getPCode());
@@ -477,7 +486,9 @@ namespace tfs
       RspKvMetaHeadBucketMessage *rsp = new RspKvMetaHeadBucketMessage();
       if (TFS_SUCCESS == ret)
       {
-        ret = meta_info_helper_.head_bucket(head_bucket_msg->get_bucket_name(), rsp->get_mutable_bucket_meta_info());
+        int64_t version = -1;
+        ret = meta_info_helper_.head_bucket(head_bucket_msg->get_bucket_name(),
+            rsp->get_mutable_bucket_meta_info(), &version);
       }
 
       if (TFS_SUCCESS != ret)
@@ -491,6 +502,97 @@ namespace tfs
         stat_mgr_.update_entry(tfs_kv_meta_stat_, "head_bucket", 1);
       }
       //stat_info_helper_.put_bucket()
+      return ret;
+    }
+
+    //about tagging
+    int KvMetaService::put_bucket_tag(ReqKvMetaPutBucketTagMessage* put_bucket_tag_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == put_bucket_tag_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::put_bucket_tag fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        const MAP_STRING *bucket_tag_map = put_bucket_tag_msg->get_bucket_tag_map();
+
+        ret = meta_info_helper_.put_bucket_tag(put_bucket_tag_msg->get_bucket_name(), *bucket_tag_map);
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = put_bucket_tag_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "put bucket tag fail");
+      }
+      else
+      {
+        ret = put_bucket_tag_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        //stat_mgr_.update_entry(tfs_kv_meta_stat_, "put_bucket", 1);
+      }
+      //stat_info_helper_.put_bucket()
+      return ret;
+    }
+
+    int KvMetaService::get_bucket_tag(ReqKvMetaGetBucketTagMessage* get_bucket_tag_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == get_bucket_tag_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::get_bucket_tag fail, ret: %d", ret);
+      }
+
+      RspKvMetaGetBucketTagMessage* rsp = new RspKvMetaGetBucketTagMessage();
+
+      if (TFS_SUCCESS == ret)
+      {
+        const string& bucket_name = get_bucket_tag_msg->get_bucket_name();
+        ret = meta_info_helper_.get_bucket_tag(bucket_name, rsp->get_mutable_bucket_tag_map());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = get_bucket_tag_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "get bucket_tag fail");
+        tbsys::gDelete(rsp);
+      }
+      else
+      {
+        ret = get_bucket_tag_msg->reply(rsp);
+        //stat_mgr_.update_entry(tfs_kv_meta_stat_, "get_bucket_tag", 1);
+      }
+      //stat_info_helper_.get_bucket_tag()
+      return ret;
+    }
+
+    int KvMetaService::del_bucket_tag(ReqKvMetaDelBucketTagMessage *del_bucket_tag_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == del_bucket_tag_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::del_bucket_tag fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.del_bucket_tag(del_bucket_tag_msg->get_bucket_name());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = del_bucket_tag_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "del bucket tag fail");
+      }
+      else
+      {
+        ret = del_bucket_tag_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        //stat_mgr_.update_entry(tfs_kv_meta_stat_, "del_bucket_tag", 1);
+      }
+      //stat_info_helper_.del_bucket_tag()
       return ret;
     }
 

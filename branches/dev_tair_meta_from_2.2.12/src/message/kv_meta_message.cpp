@@ -891,5 +891,220 @@ namespace tfs
       return Serialization::get_string_length(bucket_name_) + bucket_meta_info_.length();
     }
 
+    //about tag
+    //put bucket tag
+    ReqKvMetaPutBucketTagMessage::ReqKvMetaPutBucketTagMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_PUT_BUCKET_TAG_MESSAGE;
+    }
+
+    ReqKvMetaPutBucketTagMessage::~ReqKvMetaPutBucketTagMessage(){}
+
+    int ReqKvMetaPutBucketTagMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        int32_t size = bucket_tag_map_.size();
+        iret = output.set_int32(size);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        MAP_STRING_ITER iter = bucket_tag_map_.begin();
+        for (; iter != bucket_tag_map_.end() && common::TFS_SUCCESS == iret; iter++)
+        {
+          iret = output.set_string(iter->first);
+          if (common::TFS_SUCCESS == iret)
+          {
+            iret = output.set_string(iter->second);
+          }
+        }
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaPutBucketTagMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      int32_t size = -1;
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&size);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        std::string key;
+        std::string value;
+        for (int32_t i = 0; i < size && common::TFS_SUCCESS == iret; i++)
+        {
+          iret = input.get_string(key);
+          if (common::TFS_SUCCESS == iret)
+          {
+            iret = input.get_string(value);
+          }
+
+          if (common::TFS_SUCCESS == iret)
+          {
+            bucket_tag_map_.insert(std::make_pair(key, value));
+          }
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaPutBucketTagMessage::length() const
+    {
+      int64_t len = common::Serialization::get_string_length(bucket_name_);
+      len += INT_SIZE;
+
+      MAP_STRING_ITER iter = bucket_tag_map_.begin();
+      for (; iter != bucket_tag_map_.end(); iter++)
+      {
+        len += common::Serialization::get_string_length(iter->first);
+        len += common::Serialization::get_string_length(iter->second);
+      }
+      return len;
+    }
+
+    //get bucket tag
+    ReqKvMetaGetBucketTagMessage::ReqKvMetaGetBucketTagMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_GET_BUCKET_TAG_MESSAGE;
+    }
+
+    ReqKvMetaGetBucketTagMessage::~ReqKvMetaGetBucketTagMessage(){}
+
+    int ReqKvMetaGetBucketTagMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      return iret;
+    }
+
+    int ReqKvMetaGetBucketTagMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaGetBucketTagMessage::length() const
+    {
+      return common::Serialization::get_string_length(bucket_name_);
+    }
+
+    RspKvMetaGetBucketTagMessage::RspKvMetaGetBucketTagMessage()
+    {
+      _packetHeader._pcode = RSP_KVMETA_GET_BUCKET_TAG_MESSAGE;
+    }
+
+    RspKvMetaGetBucketTagMessage::~RspKvMetaGetBucketTagMessage(){}
+
+    int RspKvMetaGetBucketTagMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        int32_t size = bucket_tag_map_.size();
+        iret = output.set_int32(size);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        MAP_STRING_ITER iter = bucket_tag_map_.begin();
+        for (; iter != bucket_tag_map_.end() && common::TFS_SUCCESS == iret; iter++)
+        {
+          iret = output.set_string(iter->first);
+          if (common::TFS_SUCCESS == iret)
+          {
+            iret = output.set_string(iter->second);
+          }
+        }
+      }
+
+      return iret;
+    }
+
+    int RspKvMetaGetBucketTagMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      int32_t size = -1;
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&size);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        std::string key;
+        std::string value;
+        for (int32_t i = 0; i < size && common::TFS_SUCCESS == iret; i++)
+        {
+          iret = input.get_string(key);
+          if (common::TFS_SUCCESS == iret)
+          {
+            iret = input.get_string(value);
+          }
+
+          if (common::TFS_SUCCESS == iret)
+          {
+            bucket_tag_map_.insert(std::make_pair(key, value));
+          }
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t RspKvMetaGetBucketTagMessage::length() const
+    {
+      int64_t len = common::Serialization::get_string_length(bucket_name_);
+      len += INT_SIZE;
+
+      MAP_STRING_ITER iter = bucket_tag_map_.begin();
+      for (; iter != bucket_tag_map_.end(); iter++)
+      {
+        len += common::Serialization::get_string_length(iter->first);
+        len += common::Serialization::get_string_length(iter->second);
+      }
+      return len;
+    }
+
+    //del bucket tag
+    ReqKvMetaDelBucketTagMessage::ReqKvMetaDelBucketTagMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_DEL_BUCKET_TAG_MESSAGE;
+    }
+
+    ReqKvMetaDelBucketTagMessage::~ReqKvMetaDelBucketTagMessage(){}
+
+    int ReqKvMetaDelBucketTagMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      return iret;
+    }
+
+    int ReqKvMetaDelBucketTagMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaDelBucketTagMessage::length() const
+    {
+      return common::Serialization::get_string_length(bucket_name_);
+    }
   }
 }

@@ -312,6 +312,18 @@ namespace tfs
           case common::RSP_KVMETA_HEAD_BUCKET_MESSAGE:
             packet = new RspKvMetaHeadBucketMessage();
             break;
+          case common::REQ_KVMETA_PUT_BUCKET_TAG_MESSAGE:
+            packet = new ReqKvMetaPutBucketTagMessage();
+            break;
+          case common::REQ_KVMETA_GET_BUCKET_TAG_MESSAGE:
+            packet = new ReqKvMetaGetBucketTagMessage();
+            break;
+          case common::RSP_KVMETA_GET_BUCKET_TAG_MESSAGE:
+            packet = new RspKvMetaGetBucketTagMessage();
+            break;
+          case common::REQ_KVMETA_DEL_BUCKET_TAG_MESSAGE:
+            packet = new ReqKvMetaDelBucketTagMessage();
+            break;
           case common::REQ_KV_RT_MS_KEEPALIVE_MESSAGE:
             packet = new KvRtsMsHeartMessage();
             break;

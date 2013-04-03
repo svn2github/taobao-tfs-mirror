@@ -24,7 +24,6 @@ namespace tfs
 {
   namespace message
   {
-
     class ReqKvMetaPutObjectMessage : public common::BasePacket
     {
       public:
@@ -666,6 +665,130 @@ namespace tfs
         common::BucketMetaInfo bucket_meta_info_;
     };
 
+    //about msg of tag
+    class ReqKvMetaPutBucketTagMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaPutBucketTagMessage();
+        virtual ~ReqKvMetaPutBucketTagMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        void set_bucket_tag_map(const common::MAP_STRING &bucket_tag_map)
+        {
+          bucket_tag_map_ = bucket_tag_map;
+        }
+
+        const common::MAP_STRING* get_bucket_tag_map() const
+        {
+          return &bucket_tag_map_;
+        }
+
+        common::MAP_STRING* get_mutable_bucket_tag_map()
+        {
+          return &bucket_tag_map_;
+        }
+
+      private:
+        std::string bucket_name_;
+        common::MAP_STRING bucket_tag_map_;
+    };
+
+    class ReqKvMetaGetBucketTagMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaGetBucketTagMessage();
+        virtual ~ReqKvMetaGetBucketTagMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+      private:
+        std::string bucket_name_;
+    };
+
+    class RspKvMetaGetBucketTagMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaGetBucketTagMessage();
+        virtual ~RspKvMetaGetBucketTagMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        void set_bucket_tag_map(const common::MAP_STRING& bucket_tag_map)
+        {
+          bucket_tag_map_ = bucket_tag_map;
+        }
+
+        const common::MAP_STRING* get_bucket_tag_map() const
+        {
+          return &bucket_tag_map_;
+        }
+
+        common::MAP_STRING* get_mutable_bucket_tag_map()
+        {
+          return &bucket_tag_map_;
+        }
+
+      private:
+        std::string bucket_name_;
+        common::MAP_STRING bucket_tag_map_;
+    };
+
+    class ReqKvMetaDelBucketTagMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaDelBucketTagMessage();
+        virtual ~ReqKvMetaDelBucketTagMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+      private:
+        std::string bucket_name_;
+    };
   }
 }
 

@@ -56,6 +56,10 @@ namespace tfs
       int head_object(message::ReqKvMetaHeadObjectMessage *head_object_msg);
       int head_bucket(message::ReqKvMetaHeadBucketMessage *head_bucket_msg);
 
+      int put_bucket_tag(message::ReqKvMetaPutBucketTagMessage *put_bucket_tag_msg);
+      int get_bucket_tag(message::ReqKvMetaGetBucketTagMessage *get_bucket_tag_msg);
+      int del_bucket_tag(message::ReqKvMetaDelBucketTagMessage *del_bucket_tag_msg);
+
     private:
       DISALLOW_COPY_AND_ASSIGN(KvMetaService);
 
