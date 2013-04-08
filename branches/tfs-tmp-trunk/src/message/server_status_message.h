@@ -41,22 +41,22 @@ namespace tfs
         {
           from_row_ = row;
         }
-        inline int64_t get_from_row() const
+        inline int32_t get_from_row() const
         {
           return from_row_;
         }
-        inline void set_return_row(const int64_t row)
+        inline void set_return_row(const int32_t row)
         {
           return_row_ = row;
         }
-        inline int64_t get_return_row() const
+        inline int32_t get_return_row() const
         {
           return return_row_;
         }
       protected:
         int32_t status_type_;
-        int64_t from_row_;
-        int64_t return_row_;
+        int32_t from_row_;
+        int32_t return_row_;
     };
 
     class AccessStatInfoMessage: public common::BasePacket

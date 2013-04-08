@@ -465,12 +465,12 @@ namespace tfs
         {
           return block_id_;
         }
-        inline common::FILE_INFO_LIST* get_fileinfo_list()
+        inline common::FILE_INFO_LIST& get_fileinfo_list()
         {
-          return &fileinfo_list_;
+          return fileinfo_list_;
         }
       protected:
-        uint32_t block_id_;
+        uint64_t block_id_;
         common::FILE_INFO_LIST fileinfo_list_;
     };
 

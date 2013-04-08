@@ -34,18 +34,18 @@ namespace tfs
       int32_t iret = input.get_int32(&status_type_);
       if (common::TFS_SUCCESS == iret)
       {
-        iret = input.get_int64(&from_row_);
+        iret = input.get_int32(&from_row_);
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = input.get_int64(&return_row_);
+        iret = input.get_int32(&return_row_);
       }
       return iret;
     }
 
     int64_t GetServerStatusMessage::length() const
     {
-      return common::INT_SIZE + 2 * common::INT64_SIZE;
+      return common::INT_SIZE * 3;
     }
 
     int GetServerStatusMessage::serialize(common::Stream& output) const
@@ -53,11 +53,11 @@ namespace tfs
       int32_t iret = output.set_int32(status_type_);
       if (common::TFS_SUCCESS == iret)
       {
-        iret = output.set_int64(from_row_);
+        iret = output.set_int32(from_row_);
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = output.set_int64(return_row_);
+        iret = output.set_int32(return_row_);
       }
       return iret;
     }
