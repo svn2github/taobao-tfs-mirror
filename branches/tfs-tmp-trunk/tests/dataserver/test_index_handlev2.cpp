@@ -113,25 +113,24 @@ namespace tfs
       for (uint32_t i = 0; i < (uint32_t)header->file_info_bucket_size_; ++i)
       {
         current = NULL, prev = NULL, tmp = NULL, slot = 0, fileid = 0;
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, current, prev, finfos, header, false,false));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, current, prev, finfos, header, GET_SLOT_TYPE_GEN));
         EXPECT_EQ((i + 1) , fileid);
         EXPECT_TRUE(NULL != current);
         EXPECT_TRUE(NULL == prev);
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, true,true));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, GET_SLOT_TYPE_INSERT));
         EXPECT_EQ(current, tmp);
         tmp = NULL;
-        EXPECT_EQ(EXIT_META_NOT_FOUND_ERROR, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, true, false));
+        EXPECT_EQ(EXIT_META_NOT_FOUND_ERROR, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, GET_SLOT_TYPE_QUERY));
         current->id_ = fileid;
         tmp = NULL;
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, true,true));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, GET_SLOT_TYPE_QUERY));
         EXPECT_EQ(current->id_, tmp->id_);
         tmp = NULL;
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, true,true));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, GET_SLOT_TYPE_QUERY));
         EXPECT_EQ(current->id_, tmp->id_);
-        EXPECT_EQ(i + 1, (uint16_t)header->used_file_info_bucket_size_);
       }
-      current = NULL, prev = NULL, tmp = NULL, slot = 0, fileid = 0;
-      EXPECT_EQ(EXIT_INSERT_INDEX_SLOT_NOT_FOUND_ERROR, index_handle_.get_slot_(slot, fileid, current, prev, finfos, header, false,false));
+      current = NULL, prev = NULL, tmp = NULL, slot = 0, fileid = 0xFFFFFFFFFFF;
+      EXPECT_EQ(EXIT_META_NOT_FOUND_ERROR, index_handle_.get_slot_(slot, fileid, current, prev, finfos, header, GET_SLOT_TYPE_QUERY));
 
       header->seq_no_   = 222227777;
       header->used_file_info_bucket_size_ = 0;
@@ -141,24 +140,23 @@ namespace tfs
       for (uint32_t j = 0; j < (uint32_t)header->file_info_bucket_size_; ++j)
       {
         current = NULL, prev = NULL, tmp = NULL, slot = 0, fileid = 0;
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, current, prev, finfos, header, false,false));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, current, prev, finfos, header, GET_SLOT_TYPE_GEN));
         EXPECT_TRUE(NULL != current);
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, true,true));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, GET_SLOT_TYPE_INSERT));
         EXPECT_EQ(current, tmp);
         tmp = NULL;
-        EXPECT_EQ(EXIT_META_NOT_FOUND_ERROR, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, true, false));
+        EXPECT_EQ(EXIT_META_NOT_FOUND_ERROR, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, GET_SLOT_TYPE_QUERY));
         current->id_ = fileid;
         tmp = NULL;
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, true,true));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, GET_SLOT_TYPE_QUERY));
         EXPECT_EQ(current->id_, tmp->id_);
         tmp = NULL;
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, true,true));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, tmp, prev, finfos, header, GET_SLOT_TYPE_QUERY));
         EXPECT_EQ(current->id_, tmp->id_);
-        EXPECT_EQ(j + 1, (uint16_t)header->used_file_info_bucket_size_);
       }
 
-      current = NULL, prev = NULL, tmp = NULL, slot = 0, fileid = 0;
-      EXPECT_EQ(EXIT_INSERT_INDEX_SLOT_NOT_FOUND_ERROR, index_handle_.get_slot_(slot, fileid, current, prev, finfos, header, false,false));
+      current = NULL, prev = NULL, tmp = NULL, slot = 0, fileid = 0xFFFFFFFFFFF;
+      EXPECT_EQ(EXIT_META_NOT_FOUND_ERROR, index_handle_.get_slot_(slot, fileid, current, prev, finfos, header, GET_SLOT_TYPE_QUERY));
       tbsys::gDeleteA(data);
     }
 
@@ -171,7 +169,6 @@ namespace tfs
       char* data = new char[super_info->mmap_option_.first_mmap_size_];
       memset(data, 0, super_info->mmap_option_.first_mmap_size_);
       IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
-      FileInfoV2* finfos    = reinterpret_cast<FileInfoV2*>(data + sizeof(IndexHeaderV2));
       header->info_.block_id_ = 0xfff;
       header->info_.version_  = 1;
       header->seq_no_   = 0;
@@ -185,7 +182,7 @@ namespace tfs
       for (uint32_t i = 0; i < (uint32_t)header->file_info_bucket_size_; ++i)
       {
         current = NULL, prev = NULL, tmp = NULL, slot = 0, fileid = 0;
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, current, prev, finfos, header, false,false));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, current, prev, data, super_info->mmap_option_.first_mmap_size_, GET_SLOT_TYPE_GEN));
         EXPECT_EQ((i + 1) , fileid);
         EXPECT_TRUE(NULL != current);
         EXPECT_TRUE(NULL == prev);
@@ -199,10 +196,10 @@ namespace tfs
         info.modify_time_ = time(NULL);
         info.create_time_ = time(NULL);
 
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.insert_file_info_(info, data, super_info->mmap_option_.first_mmap_size_, true, true));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.insert_file_info_(info,data, super_info->mmap_option_.first_mmap_size_, false));
         current = NULL, prev = NULL, tmp = NULL, slot = 0;
 
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, current, prev, finfos, header, true,true));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.get_slot_(slot, fileid, current, prev, data, super_info->mmap_option_.first_mmap_size_, GET_SLOT_TYPE_QUERY));
         EXPECT_EQ(info.id_, current->id_);
         EXPECT_EQ(info.offset_, current->offset_);
         EXPECT_EQ(info.size_,current->size_);
@@ -221,7 +218,7 @@ namespace tfs
       EXPECT_TRUE(header->file_info_bucket_size_ > 0);
       const int32_t FILE_INFO_BUCKET_SIZE = header->file_info_bucket_size_;
 
-      EXPECT_EQ(TFS_SUCCESS, index_handle_.remmap_(threshold));
+      EXPECT_EQ(TFS_SUCCESS, index_handle_.remmap_(threshold, 65535));
       header  = index_handle_.get_index_header_();
       EXPECT_EQ(FILE_INFO_BUCKET_SIZE, header->file_info_bucket_size_);
 
@@ -234,14 +231,14 @@ namespace tfs
       {
         FileInfoV2 info;
         memset(&info, 0, sizeof(info));
-        info.id_ = 0;
+        info.id_ = i + 1;
         info.offset_ = random() % 0xFFFFFFF;
         info.size_ = random() % 0xFFFF;
         info.crc_  = random() % 0xFFFFFFFF;
         info.modify_time_ = time(NULL);
         info.create_time_ = time(NULL);
         files.push_back(info);
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.write_file_info(info, threshold, 0));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.write_file_info(info, threshold, 65535, 1, false));
       }
 
       EXPECT_EQ(FILE_INFO_BUCKET_SIZE, header->file_info_bucket_size_);
@@ -252,14 +249,14 @@ namespace tfs
       {
         FileInfoV2 info;
         memset(&info, 0, sizeof(info));
-        info.id_ = 0;
+        info.id_ =  (i + 1 +MAX_INSERT_ITEM_SIZE);
         info.offset_ = random() % 0xFFFFFFF;
         info.size_ = random() % 0xFFFF;
         info.crc_  = random() % 0xFFFFFFFF;
         info.modify_time_ = time(NULL);
         info.create_time_ = time(NULL);
         files.push_back(info);
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.write_file_info(info, threshold, 0));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.write_file_info(info, threshold, 65535, 1, false));
       }
       header  = index_handle_.get_index_header_();
       EXPECT_TRUE(header->file_info_bucket_size_ >= FILE_INFO_BUCKET_SIZE);
@@ -270,6 +267,7 @@ namespace tfs
     TEST_F(TestIndexHandle, write_read_file_info)
     {
       srandom(time(NULL));
+      const int32_t MAX_HASH_BUCKET_COUNT = 65535;
       const double threshold = 0.20;
       const int32_t LOGIC_BLOCK_ID = 0xfff;
       IndexHeaderV2* header  = index_handle_.get_index_header_();
@@ -277,7 +275,7 @@ namespace tfs
       EXPECT_TRUE(header->file_info_bucket_size_ > 0);
       const int32_t FILE_INFO_BUCKET_SIZE = header->file_info_bucket_size_;
 
-      EXPECT_EQ(TFS_SUCCESS, index_handle_.remmap_(threshold));
+      EXPECT_EQ(TFS_SUCCESS, index_handle_.remmap_(threshold, MAX_HASH_BUCKET_COUNT));
       header  = index_handle_.get_index_header_();
       EXPECT_EQ(FILE_INFO_BUCKET_SIZE, header->file_info_bucket_size_);
 
@@ -285,7 +283,7 @@ namespace tfs
 
       FileInfoV2 tmp;
       tmp.id_ = 0xfffff;
-      EXPECT_TRUE(TFS_SUCCESS != index_handle_.read_file_info(tmp, threshold, LOGIC_BLOCK_ID));
+      EXPECT_TRUE(TFS_SUCCESS != index_handle_.read_file_info(tmp, threshold, MAX_HASH_BUCKET_COUNT, LOGIC_BLOCK_ID));
 
       int32_t i = 0;
       std::vector<FileInfoV2> files;
@@ -294,13 +292,13 @@ namespace tfs
       {
         FileInfoV2 info;
         memset(&info, 0, sizeof(info));
-        info.id_ = 0;
+        info.id_ = i + 1;
         info.offset_ = random() % 0xFFFFFFF;
         info.size_ = random() % 0xFFFF;
         info.crc_  = random() % 0xFFFFFFFF;
         info.modify_time_ = time(NULL);
         info.create_time_ = time(NULL);
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.write_file_info(info, threshold, LOGIC_BLOCK_ID));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.write_file_info(info, threshold, MAX_HASH_BUCKET_COUNT, LOGIC_BLOCK_ID, false));
         files.push_back(info);
       }
 
@@ -311,10 +309,11 @@ namespace tfs
       {
         memset(&tmp, 0, sizeof(tmp));
         tmp.id_ = (*iter).id_;
-        EXPECT_EQ(TFS_SUCCESS, index_handle_.read_file_info(tmp, threshold, LOGIC_BLOCK_ID));
+        EXPECT_EQ(TFS_SUCCESS, index_handle_.read_file_info(tmp, threshold, MAX_HASH_BUCKET_COUNT, LOGIC_BLOCK_ID));
       }
+      IndexHeaderV2 output_header;
       std::vector<FileInfoV2> tfiles;
-      EXPECT_EQ(TFS_SUCCESS, index_handle_.traverse(tfiles, LOGIC_BLOCK_ID));
+      EXPECT_EQ(TFS_SUCCESS, index_handle_.traverse(output_header, tfiles, LOGIC_BLOCK_ID));
       EXPECT_EQ(files.size(), tfiles.size());
     }
 
@@ -323,6 +322,7 @@ namespace tfs
       uint64_t LOGIC_BLOCK_ID = 0xffff;
       const int64_t  FAMILY_ID = 0xfffff;
       const double threshold = 0.20;
+      const int32_t MAX_HASH_BUCKET_COUNT = 65535;
       IndexHeaderV2 header;
       for (int32_t j = 0; j < 8; j++)
       {
@@ -349,10 +349,11 @@ namespace tfs
           files.push_back(info);
         }
 
-        EXPECT_EQ(TFS_SUCCESS, verify_index_handle_.write_file_infos(header, files, threshold, header.info_.block_id_));
-        EXPECT_TRUE(TFS_SUCCESS != verify_index_handle_.traverse(rfiles, LOGIC_BLOCK_ID + 0xfff));
+        IndexHeaderV2 output_header;
+        EXPECT_EQ(TFS_SUCCESS, verify_index_handle_.write_file_infos(header, files, threshold, MAX_HASH_BUCKET_COUNT, header.info_.block_id_));
+        EXPECT_TRUE(TFS_SUCCESS != verify_index_handle_.traverse(output_header, rfiles, LOGIC_BLOCK_ID + 0xfff));
         EXPECT_EQ(0U, rfiles.size());
-        EXPECT_EQ(TFS_SUCCESS, verify_index_handle_.traverse(rfiles, header.info_.block_id_));
+        EXPECT_EQ(TFS_SUCCESS, verify_index_handle_.traverse(output_header,rfiles, header.info_.block_id_));
         EXPECT_EQ(files.size(), rfiles.size());
         IndexHeaderV2* pheader = verify_index_handle_.get_index_header_();
         EXPECT_TRUE(NULL != pheader);

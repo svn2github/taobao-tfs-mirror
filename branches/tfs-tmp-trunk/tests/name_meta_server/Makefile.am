@@ -8,6 +8,7 @@ AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -luuid `mysql_config --libs`
 CXXFLAGS= -g
 
 LDADD=$(top_builddir)/src/name_meta_server/libnamemetaserver.a \
+			$(MYSQL_LDFLAGS)\
       $(top_builddir)/src/new_client/.libs/libtfsclient.a \
 			$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a \

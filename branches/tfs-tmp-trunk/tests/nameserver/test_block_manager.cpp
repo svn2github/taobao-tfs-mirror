@@ -227,7 +227,7 @@ namespace tfs
         helper.push_back(tmp);
       }
       std::vector<uint64_t> expires;
-      EXPECT_EQ(TFS_SUCCESS, block_manager_.update_relation(expires, &server, helper, now, REPORT_BLOCK_TYPE_ALL));
+      EXPECT_EQ(TFS_SUCCESS, block_manager_.update_relation(expires, &server, helper, now));
 
       BlockCollect* pblock = NULL;
       for (int32_t index = 0; index < helper.get_array_index(); ++index)
@@ -241,7 +241,7 @@ namespace tfs
         EXPECT_EQ(1, pblock->get_servers_size());
       }
 
-      EXPECT_EQ(TFS_SUCCESS, block_manager_.update_relation(expires, &server2, helper, now, REPORT_BLOCK_TYPE_ALL));
+      EXPECT_EQ(TFS_SUCCESS, block_manager_.update_relation(expires, &server2, helper, now));
       for (int32_t index = 0; index < helper.get_array_index(); ++index)
       {
         tmp = *helper.at(index);

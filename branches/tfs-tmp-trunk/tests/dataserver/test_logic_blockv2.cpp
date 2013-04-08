@@ -86,8 +86,8 @@ namespace tfs
           SuperBlockManager& super_manager = block_manager_.get_super_block_manager();
           PhysicalBlockManager& manager = block_manager_.get_physical_block_manager();
           int32_t i = 0;
-          const int32_t start = BLOCK_RESERVER_LENGTH;
-          const int32_t end   = info.max_main_block_size_;
+          int32_t start = BLOCK_RESERVER_LENGTH;
+          int32_t end   = info.max_main_block_size_;
           for (i = 1; i <= MAX_PHYSICAL_BLOCK_NUM; ++i)
           {
             std::stringstream str;
@@ -111,6 +111,7 @@ namespace tfs
             ret = manager.insert(index, index.physical_block_id_, str.str().c_str(), start, end);
           }
 
+          start = 0;
           for (i = MAX_PHYSICAL_BLOCK_NUM; i <= MAX_PHYSICAL_BLOCK_NUM + MAX_ALLOC_PHYSICAL_BLOCK_NUM; i++)
           {
             std::stringstream str;
@@ -174,7 +175,7 @@ namespace tfs
 
       int32_t request_size = 1 * 1024 * 1024;
       int32_t request_offset = 1 * 1024 * 1024;
-      EXPECT_EQ(TFS_SUCCESS, logic_block_.extend_block_(request_size, request_offset));
+      EXPECT_EQ(TFS_SUCCESS, logic_block_.extend_block_(request_size, request_offset, false));
       avail_offset = 0;
       EXPECT_EQ(TFS_SUCCESS, logic_block_.get_avail_offset(avail_offset));
       EXPECT_EQ(MAX_BLOCK_SIZE - BLOCK_RESERVER_LENGTH, avail_offset);
@@ -184,7 +185,7 @@ namespace tfs
 
       request_size = 1 * 1024 * 1024;
       request_offset = MAX_BLOCK_SIZE - BLOCK_RESERVER_LENGTH + 128;
-      EXPECT_EQ(TFS_SUCCESS, logic_block_.extend_block_(request_size, request_offset));
+      EXPECT_EQ(TFS_SUCCESS, logic_block_.extend_block_(request_size, request_offset, false));
       avail_offset = 0;
       EXPECT_EQ(TFS_SUCCESS, logic_block_.get_avail_offset(avail_offset));
       EXPECT_EQ(MAX_BLOCK_SIZE - BLOCK_RESERVER_LENGTH + MAX_EXT_BLOCK_SIZE, avail_offset);
@@ -207,7 +208,7 @@ namespace tfs
       const int32_t MAX_DATA_SIZE = 1 * 1024 * 1024;
       int32_t request_size = MAX_DATA_SIZE;
       int32_t request_offset = MAX_BLOCK_SIZE - BLOCK_RESERVER_LENGTH + 128;
-      EXPECT_EQ(TFS_SUCCESS, logic_block_.extend_block_(request_size, request_offset));
+      EXPECT_EQ(TFS_SUCCESS, logic_block_.extend_block_(request_size, request_offset, false));
       avail_offset = 0;
       EXPECT_EQ(TFS_SUCCESS, logic_block_.get_avail_offset(avail_offset));
       EXPECT_EQ(MAX_BLOCK_SIZE - BLOCK_RESERVER_LENGTH + MAX_EXT_BLOCK_SIZE, avail_offset);
@@ -244,7 +245,7 @@ namespace tfs
       int32_t MAX_DATA_SIZE = 1 * 1024 * 1024;
       int32_t request_size = MAX_DATA_SIZE;
       int32_t request_offset = MAX_BLOCK_SIZE - BLOCK_RESERVER_LENGTH + 128;
-      EXPECT_EQ(TFS_SUCCESS, logic_block_.extend_block_(request_size, request_offset));
+      EXPECT_EQ(TFS_SUCCESS, logic_block_.extend_block_(request_size, request_offset, false));
       avail_offset = 0;
       EXPECT_EQ(TFS_SUCCESS, logic_block_.get_avail_offset(avail_offset));
       EXPECT_EQ(MAX_BLOCK_SIZE - BLOCK_RESERVER_LENGTH + MAX_EXT_BLOCK_SIZE, avail_offset);
@@ -262,7 +263,7 @@ namespace tfs
       EXPECT_EQ(MAX_DATA_SIZE, ret);
 
       uint64_t fileid = INVALID_FILE_ID;
-      ret = logic_block_.write(fileid, dfile, LOGIC_BLOCK_ID);
+      ret = logic_block_.write(fileid, dfile, LOGIC_BLOCK_ID, false);
       EXPECT_EQ(dfile.length(), ret);
 
       MAX_DATA_SIZE = MAX_DATA_SIZE + sizeof(FileInfoInDiskExt);
@@ -299,17 +300,17 @@ namespace tfs
       FileInfoV2 finfo;
       memset(&finfo, 0, sizeof(finfo));
       finfo.id_ = 0xfff;
-      EXPECT_EQ(EXIT_META_NOT_FOUND_ERROR, logic_block_.stat(finfo, LOGIC_BLOCK_ID));
+      EXPECT_EQ(EXIT_META_NOT_FOUND_ERROR, logic_block_.stat(finfo,FORCE_STAT, LOGIC_BLOCK_ID));
 
       uint64_t fileid = INVALID_FILE_ID;
-      ret = logic_block_.write(fileid, dfile, LOGIC_BLOCK_ID);
+      ret = logic_block_.write(fileid, dfile, LOGIC_BLOCK_ID, false);
       EXPECT_EQ(dfile.length(), ret);
 
       MAX_DATA_SIZE = MAX_DATA_SIZE + sizeof(FileInfoInDiskExt);
 
       memset(&finfo, 0, sizeof(finfo));
       finfo.id_ = fileid;
-      EXPECT_EQ(TFS_SUCCESS, logic_block_.stat(finfo, LOGIC_BLOCK_ID));
+      EXPECT_EQ(TFS_SUCCESS, logic_block_.stat(finfo, FORCE_STAT, LOGIC_BLOCK_ID));
 
       EXPECT_TRUE(fileid > 0);
       memset(data, 0, MAX_DATA_SIZE );
@@ -323,7 +324,7 @@ namespace tfs
       int32_t action = DELETE;
       EXPECT_EQ(TFS_SUCCESS, logic_block_.unlink(size, fileid, action, LOGIC_BLOCK_ID));
       EXPECT_EQ(size, (int64_t)(MAX_DATA_SIZE - sizeof(FileInfoInDiskExt)));
-      EXPECT_EQ(TFS_SUCCESS, logic_block_.stat(finfo, LOGIC_BLOCK_ID));
+      EXPECT_EQ(TFS_SUCCESS, logic_block_.stat(finfo, NORMAL_STAT, LOGIC_BLOCK_ID));
       EXPECT_EQ(FILE_STATUS_DELETE, finfo.status_);
     }
 
@@ -352,27 +353,27 @@ namespace tfs
         dfile.pwrite(dinfo, data, MAX_DATA_SIZE, 0);
 
         uint64_t fileid = INVALID_FILE_ID;
-        logic_block_.write(fileid, dfile, LOGIC_BLOCK_ID);
+        logic_block_.write(fileid, dfile, LOGIC_BLOCK_ID, false);
 
         MAX_DATA_SIZE = MAX_DATA_SIZE + sizeof(FileInfoInDiskExt);
 
         FileInfoV2 finfo;
         finfo.id_ = fileid;
-        logic_block_.stat(finfo, LOGIC_BLOCK_ID);
+        logic_block_.stat(finfo, NORMAL_STAT, LOGIC_BLOCK_ID);
         files[finfo.id_] = finfo;
 
         tbsys::gDeleteA(data);
       }
 
 
-      LogicBlock::Iterator iter(logic_block_);
+      LogicBlock::Iterator iter(&logic_block_);
 
 
       int64_t start = tbsys::CTimeUtil::getTime();
       int32_t mem_offset = 0;
       const char* data = NULL;
       FileInfoV2* finfov2  = NULL;
-      while (TFS_SUCCESS == iter.next(mem_offset, finfov2))
+      while (TFS_SUCCESS == iter.next(finfov2))
       {
         data = iter.get_data(mem_offset,finfov2->size_);
         if (NULL != data)

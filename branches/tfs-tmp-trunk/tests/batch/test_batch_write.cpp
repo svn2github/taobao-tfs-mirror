@@ -91,9 +91,9 @@ void* write_worker(void* arg)
     timer.start();
 
     // open a remote file
-    ret = retry_open_file(tfsclient, NULL, (char*)".jpg", T_WRITE, fd);
+    ret = retry_open_file(tfsclient, NULL, "", T_WRITE, fd);
     // get block id and file id from remote file name
-    //convname(tfsclient.get_file_name(), (char*)".jpg", block_id, file_id);
+    //convname(tfsclient.get_file_name(), "", block_id, file_id);
     if (ret != EXIT_SUCCESS)
     {
       fprintf(stderr, "index:%d, tfsopen failed\n", param.index_);

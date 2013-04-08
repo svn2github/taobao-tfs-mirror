@@ -10,7 +10,8 @@ LDADD=$(top_builddir)/src/rootserver/librootserver.a \
 			$(top_builddir)/src/message/libtfsmessage.a\
       $(top_builddir)/src/common/libtfscommon.a \
       $(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a
+      $(TBLIB_ROOT)/lib/libtbsys.a \
+			-lz
 
 
 noinst_PROGRAMS= build_table_test meta_server_manger_test

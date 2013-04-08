@@ -174,11 +174,11 @@ namespace tfs
           memset(&ext_index, 0, sizeof(ext_index));
           index.logic_block_id_ = logic_block_id;
           index.physical_block_id_ = BASE_PHYSICAL_BLOCK_ID;
-          EXPECT_EQ(TFS_SUCCESS, physical_block_manager.alloc_ext_block(index, ext_index));
+          EXPECT_EQ(TFS_SUCCESS, physical_block_manager.alloc_ext_block(index, ext_index, false));
           EXPECT_EQ(i, ext_index.index_);
           EXPECT_EQ(1, ext_index.physical_file_name_id_);
         }
-        EXPECT_EQ(EXIT_PHYSICAL_BLOCK_NOT_FOUND, physical_block_manager.alloc_ext_block(index, ext_index));
+        EXPECT_EQ(EXIT_PHYSICAL_BLOCK_NOT_FOUND, physical_block_manager.alloc_ext_block(index, ext_index, false));
       }
 
       ::unlink(path.c_str());

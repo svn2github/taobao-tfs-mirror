@@ -29,7 +29,7 @@ using namespace tfs::clientv2;
 using namespace std;
 
 int write_file(ThreadParam& param, TfsClientImplV2* tfsclient, const char* tfs_name, vector<std::string>& file_list,
-    TimeConsumed& write_time_consumed, Stater& write_stater, const char* data, vector<std::string>& read_file_list)
+    TimeConsumed& write_time_consumed, Stater& write_stater, const char* data, vector<std::string>& read_file_list, const bool update)
 {
   ++write_time_consumed.total_count_;
   bool random = param.max_size_ > param.min_size_;
@@ -60,7 +60,7 @@ int write_file(ThreadParam& param, TfsClientImplV2* tfsclient, const char* tfs_n
     if (TFS_SUCCESS == ret)
     {
       file_list.push_back(ret_name);
-      if (read_file_list.size() < 0xffff)
+      if (read_file_list.size() < 0xffff && !update)
         read_file_list.push_back(ret_name);
     }
   }
@@ -85,28 +85,6 @@ int read_file(TfsClientImplV2* tfsclient, const char* tfsname)
     ret = (fd > 0) ? TFS_SUCCESS : fd;
     if (TFS_SUCCESS == ret)
     {
-      /*uint32_t crc = 0;
-      TfsFileStat stat;
-      int32_t length = 0, total = 0, crc_offset = 0;
-      memset(&stat, 0, sizeof(stat));
-      ret = tfsclient->fstat(fd, &stat);
-      if (TFS_SUCCESS == ret)
-      {
-        char data[MAX_READ_SIZE];
-        while (total < stat.size_)
-        {
-          //crc_offset = total == 0 ? sizeof(FileInfoInDiskExt) : 0;
-          length = tfsclient->read(fd, data, MAX_READ_SIZE);
-          if (length == 0)
-            break;
-
-          if (length > 0)
-          {
-            total += length;
-            crc = Func::crc(crc, (data + crc_offset), (length - crc_offset));
-          }
-        }
-      }*/
       uint32_t crc = 0;
       TfsFileStat stat;
       memset(&stat, 0, sizeof(stat));
@@ -126,6 +104,8 @@ int read_file(TfsClientImplV2* tfsclient, const char* tfsname)
       }
       while (total < stat.size_  && TFS_SUCCESS == ret);
       tfsclient->close(fd);
+      if (crc != stat.crc_)
+        TBSYS_LOG(INFO, " crc error. filename : %s, crc: %u<> %u", tfsname, crc, stat.crc_);
       ret = (total == stat.size_ && crc == stat.crc_ )? TFS_SUCCESS : TFS_ERROR;
     }
   }
@@ -172,11 +152,17 @@ void* mix_worker(void* arg)
     char* data = new char[param.max_size_];
     memset(data, 0, param.max_size_);
     generate_data(data, param.max_size_);
+    TBSYS_LOG(INFO, "GEN data %s", data);
 
     vector<std::string>::iterator iter;
     do
     {
       int32_t index = 0, random_index;
+      for (index = 0; index < PER_WRITE; ++index)
+      {
+        write_file(param, tfsclient, NULL, write_file_list, write_time_consumed, write_stater, data, read_file_list, false);
+      }
+
       for (index = 0; index < PER_READ && !read_file_list.empty(); ++index)
       {
         timer.start();
@@ -196,17 +182,14 @@ void* mix_worker(void* arg)
         }
       }
 
-      for (index = 0; index < PER_WRITE; ++index)
-      {
-        write_file(param, tfsclient, NULL, write_file_list, write_time_consumed, write_stater, data, read_file_list);
-      }
-
       for (index = 0; index < PER_UPDATE && !read_file_list.empty(); ++index)
       {
         random_index = random() % read_file_list.size();
-        std::string file_name = read_file_list[random_index];
+        iter = read_file_list.begin() + random_index;
+        std::string file_name = (*iter);
+        read_file_list.erase(iter);
         ret = write_file(param, tfsclient, file_name.c_str(), write_file_list, update_time_consumed,
-          update_stater, data, read_file_list);
+          update_stater, data, read_file_list, true);
       }
 
       for (index = 0; index < PER_DELETE && !read_file_list.empty(); ++index)

@@ -131,8 +131,8 @@ namespace tfs
         helper.push_back(info);
       }
       std::vector<uint64_t> expires;
-      EXPECT_EQ(EXIT_PARAMETER_ERROR, manager_.update_relation(expires, NULL, helper, now, REPORT_BLOCK_TYPE_ALL));
-      EXPECT_EQ(TFS_SUCCESS, manager_.update_relation(expires, server, helper, now, REPORT_BLOCK_TYPE_ALL));
+      EXPECT_EQ(EXIT_PARAMETER_ERROR, manager_.update_relation(expires, NULL, helper, now));
+      EXPECT_EQ(TFS_SUCCESS, manager_.update_relation(expires, server, helper, now));
       EXPECT_EQ(COUNT, server->hold_->size());
       for (i = 0; i < COUNT; i++)
       {
