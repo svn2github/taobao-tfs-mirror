@@ -128,6 +128,7 @@ namespace tfs
 
     static const int32_t MAX_DEV_NAME_LEN = 64;
     static const int32_t MAX_READ_SIZE = 1048576;
+    static const int32_t MAX_READ_SIZE_KV = 1 << 21; //2M
 
     static const int MAX_FILE_FD = INT_MAX;
     static const int MAX_OPEN_FD_COUNT = MAX_FILE_FD - 1;
@@ -144,13 +145,17 @@ namespace tfs
     static const int64_t INVALID_FILE_SIZE = -1;
 
     // client config
-    static const int64_t DEFAULT_CLIENT_RETRY_COUNT = 3;
+    static const int32_t DEFAULT_CLIENT_RETRY_COUNT = 3;
+    static const int32_t DEFAULT_META_RETRY_COUNT = 3;
+    static const uint32_t DEFAULT_UPDATE_KMT_INTERVAL_COUNT = 100;
+    static const uint32_t DEFAULT_UPDATE_KMT_FAIL_COUNT = 10;
     // unit ms
     static const int64_t DEFAULT_STAT_INTERNAL = 60000; // 1min
     static const int64_t DEFAULT_GC_INTERNAL = 43200000; // 12h
 
     static const int64_t MIN_GC_EXPIRED_TIME = 21600000; // 6h
     static const int64_t MAX_SEGMENT_SIZE = 1 << 21; // 2M
+    static const int64_t MAX_BATCH_DATA_LENGTH = 1 << 23; // 8M
     static const int64_t MAX_BATCH_COUNT = 16;
 
     static const int32_t MAX_DEV_TAG_LEN = 8;
@@ -915,7 +920,6 @@ namespace tfs
       CLEAR_SYSTEM_TABLE_FLAG_REPORT_SERVER = 1 << 2,
       CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE  = 1 << 3
     }ClearSystemTableFlag;
-
     typedef enum _FamilyMemberStatus
     {
       FAMILY_MEMBER_STATUS_NORMAL = 0,
@@ -1063,6 +1067,47 @@ namespace tfs
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
     static const int32_t RAW_META_SIZE = sizeof(RawMeta);
+
+    enum identify_id
+    {
+      //TfsFileInfo struct
+      TFS_FILE_INFO_CLUSTER_ID_TAG = 101,
+      TFS_FILE_INFO_BLOCK_ID_TAG = 102,
+      TFS_FILE_INFO_FILE_ID_TAG = 103,
+      TFS_FILE_INFO_OFFSET_TAG = 104,
+      TFS_FILE_INFO_FILE_SIZE_TAG = 105,
+
+      //ObjectMetaInfo struct
+      OBJECT_META_INFO_CREATE_TIME_TAG = 201,
+      OBJECT_META_INFO_MODIFY_TIME_TAG = 202,
+      OBJECT_META_INFO_MAX_TFS_FILE_SIZE_TAG = 203,
+      OBJECT_META_INFO_BIG_FILE_SIZE_TAG = 204,
+      OBJECT_META_INFO_OWNER_ID_TAG = 205,
+
+      //CustomizeInfo struct
+      CUSTOMIZE_INFO_OTAG_TAG = 301,
+
+      //ObjectInfo struct
+      OBJECT_INFO_HAS_META_INFO_TAG = 401,
+      OBJECT_INFO_HAS_CUSTOMIZE_INFO_TAG = 402,
+      OBJECT_INFO_META_INFO_TAG = 403,
+      OBJECT_INFO_V_TFS_FILE_INFO_TAG = 404,
+      OBJECT_INFO_CUSTOMIZE_INFO_TAG = 405,
+
+      //BucketMetaInfo struct
+      BUCKET_META_INFO_CREATE_TIME_TAG = 501,
+      BUCKET_META_INFO_OWNER_ID_TAG = 502,
+
+      //KvMetaTable
+      KV_META_TABLE_V_META_TABLE_TAG = 601,
+
+      //UserInfo
+      USER_INFO_OWNER_ID_TAG = 801,
+
+      //End TAG
+      END_TAG = 999
+    };
+
   }/** end namespace common*/
 }/** end namespace tfs **/
 

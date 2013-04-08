@@ -31,6 +31,8 @@ namespace tfs
   {
     class RcClientImpl;
     class NameMetaClient;
+    class KvMetaClientImpl;
+    class TfsClusterManager;
     class StatUpdateTask : public tbutil::TimerTask
     {
       public:
@@ -60,6 +62,7 @@ namespace tfs
             const char* rs_addr = NULL);
 
         int64_t get_app_id() const { return app_id_;}
+        void set_remote_cache_info(const char * remote_cache_info);
         void set_client_retry_count(const int64_t count);
         int64_t get_client_retry_count() const;
         void set_client_retry_flag(bool retry_flag);
@@ -95,6 +98,45 @@ namespace tfs
                        const char* file_name, const char* suffix = NULL);
         int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix = NULL);
+
+        bool is_hit_local_cache(const char* tfs_name);
+
+#ifdef WITH_TAIR_CACHE
+        bool is_hit_remote_cache(const char* tfs_name);
+#endif
+
+        // for kv meta
+        void set_kv_rs_addr(const char *rs_addr); // tmp use
+
+        TfsRetType put_bucket(const char *bucket_name,
+            const common::UserInfo &user_info);
+        TfsRetType get_bucket(const char *bucket_name, const char *prefix,
+            const char *start_key, const char delimiter, const int32_t limit,
+            std::vector<common::ObjectMetaInfo> *v_object_meta_info,
+            std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix,
+            int8_t *is_truncated, const common::UserInfo &user_info);
+        TfsRetType del_bucket(const char *bucket_name,
+            const common::UserInfo &user_info);
+        TfsRetType head_bucket(const char *bucket_name,
+            common::BucketMetaInfo *bucket_meta_info,
+            const common::UserInfo &user_info);
+
+        TfsRetType put_object(const char *bucket_name, const char *object_name,
+            const char* local_file, const common::UserInfo &user_info);
+        int64_t pwrite_object(const char *bucket_name, const char *object_name,
+            const void *buf, const int64_t offset, const int64_t length,
+            const common::UserInfo &user_info);
+        int64_t pread_object(const char *bucket_name, const char *object_name,
+            void *buf, const int64_t offset, const int64_t length,
+            common::ObjectMetaInfo *object_meta_info,
+            common::CustomizeInfo *customize_info,
+            const common::UserInfo &user_info);
+        TfsRetType get_object(const char *bucket_name, const char *object_name,
+            const char* local_file, const common::UserInfo &user_info);
+        TfsRetType del_object(const char *bucket_name, const char *object_name,
+            const common::UserInfo &user_info);
+        TfsRetType head_object(const char *bucket_name, const char *object_name,
+            common::ObjectInfo *object_info, const common::UserInfo &user_info);
 
         // for name meta
         TfsRetType create_dir(const int64_t uid, const char* dir_path);
@@ -143,7 +185,6 @@ namespace tfs
 
         void destory();
 
-
         uint64_t get_active_rc_ip(size_t& retry_index) const;
         void get_ka_info(common::KeepAliveInfo& kainfo);
 
@@ -170,129 +211,13 @@ namespace tfs
         int fetch_buf(const char* ns_addr, int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix);
 
-        std::string get_ns_addr(const char* file_name, const RcClient::RC_MODE mode, const int index);
-        std::string get_ns_addr_by_cluster_id(int32_t cluster_id, const RcClient::RC_MODE mode, const int index, const uint32_t block_id = 0);
-
-        static int32_t get_cluster_id(const char* file_name);
-        static uint32_t get_block_id(const char* file_name);
         static void parse_cluster_id(const std::string& cluster_id_str, int32_t& id, bool& is_master);
 
         void calculate_ns_info(const common::BaseInfo& base_info);
 
         void parse_duplicate_info(const std::string& duplicate_info);
 
-        int64_t save_file_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
-            const char* local_file, const char* tfs_name);
-
-        int64_t fetch_file_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
-            const char* local_file, const char* tfs_name);
-
-        int64_t save_buf_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
-            const char* file_path, const char* buffer, const int64_t length);
-
-        int64_t fetch_buf_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
-            char* buffer, const int64_t offset, const int64_t length, const char* tfs_name);
-
-      public:
-
-        int add_ns_into_write_ns(const std::string& ip_str);
-
-        int add_ns_into_choice(const std::string& ip_str, const int32_t cluster_id);
-
-        int add_ns_into_update_ns(const std::string& ip_str, const int32_t cluster_id, bool is_master);
-
       private:
-        static const int8_t CHOICE_CLUSTER_NS_TYPE_LENGTH = 3;
-        typedef std::map<int32_t, std::string> ClusterNsType; //<cluster_id, ns>
-        ClusterNsType choice[CHOICE_CLUSTER_NS_TYPE_LENGTH];
-        std::string write_ns_[CHOICE_CLUSTER_NS_TYPE_LENGTH];
-        struct GroupInfo
-        {
-          GroupInfo():group_seq_(-1), is_master_(false)
-          {
-          }
-          GroupInfo(const int group_seq, const std::string& ns_addr, const bool is_master):
-            group_seq_(group_seq), ns_addr_(ns_addr), is_master_(is_master)
-          {
-          }
-          int group_seq_;
-          std::string ns_addr_;
-          bool is_master_;
-        };
-        struct ClusterGroupInfo
-        {
-          ClusterGroupInfo():group_count_(-1)
-          {
-          }
-          ~ClusterGroupInfo()
-          {
-            std::vector<GroupInfo*>::iterator iter = group_info_list_.begin();
-            for (; group_info_list_.end() != iter; iter++)
-            {
-              delete (*iter);
-              //tbsys::gDelete(*iter);
-            }
-          }
-          void insert_group_info(const int group_seq, const std::string& ns_addr, const bool is_master)
-          {
-            std::vector<GroupInfo*>::iterator iter = group_info_list_.begin();
-            for (; group_info_list_.end() != iter; iter++)
-            {
-              // exist
-              if (!(*iter)->ns_addr_.compare(ns_addr))
-              {
-                (*iter)->group_seq_ = group_seq;
-                break;
-              }
-            }
-            // new insert
-            if (group_info_list_.end() == iter)
-            {
-              GroupInfo* group_info = new GroupInfo(group_seq, ns_addr, is_master);
-              if (is_master)
-              {
-                group_info_list_.insert(group_info_list_.begin(), group_info);
-              }
-              else
-              {
-                group_info_list_.push_back(group_info);
-              }
-            }
-          }
-          void get_need_update_group_info_list(std::vector<GroupInfo*>& need_group_info_list)
-          {
-            std::vector<GroupInfo*>::iterator iter = group_info_list_.begin();
-            for (; group_info_list_.end() != iter; iter++)
-            {
-              if (-1 == (*iter)->group_seq_)
-              {
-                need_group_info_list.push_back(*iter);
-              }
-            }
-          }
-          bool get_ns_addr(const uint32_t block_id, std::string& ns_addr)
-          {
-            bool bRet = false;
-            if (group_count_ > 0)
-            {
-              int group_seq = block_id % group_count_;
-              std::vector<GroupInfo*>::iterator iter = group_info_list_.begin();
-              for (; group_info_list_.end() != iter; iter++)
-              {
-                if (group_seq == (*iter)->group_seq_)
-                {
-                  ns_addr = (*iter)->ns_addr_;
-                  bRet = true;
-                  break;
-                }
-              }
-            }
-            return bRet;
-          }
-          int group_count_;
-          std::vector<GroupInfo*> group_info_list_;
-        };
-        std::map<int32_t, ClusterGroupInfo*> update_ns_; //<cluster_id, cluster_group_info>
         std::string duplicate_server_master_;
         std::string duplicate_server_slave_;
         std::string duplicate_server_group_;
@@ -300,13 +225,11 @@ namespace tfs
         bool need_use_unique_;
         uint32_t local_addr_;
 
-      public:
-        bool update_cluster_group_info(ClusterGroupInfo* cluster_group_info);
-
       private:
         int32_t init_stat_;
         uint64_t active_rc_ip_;
         size_t next_rc_index_;
+        bool ignore_rc_remote_cache_info_;
 
         common::BaseInfo base_info_;
         common::SessionBaseInfo session_base_info_;
@@ -371,11 +294,15 @@ namespace tfs
         };
         std::map<int, fdInfo> fd_infos_;
         mutable tbsys::CThreadMutex fd_info_mutex_;
-        NameMetaClient* name_meta_client_;
+        NameMetaClient *name_meta_client_;
+        KvMetaClientImpl *kv_meta_client_;
+        TfsClusterManager *tfs_cluster_manager_;
         int64_t app_id_;
+        char kv_rs_addr_[128];
         int my_fd_;
       private:
         bool have_permission(const char* file_name, const RcClient::RC_MODE mode);
+        bool have_permission(const int32_t cluster_id, const uint32_t block_id, const RcClient::RC_MODE mode);
         static bool is_raw_tfsname(const char* name);
         int gen_fdinfo(const fdInfo& fdinfo);
         TfsRetType remove_fdinfo(const int fd, fdInfo& fdinfo);

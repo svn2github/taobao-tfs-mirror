@@ -42,16 +42,15 @@ string StatItem::remote_remove_count_ = "remote_remove_count";
 int32_t ClientConfig::use_cache_ = USE_CACHE_FLAG_LOCAL;
 int64_t ClientConfig::cache_items_ = DEFAULT_BLOCK_CACHE_ITEMS;
 int64_t ClientConfig::cache_time_ = DEFAULT_BLOCK_CACHE_TIME;
-#ifdef WITH_TAIR_CACHE
 string ClientConfig::remote_cache_master_addr_ = "";
 string ClientConfig::remote_cache_slave_addr_ = "";
 string ClientConfig::remote_cache_group_name_ = "";
 int32_t ClientConfig::remote_cache_area_ = 0;
-#endif
 int64_t ClientConfig::segment_size_ = MAX_SEGMENT_SIZE;
 int64_t ClientConfig::batch_count_ = MAX_BATCH_COUNT / 2;
 int64_t ClientConfig::batch_size_ = ClientConfig::segment_size_ * ClientConfig::batch_count_;
-int64_t ClientConfig::client_retry_count_ = DEFAULT_CLIENT_RETRY_COUNT; // retry times to read or write
+int32_t ClientConfig::client_retry_count_ = DEFAULT_CLIENT_RETRY_COUNT; // retry times to read or write
+int32_t ClientConfig::meta_retry_count_ = DEFAULT_META_RETRY_COUNT; // retry times to meta
 bool ClientConfig::client_retry_flag_ = true;
 // interval unit: ms
 int64_t ClientConfig::stat_interval_ = DEFAULT_STAT_INTERNAL;
@@ -59,3 +58,5 @@ int64_t ClientConfig::gc_interval_ = DEFAULT_GC_INTERNAL;
 int64_t ClientConfig::expired_time_ = MIN_GC_EXPIRED_TIME * 4;
 int64_t ClientConfig::batch_timeout_ = DEFAULT_NETWORK_CALL_TIMEOUT; // wait several response timeout
 int64_t ClientConfig::wait_timeout_ = DEFAULT_NETWORK_CALL_TIMEOUT;  // wait single response timeout
+uint32_t ClientConfig::update_kmt_interval_count_ = DEFAULT_UPDATE_KMT_INTERVAL_COUNT;  // kv meta table
+uint32_t ClientConfig::update_kmt_fail_count_ = DEFAULT_UPDATE_KMT_FAIL_COUNT;  // kv meta table

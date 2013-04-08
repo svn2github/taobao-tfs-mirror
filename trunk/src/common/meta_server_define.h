@@ -19,6 +19,7 @@
 #include <vector>
 #include <string>
 #include "rts_define.h"
+#include "meta_define.h"
 
 namespace tfs
 {
@@ -38,27 +39,6 @@ namespace tfs
       static const int32_t NAME_EXTRA_SIZE = 8;
       static int32_t length(const char* data);
       static const char* name(const char* data);
-    };
-
-    struct FragMeta
-    {
-      FragMeta();
-      FragMeta(const uint32_t block_id, const uint64_t file_id, const int64_t offset, const int32_t size);
-
-      static int64_t get_length();
-      bool operator < (const FragMeta& right) const;
-
-      // for store
-      int serialize(char* data, const int64_t buff_len, int64_t& pos) const;
-      int deserialize(char* data, const int64_t data_len, int64_t& pos);
-      // for packet
-      int serialize(common::Stream& output) const;
-      int deserialize(common::Stream& input);
-
-      uint64_t file_id_;
-      int64_t offset_;
-      uint32_t block_id_;
-      int32_t size_;
     };
 
     class FragInfo

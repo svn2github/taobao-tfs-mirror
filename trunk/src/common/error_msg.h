@@ -209,8 +209,8 @@ namespace tfs
     const int32_t EXIT_TABLE_VERSION_ERROR = -15003;//table version error
     const int32_t EXIT_BUCKET_ID_INVLAID= -15004;//bucket id invalid
     const int32_t EXIT_BUCKET_NOT_EXIST= -15005;//bucket not exist
-    const int32_t EXIT_NEW_TABLE_NOT_EXIST= -15005;//new table not exist
-    const int32_t EXIT_NEW_TABLE_INVALID = -15005;//new table invalid
+    const int32_t EXIT_NEW_TABLE_NOT_EXIST= -15006;//new table not exist
+    const int32_t EXIT_NEW_TABLE_INVALID = -15007;//new table invalid
 
     // erasure code related
     const int32_t EXIT_NO_MEMORY = -16000;
@@ -222,6 +222,17 @@ namespace tfs
     const int32_t EXIT_DECODE_FAIL = -16006;
     const int32_t EXIT_NO_NEED_REINSTATE = -16007;
     const int32_t EXIT_BLOCK_NOT_PRESENT = -16008;
+    // kv meta related
+    const int32_t EXIT_INVALID_OBJECT = -16000;// no meta info or something
+    const int32_t EXIT_KV_RETURN_DATA_NOT_EXIST = -16001;//no data in kv
+    const int32_t EXIT_KV_RETURN_ERROR = -16002;//kv error
+    const int32_t EXIT_KV_RETURN_VERSION_ERROR = -16003;
+    const int32_t EXIT_KV_SCAN_ERROR = -16004;
+
+    const int32_t EXIT_OBJECT_OVERLAP = -16004;// pwrite object overlap
+    const int32_t EXIT_OBJECT_NOT_EXIST = -16006; //get_key(key not exist, object type)
+    const int32_t EXIT_BUCKET_EXIST = -16007;// bucket already exist
+    const int32_t EXIT_INVALID_KV_META_SERVER = -16008;// no kv meta server
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

@@ -50,6 +50,8 @@
 #include "dataserver_task_message.h"
 #include "resolve_block_version_conflict_message.h"
 #include "family_info_message.h"
+#include "kv_meta_message.h"
+#include "kv_rts_message.h"
 
 namespace tfs
 {

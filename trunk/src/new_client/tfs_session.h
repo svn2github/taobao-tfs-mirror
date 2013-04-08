@@ -64,6 +64,7 @@ namespace tfs
 
       void insert_local_block_cache(const uint32_t block_id, const common::VUINT64& rds, const common::FamilyInfoExt* family_info = NULL);
       void remove_local_block_cache(const uint32_t block_id);
+      bool is_hit_local_cache(const uint32_t block_id);
 
       bool is_expired(const BlockCache& block_cache) const;
 

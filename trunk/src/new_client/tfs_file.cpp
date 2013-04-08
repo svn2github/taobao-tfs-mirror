@@ -183,7 +183,8 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset,
   }
   else if (count > 0)
   {
-    int64_t check_size = 0, cur_size = 0, seg_count = 0, retry_count = 0;
+    int64_t check_size = 0, cur_size = 0, seg_count = 0;
+    int32_t retry_count = 0;
 
     while (check_size < count)
     {
@@ -261,7 +262,8 @@ int64_t TfsFile::write_ex(const void* buf, const int64_t count, const int64_t of
   }
   else if (count > 0)
   {
-    int64_t cur_size = 0, seg_count = 0, retry_count = 0;
+    int64_t cur_size = 0, seg_count = 0;
+    int32_t retry_count = 0;
 
     while (check_size < count)
     {
@@ -412,7 +414,7 @@ int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatType mode)
     meta_seg_->reset_status();
     get_meta_segment(0, NULL, 0);  // just stat
 
-    int retry_count = ClientConfig::client_retry_count_;
+    int32_t retry_count = ClientConfig::client_retry_count_;
     do
     {
       ret = stat_process();

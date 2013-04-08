@@ -22,6 +22,7 @@
 #include "func.h"
 #include "internal.h"
 #include "rts_define.h"
+#include "kv_rts_define.h"
 namespace
 {
   const int PORT_PER_PROCESS = 2;
@@ -37,6 +38,8 @@ namespace tfs
     NameMetaServerParameter NameMetaServerParameter::meta_parameter_;
     RtServerParameter RtServerParameter::rt_parameter_;
     CheckServerParameter CheckServerParameter::cs_parameter_;
+    KvMetaParameter KvMetaParameter::kv_meta_parameter_;
+    KvRtServerParameter KvRtServerParameter::kv_rt_parameter_;
 
     static void set_hour_range(const char *str, int32_t& min, int32_t& max)
     {
@@ -537,6 +540,101 @@ namespace tfs
       }
 
       return ret;
+    }
+
+    int KvMetaParameter::initialize(const std::string& config_file)
+    {
+      tbsys::CConfig config;
+      int32_t ret = config.load(config_file.c_str());
+      if (EXIT_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "load config file erro.");
+        return TFS_ERROR;
+      }
+
+      tair_master_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_MASTER, "");
+      tair_slave_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_SLAVE, "");
+      tair_group_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_GROUP, "");
+      tair_object_area_ = config.getInt(CONF_SN_KVMETA, CONF_TAIR_OBJECT_AREA, -1);
+      dump_stat_info_interval_ = config.getInt(CONF_SN_KVMETA, CONF_STAT_INFO_INTERVAL, 60000000);
+
+      if (TFS_SUCCESS == ret)
+      {
+        std::string ips1 = TBSYS_CONFIG.getString(CONF_SN_KVMETA, CONF_KV_ROOT_IPPORT, "");
+        std::vector<std::string> items1;
+        Func::split_string(ips1.c_str(), ':', items1);
+        if (items1.size() != 2U)
+        {
+          TBSYS_LOG(ERROR, "%s is invalid", ips1.c_str());
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          int32_t port1 = atoi(items1[1].c_str());
+          if (port1 <= 1024 || port1 >= 65535)
+          {
+            TBSYS_LOG(ERROR, "%s is invalid", ips1.c_str());
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            rs_ip_port_ = tbsys::CNetUtil::strToAddr(items1[0].c_str(), atoi(items1[1].c_str()));
+          }
+          TBSYS_LOG(INFO, "kv root server ip addr: %s", ips1.c_str());
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        std::string ips2 = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_IP_ADDR, "");
+        std::string ports2 = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_PORT, "");
+
+        int32_t port2 = atoi(ports2.c_str());
+        if (port2 <= 1024 || port2 >= 65535)
+        {
+          TBSYS_LOG(ERROR, "%s is invalid", ports2.c_str());
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          ms_ip_port_ = tbsys::CNetUtil::strToAddr(ips2.c_str(), port2);
+        }
+        TBSYS_LOG(INFO, "kv meta server ip addr: %s:%d", ips2.c_str(), port2);
+      }
+      return ret;
+    }
+    int KvRtServerParameter::initialize(void)
+    {
+      int32_t iret = TFS_SUCCESS;
+      kv_rts_check_lease_interval_ =
+        TBSYS_CONFIG.getInt(CONF_SN_KVROOTSERVER, CONF_KV_MTS_RTS_LEASE_CHECK_TIME, 1);
+      if (kv_rts_check_lease_interval_ <= 0)
+      {
+        TBSYS_LOG(ERROR, "kv_rts_check_lease_interval_: %d is invalid", kv_rts_check_lease_interval_);
+        iret = TFS_ERROR;
+      }
+      kv_mts_rts_lease_expired_time_ =
+        TBSYS_CONFIG.getInt(CONF_SN_KVROOTSERVER, CONF_KV_MTS_RTS_LEASE_EXPIRED_TIME, 4);
+      if (kv_mts_rts_lease_expired_time_ <= 0)
+      {
+        TBSYS_LOG(ERROR, "kv_mts_rts_lease_expired_time: %d is invalid", kv_mts_rts_lease_expired_time_);
+        iret = TFS_ERROR;
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        kv_mts_rts_heart_interval_
+        = TBSYS_CONFIG.getInt(CONF_SN_KVROOTSERVER, CONF_KV_MTS_RTS_HEART_INTERVAL, 2);
+        if (kv_mts_rts_heart_interval_ > kv_mts_rts_lease_expired_time_ / 2 )
+        {
+          TBSYS_LOG(ERROR, "mts_rts_lease_expired_interval: %d is invalid, less than: %d",
+            kv_mts_rts_heart_interval_, kv_mts_rts_lease_expired_time_ / 2 + 1);
+          iret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          safe_mode_time_ = TBSYS_CONFIG.getInt(CONF_SN_KVROOTSERVER, CONF_SAFE_MODE_TIME, 60);
+        }
+      }
+      return iret;
     }
   }/** common **/
 }/** tfs **/

@@ -31,6 +31,8 @@ namespace tfs
 #define CONF_SN_NAMEMETASERVER                        "metaserver"
 #define CONF_SN_ROOTSERVER                            "rootserver"
 #define CONF_SN_CHECKSERVER                           "checkserver"
+#define CONF_SN_KVMETA                                "kvmetaserver"
+#define CONF_SN_KVROOTSERVER                          "kvrootserver"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"
@@ -187,6 +189,22 @@ namespace tfs
 #define CONF_MASTER_NS_PORT                           "master_ns_port"
 #define CONF_SLAVE_NS_IP                              "slave_ns_ip"
 #define CONF_SLAVE_NS_PORT                            "slave_ns_port"
+
+//kv meta server
+#define CONF_TAIR_MASTER                             "tair_master"
+#define CONF_TAIR_SLAVE                              "tair_slave"
+#define CONF_TAIR_GROUP                              "tair_group"
+#define CONF_TAIR_OBJECT_AREA                        "tair_object_area"
+#define CONF_STAT_INFO_INTERVAL                      "stat_info_interval"
+#define CONF_KV_META_IPPORT                          "kv_meta_ip_port"
+#define CONF_KV_ROOT_IPPORT                          "kv_root_ip_port"
+
+//kv root server
+#define CONF_KV_MTS_RTS_LEASE_CHECK_TIME                 "mts_rts_lease_check_time" //(s)
+#define CONF_KV_MTS_RTS_LEASE_EXPIRED_TIME               "mts_rts_lease_expired_time" //(s)
+#define CONF_KV_MTS_RTS_HEART_INTERVAL                   "mts_rts_heart_interval" //(s)
+#define CONF_KV_RT_TABLE_FILE_PATH                       "table_file_path"
+#define CONF_KV_UPDATE_TABLE_THREAD_COUNT                "update_table_thread_count"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

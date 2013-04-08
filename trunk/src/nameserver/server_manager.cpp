@@ -100,7 +100,6 @@ namespace tfs
 
     int ServerManager::remove(const uint64_t server, const time_t now)
     {
-      TBSYS_LOG(INFO, "dataserver: %s exit", tbsys::CNetUtil::addrToString(server).c_str());
       ServerCollect query(manager_, server);
       ServerCollect* object = NULL;
       rwmutex_.wrlock();
@@ -115,6 +114,8 @@ namespace tfs
 
       if (NULL != object)
       {
+        TBSYS_LOG(INFO, "dataserver: %s exit, now: %"PRI64_PREFIX"d, last_update_time: %"PRI64_PREFIX"d",
+            tbsys::CNetUtil::addrToString(server).c_str(), now, object->get_last_update_time());
         object->update_status();
         object->set_in_dead_queue_timeout(now);
 
@@ -184,10 +185,10 @@ namespace tfs
           del_report_block_server_(server);
 
         SERVER_TABLE_ITER iter = wait_report_block_servers_.find(server);
-        SERVER_TABLE_ITER it   = current_reporting_block_servers_.find(server);
         bool insert = iter == wait_report_block_servers_.end();
         if (insert)
         {
+          SERVER_TABLE_ITER it   = current_reporting_block_servers_.find(server);
           if (it != current_reporting_block_servers_.end())
           {
             result = *it;
@@ -224,6 +225,11 @@ namespace tfs
         if (iter != current_reporting_block_servers_.end())
         {
           current_reporting_block_servers_.erase((*iter));
+        }
+        iter = wait_report_block_servers_.find(server);
+        if (iter != wait_report_block_servers_.end())
+        {
+          wait_report_block_servers_.erase((*iter));
         }
       }
       return ret;
@@ -264,6 +270,11 @@ namespace tfs
       tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
       wait_report_block_servers_.clear();
       current_reporting_block_servers_.clear();
+    }
+
+    int64_t ServerManager::get_report_block_server_queue_size() const
+    {
+      return current_reporting_block_servers_.size() + wait_report_block_servers_.size();
     }
 
     ServerCollect* ServerManager::get_(const uint64_t server) const
@@ -654,7 +665,7 @@ namespace tfs
     {
       result = NULL;
       SORT_MAP sorts;
-      GROUP_MAP group;
+      GROUP_MAP group, servers;
       for (int64_t index = 0; index < sources.get_array_index(); ++index)
       {
         uint64_t id = *sources.at(index);
@@ -665,7 +676,14 @@ namespace tfs
           int64_t use = static_cast<int64_t>(calc_capacity_percentage(server->use_capacity(),
                 server->total_capacity()) *  PERCENTAGE_MAGIC);
           sorts.insert(SORT_MAP::value_type(use, server));
+          uint32_t id  = server->id() & 0xFFFFFFFF;
           uint32_t lan = Func::get_lan(server->id(), SYSPARAM_NAMESERVER.group_mask_);
+          GROUP_MAP_ITER it   = servers.find(id);
+          if (servers.end() == it)
+          {
+            it = servers.insert(GROUP_MAP::value_type(id, SORT_MAP())).first;
+          }
+          it->second.insert(SORT_MAP::value_type(use, server));
           GROUP_MAP_ITER iter = group.find(lan);
           if (group.end() == iter)
             iter = group.insert(GROUP_MAP::value_type(lan, SORT_MAP())).first;
@@ -679,14 +697,23 @@ namespace tfs
       }
       else
       {
-        uint32_t nums = 0;
-        GROUP_MAP_ITER iter = group.begin();
-        for (; iter != group.end(); ++iter)
+        GROUP_MAP_ITER iter = servers.begin();
+        for (; servers.end() != iter && NULL == result; ++iter)
         {
-          if (iter->second.size() > nums)
-          {
-            nums = iter->second.size();
+          if (iter->second.size() > 1u)
             result = iter->second.rbegin()->second;
+        }
+        if (NULL == result)
+        {
+          uint32_t nums = 0;
+          iter = group.begin();
+          for (; iter != group.end(); ++iter)
+          {
+            if (iter->second.size() > nums)
+            {
+              nums = iter->second.size();
+              result = iter->second.rbegin()->second;
+            }
           }
         }
         if (NULL == result)

@@ -71,7 +71,7 @@ namespace tfs
       {
         buffer_.expand(INT8_SIZE);
       }
-      int32_t iret = Serialization::set_int8(buffer_.get_free(), buffer_.get_free_length(), pos, value); 
+      int32_t iret = Serialization::set_int8(buffer_.get_free(), buffer_.get_free_length(), pos, value);
       if (TFS_SUCCESS == iret)
       {
         buffer_.pour(INT8_SIZE);
@@ -86,7 +86,7 @@ namespace tfs
       {
         buffer_.expand(INT16_SIZE);
       }
-      int32_t iret = Serialization::set_int16(buffer_.get_free(), buffer_.get_free_length(), pos, value); 
+      int32_t iret = Serialization::set_int16(buffer_.get_free(), buffer_.get_free_length(), pos, value);
       if (TFS_SUCCESS == iret)
       {
         buffer_.pour(INT16_SIZE);
@@ -101,7 +101,7 @@ namespace tfs
       {
         buffer_.expand(INT_SIZE);
       }
-      int32_t iret = Serialization::set_int32(buffer_.get_free(), buffer_.get_free_length(), pos, value); 
+      int32_t iret = Serialization::set_int32(buffer_.get_free(), buffer_.get_free_length(), pos, value);
       if (TFS_SUCCESS == iret)
       {
         buffer_.pour(INT_SIZE);
@@ -116,7 +116,7 @@ namespace tfs
       {
         buffer_.expand(INT64_SIZE);
       }
-      int32_t iret = Serialization::set_int64(buffer_.get_free(), buffer_.get_free_length(), pos, value); 
+      int32_t iret = Serialization::set_int64(buffer_.get_free(), buffer_.get_free_length(), pos, value);
       if (TFS_SUCCESS == iret)
         buffer_.pour(INT64_SIZE);
       return iret;
@@ -129,7 +129,7 @@ namespace tfs
       {
         buffer_.expand(length);
       }
-      int32_t iret = Serialization::set_bytes(buffer_.get_free(), buffer_.get_free_length(), pos, data, length); 
+      int32_t iret = Serialization::set_bytes(buffer_.get_free(), buffer_.get_free_length(), pos, data, length);
       if (TFS_SUCCESS == iret)
       {
         buffer_.pour(length);
@@ -145,7 +145,7 @@ namespace tfs
       {
         buffer_.expand(length);
       }
-      int32_t iret = Serialization::set_string(buffer_.get_free(), buffer_.get_free_length(), pos, str); 
+      int32_t iret = Serialization::set_string(buffer_.get_free(), buffer_.get_free_length(), pos, str);
       if (TFS_SUCCESS == iret)
       {
         buffer_.pour(length);
@@ -161,7 +161,7 @@ namespace tfs
       {
         buffer_.expand(length);
       }
-      int32_t iret = Serialization::set_string(buffer_.get_free(), buffer_.get_free_length(), pos, str.c_str()); 
+      int32_t iret = Serialization::set_string(buffer_.get_free(), buffer_.get_free_length(), pos, str.c_str());
       if (TFS_SUCCESS == iret)
       {
         buffer_.pour(length);

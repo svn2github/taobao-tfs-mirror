@@ -333,10 +333,61 @@ namespace tfs
           case common::DEGRADE_READ_DATA_MESSAGE:
             packet = new DegradeReadDataMessage();
             break;
+          case common::REQ_KVMETA_GET_OBJECT_MESSAGE:
+            packet = new ReqKvMetaGetObjectMessage();
+            break;
+          case common::RSP_KVMETA_GET_OBJECT_MESSAGE:
+            packet = new RspKvMetaGetObjectMessage();
+            break;
+          case common::REQ_KVMETA_PUT_OBJECT_MESSAGE:
+            packet = new ReqKvMetaPutObjectMessage();
+            break;
+          case common::REQ_KVMETA_DEL_OBJECT_MESSAGE:
+            packet = new ReqKvMetaDelObjectMessage();
+            break;
+          case common::RSP_KVMETA_DEL_OBJECT_MESSAGE:
+            packet = new RspKvMetaDelObjectMessage();
+            break;
+          case common::REQ_KVMETA_HEAD_OBJECT_MESSAGE:
+            packet = new ReqKvMetaHeadObjectMessage();
+            break;
+          case common::RSP_KVMETA_HEAD_OBJECT_MESSAGE:
+            packet = new RspKvMetaHeadObjectMessage();
+            break;
+          case common::REQ_KVMETA_GET_BUCKET_MESSAGE:
+            packet = new ReqKvMetaGetBucketMessage();
+            break;
+          case common::RSP_KVMETA_GET_BUCKET_MESSAGE:
+            packet = new RspKvMetaGetBucketMessage();
+            break;
+          case common::REQ_KVMETA_PUT_BUCKET_MESSAGE:
+            packet = new ReqKvMetaPutBucketMessage();
+            break;
+          case common::REQ_KVMETA_DEL_BUCKET_MESSAGE:
+            packet = new ReqKvMetaDelBucketMessage();
+            break;
+          case common::REQ_KVMETA_HEAD_BUCKET_MESSAGE:
+            packet = new ReqKvMetaHeadBucketMessage();
+            break;
+          case common::RSP_KVMETA_HEAD_BUCKET_MESSAGE:
+            packet = new RspKvMetaHeadBucketMessage();
+            break;
+          case common::REQ_KV_RT_MS_KEEPALIVE_MESSAGE:
+            packet = new KvRtsMsHeartMessage();
+            break;
+          case common::RSP_KV_RT_MS_KEEPALIVE_MESSAGE:
+            packet = new KvRtsMsHeartResponseMessage();
+            break;
+          case common::REQ_KV_RT_GET_TABLE_MESSAGE:
+            packet = new GetTableFromKvRtsMessage();
+            break;
+          case common::RSP_KV_RT_GET_TABLE_MESSAGE:
+            packet = new GetTableFromKvRtsResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;
-        }
+         }
       }
       return packet;
     }

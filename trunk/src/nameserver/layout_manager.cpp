@@ -682,10 +682,16 @@ namespace tfs
         if (ngi.is_master())
         {
           while ((get_server_manager().has_report_block_server()) && (!ngi.is_destroyed()))
+          {
+            TBSYS_LOG(DEBUG, "HAS REPORT BLOCK SERVER: %"PRI64_PREFIX"d", get_server_manager().get_report_block_server_queue_size());
             usleep(1000);
+          }
 
           while (((need = has_space_in_task_queue_()) <= 0) && (!ngi.is_destroyed()))
+          {
+            TBSYS_LOG(DEBUG, "HAS SPACE IN TASK QUEUE: %"PRI64_PREFIX"d", need);
             usleep(1000);
+          }
 
           now = Func::get_monotonic_time();
 
@@ -762,16 +768,26 @@ namespace tfs
         if (ngi.is_master())
         {
           while ((get_server_manager().has_report_block_server()) && (!ngi.is_destroyed()))
+          {
+            TBSYS_LOG(DEBUG, "HAS REPORT BLOCK SERVER: %"PRI64_PREFIX"d", get_server_manager().get_report_block_server_queue_size());
             usleep(1000);
+          }
 
           while ((get_block_manager().has_emergency_replicate_in_queue()) && (!ngi.is_destroyed()) && sleep_nums++ <= MAX_SLEEP_NUMS)
+          {
+            TBSYS_LOG(DEBUG, "HAS EMERGENCY REPLICATE IN QUEUE: %"PRI64_PREFIX"d, SLEEP NUM : %"PRI64_PREFIX"d",
+                get_block_manager().get_emergency_replicate_queue_size(), sleep_nums);
             usleep(1000);
+          }
 
           while ((!get_family_manager().reinstate_or_dissolve_queue_empty()) && (!ngi.is_destroyed()) && sleep_nums++ <= MAX_SLEEP_NUMS)
             usleep(1000);
 
           while (((need = has_space_in_task_queue_()) <= 0) && (!ngi.is_destroyed()))
+          {
+            TBSYS_LOG(DEBUG, "HAS SPACE IN TASK QUEUE: %"PRI64_PREFIX"d", need);
             usleep(1000);
+          }
 
           while ((!(plan_run_flag_ & PLAN_TYPE_MOVE)) && (!ngi.is_destroyed()))
             usleep(100000);
@@ -1331,7 +1347,10 @@ namespace tfs
               get_block_manager().remove(pobject, block_id);//rollback
             }
           }
-          else
+          if ((TFS_SUCCESS != ret)
+              && (NULL != block)
+              && (get_block_manager().get_servers_size(block) <= 0)
+              && (new_create_block_collect || !block->is_creating()))
           {
             get_block_manager().remove(pobject, block_id);//rollback
           }

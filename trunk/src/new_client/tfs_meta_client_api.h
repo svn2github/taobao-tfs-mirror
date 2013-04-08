@@ -26,6 +26,7 @@ namespace tfs
   namespace client
   {
     typedef int TfsRetType;
+    class TfsClusterManager;
     class NameMetaClientImpl;
     class NameMetaClient
     {
@@ -35,13 +36,14 @@ namespace tfs
 
         int initialize(const char* rs_addr);
         int initialize(const int64_t rs_addr);
+        void set_tfs_cluster_manager(TfsClusterManager *tfs_cluster_manager);
 
         TfsRetType create_dir(const int64_t app_id, const int64_t uid, const char* dir_path);
         TfsRetType create_dir_with_parents(const int64_t app_id, const int64_t uid, const char* dir_path);
         TfsRetType create_file(const int64_t app_id, const int64_t uid, const char* file_path);
 
         TfsRetType rm_dir(const int64_t app_id, const int64_t uid, const char* dir_path);
-        TfsRetType rm_file(const char* ns_addr, const int64_t app_id, const int64_t uid, const char* file_path);
+        TfsRetType rm_file(const int64_t app_id, const int64_t uid, const char* file_path);
 
         TfsRetType mv_dir(const int64_t app_id, const int64_t uid,
             const char* src_dir_path, const char* dest_dir_path);
@@ -60,16 +62,16 @@ namespace tfs
 
         int32_t get_cluster_id(const int64_t app_id, const int64_t uid, const char* path);
 
-        int64_t read(const char* ns_addr, const int64_t app_id, const int64_t uid,
+        int64_t read(const int64_t app_id, const int64_t uid,
             const char* file_path, void* buffer, const int64_t offset, const int64_t length);
-        int64_t write(const char* ns_addr, const int64_t app_id, const int64_t uid,
+        int64_t write(const int64_t app_id, const int64_t uid,
             const char* file_path, const void* buffer, const int64_t length);
-        int64_t write(const char* ns_addr, const int64_t app_id, const int64_t uid,
+        int64_t write(const int64_t app_id, const int64_t uid,
             const char* file_path, const void* buffer, const int64_t offset, const int64_t length);
 
-        int64_t save_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
+        int64_t save_file(const int64_t app_id, const int64_t uid,
             const char* local_file, const char* tfs_name);
-        int64_t fetch_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
+        int64_t fetch_file(const int64_t app_id, const int64_t uid,
             const char* local_file, const char* tfs_name);
 
       private:

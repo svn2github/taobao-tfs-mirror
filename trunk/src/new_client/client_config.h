@@ -58,12 +58,10 @@ namespace tfs
       static int32_t use_cache_;
       static int64_t cache_items_;
       static int64_t cache_time_;
-#ifdef WITH_TAIR_CACHE
       static std::string remote_cache_master_addr_;
       static std::string remote_cache_slave_addr_;
       static std::string remote_cache_group_name_;
       static int32_t remote_cache_area_;
-#endif
       static int64_t segment_size_;
       static int64_t batch_count_;
       static int64_t batch_size_;
@@ -72,8 +70,11 @@ namespace tfs
       static int64_t expired_time_;
       static int64_t batch_timeout_;
       static int64_t wait_timeout_;
-      static int64_t client_retry_count_;
+      static int32_t client_retry_count_;
+      static int32_t meta_retry_count_;
       static bool client_retry_flag_;
+      static uint32_t update_kmt_interval_count_;
+      static uint32_t update_kmt_fail_count_;
     };
   }
 }

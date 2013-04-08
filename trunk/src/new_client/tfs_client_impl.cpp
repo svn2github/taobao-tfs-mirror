@@ -712,7 +712,22 @@ void TfsClientImpl::remove_local_block_cache(const char* ns_addr, const uint32_t
   }
 }
 
-#ifdef WITH_TAIR_CACHE
+bool TfsClientImpl::is_hit_local_cache(const char* ns_addr, const char* tfs_name) const
+{
+  bool ret = false;
+  if (NULL == tfs_name || tfs_name[0] == '\0')
+  {
+    TBSYS_LOG(ERROR, "tfs_name is NULL or empty");
+  }
+  else
+  {
+    FSName fs_name(tfs_name);
+    uint32_t block_id = fs_name.get_block_id();
+    ret = is_hit_local_cache(ns_addr, block_id);
+  }
+  return ret;
+}
+
 void TfsClientImpl::set_remote_cache_info(const char* remote_cache_master_addr, const char* remote_cache_slave_addr,
        const char* remote_cache_group_name, const int32_t remote_cache_area)
 {
@@ -722,6 +737,7 @@ void TfsClientImpl::set_remote_cache_info(const char* remote_cache_master_addr, 
   ClientConfig::remote_cache_area_ = remote_cache_area;
 }
 
+#ifdef WITH_TAIR_CACHE
 void TfsClientImpl::insert_remote_block_cache(const char* ns_addr, const uint32_t block_id,
        const common::VUINT64& ds_list)
 {
@@ -784,6 +800,46 @@ void TfsClientImpl::remove_remote_block_cache(const char* ns_addr, const uint32_
   {
     tfs_session->remove_remote_block_cache(block_id);
   }
+}
+bool TfsClientImpl::is_hit_remote_cache(const char* ns_addr, const char* tfs_name) const
+{
+  bool ret = false;
+  if (NULL == tfs_name || tfs_name[0] == '\0')
+  {
+    TBSYS_LOG(ERROR, "tfs_name is NULL or empty");
+  }
+  else
+  {
+    FSName fs_name(tfs_name);
+    uint32_t block_id = fs_name.get_block_id();
+    ret = is_hit_remote_cache(ns_addr, block_id);
+  }
+  return ret;
+}
+bool TfsClientImpl::is_hit_remote_cache(const char* ns_addr, const uint32_t block_id) const
+{
+  TfsSession *tfs_session = NULL;
+  bool ret = false;
+
+  if (ns_addr != NULL && strlen(ns_addr) > 0)
+  {
+    tfs_session = SESSION_POOL.get(ns_addr);
+  }
+  else
+  {
+    if (NULL != default_tfs_session_)
+    {
+      tfs_session = default_tfs_session_;
+    }
+  }
+
+  if (NULL != tfs_session)
+  {
+    ret = tfs_session->is_hit_remote_cache(block_id);
+  }
+
+  return ret;
+
 }
 #endif
 
@@ -920,20 +976,20 @@ int64_t TfsClientImpl::get_wait_timeout() const
   return ClientConfig::wait_timeout_;
 }
 
-void TfsClientImpl::set_client_retry_count(const int64_t count)
+void TfsClientImpl::set_client_retry_count(const int32_t count)
 {
   if (count > 0)
   {
     ClientConfig::client_retry_count_ = count;
-    TBSYS_LOG(INFO, "set client retry count: %" PRI64_PREFIX "d", ClientConfig::client_retry_count_);
+    TBSYS_LOG(INFO, "set client retry count: %d", ClientConfig::client_retry_count_);
   }
   else
   {
-    TBSYS_LOG(WARN, "set client retry count %"PRI64_PREFIX"d <= 0", count);
+    TBSYS_LOG(WARN, "set client retry count %d <= 0", count);
   }
 }
 
-int64_t TfsClientImpl::get_client_retry_count() const
+int32_t TfsClientImpl::get_client_retry_count() const
 {
   return ClientConfig::client_retry_count_;
 }
@@ -1683,4 +1739,29 @@ int TfsClientImpl::erase_file(const int fd)
   tbsys::gDelete(it->second);
   tfs_file_map_.erase(it);
   return TFS_SUCCESS;
+}
+
+bool TfsClientImpl::is_hit_local_cache(const char* ns_addr, const uint32_t block_id) const
+{
+  TfsSession *tfs_session = NULL;
+  bool ret = false;
+
+  if (ns_addr != NULL && strlen(ns_addr) > 0)
+  {
+    tfs_session = SESSION_POOL.get(ns_addr);
+  }
+  else
+  {
+    if (NULL != default_tfs_session_)
+    {
+      tfs_session = default_tfs_session_;
+    }
+  }
+
+  if (NULL != tfs_session)
+  {
+    ret = tfs_session->is_hit_local_cache(block_id);
+  }
+
+  return ret;
 }

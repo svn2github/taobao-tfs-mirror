@@ -55,6 +55,11 @@ namespace tfs
       return impl_->get_app_id();
     }
 
+    void RcClient::set_remote_cache_info(const char * remote_cache_info)
+    {
+      impl_->set_remote_cache_info(remote_cache_info);
+    }
+
     void RcClient::set_client_retry_count(const int64_t count)
     {
       impl_->set_client_retry_count(count);
@@ -163,6 +168,83 @@ namespace tfs
         const char* file_name, const char* suffix)
     {
       return impl_->fetch_buf(ret_count, buf, count, file_name, suffix);
+    }
+
+    // for kv meta
+    void RcClient::set_kv_rs_addr(const char *rs_addr)
+    {
+      impl_->set_kv_rs_addr(rs_addr);
+    }
+
+    TfsRetType RcClient::put_bucket(const char *bucket_name,
+        const UserInfo &user_info)
+    {
+      return impl_->put_bucket(bucket_name, user_info);
+    }
+
+    TfsRetType RcClient::get_bucket(const char *bucket_name, const char *prefix,
+        const char *start_key, const char delimiter, const int32_t limit,
+        vector<ObjectMetaInfo> *v_object_meta_info,
+        vector<string> *v_object_name,
+        set<string> *s_common_prefix,
+        int8_t *is_truncated, const UserInfo &user_info)
+    {
+      return impl_->get_bucket(bucket_name, prefix, start_key, delimiter,
+          limit, v_object_meta_info, v_object_name, s_common_prefix,
+          is_truncated, user_info);
+    }
+
+    TfsRetType RcClient::del_bucket(const char *bucket_name, const UserInfo &user_info)
+    {
+      return impl_->del_bucket(bucket_name, user_info);
+    }
+
+    TfsRetType RcClient::head_bucket(const char *bucket_name,
+        BucketMetaInfo *bucket_meta_info, const UserInfo &user_info)
+    {
+      return impl_->head_bucket(bucket_name, bucket_meta_info, user_info);
+    }
+
+    TfsRetType RcClient::put_object(const char *bucket_name, const char *object_name,
+        const char* local_file, const UserInfo &user_info)
+    {
+      return impl_->put_object(bucket_name, object_name, local_file, user_info);
+    }
+
+    int64_t RcClient::pwrite_object(const char *bucket_name, const char *object_name,
+        const void *buf, const int64_t offset, const int64_t length,
+        const UserInfo &user_info)
+    {
+      return impl_->pwrite_object(bucket_name, object_name, buf, offset,
+          length, user_info);
+    }
+
+    int64_t RcClient::pread_object(const char *bucket_name, const char *object_name,
+        void *buf, const int64_t offset, const int64_t length,
+        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info,
+        const UserInfo &user_info)
+    {
+      return impl_->pread_object(bucket_name, object_name, buf, offset,
+          length, object_meta_info, customize_info, user_info);
+    }
+
+    TfsRetType RcClient::get_object(const char *bucket_name, const char *object_name,
+        const char* local_file, const UserInfo &user_info)
+    {
+      return impl_->get_object(bucket_name, object_name, local_file,
+          user_info);
+    }
+
+    TfsRetType RcClient::del_object(const char *bucket_name, const char *object_name,
+        const UserInfo &user_info)
+    {
+      return impl_->del_object(bucket_name, object_name, user_info);
+    }
+
+    TfsRetType RcClient::head_object(const char *bucket_name, const char *object_name,
+        ObjectInfo *object_info, const UserInfo &user_info)
+    {
+      return impl_->head_object(bucket_name, object_name, object_info, user_info);
     }
 
     // for name meta

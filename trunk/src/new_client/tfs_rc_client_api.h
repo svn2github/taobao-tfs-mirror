@@ -18,6 +18,7 @@
 #include <string>
 #include "common/define.h"
 #include "common/meta_server_define.h"
+#include "common/kv_meta_define.h"
 
 namespace tfs
 {
@@ -52,6 +53,9 @@ namespace tfs
             const char* dev_name = NULL);
 
         int64_t get_app_id() const;
+
+        // for imgsrc tmp use
+        void set_remote_cache_info(const char * remote_cache_info);
 
         void set_client_retry_count(const int64_t count);
         int64_t get_client_retry_count() const;
@@ -93,6 +97,39 @@ namespace tfs
                        const char* file_name, const char* suffix = NULL);
         int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix = NULL);
+
+        // for kv meta
+        void set_kv_rs_addr(const char *rs_addr); // tmp use
+
+        TfsRetType put_bucket(const char *bucket_name,
+            const common::UserInfo &user_info);
+        TfsRetType get_bucket(const char *bucket_name, const char *prefix,
+            const char *start_key, const char delimiter, const int32_t limit,
+            std::vector<common::ObjectMetaInfo> *v_object_meta_info,
+            std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix,
+            int8_t *is_truncated, const common::UserInfo &user_info);
+        TfsRetType del_bucket(const char *bucket_name,
+            const common::UserInfo &user_info);
+        TfsRetType head_bucket(const char *bucket_name,
+            common::BucketMetaInfo *bucket_meta_info,
+            const common::UserInfo &user_info);
+
+        TfsRetType put_object(const char *bucket_name, const char *object_name,
+            const char* local_file, const common::UserInfo &user_info);
+        int64_t pwrite_object(const char *bucket_name, const char *object_name,
+            const void *buf, const int64_t offset, const int64_t length,
+            const common::UserInfo &user_info);
+        int64_t pread_object(const char *bucket_name, const char *object_name,
+            void *buf, const int64_t offset, const int64_t length,
+            common::ObjectMetaInfo *object_meta_info,
+            common::CustomizeInfo *customize_info,
+            const common::UserInfo &user_info);
+        TfsRetType get_object(const char *bucket_name, const char *object_name,
+            const char* local_file, const common::UserInfo &user_info);
+        TfsRetType del_object(const char *bucket_name, const char *object_name,
+            const common::UserInfo &user_info);
+        TfsRetType head_object(const char *bucket_name, const char *object_name,
+            common::ObjectInfo *object_info, const common::UserInfo &user_info);
 
         // for name meta
         TfsRetType create_dir(const int64_t uid, const char* dir_path);
