@@ -405,6 +405,7 @@ namespace tfs
         uint64_t server = (*blocks.at(index));
         out.push_back(BlockMeta());
         BlockMeta* meta = out.at(index);
+        meta->block_id_ = server;
         common::ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, meta->ds_);
         int32_t ret = open_read_mode_(servers, meta->family_info_, server);
         if (TFS_SUCCESS == ret)
@@ -423,6 +424,7 @@ namespace tfs
         {
           out.push_back(BlockMeta());
           BlockMeta* meta = out.at(index);
+          meta->block_id_ = 0;
           common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, meta->ds_);
           ret = open_write_mode_(meta->block_id_, meta->lease_id_, meta->version_, helper, meta->family_info_,mode, now);
           if (TFS_SUCCESS == ret)

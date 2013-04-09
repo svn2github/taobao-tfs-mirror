@@ -529,7 +529,11 @@ namespace tfs
         int32_t block_count = message->get_block_count();
         int32_t  mode     = message->get_mode();
         uint64_t blocks[message->get_block_id().size()];
-        common::ArrayHelper<uint64_t> helper(message->get_block_id().size(), blocks);
+        for (uint32_t index = 0; index < message->get_block_id().size(); index++)
+        {
+          blocks[index] = message->get_block_id()[index];
+        }
+        common::ArrayHelper<uint64_t> helper(message->get_block_id().size(), blocks, message->get_block_id().size());
         BlockMeta metas[MAX_BATCH_SIZE];
         common::ArrayHelper<BlockMeta> meta_helper(MAX_BATCH_SIZE, metas);
         BatchSetBlockInfoMessage* reply = new (std::nothrow)BatchSetBlockInfoMessage();
