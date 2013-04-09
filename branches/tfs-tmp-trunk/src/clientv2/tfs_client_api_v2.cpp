@@ -40,9 +40,10 @@ namespace tfs
     }
 
     int TfsClientV2::stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix,
-        const common::TfsStatType stat_type, const char* ns_addr)
+        const char* ns_addr)
     {
-      return TfsClientImplV2::Instance()->stat_file(file_stat, file_name, suffix, stat_type, ns_addr);
+      return TfsClientImplV2::Instance()->stat_file(file_stat, file_name, suffix,
+          common::NORMAL_STAT, ns_addr);
     }
 
     int64_t TfsClientV2::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
@@ -60,13 +61,13 @@ namespace tfs
 
     int TfsClientV2::fetch_file(const char* local_file, const char* file_name, const char* suffix, const char* ns_addr)
     {
-      return TfsClientImplV2::Instance()->fetch_file(local_file, file_name, suffix, ns_addr);
+      return TfsClientImplV2::Instance()->fetch_file(local_file, file_name, suffix, READ_DATA_OPTION_FLAG_NORMAL, ns_addr);
     }
 
     int TfsClientV2::unlink(int64_t& file_size, const char* file_name, const char* suffix,
-        const common::TfsUnlinkType action, const common::OptionFlag option_flag, const char* ns_addr)
+        const common::TfsUnlinkType action, const char* ns_addr)
     {
-      return TfsClientImplV2::Instance()->unlink(file_size, file_name, suffix, action, option_flag, ns_addr);
+      return TfsClientImplV2::Instance()->unlink(file_size, file_name, suffix, action, ns_addr);
     }
 
     int64_t TfsClientV2::get_server_id()

@@ -54,13 +54,12 @@ namespace tfs
        * @param file_stat: where to save file status
        * @param file_name: tfs file name
        * @param suffix: file suffix specified when save this file
-       * @param stat_type: stat flag (NORMAL_STAT or FORCE_STAT)
        * @param ns_addr: nameserver address
        *
        * @return TFS_SUCCESS on success, errno on fail.
        */
       int stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix = NULL,
-          const common::TfsStatType stat_type = common::NORMAL_STAT, const char* ns_addr = NULL);
+          const char* ns_addr = NULL);
 
       /**
        * @brief save local file to tfs
@@ -112,15 +111,12 @@ namespace tfs
        * @param file_name: tfs file name to unlink
        * @param suffix: file suffix specified when save this file
        * @param action: unlink action: 0-delete, 2-undelete, 4-hide, 6-unhide
-       * @param option_flag: extra flag
        * @param ns_addr: nameserver address
        *
        * @return TFS_SUCCESS on success, errno on fail.
        */
       int unlink(int64_t& file_size, const char* file_name, const char* suffix = NULL,
-          const common::TfsUnlinkType action = common::DELETE,
-          const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION,
-          const char* ns_addr = NULL);
+          const common::TfsUnlinkType action = common::DELETE, const char* ns_addr = NULL);
 
       /**
        * @brief  get default ns addr, which passed in initialize

@@ -416,7 +416,7 @@ namespace tfs
         ret = dest->write_file_infos(header, finfos_vec, block_id_);
         if (TFS_SUCCESS == ret)
         {
-          dest->update_block_version(VERSION_INC_STEP_DEFAULT);
+          dest->update_block_version(VERSION_INC_STEP_COMPACT);
         }
       }
       tbsys::gDeleteA(buffer);
@@ -454,7 +454,7 @@ namespace tfs
 
     bool CompactTask::is_big_file(const int32_t size) const
     {
-      return size >= LogicBlock::Iterator::MAX_DATA_SIZE;
+      return size > LogicBlock::Iterator::MAX_DATA_SIZE;
     }
 
     ReplicateTask::ReplicateTask(DataService& service, const int64_t seqno,

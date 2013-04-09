@@ -68,10 +68,10 @@ namespace tfs
       int64_t save_file_update(const char* local_file, const int32_t flag,
         const char* tfs_name, const char* suffix, const char* ns_addr = NULL);
       int fetch_file(const char* local_file, const char* file_name, const char* suffix = NULL,
+          const common::ReadDataOptionFlag read_flag = common::READ_DATA_OPTION_FLAG_NORMAL,
           const char* ns_addr = NULL);
       int unlink(int64_t& file_size, const char* file_name, const char* suffix = NULL,
           const common::TfsUnlinkType action = common::DELETE,
-          const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION,
           const char* ns_addr = NULL);
 
       int64_t get_server_id();

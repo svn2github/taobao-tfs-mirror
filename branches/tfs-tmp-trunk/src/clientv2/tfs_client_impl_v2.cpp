@@ -495,7 +495,7 @@ namespace tfs
       return ret < 0 ? ret : done;
     }
 
-    int TfsClientImplV2::fetch_file(const char* local_file, const char* file_name, const char* suffix, const char* ns_addr)
+    int TfsClientImplV2::fetch_file(const char* local_file, const char* file_name, const char* suffix,const common::ReadDataOptionFlag read_flag, const char* ns_addr)
     {
       int ret = TFS_SUCCESS;
       int local_fd = 0;  // local file desp
@@ -517,6 +517,7 @@ namespace tfs
         }
         else
         {
+          set_option_flag(fd, read_flag);
           char buf[MAX_READ_SIZE];
           int rlen = 0;
           int wlen = 0;
@@ -552,7 +553,7 @@ namespace tfs
     }
 
     int TfsClientImplV2::unlink(int64_t& file_size, const char* file_name, const char* suffix,
-        const common::TfsUnlinkType action, const common::OptionFlag option_flag, const char* ns_addr)
+        const common::TfsUnlinkType action, const char* ns_addr)
     {
       int ret = TFS_SUCCESS;
       int fd = open(file_name, suffix, ns_addr, T_UNLINK);
@@ -562,7 +563,6 @@ namespace tfs
       }
       else
       {
-        set_option_flag(fd, option_flag);
         ret = unlink(file_size, fd, action);
         close(fd);
       }

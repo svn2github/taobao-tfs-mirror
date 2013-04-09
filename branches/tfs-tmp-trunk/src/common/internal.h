@@ -188,7 +188,8 @@ namespace tfs
     enum VersionStep
     {
       VERSION_INC_STEP_DEFAULT = 1,
-      VERSION_INC_STEP_REPLICATE = 2
+      VERSION_INC_STEP_REPLICATE = 2,
+      VERSION_INC_STEP_COMPACT = 2
     };
 
     enum OplogFlag
@@ -668,6 +669,12 @@ namespace tfs
       int64_t write_file_count_;
       int64_t read_byte_;
       int64_t read_file_count_;
+      int64_t unlink_file_count_;
+      int64_t fail_write_byte_;
+      int64_t fail_write_file_count_;
+      int64_t fail_read_byte_;
+      int64_t fail_read_file_count_;
+      int64_t fail_unlink_file_count_;
     };
 
     //dataserver stat info

@@ -483,6 +483,30 @@ namespace tfs
       {
         ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&read_file_count_));
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&unlink_file_count_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fail_write_byte_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fail_write_file_count_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fail_read_byte_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fail_read_file_count_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fail_unlink_file_count_));
+      }
       return ret;
     }
     int Throughput::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -504,6 +528,33 @@ namespace tfs
       {
         ret = Serialization::set_int64(data, data_len, pos, read_file_count_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, unlink_file_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, fail_write_byte_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, fail_write_file_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, fail_read_byte_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, fail_read_file_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, fail_unlink_file_count_);
+      }
+
+
+
       return ret;
     }
 

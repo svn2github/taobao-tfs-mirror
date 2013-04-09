@@ -763,7 +763,7 @@ int cmd_get_file(const VSTRING& param)
   const char* tfs_name = canonical_param(param[0]);
   const char* local_file = expand_path(const_cast<string&>(param[1]));
 
-  int ret = g_tfs_client->fetch_file(local_file, tfs_name, NULL);
+  int ret = g_tfs_client->fetch_file(local_file, tfs_name, NULL, READ_DATA_OPTION_FLAG_FORCE);
 
   ToolUtil::print_info(ret, "fetch %s => %s", tfs_name, local_file);
 
