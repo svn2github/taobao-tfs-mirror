@@ -131,6 +131,16 @@ namespace tfs
           return family_info_;
         }
 
+        void set_prepare_flag(const bool prepare)
+        {
+          prepare_ = prepare;
+        }
+
+        bool get_prepare_flag() const
+        {
+          return prepare_;
+        }
+
       private:
         uint64_t block_id_;
         uint64_t attach_block_id_;
@@ -141,6 +151,7 @@ namespace tfs
         int32_t version_;
         int32_t action_;
         int32_t flag_;
+        int8_t prepare_;
         common::FamilyInfoExt family_info_;
     };
 

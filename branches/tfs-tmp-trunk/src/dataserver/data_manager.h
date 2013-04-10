@@ -38,7 +38,7 @@ namespace tfs
         /** lease management */
         inline BlockManager& get_block_manager();
         int prepare_lease(const uint64_t block_id, uint64_t& file_id, uint64_t& lease_id,
-            const LeaseType type, const common::VUINT64& servers);
+            const LeaseType type, const common::VUINT64& servers, const bool alloc);
         int update_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
             tbnet::Packet* packet);
         int update_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
@@ -63,9 +63,11 @@ namespace tfs
         int close_file(const uint64_t block_id, const uint64_t attach_block_id,
             uint64_t& file_id, const uint64_t lease_id, const uint32_t crc,
             const bool tmp, common::BlockInfoV2& local);
+        int prepare_unlink_file(const uint64_t block_id, const uint64_t attach_block_id,
+            const uint64_t file_id, const int64_t lease_id, const int32_t action,
+            const int32_t remote_version, common::BlockInfoV2& local);
         int unlink_file(const uint64_t block_id, const uint64_t attach_block_id, const uint64_t file_id,
-            const int64_t lease_id, const int32_t action, const int32_t remote_version,
-            common::BlockInfoV2& local);
+            const int64_t lease_id, const int32_t action, common::BlockInfoV2& local);
 
         /** helper functions */
         int update_block_info(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,

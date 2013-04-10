@@ -393,7 +393,11 @@ namespace tfs
       }
       else
       {
-        ret = do_unlink(action, file_size);
+        ret = do_unlink(action, file_size, true); // prepare unlink
+        if (TFS_SUCCESS == ret)
+        {
+          ret = do_unlink(action, file_size, false);  // real unlink
+        }
       }
 
       return ret;
@@ -777,7 +781,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsFile::do_unlink(const int32_t action, int64_t& file_size)
+    int TfsFile::do_unlink(const int32_t action, int64_t& file_size, const bool prepare)
     {
       int ret = TFS_SUCCESS;
       uint64_t server = 0;
@@ -800,6 +804,7 @@ namespace tfs
         msg.set_action(action);
         msg.set_version(file_.version_);
         msg.set_flag(file_.opt_flag_);
+        msg.set_prepare_flag(prepare);
         if (file_.has_family())
         {
           msg.set_family_info(file_.family_info_);
@@ -811,9 +816,9 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(WARN, "unlink file %s fail. blockid: %"PRI64_PREFIX"u, "
-            "fileid: %"PRI64_PREFIX"u, server: %s, ret: %d",
+            "fileid: %"PRI64_PREFIX"u, server: %s, prepare: %s, ret: %d",
             fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
-            tbsys::CNetUtil::addrToString(server).c_str(), ret);
+            tbsys::CNetUtil::addrToString(server).c_str(), prepare ? "true" : "false", ret);
       }
       else
       {
@@ -828,13 +833,21 @@ namespace tfs
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "unlink file %s fail. blockid: %"PRI64_PREFIX"u, "
-                "fileid: %"PRI64_PREFIX"u, server: %s, error msg: %s, ret: %d",
+                "fileid: %"PRI64_PREFIX"u, server: %s, prepare: %s, error msg: %s, ret: %d",
                 fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
-                tbsys::CNetUtil::addrToString(server).c_str(), smsg->get_error(), ret);
+                tbsys::CNetUtil::addrToString(server).c_str(), prepare ? "true" : "false",
+                smsg->get_error(), ret);
           }
           else
           {
-            file_size = atol(smsg->get_error());
+            if (prepare)
+            {
+              file_.lease_id_ = strtoll(smsg->get_error(), NULL, 10);
+            }
+            else
+            {
+              file_size = strtoll(smsg->get_error(), NULL, 10);
+            }
           }
         }
       }

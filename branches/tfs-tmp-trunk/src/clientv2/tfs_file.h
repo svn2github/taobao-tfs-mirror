@@ -81,7 +81,7 @@ namespace tfs
             common::TfsFileStat* file_stat = NULL);
         int do_write(const char* buf, int64_t count);
         int do_close();
-        int do_unlink(const int32_t action, int64_t& file_size);
+        int do_unlink(const int32_t action, int64_t& file_size, const bool prepare = false);
         void transfer_mode(const int32_t mode);
 
       private:

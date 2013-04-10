@@ -423,7 +423,10 @@ namespace tfs
       {
         case SYNC:
           if ((finfo.status_ & FILE_STATUS_DELETE) != (status & FILE_STATUS_DELETE))
+          {
             oper_type = status & FILE_STATUS_DELETE ? OPER_DELETE : OPER_UNDELETE;
+            finfo.status_ = status;
+          }
           break;
         case DELETE:
           ret = (0 != (finfo.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID))) ? EXIT_FILE_STATUS_ERROR : TFS_SUCCESS;

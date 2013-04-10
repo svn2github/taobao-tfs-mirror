@@ -45,7 +45,7 @@ namespace tfs
     }
 
     int DataManager::prepare_lease(const uint64_t block_id, uint64_t& file_id, uint64_t& lease_id,
-        const LeaseType type, const VUINT64& servers)
+        const LeaseType type, const VUINT64& servers, const bool alloc)
     {
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if ((TFS_SUCCESS == ret) && (0 == (file_id & 0xFFFFFFFF)))
@@ -62,24 +62,24 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int64_t now_us = Func::get_monotonic_time_us();
-        if (INVALID_LEASE_ID == lease_id)
+        if ((INVALID_LEASE_ID == lease_id) && alloc)
         {
           lease_id = lease_manager_.gen_lease_id();
         }
 
         LeaseId lid(block_id, file_id, lease_id);
         Lease* lease = lease_manager_.get(lid, now_us);
-        if (NULL == lease)
+        if ((NULL == lease) && alloc)
         {
           ret = lease_manager_.has_out_of_limit() ? EXIT_BLOCK_LEASE_OVERLOAD_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
             lease_manager_.generation(lid, now_us, type, servers);
             lease = lease_manager_.get(lid, now_us);
-            ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
           }
         }
 
+        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           lease->reset_member_info(now_us); // reset on every reqeust
@@ -135,7 +135,7 @@ namespace tfs
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
         Lease* lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
@@ -159,7 +159,7 @@ namespace tfs
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
         Lease* lease = lease_manager_.get(lid, now_us);
-        status = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+        status = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == status)
         {
           all_finish = lease->check_all_finish();
@@ -242,7 +242,7 @@ namespace tfs
         {
           LeaseId lid(attach_block_id, file_id, lease_id);
           lease = lease_manager_.get(lid, now_us);
-          ret = (NULL == lease)? EXIT_DATA_FILE_ERROR: TFS_SUCCESS;
+          ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
         }
 
         if (TFS_SUCCESS == ret)
@@ -278,7 +278,7 @@ namespace tfs
         int64_t now_us = Func::get_monotonic_time_us();
         LeaseId lid(attach_block_id, file_id, lease_id);
         lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
       }
 
       if ((TFS_SUCCESS == ret) && !tmp) // write tmp block won't check crc
@@ -307,10 +307,11 @@ namespace tfs
       return (ret < 0) ? ret: TFS_SUCCESS;
     }
 
-    int DataManager::unlink_file(const uint64_t block_id, const uint64_t attach_block_id,
+    int DataManager::prepare_unlink_file(const uint64_t block_id, const uint64_t attach_block_id,
         const uint64_t file_id, const int64_t lease_id, const int32_t action,
         const int32_t remote_version, BlockInfoV2& local)
     {
+      UNUSED(action);
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
           (INVALID_BLOCK_ID == attach_block_id) ||
@@ -325,11 +326,27 @@ namespace tfs
         ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
+          TBSYS_LOG(WARN, "unlink check block version conflict. blockid: %"PRI64_PREFIX"u, "
               "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
               "remote version: %d, local version: %d, ret: %d",
               block_id, file_id, lease_id, remote_version, local.version_, ret);
         }
+      }
+
+      return ret;
+    }
+
+    int DataManager::unlink_file(const uint64_t block_id, const uint64_t attach_block_id,
+        const uint64_t file_id, const int64_t lease_id, const int32_t action,
+        BlockInfoV2& local)
+    {
+      int ret = TFS_SUCCESS;
+      if ((INVALID_BLOCK_ID == block_id) ||
+          (INVALID_BLOCK_ID == attach_block_id) ||
+          (INVALID_FILE_ID == file_id) ||
+          (INVALID_LEASE_ID == lease_id))
+      {
+        ret = EXIT_PARAMETER_ERROR;
       }
 
       int64_t file_size = 0;
@@ -347,7 +364,7 @@ namespace tfs
         LeaseId lid(attach_block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
         Lease* lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           lease->set_file_size(file_size);
@@ -371,7 +388,7 @@ namespace tfs
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
         lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR: TFS_SUCCESS;
+        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           // get the blockinfo with highest version
