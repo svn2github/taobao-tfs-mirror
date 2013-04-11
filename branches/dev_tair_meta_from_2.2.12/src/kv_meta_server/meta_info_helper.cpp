@@ -1031,7 +1031,6 @@ namespace tfs
         std::set<std::string>* s_common_prefix, int8_t* is_truncated)
     {
       int ret = TFS_SUCCESS;
-      int32_t actual_limit = limit;
 
       if (NULL == v_object_meta_info ||
           NULL == v_object_name ||
