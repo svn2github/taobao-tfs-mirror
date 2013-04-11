@@ -1016,7 +1016,7 @@ namespace tfs
     }
 
     int MetaInfoHelper::list_objects(const KvKey& pkey, const std::string& prefix,
-        const std::string& start_key, const char delimiter, const int32_t limit,
+        const std::string& start_key, const char delimiter, int32_t *limit,
         std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
         std::set<std::string>* s_common_prefix, int8_t* is_truncated)
     {
@@ -1025,16 +1025,16 @@ namespace tfs
       if (NULL == v_object_meta_info ||
           NULL == v_object_name ||
           NULL == s_common_prefix ||
-          NULL == is_truncated)
+          NULL == is_truncated ||
+          NULL == limit)
       {
         ret = TFS_ERROR;
       }
 
-      int32_t actual_limit = limit;
-      if (limit > MAX_LIMIT or limit < 0)
+      if (*limit > MAX_LIMIT or *limit < 0)
       {
-        actual_limit = MAX_LIMIT;
-        TBSYS_LOG(WARN, "limit: %d will be cutoff", limit);
+        TBSYS_LOG(WARN, "limit: %d will be cutoff", *limit);
+        *limit = MAX_LIMIT;
       }
 
       if (TFS_SUCCESS == ret)
@@ -1043,7 +1043,7 @@ namespace tfs
         v_object_name->clear();
         s_common_prefix->clear();
 
-        int32_t limit_size = actual_limit;
+        int32_t limit_size = *limit;
         *is_truncated = 0;
 
         vector<KvValue*> kv_value_keys;
@@ -1059,7 +1059,7 @@ namespace tfs
           int32_t actual_size = static_cast<int32_t>(v_object_name->size()) +
             static_cast<int32_t>(s_common_prefix->size());
 
-          limit_size = limit - actual_size;
+          limit_size = *limit - actual_size;
 
           ret = get_range(pkey, temp_start_key, first_offset, limit_size + 1,
               &kv_value_keys, &kv_value_values, &res_size);
@@ -1112,7 +1112,7 @@ namespace tfs
             }
 
             if (static_cast<int32_t>(s_common_prefix->size()) +
-                static_cast<int32_t>(v_object_name->size()) >= limit)
+                static_cast<int32_t>(v_object_name->size()) >= *limit)
             {
               loop = false;
               *is_truncated = 1;
@@ -1260,7 +1260,7 @@ namespace tfs
     }
 
     int MetaInfoHelper::get_bucket(const std::string& bucket_name, const std::string& prefix,
-        const std::string& start_key, const char delimiter, const int32_t limit,
+        const std::string& start_key, const char delimiter, int32_t *limit,
         vector<ObjectMetaInfo>* v_object_meta_info, VSTRING* v_object_name, set<string>* s_common_prefix,
         int8_t* is_truncated)
     {

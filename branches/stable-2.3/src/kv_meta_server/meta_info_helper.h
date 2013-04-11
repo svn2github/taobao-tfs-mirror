@@ -74,7 +74,7 @@ namespace tfs
         int put_bucket(const std::string& bucket_name, common::BucketMetaInfo& bucket_meta_info,
                        const common::UserInfo &user_info);
         int get_bucket(const std::string& bucket_name, const std::string& prefix,
-            const std::string& start_key, const char delimiter, const int32_t limit,
+            const std::string& start_key, const char delimiter, int32_t *limit,
             std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
             std::set<std::string>* s_common_prefix, int8_t* is_truncated);
         int del_bucket(const std::string& bucket_name);
@@ -115,7 +115,7 @@ namespace tfs
             std::vector<KvValue*> *kv_value_values, int32_t *result_size);
 
         int list_objects(const KvKey &pkey, const std::string &prefix,
-            const std::string &start_key, const char delimiter, const int32_t limit,
+            const std::string &start_key, const char delimiter, int32_t *limit,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info, common::VSTRING *v_object_name,
             std::set<std::string> *s_common_prefix, int8_t *is_truncated);
 
