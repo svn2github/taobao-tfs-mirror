@@ -1031,19 +1031,22 @@ namespace tfs
         std::set<std::string>* s_common_prefix, int8_t* is_truncated)
     {
       int ret = TFS_SUCCESS;
+      int32_t actual_limit = limit;
 
       if (NULL == v_object_meta_info ||
           NULL == v_object_name ||
           NULL == s_common_prefix ||
-          NULL == is_truncated)
+          NULL == is_truncated ||
+          limit < 0)
       {
         ret = TFS_ERROR;
       }
 
-      if (limit > MAX_LIMIT || limit < 0)
+      int32_t actual_limit = limit;
+      if (limit > MAX_LIMIT or limit < 0)
       {
-        TBSYS_LOG(ERROR, "%s", "limit param error");
-        ret = TFS_ERROR;
+        actual_limit = MAX_LIMIT;
+        TBSYS_LOG(WARN, "limit: %d will be cutoff", limit);
       }
 
       if (TFS_SUCCESS == ret)
@@ -1052,7 +1055,7 @@ namespace tfs
         v_object_name->clear();
         s_common_prefix->clear();
 
-        int32_t limit_size = limit;
+        int32_t limit_size = actual_limit;
         *is_truncated = 0;
 
         vector<KvValue*> kv_value_keys;
@@ -1061,6 +1064,7 @@ namespace tfs
         string temp_start_key(start_key);
 
         bool loop = true;
+        int32_t first_offset = !start_key.empty() ? 1 : 0;
         do
         {
           int32_t res_size = -1;
@@ -1069,8 +1073,8 @@ namespace tfs
 
           limit_size = limit - actual_size;
 
-          ret = get_range(pkey, temp_start_key,  0, limit_size + 1,
-                          &kv_value_keys, &kv_value_values, &res_size);
+          ret = get_range(pkey, temp_start_key, first_offset, limit_size + 1,
+              &kv_value_keys, &kv_value_values, &res_size);
           // error
           if (TFS_SUCCESS != ret)
           {
@@ -1153,6 +1157,7 @@ namespace tfs
           }
           kv_value_keys.clear();
           kv_value_values.clear();
+          first_offset = 0;
         } while (loop);// end of while
       }// end of if
       return ret;
