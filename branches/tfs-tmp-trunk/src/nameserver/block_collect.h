@@ -69,7 +69,7 @@ namespace tfs
       void get_servers(common::ArrayHelper<uint64_t>& servers) const;
       uint64_t get_server(const int8_t index = 0) const;
       inline void update(const common::BlockInfoV2& info) { info_ = info;}
-      inline bool is_full() const { return info_.size_ >= common::SYSPARAM_NAMESERVER.max_block_size_; }
+      inline bool is_full() const { return (info_.size_ + common::BLOCK_RESERVER_LENGTH) >= common::SYSPARAM_NAMESERVER.max_block_size_; }
       inline uint64_t id() const { return info_.block_id_;}
       inline int32_t version() const { return info_.version_;}
       inline void update_version(const int32_t step) { info_.version_ += step;}

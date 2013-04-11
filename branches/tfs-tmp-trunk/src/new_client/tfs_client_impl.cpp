@@ -226,18 +226,21 @@ int TfsClientImpl::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs
       {
         TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
       }
-      // buffer not null, then consider as wanting tfs name back
-      // len must invalid
-      else if (NULL != ret_tfs_name)
+      else
       {
-        if (ret_tfs_name_len < TFS_FILE_LEN)
+        // buffer not null, then consider as wanting tfs name back
+        // len must invalid
+        if (NULL != ret_tfs_name)
         {
-          TBSYS_LOG(ERROR, "name buffer length less: %d < %d", ret_tfs_name_len, TFS_FILE_LEN);
-          ret = TFS_ERROR;
-        }
-        else
-        {
-          memcpy(ret_tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
+          if (ret_tfs_name_len < TFS_FILE_LEN)
+          {
+            TBSYS_LOG(ERROR, "name buffer length less: %d < %d", ret_tfs_name_len, TFS_FILE_LEN);
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            memcpy(ret_tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
+          }
         }
       }
     }

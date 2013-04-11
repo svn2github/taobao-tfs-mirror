@@ -59,6 +59,7 @@ namespace tfs
     const int32_t EXIT_CREATE_DIR_ERROR = -1034;
     const int32_t EXIT_RM_DIR_ERROR = -1035;
     const int32_t EXIT_ALREADY_MMAPPED_ERROR = -1036;
+    const int32_t EXIT_ALREADY_MMAPPED_MAX_SIZE_ERROR = -1037;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;

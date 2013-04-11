@@ -18,9 +18,9 @@ HEADER=dump_plan_message.h client_cmd_message.h heart_message.h\
 			 rts_ms_heart_message.h get_tables_from_rts_message.h base_task_message.h\
 			 update_table_message.h rts_rts_heart_message.h checkserver_message.h\
 			 erasure_code_message.h dataserver_task_message.h resolve_block_version_conflict_message.h\
-			 family_info_message.h file_info_message_v2.h write_file_message_v2.h close_file_message_v2.h\
+			 family_info_message.h block_info_message_v2.h write_file_message_v2.h close_file_message_v2.h\
 			 read_file_message_v2.h unlink_file_message_v2.h read_data_message_v2.h read_data_message_v2.h\
-			 read_index_message_v2.h write_index_message_v2.h ec_meta_message.h
+			 write_data_message_v2.h read_index_message_v2.h write_index_message_v2.h ec_meta_message.h
 libtfsmessage_a_SOURCES = dump_plan_message.cpp client_cmd_message.cpp heart_message.cpp\
 													oplog_sync_message.cpp crc_error_message.cpp reload_message.cpp\
 													unlink_file_message.cpp file_info_message.cpp rollback_message.cpp\

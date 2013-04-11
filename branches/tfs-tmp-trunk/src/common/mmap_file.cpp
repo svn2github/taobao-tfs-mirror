@@ -55,6 +55,7 @@ namespace tfs
       }
       return ret;
     }
+
     int MMapFile::mmap(const bool write)
     {
       int32_t ret = (fd_ >= 0 && option_.check()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -94,6 +95,7 @@ namespace tfs
       {
         if (length_ == option_.max_mmap_size_)
         {
+          ret = EXIT_ALREADY_MMAPPED_MAX_SIZE_ERROR;
           TBSYS_LOG(INFO, "already mapped max size, now size: %d, max size: %d", length_, option_.max_mmap_size_);
         }
         else

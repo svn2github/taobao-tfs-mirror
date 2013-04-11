@@ -592,7 +592,7 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, FamilyInfoEx
         GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
       for (int32_t i = 0; i < MEMBER_NUM; i++)
       {
-        TBSYS_LOG(DEBUG, "block: %u, server: %s", family_info.members_[i].first,
+        TBSYS_LOG(DEBUG, "block: %"PRI64_PREFIX"u, server: %s", family_info.members_[i].first,
              tbsys::CNetUtil::addrToString(family_info.members_[i].second).c_str());
       }
       ret = TFS_SUCCESS;
@@ -732,7 +732,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
                 GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
               for (int32_t i = 0; i < MEMBER_NUM; i++)
               {
-                TBSYS_LOG(DEBUG, "block: %u, server: %s", family_info.members_[i].first,
+                TBSYS_LOG(DEBUG, "block: %"PRI64_PREFIX"u, server: %s", family_info.members_[i].first,
                     tbsys::CNetUtil::addrToString(family_info.members_[i].second).c_str());
               }
             }
