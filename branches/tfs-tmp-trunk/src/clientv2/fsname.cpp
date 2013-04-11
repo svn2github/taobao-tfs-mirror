@@ -50,7 +50,7 @@ namespace tfs
     {
       file_name_[0] = '\0';
       memset(&filev1_, 0, sizeof(FileBitsV1));
-      memset(&filev2_, 0, sizeof(FileBitsV1));
+      memset(&filev2_, 0, sizeof(FileBitsV2));
     }
 
     FSName::FSName(const uint64_t block_id, const uint64_t file_id, const int32_t cluster_id) :
@@ -76,7 +76,7 @@ namespace tfs
     {
       file_name_[0] = '\0';
       cluster_id_ = cluster_id;
-      memset(&filev1_, 0, sizeof(FileBitsV2));
+      memset(&filev1_, 0, sizeof(FileBitsV1));
       memset(&filev2_, 0, sizeof(FileBitsV2));
 
       if (NULL != file_name && file_name[0] != '\0')
