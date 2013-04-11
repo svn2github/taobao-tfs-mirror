@@ -1106,13 +1106,14 @@ namespace tfs
           real_read_len = file_info.size_ - read_offset;
         }
 
-        ret = (real_read_len <= 0) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
-        if (TFS_SUCCESS == ret)
+        ret = (real_read_len < 0) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+        if (TFS_SUCCESS == ret && real_read_len > 0)
         {
           read_offset += FILEINFO_EXT_SIZE;
           char* packet_data = resp_rd_v2_msg->alloc_data(real_read_len);
           assert(NULL != packet_data);
           ret = data_management_.read_data(block_id, file_id, read_offset, flag, real_read_len, packet_data);
+          TBSYS_LOG(INFO, "========================= %d", ret);
         }
       }
 
@@ -1132,11 +1133,11 @@ namespace tfs
       }
 
       TIMER_END();
-      TBSYS_LOG(INFO, "read v%d %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
-                version, TFS_SUCCESS == ret ? "success" : "fail",
+      TBSYS_LOG(INFO, "read v%d %s, ret: %d. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
+                version, TFS_SUCCESS == ret ? "success" : "fail",ret,
                 block_id, file_id, real_read_len, read_offset,
                 tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
-      traffic_control_.rw_stat(RW_STAT_TYPE_READ, ret, 0 == read_offset, real_read_len);
+      traffic_control_.rw_stat(RW_STAT_TYPE_READ, ret, read_offset <= FILEINFO_EXT_SIZE, real_read_len);
       return TFS_SUCCESS;
     }
 
@@ -1162,8 +1163,8 @@ namespace tfs
           real_read_len = file_info.size_ - read_offset;
         }
 
-        ret = (real_read_len <= 0) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
-        if (TFS_SUCCESS == ret)
+        ret = (real_read_len < 0) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+        if (TFS_SUCCESS == ret && real_read_len > 0)
         {
           read_offset += FILEINFO_EXT_SIZE;
           char* packet_data = resp_rd_msg->alloc_data(real_read_len);
@@ -1184,10 +1185,10 @@ namespace tfs
       }
 
       TIMER_END();
-      TBSYS_LOG(INFO, "read %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
-          TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, real_read_len, read_offset,
+      TBSYS_LOG(INFO, "read %s, ret : %d. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
+          TFS_SUCCESS == ret ? "success" : "fail", ret ,block_id, file_id, real_read_len, read_offset,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
-      traffic_control_.rw_stat(RW_STAT_TYPE_READ, ret, 0 == read_offset, real_read_len);
+      traffic_control_.rw_stat(RW_STAT_TYPE_READ, ret, read_offset <= FILEINFO_EXT_SIZE, real_read_len);
       return TFS_SUCCESS;
     }
 

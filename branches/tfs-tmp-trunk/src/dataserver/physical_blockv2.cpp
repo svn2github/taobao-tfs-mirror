@@ -27,7 +27,7 @@ namespace tfs
     const int32_t BasePhysicalBlock::MAX_WARN_CONSUME_TIME_US = 1000000000;
     const int32_t AllocPhysicalBlock::STORE_ALLOC_BIT_MAP_SIZE = sizeof(uint64_t);
     const int32_t AllocPhysicalBlock::ALLOC_BIT_MAP_SIZE   = 32;//只使用32位
-    const uint64_t BIT_MAP_MASK[AllocPhysicalBlock::ALLOC_BIT_MAP_SIZE] =
+    static const uint64_t BIT_MAP_MASK[AllocPhysicalBlock::ALLOC_BIT_MAP_SIZE] =
     {
       0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,
       0x100, 0x200, 0x400, 0x800, 0x1000, 0x2000, 0x4000, 0x8000,

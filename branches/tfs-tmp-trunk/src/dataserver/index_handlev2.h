@@ -38,10 +38,13 @@ namespace tfs
       public:
         explicit BaseIndexHandle(const std::string& path): is_load_(false), file_op_(path, O_RDWR | O_LARGEFILE | O_CREAT) {}
         virtual ~BaseIndexHandle() {}
-        virtual int read_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const  = 0;
-        virtual int write_file_info(common::FileInfoV2& info,const double threshold, const uint64_t logic_block_id, const bool update) = 0;
-        virtual int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID, const bool partial = false) = 0;
-        virtual int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const = 0;
+        virtual int read_file_info(common::FileInfoV2& info, const double threshold,
+            const int32_t max_hash_bucket, const uint64_t logic_block_id) const  = 0;
+        virtual int write_file_info(common::FileInfoV2& info,const double threshold,
+            const int32_t max_hash_bucket, const uint64_t logic_block_id, const bool update) = 0;
+        virtual int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos,
+            const double threshold, const int32_t max_hash_bucket, const uint64_t logic_block_id, const bool partial = false) = 0;
+        virtual int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id) const = 0;
         virtual int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const = 0;
         virtual int get_index_num(int32_t& index_num) const = 0;
         virtual int mmap(const uint64_t logic_block_id, const common::MMapOption& map_options) = 0;
@@ -65,7 +68,7 @@ namespace tfs
         int remove_self(const uint64_t logic_block_id);
         int check_load() const;
       protected:
-        virtual int remmap_(const double threshold) const = 0;
+        virtual int remmap_(const double threshold, const int32_t max_hash_bucket) const = 0;
         virtual common::FileInfoV2*  get_file_infos_array_() const = 0;
         common::IndexHeaderV2* get_index_header_() const;
         int update_block_statistic_info_(common::IndexHeaderV2* header, const int32_t oper_type,
@@ -76,8 +79,8 @@ namespace tfs
         int get_slot_(uint16_t& slot, uint64_t& file_id, common::FileInfoV2*& current,
               common::FileInfoV2*& prev, const char* buf, const int32_t nbytes, const int8_t type) const;
         int get_slot_(uint16_t& slot, uint64_t& file_id, common::FileInfoV2*& current,
-              common::FileInfoV2*& prev, const double threshold, const int8_t type) const ;
-        int insert_file_info_(common::FileInfoV2& info, const double threshold, const bool update);
+              common::FileInfoV2*& prev, const double threshold, const int32_t max_hash_bucket,const int8_t type) const ;
+        int insert_file_info_(common::FileInfoV2& info, const double threshold, const int32_t max_hash_bucket,const bool update);
         int insert_file_info_(common::FileInfoV2& info, char* buf, const int32_t nbytes, const bool update) const;
         bool is_load_;
         mutable common::MMapFileOperation file_op_;
@@ -105,12 +108,13 @@ namespace tfs
         virtual ~IndexHandle();
         int create(const uint64_t logic_block_id, const int32_t max_bucket_size, const common::MMapOption& map_options);
         int mmap(const uint64_t logic_block_id, const common::MMapOption& map_options);
-        int generation_file_id(uint64_t& file_id, const double threshold);
-        int read_file_info(common::FileInfoV2& info,  const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
-        int write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id, const bool update);
-        int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID, const bool partial = false);
-        int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
-        int traverse(std::vector<common::FileInfo>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+        int generation_file_id(uint64_t& file_id, const double threshold, const int32_t max_hash_bucket);
+        int read_file_info(common::FileInfoV2& info,  const double threshold, const int32_t max_hash_bucket,const uint64_t logic_block_id) const;
+        int write_file_info(common::FileInfoV2& info, const double threshold, const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool update);
+        int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold,
+            const int32_t max_hash_bucket, const uint64_t logic_block_id,const bool partial = false);
+        int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id) const;
+        int traverse(std::vector<common::FileInfo>& infos, const uint64_t logic_block_id ) const;
         int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const;
         int get_index_num(int32_t& index_num) const;
         int update_block_statistic_info(const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback = false);
@@ -122,7 +126,7 @@ namespace tfs
         int inc_unlink_visit_count(const int32_t step = 1,const int32_t nbytes = 0);
         int statistic_visit(common::ThroughputV2& throughput, const bool reset = false);
       protected:
-        int remmap_(const double threshold) const;
+        int remmap_(const double threshold, const int32_t max_hash_bucket) const;
         common::FileInfoV2*  get_file_infos_array_() const;
       private:
         DISALLOW_COPY_AND_ASSIGN(IndexHandle);
@@ -152,10 +156,13 @@ namespace tfs
       virtual ~VerifyIndexHandle();
       int create(const uint64_t logic_block_id, const int64_t family_id, const int16_t index_num);
       int mmap(const uint64_t logic_block_id, const common::MMapOption& map_options);
-      int write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id, const bool update);
-      int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID, const bool partial = false);
-      int read_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
-      int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+      int write_file_info(common::FileInfoV2& info, const double threshold, const int32_t max_hash_bucket,
+          const uint64_t logic_block_id, const bool update);
+      int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold,
+          const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial = false);
+      int read_file_info(common::FileInfoV2& info, const double threshold,
+          const int32_t max_hash_bucket,const uint64_t logic_block_id) const;
+      int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id) const;
       int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const;
       int get_index_num(int32_t& index_num) const;
       int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const;
@@ -170,7 +177,7 @@ namespace tfs
       int malloc_index_mem_(char*& data, InnerIndex& index) const;
       int free_index_mem_(const char* data, InnerIndex& index, const bool write_back) const;
 
-      int remmap_(const double threshold) const { UNUSED(threshold);return common::TFS_SUCCESS;}
+      int remmap_(const double threshold, const int32_t max_hash_bucket) const { UNUSED(max_hash_bucket);UNUSED(threshold);return common::TFS_SUCCESS;}
       common::FileInfoV2*  get_file_infos_array_() const { return NULL;}
     };
   }/** end namespace dataserver **/

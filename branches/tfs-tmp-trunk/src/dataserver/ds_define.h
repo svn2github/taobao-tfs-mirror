@@ -85,6 +85,7 @@ namespace tfs
       int32_t max_main_block_size_;//max size of main block
       int32_t max_extend_block_size_;//max size of extend block
       int32_t hash_bucket_count_;//total count of hash bucket
+      int32_t max_hash_bucket_count_;//max hash bucket
       int32_t main_block_id_seq_;// generate main block id sequence
       int32_t ext_block_id_seq_; // generate ext block id sequence
       common::MMapOption mmap_option_;    //mmap option

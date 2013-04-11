@@ -287,7 +287,7 @@ namespace tfs
         {
           FileInfoV2 finfo;
           finfo.id_ = fileid;
-          ret = index_handle_->read_file_info(finfo, sbinfo->max_use_hash_bucket_ratio_, logic_block_id);
+          ret = index_handle_->read_file_info(finfo, sbinfo->max_use_hash_bucket_ratio_,sbinfo->max_hash_bucket_count_, logic_block_id);
           if (TFS_SUCCESS == ret)
           {
             // truncate to right read length
@@ -375,7 +375,7 @@ namespace tfs
         ret = supber_block_manager.get_super_block_info(sbinfo);
         if (TFS_SUCCESS == ret)
         {
-          ret = index_handle_->read_file_info(info, sbinfo->max_use_hash_bucket_ratio_, logic_block_id);
+          ret = index_handle_->read_file_info(info, sbinfo->max_use_hash_bucket_ratio_,sbinfo->max_hash_bucket_count_, logic_block_id);
           if (TFS_SUCCESS == ret)
           {
             if (FORCE_STAT & flag)
@@ -618,7 +618,7 @@ namespace tfs
       int ret = supber_block_manager.get_super_block_info(sbinfo);
       if (TFS_SUCCESS == ret)
       {
-        ret = get_index_handle_()->generation_file_id(fileid, sbinfo->max_use_hash_bucket_ratio_);
+        ret = get_index_handle_()->generation_file_id(fileid, sbinfo->max_use_hash_bucket_ratio_, sbinfo->max_hash_bucket_count_);
       }
       return ret;
     }
@@ -645,7 +645,8 @@ namespace tfs
           {
             FileInfoV2 old_finfo, new_finfo;
             new_finfo.id_ = old_finfo.id_ = fileid;
-            ret = get_index_handle_()->read_file_info(old_finfo, sbinfo->max_use_hash_bucket_ratio_, logic_block_id);
+            ret = get_index_handle_()->read_file_info(old_finfo, sbinfo->max_use_hash_bucket_ratio_,
+                    sbinfo->max_hash_bucket_count_, logic_block_id);
             bool update = (TFS_SUCCESS == ret);
             if (update)
               TBSYS_LOG(INFO, "file exist, update! block id: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u", logic_block_id, fileid);
@@ -656,7 +657,8 @@ namespace tfs
               ret = get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);
               if (TFS_SUCCESS == ret)
               {
-                ret = get_index_handle_()->write_file_info(new_finfo, sbinfo->max_use_hash_bucket_ratio_, logic_block_id, update);
+                ret = get_index_handle_()->write_file_info(new_finfo, sbinfo->max_use_hash_bucket_ratio_
+                      ,sbinfo->max_hash_bucket_count_, logic_block_id, update);
                 if (TFS_SUCCESS != ret)
                 {
                   TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
@@ -698,7 +700,7 @@ namespace tfs
         {
           FileInfoV2 finfo;
           finfo.id_ = fileid;
-          ret = index_handle_->read_file_info(finfo, sbinfo->max_use_hash_bucket_ratio_, id());
+          ret = index_handle_->read_file_info(finfo, sbinfo->max_use_hash_bucket_ratio_,sbinfo->max_hash_bucket_count_, id());
           if (TFS_SUCCESS == ret)
           {
             int32_t oper_type  = OPER_NONE;
@@ -709,7 +711,8 @@ namespace tfs
               if (TFS_SUCCESS == ret)
               {
                 finfo.modify_time_ = time(NULL);
-                ret = get_index_handle_()->write_file_info(finfo, sbinfo->max_use_hash_bucket_ratio_, id(), true);
+                ret = get_index_handle_()->write_file_info(finfo, sbinfo->max_use_hash_bucket_ratio_,
+                      sbinfo->max_hash_bucket_count_, id(), true);
                 if (TFS_SUCCESS != ret)
                   ret = get_index_handle_()->update_block_statistic_info(oper_type, 0, finfo.size_, true);
                 else

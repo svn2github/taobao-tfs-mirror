@@ -443,7 +443,7 @@ namespace tfs
     }
 
     int BaseIndexHandle::get_slot_(uint16_t& slot, uint64_t& file_id, common::FileInfoV2*& current,
-        common::FileInfoV2*& prev, const double threshold, const int8_t type) const
+        common::FileInfoV2*& prev, const double threshold, const int32_t max_hash_bucket,const int8_t type) const
     {
       slot = 0, current = NULL, prev = NULL;
       int32_t ret = check_load();
@@ -451,7 +451,7 @@ namespace tfs
       {
         IndexHeaderV2* header = get_index_header_();
         assert(NULL != header);
-        ret = GET_SLOT_TYPE_QUERY != type ? remmap_(threshold) : TFS_SUCCESS;
+        ret = GET_SLOT_TYPE_QUERY != type ? remmap_(threshold, max_hash_bucket) : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           header  = get_index_header_();
@@ -463,7 +463,8 @@ namespace tfs
       return ret;
     }
 
-    int BaseIndexHandle::insert_file_info_(common::FileInfoV2& info, const double threshold, const bool update)
+    int BaseIndexHandle::insert_file_info_(common::FileInfoV2& info, const double threshold,
+        const int32_t max_hash_bucket,const bool update)
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
@@ -472,7 +473,7 @@ namespace tfs
           info.next_ = 0;
         uint16_t slot = 0;
         FileInfoV2* current = NULL, *prev = NULL;
-        ret = get_slot_(slot, info.id_, current, prev, threshold, update ? GET_SLOT_TYPE_QUERY : GET_SLOT_TYPE_INSERT);
+        ret = get_slot_(slot, info.id_, current, prev, threshold, max_hash_bucket, update ? GET_SLOT_TYPE_QUERY : GET_SLOT_TYPE_INSERT);
         if (TFS_SUCCESS == ret)
         {
           IndexHeaderV2* header = get_index_header_();
@@ -635,19 +636,19 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::generation_file_id(uint64_t& file_id, const double threshold)
+    int IndexHandle::generation_file_id(uint64_t& file_id, const double threshold, const int32_t max_hash_bucket)
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
         uint16_t slot = 0;
         FileInfoV2* current = NULL, *prev = NULL;
-        ret =get_slot_(slot, file_id, current, prev, threshold, GET_SLOT_TYPE_GEN);
+        ret =get_slot_(slot, file_id, current, prev, threshold, max_hash_bucket, GET_SLOT_TYPE_GEN);
       }
       return ret;
     }
 
-    int IndexHandle::read_file_info(FileInfoV2& info, const double threshold, const uint64_t logic_block_id ) const
+    int IndexHandle::read_file_info(FileInfoV2& info, const double threshold, const int32_t max_hash_bucket, const uint64_t logic_block_id ) const
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
@@ -658,7 +659,7 @@ namespace tfs
       {
         uint16_t slot = 0;
         FileInfoV2* prev = NULL, *current = NULL;
-        ret = get_slot_(slot, info.id_, current, prev, threshold,GET_SLOT_TYPE_QUERY);
+        ret = get_slot_(slot, info.id_, current, prev, threshold, max_hash_bucket, GET_SLOT_TYPE_QUERY);
         if (TFS_SUCCESS == ret)
         {
           assert(NULL != current);
@@ -668,18 +669,20 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id, const bool update)
+    int IndexHandle::write_file_info(common::FileInfoV2& info, const double threshold,
+          const int32_t max_hash_bucket, const uint64_t logic_block_id, const bool update)
     {
       UNUSED(logic_block_id);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
-        ret = insert_file_info_(info, threshold, update);
+        ret = insert_file_info_(info, threshold, max_hash_bucket, update);
       }
       return ret;
     }
 
-    int IndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id, const bool partial)
+    int IndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos,
+        const double threshold, const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial)
     {
       UNUSED(logic_block_id);
       int32_t ret = check_load();
@@ -705,7 +708,7 @@ namespace tfs
           for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
           {
             FileInfoV2& finfo = (*iter);
-            ret = insert_file_info_(finfo, threshold, false);
+            ret = insert_file_info_(finfo, threshold, max_hash_bucket, false);
           }
         }
       }
@@ -910,7 +913,7 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::remmap_(const double threshold) const
+    int IndexHandle::remmap_(const double threshold, const int32_t max_hash_bucket) const
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
@@ -919,7 +922,7 @@ namespace tfs
         ret = (NULL != header) ? TFS_SUCCESS : EXIT_INDEX_HEADER_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
-          if (header->check_need_mremap(threshold))
+          if (header->check_need_mremap(threshold) && header->file_info_bucket_size_ < max_hash_bucket)
           {
             int32_t old_length = file_op_.length();
             char* old_data = new (std::nothrow)char[old_length];
@@ -1076,9 +1079,11 @@ namespace tfs
       return ret;
     }
 
-    int VerifyIndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id, const bool partial)
+    int VerifyIndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold,
+        const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial)
     {
       UNUSED(threshold);
+      UNUSED(max_hash_bucket);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
@@ -1133,9 +1138,11 @@ namespace tfs
       return ret;
     }
 
-    int VerifyIndexHandle::write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id, const bool update)
+    int VerifyIndexHandle::write_file_info(common::FileInfoV2& info, const double threshold, const int32_t max_hash_bucket,
+        const uint64_t logic_block_id, const bool update)
     {
       UNUSED(threshold);
+      UNUSED(max_hash_bucket);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
@@ -1155,9 +1162,11 @@ namespace tfs
       return ret;
     }
 
-    int VerifyIndexHandle::read_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id) const
+    int VerifyIndexHandle::read_file_info(common::FileInfoV2& info, const double threshold, const int32_t max_hash_bucket,
+        const uint64_t logic_block_id) const
     {
       UNUSED(threshold);
+      UNUSED(max_hash_bucket);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
