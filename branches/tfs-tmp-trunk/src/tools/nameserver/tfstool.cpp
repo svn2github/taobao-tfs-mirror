@@ -36,11 +36,11 @@
 #include "common/base_packet_streamer.h"
 #include "tools/util/tool_util.h"
 #include "tools/util/ds_lib.h"
-#include "new_client/fsname.h"
 #include "new_client/tfs_client_impl.h"
 #include "new_client/tfs_rc_client_api_impl.h"
 #include "new_client/tfs_meta_client_api_impl.h"
 #include "clientv2/tfs_client_impl_v2.h"
+#include "clientv2/fsname.h"
 
 using namespace std;
 using namespace tfs::client;
@@ -493,7 +493,7 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
   const char* suffix = NULL;
   int32_t flag = T_DEFAULT;
   int ret = TFS_SUCCESS;
-  char ret_tfs_name[TFS_FILE_LEN];
+  char ret_tfs_name[TFS_FILE_LEN_V2];
   ret_tfs_name[0] = '\0';
 
 
@@ -534,7 +534,7 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
     }
     else
     {
-      ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix) < 0 ?
+      ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN_V2, local_file, flag, suffix) < 0 ?
           TFS_ERROR : TFS_SUCCESS;
     }
   }
@@ -546,7 +546,7 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
     }
     else
     {
-      ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix) < 0 ?
+      ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN_V2, local_file, flag, suffix) < 0 ?
           TFS_ERROR : TFS_SUCCESS;
     }
   }
@@ -560,7 +560,7 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
   }
   else
   {
-    ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix);
+    ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN_V2, local_file, flag, suffix);
   }
 
   if (ret >= 0)
@@ -583,7 +583,7 @@ int put_file_raw_ex(const VSTRING& param, const bool is_large)
   char appkey[257];
   //int32_t flag = T_DEFAULT;
   int ret = TFS_SUCCESS;
-  char ret_tfs_name[TFS_FILE_LEN];
+  char ret_tfs_name[TFS_FILE_LEN_V2];
   ret_tfs_name[0] = '\0';
 
   if (size > 1)
@@ -613,7 +613,7 @@ int put_file_raw_ex(const VSTRING& param, const bool is_large)
   }
   else
   {
-    ret = impl.save_file(local_file, ret_tfs_name, TFS_FILE_LEN, suffix, is_large) < 0 ? TFS_ERROR : TFS_SUCCESS;
+    ret = impl.save_file(local_file, ret_tfs_name, TFS_FILE_LEN_V2, suffix, is_large) < 0 ? TFS_ERROR : TFS_SUCCESS;
   }
 
   //printf("tfs_name: %s, ret_tfs_name: %s\n", tfs_name, ret_tfs_name);
@@ -833,10 +833,10 @@ int cmd_stat_file(const VSTRING& param)
 
   if (TFS_SUCCESS == ret)
   {
-    FSName fsname(tfs_name, NULL);
+    tfs::clientv2::FSName fsname(tfs_name, NULL);
     fprintf(stdout,
             "  FILE_NAME:     %s\n"
-            "  BLOCK_ID:      %u\n"
+            "  BLOCK_ID:      %"PRI64_PREFIX"u\n"
             "  FILE_ID:       %" PRI64_PREFIX "u\n"
             "  OFFSET:        %d\n"
             "  SIZE:          %"PRI64_PREFIX"d\n"
@@ -1122,7 +1122,7 @@ int cmd_stat_file_raw(const VSTRING& param)
       {
         TBSYS_LOG(DEBUG, "stat %s fail, return %d", tfs_name, ret);
       }
-      int re = impl.close(fd, const_cast<char*>(tfs_name), TFS_FILE_LEN);
+      int re = impl.close(fd, const_cast<char*>(tfs_name), TFS_FILE_LEN_V2);
       if (TFS_SUCCESS != re)
       {
         TBSYS_LOG(DEBUG, "close %s fail, return %d", tfs_name, re);
@@ -1137,7 +1137,7 @@ int cmd_stat_file_raw(const VSTRING& param)
     FSName fsname(tfs_name, NULL);
     fprintf(stdout,
             "  FILE_NAME:     %s\n"
-            "  BLOCK_ID:      %u\n"
+            "  BLOCK_ID:      %"PRI64_PREFIX"u\n"
             "  FILE_ID:       %" PRI64_PREFIX "u\n"
             "  OFFSET:        %d\n"
             "  SIZE:          %"PRI64_PREFIX"d\n"

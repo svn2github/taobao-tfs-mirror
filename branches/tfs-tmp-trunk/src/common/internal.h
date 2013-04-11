@@ -415,7 +415,15 @@ namespace tfs
     {
       INVALID_TFS_FILE_TYPE = 0,
       SMALL_TFS_FILE_TYPE,
-      LARGE_TFS_FILE_TYPE
+      LARGE_TFS_FILE_TYPE,
+      SMALL_TFS_FILE_TYPE_V2,
+      LARGE_TFS_FILE_TYPE_V2
+    };
+
+    enum TfsFileNameVersion
+    {
+      TFS_FILE_NAME_V1 = 0,
+      TFS_FILE_NAME_V2
     };
 
     /*enum BlkType

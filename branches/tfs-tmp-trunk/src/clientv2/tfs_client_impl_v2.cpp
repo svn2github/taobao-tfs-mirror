@@ -333,14 +333,14 @@ namespace tfs
           }
           else if (NULL != ret_tfs_name)
           {
-            if (ret_tfs_name_len < TFS_FILE_LEN)
+            if (ret_tfs_name_len < TFS_FILE_LEN_V2)
             {
-              TBSYS_LOG(ERROR, "name buffer length less: %d < %d", ret_tfs_name_len, TFS_FILE_LEN);
+              TBSYS_LOG(ERROR, "name buffer length less: %d < %d", ret_tfs_name_len, TFS_FILE_LEN_V2);
               ret = TFS_ERROR;
             }
             else
             {
-              memcpy(ret_tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
+              memcpy(ret_tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN_V2);
             }
           }
           erase_file(fd);

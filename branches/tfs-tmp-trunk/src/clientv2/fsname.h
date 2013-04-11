@@ -23,18 +23,26 @@ namespace tfs
 {
   namespace clientv2
   {
-    struct FileBits
+    struct FileBitsV1
     {
       uint32_t block_id_;
       uint32_t seq_id_;
       uint32_t suffix_;
     };
 
+    struct FileBitsV2
+    {
+      uint64_t block_id_;
+      uint32_t seq_id_;
+      uint32_t suffix_;
+      char reserve_[2];
+    };
+
     class FSName
     {
     public:
       FSName();
-      FSName(const uint32_t block_id, const uint64_t file_id, const int32_t cluster_id = 0);
+      FSName(const uint64_t block_id, const uint64_t file_id, const int32_t cluster_id = 0);
       FSName(const char *file_name, const char* suffix = NULL, const int32_t cluster_id = 0);
       virtual ~FSName();
 
@@ -43,53 +51,111 @@ namespace tfs
       void set_suffix(const char* suffix);
       std::string to_string();
 
-      static common::TfsFileType check_file_type(const char* tfs_name);
+      common::TfsFileType check_file_type(const char* tfs_name);
 
       inline bool is_valid() const
       {
         return is_valid_;
       }
 
-      inline void set_block_id(const uint32_t id)
+      inline void set_block_id(const uint64_t id)
       {
-        file_.block_id_ = id;
+        if (common::TFS_FILE_NAME_V1 == version_)
+        {
+          filev1_.block_id_ = id;
+        }
+        else
+        {
+          filev2_.block_id_ = id;
+        }
       }
 
       inline uint64_t get_block_id() const
       {
-        return file_.block_id_;
+        if (common::TFS_FILE_NAME_V1 == version_)
+        {
+          return filev1_.block_id_;
+        }
+        else
+        {
+          return filev2_.block_id_;
+        }
       }
 
       inline void set_seq_id(const uint32_t id)
       {
-        file_.seq_id_ = id;
+        if (common::TFS_FILE_NAME_V1 == version_)
+        {
+          filev1_.seq_id_ = id;
+        }
+        else
+        {
+          filev2_.seq_id_ = id;
+        }
       }
 
       inline uint32_t get_seq_id() const
       {
-        return file_.seq_id_;
+        if (common::TFS_FILE_NAME_V1 == version_)
+        {
+          return filev1_.seq_id_;
+        }
+        else
+        {
+          return filev2_.seq_id_;
+        }
       }
 
       inline void set_suffix(const uint32_t id)
       {
-        file_.suffix_ = id;
+        if (common::TFS_FILE_NAME_V1 == version_)
+        {
+          filev1_.suffix_ = id;
+        }
+        else
+        {
+          filev2_.suffix_ = id;
+        }
       }
 
       inline uint32_t get_suffix() const
       {
-        return file_.suffix_;
+        if (common::TFS_FILE_NAME_V1 == version_)
+        {
+          return filev1_.suffix_;
+        }
+        else
+        {
+          return filev2_.suffix_;
+        }
       }
 
       inline void set_file_id(const uint64_t id)
       {
-        file_.suffix_ = (id >> 32);
-        file_.seq_id_ = (id & 0xFFFFFFFF);
+        if (common::TFS_FILE_NAME_V1 == version_)
+        {
+          filev1_.suffix_ = (id >> 32);
+          filev1_.seq_id_ = (id & 0xFFFFFFFF);
+        }
+        else
+        {
+          filev2_.suffix_ = (id >> 32);
+          filev2_.seq_id_ = (id & 0xFFFFFFFF);
+        }
       }
 
       inline uint64_t get_file_id()
       {
-        uint64_t id = file_.suffix_;
-        return ((id << 32) | file_.seq_id_);
+        if (common::TFS_FILE_NAME_V1 == version_)
+        {
+          uint64_t id = filev1_.suffix_;
+          return ((id << 32) | filev1_.seq_id_);
+        }
+        else
+        {
+          uint64_t id = filev2_.suffix_;
+          return ((id << 32) | filev2_.seq_id_);
+        }
       }
 
       inline void set_cluster_id(const int32_t cluster_id)
@@ -103,10 +169,12 @@ namespace tfs
       }
 
     private:
+      common::TfsFileNameVersion version_;
       bool is_valid_;
-      FileBits file_;
+      FileBitsV1 filev1_;
+      FileBitsV2 filev2_;
       int32_t cluster_id_;
-      char file_name_[common::TFS_FILE_LEN];
+      char file_name_[common::TFS_FILE_LEN_V2];
     };
   }
 }

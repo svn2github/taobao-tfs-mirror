@@ -29,6 +29,8 @@ namespace tfs
     {
       static const char SMALL_TFS_FILE_KEY_CHAR = 'T';
       static const char LARGE_TFS_FILE_KEY_CHAR = 'L';
+      static const char SMALL_TFS_FILE_KEY_CHAR_V2 = 'S';
+      static const char LARGE_TFS_FILE_KEY_CHAR_V2 = 'M';
 
       static const char* KEY_MASK = "Taobao-inc";
       static const int32_t KEY_MASK_LEN = strlen(KEY_MASK);
@@ -44,17 +46,19 @@ namespace tfs
         return TFS_SUCCESS;
       }
 
-      void encode(const char *input, char *output)
+      void encode(const char *input, char *output, const int32_t len)
       {
+        assert(len % 3 == 0);
         if (input != NULL && output != NULL)
         {
-          char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
-          xor_mask(input, FILE_NAME_EXCEPT_SUFFIX_LEN, buffer);
+          const int32_t buffer_len = len;
+          char buffer[buffer_len];
+          xor_mask(input, buffer_len, buffer);
 
           int32_t i = 0;
           int32_t k = 0;
           uint32_t value = 0;
-          for (i = 0; i < FILE_NAME_EXCEPT_SUFFIX_LEN; i += 3)
+          for (i = 0; i < len; i += 3)
           {
             value = ((buffer[i] << 16) & 0xff0000) + ((buffer[i + 1] << 8) & 0xff00) + (buffer[i + 2] & 0xff);
             output[k++] = enc_table[value >> 18];
@@ -65,15 +69,17 @@ namespace tfs
         }
       }
 
-      void decode(const char *input, char *output)
+      void decode(const char *input, char *output, const int32_t len)
       {
+        assert(len % 4 == 0);
         if (input != NULL && output != NULL)
         {
           int32_t i = 0;
           int32_t k = 0;
           uint32_t value = 0;
-          char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
-          for (i = 0; i < FILE_NAME_LEN - 2; i += 4)
+          const int32_t buffer_len = len * 3 / 4;
+          char buffer[buffer_len];
+          for (i = 0; i < len; i += 4)
           {
             value = (dec_table[input[i] & 0xff] << 18) + (dec_table[input[i + 1] & 0xff] << 12) +
               (dec_table[input[i + 2] & 0xff] << 6) + dec_table[input[i + 3] & 0xff];
@@ -81,7 +87,7 @@ namespace tfs
             buffer[k++] = static_cast<char> ((value >> 8) & 0xff);
             buffer[k++] = static_cast<char> (value & 0xff);
           }
-          xor_mask(buffer, FILE_NAME_EXCEPT_SUFFIX_LEN, output);
+          xor_mask(buffer, buffer_len, output);
         }
       }
     }
