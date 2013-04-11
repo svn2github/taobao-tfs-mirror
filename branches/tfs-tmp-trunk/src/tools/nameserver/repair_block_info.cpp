@@ -37,7 +37,7 @@ using namespace std;
 using namespace tfs::common;
 using namespace tfs::message;
 
-int get_block_ds_list(const uint64_t server_id, const uint32_t block_id, VUINT64& ds_list)
+int get_block_ds_list(const uint64_t server_id, const uint64_t block_id, VUINT64& ds_list)
 {
   int ret = TFS_SUCCESS;
   if (false == NewClientManager::get_instance().is_init())

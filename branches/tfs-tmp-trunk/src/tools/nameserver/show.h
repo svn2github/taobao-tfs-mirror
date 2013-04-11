@@ -37,7 +37,7 @@ namespace tfs
             int32_t count, const int32_t interval, const std::string& filename);
         int show_machine(const int8_t flag, const int32_t num,
             int32_t count, const int32_t interval, const std::string& filename);
-        int show_block(const int8_t flag, const int32_t num, const uint32_t block_id, const int32_t block_chunk_num,
+        int show_block(const int8_t flag, const int32_t num, const uint64_t block_id, const int32_t block_chunk_num,
             int32_t count, const int32_t interval, const std::string& filename);
         bool is_loop_;
         bool interrupt_;

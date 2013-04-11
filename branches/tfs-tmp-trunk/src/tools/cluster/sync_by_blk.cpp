@@ -520,12 +520,12 @@ int get_file_list(const string& ns_addr, const uint32_t block_id, BLOCK_FILE_INF
           TBSYS_LOG(DEBUG, "ret_msg->pCODE: %d", ret_msg->getPCode());
           if (BLOCK_FILE_INFO_MESSAGE == ret_msg->getPCode())
           {
-            FILE_INFO_LIST* file_info_list = (dynamic_cast<BlockFileInfoMessage*> (ret_msg))->get_fileinfo_list();
+            FILE_INFO_LIST& file_info_list = (dynamic_cast<BlockFileInfoMessage*> (ret_msg))->get_fileinfo_list();
             int32_t i = 0;
-            int32_t list_size = file_info_list->size();
+            int32_t list_size = file_info_list.size();
             for (i = 0; i < list_size; i++)
             {
-              FileInfo& file_info = file_info_list->at(i);
+              FileInfo& file_info = file_info_list.at(i);
               FSName fsname(block_id, file_info.id_, TfsClientImpl::Instance()->get_cluster_id(ns_addr.c_str()));
               TBSYS_LOG(DEBUG, "block_id: %u, file_id: %"PRI64_PREFIX"u, name: %s\n", block_id, file_info.id_, fsname.get_name());
               v_block_file_info.push_back(BlockFileInfo(block_id, file_info));

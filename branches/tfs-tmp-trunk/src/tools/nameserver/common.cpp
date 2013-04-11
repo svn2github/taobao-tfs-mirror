@@ -24,9 +24,6 @@ namespace tfs
       id_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
       last_update_time_(0), startup_time_(0), current_time_(0)
     {
-#ifdef TFS_NS_DEBUG
-      total_elect_num_ = 0;
-#endif
       memset(&total_tp_, 0, sizeof(total_tp_));
       memset(&last_tp_, 0, sizeof(last_tp_));
     }
@@ -41,10 +38,6 @@ namespace tfs
         return TFS_ERROR;
       }
       int32_t len = input.getDataLen();
-#ifdef TFS_NS_DEBUG
-      total_elect_num_ = input.readInt64();
-#endif
-
       id_ = input.readInt64();
       use_capacity_ = input.readInt64();
       total_capacity_ = input.readInt64();
@@ -52,11 +45,16 @@ namespace tfs
       block_count_  = input.readInt32();
       last_update_time_ = input.readInt64();
       startup_time_ = input.readInt64();
-      total_tp_.write_byte_ = input.readInt64();          input.readInt64();  // place holder
-      total_tp_.write_file_count_ = input.readInt64();    input.readInt64();
-      total_tp_.read_byte_ = input.readInt64();           input.readInt64();
-      total_tp_.read_file_count_ = input.readInt64();     input.readInt64();
-      input.readInt64(); input.readInt64();
+      total_tp_.write_byte_ = input.readInt64();
+      total_tp_.read_byte_ = input.readInt64();
+      total_tp_.write_file_count_ = input.readInt64();
+      total_tp_.read_file_count_ = input.readInt64();
+      total_tp_.unlink_file_count_ = input.readInt64();
+      total_tp_.fail_write_byte_ = input.readInt64();
+      total_tp_.fail_read_byte_ = input.readInt64();
+      total_tp_.fail_write_file_count_ = input.readInt64();
+      total_tp_.fail_read_file_count_ = input.readInt64();
+      total_tp_.fail_unlink_file_count_ = input.readInt64();
       current_time_ = input.readInt64();
       status_ = (DataServerLiveStatus)input.readInt32();
 
@@ -159,7 +157,7 @@ namespace tfs
 
     void BlockBase::dump() const
     {
-      TBSYS_LOG(INFO, "family_id: %"PRI64_PREFIX"d,block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, copys: %Zd",
+      TBSYS_LOG(INFO, "family_id: %"PRI64_PREFIX"d,block_id: %"PRI64_PREFIX"u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, copys: %Zd",
           info_.family_id_, info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_, server_list_.size());
     }
   }

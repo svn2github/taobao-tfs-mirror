@@ -5,7 +5,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
 
-bin_PROGRAMS = sync_by_blk sync_by_log sync_by_file transfer_by_file block_tool
+bin_PROGRAMS = sync_by_blk sync_by_log sync_by_file transfer_by_file block_tool calc_ip_addr
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
@@ -22,3 +22,5 @@ sync_by_file_SOURCES =  sync_by_file.cpp sync_file_base.cpp sync_file_base.h
 
 transfer_by_file_SOURCES = transfer_by_file.cpp sync_file_base.h
 block_tool_SOURCES = blocktool.cpp
+
+calc_ip_addr_SOURCES= calc_ip_addr.cpp

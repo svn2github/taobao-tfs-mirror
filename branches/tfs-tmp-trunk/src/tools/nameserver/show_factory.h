@@ -38,7 +38,7 @@ namespace tfs
         int calculate(ServerShow& old_server);
         void dump(const int8_t flag, FILE* fp) const;
       private:
-        void dump(const uint64_t server_id, const std::set<uint32_t>& blocks, FILE* fp) const;
+        void dump(const uint64_t server_id, const std::set<uint64_t>& blocks, FILE* fp) const;
     };
 
     class BlockShow : public BlockBase

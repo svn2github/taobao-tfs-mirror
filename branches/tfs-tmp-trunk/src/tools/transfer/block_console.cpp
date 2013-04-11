@@ -632,19 +632,15 @@ int TranBlock::check_dest_blk()
     if (ds_size > 0)
     {
       TBSYS_LOG(ERROR, "block exists in dest cluster. block list size is %d, blockid: %u", ds_size, src_block_info_.block_id_);
-      /*int i = 0;
-      for (i = 0; i < ds_size; i++)
+      ret = rm_block_from_ns(dest_ds[0]);
+      int i = 0;
+      for (i = 0; i < ds_size && TFS_SUCCESS == ret; i++)
       {
-        if ((ret = rm_block_from_ns(dest_ds[i])) != TFS_SUCCESS)
-        {
-          break;
-        }
         if ((ret = rm_block_from_ds(dest_ds[i])) != TFS_SUCCESS)
         {
           break;
         }
-      }*/
-      rm_block_from_ns(dest_ds[0]);
+      }
     }
   }
   else

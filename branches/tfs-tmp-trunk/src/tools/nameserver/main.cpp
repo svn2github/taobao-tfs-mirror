@@ -149,14 +149,14 @@ int get_value(const char* data, string& value)
 {
   return ((value = data) != "");
 }
-int get_value(const char* data, int32_t& value)
+int get_value(const char* data, uint64_t& value)
 {
   int base = 10;
   char *endptr;
   long val;
 
   errno = 0;    // To distinguish success/failure after call
-  val = (strtol(data, &endptr, base));
+  val = (strtoll(data, &endptr, base));
   //TBSYS_LOG(DEBUG, "val: %d", val);
 
   // Check for various possible errors
@@ -246,19 +246,19 @@ int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
       }
       if (com_type & BLOCK_TYPE)
       {
-        int32_t tmp = -1;
+        uint64_t tmp = 0;
         switch (cmd)
         {
           case CMD_BLOCK_ID:
             if ((ret = get_value((*iter).c_str(), tmp)) == TFS_SUCCESS)
             {
-              ret_param.block_id_ = static_cast< uint32_t > (tmp);
+              ret_param.block_id_ = tmp;
             }
             if (ret == TFS_SUCCESS && ((iter + 1) != param.end()) && ((*(iter + 1)).substr(0, 1) != "-"))
             {
               if ((ret = get_value((*(iter + 1)).c_str(), tmp)) == TFS_SUCCESS)
               {
-                ret_param.block_chunk_num_ = static_cast< int32_t > (tmp);
+                ret_param.block_chunk_num_ = tmp;
                 iter++;
               }
             }
