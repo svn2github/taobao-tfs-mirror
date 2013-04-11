@@ -310,7 +310,8 @@ namespace tfs
 
     bool ServerCollect::touch(bool& promote, int32_t& count, const double average_used_capacity)
     {
-      bool ret = ((is_report_block_complete() || promote) /*&& !is_full()*/ && count > 0);
+      bool ret = ((is_report_block_complete() || promote) /*&& !is_full()*/
+                    && count > 0 && total_capacity_ > 0 && use_capacity_ >= 0);
       if (!ret)
       {
         count = 0;
@@ -342,7 +343,7 @@ namespace tfs
             mutex_.unlock();
 
             BlockCollect* block = NULL;
-            double use_capacity_ratio = use_capacity_ / total_capacity_;
+            double use_capacity_ratio = static_cast<double>(use_capacity_) / static_cast<double>(total_capacity_);
             double max_average_use_capacity_ratio = average_used_capacity * AVERAGE_USED_CAPACITY_MULTIPLE;
 
             for (index = 0; index < helper.get_array_index() && actual < count; ++index)

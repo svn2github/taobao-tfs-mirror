@@ -276,7 +276,7 @@ namespace tfs
         block = get_block_manager().get(info.block_id_);
         ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
       }
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret || addnew)
       {
         ret = get_block_manager().update_block_info(block, isnew, writable, master,
             info, pserver, now, addnew);
@@ -987,9 +987,9 @@ namespace tfs
       ServerCollect* pserver = NULL;
       uint64_t new_block_id = 0;
       int32_t ret = TFS_SUCCESS;
-      int64_t total_capacity = GFactory::get_global_info().total_capacity_ <= 0
+      double total_capacity = GFactory::get_global_info().total_capacity_ <= 0
               ? 1 : GFactory::get_global_info().total_capacity_;
-      int64_t use_capacity = GFactory::get_global_info().use_capacity_ <= 0
+      double use_capacity = GFactory::get_global_info().use_capacity_ <= 0
         ? 0 : GFactory::get_global_info().use_capacity_;
       if (total_capacity <= 0)
         total_capacity = 1;
@@ -1657,7 +1657,7 @@ namespace tfs
         ret = ((NULL != block) && (NULL != server));
         if (ret)
         {
-          relieve_relation(block, server, now);
+          relieve_relation(block, server, now);//这里有可能误报，因为有一些地方会先解除关系后再加入到删除列表
           ret = (TFS_SUCCESS == get_task_manager().remove_block_from_dataserver(server->id(), block->id(), now));
         }
       }

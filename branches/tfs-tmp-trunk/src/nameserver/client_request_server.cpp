@@ -402,12 +402,12 @@ namespace tfs
     {
       for (int64_t index = 0; index < blocks.get_array_index(); ++index)
       {
-        uint64_t server = (*blocks.at(index));
+        uint64_t block = (*blocks.at(index));
         out.push_back(BlockMeta());
         BlockMeta* meta = out.at(index);
-        meta->block_id_ = server;
+        meta->block_id_ = block;
         common::ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, meta->ds_);
-        int32_t ret = open_read_mode_(servers, meta->family_info_, server);
+        int32_t ret = open_read_mode_(servers, meta->family_info_, block);
         if (TFS_SUCCESS == ret)
           meta->size_ = servers.get_array_index();
       }
@@ -838,8 +838,8 @@ namespace tfs
               //解除关系失败可以暂时不管
               update_last_time = true;
               server = manager_.get_server_manager().get(item->first);
-              manager_.get_block_manager().push_to_delete_queue(block_id, item->first);
               manager_.relieve_relation(block, server, now);
+              manager_.get_block_manager().push_to_delete_queue(block_id, item->first);
               TBSYS_LOG(INFO, "resolve block version conflict: relieve relation block: %"PRI64_PREFIX"u, server: %s, version: %d",
                 block_id, tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
             }
