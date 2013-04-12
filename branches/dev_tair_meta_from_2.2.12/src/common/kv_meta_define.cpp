@@ -260,16 +260,39 @@ namespace tfs
 
     //customizeinfo
     CustomizeInfo::CustomizeInfo()
-    { }
+    {
+      meta_data_.clear();
+    }
 
     int64_t CustomizeInfo::length() const
     {
-      return Serialization::get_string_length(otag_) + INT_SIZE * 2;
+      int64_t len = 0;
+      len += INT_SIZE;
+
+      if (meta_data_.size() > 0)
+      {
+        MAP_STRING_ITER iter = meta_data_.begin();
+        for (; iter != meta_data_.end(); iter++)
+        {
+          len += common::Serialization::get_string_length(iter->first);
+          len += common::Serialization::get_string_length(iter->second);
+        }
+      }
+
+      return len + INT_SIZE * 2;
     }
 
     void CustomizeInfo::dump() const
     {
-      // TODO
+      int32_t meta_size = meta_data_.size();
+      if (meta_size > 0)
+      {
+        MAP_STRING_ITER iter = meta_data_.begin();
+        for (; iter != meta_data_.end(); iter++)
+        {
+          TBSYS_LOG(DEBUG, "CustomizeInfo: [key: %s, value: %s]", iter->first.c_str(), iter->second.c_str());
+        }
+      }
     }
 
     int CustomizeInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -277,12 +300,25 @@ namespace tfs
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, CUSTOMIZE_INFO_OTAG_TAG);
+        ret = Serialization::set_int32(data, data_len, pos, CUSTOMIZE_INFO_META_DATA_TAG);
       }
-      if (TFS_SUCCESS == ret)
+
+      int32_t meta_size = static_cast<int32_t>(meta_data_.size());
+      ret = Serialization::set_int32(data, data_len, pos, meta_size);
+
+      if (TFS_SUCCESS == ret && meta_size > 0)
       {
-        ret = Serialization::set_string(data, data_len, pos, otag_);
+        MAP_STRING_ITER iter = meta_data_.begin();
+        for (; iter != meta_data_.end() && TFS_SUCCESS == ret; iter++)
+        {
+          ret = Serialization::set_string(data, data_len, pos, iter->first);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = Serialization::set_string(data, data_len, pos, iter->second);
+          }
+        }
       }
+
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int32(data, data_len, pos, END_TAG);
@@ -299,12 +335,32 @@ namespace tfs
         int32_t type_tag = 0;
         ret = Serialization::get_int32(data, data_len, pos, &type_tag);
 
+        int32_t size = 0;
         if (TFS_SUCCESS == ret)
         {
           switch (type_tag)
           {
-            case CUSTOMIZE_INFO_OTAG_TAG:
-              ret = Serialization::get_string(data, data_len, pos, otag_);
+            case CUSTOMIZE_INFO_META_DATA_TAG:
+              ret = Serialization::get_int32(data, data_len, pos, &size);
+
+              if (TFS_SUCCESS == ret && size > 0)
+              {
+                std::string key;
+                std::string value;
+                for (int32_t i = 0; i < size && TFS_SUCCESS == ret; i++)
+                {
+                  ret = Serialization::get_string(data, data_len, pos, key);
+                  if (TFS_SUCCESS == ret)
+                  {
+                    ret = Serialization::get_string(data, data_len, pos, value);
+                  }
+
+                  if (TFS_SUCCESS == ret)
+                  {
+                    meta_data_.insert(std::make_pair(key, value));
+                  }
+                }
+              }
               break;
             case END_TAG:
               ;

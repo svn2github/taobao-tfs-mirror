@@ -95,9 +95,10 @@ namespace tfs
 
     TfsRetType KvMetaClient::put_object(const char *bucket_name,
         const char *object_name, const char* local_file,
-        const common::UserInfo &user_info)
+        const common::UserInfo &user_info,
+        const common::CustomizeInfo &customize_info)
     {
-      return impl_->put_object(bucket_name, object_name, local_file, user_info);
+      return impl_->put_object(bucket_name, object_name, local_file, user_info, customize_info);
     }
 
     int64_t KvMetaClient::pwrite_object(const char *bucket_name,
@@ -105,7 +106,7 @@ namespace tfs
         const int64_t length, const common::UserInfo &user_info)
     {
       return impl_->pwrite_object(bucket_name, object_name, buf, offset,
-          length, user_info);
+          length, user_info, NULL);
     }
 
     int64_t KvMetaClient::pread_object(const char *bucket_name,

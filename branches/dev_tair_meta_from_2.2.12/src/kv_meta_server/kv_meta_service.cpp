@@ -415,7 +415,7 @@ namespace tfs
         const string& prefix = get_bucket_msg->get_prefix();
         const string& start_key = get_bucket_msg->get_start_key();
         char delimiter = get_bucket_msg->get_delimiter();
-        int32_t limit = get_bucket_msg->get_mutable_limit();
+        int32_t limit = get_bucket_msg->get_limit();
 
         ret = meta_info_helper_.get_bucket(bucket_name, prefix, start_key, delimiter, &limit,
             rsp->get_mutable_v_object_meta_info(), rsp->get_mutable_v_object_name(), rsp->get_mutable_s_common_prefix(),

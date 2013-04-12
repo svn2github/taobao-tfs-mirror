@@ -220,9 +220,9 @@ namespace tfs
     }
 
     TfsRetType RcClient::put_object(const char *bucket_name, const char *object_name,
-        const char* local_file, const UserInfo &user_info)
+        const char* local_file, const UserInfo &user_info, const CustomizeInfo &customize_info)
     {
-      return impl_->put_object(bucket_name, object_name, local_file, user_info);
+      return impl_->put_object(bucket_name, object_name, local_file, user_info, customize_info);
     }
 
     int64_t RcClient::pwrite_object(const char *bucket_name, const char *object_name,

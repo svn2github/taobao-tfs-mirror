@@ -878,7 +878,7 @@ namespace tfs
       OBJECT_META_INFO_OWNER_ID_TAG = 205,
 
       //CustomizeInfo struct
-      CUSTOMIZE_INFO_OTAG_TAG = 301,
+      CUSTOMIZE_INFO_META_DATA_TAG = 301,
 
       //ObjectInfo struct
       OBJECT_INFO_HAS_META_INFO_TAG = 401,

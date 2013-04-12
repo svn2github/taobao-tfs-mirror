@@ -495,12 +495,12 @@ namespace tfs
 
     int64_t KvMetaClientImpl::pwrite_object(const char *bucket_name,
         const char *object_name, const void *buffer, int64_t offset,
-        int64_t length, const UserInfo &user_info)
+        int64_t length, const UserInfo &user_info, const CustomizeInfo *customize_info)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
       {
-        TBSYS_LOG(ERROR, "bucket name of object name is invalid ");
+        TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
         ret = EXIT_INVALID_FILE_NAME;
       }
       else if (buffer == NULL || length < 0)
@@ -513,6 +513,10 @@ namespace tfs
         ObjectInfo object_info_null;
         object_info_null.has_meta_info_ = true;
         object_info_null.has_customize_info_ = true;
+        if (NULL != customize_info)
+        {
+          object_info_null.customize_info_ = *customize_info;
+        }
         object_info_null.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
 
         ret = do_put_object(bucket_name, object_name, object_info_null, user_info);
@@ -579,6 +583,10 @@ namespace tfs
               {
                 object_info.has_meta_info_ = true;
                 object_info.has_customize_info_ = true;
+                if (NULL != customize_info)
+                {
+                  object_info.customize_info_ = *customize_info;
+                }
                 object_info.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
                 TBSYS_LOG(DEBUG, "first object info, will put meta info.");
                 object_info.meta_info_.dump();
@@ -646,7 +654,7 @@ namespace tfs
       else if (buffer == NULL || offset < 0 || length < 0)
       {
         TBSYS_LOG(ERROR, "invalid buffer, offset: %"PRI64_PREFIX"d,"
-                  " length: %"PRI64_PREFIX"d", offset, length);
+            " length: %"PRI64_PREFIX"d", offset, length);
         ret = EXIT_INVALID_ARGU_ERROR;
       }
       else
@@ -732,13 +740,16 @@ namespace tfs
     }
 
     TfsRetType KvMetaClientImpl::put_object(const char *bucket_name,
-        const char *object_name, const char* local_file, const UserInfo &user_info)
+        const char *object_name, const char* local_file,
+        const UserInfo &user_info, const CustomizeInfo &customize_info)
     {
       TfsRetType ret = TFS_SUCCESS;
       int fd = -1;
-      if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
+      if (!is_valid_bucket_name(bucket_name)
+          || !is_valid_object_name(object_name)
+          || !is_valid_customize_info(customize_info))
       {
-        TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
+        TBSYS_LOG(ERROR, "bucket_name or object_name or customize_info is invalid ");
         ret = EXIT_INVALID_FILE_NAME;
       }
       else if (NULL == local_file)
@@ -773,7 +784,14 @@ namespace tfs
 
           do
           {
-            write_len = pwrite_object(bucket_name, object_name, buf, offset, read_len, user_info);
+            if (offset == 0)
+            {
+              write_len = pwrite_object(bucket_name, object_name, buf, offset, read_len, user_info, &customize_info);
+            }
+            else
+            {
+              write_len = pwrite_object(bucket_name, object_name, buf, offset, read_len, user_info, NULL);
+            }
             if (write_len < 0)
             {
               TBSYS_LOG(ERROR, "pwrite object fail. bucket: %s, object: %s", bucket_name, object_name);
@@ -1080,7 +1098,7 @@ namespace tfs
         ret = KvMetaHelper::do_put_object(meta_server_id, bucket_name, object_name, object_info, user_info);
 
         update_fail_info(ret);
-              }
+      }
       while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
 
       return ret;
@@ -1225,7 +1243,7 @@ namespace tfs
 
     bool KvMetaClientImpl::is_valid_object_name(const char *object_name)
     {
-      return ((object_name != NULL) && (strlen(object_name) > 0) && (static_cast<int32_t>(strlen(object_name)) < MAX_FILE_PATH_LEN) && (strstr(object_name, " ") == NULL));
+      return ((object_name != NULL) && (strlen(object_name) > 0) && (static_cast<int32_t>(strlen(object_name)) <= MAX_OBJECT_NAME_SIZE) && (strstr(object_name, " ") == NULL));
     }
 
     bool KvMetaClientImpl::is_valid_string(const string &str)
@@ -1272,6 +1290,30 @@ namespace tfs
       return is_valid;
     }
 
+    bool KvMetaClientImpl::is_valid_customize_info(const CustomizeInfo &customize_info)
+    {
+      bool is_valid = true;
+      int32_t meta_size = customize_info.meta_data_.size();
+
+      int32_t len = 0;
+      if (meta_size > 0)
+      {
+        MAP_STRING_ITER iter = customize_info.meta_data_.begin();
+        for (; iter != customize_info.meta_data_.end(); iter++)
+        {
+          len += iter->first.length();
+          len += iter->second.length();
+
+          if (len > MAX_CUSTOMIZE_INFO_SIZE)
+          {
+            is_valid = false;
+            break;
+          }
+        }
+      }
+
+      return is_valid;
+    }
   }
 }
 

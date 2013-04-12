@@ -60,13 +60,14 @@ namespace tfs
 
         int64_t pwrite_object(const char *bucket_name, const char *object_name,
             const void *buffer, int64_t offset, int64_t length,
-            const common::UserInfo &user_info);
+            const common::UserInfo &user_info, const common::CustomizeInfo *customize_info);
         int64_t pread_object(const char *bucket_name, const char *object_name,
             void *buffer, const int64_t offset, int64_t length,
             common::ObjectMetaInfo *object_meta_info, common::CustomizeInfo *customize_info,
             const common::UserInfo &user_info);
         TfsRetType put_object(const char *bucket_name, const char *object_name,
-            const char* local_file, const common::UserInfo &user_info);
+            const char* local_file, const common::UserInfo &user_info,
+            const common::CustomizeInfo &customize_info);
         TfsRetType get_object(const char *bucket_name, const char *object_name,
             const char* local_file, common::ObjectMetaInfo *object_meta_info,
             common::CustomizeInfo *customize_info, const common::UserInfo &user_info);
@@ -107,6 +108,7 @@ namespace tfs
         static bool is_valid_bucket_tag(const common::MAP_STRING &bucket_tag_map);
         static bool is_valid_bucket_name(const char *bucket_name);
         static bool is_valid_object_name(const char *object_name);
+        static bool is_valid_customize_info(const common::CustomizeInfo &customize_info);
 
       private:
         int64_t write_data(const char *ns_addr,

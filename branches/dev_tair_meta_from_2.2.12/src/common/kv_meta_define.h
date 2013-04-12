@@ -36,6 +36,8 @@ namespace tfs
 
     const int32_t MAX_TAG_KEY_LEN = 128;
     const int32_t MAX_TAG_VALUE_LEN = 256;
+    const int32_t MAX_OBJECT_NAME_SIZE = 1024;
+    const int32_t MAX_CUSTOMIZE_INFO_SIZE = 2*(1<<10);
     typedef std::map<std::string, std::string> MAP_STRING;
     typedef std::map<std::string, std::string>::const_iterator MAP_STRING_ITER;
 
@@ -86,7 +88,8 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       void dump() const;
 
-      std::string otag_;
+      // meta_data_ (size of key and value not over 2k)
+      MAP_STRING meta_data_;
     };
 
     struct ObjectInfo

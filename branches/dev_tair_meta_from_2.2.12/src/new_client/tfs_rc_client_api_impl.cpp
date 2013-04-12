@@ -1589,13 +1589,13 @@ namespace tfs
 
 
       TfsRetType RcClientImpl::put_object(const char *bucket_name, const char *object_name,
-          const char* local_file, const common::UserInfo &user_info)
+          const char* local_file, const common::UserInfo &user_info, const common::CustomizeInfo &customize_info)
       {
         TfsRetType ret = check_init_stat();
         if (TFS_SUCCESS == ret)
         {
           ret = kv_meta_client_->put_object(bucket_name, object_name,
-              local_file, user_info);
+              local_file, user_info, customize_info);
         }
         return ret;
       }
@@ -1608,7 +1608,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = kv_meta_client_->pwrite_object(bucket_name, object_name,
-              buf, offset, length, user_info);
+              buf, offset, length, user_info, NULL);
         }
         return ret;
       }
