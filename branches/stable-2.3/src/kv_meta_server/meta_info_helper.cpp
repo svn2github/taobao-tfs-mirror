@@ -1271,8 +1271,8 @@ namespace tfs
       pkey.key_size_ = bucket_name.length();
       pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
 
-      TBSYS_LOG(DEBUG, "get bucket: %s, prefix: %s, start_key: %s, delimiter: %c, limit: %d",
-                bucket_name.c_str(), prefix.c_str(), start_key.c_str(), delimiter, limit);
+      TBSYS_LOG(DEBUG, "get bucket: %s, prefix: %s, start_key: %s, delimiter: %c",
+                bucket_name.c_str(), prefix.c_str(), start_key.c_str(), delimiter);
       // check bucket whether exist
       if (TFS_SUCCESS == ret)
       {
