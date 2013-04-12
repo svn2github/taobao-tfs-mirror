@@ -1062,7 +1062,7 @@ namespace tfs
         string temp_start_key(start_key);
 
         bool loop = true;
-        int32_t first_offset = !start_key.empty() ? 1 : 0;
+        bool first_loop = true;
         do
         {
           int32_t res_size = -1;
@@ -1071,7 +1071,8 @@ namespace tfs
 
           limit_size = *limit - actual_size;
 
-          ret = get_range(pkey, temp_start_key, first_offset, limit_size + 1,
+          int32_t extra = first_loop ? 2 : 1;
+          ret = get_range(pkey, temp_start_key, 0, limit_size + extra,
               &kv_value_keys, &kv_value_values, &res_size);
           // error
           if (TFS_SUCCESS != ret)
@@ -1086,7 +1087,7 @@ namespace tfs
           {
             break;
           }
-          else if (res_size < limit_size + 1)
+          else if (res_size < limit_size + extra)
           {
             loop = false;
           }
@@ -1108,7 +1109,17 @@ namespace tfs
             }
             else if (offset == 0)
             {
-              ret = group_objects(object_name, v, prefix, delimiter, v_object_meta_info, v_object_name, s_common_prefix);
+              if (!first_loop)
+              {
+                ret = group_objects(object_name, v, prefix, delimiter,
+                    v_object_meta_info, v_object_name, s_common_prefix);
+              }
+              else if (object_name.compare(start_key) != 0)
+              {
+                ret = group_objects(object_name, v, prefix, delimiter,
+                    v_object_meta_info, v_object_name, s_common_prefix);
+              }
+
               if (TFS_SUCCESS != ret)
               {
                 TBSYS_LOG(ERROR, "group objects fail, ret: %d", ret);
@@ -1155,7 +1166,7 @@ namespace tfs
           }
           kv_value_keys.clear();
           kv_value_values.clear();
-          first_offset = 0;
+          first_loop = false;
         } while (loop);// end of while
       }// end of if
       return ret;
