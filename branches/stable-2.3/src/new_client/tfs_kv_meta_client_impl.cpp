@@ -612,7 +612,7 @@ namespace tfs
 
           TBSYS_LOG(DEBUG, "vector size ================= is: %lu", object_info.v_tfs_file_info_.size());
 
-          cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_) - offset, left_length);
+          cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_) - cur_offset, left_length);
 
           // read tfs
           read_length = read_data(object_info.v_tfs_file_info_,
