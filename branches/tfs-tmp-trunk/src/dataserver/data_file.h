@@ -74,7 +74,7 @@ namespace tfs
         int32_t length_;        // current max buffer write length
         uint32_t crc_;          // crc checksum
         std::stringstream path_;// file path
-        static const int32_t WRITE_DATA_TMPBUF_SIZE = 2 * 1024 * 1024;
+        static const int32_t WRITE_DATA_TMPBUF_SIZE = 2 * 1024 * 1024 + 128;
         char data_[WRITE_DATA_TMPBUF_SIZE]; // data buffer
         DataFile();
         DISALLOW_COPY_AND_ASSIGN(DataFile);

@@ -590,6 +590,7 @@ namespace tfs
         ret = layout_manager_.get_client_request_server().batch_open(blocks, mode, block_count, meta);
         if (TFS_SUCCESS == ret)
         {
+          reply->set_size(meta.get_array_index());
           ret = message->reply(reply);
         }
         else

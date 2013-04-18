@@ -679,6 +679,12 @@ namespace tfs
         }
       }
 
+      // when move parity block, marshalling offset should be set to target
+      if (INVALID_FAMILY_ID != family_id)
+      {
+        ret = get_block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
+      }
+
       // commit block, update version and switch
       if (TFS_SUCCESS == ret)
       {
@@ -1466,6 +1472,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           // success, do clear work, ignore return value
+          clear_family_id();
           delete_parity_blocks();
         }
       }
@@ -1508,6 +1515,36 @@ namespace tfs
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to replicate, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
 
+      }
+
+      return ret;
+    }
+
+    int DissolveTask::clear_family_id()
+    {
+      int ret = TFS_SUCCESS;
+      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
+      int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_) / 2;
+      int32_t total_num = data_num + check_num;
+
+      for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
+      {
+        if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
+        {
+          continue;  // lost block, needn't clear
+        }
+
+        // ignore return value
+        // if fail, family id will be cleared in next report
+        ECMeta ec_meta;
+        ec_meta.family_id_ = INVALID_FAMILY_ID;
+        get_data_helper().commit_ec_meta(family_members_[i].server_,
+            family_members_[i].block_, ec_meta, SWITCH_BLOCK_NO);
+        get_data_helper().commit_ec_meta(family_members_[i+total_num].server_,
+            family_members_[i+total_num].block_, ec_meta, SWITCH_BLOCK_NO);
+
+        TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to clear family id, ret: %d",
+            seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
       }
 
       return ret;

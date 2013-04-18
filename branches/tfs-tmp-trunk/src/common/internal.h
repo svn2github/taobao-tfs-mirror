@@ -649,6 +649,11 @@ namespace tfs
       int32_t start_time_;
       int32_t is_move_;
       int32_t source_num_;
+
+      ReplBlock(): block_id_(INVALID_BLOCK_ID), destination_id_(INVALID_SERVER_ID),
+        start_time_(0), is_move_(0), source_num_(0)
+      {
+      }
     };
 
     struct CheckBlockInfo

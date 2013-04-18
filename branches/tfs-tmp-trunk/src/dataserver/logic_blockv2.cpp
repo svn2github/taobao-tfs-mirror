@@ -259,7 +259,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = index_handle_->write_file_infos(header, infos,
-            sbinfo->max_use_hash_bucket_ratio_, logic_block_id, partial);
+            sbinfo->max_use_hash_bucket_ratio_, sbinfo->max_hash_bucket_count_, logic_block_id, partial);
       }
       return ret;
     }

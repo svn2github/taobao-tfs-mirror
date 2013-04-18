@@ -325,6 +325,7 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(DissolveTask);
         int do_dissolve();
         int replicate_data_blocks();
+        int clear_family_id();
         int delete_parity_blocks();
 
       private:
