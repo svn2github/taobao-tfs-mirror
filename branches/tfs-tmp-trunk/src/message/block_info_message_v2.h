@@ -187,6 +187,16 @@ namespace tfs
           return index_num_;
         }
 
+        void set_expire_time(const uint32_t expire_time)
+        {
+          expire_time_ = expire_time;
+        }
+
+        uint32_t get_expire_time() const
+        {
+          return expire_time_;
+        }
+
         void set_tmp_flag(const bool tmp)
         {
           tmp_ = tmp;
@@ -201,6 +211,7 @@ namespace tfs
         uint64_t block_id_;
         uint64_t family_id_;
         int32_t index_num_;
+        int32_t expire_time_;
         int8_t tmp_;
     };
 

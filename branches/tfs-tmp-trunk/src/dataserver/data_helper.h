@@ -42,8 +42,9 @@ namespace tfs
         int send_simple_request(uint64_t server_id, common::BasePacket* message);
 
         int new_remote_block(const uint64_t server_id, const uint64_t block_id,
-            const bool tmp = false, const uint64_t family_id = common::INVALID_FAMILY_ID ,
-            const int32_t index_num = 0);
+            const bool tmp = false, const uint64_t family_id = common::INVALID_FAMILY_ID,
+            const int32_t index_num = 0,
+            const int32_t expire_time = DEFAULT_BLOCK_EXPIRE_TIME);
         int delete_remote_block(const uint64_t server_id, const uint64_t block_id,
             const bool tmp = false);
 
@@ -79,7 +80,8 @@ namespace tfs
       private:
         int new_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
             const bool tmp = false, const uint64_t family_id = common::INVALID_FAMILY_ID ,
-            const int32_t index_num = 0);
+            const int32_t index_num = 0,
+            const int32_t expire_time = DEFAULT_BLOCK_EXPIRE_TIME);
         int delete_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
             const bool tmp = false);
 

@@ -316,12 +316,11 @@ namespace tfs
 
     int LogicBlockManager::timeout(std::vector<uint64_t>& expired_blocks, const time_t now)
     {
-     const int32_t EXPIRED_TIME_S = 3 * 60;
       expired_blocks.clear();
       TMP_LOGIC_BLOCK_MAP_ITER iter = tmp_logic_blocks_.begin();
       for (; iter != tmp_logic_blocks_.end(); ++iter)
       {
-       if ((iter->second->get_last_update_time() + EXPIRED_TIME_S) <= now)
+       if ((iter->second->get_last_update_time() + iter->second->get_expire_time()) <= now)
           expired_blocks.push_back(iter->second->id());
       }
       return TFS_SUCCESS;

@@ -750,11 +750,13 @@ namespace tfs
       int64_t family_id = message->get_family_id();
       int8_t index_num = message->get_index_num();
       bool tmp = message->get_tmp_flag();
-      int ret = get_block_manager().new_block(block_id, tmp, family_id, index_num);
+      int32_t expire_time = message->get_expire_time();
+      int ret = get_block_manager().new_block(block_id, tmp, family_id, index_num, expire_time);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(WARN, "new block %"PRI64_PREFIX"u fail, tmp: %d, family_id: %"PRI64_PREFIX"u, "
-            "index num: %d, ret: %d", block_id, tmp, family_id, index_num, ret);
+            "index num: %d, expire time: %d, ret: %d",
+            block_id, tmp, family_id, index_num, expire_time, ret);
       }
       else
       {

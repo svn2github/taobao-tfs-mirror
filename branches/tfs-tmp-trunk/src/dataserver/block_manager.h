@@ -52,7 +52,7 @@ namespace tfs
         int cleanup(const common::FileSystemParameter& parameter);
         int bootstrap(const common::FileSystemParameter& parameter);
 
-        int new_block(const uint64_t logic_block_id, const bool tmp = false, const int64_t family_id = common::INVALID_FAMILY_ID, const int8_t index_num = 0);
+        int new_block(const uint64_t logic_block_id, const bool tmp = false, const int64_t family_id = common::INVALID_FAMILY_ID, const int8_t index_num = 0, const int32_t expire_time = DEFAULT_BLOCK_EXPIRE_TIME);
         int del_block(const uint64_t logic_block_id, const bool tmp = false);
         BaseLogicBlock* get(const uint64_t logic_block_id, const bool tmp = false) const;
         int get_all_block_ids(std::vector<uint64_t>& blocks) const;
@@ -116,7 +116,7 @@ namespace tfs
         int fallocate_block_(const common::FileSystemParameter& parameter);
 
         BasePhysicalBlock* insert_physical_block_(const SuperBlockInfo& info, const BlockIndex& index, const int32_t physical_block_id, const std::string& path);
-        BaseLogicBlock* insert_logic_block_(const uint64_t logic_block_id, const std::string& index_path, const bool tmp = false);
+        BaseLogicBlock* insert_logic_block_(const uint64_t logic_block_id, const std::string& index_path, const bool tmp = false, const int32_t expire_time = DEFAULT_BLOCK_EXPIRE_TIME);
         BaseLogicBlock* get_(const uint64_t logic_block_id, const bool tmp = false) const;
         bool exist_(const uint64_t logic_block_id, const bool tmp = false) const;
         int del_block_(const uint64_t logic_block_id, const bool tmp = false);

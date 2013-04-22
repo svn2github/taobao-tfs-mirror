@@ -227,6 +227,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = output.set_int32(expire_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = output.set_int8(tmp_);
       }
 
@@ -248,6 +253,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = input.get_int32(&expire_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = input.get_int8(&tmp_);
       }
 
@@ -256,7 +266,7 @@ namespace tfs
 
     int64_t NewBlockMessageV2::length() const
     {
-      return 2 * INT64_SIZE + INT_SIZE + INT8_SIZE;
+      return 2 * INT64_SIZE + 2 * INT_SIZE + INT8_SIZE;
     }
 
     RemoveBlockMessageV2::RemoveBlockMessageV2():

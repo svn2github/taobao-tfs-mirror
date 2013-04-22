@@ -45,6 +45,8 @@ namespace tfs
       explicit BaseLogicBlock(const uint64_t logic_block_id); //for query
       virtual ~BaseLogicBlock();
       inline uint64_t id() const { return logic_block_id_;}
+      void set_expire_time(const int32_t expire_time);
+      int32_t get_expire_time() const;
       int remove_self_file();
       int rename_index_filename();
       int add_physical_block(PhysicalBlock* block);
@@ -92,6 +94,7 @@ namespace tfs
       BaseIndexHandle* index_handle_;//index operation handle
       PHYSICAL_BLOCK_LIST physical_block_list_;//the physical block list of this logic block
       mutable common::RWLock mutex_;
+      int32_t expire_time_;
     };
 
     class LogicBlock : public BaseLogicBlock

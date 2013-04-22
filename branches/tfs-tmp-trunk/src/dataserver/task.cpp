@@ -652,7 +652,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = get_data_helper().new_remote_block(dest_id,
-            block_id, true, family_id, index_num);
+            block_id, true, family_id, index_num, expire_time_);
       }
 
       // replicate data
@@ -917,7 +917,7 @@ namespace tfs
       for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
       {
         ret = get_data_helper().new_remote_block(family_members_[i].server_,
-            family_members_[i].block_, true, family_id_, data_num);
+            family_members_[i].block_, true, family_id_, data_num, expire_time_);
       }
 
       // encode data & write to parity block
@@ -1036,12 +1036,12 @@ namespace tfs
         if (i < data_num)  // create data block
         {
           ret = get_data_helper().new_remote_block(family_members_[i].server_,
-            family_members_[i].block_, true);
+            family_members_[i].block_, true, INVALID_FAMILY_ID, 0, expire_time_);
         }
         else // create parity block
         {
           ret = get_data_helper().new_remote_block(family_members_[i].server_,
-              family_members_[i].block_, true, family_id_, data_num);
+              family_members_[i].block_, true, family_id_, data_num, expire_time_);
         }
       }
 

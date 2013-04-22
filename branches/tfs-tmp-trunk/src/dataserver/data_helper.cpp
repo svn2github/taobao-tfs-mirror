@@ -66,14 +66,14 @@ namespace tfs
     }
 
     int DataHelper::new_remote_block(const uint64_t server_id, const uint64_t block_id,
-        const bool tmp, const uint64_t family_id, const int32_t index_num)
+        const bool tmp, const uint64_t family_id, const int32_t index_num, const int32_t expire_time)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
-          (index_num < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+          (index_num < 0) || (expire_time < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       if (TFS_SUCCESS == ret)
       {
-        ret = new_remote_block_ex(server_id, block_id, tmp, family_id, index_num);
+        ret = new_remote_block_ex(server_id, block_id, tmp, family_id, index_num, expire_time);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "new remote block fail. server: %s, blockid: %"PRI64_PREFIX"u, "
@@ -374,13 +374,13 @@ namespace tfs
     }
 
     int DataHelper::new_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
-        const bool tmp, const uint64_t family_id, const int32_t index_num)
+        const bool tmp, const uint64_t family_id, const int32_t index_num, const int32_t expire_time)
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       if (server_id == ds_info.information_.id_)
       {
-        ret = get_block_manager().new_block(block_id, tmp, family_id, index_num);
+        ret = get_block_manager().new_block(block_id, tmp, family_id, index_num, expire_time);
       }
       else
       {
@@ -389,6 +389,7 @@ namespace tfs
         req_msg.set_tmp_flag(tmp);
         req_msg.set_family_id(family_id);
         req_msg.set_index_num(index_num);
+        req_msg.set_expire_time(expire_time);
 
         ret = send_simple_request(server_id, &req_msg);
       }

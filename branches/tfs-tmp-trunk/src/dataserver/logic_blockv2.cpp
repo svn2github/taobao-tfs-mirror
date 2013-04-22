@@ -34,7 +34,8 @@ namespace tfs
       manager_(manager),
       logic_block_id_(logic_block_id),
       data_handle_(*this),
-      index_handle_(NULL)
+      index_handle_(NULL),
+      expire_time_(0)
     {
       if (IS_VERFIFY_BLOCK(logic_block_id))
         index_handle_ = new (std::nothrow)VerifyIndexHandle(index_path);
@@ -47,7 +48,8 @@ namespace tfs
       manager_(NULL),
       logic_block_id_(logic_block_id),
       data_handle_(*this),
-      index_handle_(NULL)
+      index_handle_(NULL),
+      expire_time_(0)
     {
 
     }
@@ -55,6 +57,16 @@ namespace tfs
     BaseLogicBlock::~BaseLogicBlock()
     {
       tbsys::gDelete(index_handle_);
+    }
+
+    void BaseLogicBlock::set_expire_time(const int32_t expire_time)
+    {
+      expire_time_ = expire_time;
+    }
+
+    int32_t BaseLogicBlock::get_expire_time() const
+    {
+      return expire_time_;
     }
 
     int BaseLogicBlock::remove_self_file()

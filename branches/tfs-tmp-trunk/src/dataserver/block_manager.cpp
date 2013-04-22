@@ -84,7 +84,7 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::new_block(const uint64_t logic_block_id, const bool tmp, const int64_t family_id, const int8_t index_num)
+    int BlockManager::new_block(const uint64_t logic_block_id, const bool tmp, const int64_t family_id, const int8_t index_num, const int32_t expire_time)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       SuperBlockInfo* info = NULL;
@@ -113,7 +113,7 @@ namespace tfs
         {
           std::stringstream index_path;
           index_path << info->mount_point_ << INDEX_DIR_PREFIX << index.physical_block_id_;
-          logic_block = insert_logic_block_(index.logic_block_id_, index_path.str(), tmp);
+          logic_block = insert_logic_block_(index.logic_block_id_, index_path.str(), tmp, expire_time);
           ret = (NULL != logic_block) ? TFS_SUCCESS : EXIT_ADD_LOGIC_BLOCK_ERROR;
           if (TFS_SUCCESS != ret)
           {
@@ -148,8 +148,8 @@ namespace tfs
           }
         }
       }
-      TBSYS_LOG(INFO, "new block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s, family id: %"PRI64_PREFIX"d, index_num: %d",
-          logic_block_id, TFS_SUCCESS == ret ? "successful" : "failed", ret, tmp ? "true" : "false", family_id, index_num);
+      TBSYS_LOG(INFO, "new block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s, family id: %"PRI64_PREFIX"d, index_num: %d, expire_time: %d",
+          logic_block_id, TFS_SUCCESS == ret ? "successful" : "failed", ret, tmp ? "true" : "false", family_id, index_num, expire_time);
       return ret;
     }
 
@@ -250,7 +250,7 @@ namespace tfs
         std::vector<uint64_t>::const_iterator iter = expired_blocks.begin();
         for (; iter != expired_blocks.end(); ++iter)
         {
-          TBSYS_LOG(DEBUG, "timeout logic block %"PRI64_PREFIX"u", *iter);
+          TBSYS_LOG(INFO, "timeout logic block %"PRI64_PREFIX"u", *iter);
           ret = del_block_((*iter), true);
           if (TFS_SUCCESS != ret)
           {
@@ -989,7 +989,7 @@ namespace tfs
       return physical_block;
     }
 
-    BaseLogicBlock* BlockManager::insert_logic_block_(const uint64_t logic_block_id, const std::string& index_path, const bool tmp)
+    BaseLogicBlock* BlockManager::insert_logic_block_(const uint64_t logic_block_id, const std::string& index_path, const bool tmp, const int32_t expire_time)
     {
       BaseLogicBlock* logic_block = NULL;
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id && !index_path.empty()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -1000,6 +1000,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         logic_block = get_logic_block_manager().get(logic_block_id, tmp);
+        if ((NULL != logic_block) && tmp)
+        {
+          logic_block->set_expire_time(expire_time);
+        }
       }
       return logic_block;
     }
