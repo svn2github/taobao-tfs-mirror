@@ -114,7 +114,7 @@ namespace tfs
       bool check_need_reinstate(common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members,
           const FamilyCollect* family, const time_t now) const;
       bool check_need_dissolve(const FamilyCollect* family,
-          const common::ArrayHelper<common::FamilyMemberInfo>& need_reinstate_members) const;
+          const common::ArrayHelper<common::FamilyMemberInfo>& need_reinstate_members, const time_t now) const;
       bool check_need_compact(const FamilyCollect* family, const time_t now) const;
       void dump_marshalling_queue(const int32_t level, const char* format = NULL) const;
     private:

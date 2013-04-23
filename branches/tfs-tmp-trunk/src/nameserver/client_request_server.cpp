@@ -494,8 +494,8 @@ namespace tfs
         GCObject* pobject = NULL;
         if (info.value4_ & HANDLE_DELETE_BLOCK_FLAG_BOTH)
         {
-          uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-          ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+          uint64_t servers[MAX_REPLICATION_NUM];
+          ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
           ret = manager_.get_block_manager().get_servers(helper, info.value3_);
           if (TFS_SUCCESS != ret)
           {
@@ -528,8 +528,8 @@ namespace tfs
         }
         else if (info.value4_ & HANDLE_DELETE_BLOCK_FLAG_ONLY_DS)
         {
-          uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-          ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+          uint64_t servers[MAX_REPLICATION_NUM];
+          ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
           ret = manager_.get_block_manager().get_servers(helper, info.value3_);
           if (TFS_SUCCESS != ret)
           {
@@ -584,8 +584,8 @@ namespace tfs
       int32_t ret = ((NULL == buf) || (buf_length <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-        ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+        uint64_t servers[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
         ret = manager_.get_block_manager().get_servers(helper, info.value3_);
         if (TFS_SUCCESS != ret)
           snprintf(buf, buf_length, " block: %"PRI64_PREFIX"u no exist or dataserver not found, ret: %d", info.value3_, ret);
@@ -624,8 +624,8 @@ namespace tfs
         {
           ServerCollect* source = NULL;
           ServerCollect* target = NULL;
-          uint64_t servers[SYSPARAM_NAMESERVER.max_replication_ + 1];
-          ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_ + 1, servers);
+          uint64_t servers[MAX_REPLICATION_NUM+ 1];
+          ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM+ 1, servers);
           manager_.get_block_manager().get_servers(helper, info.value3_);
           if (0 != info.value1_)
             source = manager_.get_server_manager().get(info.value1_);

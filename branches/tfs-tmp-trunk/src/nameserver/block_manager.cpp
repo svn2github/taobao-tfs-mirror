@@ -681,7 +681,7 @@ namespace tfs
     bool BlockManager::need_compact(const BlockCollect* block, const time_t now, const bool check_in_family) const
     {
       RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
-      return (NULL != block) ? (block->check_compact(check_in_family) && (!has_write_(block->id(), now))) : false;
+      return (NULL != block) ? (block->check_compact(now, check_in_family) && (!has_write_(block->id(), now))) : false;
     }
 
     bool BlockManager::need_compact(ArrayHelper<uint64_t>& servers, const BlockCollect* block, const time_t now, const bool check_in_family) const
@@ -690,7 +690,7 @@ namespace tfs
       if (ret)
       {
         get_mutex_(block->id()).rdlock();
-        ret = ((block->check_compact(check_in_family)) && (!has_write_(block->id(), now)));
+        ret = ((block->check_compact(now,check_in_family)) && (!has_write_(block->id(), now)));
         if (ret)
           block->get_servers(servers);
         get_mutex_(block->id()).unlock();
@@ -776,7 +776,7 @@ namespace tfs
       bool ret = last_write_blocks_[get_chunk_(block)].end() == iter ? false : now < iter->second;
       if (ret)
       {
-        TBSYS_LOG(DEBUG, "block : %"PRI64_PREFIX"u, %d, %ld, %ld", block,
+        TBSYS_LOG(INFO, "block : %"PRI64_PREFIX"u, %d, %ld, %ld", block,
           last_write_blocks_[get_chunk_(block)].end() == iter, iter->second, now);
       }
       return ret;

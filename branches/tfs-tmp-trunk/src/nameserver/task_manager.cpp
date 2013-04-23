@@ -123,8 +123,8 @@ namespace tfs
           {
             int64_t index = 0;
             uint64_t server = INVALID_SERVER_ID;
-            std::pair<uint64_t, bool> success[SYSPARAM_NAMESERVER.max_replication_];
-            ArrayHelper<std::pair<uint64_t, bool> > helper(SYSPARAM_NAMESERVER.max_replication_, success);
+            std::pair<uint64_t, bool> success[MAX_REPLICATION_NUM];
+            ArrayHelper<std::pair<uint64_t, bool> > helper(MAX_REPLICATION_NUM, success);
             for (index = 0; index < servers.get_array_index() && TFS_SUCCESS == ret; ++index)
             {
               server = *servers.at(index);

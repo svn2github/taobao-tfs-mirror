@@ -268,7 +268,16 @@ namespace tfs
         if (GFactory::get_runtime_info().is_master())
           msg->reply(new StatusMessage(ret));
       }
-      return (ret == STATUS_MESSAGE_OK || ret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : ret;
+      ret = (ret == STATUS_MESSAGE_OK || ret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : ret;
+      if (TFS_SUCCESS != ret || status_ != PLAN_STATUS_END)
+      {
+        BlockCollect* block = manager_.get_manager().get_block_manager().get(block_);
+        if (NULL != block)
+        {
+          block->update_last_time(common::Func::get_monotonic_time() + SYSPARAM_NAMESERVER.move_task_expired_time_);
+        }
+      }
+      return ret;
     }
 
     MoveTask::MoveTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers):
@@ -373,6 +382,14 @@ namespace tfs
         if ( GFactory::get_runtime_info().is_master())
           message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
+      if (TFS_SUCCESS != ret || status_ != PLAN_STATUS_END)
+      {
+        BlockCollect* block = manager_.get_manager().get_block_manager().get(block_);
+        if (NULL != block)
+        {
+          block->update_last_time(common::Func::get_monotonic_time() + SYSPARAM_NAMESERVER.compact_task_expired_time_);
+        }
+      }
       return ret;
     }
 
@@ -464,8 +481,8 @@ namespace tfs
               const int32_t MEMBER_NUM = CHECK_MEMBER_NUM + DATA_MEMBER_NUM;
               const int32_t MAX_DELETE_BLOCK_ARRAY_SIZE = MEMBER_NUM * SYSPARAM_NAMESERVER.max_replication_;
               std::pair<ServerCollect*, BlockCollect*> del_items[MAX_DELETE_BLOCK_ARRAY_SIZE];
-              uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-              ArrayHelper<uint64_t> helper2(SYSPARAM_NAMESERVER.max_replication_, servers);
+              uint64_t servers[MAX_REPLICATION_NUM];
+              ArrayHelper<uint64_t> helper2(MAX_REPLICATION_NUM, servers);
               for (; index < DATA_MEMBER_NUM && TFS_SUCCESS == ret; ++index)
               {
                 helper2.clear();
@@ -700,6 +717,14 @@ namespace tfs
                       ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
         ret = msg->reply(reply_msg);
       }
+      if (TFS_SUCCESS != ret || status_ != PLAN_STATUS_END)
+      {
+        FamilyCollect* family = manager_.get_manager().get_family_manager().get(family_id_);
+        if (NULL != family)
+        {
+          family->update_last_time(common::Func::get_monotonic_time() + SYSPARAM_NAMESERVER.reinstate_task_expired_time_);
+        }
+      }
       return ret;
     }
 
@@ -817,6 +842,14 @@ namespace tfs
         StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
                       ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
         ret = msg->reply(reply_msg);
+      }
+      if (TFS_SUCCESS != ret || status_ != PLAN_STATUS_END)
+      {
+        FamilyCollect* family = manager_.get_manager().get_family_manager().get(family_id_);
+        if (NULL != family)
+        {
+          family->update_last_time(common::Func::get_monotonic_time() + SYSPARAM_NAMESERVER.dissolve_task_expired_time_);
+        }
       }
       return ret;
     }

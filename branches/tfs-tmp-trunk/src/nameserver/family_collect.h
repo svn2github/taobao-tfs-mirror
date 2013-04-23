@@ -70,6 +70,10 @@ namespace tfs
       inline int32_t get_family_aid_info() const { return family_aid_info_;}
       inline bool in_reinstate_or_dissolve_queue() const { return FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES == in_reinstate_or_dissolve_queue_;}
       inline void set_in_reinstate_or_dissolve_queue(const int8_t falg = FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES) { in_reinstate_or_dissolve_queue_ = falg;}
+      bool check_need_reinstate(const time_t now) const;
+      bool check_need_dissolve(const time_t now) const;
+      bool check_need_compact(const time_t now) const;
+
     private:
       DISALLOW_COPY_AND_ASSIGN(FamilyCollect);
       int64_t family_id_;//family id

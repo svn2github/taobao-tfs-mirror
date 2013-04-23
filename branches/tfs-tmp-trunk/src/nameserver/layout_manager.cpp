@@ -70,9 +70,9 @@ namespace tfs
       last_rotate_log_time_ = 0;
       plan_run_flag_ |= PLAN_RUN_FLAG_MOVE;
       plan_run_flag_ |= PLAN_RUN_FLAG_COMPACT;
-      plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;
-      plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
-      plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
+      //plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;//TODO
+      //plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
+      //plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
     }
 
 
@@ -305,8 +305,8 @@ namespace tfs
       int32_t ret = ((NULL != msg) && (length > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-        ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+        uint64_t servers[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
         BlockCollect* block = get_block_manager().get(block_id);
         ret = (NULL == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
@@ -587,7 +587,7 @@ namespace tfs
     void LayoutManager::build_()
     {
       bool over = false;
-      int32_t loop = 0;
+      int32_t loop = 0, sleep_time = 0;
       uint64_t block_start = 0;
       time_t  now = 0, current = 0;
       int64_t need = 0, family_start = 0;
@@ -673,7 +673,9 @@ namespace tfs
           }
         }
         ++loop;
-        usleep(get_block_manager().has_emergency_replicate_in_queue() ? MAX_SLEEP_TIME_US : MIN_SLEEP_TIME_US);
+        sleep_time = (get_block_manager().has_emergency_replicate_in_queue()
+                      || get_family_manager().reinstate_or_dissolve_queue_empty()) ? MAX_SLEEP_TIME_US : MIN_SLEEP_TIME_US;
+        usleep(sleep_time);
       }
     }
 
@@ -725,8 +727,11 @@ namespace tfs
             // find move src and dest ds list
             get_server_manager().move_split_servers(source, targets, percent);
 
-            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source : %zd, target: %d, percent: %e",
-                need, source.size(), targets.size(), percent);
+            const int64_t replicate_queue_size = get_block_manager().get_emergency_replicate_queue_size();
+            const int64_t reinsate_or_dissolve_queue_size = get_family_manager().get_reinstate_or_dissolve_queue_size();
+            const int64_t marshalling_queue_size = get_family_manager().get_marshalling_queue_size();
+            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source: %zd, target: %d, percent: %e, emergency_replicate_queue: %"PRI64_PREFIX"d, reinsate or dissolve queue: %"PRI64_PREFIX"d, marshalling queue: %"PRI64_PREFIX"d",
+              need, source.size(), targets.size(), percent, replicate_queue_size, reinsate_or_dissolve_queue_size, marshalling_queue_size);
 
             bool complete = false;
             now = Func::get_monotonic_time();
@@ -1041,10 +1046,10 @@ namespace tfs
           msg.set_block_id(block_id);
           uint8_t send_id = 0;
           std::string all_servers, success_servers;
-          uint64_t send_msg_success[SYSPARAM_NAMESERVER.max_replication_];
-          ArrayHelper<uint64_t> send_msg_success_helper(SYSPARAM_NAMESERVER.max_replication_, send_msg_success);
-          uint64_t send_msg_fail[SYSPARAM_NAMESERVER.max_replication_];
-          ArrayHelper<uint64_t> send_msg_fail_helper(SYSPARAM_NAMESERVER.max_replication_, send_msg_fail);
+          uint64_t send_msg_success[MAX_REPLICATION_NUM];
+          ArrayHelper<uint64_t> send_msg_success_helper(MAX_REPLICATION_NUM, send_msg_success);
+          uint64_t send_msg_fail[MAX_REPLICATION_NUM];
+          ArrayHelper<uint64_t> send_msg_fail_helper(MAX_REPLICATION_NUM, send_msg_fail);
 
           for (int64_t index = 0; index < servers.get_array_index() && TFS_SUCCESS == ret; ++index)
           {
@@ -1076,8 +1081,8 @@ namespace tfs
           }
           else //有发消息成的
           {
-            uint64_t success[SYSPARAM_NAMESERVER.max_replication_];
-            ArrayHelper<uint64_t> success_helper(SYSPARAM_NAMESERVER.max_replication_, success);
+            uint64_t success[MAX_REPLICATION_NUM];
+            ArrayHelper<uint64_t> success_helper(MAX_REPLICATION_NUM, success);
             client->wait();
             NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
             NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
@@ -1152,10 +1157,10 @@ namespace tfs
       int32_t ret =  (0 != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        uint64_t exist[SYSPARAM_NAMESERVER.max_replication_];
-        ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, exist);
-        uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-        ArrayHelper<uint64_t> news(SYSPARAM_NAMESERVER.max_replication_, servers);
+        uint64_t exist[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, exist);
+        uint64_t servers[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> news(MAX_REPLICATION_NUM, servers);
         bool new_create_block_collect = false;
         block = get_block_manager().get(block_id);
         if (NULL == block)//block not found in nameserver meta
@@ -1222,10 +1227,10 @@ namespace tfs
       int32_t ret =  (0 == block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        uint64_t result[SYSPARAM_NAMESERVER.max_replication_];
-        ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, result);
-        uint64_t news[SYSPARAM_NAMESERVER.max_replication_];
-        ArrayHelper<uint64_t> news_helper(SYSPARAM_NAMESERVER.max_replication_, news);
+        uint64_t result[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, result);
+        uint64_t news[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> news_helper(MAX_REPLICATION_NUM, news);
         if (NULL != server)
           helper.push_back(server->id());
 
@@ -1306,13 +1311,13 @@ namespace tfs
         FamilyMemberInfo members[MAX_MARSHALLING_NUM];
         ArrayHelper<FamilyMemberInfo> helper(MAX_MARSHALLING_NUM, members);
         int64_t count = get_family_manager().get_reinstate_or_dissolve_queue_size();
-        count = std::max(count, MAX_QUERY_FAMILY_NUMS);
+        count = std::min(count, MAX_QUERY_FAMILY_NUMS);
         while (need > 0 && count > 0 && (NULL != (family = get_family_manager().pop_from_reinstate_or_dissolve_queue())))
         {
           --count;
           helper.clear();
           reinstate = get_family_manager().check_need_reinstate(helper, family, now);
-          dissolve  = get_family_manager().check_need_dissolve(family, helper);
+          dissolve  = get_family_manager().check_need_dissolve(family, helper, now);
           ret = (reinstate && !dissolve);
           if ((ret) && (ret = build_reinstate_task_(need, family, helper, now)))
             --need;
@@ -1423,8 +1428,8 @@ namespace tfs
       int ret = ((NULL != block) && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-        ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+        uint64_t servers[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
         if (get_block_manager().need_compact(helper, block, now))
         {
           ret = get_task_manager().add(block->id(), helper, PLAN_TYPE_COMPACT, now);
@@ -1440,8 +1445,8 @@ namespace tfs
       if (ret)
       {
         ServerCollect* result= NULL;
-        uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-        ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+        uint64_t servers[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
         ret = get_block_manager().need_balance(helper, block, now);
         if (ret)
         {
@@ -1809,7 +1814,7 @@ namespace tfs
         {
 
         }
-        ret = ((!ret) && get_family_manager().check_need_dissolve(family, helper));
+        ret = ((!ret) && get_family_manager().check_need_dissolve(family, helper, now));
         if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_DISSOLVE)))
         {
 

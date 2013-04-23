@@ -479,8 +479,8 @@ namespace tfs
       bool ret = (NULL != block);
       if (ret)
       {
-        uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-        common::ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+        uint64_t servers[MAX_REPLICATION_NUM];
+        common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
         if (ret = (manager_.get_block_manager().need_marshalling(helper, block, now)
           && !manager_.get_task_manager().exist_block(block->id())
           && !manager_.get_task_manager().exist(helper)))
@@ -713,8 +713,8 @@ namespace tfs
           {
             int64_t index = 0;
             ServerCollect* target = NULL;
-            uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
-            common::ArrayHelper<uint64_t> helper2(SYSPARAM_NAMESERVER.max_replication_, servers);
+            uint64_t servers[MAX_REPLICATION_NUM];
+            common::ArrayHelper<uint64_t> helper2(MAX_REPLICATION_NUM, servers);
             for (; index < DATA_MEMBER_NUM; ++index)
             {
               target = NULL;
@@ -750,7 +750,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = manager_.get_task_manager().exist_family(family->get_family_id()) ? EXIT_FAMILY_EXISTED_IN_TASK_QUEUE_ERROR : TFS_SUCCESS;
-        if (TFS_SUCCESS == ret)
+        if (TFS_SUCCESS == ret && family->check_need_reinstate(now))
         {
           const int32_t MEMBER_NUM = family->get_data_member_num() + family->get_check_member_num();
           BlockCollect* blocks[MEMBER_NUM];
@@ -776,13 +776,13 @@ namespace tfs
       return reinstate_members.get_array_index() > 0;
     }
 
-    bool FamilyManager::check_need_dissolve(const FamilyCollect* family, const common::ArrayHelper<FamilyMemberInfo>& need_reinstate_members) const
+    bool FamilyManager::check_need_dissolve(const FamilyCollect* family, const common::ArrayHelper<FamilyMemberInfo>& need_reinstate_members, const time_t now) const
     {
       bool ret = (NULL != family);
       if (ret)
       {
         ret = !manager_.get_task_manager().exist_family(family->get_family_id());
-        if (ret)
+        if (ret && family->check_need_dissolve(now))
           ret = need_reinstate_members.get_array_index() > family->get_check_member_num();
       }
       return ret;
@@ -796,7 +796,7 @@ namespace tfs
       {
         ret = !manager_.get_task_manager().exist_family(family->get_family_id());
       }
-      if (ret)
+      if (ret && family->check_need_compact(now))
       {
         ret = CHECK_MEMBER_NUM_V2(family->get_data_member_num(),  family->get_check_member_num());
         if (ret)

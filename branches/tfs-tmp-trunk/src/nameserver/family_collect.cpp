@@ -202,5 +202,20 @@ namespace tfs
       return TFS_SUCCESS == ret ? complete ? TFS_SUCCESS : EXIT_NO_BLOCK : ret;
     }
     #endif
+
+    bool FamilyCollect::check_need_reinstate(const time_t now) const
+    {
+      return (last_update_time_ + SYSPARAM_NAMESERVER.reinstate_task_expired_time_) <= now;
+    }
+
+    bool FamilyCollect::check_need_dissolve(const time_t now) const
+    {
+      return (last_update_time_ + SYSPARAM_NAMESERVER.dissolve_task_expired_time_) <= now;
+    }
+
+    bool FamilyCollect::check_need_compact(const time_t now) const
+    {
+      return (last_update_time_ + SYSPARAM_NAMESERVER.compact_task_expired_time_) <= now;
+    }
   }/** end namespace nameserver **/
 }/** end namespace tfs **/
