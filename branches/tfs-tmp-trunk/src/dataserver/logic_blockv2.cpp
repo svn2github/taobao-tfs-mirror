@@ -63,7 +63,6 @@ namespace tfs
     {
       expire_time_ = expire_time;
     }
-
     int32_t BaseLogicBlock::get_expire_time() const
     {
       return expire_time_;
@@ -506,11 +505,15 @@ namespace tfs
           int32_t retry_times = (total_need_length / super_info->max_extend_block_size_) + 1;
           while (TFS_SUCCESS == ret && avail_size < total_offset && retry_times-- > 0)
           {
-            TBSYS_LOG(INFO, "extend logic block: %"PRI64_PREFIX"u,avail_size: %d, total_offset: %d",
-                id(), avail_size, total_offset);
+            TBSYS_LOG(INFO, "extend logic block: %"PRI64_PREFIX"u,avail_size: %d, total_offset: %d, max_single_block_size: %d",
+                id(), avail_size, total_offset, MAX_MAIN_AND_EXT_BLOCK_SIZE);
             BlockIndex index, ext_index;
             BasePhysicalBlock* new_physical_block = NULL;
-            ret = (!physical_block_list_.empty()) ? TFS_SUCCESS : EXIT_PHYSICALBLOCK_NUM_ERROR;
+            ret = (avail_size  + super_info->max_extend_block_size_) < MAX_MAIN_AND_EXT_BLOCK_SIZE ? TFS_SUCCESS : EXIT_BLOCK_SIZE_OUT_OF_RANGE;
+            if (TFS_SUCCESS == ret)
+            {
+              ret = (!physical_block_list_.empty()) ? TFS_SUCCESS : EXIT_PHYSICALBLOCK_NUM_ERROR;
+            }
             if (TFS_SUCCESS == ret)
             {
               PhysicalBlock* last_physical_block = physical_block_list_.back();

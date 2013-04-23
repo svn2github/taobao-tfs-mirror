@@ -288,7 +288,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         SyncData* sf = reinterpret_cast<SyncData*>(const_cast<char*>(data));
-        FSName fsname(sf->block_id_, sf->file_id_);
+        FSName fsname(sf->block_id_, sf->file_id_, 0);
         ret = backup_->do_sync(sf);
         TBSYS_LOG(INFO, "sync file %s to dest %s %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, ret: %d, action: %d",
           fsname.get_name(), dest_addr_.c_str(), TFS_SUCCESS == ret ? "successful" : "fail", sf->block_id_, sf->file_id_, ret, sf->cmd_);

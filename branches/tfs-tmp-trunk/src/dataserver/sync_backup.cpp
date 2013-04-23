@@ -446,7 +446,7 @@ namespace tfs
 
     int TfsMirrorBackup::get_file_info(const char* nsip, const uint64_t block_id, const uint64_t file_id, TfsFileStat& buf)
     {
-      FSName fsname(block_id, file_id);
+      FSName fsname(block_id, file_id, tfs_client_->get_cluster_id());
       int32_t fd = tfs_client_->open(block_id, file_id, nsip, T_READ | T_FORCE);
       int32_t ret = fd < 0 ? fd : TFS_SUCCESS;
       if (TFS_SUCCESS != ret)

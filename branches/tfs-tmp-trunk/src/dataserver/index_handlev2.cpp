@@ -362,12 +362,14 @@ namespace tfs
         {
           prev = NULL;
           assert(INVALID_FILE_ID == file_id);
-          slot = ++header->seq_no_ % header->file_info_bucket_size_;
+          //slot = ++header->seq_no_ % header->file_info_bucket_size_;
+          slot = (++header->seq_no_ % (header->file_info_bucket_size_ - 1) ) + 1;
           current =  (finfos + slot);
           ret = (0 == current->offset_ && INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_INSERT_INDEX_SLOT_NOT_FOUND_ERROR;
           while (TFS_SUCCESS != ret && max_loop-- > 0)
           {
-            slot = ++header->seq_no_ % header->file_info_bucket_size_;
+            //slot = ++header->seq_no_ % header->file_info_bucket_size_;
+            slot = (++header->seq_no_ % (header->file_info_bucket_size_ - 1) ) + 1;
             current =  (finfos + slot);
             ret = (0 == current->offset_ && INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_INSERT_INDEX_SLOT_NOT_FOUND_ERROR;
           }
@@ -382,7 +384,8 @@ namespace tfs
           prev = NULL;
           assert(INVALID_FILE_ID != file_id);
           uint32_t key = file_id & 0xFFFFFFFF;//lower 32 bit
-          slot = key % header->file_info_bucket_size_;
+          slot = (key % (header->file_info_bucket_size_ - 1)) + 1;
+          //slot = key % header->file_info_bucket_size_;
           current =  (finfos + slot);
           ret = (file_id == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           while (TFS_SUCCESS != ret && 0 != current->next_ && max_loop -- > 0)
@@ -398,7 +401,8 @@ namespace tfs
           prev = NULL;
           assert(INVALID_FILE_ID != file_id);
           uint32_t key = file_id & 0xFFFFFFFF;//lower 32 bit
-          slot = key % header->file_info_bucket_size_;
+          //slot = key % header->file_info_bucket_size_;
+          slot = (key % (header->file_info_bucket_size_ - 1)) + 1;
           current =  (finfos + slot);
           ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           while (TFS_SUCCESS != ret && 0 != current->next_)
@@ -411,7 +415,8 @@ namespace tfs
             prev = current;
           while (TFS_SUCCESS != ret && max_loop-- > 0 && header->used_file_info_bucket_size_ < header->file_info_bucket_size_)
           {
-            slot = (key + random()) % header->file_info_bucket_size_;
+            slot = ((key + random()) % (header->file_info_bucket_size_ - 1)) + 1;
+            //slot = (key + random()) % header->file_info_bucket_size_;
             current =  (finfos + slot);
             ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           }
@@ -1114,6 +1119,10 @@ namespace tfs
           {
             ret = file_op_.pwrite(data, index->size_, index->offset_);
             ret = (index->size_ == ret) ? TFS_SUCCESS : ret;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            ret = file_op_.flush();
           }
           tbsys::gDeleteA(data);
         }

@@ -185,6 +185,9 @@ namespace tfs
     static const int32_t DEFAULT_MAX_MR_NETWORK_CAPACITY_MB = 6;
     static const int32_t DEFAULT_MAX_RW_NETWORK_CAPACITY_MB = 12;
 
+    static const int32_t MAX_SINGLE_BLOCK_FILE_COUNT = (UINT16_MAX - 2);
+    static const int32_t MAX_MAIN_AND_EXT_BLOCK_SIZE = 320 * 1024 * 1024;
+
     enum VersionStep
     {
       VERSION_INC_STEP_DEFAULT = 1,
