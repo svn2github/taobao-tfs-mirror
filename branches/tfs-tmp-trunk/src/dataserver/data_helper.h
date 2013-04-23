@@ -39,7 +39,8 @@ namespace tfs
         *
         * @return TFS_SUCCESS only if server return STATUS_MESSAGE_OK
         */
-        int send_simple_request(uint64_t server_id, common::BasePacket* message);
+        int send_simple_request(uint64_t server_id, common::BasePacket* message,
+            const int32_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT);
 
         int new_remote_block(const uint64_t server_id, const uint64_t block_id,
             const bool tmp = false, const uint64_t family_id = common::INVALID_FAMILY_ID,

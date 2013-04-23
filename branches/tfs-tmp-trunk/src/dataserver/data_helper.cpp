@@ -47,7 +47,7 @@ namespace tfs
       return service_.get_traffic_control();
     }
 
-    int DataHelper::send_simple_request(uint64_t server_id, common::BasePacket* message)
+    int DataHelper::send_simple_request(uint64_t server_id, common::BasePacket* message, const int32_t timeout)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (NULL == message)) ?
           EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -55,7 +55,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int32_t status = TFS_ERROR;
-        ret = send_msg_to_server(server_id, message, status);
+        ret = send_msg_to_server(server_id, message, status, timeout);
         if (TFS_SUCCESS == ret)
         {
           ret = (STATUS_MESSAGE_OK != status) ? status : TFS_SUCCESS;
@@ -561,7 +561,7 @@ namespace tfs
         req_msg.set_index_data(index_data);
         req_msg.set_tmp_flag(tmp);
         req_msg.set_partial_flag(partial);
-        ret = send_simple_request(server_id, &req_msg);
+        ret = send_simple_request(server_id, &req_msg, WRITE_INDEX_TIMEOUT_MS);
       }
 
       return ret;
