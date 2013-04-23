@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([tfs], 2.2.0, duolong@taobao.com)
+AC_INIT([tfs], 2.6.0, duolong@taobao.com)
 AC_CONFIG_SRCDIR([src/common/config_item.h])
 
-AM_INIT_AUTOMAKE(tfs, 2.2.0)
+AM_INIT_AUTOMAKE(tfs, 2.6.0)
 # Checks for programs.
 AC_PROG_AWK
 AC_PROG_CXX
@@ -212,7 +212,6 @@ AC_CONFIG_FILES([Makefile
                  src/rcserver/Makefile
                  src/name_meta_server/Makefile
                  src/rootserver/Makefile
-                 src/checkserver/Makefile
                  src/tools/Makefile
                  src/tools/rcserver/Makefile
                  src/tools/util/Makefile
@@ -220,14 +219,15 @@ AC_CONFIG_FILES([Makefile
                  src/tools/nameserver/Makefile
                  src/tools/adminserver/Makefile
                  src/tools/transfer/Makefile
-                 src/tools/mock/Makefile
-                 src/tools/cluster/Makefile
-                 tests/Makefile
-                 tests/batch/Makefile
-                 tests/rcserver/Makefile
-                 tests/name_meta_server/Makefile
-                 tests/common/Makefile
-                 tests/rootserver/Makefile
-                 tests/dataserver/Makefile
-                 tests/intergrate/Makefile])
+                 src/tools/cluster/Makefile])
+                 #src/checkserver/Makefile
+                 #src/tools/mock/Makefile
+                 #tests/Makefile
+                 #tests/batch/Makefile
+                 #tests/rcserver/Makefile
+                 #tests/name_meta_server/Makefile
+                 #tests/common/Makefile
+                 #tests/rootserver/Makefile
+                 #tests/dataserver/Makefile
+                 #tests/intergrate/Makefile])
 AC_OUTPUT
