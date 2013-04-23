@@ -85,7 +85,7 @@ void* write_worker(void* arg)
 
   int32_t i = 0;
   int fd;
-  char ret_name[FILE_NAME_LEN+1];
+  char ret_name[FILE_NAME_LEN_V2+1];
   for (i = 0; i < param.file_count_; ++i)
   {
     timer.start();
@@ -131,7 +131,7 @@ void* write_worker(void* arg)
         printf("index:%d, tfswrite completed, spend (%" PRI64_PREFIX "d)\n", param.index_, time_consumed);
         print_rate(ret, time_consumed);
       }
-      ret = tfsclient->close(fd, ret_name, FILE_NAME_LEN+1);
+      ret = tfsclient->close(fd, ret_name, FILE_NAME_LEN_V2+1);
       if (ret == TFS_SUCCESS)
       {
         time_consumed = timer.consume();

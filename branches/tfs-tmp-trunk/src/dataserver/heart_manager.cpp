@@ -111,7 +111,7 @@ namespace tfs
         }
         int32_t sleep_time_us = 500000;
         heart_interval = DEFAULT_HEART_INTERVAL;
-        TBSYS_LOG(INFO, "keepalive begin .....");
+        //TBSYS_LOG(INFO, "keepalive begin .....");
         ret = keepalive(heart_interval, who, KEEPALIVE_TIMEOUT_MS);
         if (TFS_SUCCESS != ret)
         {
@@ -122,7 +122,7 @@ namespace tfs
         {
           sleep_time_us = heart_interval <= 0 ? DEFAULT_HEART_INTERVAL * 1000000 : heart_interval * 1000000;
         }
-        TBSYS_LOG(INFO, "keepalive end.....");
+        //TBSYS_LOG(INFO, "keepalive end.....");
         usleep(sleep_time_us);
       }
       info.status_ = DATASERVER_STATUS_DEAD;

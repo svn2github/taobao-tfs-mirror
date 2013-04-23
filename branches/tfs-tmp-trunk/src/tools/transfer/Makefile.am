@@ -16,12 +16,13 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(UNIQUE_STORE_LDFLAGS)\
   $(TAIR_CACHE_LDFLAGS) \
+	-lz\
 	$(TBLIB_ROOT)/lib/libtbnet.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a
 
 transfer_block_SOURCES = transfer_block.cpp block_console.cpp block_console.h 
 split_block_tool_SOURCES = split_block_tool.cpp
-compare_crc_SOURCES=compare_crc.cpp compare_crc.h
+compare_crc_SOURCES=compare_crc.cpp 
 compare_same_cluster_SOURCES=compare_same_cluster.cpp
 compare_same_cluster_ext_SOURCES=compare_same_cluster_ext.cpp
 transfer_same_cluster_block_SOURCES=transfer_same_cluster_block.cpp

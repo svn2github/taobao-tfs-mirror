@@ -468,7 +468,7 @@ namespace tfs
               //block.BlockBase::dump();
               if (once && (block.info_.block_id_ != block_id))
               {
-                TBSYS_LOG(ERROR, "block(%"PRI64_PREFIX"u)(%lu) not exists", block.info_.block_id_, block_id);
+                TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", block.info_.block_id_, block_id);
                 break;
               }
               stat.add(block);

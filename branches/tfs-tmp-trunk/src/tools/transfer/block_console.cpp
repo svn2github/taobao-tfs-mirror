@@ -600,7 +600,7 @@ int TranBlock::recombine_data()
       // write to dest buf
       dest_content_buf_.writeBytes(&fde, FILEINFO_EXT_SIZE);
       char* data = (src_content_buf_.getData() + finfo.offset_ + FILEINFO_SIZE);
-      Func::hex_dump(data, 10, true, TBSYS_LOG_LEVEL_INFO);
+      //Func::hex_dump(data, 10, true, TBSYS_LOG_LEVEL_INFO);
       dest_content_buf_.writeBytes(data,finfo.size_);
       dest_index_data_.finfos_.push_back(new_info);
     }
@@ -884,7 +884,7 @@ int TranBlock::rm_block_from_ns(uint64_t ds_id)
   req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
   req_cc_msg.set_value1(ds_id);
   req_cc_msg.set_value3(src_block_info_.block_id_);
-  req_cc_msg.set_value4(tfs::nameserver::HANDLE_DELETE_BLOCK_FLAG_BOTH);
+  req_cc_msg.set_value4(tfs::nameserver::HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION);
 
   NewClient* client = NewClientManager::get_instance().create_client();
   tbnet::Packet* rsp = NULL;
@@ -924,8 +924,9 @@ int TranBlock::rm_block_from_ns(uint64_t ds_id)
 int TranBlock::rm_block_from_ds(uint64_t ds_id)
 {
   int ret = TFS_SUCCESS;
-  RemoveBlockMessage req_rb_msg;
-  req_rb_msg.set(src_block_info_.block_id_);
+  RemoveBlockMessageV2 req_rb_msg;
+  req_rb_msg.set_block_id(src_block_info_.block_id_);
+  req_rb_msg.set_tmp_flag(false);
   NewClient* client = NewClientManager::get_instance().create_client();
   tbnet::Packet* rsp = NULL;
   if((ret = send_msg_to_server(ds_id, client, &req_rb_msg, rsp)) != TFS_SUCCESS)

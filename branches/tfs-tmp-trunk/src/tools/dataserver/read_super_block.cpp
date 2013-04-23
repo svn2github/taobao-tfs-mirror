@@ -41,6 +41,7 @@ void dump_super_block(const SuperBlockInfo& info)
   printf("%-25s%d\n", "used main block count:", info.used_main_block_count_);
   printf("%-25s%d\n", "max main block size:", info.max_main_block_size_);
   printf("%-25s%d\n", "max extend block size:", info.max_extend_block_size_);
+  printf("%-25s%d\n", "max hash bucket count:", info.max_hash_bucket_count_);
   printf("%-25s%d\n", "hash bucket count:", info.hash_bucket_count_);
   printf("%-25s%lf\n", "max use block ratio:", info.max_use_block_ratio_);
   printf("%-25s%lf\n", "max use hash ratio:", info.max_use_hash_bucket_ratio_);

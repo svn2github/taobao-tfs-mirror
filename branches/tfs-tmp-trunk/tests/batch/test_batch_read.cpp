@@ -37,7 +37,7 @@ void sign_handler(int32_t sig)
   }
 }
 
-#define FILE_NAME_LEN 18
+//#define FILE_NAME_LEN 18
 
 void* read_worker(void* arg)
 {
@@ -48,7 +48,7 @@ void* read_worker(void* arg)
   FILE* input_fd = fopen(file_list_name, "rb");
   if (NULL == input_fd)
   {
-    printf("index(%d) open read file failed, exit\n", param.index_);
+    printf("file_list_name:%s open read file failed, index: %d, exit\n", file_list_name, param.index_);
     return NULL;
   }
 

@@ -52,10 +52,10 @@ int write_file(ThreadParam& param, TfsClientImplV2* tfsclient, const char* tfs_n
     ret = ret > 0 ? TFS_SUCCESS : ret;
   }
 
-  char ret_name[FILE_NAME_LEN+1];
+  char ret_name[FILE_NAME_LEN_V2+1];
   if (fd > 0)
   {
-    int32_t result = tfsclient->close(fd, ret_name, FILE_NAME_LEN+1);
+    int32_t result = tfsclient->close(fd, ret_name, FILE_NAME_LEN_V2+1);
     ret = TFS_SUCCESS == ret ? result : ret;
     if (TFS_SUCCESS == ret)
     {
@@ -152,7 +152,7 @@ void* mix_worker(void* arg)
     char* data = new char[param.max_size_];
     memset(data, 0, param.max_size_);
     generate_data(data, param.max_size_);
-    TBSYS_LOG(INFO, "GEN data %s", data);
+    TBSYS_LOG(DEBUG, "GEN data %s", data);
 
     vector<std::string>::iterator iter;
     do

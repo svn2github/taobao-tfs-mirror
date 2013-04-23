@@ -152,16 +152,15 @@ int get_value(const char* data, string& value)
 int get_value(const char* data, uint64_t& value)
 {
   int base = 10;
-  char *endptr;
-  long val;
+  char* endptr = NULL;
 
   errno = 0;    // To distinguish success/failure after call
-  val = (strtoll(data, &endptr, base));
-  //TBSYS_LOG(DEBUG, "val: %d", val);
+  value = (strtoull(data, &endptr, base));
+  //TBSYS_LOG(DEBUG, "val: %lu, %s, %s", value, endptr, data);
 
   // Check for various possible errors
-  if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
-      || (errno != 0 && val == 0)) {
+  if ((errno == ERANGE && (value == UINT64_MAX))
+      || (errno != 0 && value == 0)) {
     perror("strtol");
     return TFS_ERROR;
   }
@@ -176,7 +175,6 @@ int get_value(const char* data, uint64_t& value)
     printf("Further characters after number: %s\n", endptr);
     return TFS_ERROR;
   }
-  value = static_cast<int32_t> (val);
   return TFS_SUCCESS;
 }
 int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
