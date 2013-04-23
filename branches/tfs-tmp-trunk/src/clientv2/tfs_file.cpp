@@ -139,7 +139,6 @@ namespace tfs
       ns_addr_(ns_addr)
     {
       fsname_.set_cluster_id(cluster_id);
-      TBSYS_LOG(DEBUG, "CLUSTERIDDIDiddd: %d", fsname_.get_cluster_id());
     }
 
     TfsFile::~TfsFile()
