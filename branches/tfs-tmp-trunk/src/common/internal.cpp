@@ -1894,11 +1894,6 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int64(data, data_len, pos, last_update_time_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
         ret = Serialization::set_int64(data, data_len, pos, last_statistics_time_);
       }
 
@@ -1946,11 +1941,6 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int64(data, data_len, pos, &last_update_time_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
         ret = Serialization::get_int64(data, data_len, pos, &last_statistics_time_);
       }
 
@@ -1959,7 +1949,7 @@ namespace tfs
     }
     int64_t ThroughputV2::length() const
     {
-      return INT64_SIZE * 10;
+      return INT64_SIZE * 9;
     }
 
     bool IndexHeaderV2::check_need_mremap(const double threshold) const
@@ -2373,6 +2363,11 @@ namespace tfs
         ret = Serialization::set_int32(data, data_len, pos, update_size_);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, last_update_time_);
+      }
+
       return ret;
     }
 
@@ -2425,12 +2420,17 @@ namespace tfs
         ret = Serialization::get_int32(data, data_len, pos, &update_size_);
       }
 
-     return ret;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &last_update_time_);
+      }
+
+      return ret;
     }
 
     int64_t BlockInfoV2::length() const
     {
-      return 7 * INT_SIZE + 2 * INT64_SIZE;
+      return 8 * INT_SIZE + 2 * INT64_SIZE;
     }
   } /** nameserver **/
 }/** tfs **/

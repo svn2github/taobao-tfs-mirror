@@ -1181,6 +1181,7 @@ namespace tfs
       int32_t del_file_count_;
       int32_t update_size_;
       int32_t update_file_count_;
+      int32_t last_update_time_;
 
       BlockInfoV2()
       {
@@ -1207,7 +1208,6 @@ namespace tfs
     	int64_t read_visit_count_;
     	int64_t update_visit_count_;
       int64_t unlink_visit_count_;
-      int64_t last_update_time_;
       int64_t last_statistics_time_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);

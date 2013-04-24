@@ -296,7 +296,7 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          header->throughput_.last_update_time_  = time(NULL);
+          header->info_.last_update_time_  = time(NULL);
           int32_t file_count = rollback ? -1 : 1;
           int32_t real_new_size = rollback ? 0 - new_size : new_size;
           int32_t real_old_size = rollback ? 0 - old_size : old_size;
@@ -563,8 +563,8 @@ namespace tfs
             memset(&header, 0, sizeof(header));
             header.info_.block_id_ = logic_block_id;
             header.info_.family_id_= INVALID_FAMILY_ID;
-            header.throughput_.last_update_time_ = time(NULL);
-            header.throughput_.last_statistics_time_ = header.throughput_.last_update_time_;
+            header.info_.last_update_time_ = time(NULL);
+            header.throughput_.last_statistics_time_ = header.info_.last_update_time_;
             header.file_info_bucket_size_ = max_bucket_size;
             file_size = INDEX_HEADER_V2_LENGTH + max_bucket_size * FILE_INFO_V2_LENGTH;
             char* data = new (std::nothrow)char[file_size];
@@ -911,8 +911,8 @@ namespace tfs
         if (reset)
         {
           memset(&header->throughput_, 0, sizeof(header->throughput_));
-          header->throughput_.last_update_time_ = time(NULL);
-          header->throughput_.last_statistics_time_ = header->throughput_.last_update_time_;
+          header->info_.last_update_time_ = time(NULL);
+          header->throughput_.last_statistics_time_ = header->info_.last_update_time_;
         }
       }
       return ret;
@@ -1011,8 +1011,8 @@ namespace tfs
             header.info_.block_id_ = logic_block_id;
             header.seq_no_   = 0;
             header.info_.family_id_ = family_id;
-            header.throughput_.last_update_time_ = time(NULL);
-            header.throughput_.last_statistics_time_ = header.throughput_.last_update_time_;
+            header.info_.last_update_time_ = time(NULL);
+            header.throughput_.last_statistics_time_ = header.info_.last_update_time_;
             header.max_index_num_  = index_num;
             file_size = INDEX_HEADER_V2_LENGTH + header.max_index_num_ * sizeof(InnerIndex);
             char* data = new (std::nothrow)char[file_size];

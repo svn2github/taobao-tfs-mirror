@@ -203,7 +203,7 @@ namespace tfs
     }
 
     NewBlockMessageV2::NewBlockMessageV2():
-      family_id_(INVALID_FAMILY_ID), index_num_(0), tmp_(0)
+      family_id_(INVALID_FAMILY_ID), index_num_(0), expire_time_(0), tmp_(0)
     {
       _packetHeader._pcode = NEW_BLOCK_MESSAGE_V2;
     }
