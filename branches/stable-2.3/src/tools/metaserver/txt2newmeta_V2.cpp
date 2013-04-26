@@ -56,11 +56,7 @@ typedef struct
   uint32_t tnum;
   uint32_t ttotal;
 } arg_type;
-typedef struct
-{
-  int64_t appid;
-  int64_t uid;
-} id_type;
+
 void sign_handler(int32_t sig)
 {
   switch (sig)
@@ -115,7 +111,6 @@ void* transfer(void* param)
 
   uint32_t tnum = param_t->tnum;
   uint32_t total = param_t->ttotal;
-  id_type helper;
   bool doflag_thread = false;
 
 
@@ -134,36 +129,7 @@ void* transfer(void* param)
       {
         go_on_mode_lock = true;
       }
-      //for hash
-      helper.appid = app_id;
-      helper.uid = uid;
-      doflag_thread = false;
-      if (tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(helper)) % total == tnum)
-      {
-        doflag_thread = true;
-      }
-      if (doflag_thread && go_on_mode_lock)
-      {
-        TBSYS_LOG(INFO, "deal appid:%ld uid:%ld", app_id, uid);
-      }
-      sprintf(bucket_name, "%ld^%ld", app_id, uid);
-      user_info.owner_id_ = app_id;
 
-      if (doflag_thread && go_on_mode_lock)
-      {
-        ret = tfs::client::KvMetaHelper::do_put_bucket(server_id, bucket_name,
-          bucket_meta_info, user_info);
-        if (ret == EXIT_BUCKET_EXIST)
-        {
-          TBSYS_LOG(ERROR, "[conflict] put bucket conflict |%s|", bucket_name);
-          ret = TFS_SUCCESS;
-        }
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "put bucket error |%s|", bucket_name);
-          ret = TFS_SUCCESS;
-        }
-      }
       continue;
     }
     else if (magic_number != MAGIC_NUMBER1)
@@ -179,6 +145,51 @@ void* transfer(void* param)
     }
     fread(buff, full_name_len, 1, s_fd);
     object_name.assign(buff + 1, full_name_len - 1);
+    char *p = NULL;
+    char *q = NULL;
+    //for hash
+    q = buff + 1;
+    while(1)
+    {
+      p = NULL;
+      p = strchr(q, '/');
+      if (NULL == p)
+      {
+        break;
+      }
+      q = p + 1;
+    }
+
+    int pre_len = q - buff;
+    char * de = q;
+    int64_t hashnum;
+    doflag_thread = false;
+    if (tbsys::CStringUtil::murMurHash((const void*)de, full_name_len - pre_len) % total == tnum)
+    {
+      hashnum = (tbsys::CStringUtil::murMurHash((const void*)de, full_name_len - pre_len) - 1) % 10243 + 1;
+      sprintf(bucket_name, "%ld^%ld", app_id, hashnum);
+      user_info.owner_id_ = app_id;
+      doflag_thread = true;
+    }
+    if (doflag_thread && go_on_mode_lock)
+    {
+      TBSYS_LOG(INFO, "deal appid:%ld uid:%ld OBJ_name:%s thread:%d hashnum:%ld size:%d", app_id, uid, object_name.c_str(), tnum, hashnum, full_name_len - pre_len);
+      /*
+      ret = tfs::client::KvMetaHelper::do_put_bucket(server_id, bucket_name,
+        bucket_meta_info, user_info);
+      if (ret == EXIT_BUCKET_EXIST)
+      {
+        TBSYS_LOG(DEBUG, "[conflict] put bucket conflict |%s|", bucket_name);
+        ret = TFS_SUCCESS;
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "put bucket error |%s|", bucket_name);
+        ret = TFS_SUCCESS;
+      }
+      */
+    }
+
     fread(&(meta_info.file_info_.create_time_), sizeof(meta_info.file_info_.create_time_), 1, s_fd);//ct
     fread(&(meta_info.file_info_.modify_time_), sizeof(meta_info.file_info_.modify_time_), 1, s_fd);//mt
     fread(&(meta_info.file_info_.size_), sizeof(meta_info.file_info_.size_), 1, s_fd);//size
