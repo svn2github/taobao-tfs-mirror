@@ -23,6 +23,7 @@ namespace tfs
   {
     const uint16_t BlockIdFactory::BLOCK_START_NUMBER = 100;
     const uint16_t BlockIdFactory::SKIP_BLOCK_NUMBER  = 100;
+    const uint64_t BlockIdFactory::MAX_BLOCK_ID = 0xFFFFFFFFFFFF -1;
     BlockIdFactory::BlockIdFactory():
       global_id_(BLOCK_START_NUMBER),
       count_(0),
@@ -99,6 +100,7 @@ namespace tfs
       mutex_.lock();
       ++count_;
       uint64_t id = ++global_id_;
+      assert(id <= MAX_BLOCK_ID);
       bool flush_flag = false;
       if (count_ >= SKIP_BLOCK_NUMBER)
       {
@@ -118,7 +120,7 @@ namespace tfs
       if (common::TFS_SUCCESS == ret)
       {
         if (verify)
-          id |= 0x8000000000000000;
+          id |= 0xFF00000000000000;
       }
       return id;
     }

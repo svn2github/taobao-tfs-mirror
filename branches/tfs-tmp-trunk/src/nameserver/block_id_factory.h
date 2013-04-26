@@ -40,6 +40,7 @@ namespace tfs
         tbutil::Mutex mutex_;
         static const uint16_t BLOCK_START_NUMBER;
         static const uint16_t SKIP_BLOCK_NUMBER;
+        static const uint64_t MAX_BLOCK_ID;
         uint64_t global_id_;
         int32_t  count_;
         int32_t  fd_;
