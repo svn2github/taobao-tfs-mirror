@@ -750,6 +750,104 @@ namespace tfs
       return ret;
     }
 
+
+    //ObjectUploadInfo
+    ObjectUploadInfo::ObjectUploadInfo()
+      :owner_id_(0)
+    {}
+    int64_t ObjectUploadInfo::length() const
+    {
+      return INT64_SIZE
+        + Serialization::get_string_length(object_name_)
+        + Serialization::get_string_length(upload_id_);
+    }
+
+    int ObjectUploadInfo::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_UPLOAD_INFO_OBJECT_NAME_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_string(data, data_len, pos, object_name_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_UPLOAD_INFO_UPLOAD_ID_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_string(data, data_len, pos, upload_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_UPLOAD_INFO_OWNER_ID_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, owner_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
+      return ret;
+    }
+
+    int ObjectUploadInfo::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    {
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
+
+      while (TFS_SUCCESS == ret)
+      {
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
+
+        if (TFS_SUCCESS == ret)
+        {
+          switch (type_tag)
+          {
+            case OBJECT_UPLOAD_INFO_OBJECT_NAME_TAG:
+              ret = Serialization::get_string(data, data_len, pos, object_name_);
+              break;
+            case OBJECT_UPLOAD_INFO_UPLOAD_ID_TAG:
+              ret = Serialization::get_string(data, data_len, pos, upload_id_);
+              break;
+            case OBJECT_UPLOAD_INFO_OWNER_ID_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &owner_id_);
+              break;
+            case END_TAG:
+              ;
+              break;
+            default:
+              TBSYS_LOG(ERROR, "object upload info: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
+          }
+        }
+
+        if (END_TAG == type_tag)
+        {
+          break;
+        }
+      }
+
+      return ret;
+    }
+
+    //list_multipart_object_result
+    ListMultipartObjectResult::ListMultipartObjectResult()
+      :limit_(0), delimiter_(DEFAULT_CHAR), is_truncated_(false)
+    {
+      s_common_prefix_.clear();
+      v_object_upload_info_.clear();
+    }
+
+
   }
 }
 

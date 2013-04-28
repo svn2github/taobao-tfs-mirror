@@ -52,6 +52,11 @@ namespace tfs
       int put_bucket(message::ReqKvMetaPutBucketMessage* put_bucket_msg);
       int get_bucket(message::ReqKvMetaGetBucketMessage* get_bucket_msg);
       int del_bucket(message::ReqKvMetaDelBucketMessage* del_bucket_msg);
+      int list_multipart_object(message::ReqKvMetaListMultipartObjectMessage *list_multipart_object_msg);
+
+      int put_bucket_acl(message::ReqKvMetaPutBucketAclMessage *put_bucket_acl_msg);
+      int get_bucket_acl(message::ReqKvMetaGetBucketAclMessage *get_bucket_acl_msg);
+
       int del_object(message::ReqKvMetaDelObjectMessage* del_object_msg);
       int head_object(message::ReqKvMetaHeadObjectMessage *head_object_msg);
       int head_bucket(message::ReqKvMetaHeadBucketMessage *head_bucket_msg);

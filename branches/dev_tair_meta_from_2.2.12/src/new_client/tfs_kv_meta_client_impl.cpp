@@ -313,6 +313,27 @@ namespace tfs
       return ret;
     }
 
+    TfsRetType KvMetaClientImpl::list_multipart_object(const char *bucket_name, const char *prefix,
+        const char *start_key, const char *start_id, const char delimiter, const int32_t limit,
+        ListMultipartObjectResult *list_multipart_object_result, const UserInfo &user_info)
+    {
+      TfsRetType ret = TFS_SUCCESS;
+
+      if (!is_valid_bucket_name(bucket_name))
+      {
+        ret = TFS_ERROR;
+        TBSYS_LOG(ERROR, "bucket name is invalid");
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = do_list_multipart_object(bucket_name, prefix, start_key, start_id, delimiter, limit,
+            list_multipart_object_result, user_info);
+      }
+
+      return ret;
+    }
+
     // copy from NameMetaClientImpl::write_data
     int64_t KvMetaClientImpl::write_data(const char *ns_addr,
         const void *buffer, int64_t offset, int64_t length,
@@ -793,6 +814,7 @@ namespace tfs
             {
               write_len = pwrite_object(bucket_name, object_name, buf, offset, read_len, user_info, NULL);
             }
+
             if (write_len < 0)
             {
               TBSYS_LOG(ERROR, "pwrite object fail. bucket: %s, object: %s", bucket_name, object_name);
@@ -1004,6 +1026,25 @@ namespace tfs
 
       return ret;
     }
+
+    int KvMetaClientImpl::do_list_multipart_object(const char *bucket_name, const char *prefix,
+        const char *start_key, const char *start_id, const char delimiter, const int32_t limit,
+        ListMultipartObjectResult *list_multipart_object_result, const UserInfo &user_info)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_list_multipart_object(meta_server_id, bucket_name, prefix, start_key, start_id, delimiter, limit, list_multipart_object_result, user_info);
+        update_fail_info(ret);
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
 
     int KvMetaClientImpl::do_del_bucket(const char *bucket_name, const UserInfo &user_info)
     {

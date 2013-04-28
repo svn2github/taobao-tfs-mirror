@@ -899,6 +899,11 @@ namespace tfs
       //UserInfo
       USER_INFO_OWNER_ID_TAG = 801,
 
+      //ObjectUploadInfo
+      OBJECT_UPLOAD_INFO_OBJECT_NAME_TAG = 901,
+      OBJECT_UPLOAD_INFO_UPLOAD_ID_TAG = 902,
+      OBJECT_UPLOAD_INFO_OWNER_ID_TAG = 903,
+
       //End TAG
       END_TAG = 999
     };

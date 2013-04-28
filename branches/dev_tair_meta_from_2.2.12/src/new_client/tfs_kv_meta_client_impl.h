@@ -58,6 +58,10 @@ namespace tfs
         TfsRetType get_bucket_tag(const char *bucket_name, common::MAP_STRING *bucket_tag_map);
         TfsRetType del_bucket_tag(const char *bucket_name);
 
+        TfsRetType list_multipart_object(const char *bucket_name, const char *prefix,
+            const char *start_key, const char *star_id, const char delimiter, const int32_t limit,
+            common::ListMultipartObjectResult *list_multipart_object_result, const common::UserInfo &user_info);
+
         int64_t pwrite_object(const char *bucket_name, const char *object_name,
             const void *buffer, int64_t offset, int64_t length,
             const common::UserInfo &user_info, const common::CustomizeInfo *customize_info);
@@ -100,6 +104,10 @@ namespace tfs
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,
             std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix,
             int8_t *is_trucated, const common::UserInfo &user_info);
+
+        int do_list_multipart_object(const char *bucket_name, const char *prefix,
+            const char *start_key, const char *star_id, const char delimiter, const int32_t limit,
+            common::ListMultipartObjectResult *list_multipart_object_result, const common::UserInfo &user_info);
 
         int do_del_bucket(const char *bucket_name, const common::UserInfo &user_info);
         int do_head_bucket(const char *bucket_name, common::BucketMetaInfo *bucket_meta_info,

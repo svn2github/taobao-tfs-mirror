@@ -210,6 +210,114 @@ namespace tfs
       return ret;
     }
 
+    int MetaInfoHelper::serialize_upload_key(const std::string &file_name, const std::string &upload_id,
+        const int64_t offset, const int64_t part_num, KvKey *key, char *key_buff,
+        const int32_t buff_size, int32_t key_type)
+    {
+      int ret = (file_name.size() > 0 && upload_id.size() > 0 && offset >= 0
+          && part_num >= 0 && key != NULL &&  key_buff != NULL ) ? TFS_SUCCESS : TFS_ERROR;
+      int64_t pos = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        //multipart_upload_key
+        if (pos + 1 < buff_size)
+        {
+          key_buff[pos++] = MULTIPART_UPLOAD_KEY;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+
+        //upload_id
+        int64_t upload_id_size = static_cast<int64_t>(upload_id.size());
+        if (TFS_SUCCESS == ret && pos + upload_id_size < buff_size)
+        {
+          memcpy(key_buff + pos, upload_id.data(), upload_id_size);
+          pos += upload_id_size;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //DELIMITER
+        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
+        {
+          key_buff[pos++] = KvKey::DELIMITER;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //filename
+        int64_t file_name_size = static_cast<int64_t>(file_name.size());
+        if (TFS_SUCCESS == ret && pos + file_name_size < buff_size)
+        {
+          memcpy(key_buff + pos, file_name.data(), file_name_size);
+          pos += file_name_size;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //DELIMITER
+        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
+        {
+          key_buff[pos++] = KvKey::DELIMITER;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //version
+        int64_t version = 0;
+        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
+        {
+          ret = Serialization::int64_to_char(key_buff + pos, buff_size, version);
+          pos = pos + 8;
+        }
+        //DELIMITER
+        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
+        {
+          key_buff[pos++] = KvKey::DELIMITER;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //part_num
+        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
+        {
+          ret = Serialization::int64_to_char(key_buff + pos, buff_size, part_num);
+          pos = pos + 8;
+        }
+        //DELIMITER
+        if (TFS_SUCCESS == ret && (pos + 1) < buff_size)
+        {
+          key_buff[pos++] = KvKey::DELIMITER;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+        //offset
+        if (TFS_SUCCESS == ret && (pos + 8) < buff_size)
+        {
+          ret = Serialization::int64_to_char(key_buff + pos, buff_size, offset);
+          pos = pos + 8;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        key->key_ = key_buff;
+        key->key_size_ = pos;
+        key->key_type_ = key_type;
+      }
+      return ret;
+    }
+
+
     /*----------------------------object part-----------------------------*/
     int MetaInfoHelper::head_object(const string &bucket_name,
         const string &file_name, ObjectInfo *object_info_zero)
@@ -464,6 +572,7 @@ namespace tfs
 
           //TODO: check this
           object_info_zero.has_customize_info_ = object_info.has_customize_info_;
+
           object_info_zero.customize_info_ = object_info.customize_info_;
 
           if (!object_info.v_tfs_file_info_.empty())
@@ -472,8 +581,95 @@ namespace tfs
           }
         }
 
-        ret = put_object_zero(bucket_name, file_name, &object_info_zero,
-            &offset, length, version, is_append);
+        //check whether overlap
+        if (!is_append)
+        {
+          //check offset & length
+          int32_t limit = MAX_LIMIT;
+          int32_t res_size = -1;
+          vector<KvValue*> kv_value_keys;
+          vector<KvValue*> kv_value_values;
+
+          KvKey pkey;
+          pkey.key_ = bucket_name.c_str();
+          pkey.key_size_ = bucket_name.length();
+          pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
+
+          string tmp_start_key = file_name;
+          bool loop = true;
+          do
+          {
+            ret = get_range(pkey, tmp_start_key, 0, limit, &kv_value_keys, &kv_value_values, &res_size);
+            if (TFS_SUCCESS == ret)
+            {
+              for (int i = 0; i < res_size; ++i)
+              {
+                int64_t tmp_offset = 0;
+                int64_t tmp_length = 0;
+                string tmp_bucket_name;
+                string tmp_object_name;
+                string k(kv_value_keys[i]->get_data(), kv_value_keys[i]->get_size());
+                string v(kv_value_values[i]->get_data(), kv_value_values[i]->get_size());
+
+                ret = deserialize_key(k.c_str(), k.length(), &tmp_bucket_name, &tmp_object_name, &tmp_offset, &version);
+                if (EXIT_MULTIPART_TYPE_KEY == ret)
+                {
+                  continue;
+                }
+                else if (TFS_SUCCESS != ret)
+                {
+                  TBSYS_LOG(ERROR, "deserialize from %s fail", k.c_str());
+                }
+                else if (tmp_object_name.compare(file_name) > 0)
+                {
+                  loop = false;
+                  break;
+                }
+                else if (tmp_object_name.compare(file_name) == 0)
+                {
+                  ObjectInfo object_info;
+                  int64_t pos = 0;
+                  ret = object_info.deserialize(v.c_str(), v.length(), pos);
+                  if (TFS_SUCCESS == ret)
+                  {
+                    for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
+                    {
+                      tmp_length += object_info.v_tfs_file_info_[i].file_size_;
+                    }
+                  }
+
+                  if (!(offset + static_cast<int64_t>(length) <= tmp_offset || tmp_offset + tmp_length <= offset))
+                  {
+                    ret = EXIT_OBJECT_OVERLAP;
+                    break;
+                  }
+
+                  tmp_start_key.assign(k.c_str(), k.length());
+                }
+              }
+            }
+
+            if (res_size < limit || TFS_SUCCESS != ret)
+            {
+              loop = false;
+            }
+
+            //delete for tair
+            for (int i = 0; i < res_size; ++i)
+            {
+              kv_value_keys[i]->free();
+              kv_value_values[i]->free();
+            }
+            kv_value_keys.clear();
+            kv_value_values.clear();
+          }while (loop);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = put_object_zero(bucket_name, file_name, &object_info_zero,
+              &offset, length, version, is_append);
+        }
 
         if (TFS_SUCCESS == ret)
         {
@@ -544,6 +740,7 @@ namespace tfs
           ret = EXIT_OBJECT_NOT_EXIST;
         }
       }
+
       int64_t pos = 0;
       if (TFS_SUCCESS == ret)
       {
@@ -642,12 +839,12 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             ret = serialize_key(bucket_name, file_name, start_offset,
-                  &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+                &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
           }
           if (TFS_SUCCESS == ret)
           {
             ret = serialize_key(bucket_name, file_name, end_offset,
-                  &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+                &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
           }
 
           //op value
@@ -941,8 +1138,8 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::deserialize_key(const char *key, const int32_t key_size, string *bucket_name, string *object_name,
-        int64_t *offset, int64_t *version)
+    int MetaInfoHelper::deserialize_key(const char *key, const int32_t key_size, string *bucket_name,
+        string *object_name, int64_t *offset, int64_t *version)
     {
       int ret = (key != NULL && key_size > 0 && bucket_name != NULL && object_name != NULL &&
           version != NULL && offset != NULL) ? TFS_SUCCESS : TFS_ERROR;
@@ -975,6 +1172,11 @@ namespace tfs
         int64_t object_name_size = pos - key - bucket_name_size - 1;
         object_name->assign(key + bucket_name_size + 1, object_name_size);
 
+        if ((*object_name)[0] == MULTIPART_UPLOAD_KEY)
+        {
+          ret = EXIT_MULTIPART_TYPE_KEY;
+        }
+
         pos++;
 
         if (TFS_SUCCESS == ret && (pos + 8) <= key + key_size)
@@ -995,6 +1197,139 @@ namespace tfs
 
       return ret;
     }
+
+    int MetaInfoHelper::deserialize_upload_key(const char *key, const int32_t key_size,
+        string *bucket_name, string *upload_id, string *object_name,
+        int64_t *version, int64_t *part_num, int64_t *offset)
+    {
+      int ret = (key != NULL && key_size > 0 && bucket_name != NULL
+          && upload_id != NULL && object_name != NULL
+          && version != NULL && part_num != NULL && offset != NULL) ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        char *pos = const_cast<char*>(key);
+        do
+        {
+          if (KvKey::DELIMITER == *pos)
+          {
+            break;
+          }
+          pos++;
+        } while(pos - key < key_size);
+        int64_t bucket_name_size = pos - key;
+        bucket_name->assign(key, bucket_name_size);
+
+        pos++;
+
+        if (*pos != MULTIPART_UPLOAD_KEY)
+        {
+          ret = EXIT_NOT_MULTIPART_TYPE_KEY;
+        }
+
+        //upload_id's first char is 2
+        int64_t upload_id_size = -1;
+        if (TFS_SUCCESS == ret)
+        {
+          do
+          {
+            if (KvKey::DELIMITER == *pos)
+            {
+              break;
+            }
+            pos++;
+          } while(pos - key < key_size);
+
+          upload_id_size = pos - key - bucket_name_size - 1;
+          upload_id->assign(key + bucket_name_size + 2, upload_id_size - 1);
+        }
+
+        pos++;
+
+        if (TFS_SUCCESS == ret)
+        {
+          do
+          {
+            if (KvKey::DELIMITER == *pos)
+            {
+              break;
+            }
+            pos++;
+          } while(pos - key < key_size);
+
+          int64_t object_name_size = pos - key - bucket_name_size - upload_id_size - 1;
+          object_name->assign(key + bucket_name_size + upload_id_size + 1, object_name_size);
+        }
+
+        pos++;
+
+        if (TFS_SUCCESS == ret && (pos + 8) <= key + key_size)
+        {
+          ret = Serialization::char_to_int64(pos, key + key_size - pos, *version);
+          pos = pos + 8;
+        }
+
+        pos++;
+
+        if (TFS_SUCCESS == ret && (pos + 8) <= key + key_size)
+        {
+          ret = Serialization::char_to_int64(pos, key + key_size - pos, *part_num);
+          pos = pos + 8;
+        }
+
+        pos++;
+
+        if (TFS_SUCCESS == ret && (pos + 8) <= key + key_size)
+        {
+          ret = Serialization::char_to_int64(pos, key + key_size - pos, *offset);
+          pos = pos + 8;
+        }
+      }
+
+
+      return ret;
+    }
+
+    int MetaInfoHelper::group_upload_objects(const string &object_name, const string &upload_id,
+        const string &v, const string &prefix, const char delimiter,
+        vector<ObjectUploadInfo> *v_object_upload_info, set<string> *s_common_prefix)
+    {
+      UNUSED(v);
+      UNUSED(v_object_upload_info);
+      int ret = TFS_SUCCESS;
+      int common_pos = -1;
+
+      bool prefix_flag = false;
+      bool common_flag = false;
+
+      ret = get_common_prefix(object_name.c_str(), prefix, delimiter, &prefix_flag, &common_flag, &common_pos);
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (common_flag)
+        {
+          string common_prefix(object_name.substr(0, common_pos+1));
+          s_common_prefix->insert(common_prefix);
+        }
+        else if (prefix_flag)
+        {
+          ObjectInfo object_info;
+          ObjectUploadInfo object_upload_info;
+          int64_t pos = 0;
+          ret = object_info.deserialize(v.c_str(), v.length(), pos);
+          if (TFS_SUCCESS == ret)
+          {
+            object_upload_info.object_name_ = object_name;
+            object_upload_info.upload_id_ = upload_id;
+            object_upload_info.owner_id_ = object_info.meta_info_.owner_id_;
+            v_object_upload_info->push_back(object_upload_info);
+          }
+        }
+      }
+
+      return ret;
+    }
+
 
     int MetaInfoHelper::group_objects(const string &object_name, const string &v,
         const string &prefix, const char delimiter,
@@ -1109,7 +1444,11 @@ namespace tfs
             string v(kv_value_values[i]->get_data(), kv_value_values[i]->get_size());
 
             ret = deserialize_key(k.c_str(), k.length(), &bucket_name, &object_name, &offset, &version);
-            if (TFS_SUCCESS != ret)
+            if (EXIT_MULTIPART_TYPE_KEY == ret)
+            {
+              continue;
+            }
+            else if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(ERROR, "deserialize from %s fail", k.c_str());
             }
@@ -1443,6 +1782,199 @@ namespace tfs
       kv_value_values.clear();
       return ret;
     }
+    int MetaInfoHelper::list_upload_objects(const KvKey& pkey, const std::string& prefix,
+        const std::string &start_key, const std::string &start_id, const char delimiter,
+        const int32_t &limit, common::ListMultipartObjectResult *list_multipart_object_result)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == list_multipart_object_result)
+      {
+        ret = TFS_ERROR;
+      }
+
+      if (limit > MAX_LIMIT or limit < 0)
+      {
+        TBSYS_LOG(WARN, "limit: %d will be cutoff", limit);
+        list_multipart_object_result->limit_ = MAX_LIMIT;
+      }
+      else
+      {
+        list_multipart_object_result->limit_ = limit;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        list_multipart_object_result->v_object_upload_info_.clear();
+        list_multipart_object_result->s_common_prefix_.clear();
+
+        int32_t limit_size = list_multipart_object_result->limit_;
+        list_multipart_object_result->is_truncated_ = false;
+
+        vector<KvValue*> kv_value_keys;
+        vector<KvValue*> kv_value_values;
+
+        //multipart object form: $upload_id*object_name*version*partnum*offset
+        string temp_start_key;
+        temp_start_key += MULTIPART_UPLOAD_KEY;
+        temp_start_key += start_id;
+
+        bool loop = true;
+        bool first_loop = true;
+        do
+        {
+          int32_t res_size = -1;
+          int32_t actual_size = static_cast<int32_t>(list_multipart_object_result->v_object_upload_info_.size()) +
+            static_cast<int32_t>(list_multipart_object_result->s_common_prefix_.size());
+
+          limit_size = limit - actual_size;
+
+          int32_t extra = first_loop ? 2 : 1;
+          ret = get_range(pkey, temp_start_key, 0, limit_size + extra,
+              &kv_value_keys, &kv_value_values, &res_size);
+          // error
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "get range fail, ret: %d", ret);
+            break;
+          }
+
+          TBSYS_LOG(DEBUG, "get range once, res_size: %d, limit_size: %d", res_size, limit_size);
+
+          if (res_size == 0)
+          {
+            break;
+          }
+          else if (res_size < limit_size + extra)
+          {
+            loop = false;
+          }
+
+          string upload_id;
+          string object_name;
+          string bucket_name;
+
+          int64_t part_num = -1;
+          int64_t offset = -1;
+          int64_t version = -1;
+
+          for (int i = 0; i < res_size; i++)
+          {
+            string k(kv_value_keys[i]->get_data(), kv_value_keys[i]->get_size());
+            string v(kv_value_values[i]->get_data(), kv_value_values[i]->get_size());
+
+            ret = deserialize_upload_key(k.c_str(), k.length(), &bucket_name, &upload_id,
+                &object_name, &version, &part_num, &offset);
+
+            if (EXIT_NOT_MULTIPART_TYPE_KEY == ret)
+            {
+              continue;
+            }
+            else if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(ERROR, "deserialize from %s fail", k.c_str());
+            }
+            else if (offset == 0 && object_name.compare(start_key) >= 0)
+            {
+              if (!first_loop)
+              {
+                ret = group_upload_objects(object_name, upload_id, v, prefix, delimiter,
+                    &(list_multipart_object_result->v_object_upload_info_),
+                    &(list_multipart_object_result->s_common_prefix_));
+              }
+              else if (object_name.compare(start_key) != 0)
+              {
+                ret = group_upload_objects(object_name, upload_id, v, prefix, delimiter,
+                    &list_multipart_object_result->v_object_upload_info_,
+                    &list_multipart_object_result->s_common_prefix_);
+              }
+
+              if (TFS_SUCCESS != ret)
+              {
+                TBSYS_LOG(ERROR, "group objects fail, ret: %d", ret);
+              }
+            }
+
+            if (TFS_SUCCESS != ret)
+            {
+              loop = false;
+              break;
+            }
+
+            if (static_cast<int32_t>(list_multipart_object_result->s_common_prefix_.size()) +
+                static_cast<int32_t>(list_multipart_object_result->v_object_upload_info_.size())
+                >= list_multipart_object_result->limit_)
+            {
+              loop = false;
+              list_multipart_object_result->is_truncated_ = true;
+              vector<ObjectUploadInfo>::const_iterator iter = list_multipart_object_result->v_object_upload_info_.end();
+              list_multipart_object_result->next_start_key_ = (iter -1)->object_name_;
+              list_multipart_object_result->next_start_id_ = (iter - 1)->upload_id_;
+              break;
+            }
+          }
+
+          if (loop)
+          {
+            KvKey key;
+            char key_buff[KEY_BUFF_SIZE];
+            part_num = INT64_MAX;
+            offset = INT64_MAX;
+            ret = serialize_upload_key(object_name, upload_id, offset, part_num, &key,
+                key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+            if (TFS_SUCCESS == ret)
+            {
+              temp_start_key.assign(key.key_, key.key_size_);
+            }
+            else
+            {
+              TBSYS_LOG(INFO, "serialize sub key error");
+              loop = false;
+            }
+          }
+
+          //delete for tair
+          for (int i = 0; i < res_size; ++i)
+          {
+            kv_value_keys[i]->free();
+            kv_value_values[i]->free();
+          }
+          kv_value_keys.clear();
+          kv_value_values.clear();
+          first_loop = false;
+        } while (loop);// end of while
+      }// end of if
+      return ret;
+
+    }
+
+    int MetaInfoHelper::list_multipart_object(const std::string &bucket_name, const std::string &prefix, const std::string &start_key, const std::string &start_id, const char delimiter, const int32_t &limit, common::ListMultipartObjectResult *list_multipart_object_result)
+    {
+      int ret = TFS_SUCCESS;
+
+      KvKey pkey;
+      pkey.key_ = bucket_name.c_str();
+      pkey.key_size_ = bucket_name.length();
+      pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
+
+      TBSYS_LOG(DEBUG, "get bucket: %s, prefix: %s, start_key: %s, start_id: %s, delimiter: %c",
+                bucket_name.c_str(), prefix.c_str(), start_key.c_str(), start_id.c_str(), delimiter);
+      // check bucket whether exist
+      if (TFS_SUCCESS == ret)
+      {
+        BucketMetaInfo bucket_meta_info;
+        ret = head_bucket(bucket_name, &bucket_meta_info, NULL);
+        TBSYS_LOG(INFO, "head bucket: %s, ret: %d", bucket_name.c_str(), ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = list_upload_objects(pkey, prefix, start_key, start_id, delimiter, limit, list_multipart_object_result);
+      }
+
+      return ret;
+    }
+
     int MetaInfoHelper::del_bucket_tag(const string& bucket_name)
     {
       int ret = TFS_SUCCESS;
@@ -1481,6 +2013,55 @@ namespace tfs
       return ret;
     }
 
+    //about bucket acl
+    int MetaInfoHelper::put_bucket_acl(const string& bucket_name, const MAP_STRING_INT &bucket_acl_map)
+    {
+      int ret = TFS_SUCCESS;
+
+      BucketMetaInfo new_bucket_meta_info;
+      int64_t version = -1;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = head_bucket(bucket_name, &new_bucket_meta_info, &version);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(INFO, "bucket: %s has not existed", bucket_name.c_str());
+          ret = EXIT_BUCKET_NOT_EXIST;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        new_bucket_meta_info.bucket_acl_map_.clear();
+        new_bucket_meta_info.bucket_acl_map_ = bucket_acl_map;
+        ret = put_bucket_ex(bucket_name, new_bucket_meta_info, version);
+      }
+
+      return ret;
+    }
+
+    int MetaInfoHelper::get_bucket_acl(const string& bucket_name, MAP_STRING_INT *bucket_acl_map)
+    {
+      int ret = TFS_SUCCESS;
+
+      BucketMetaInfo bucket_meta_info;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = head_bucket(bucket_name, &bucket_meta_info, NULL);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(INFO, "bucket: %s has not existed", bucket_name.c_str());
+          ret = EXIT_BUCKET_NOT_EXIST;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        *bucket_acl_map = bucket_meta_info.bucket_acl_map_;
+      }
+
+      return ret;
+    }
 
     /*----------------------------multi part-----------------------------*/
     int MetaInfoHelper::joint_multi_objectname(const std::string &file_name,

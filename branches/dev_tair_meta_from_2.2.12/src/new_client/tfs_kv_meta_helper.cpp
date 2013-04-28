@@ -176,6 +176,71 @@ int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_nam
   return ret;
 }
 
+int KvMetaHelper::do_list_multipart_object(const uint64_t server_id, const char *bucket_name,
+                                const char *prefix, const char *start_key, const char *start_id, char delimiter,
+                                const int32_t limit, ListMultipartObjectResult *list_multipart_object_result,
+                                const UserInfo &user_info)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaListMultipartObjectMessage req_lmo_msg;
+    req_lmo_msg.set_bucket_name(bucket_name);
+    req_lmo_msg.set_prefix(NULL == prefix ? "" : string(prefix));
+    req_lmo_msg.set_start_key(NULL == start_key ? "" : string(start_key));
+    req_lmo_msg.set_start_id(NULL == start_id ? "" : string(start_id));
+    req_lmo_msg.set_delimiter(delimiter);
+    req_lmo_msg.set_limit(limit);
+    req_lmo_msg.set_user_info(user_info);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_lmo_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call list multipart object fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_GET_BUCKET_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaListMultipartObjectMessage* rsp_lmo_msg = dynamic_cast<RspKvMetaListMultipartObjectMessage*>(rsp);
+      list_multipart_object_result->limit_ = *(rsp_lmo_msg->get_limit());
+      list_multipart_object_result->v_object_upload_info_ = *(rsp_lmo_msg->get_mutable_v_object_upload_info());
+      list_multipart_object_result->is_truncated_ = *(rsp_lmo_msg->get_truncated());
+      list_multipart_object_result->s_common_prefix_ = *(rsp_lmo_msg->get_mutable_s_common_prefix());
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "list multipart object return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "list multipart object fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
 int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_name, const UserInfo &user_info)
 {
   int ret = TFS_SUCCESS;

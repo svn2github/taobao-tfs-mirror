@@ -41,6 +41,11 @@ namespace tfs
       static int do_head_bucket(const uint64_t server_id, const char *bucket_name, common::BucketMetaInfo *bucket_meta_info,
                                 const common::UserInfo &user_info);
 
+      static int do_list_multipart_object(const uint64_t server_id, const char *bucket_name,
+                               const char *prefix, const char *start_key, const char *start_id, char delimiter,
+                               const int32_t limit, common::ListMultipartObjectResult *list_multipart_object_result,
+                               const common::UserInfo &user_info);
+
       static int do_put_object(const uint64_t server_id,
                                const char *bucket_name, const char *object_name,
                                const common::ObjectInfo &object_info, const common::UserInfo &user_info);

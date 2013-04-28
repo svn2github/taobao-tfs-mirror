@@ -113,6 +113,9 @@ namespace tfs
         TfsRetType head_bucket(const char *bucket_name,
             common::BucketMetaInfo *bucket_meta_info,
             const common::UserInfo &user_info);
+        TfsRetType list_multipart_object(const char *bucket_name, const char *prefix,
+            const char *start_key, const char *start_id, const char delimiter, const int32_t limit,
+            common::ListMultipartObjectResult *list_multipart_object_result, const common::UserInfo &user_info);
 
         TfsRetType put_bucket_tag(const char *bucket_name, const common::MAP_STRING &bucket_tag_map);
         TfsRetType get_bucket_tag(const char *bucket_name, common::MAP_STRING *bucket_tag_map);

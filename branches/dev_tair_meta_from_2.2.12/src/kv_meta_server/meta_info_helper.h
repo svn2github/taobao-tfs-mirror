@@ -78,10 +78,14 @@ namespace tfs
             std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
             std::set<std::string>* s_common_prefix, int8_t* is_truncated);
         int del_bucket(const std::string& bucket_name);
+        int list_multipart_object(const std::string &bucket_name, const std::string &prefix, const std::string &start_key, const std::string &start_id, const char delimiter, const int32_t &limit, common::ListMultipartObjectResult *list_multipart_object_result);
 
         int put_bucket_tag(const std::string &bucket_name, const common::MAP_STRING &bucket_tag_map);
         int get_bucket_tag(const std::string &bucket_name, common::MAP_STRING *bucket_tag_map);
         int del_bucket_tag(const std::string &bucket_name);
+
+        int put_bucket_acl(const std::string &bucket_name, const common::MAP_STRING_INT &bucket_acl_map);
+        int get_bucket_acl(const std::string &bucket_name, common::MAP_STRING_INT *bucket_acl_map);
 
         /*----------------------------multi part-----------------------------*/
         int joint_multi_objectname(const std::string &file_name,
@@ -121,10 +125,22 @@ namespace tfs
         int serialize_key_ex(const std::string &file_name, const int64_t offset,
                         KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
 
+        int serialize_upload_key(const std::string &file_name, const std::string &upload_id,
+            const int64_t offset, const int64_t part_num,
+            KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
+
+        int deserialize_upload_key(const char *key, const int32_t key_size, std::string *bucket_name,
+            std::string *upload_id, std::string *object_name, int64_t *version,
+            int64_t *part_num, int64_t *offset);
+
       protected:
         int group_objects(const std::string &object_name, const std::string &v, const std::string &prefix,
             const char delimiter, std::vector<common::ObjectMetaInfo> *v_object_meta_info,
             std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix);
+
+        int group_upload_objects(const std::string &object_name, const std::string &upload_id,
+            const std::string &v, const std::string &prefix, const char delimiter,
+            std::vector<common::ObjectUploadInfo> *v_object_upload_info, std::set<std::string> *s_common_prefix);
 
         int put_object_part(const std::string &bucket_name, const std::string &file_name,
             const common::ObjectInfo &object_info);
@@ -141,6 +157,10 @@ namespace tfs
             const std::string &start_key, const char delimiter, int32_t *limit,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info, common::VSTRING *v_object_name,
             std::set<std::string> *s_common_prefix, int8_t *is_truncated);
+
+        int list_upload_objects(const KvKey &pkey, const std::string &prefix,
+            const std::string &start_key, const std::string &start_id, const char delimiter,
+            const int32_t &limit, common::ListMultipartObjectResult *list_multipart_object_result);
 
       protected:
         KvEngineHelper* kv_engine_helper_;

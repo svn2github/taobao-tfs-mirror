@@ -219,6 +219,14 @@ namespace tfs
       return impl_->del_bucket_tag(bucket_name);
     }
 
+    TfsRetType RcClient::list_multipart_object(const char *bucket_name, const char *prefix,
+        const char *start_key, const char *start_id, const char delimiter, const int32_t limit,
+        ListMultipartObjectResult *list_multipart_object_result, const UserInfo &user_info)
+    {
+      return impl_->list_multipart_object(bucket_name, prefix, start_key,
+          start_id, delimiter, limit, list_multipart_object_result, user_info);
+    }
+
     TfsRetType RcClient::put_object(const char *bucket_name, const char *object_name,
         const char* local_file, const UserInfo &user_info, const CustomizeInfo &customize_info)
     {

@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include <string>
 #include "define.h"
 #include "meta_define.h"
@@ -29,6 +30,7 @@ namespace tfs
     const char PERIOD = '.';
     const char DASH = '-';
     const char DEFAULT_CHAR = 7;
+    const char MULTIPART_UPLOAD_KEY = 2;
     const int32_t MAX_LIMIT = 1000;
     const int32_t VERSION_ERROR_RETRY_COUNT = 3;
     const int64_t MAX_VERSION = 1<<15 - 1;
@@ -40,6 +42,8 @@ namespace tfs
     const int32_t MAX_CUSTOMIZE_INFO_SIZE = 2*(1<<10);
     typedef std::map<std::string, std::string> MAP_STRING;
     typedef std::map<std::string, std::string>::const_iterator MAP_STRING_ITER;
+    typedef std::map<std::string, int32_t> MAP_STRING_INT;
+    typedef std::map<std::string, int32_t>::const_iterator  MAP_STRING_INT_ITER;
 
     /*------------MULTIPART-------------------------------*/
     const int32_t PARTNUM_BASE = 10000000;//because no meta_info_.max_tfs_file_size_ > PARTNUM_BASE
@@ -132,6 +136,7 @@ namespace tfs
 
       bool has_tag_info_;
       MAP_STRING bucket_tag_map_;
+      MAP_STRING_INT bucket_acl_map_;
     };
 
     struct UserInfo
@@ -143,6 +148,36 @@ namespace tfs
 
       int64_t owner_id_;
     };
+
+    struct ObjectUploadInfo
+    {
+      ObjectUploadInfo();
+      int64_t length() const;
+      int serialize(char *data, const int64_t data_len, int64_t &pos) const;
+      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
+
+      std::string object_name_;
+      std::string upload_id_;
+      int64_t owner_id_;
+    };
+
+    struct ListMultipartObjectResult
+    {
+      ListMultipartObjectResult();
+
+      std::string bucket_name_;
+      std::string start_key_;
+      std::string start_id_;
+      std::string next_start_key_;
+      std::string next_start_id_;
+
+      std::set<std::string> s_common_prefix_;
+      std::vector<common::ObjectUploadInfo> v_object_upload_info_;
+      int32_t limit_;
+      char delimiter_;
+      bool is_truncated_;
+    };
+
 
   }
 }
