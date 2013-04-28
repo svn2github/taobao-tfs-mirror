@@ -2138,9 +2138,7 @@ int cmd_put_bucket_tag(const VSTRING& param)
     const char *value = canonical_param(param[i*2+3]);
     if (NULL != key && NULL != value)
     {
-      string tmp_key(key);
-      string tmp_value(value);
-      if (!(bucket_tag_map.insert(std::make_pair(tmp_key, tmp_value))).second)
+      if (!(bucket_tag_map.insert(std::make_pair(key, value))).second)
       {
         printf("maybe insert duplicate key, fail\n");
         ret = TFS_ERROR;
@@ -2248,9 +2246,7 @@ int cmd_put_object(const VSTRING& param)
     const char *value = canonical_param(param[i*2+6]);
     if (NULL != key && NULL != value)
     {
-      string tmp_key(key);
-      string tmp_value(value);
-      if (!(meta_data.insert(std::make_pair(tmp_key, tmp_value))).second)
+      if (!(meta_data.insert(std::make_pair(key, value))).second)
       {
         printf("maybe insert duplicate key, fail\n");
         ret = TFS_ERROR;
@@ -2352,13 +2348,17 @@ int cmd_pread_object(const VSTRING& param)
 
   user_info.owner_id_ = owner_id;
 
-  char buf[3*1<<20];
+  char *buf = NULL;
+  if (length > 0)
+  {
+    buf = new char[length];
+  }
 
   impl.set_kv_rs_addr(krs_addr);
 
   int64_t ret = impl.initialize(rc_addr, app_key, app_ip);
 
-  if (TFS_SUCCESS == ret)
+  if (TFS_SUCCESS == ret && NULL != buf)
   {
     ret = impl.pread_object(bucket_name, object_name, buf, offset, length, &object_meta_info, &customize_info, user_info);
   }
@@ -2388,6 +2388,12 @@ int cmd_pread_object(const VSTRING& param)
       printf("open write to local file: %s fail\n", local_file);
       ret = TFS_ERROR;
     }
+  }
+
+  if (NULL != buf)
+  {
+    delete []buf;
+    buf = NULL;
   }
 
   ToolUtil::print_info(ret, "get bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d => %s",
