@@ -789,6 +789,351 @@ namespace tfs
       private:
         std::string bucket_name_;
     };
+
+
+    // init multipart
+    class ReqKvMetaInitMulitpartMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaInitMulitpartMessage();
+        virtual ~ReqKvMetaInitMulitpartMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        const std::string& get_file_name() const
+        {
+          return file_name_;
+        }
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        void set_file_name(const std::string& file_name)
+        {
+          file_name_ = file_name;
+        }
+
+      private:
+        std::string bucket_name_;
+        std::string file_name_;
+    };
+
+    class RspKvMetaInitMulitpartMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaInitMulitpartMessage();
+        virtual ~RspKvMetaInitMulitpartMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_upload_id() const
+        {
+          return upload_id_;
+        }
+
+        void set_upload_id(const std::string& upload_id)
+        {
+          upload_id_ = upload_id;
+        }
+
+      private:
+        std::string upload_id_;
+    };
+
+    //upload multipart
+    class ReqKvMetaUploadMulitpartMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaUploadMulitpartMessage();
+        virtual ~ReqKvMetaUploadMulitpartMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        const std::string& get_file_name() const
+        {
+          return file_name_;
+        }
+
+        const std::string& get_upload_id() const
+        {
+          return upload_id_;
+        }
+
+        int32_t get_part_num() const
+        {
+          return part_num_;
+        }
+
+        const common::ObjectInfo& get_object_info() const
+        {
+          return object_info_;
+        }
+
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        void set_file_name(const std::string& file_name)
+        {
+          file_name_ = file_name;
+        }
+
+        void set_upload_id(const std::string& upload_id)
+        {
+          upload_id_ = upload_id;
+        }
+
+        void set_part_num(const int32_t part_num)
+        {
+          part_num_ = part_num;
+        }
+
+        void set_object_info(const common::ObjectInfo& object_info)
+        {
+          object_info_ = object_info;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
+      private:
+        std::string bucket_name_;
+        std::string file_name_;
+        std::string upload_id_;
+        int32_t part_num_;
+        common::ObjectInfo object_info_;
+        common::UserInfo user_info_;
+    };
+
+    //complete multipart
+    class ReqKvMetaCompleteMulitpartMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaCompleteMulitpartMessage();
+        virtual ~ReqKvMetaCompleteMulitpartMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        const std::string& get_file_name() const
+        {
+          return file_name_;
+        }
+
+        const std::string& get_upload_id() const
+        {
+          return upload_id_;
+        }
+
+        std::vector<int32_t>& get_v_part_num()
+        {
+          return v_part_num_;
+        }
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        void set_file_name(const std::string& file_name)
+        {
+          file_name_ = file_name;
+        }
+
+        void set_upload_id(const std::string& upload_id)
+        {
+          upload_id_ = upload_id;
+        }
+
+        void set_v_part_num(const std::vector<int32_t>& v_part_num)
+        {
+          v_part_num_ = v_part_num;
+        }
+      protected:
+        std::string bucket_name_;
+        std::string file_name_;
+        std::string upload_id_;
+        std::vector<int32_t> v_part_num_;
+    };
+
+    //list multipart
+    class ReqKvMetaListMulitpartMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaListMulitpartMessage();
+        virtual ~ReqKvMetaListMulitpartMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        const std::string& get_file_name() const
+        {
+          return file_name_;
+        }
+
+        const std::string& get_upload_id() const
+        {
+          return upload_id_;
+        }
+
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        void set_file_name(const std::string& file_name)
+        {
+          file_name_ = file_name;
+        }
+
+        void set_upload_id(const std::string& upload_id)
+        {
+          upload_id_ = upload_id;
+        }
+
+      protected:
+        std::string bucket_name_;
+        std::string file_name_;
+        std::string upload_id_;
+    };
+
+    class RspKvMetaListMulitpartMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaListMulitpartMessage();
+        virtual ~RspKvMetaListMulitpartMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        std::vector<int32_t>& get_v_part_num()
+        {
+          return v_part_num_;
+        }
+
+        void set_v_part_num(const std::vector<int32_t>& v_part_num)
+        {
+          v_part_num_ = v_part_num;
+        }
+      protected:
+        std::vector<int32_t> v_part_num_;
+    };
+
+    //abort multipart
+    class ReqKvMetaAbortMulitpartMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaAbortMulitpartMessage();
+        virtual ~ReqKvMetaAbortMulitpartMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        const std::string& get_file_name() const
+        {
+          return file_name_;
+        }
+
+        const std::string& get_upload_id() const
+        {
+          return upload_id_;
+        }
+
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        void set_file_name(const std::string& file_name)
+        {
+          file_name_ = file_name;
+        }
+
+        void set_upload_id(const std::string& upload_id)
+        {
+          upload_id_ = upload_id;
+        }
+
+      protected:
+        std::string bucket_name_;
+        std::string file_name_;
+        std::string upload_id_;
+    };
+
+    class RspKvMetaAbortMulitpartMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaAbortMulitpartMessage();
+        virtual ~RspKvMetaAbortMulitpartMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const bool get_still_have() const
+        {
+          return still_have_;
+        }
+
+        void set_still_have(const bool still_have)
+        {
+          still_have_ = still_have;
+        }
+
+        const common::ObjectInfo& get_object_info() const
+        {
+          return object_info_;
+        }
+
+        void set_object_info(const common::ObjectInfo& object_info)
+        {
+          object_info_ = object_info;
+        }
+
+      private:
+        bool still_have_;
+        common::ObjectInfo object_info_;
+    };
+
   }
 }
 

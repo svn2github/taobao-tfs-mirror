@@ -60,6 +60,12 @@ namespace tfs
       int get_bucket_tag(message::ReqKvMetaGetBucketTagMessage *get_bucket_tag_msg);
       int del_bucket_tag(message::ReqKvMetaDelBucketTagMessage *del_bucket_tag_msg);
 
+      int init_multipart(message::ReqKvMetaInitMulitpartMessage* req_init_multi_msg);
+      int upload_multipart(message::ReqKvMetaUploadMulitpartMessage* req_up_multi_msg);
+      int complete_multipart(message::ReqKvMetaCompleteMulitpartMessage* req_comp_multi_msg);
+      int list_multipart(message::ReqKvMetaListMulitpartMessage* req_list_multi_msg);
+      int abort_multipart(message::ReqKvMetaAbortMulitpartMessage* req_abort_multi_msg);
+
     private:
       DISALLOW_COPY_AND_ASSIGN(KvMetaService);
 

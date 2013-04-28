@@ -336,6 +336,30 @@ namespace tfs
           case common::RSP_KV_RT_GET_TABLE_MESSAGE:
             packet = new GetTableFromKvRtsResponseMessage();
             break;
+          case common::REQ_KVMETA_INIT_MULTIPART_MESSAGE:
+            packet = new ReqKvMetaInitMulitpartMessage();
+            break;
+          case common::RSP_KVMETA_INIT_MULTIPART_MESSAGE:
+            packet = new RspKvMetaInitMulitpartMessage();
+            break;
+          case common::REQ_KVMETA_UPLOAD_MULTIPART_MESSAGE:
+            packet = new ReqKvMetaUploadMulitpartMessage();
+            break;
+          case common::REQ_KVMETA_COMPLETE_MULTIPART_MESSAGE:
+            packet = new ReqKvMetaCompleteMulitpartMessage();
+            break;
+          case common::REQ_KVMETA_LIST_MULTIPART_MESSAGE:
+            packet = new ReqKvMetaListMulitpartMessage();
+            break;
+          case common::RSP_KVMETA_LIST_MULTIPART_MESSAGE:
+            packet = new RspKvMetaListMulitpartMessage();
+            break;
+          case common::REQ_KVMETA_ABORT_MULTIPART_MESSAGE:
+            packet = new ReqKvMetaAbortMulitpartMessage();
+            break;
+          case common::RSP_KVMETA_ABORT_MULTIPART_MESSAGE:
+            packet = new RspKvMetaAbortMulitpartMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;

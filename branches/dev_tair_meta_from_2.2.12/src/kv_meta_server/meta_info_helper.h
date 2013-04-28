@@ -83,6 +83,25 @@ namespace tfs
         int get_bucket_tag(const std::string &bucket_name, common::MAP_STRING *bucket_tag_map);
         int del_bucket_tag(const std::string &bucket_name);
 
+        /*----------------------------multi part-----------------------------*/
+        int joint_multi_objectname(const std::string &file_name,
+                const std::string &upload_id, const int32_t part_num, std::string &new_objectname);
+        int is_equal_v_part_num(const std::vector<int32_t>& v_part_num_kv, const std::vector<int32_t>& v_part_num);
+        int get_v_partnum_kv(const std::string& bucket_name, const std::string& file_name,
+            const std::string &upload_id, std::vector<int32_t>* const p_v_part_num);
+        int init_multipart(const std::string& bucket_name,
+                         const std::string& file_name, std::string* upload_id);
+        int upload_multipart(const std::string &bucket_name,
+             const std::string &file_name, const std::string &upload_id, const int32_t part_num,
+             common::ObjectInfo &object_info, const common::UserInfo &user_info);
+        int complete_multipart(const std::string &bucket_name,
+            const std::string &file_name, const std::string &upload_id, const std::vector<int32_t>& v_part_num);
+        int list_multipart(const std::string& bucket_name, const std::string& file_name,
+                           const std::string& upload_id, std::vector<int32_t>* const p_v_part_num);
+        int abort_multipart(const std::string &bucket_name, const std::string &file_name,
+            const std::string &upload_id, common::ObjectInfo *object_info, bool* still_have);
+        int del_part_num_key(const std::string &bucket_name,
+                const std::string &file_name, const std::string &upload_id);
       public:
         int put_bucket_ex(const std::string &bucket_name, const common::BucketMetaInfo &bucket_meta_info,
             const int64_t lock_version = 0);

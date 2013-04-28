@@ -196,6 +196,9 @@ namespace tfs
     const int32_t EXIT_TAG_KEY_OVER_LIMIT = -16009; //over bucket tag key size(10)
     const int32_t EXIT_TAG_KEY_EXIST = -16010; //bucket has the key
     const int32_t EXIT_BUCKET_TAG_NOT_EXIST = -16011; //del bucket tag not exist
+
+    const int32_t EXIT_OBJECT_EXIST = -16020; //init multipart fail
+    const int32_t EXIT_MULITIPART_LIST_DIFF = -16021;
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

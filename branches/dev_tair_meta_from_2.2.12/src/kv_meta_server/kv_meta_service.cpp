@@ -125,6 +125,11 @@ namespace tfs
         stat_ptr->add_sub_key("get_object");
         stat_ptr->add_sub_key("del_object");
         stat_ptr->add_sub_key("head_object");
+        stat_ptr->add_sub_key("init_multipart");
+        stat_ptr->add_sub_key("upload_multipart");
+        stat_ptr->add_sub_key("complete_multipart");
+        stat_ptr->add_sub_key("list_multipart");
+        stat_ptr->add_sub_key("abort_multipart");
         stat_mgr_.add_entry(stat_ptr, SYSPARAM_KVMETA.dump_stat_info_interval_);
       }
 
@@ -208,6 +213,21 @@ namespace tfs
             break;
           case REQ_KVMETA_DEL_BUCKET_TAG_MESSAGE:
             ret = del_bucket_tag(dynamic_cast<ReqKvMetaDelBucketTagMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_INIT_MULTIPART_MESSAGE:
+            ret = init_multipart(dynamic_cast<ReqKvMetaInitMulitpartMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_UPLOAD_MULTIPART_MESSAGE:
+            ret = upload_multipart(dynamic_cast<ReqKvMetaUploadMulitpartMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_COMPLETE_MULTIPART_MESSAGE:
+            ret = complete_multipart(dynamic_cast<ReqKvMetaCompleteMulitpartMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_LIST_MULTIPART_MESSAGE:
+            ret = list_multipart(dynamic_cast<ReqKvMetaListMulitpartMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_ABORT_MULTIPART_MESSAGE:
+            ret = abort_multipart(dynamic_cast<ReqKvMetaAbortMulitpartMessage*>(base_packet));
             break;
           default:
             ret = EXIT_UNKNOWN_MSGTYPE;
@@ -593,6 +613,166 @@ namespace tfs
         //stat_mgr_.update_entry(tfs_kv_meta_stat_, "del_bucket_tag", 1);
       }
       //stat_info_helper_.del_bucket_tag()
+      return ret;
+    }
+
+    int KvMetaService::init_multipart(ReqKvMetaInitMulitpartMessage* req_init_multi_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_init_multi_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "init multi mess is null, ret: %d", ret);
+      }
+      std::string upload_id;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.init_multipart(req_init_multi_msg->get_bucket_name(),
+            req_init_multi_msg->get_file_name(), &upload_id);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        RspKvMetaInitMulitpartMessage* rsp_init_multi_msg = new(std::nothrow) RspKvMetaInitMulitpartMessage();
+        assert(NULL != rsp_init_multi_msg);
+        rsp_init_multi_msg->set_upload_id(upload_id);
+
+        req_init_multi_msg->reply(rsp_init_multi_msg);
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "init_multipart", 1);
+      }
+      else
+      {
+        req_init_multi_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "init multipart fail");
+      }
+      return ret;
+    }
+
+    int KvMetaService::upload_multipart(ReqKvMetaUploadMulitpartMessage* req_up_multi_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_up_multi_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::Upload Mulitpart fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ObjectInfo object_info = req_up_multi_msg->get_object_info();
+        const UserInfo &user_info = req_up_multi_msg->get_user_info();
+        ret = meta_info_helper_.upload_multipart(req_up_multi_msg->get_bucket_name(),
+              req_up_multi_msg->get_file_name(),
+              req_up_multi_msg->get_upload_id(),
+              req_up_multi_msg->get_part_num(),
+              object_info, user_info);
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = req_up_multi_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "Upload Mulitpart fail");
+      }
+      else
+      {
+        ret = req_up_multi_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "upload_multipart", 1);
+      }
+      return ret;
+    }
+
+    int KvMetaService::complete_multipart(ReqKvMetaCompleteMulitpartMessage* req_comp_multi_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_comp_multi_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::Complete Mulitpart fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.complete_multipart(req_comp_multi_msg->get_bucket_name(),
+              req_comp_multi_msg->get_file_name(),
+              req_comp_multi_msg->get_upload_id(),
+              req_comp_multi_msg->get_v_part_num());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = req_comp_multi_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "Complete Mulitpart fail");
+      }
+      else
+      {
+        ret = req_comp_multi_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "complete_multipart", 1);
+      }
+      return ret;
+    }
+
+    int KvMetaService::list_multipart(ReqKvMetaListMulitpartMessage* req_list_multi_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_list_multi_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "list multi message is null, ret: %d", ret);
+      }
+      std::vector<int32_t> v_part_num;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.list_multipart(req_list_multi_msg->get_bucket_name(),
+            req_list_multi_msg->get_file_name(), req_list_multi_msg->get_upload_id(), &v_part_num);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        RspKvMetaListMulitpartMessage* rsp_list_multi_msg = new(std::nothrow) RspKvMetaListMulitpartMessage();
+        assert(NULL != rsp_list_multi_msg);
+        rsp_list_multi_msg->set_v_part_num(v_part_num);
+
+        req_list_multi_msg->reply(rsp_list_multi_msg);
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "list_multipart", 1);
+      }
+      else
+      {
+        req_list_multi_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "list multipart fail");
+      }
+      return ret;
+    }
+
+    int KvMetaService::abort_multipart(ReqKvMetaAbortMulitpartMessage* req_abort_multi_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == req_abort_multi_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::del_object fail, ret: %d", ret);
+      }
+
+      ObjectInfo object_info;
+      bool still_have = false;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.abort_multipart(req_abort_multi_msg->get_bucket_name(),
+                                           req_abort_multi_msg->get_file_name(),
+                                           req_abort_multi_msg->get_upload_id(),
+                                           &object_info, &still_have);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        RspKvMetaAbortMulitpartMessage* rsp_abort_multi_msg = new(std::nothrow) RspKvMetaAbortMulitpartMessage();
+          assert(NULL != rsp_abort_multi_msg);
+          rsp_abort_multi_msg->set_object_info(object_info);
+          rsp_abort_multi_msg->set_still_have(still_have);
+          req_abort_multi_msg->reply(rsp_abort_multi_msg);
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "abort_multipart", 1);
+      }
+      else
+      {
+        ret = req_abort_multi_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "abort_multi fail");
+      }
       return ret;
     }
 

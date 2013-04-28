@@ -1665,6 +1665,82 @@ namespace tfs
         return ret;
       }
 
+      TfsRetType RcClientImpl::init_multipart(const char *bucket_name, const char *object_name,
+          std::string* const upload_id)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->init_multipart(bucket_name, object_name,
+              upload_id);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::upload_multipart(const char *bucket_name,
+        const char *object_name, const char* local_file, const char* upload_id,
+        const int32_t part_num, const UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->upload_multipart(bucket_name, object_name, local_file, upload_id,
+                part_num, user_info);
+        }
+        return ret;
+      }
+
+      int64_t RcClientImpl::pwrite_upload_multipart(const char *bucket_name,
+        const char *object_name, const void *buffer, int64_t offset,
+        int64_t length, const char* upload_id,
+        const int32_t part_num, const UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->pwrite_upload_multipart(bucket_name,
+             object_name, buffer, offset,
+             length, upload_id, part_num, user_info);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::complete_multipart(const char *bucket_name,
+        const char *object_name, const char* upload_id,
+        const std::vector<int32_t>& v_part_num)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->complete_multipart(bucket_name, object_name, upload_id,
+                v_part_num);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::list_multipart(const char *bucket_name,
+        const char *object_name, const char* upload_id,
+        std::vector<int32_t>* const p_v_part_num)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->list_multipart(bucket_name, object_name, upload_id,
+                p_v_part_num);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::abort_multipart(const char *bucket_name,
+        const char *object_name, const char* upload_id)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->abort_multipart(bucket_name, object_name, upload_id);
+        }
+        return ret;
+      }
       int64_t RcClientImpl::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
       {
         int64_t write_count = -1;

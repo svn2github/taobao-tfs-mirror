@@ -76,6 +76,22 @@ namespace tfs
         TfsRetType head_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info, const common::UserInfo &user_info);
 
+        TfsRetType init_multipart(const char *bucket_name,
+            const char *object_name, std::string* const upload_id);
+        TfsRetType upload_multipart(const char *bucket_name,
+            const char *object_name, const char* local_file, const char* upload_id,
+            const int32_t part_num, const common::UserInfo &user_info);
+        int64_t pwrite_upload_multipart(const char *bucket_name,
+            const char *object_name, const void *buffer, int64_t offset,
+            int64_t length, const char* upload_id,
+            const int32_t part_num, const common::UserInfo &user_info);
+        TfsRetType complete_multipart(const char *bucket_name,
+                const char *object_name, const char* upload_id, const std::vector<int32_t>& v_part_num);
+        TfsRetType list_multipart(const char *bucket_name, const char *object_name,
+                const char* upload_id, std::vector<int32_t>* const p_v_part_num);
+        TfsRetType abort_multipart(const char *bucket_name,
+              const char *object_name, const char* upload_id);
+
         void update_fail_info(const int ret);
         int do_put_bucket(const char *bucket_name,
             const common::BucketMetaInfo& bucket_meta_info, const common::UserInfo &user_info);
@@ -103,7 +119,17 @@ namespace tfs
             bool *still_have, const common::UserInfo &user_info);
         int do_head_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info, const common::UserInfo &user_info);
-
+        int do_init_multipart(const char *bucket_name, const char *object_name,
+            std::string* const upload_id);
+        int do_upload_multipart(const char *bucket_name,
+            const char *object_name, const common::ObjectInfo &object_info, const common::UserInfo &user_info,
+            const char* upload_id, const int32_t part_num);
+        int do_complete_multipart(const char *bucket_name, const char *object_name,
+                const char* upload_id, const std::vector<int32_t>& v_part_num);
+        int do_list_multipart(const char *bucket_name, const char *object_name,
+                const char* upload_id, std::vector<int32_t>* const p_v_part_num);
+        int do_abort_multipart(const char *bucket_name, const char *object_name,
+            const char* upload_id, common::ObjectInfo *object_info, bool* still_have);
         static bool is_valid_string(const std::string &str);
         static bool is_valid_bucket_tag(const common::MAP_STRING &bucket_tag_map);
         static bool is_valid_bucket_name(const char *bucket_name);

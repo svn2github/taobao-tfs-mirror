@@ -18,6 +18,7 @@
 #include "meta_info_helper.h"
 #include <malloc.h>
 #include "tairengine_helper.h"
+#include "common/session_util.h"
 using namespace std;
 namespace tfs
 {
@@ -31,6 +32,8 @@ namespace tfs
     const int32_t SCAN_LIMIT = 500;
     const int32_t MESS_LIMIT = 10;
     const int64_t INT64_INFI = 0x7FFFFFFFFFFFFFFF;
+    const char DELIMITER_1 = 7;
+    const char DELIMITER_2 = 2;
     enum
     {
       MODE_REQ_LIMIT = 1,
@@ -207,7 +210,6 @@ namespace tfs
       return ret;
     }
 
-
     /*----------------------------object part-----------------------------*/
     int MetaInfoHelper::head_object(const string &bucket_name,
         const string &file_name, ObjectInfo *object_info_zero)
@@ -238,7 +240,7 @@ namespace tfs
       KvKey key;
       if (TFS_SUCCESS == ret)
       {
-        ret = serialize_key(bucket_name, file_name, offset, &key, key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+         ret = serialize_key(bucket_name, file_name, offset, &key, key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
       }
 
       //op value
@@ -446,6 +448,10 @@ namespace tfs
         if (0 == offset)
         {
           object_info_zero.meta_info_.owner_id_ = user_info.owner_id_;
+          if (object_info.meta_info_.max_tfs_file_size_ > PARTNUM_BASE)
+          {
+            object_info_zero.meta_info_.max_tfs_file_size_ = object_info.meta_info_.max_tfs_file_size_;
+          }
           // identify old data
           if (-5 == object_info.meta_info_.max_tfs_file_size_)
           {
@@ -1437,7 +1443,6 @@ namespace tfs
       kv_value_values.clear();
       return ret;
     }
-
     int MetaInfoHelper::del_bucket_tag(const string& bucket_name)
     {
       int ret = TFS_SUCCESS;
@@ -1471,6 +1476,589 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = put_bucket_ex(bucket_name, bucket_meta_info, version);
+      }
+
+      return ret;
+    }
+
+
+    /*----------------------------multi part-----------------------------*/
+    int MetaInfoHelper::joint_multi_objectname(const std::string &file_name,
+        const std::string &upload_id, const int32_t part_num, std::string &new_objectname)
+    {
+      int ret = (file_name.size() > 0 &&
+                 upload_id.size() > 0 && part_num <= PARTNUM_MAX && part_num >= PARTNUM_MIN - 1) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        char str[10];
+        sprintf(str, "%05d", part_num);
+        string str_num(str);
+        new_objectname = DELIMITER_2 + upload_id + DELIMITER_1 + file_name + DELIMITER_1 + str_num;
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "joint fail");
+      }
+      return ret;
+    }
+/*
+    int MetaInfoHelper::joint_multi_objectname_for_check(const std::string &file_name,
+        const std::string &upload_id, const int32_t part_num, std::string &new_objectname)
+    {
+      int ret = (file_name.size() > 0 &&
+                 upload_id.size() > 0 && part_num < 10000 && part_num >= 0) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        char str[10];
+        sprintf(str, "%05d", part_num);
+        string str_num(str);
+        const char DELIMITER_1 = 7;
+        const char DELIMITER_2 = 2;
+        new_objectname = DELIMITER_2 + upload_id + DELIMITER_1 + file_name + DELIMITER_1 + DELIMITER_2 + str_num;
+      }
+      return ret;
+    }
+*/
+    int MetaInfoHelper::is_equal_v_part_num(const VINT32& v_part_num_kv, const VINT32& v_part_num)
+    {
+      int32_t ret = TFS_SUCCESS;
+      if (v_part_num_kv.size() == v_part_num.size())
+      {
+        for (size_t i = 0; i < v_part_num.size(); ++i)
+        {
+          if (v_part_num_kv[i] != v_part_num[i])
+          {
+            ret = EXIT_MULITIPART_LIST_DIFF;
+            break;
+          }
+        }
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "SIZE is diff : user:%d , kv:%d",v_part_num.size() , v_part_num_kv.size());
+        ret = EXIT_MULITIPART_LIST_DIFF;
+      }
+      return ret;
+    }
+
+    int MetaInfoHelper::get_v_partnum_kv(const std::string& bucket_name,
+                const std::string& file_name, const std::string &upload_id, std::vector<int32_t>* const p_v_part_num)
+    {
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0 &&
+          upload_id.size() > 0 && p_v_part_num != NULL) ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        //op key
+        char *start_key_buff = NULL;
+        if (TFS_SUCCESS == ret)
+        {
+          start_key_buff = (char*) malloc(KEY_BUFF_SIZE);
+        }
+        if (NULL == start_key_buff)
+        {
+          ret = TFS_ERROR;
+        }
+        char *end_key_buff = NULL;
+        if (TFS_SUCCESS == ret)
+        {
+          end_key_buff = (char*) malloc(KEY_BUFF_SIZE);
+        }
+        if (NULL == end_key_buff)
+        {
+          ret = TFS_ERROR;
+        }
+        KvKey start_key;
+        KvKey end_key;
+        int64_t start_offset = 0;
+        int64_t end_offset = 0;
+        string check_objectname_start;
+        string check_objectname_end;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = joint_multi_objectname(file_name, upload_id, PARTNUM_MIN, check_objectname_start);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = joint_multi_objectname(file_name, upload_id, PARTNUM_MAX, check_objectname_end);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = serialize_key(bucket_name, check_objectname_start, start_offset,
+                &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "error serialize_key", ret);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = serialize_key(bucket_name, check_objectname_end, end_offset,
+                &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "error serialize_key", ret);
+        }
+
+        int32_t i;
+        int32_t first = 0;
+        bool go_on = true;
+        short scan_type = CMD_RANGE_VALUE_ONLY;//only scan value
+        vector<KvValue*> kv_value_keys;
+        vector<KvValue*> kv_value_values;
+        p_v_part_num->clear();
+
+        while (go_on)
+        {
+          int32_t result_size = 0;
+          ret = kv_engine_helper_->scan_keys(start_key, end_key, SCAN_LIMIT, first,
+              &kv_value_keys, &kv_value_values, &result_size, scan_type);
+          if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+          {//metainfo exist but data not exist
+            ret = TFS_SUCCESS;
+          }
+          for(i = 0; i < result_size; ++i)
+          {
+            common::ObjectInfo tmp_object_info;
+            //value get
+            int64_t pos = 0;
+            tmp_object_info.deserialize(kv_value_values[i]->get_data(),
+                                     kv_value_values[i]->get_size(), pos);
+            if (tmp_object_info.v_tfs_file_info_.size() > 0)
+            {
+              if (tmp_object_info.meta_info_.max_tfs_file_size_ > PARTNUM_BASE && tmp_object_info.v_tfs_file_info_[0].offset_ == 0)
+              {
+                if (p_v_part_num->size() > 0)
+                {
+                  if (tmp_object_info.meta_info_.max_tfs_file_size_ - PARTNUM_BASE == p_v_part_num->back())
+                  {
+                    continue;
+                  }
+                }
+                p_v_part_num->push_back(tmp_object_info.meta_info_.max_tfs_file_size_ - PARTNUM_BASE);
+                TBSYS_LOG(DEBUG, "this time part_num is =========: %d", tmp_object_info.meta_info_.max_tfs_file_size_ - PARTNUM_BASE);
+              }
+            }
+          }
+
+          TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
+
+          if(result_size == SCAN_LIMIT)
+          {
+            if (TFS_SUCCESS == ret)
+            {
+              ret = joint_multi_objectname(file_name, upload_id, p_v_part_num->back() + 1, check_objectname_start);
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              ret = serialize_key(bucket_name, check_objectname_start, start_offset,
+                    &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+            }
+          }
+          else
+          {
+            go_on = false;
+          }
+
+          for(i = 0; i < result_size; ++i)//free tair
+          {
+            kv_value_values[i]->free();
+          }
+          kv_value_values.clear();
+        }//end while
+
+        if (NULL != start_key_buff)
+        {
+          free(start_key_buff);
+          start_key_buff = NULL;
+        }
+        if (NULL != end_key_buff)
+        {
+          free(end_key_buff);
+          end_key_buff = NULL;
+        }
+      }
+      return ret;
+    }
+    int MetaInfoHelper::init_multipart(const std::string& bucket_name,
+                const std::string& file_name, std::string* upload_id)
+    {
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0 &&
+          NULL != upload_id ) ? TFS_SUCCESS : TFS_ERROR;
+
+      // check bucket whether exist
+      if (TFS_SUCCESS == ret)
+      {
+        BucketMetaInfo bucket_meta_info;
+        ret = head_bucket(bucket_name, &bucket_meta_info, NULL);
+        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
+            bucket_name.c_str(), file_name.c_str(), ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ObjectInfo object_info_zero;
+        ret = head_object(bucket_name, file_name, &object_info_zero);
+      }
+      if (EXIT_OBJECT_NOT_EXIST == ret)
+      {
+        string new_objectname;
+        int32_t part_num = 0;
+
+        SessionUtil::gene_session_id(static_cast<int32_t>(bucket_name.size()), static_cast<int64_t>(file_name.size()), *upload_id);
+        // put partnum = 0 key as checkkey
+        ret = joint_multi_objectname(file_name, *upload_id, part_num, new_objectname);
+        if (TFS_SUCCESS == ret)
+        {
+          ObjectInfo object_info;
+          UserInfo user_info;
+          ret = put_object(bucket_name, new_objectname, object_info, user_info);
+        }
+      }
+      else if (TFS_SUCCESS == ret)
+      {
+        ret = EXIT_OBJECT_EXIST;
+      }
+      return ret;
+    }
+
+    int MetaInfoHelper::upload_multipart(const std::string &bucket_name,
+        const std::string &file_name, const std::string &upload_id, const int32_t part_num,
+        ObjectInfo &object_info, const UserInfo &user_info)
+    {
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0 &&
+                 upload_id.size() > 0 && part_num <= PARTNUM_MAX && part_num >= PARTNUM_MIN) ? TFS_SUCCESS : TFS_ERROR;
+      //first check uploadid is vaild;
+      string check_objectname;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = joint_multi_objectname(file_name, upload_id, 0, check_objectname);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        common::ObjectInfo object_info_zero;
+        int64_t version = 0;
+        int64_t offset_zero = 0;
+        ret = get_object_part(bucket_name, check_objectname, offset_zero, &object_info_zero, &version);
+        if (TFS_SUCCESS != ret)
+        {
+          if (EXIT_OBJECT_NOT_EXIST == ret)
+          {
+            TBSYS_LOG(ERROR, "upload multipart fail object noexist or uploadid is wrong ret : %d", ret);
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "upload multipart other error ret : %d", ret);
+          }
+        }
+      }
+      //put this frag
+      string new_objectname;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = joint_multi_objectname(file_name, upload_id, part_num, new_objectname);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        if (object_info.v_tfs_file_info_.size() > 0)
+        {
+          //put partnum to meta_info_.max_tfs_file_size_ of first frag
+          if (0 == object_info.v_tfs_file_info_.front().offset_)
+          {
+            object_info.meta_info_.max_tfs_file_size_ = PARTNUM_BASE + part_num;
+          }
+        }
+        ret = put_object(bucket_name, new_objectname, object_info, user_info);
+      }
+      return ret;
+    }
+
+    int MetaInfoHelper::complete_multipart(const std::string &bucket_name,
+        const std::string &file_name, const std::string &upload_id, const std::vector<int32_t>& v_part_num)
+    {
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0 &&
+                 upload_id.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+      //first check uploadid is vaild;
+      string check_objectname;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = joint_multi_objectname(file_name, upload_id, 0, check_objectname);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        common::ObjectInfo object_info_zero;
+        int64_t version = 0;
+        int64_t offset_zero = 0;
+        ret = get_object_part(bucket_name, check_objectname, offset_zero, &object_info_zero, &version);
+      }
+      std::vector<int32_t> v_part_num_kv;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_v_partnum_kv(bucket_name, file_name, upload_id, &v_part_num_kv);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = is_equal_v_part_num(v_part_num_kv, v_part_num);
+      }
+      bool still_have = false;
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t total_offset = 0;
+        int64_t one = 1;//must define ; in 1<<40 ,1 is int32 so...
+        int64_t total_length = one << 40;//max 1TB
+        size_t i = 0;
+        for (i = 0; i < v_part_num.size(); ++i)
+        {
+          ret = joint_multi_objectname(file_name, upload_id, v_part_num[i], check_objectname);
+
+          still_have = false;
+          int64_t left_length = total_length;
+          int64_t read_length = 0;
+          int64_t cur_offset = 0;
+          common::UserInfo user_info;
+          if (TFS_SUCCESS == ret)
+          {
+            do
+            {
+              still_have = false;
+              common::ObjectInfo object_info;
+              ret = get_object(bucket_name, check_objectname, cur_offset, left_length, &object_info, &still_have);
+              for (size_t j = 0; j < object_info.v_tfs_file_info_.size(); ++j)
+              {
+                common::ObjectInfo object_info_one;
+                if (i == 0 && j == 0)
+                {
+                  object_info_one.has_meta_info_ = true;
+                  object_info_one.has_customize_info_ = true;
+                  object_info_one.customize_info_ = object_info.customize_info_;
+                  user_info.owner_id_ = object_info.meta_info_.owner_id_;
+                }
+                object_info.v_tfs_file_info_[j].offset_ += total_offset;
+                object_info_one.v_tfs_file_info_.push_back(object_info.v_tfs_file_info_[j]);
+
+                ret = put_object(bucket_name, file_name, object_info_one, user_info);
+                if (TFS_SUCCESS != ret)
+                {
+                  TBSYS_LOG(ERROR, "complete multipart input fail ret : %d", ret);
+                  //TODO
+                }
+
+                cur_offset += object_info.v_tfs_file_info_[j].file_size_;
+                read_length += object_info.v_tfs_file_info_[j].file_size_;
+                left_length -= object_info.v_tfs_file_info_[j].file_size_;
+              }
+            }while(left_length > 0 && still_have);
+          }
+
+          total_offset += read_length;
+          total_length -= read_length;
+
+          do
+          {
+            still_have = false;
+            common::ObjectInfo object_info_del;
+            ret = del_object(bucket_name, check_objectname, &object_info_del, &still_have);
+          }while(still_have);
+        }
+        if (TFS_SUCCESS == ret && i == v_part_num.size())
+        {
+          ret = joint_multi_objectname(file_name, upload_id, 0, check_objectname);
+          if (TFS_SUCCESS == ret)
+          {
+            common::ObjectInfo object_info_tdel;
+            ret = del_object(bucket_name, check_objectname, &object_info_tdel, &still_have);
+          }
+        }
+      }
+
+      return ret;
+    }
+
+    int MetaInfoHelper::list_multipart(const std::string& bucket_name,
+                const std::string& file_name, const std::string &upload_id, std::vector<int32_t>* const p_v_part_num)
+    {
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0 &&
+          upload_id.size() > 0 && p_v_part_num != NULL) ? TFS_SUCCESS : TFS_ERROR;
+
+      string check_objectname;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = joint_multi_objectname(file_name, upload_id, 0, check_objectname);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        common::ObjectInfo object_info_zero;
+        int64_t version = 0;
+        int64_t offset_zero = 0;
+        ret = get_object_part(bucket_name, check_objectname, offset_zero, &object_info_zero, &version);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_v_partnum_kv(bucket_name, file_name, upload_id, p_v_part_num);
+      }
+
+      return ret;
+    }
+
+    int MetaInfoHelper::abort_multipart(const std::string &bucket_name,
+        const std::string &file_name, const std::string &upload_id, common::ObjectInfo *object_info, bool* still_have)
+    {
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0 &&
+                 upload_id.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+                 /*
+      string check_objectname;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = joint_multi_objectname(file_name, upload_id, 0, check_objectname);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        common::ObjectInfo object_info_zero;
+        int64_t version = 0;
+        int64_t offset_zero = 0;
+        ret = get_object_part(bucket_name, check_objectname, offset_zero, &object_info_zero, &version);
+      }
+      */
+      if (TFS_SUCCESS == ret)
+      {
+        *still_have = false;
+        //op key
+        char *start_key_buff = NULL;
+        if (TFS_SUCCESS == ret)
+        {
+          start_key_buff = (char*) malloc(KEY_BUFF_SIZE);
+        }
+        if (NULL == start_key_buff)
+        {
+          ret = TFS_ERROR;
+        }
+        char *end_key_buff = NULL;
+        if (TFS_SUCCESS == ret)
+        {
+          end_key_buff = (char*) malloc(KEY_BUFF_SIZE);
+        }
+        if (NULL == end_key_buff)
+        {
+          ret = TFS_ERROR;
+        }
+        KvKey start_key;
+        KvKey end_key;
+        int64_t start_offset = 0;
+        int64_t end_offset = INT64_INFI;
+
+        string newobjectname_start;
+        string newobjectname_end;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = joint_multi_objectname(file_name, upload_id, PARTNUM_MIN, newobjectname_start);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = joint_multi_objectname(file_name, upload_id, PARTNUM_MAX, newobjectname_end);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = serialize_key(bucket_name, newobjectname_start, start_offset,
+                &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = serialize_key(bucket_name, newobjectname_end, end_offset,
+                &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+        }
+        int32_t limit = MESS_LIMIT;
+        int32_t i;
+        int32_t first = 0;
+        short scan_type = CMD_RANGE_ALL;
+        vector<KvValue*> kv_value_keys;
+        vector<KvValue*> kv_value_values;
+        object_info->v_tfs_file_info_.clear();
+        vector<KvKey> vec_keys;
+
+        int32_t result_size = 0;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_engine_helper_->scan_keys(start_key, end_key, limit + 1, first,
+            &kv_value_keys, &kv_value_values, &result_size, scan_type);
+          if (TFS_SUCCESS == ret && result_size == 0)
+          {
+            ret = EXIT_OBJECT_NOT_EXIST;
+          }
+          if (result_size == limit + 1)
+          {
+            result_size -= 1;
+            *still_have = true;
+          }
+
+          if(TFS_SUCCESS == ret)
+          {
+            for(i = 0; i < result_size; ++i)
+            {
+              //key get
+              KvKey tmp_key;
+              tmp_key.key_ = kv_value_keys[i]->get_data();
+              tmp_key.key_size_ = kv_value_keys[i]->get_size();
+              tmp_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
+              vec_keys.push_back(tmp_key);
+
+              //value get
+              common::ObjectInfo tmp_object_info;
+              int64_t pos = 0;
+              if(TFS_SUCCESS == ret)
+              {
+                ret = tmp_object_info.deserialize(kv_value_values[i]->get_data(),
+                                       kv_value_values[i]->get_size(), pos);
+              }
+              if(TFS_SUCCESS == ret)
+              {
+                //j now max == 1
+                for (size_t j = 0; j < tmp_object_info.v_tfs_file_info_.size(); j++)
+                {
+                  object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[j]);
+                }
+              }
+            }
+            TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "del partnum key fail ret:%d", ret);
+          }
+
+          //del from tair
+          if(TFS_SUCCESS == ret && result_size > 0)
+          {
+             ret = kv_engine_helper_->delete_keys(vec_keys);
+          }
+          for(i = 0; i < result_size; ++i)//free tair
+          {
+            kv_value_keys[i]->free();
+            kv_value_values[i]->free();
+          }
+          kv_value_keys.clear();
+          kv_value_values.clear();
+        }
+
+        if(NULL != start_key_buff)
+        {
+          free(start_key_buff);
+          start_key_buff = NULL;
+        }
+        if(NULL != end_key_buff)
+        {
+          free(end_key_buff);
+          end_key_buff = NULL;
+        }
+      }
+      else if (EXIT_OBJECT_NOT_EXIST == ret)
+      {
+        TBSYS_LOG(ERROR,"multipart noexist or uploadid is wrong");
+      }
+      else
+      {
+        TBSYS_LOG(ERROR,"other error ret:%d", ret);
       }
 
       return ret;

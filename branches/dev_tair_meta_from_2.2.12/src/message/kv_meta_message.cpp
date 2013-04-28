@@ -891,6 +891,7 @@ namespace tfs
       return Serialization::get_string_length(bucket_name_) + bucket_meta_info_.length();
     }
 
+
     //about tag
     //put bucket tag
     ReqKvMetaPutBucketTagMessage::ReqKvMetaPutBucketTagMessage()
@@ -1106,5 +1107,451 @@ namespace tfs
     {
       return common::Serialization::get_string_length(bucket_name_);
     }
+
+    //init multipart
+    ReqKvMetaInitMulitpartMessage::ReqKvMetaInitMulitpartMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_INIT_MULTIPART_MESSAGE;
+    }
+
+    ReqKvMetaInitMulitpartMessage::~ReqKvMetaInitMulitpartMessage(){}
+
+    int ReqKvMetaInitMulitpartMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(file_name_);
+      }
+      return iret;
+    }
+
+    int ReqKvMetaInitMulitpartMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(file_name_);
+      }
+      return iret;
+    }
+
+    int64_t ReqKvMetaInitMulitpartMessage::length() const
+    {
+      return Serialization::get_string_length(bucket_name_) +
+        Serialization::get_string_length(file_name_);
+    }
+
+    RspKvMetaInitMulitpartMessage::RspKvMetaInitMulitpartMessage()
+    {
+      _packetHeader._pcode = RSP_KVMETA_INIT_MULTIPART_MESSAGE;
+    }
+
+    RspKvMetaInitMulitpartMessage::~RspKvMetaInitMulitpartMessage(){}
+
+    int RspKvMetaInitMulitpartMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(upload_id_);
+      return iret;
+    }
+
+    int RspKvMetaInitMulitpartMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(upload_id_);
+      return iret;
+    }
+
+    int64_t RspKvMetaInitMulitpartMessage::length() const
+    {
+      return Serialization::get_string_length(upload_id_);
+    }
+
+    //upload mulitpart
+    ReqKvMetaUploadMulitpartMessage::ReqKvMetaUploadMulitpartMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_UPLOAD_MULTIPART_MESSAGE;
+    }
+
+    ReqKvMetaUploadMulitpartMessage::~ReqKvMetaUploadMulitpartMessage(){}
+
+    int ReqKvMetaUploadMulitpartMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(file_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(upload_id_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(part_num_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = object_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(object_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaUploadMulitpartMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(file_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(upload_id_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&part_num_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = object_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(object_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaUploadMulitpartMessage::length() const
+    {
+      return Serialization::get_string_length(bucket_name_) +
+        Serialization::get_string_length(file_name_) +
+        Serialization::get_string_length(upload_id_) +
+        INT_SIZE +
+        object_info_.length() + user_info_.length();
+    }
+
+    //complete mulitpart
+    ReqKvMetaCompleteMulitpartMessage::ReqKvMetaCompleteMulitpartMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_COMPLETE_MULTIPART_MESSAGE;
+    }
+
+    ReqKvMetaCompleteMulitpartMessage::~ReqKvMetaCompleteMulitpartMessage(){}
+
+    int ReqKvMetaCompleteMulitpartMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(file_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(upload_id_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(v_part_num_.size());
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        for (size_t i = 0; TFS_SUCCESS == iret && i < v_part_num_.size(); i++)
+        {
+          iret = output.set_int32(v_part_num_[i]);
+        }
+      }
+      return iret;
+    }
+
+    int ReqKvMetaCompleteMulitpartMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(file_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(upload_id_);
+      }
+
+      int32_t v_size = -1;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&v_size);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int32_t part_num = -1;
+        for (int32_t i = 0; TFS_SUCCESS == iret && i < v_size; i++)
+        {
+          iret = input.get_int32(&part_num);
+          if (common::TFS_SUCCESS == iret)
+          {
+            v_part_num_.push_back(part_num);
+          }
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaCompleteMulitpartMessage::length() const
+    {
+      return Serialization::get_string_length(bucket_name_) +
+        Serialization::get_string_length(file_name_) +
+        Serialization::get_string_length(upload_id_) +
+        INT_SIZE +
+        INT_SIZE * v_part_num_.size();
+    }
+
+    //list mulitpart
+    ReqKvMetaListMulitpartMessage::ReqKvMetaListMulitpartMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_LIST_MULTIPART_MESSAGE;
+    }
+
+    ReqKvMetaListMulitpartMessage::~ReqKvMetaListMulitpartMessage(){}
+
+    int ReqKvMetaListMulitpartMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(file_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(upload_id_);
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaListMulitpartMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(file_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(upload_id_);
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaListMulitpartMessage::length() const
+    {
+      return Serialization::get_string_length(bucket_name_) +
+        Serialization::get_string_length(file_name_) +
+        Serialization::get_string_length(upload_id_);
+    }
+
+    RspKvMetaListMulitpartMessage::RspKvMetaListMulitpartMessage()
+    {
+      _packetHeader._pcode = RSP_KVMETA_LIST_MULTIPART_MESSAGE;
+    }
+
+    RspKvMetaListMulitpartMessage::~RspKvMetaListMulitpartMessage(){}
+
+    int RspKvMetaListMulitpartMessage::serialize(Stream& output) const
+    {
+      int32_t iret = TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(v_part_num_.size());
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        for (size_t i = 0; TFS_SUCCESS == iret && i < v_part_num_.size(); i++)
+        {
+          iret = output.set_int32(v_part_num_[i]);
+        }
+      }
+      return iret;
+    }
+
+    int RspKvMetaListMulitpartMessage::deserialize(Stream& input)
+    {
+      int32_t iret = TFS_SUCCESS;
+
+      int32_t v_size = -1;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&v_size);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int32_t part_num = -1;
+        for (int32_t i = 0; TFS_SUCCESS == iret && i < v_size; i++)
+        {
+          iret = input.get_int32(&part_num);
+          if (common::TFS_SUCCESS == iret)
+          {
+            v_part_num_.push_back(part_num);
+          }
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t RspKvMetaListMulitpartMessage::length() const
+    {
+      return INT_SIZE + INT_SIZE * v_part_num_.size();
+    }
+
+    ReqKvMetaAbortMulitpartMessage::ReqKvMetaAbortMulitpartMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_ABORT_MULTIPART_MESSAGE;
+    }
+
+    ReqKvMetaAbortMulitpartMessage::~ReqKvMetaAbortMulitpartMessage(){}
+
+    int ReqKvMetaAbortMulitpartMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(file_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(upload_id_);
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaAbortMulitpartMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(file_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(upload_id_);
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaAbortMulitpartMessage::length() const
+    {
+      return Serialization::get_string_length(bucket_name_) +
+        Serialization::get_string_length(file_name_) +
+        Serialization::get_string_length(upload_id_);
+    }
+
+
+    RspKvMetaAbortMulitpartMessage::RspKvMetaAbortMulitpartMessage()
+    : still_have_(false)
+    {
+      _packetHeader._pcode = RSP_KVMETA_ABORT_MULTIPART_MESSAGE;
+    }
+    RspKvMetaAbortMulitpartMessage::~RspKvMetaAbortMulitpartMessage(){}
+
+    int RspKvMetaAbortMulitpartMessage::serialize(Stream& output) const
+    {
+      int ret = TFS_ERROR;
+      ret = output.set_int8(still_have_);
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t pos = 0;
+        ret = object_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == ret)
+        {
+          output.pour(object_info_.length());
+        }
+      }
+
+      return ret;
+    }
+
+    int RspKvMetaAbortMulitpartMessage::deserialize(Stream& input)
+    {
+      int ret = TFS_ERROR;
+      ret = input.get_int8(reinterpret_cast<int8_t*>(&still_have_));
+
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t pos = 0;
+        ret = object_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == ret)
+        {
+          input.drain(object_info_.length());
+        }
+      }
+
+      return ret;
+    }
+    int64_t RspKvMetaAbortMulitpartMessage::length() const
+    {
+      return INT8_SIZE + object_info_.length();
+    }
+
   }
 }

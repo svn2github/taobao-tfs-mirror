@@ -41,6 +41,10 @@ namespace tfs
     typedef std::map<std::string, std::string> MAP_STRING;
     typedef std::map<std::string, std::string>::const_iterator MAP_STRING_ITER;
 
+    /*------------MULTIPART-------------------------------*/
+    const int32_t PARTNUM_BASE = 10000000;//because no meta_info_.max_tfs_file_size_ > PARTNUM_BASE
+    const int32_t PARTNUM_MIN = 1;
+    const int32_t PARTNUM_MAX = 10000;
     struct TfsFileInfo
     {
       TfsFileInfo();

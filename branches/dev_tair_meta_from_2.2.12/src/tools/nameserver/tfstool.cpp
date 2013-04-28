@@ -183,6 +183,12 @@ int cmd_get_object(const VSTRING& param);
 int cmd_del_object(const VSTRING& param);
 int cmd_head_object(const VSTRING& param);
 
+int cmd_init_multipart(const VSTRING& param);
+int cmd_upload_multipart(const VSTRING& param);
+int cmd_complete_multipart(const VSTRING& param);
+int cmd_list_multipart(const VSTRING& param);
+int cmd_abort_multipart(const VSTRING& param);
+
 const char* rc_addr = NULL;
 const char* nsip = NULL;
 const char* krs_addr = NULL;
@@ -397,9 +403,9 @@ void init()
     g_cmd_map["get_bucket"] = CmdNode("get_bucket bucket_name [ prefix start_key delimiter limit ]", "get a bucket(list object)", 1, 5, cmd_get_bucket);
     g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name", "delete a bucket", 1, 1, cmd_del_bucket);
     g_cmd_map["head_bucket"] = CmdNode("head_bucket bucket_name", "stat a bucket", 1, 1, cmd_head_bucket);
-
+/*
     g_cmd_map["list_mul_obj"] = CmdNode("list_mul_obj bucket_name [prefix start_key start_id delimiter limit]", "list multipart objects", 1, 6, cmd_list_mul_obj);
-
+*/
     g_cmd_map["put_bucket_tag"] = CmdNode("put_bucket_tag bucket_name map_size key value [key value]", "put bucket tag", 4, 22, cmd_put_bucket_tag);
     g_cmd_map["get_bucket_tag"] = CmdNode("get_bucket_tag bucket_name", "get bucket tag", 1, 1, cmd_get_bucket_tag);
     g_cmd_map["del_bucket_tag"] = CmdNode("del_bucket_tag bucket_name", "del bucket tag", 1, 1, cmd_del_bucket_tag);
@@ -413,6 +419,14 @@ void init()
     g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name local_file", "get a object", 3, 3, cmd_get_object);
     g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name", "delete a object", 2, 2, cmd_del_object);
     g_cmd_map["head_object"] = CmdNode("head_object bucket_name object_name", "stat a object", 2, 2, cmd_head_object);
+
+    g_cmd_map["init_multipart"] = CmdNode("init_multipart bucket_name object_name", "init multipart", 2, 2, cmd_init_multipart);
+    g_cmd_map["upload_multipart"] = CmdNode("upload_multipart bucket_name object_name local_file owner_id upload_id part_num",
+                                            "upload multipart", 6, 6, cmd_upload_multipart);
+    g_cmd_map["complete_multipart"] = CmdNode("complete_multipart bucket_name object_name upload_id part_num_s part_num_e",
+                                              "complete multipart", 5, 5, cmd_complete_multipart);
+    g_cmd_map["list_multipart"] = CmdNode("list_multipart bucket_name object_name upload_id", "list multipart", 3, 3, cmd_list_multipart);
+    g_cmd_map["abort_multipart"] = CmdNode("abort_multipart bucket_name object_name upload_id", "abort multipart", 3, 3, cmd_abort_multipart);
     break;
   }
 }
@@ -1968,7 +1982,7 @@ int cmd_get_bucket(const VSTRING& param)
   ToolUtil::print_info(ret, "get bucket %s", bucket_name);
   return ret;
 }
-
+/*
 int cmd_list_mul_obj(const VSTRING& param)
 {
   int size = param.size();
@@ -2048,7 +2062,7 @@ int cmd_list_mul_obj(const VSTRING& param)
   return ret;
 }
 
-
+*/
 int cmd_del_bucket(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
@@ -2478,3 +2492,136 @@ int cmd_head_object(const VSTRING& param)
   return ret;
 }
 
+int cmd_init_multipart(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  const char* object_name = param[1].c_str();
+
+  string upload_id;
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.init_multipart(bucket_name, object_name, &upload_id);
+  }
+
+  if (TFS_SUCCESS == ret)
+  {
+    printf("upload_id is %s \n", upload_id.c_str());
+  }
+  ToolUtil::print_info(ret, "head bucket: %s, object: %s", bucket_name, object_name);
+
+  return ret;
+}
+
+int cmd_upload_multipart(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  const char* object_name = param[1].c_str();
+  const char* local_file = expand_path(const_cast<string&>(param[2]));
+  int64_t owner_id = strtoll(param[3].c_str(), NULL, 10);
+  const char* upload_id = param[4].c_str();
+  int32_t part_num = atoi(param[5].c_str());
+  UserInfo user_info;
+  user_info.owner_id_ = owner_id;
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.upload_multipart(bucket_name, object_name, local_file, upload_id, part_num, user_info);
+    ToolUtil::print_info(ret, "upload multipart bucketname: %s, object: %s localfile %s partnum:%d",
+        bucket_name, object_name, local_file, part_num);
+  }
+  return ret;
+}
+
+int cmd_complete_multipart(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  const char* object_name = param[1].c_str();
+  const char* upload_id = param[2].c_str();
+  int32_t part_num_s = atoi(param[3].c_str());
+  int32_t part_num_e = atoi(param[4].c_str());
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    std::vector<int32_t> v_part_num;
+    for (int32_t i = part_num_s; i < part_num_e + 1; ++i)
+    {
+      v_part_num.push_back(i);
+    }
+    ret = impl.complete_multipart(bucket_name, object_name, upload_id, v_part_num);
+    ToolUtil::print_info(ret, "complete multipart bucketname: %s, object: %s upload id: %s",bucket_name, object_name, upload_id);
+  }
+  return ret;
+}
+
+int cmd_list_multipart(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  const char* object_name = param[1].c_str();
+  const char* upload_id = param[2].c_str();
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    std::vector<int32_t> v_part_num;
+    ret = impl.list_multipart(bucket_name, object_name, upload_id, &v_part_num);
+    for (size_t i = 0; i < v_part_num.size(); ++i)
+    {
+      printf("has part_num: %d\n", v_part_num[i]);
+    }
+    ToolUtil::print_info(ret, "list multipart bucketname: %s, object: %s upload id: %s",bucket_name, object_name, upload_id);
+  }
+  return ret;
+}
+int cmd_abort_multipart(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  const char* object_name = param[1].c_str();
+  const char* upload_id = param[2].c_str();
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.abort_multipart(bucket_name, object_name, upload_id);
+    ToolUtil::print_info(ret, "abort multipart bucketname: %s, object: %s upload id: %s",bucket_name, object_name, upload_id);
+  }
+  return ret;
+}

@@ -652,3 +652,281 @@ int KvMetaHelper::do_head_object(const uint64_t server_id, const char *bucket_na
   return ret;
 }
 
+int KvMetaHelper::do_init_multipart(const uint64_t server_id, const char *bucket_name,
+    const char *object_name, std::string* const upload_id)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name || NULL == object_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaInitMulitpartMessage req_init_multi_msg;
+    req_init_multi_msg.set_bucket_name(bucket_name);
+    req_init_multi_msg.set_file_name(object_name);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_init_multi_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call init multi part fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "object_name: %s, ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, object_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_INIT_MULTIPART_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaInitMulitpartMessage* rsp_init_multi_msg = dynamic_cast<RspKvMetaInitMulitpartMessage*>(rsp);
+      *upload_id = rsp_init_multi_msg->get_upload_id();
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "init multi part return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "init multi part fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "object_name: %s, ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(),
+          bucket_name, object_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_upload_multipart(const uint64_t server_id, const char *bucket_name,const char *object_name,
+    const char *upload_id, const int32_t part_num,
+    const ObjectInfo &object_info, const UserInfo &user_info)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name || NULL == object_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaUploadMulitpartMessage req_up_mu_msg;
+    req_up_mu_msg.set_bucket_name(bucket_name);
+    req_up_mu_msg.set_file_name(object_name);
+    req_up_mu_msg.set_upload_id(upload_id);
+    req_up_mu_msg.set_part_num(part_num);
+    req_up_mu_msg.set_object_info(object_info);
+    req_up_mu_msg.set_user_info(user_info);
+
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_up_mu_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call upload multipart fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "object_name: %s, upload_id:%s part_num:%d ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, object_name, upload_id, part_num, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "upload multipart return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "call upload multipart fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "object_name: %s, upload_id:%s part_num:%d ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, object_name, upload_id, part_num, ret);
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_complete_multipart(const uint64_t server_id, const char *bucket_name,
+    const char *object_name, const char* upload_id, const std::vector<int32_t>& v_part_num)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name || NULL == object_name || NULL == upload_id)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaCompleteMulitpartMessage req_comp_multi_msg;
+    req_comp_multi_msg.set_bucket_name(bucket_name);
+    req_comp_multi_msg.set_file_name(object_name);
+    req_comp_multi_msg.set_upload_id(upload_id);
+    req_comp_multi_msg.set_v_part_num(v_part_num);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_comp_multi_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call complete multi part fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "object_name: %s, upload_id:%s, ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, object_name, upload_id, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "complete multipart return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "call upload multipart fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "object_name: %s, upload_id:%s ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, object_name, upload_id, ret);
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_list_multipart(const uint64_t server_id, const char *bucket_name,
+    const char *object_name, const char *upload_id, std::vector<int32_t>* const p_v_part_num)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name || NULL == object_name || NULL == upload_id)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaListMulitpartMessage req_list_multi_msg;
+    req_list_multi_msg.set_bucket_name(bucket_name);
+    req_list_multi_msg.set_file_name(object_name);
+    req_list_multi_msg.set_upload_id(upload_id);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_list_multi_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call list multi part fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "object_name: %s, upload_id: %s, ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, object_name, upload_id, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_LIST_MULTIPART_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaListMulitpartMessage* rsp_list_multi_msg = dynamic_cast<RspKvMetaListMulitpartMessage*>(rsp);
+      *p_v_part_num = rsp_list_multi_msg->get_v_part_num();
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "list multi part return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "list multi part fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "object_name: %s, ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(),
+          bucket_name, object_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_abort_multipart(const uint64_t server_id, const char *bucket_name,
+    const char *object_name, const char *upload_id, ObjectInfo *object_info, bool *still_have)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name || NULL == object_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaAbortMulitpartMessage req_abort_multi_msg;
+    req_abort_multi_msg.set_bucket_name(bucket_name);
+    req_abort_multi_msg.set_file_name(object_name);
+    req_abort_multi_msg.set_upload_id(upload_id);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_abort_multi_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call abort multipart fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "object_name: %s, ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, object_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_ABORT_MULTIPART_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaAbortMulitpartMessage* rsp_abort_multi_msg = dynamic_cast<RspKvMetaAbortMulitpartMessage*>(rsp);
+      *object_info = rsp_abort_multi_msg->get_object_info();
+      *still_have = rsp_abort_multi_msg->get_still_have();
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "del object return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "del object fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "object_name: %s, ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(),
+          bucket_name, object_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}

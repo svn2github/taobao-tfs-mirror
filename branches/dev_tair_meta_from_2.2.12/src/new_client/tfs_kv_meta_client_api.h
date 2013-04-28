@@ -74,6 +74,23 @@ namespace tfs
         TfsRetType head_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info, const common::UserInfo &user_info);
 
+        TfsRetType init_multipart(const char *bucket_name,
+            const char *object_name, std::string* const upload_id);
+        TfsRetType upload_multipart(const char *bucket_name,
+            const char *object_name, const char* local_file, const char* upload_id,
+            const int32_t part_num, const common::UserInfo &user_info);
+        int64_t pwrite_upload_multipart(const char *bucket_name,
+            const char *object_name, const void *buffer, int64_t offset,
+            int64_t length, const char* upload_id,
+            const int32_t part_num, const common::UserInfo &user_info);
+        TfsRetType complete_multipart(const char *bucket_name,
+                const char *object_name, const char* upload_id,
+                        const std::vector<int32_t>& v_part_num);
+        TfsRetType list_multipart(const char *bucket_name,
+                const char *object_name, const char* upload_id,
+                        std::vector<int32_t>* const p_v_part_num);
+        TfsRetType abort_multipart(const char *bucket_name,
+            const char *object_name, const char* upload_id);
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClient);
         KvMetaClientImpl* impl_;

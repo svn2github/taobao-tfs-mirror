@@ -373,6 +373,7 @@ namespace tfs
       vector<TfsFileInfo>::const_iterator iter = v_tfs_file_info.begin();
       for(; iter != v_tfs_file_info.end(); iter++)
       {
+        TBSYS_LOG(ERROR, "===============, cur_offset: %"PRI64_PREFIX"d, total: %"PRI64_PREFIX"d",cur_offset, (iter->offset_ + iter->file_size_));
         if (cur_offset > iter->offset_ + iter->file_size_)
         {
           TBSYS_LOG(DEBUG, "skip a seg, cur_offset: %"PRI64_PREFIX"d, total: %"PRI64_PREFIX"d",
@@ -707,7 +708,7 @@ namespace tfs
 
           TBSYS_LOG(DEBUG, "vector size ================= is: %lu", object_info.v_tfs_file_info_.size());
 
-          cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_) - offset, left_length);
+          cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_) - cur_offset, left_length);
 
           // read tfs
           read_length = read_data(object_info.v_tfs_file_info_,
@@ -1161,7 +1162,6 @@ namespace tfs
       {
         is_valid = false;
       }
-
       int32_t len = -1;
       // len > 3 && len < 256
       if (is_valid)
@@ -1237,7 +1237,6 @@ namespace tfs
           is_valid = false;
         }
       }
-
       return is_valid;
     }
 
@@ -1289,6 +1288,487 @@ namespace tfs
 
       return is_valid;
     }
+
+    TfsRetType KvMetaClientImpl::init_multipart(const char *bucket_name,
+        const char *object_name, std::string* const upload_id)
+    {
+      TfsRetType ret = TFS_SUCCESS;
+      if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = do_init_multipart(bucket_name, object_name, upload_id);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "init multipart failed. bucket: %s, object: %s", bucket_name, object_name);
+        }
+      }
+
+      return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::upload_multipart(const char *bucket_name,
+        const char *object_name, const char* local_file, const char* upload_id,
+        const int32_t part_num, const UserInfo &user_info)
+    {
+      TfsRetType ret = TFS_SUCCESS;
+      int fd = -1;
+      if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else if (NULL == upload_id)
+      {
+        TBSYS_LOG(ERROR, "upload id is null");
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else if (part_num < PARTNUM_MIN && part_num > PARTNUM_MAX)
+      {
+        TBSYS_LOG(ERROR, "part_num is out limit %d", part_num);
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else if (NULL == local_file)
+      {
+        TBSYS_LOG(ERROR, "local file is null");
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else if ((fd = ::open(local_file, O_RDONLY)) < 0)
+      {
+        TBSYS_LOG(ERROR, "open local file %s fail: %s", local_file, strerror(errno));
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else
+      {
+        char* buf = new char[MAX_BATCH_DATA_LENGTH];
+        int64_t read_len = 0, write_len = 0;
+        int64_t offset = 0;
+
+        while (TFS_SUCCESS == ret)
+        {
+          if ((read_len = ::read(fd, buf, MAX_BATCH_DATA_LENGTH)) < 0)
+          {
+            ret = EXIT_INVALID_ARGU_ERROR;
+            TBSYS_LOG(ERROR, "read local file %s fail, error: %s", local_file, strerror(errno));
+            break;
+          }
+          // jump for non_local_file
+          if (read_len == 0 && offset != 0)
+          {
+            break;
+          }
+          do
+          {
+            write_len = pwrite_upload_multipart(bucket_name, object_name, buf, offset, read_len, upload_id, part_num, user_info);
+            if (write_len < 0)
+            {
+              TBSYS_LOG(ERROR, "upload multipart fail. bucket: %s, object: %s", bucket_name, object_name);
+              ret = TFS_ERROR;
+              break;
+            }
+            offset += write_len;
+            read_len -= write_len;
+          }while (read_len > 0);
+
+          //jump for empty local_file
+          if (offset == 0)
+          {
+            break;
+          }
+        }
+
+        tbsys::gDeleteA(buf);
+        ::close(fd);
+      }
+
+      return ret;
+    }
+
+    int64_t KvMetaClientImpl::pwrite_upload_multipart(const char *bucket_name,
+        const char *object_name, const void *buffer, int64_t offset,
+        int64_t length, const char* upload_id,
+        const int32_t part_num, const UserInfo &user_info)
+    {
+      int64_t ret = EXIT_GENERAL_ERROR;
+      if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name of object name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else if (buffer == NULL || length < 0)
+      {
+        TBSYS_LOG(ERROR, "invalid buffer, length: %"PRI64_PREFIX"d", length);
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else if (NULL == upload_id)
+      {
+        TBSYS_LOG(ERROR, "upload id is null");
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else if (part_num < PARTNUM_MIN && part_num > PARTNUM_MAX)
+      {
+        TBSYS_LOG(ERROR, "part_num is out limit");
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else if (offset == 0 && length == 0)
+      {
+        ObjectInfo object_info_null;
+        object_info_null.has_meta_info_ = true;
+        object_info_null.has_customize_info_ = true;
+        object_info_null.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
+
+        ret = do_upload_multipart(bucket_name, object_name, object_info_null, user_info, upload_id, part_num);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "p-upload multipart fail, bucket: %s, object: %s, upload_id: %s, part_num: %d, ret: %"PRI64_PREFIX"d",
+              bucket_name, object_name, upload_id, part_num, ret);
+          if (TFS_ERROR == ret)
+          {
+            ret = EXIT_GENERAL_ERROR;
+          }
+        }
+      }
+      else
+      {
+        int ns_get_index = 0;
+        string ns_addr;
+        ns_addr = tfs_cluster_manager_->get_write_ns_addr(ns_get_index++);
+        if (ns_addr.empty())
+        {
+          TBSYS_LOG(ERROR, "select write ns failed");
+        }
+        else
+        {
+          int32_t cluster_id = tfs_meta_manager_.get_cluster_id(ns_addr.c_str());
+          int64_t left_length = length;
+          int64_t cur_offset = offset;
+          int64_t cur_pos = 0;
+          vector<FragMeta> v_frag_meta;
+          vector<TfsFileInfo> v_tfs_file_info;
+          do
+          {
+            // write MAX_BATCH_DATA_LENGTH(8M) to tfs cluster
+            int64_t write_length = min(left_length, MAX_BATCH_DATA_LENGTH);
+            v_frag_meta.clear();
+
+            int64_t real_write_length = write_data(ns_addr.c_str(),
+                reinterpret_cast<const char*>(buffer) + cur_pos,
+                cur_offset, write_length, &v_frag_meta);
+            if (real_write_length != write_length)
+            {
+              TBSYS_LOG(ERROR, "write ns %s failed error, cur_pos: %"PRI64_PREFIX"d"
+                  "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d)",
+                  ns_addr.c_str(), cur_pos, write_length, real_write_length);
+              ns_addr = tfs_cluster_manager_->get_write_ns_addr(ns_get_index++);
+              if (ns_addr.empty())
+              {
+                TBSYS_LOG(ERROR, "select write ns failed");
+                break;
+              }
+              cluster_id = tfs_meta_manager_.get_cluster_id(ns_addr.c_str());
+              continue;
+            }
+            TBSYS_LOG(DEBUG, "write tfs data, cluster_id: %d, cur_offset: %"PRI64_PREFIX"d, write_length: %"PRI64_PREFIX"d",
+                cluster_id, cur_offset, write_length);
+
+            vector<FragMeta>::iterator iter = v_frag_meta.begin();
+            v_tfs_file_info.clear();
+            for (; v_frag_meta.end() != iter; iter++)
+            {
+              ObjectInfo object_info;
+              if (0 == iter->offset_)
+              {
+                object_info.has_meta_info_ = true;
+                object_info.has_customize_info_ = true;
+                object_info.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
+                TBSYS_LOG(DEBUG, "first object info, will put meta info.");
+                object_info.meta_info_.dump();
+              }
+              else
+              {
+                object_info.has_meta_info_ = false;
+                object_info.has_customize_info_ = false;
+              }
+              TfsFileInfo tmp_tfs_info;
+              tmp_tfs_info.offset_ = iter->offset_;
+              tmp_tfs_info.block_id_ = iter->block_id_;
+              tmp_tfs_info.file_id_ = iter->file_id_;
+              tmp_tfs_info.cluster_id_ = cluster_id;
+              tmp_tfs_info.file_size_ = iter->size_;
+              object_info.v_tfs_file_info_.push_back(tmp_tfs_info);
+              v_tfs_file_info.push_back(tmp_tfs_info);
+
+              ret = do_upload_multipart(bucket_name, object_name, object_info, user_info, upload_id, part_num);
+
+              if (TFS_SUCCESS != ret)
+              {
+                TBSYS_LOG(ERROR, "upload multipart fail, bucket: %s, object: %s, offset: %"PRI64_PREFIX"d, upload_id: %s, part_num: %d, ret: %"PRI64_PREFIX"d",
+                    bucket_name, object_name, iter->offset_, upload_id, part_num, ret);
+                if (TFS_ERROR == ret)
+                {
+                  ret = EXIT_GENERAL_ERROR;
+                }
+                break;
+              }
+            }
+            if (TFS_SUCCESS != ret)
+            {
+              unlink_file(v_tfs_file_info);
+              break;
+            }
+
+            left_length -= real_write_length;
+            cur_pos += real_write_length;
+            cur_offset += real_write_length;
+          }
+          while (left_length > 0 && TFS_SUCCESS == ret);
+
+          if (TFS_SUCCESS == ret)
+          {
+            ret = length - left_length;
+          }
+        }
+      }
+
+      return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::complete_multipart(const char *bucket_name,
+        const char *object_name, const char* upload_id, const std::vector<int32_t>& v_part_num)
+    {
+      TfsRetType ret = TFS_SUCCESS;
+      if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else if(upload_id == NULL)
+      {
+        TBSYS_LOG(ERROR, "upload_id is null ");
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else
+      {
+        ret = do_complete_multipart(bucket_name, object_name, upload_id, v_part_num);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "complete multipart failed. bucket: %s object: %s", bucket_name, object_name);
+        }
+      }
+
+      return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::list_multipart(const char *bucket_name,
+        const char *object_name, const char* upload_id, std::vector<int32_t>* const p_v_part_num)
+    {
+      TfsRetType ret = TFS_SUCCESS;
+      if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else if (NULL == upload_id)
+      {
+        TBSYS_LOG(ERROR, "upload id is null ");
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else
+      {
+        ret = do_list_multipart(bucket_name, object_name, upload_id, p_v_part_num);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "list multipart failed. bucket: %s", bucket_name);
+        }
+      }
+
+      return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::abort_multipart(const char *bucket_name,
+        const char *object_name, const char* upload_id)
+    {
+      TfsRetType ret = TFS_ERROR;
+      if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
+      {
+        TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else if (NULL == upload_id)
+      {
+        TBSYS_LOG(ERROR, "upload id is null ");
+        ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else
+      {
+        vector<TfsFileInfo> v_tfs_file_info;
+        bool still_have = false;
+        do
+        {
+          ObjectInfo object_info;
+          still_have = false;
+          ret = do_abort_multipart(bucket_name, object_name, upload_id, &object_info, &still_have);
+          TBSYS_LOG(DEBUG, "bucket_name %s object_name %s "
+              " still_have %d", bucket_name, object_name, still_have);
+          TBSYS_LOG(DEBUG, "del multi vector size ================= is: %lu",
+              object_info.v_tfs_file_info_.size());
+          if (TFS_SUCCESS == ret)
+          {
+            v_tfs_file_info.clear();
+            size_t i = 0;
+            for(; i < object_info.v_tfs_file_info_.size(); ++i)
+            {
+              TfsFileInfo tfs_info(object_info.v_tfs_file_info_[i].cluster_id_,
+              object_info.v_tfs_file_info_[i].block_id_,
+              object_info.v_tfs_file_info_[i].file_id_,
+              object_info.v_tfs_file_info_[i].offset_,
+              object_info.v_tfs_file_info_[i].file_size_);
+              v_tfs_file_info.push_back(tfs_info);
+            }
+          }
+
+          if (TFS_SUCCESS == ret && v_tfs_file_info.size() > 0)
+          {
+            ret = unlink_file(v_tfs_file_info);
+          }
+
+        } while(still_have);
+
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "del object failed. bucket: %s, object: %s", bucket_name, object_name);
+        }
+      }
+      return ret;
+    }
+    int KvMetaClientImpl::do_init_multipart(const char *bucket_name, const char *object_name, std::string* const upload_id)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_init_multipart(meta_server_id, bucket_name, object_name, upload_id);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    int KvMetaClientImpl::do_upload_multipart(const char *bucket_name,
+        const char *object_name, const ObjectInfo &object_info, const UserInfo &user_info,
+        const char* upload_id, const int32_t part_num)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_upload_multipart(meta_server_id, bucket_name, object_name, upload_id, part_num, object_info, user_info);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    int KvMetaClientImpl::do_complete_multipart(const char *bucket_name, const char *object_name,
+        const char* upload_id, const std::vector<int32_t>& v_part_num)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_complete_multipart(meta_server_id, bucket_name, object_name, upload_id, v_part_num);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    int KvMetaClientImpl::do_list_multipart(const char *bucket_name, const char *object_name,
+                const char* upload_id, std::vector<int32_t>* const p_v_part_num)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_list_multipart(meta_server_id, bucket_name, object_name, upload_id, p_v_part_num);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+    int KvMetaClientImpl::do_abort_multipart(const char *bucket_name, const char *object_name,
+        const char* upload_id, common::ObjectInfo *object_info, bool* still_have)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_abort_multipart(meta_server_id, bucket_name, object_name, upload_id, object_info, still_have);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+
 
     bool KvMetaClientImpl::is_valid_customize_info(const CustomizeInfo &customize_info)
     {

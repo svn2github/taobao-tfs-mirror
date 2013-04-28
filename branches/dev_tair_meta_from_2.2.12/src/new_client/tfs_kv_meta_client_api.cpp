@@ -140,6 +140,49 @@ namespace tfs
       return impl_->head_object(bucket_name, object_name, object_info, user_info);
     }
 
+    TfsRetType KvMetaClient::init_multipart(const char *bucket_name,
+        const char *object_name, std::string* const upload_id)
+    {
+      return impl_->init_multipart(bucket_name, object_name, upload_id);
+    }
+
+    TfsRetType KvMetaClient::upload_multipart(const char *bucket_name,
+        const char *object_name, const char* local_file, const char* upload_id,
+        const int32_t part_num, const common::UserInfo &user_info)
+    {
+      return impl_->upload_multipart(bucket_name, object_name, local_file, upload_id,
+        part_num, user_info);
+    }
+
+    int64_t KvMetaClient::pwrite_upload_multipart(const char *bucket_name,
+        const char *object_name, const void *buffer, int64_t offset,
+        int64_t length, const char* upload_id,
+        const int32_t part_num, const common::UserInfo &user_info)
+    {
+      return impl_->pwrite_upload_multipart(bucket_name,
+             object_name, buffer, offset,
+             length, upload_id, part_num, user_info);
+    }
+
+    TfsRetType KvMetaClient::complete_multipart(const char *bucket_name,
+        const char *object_name, const char* upload_id,
+        const std::vector<int32_t>& v_part_num)
+    {
+      return impl_->complete_multipart(bucket_name, object_name, upload_id, v_part_num);
+    }
+
+    TfsRetType KvMetaClient::list_multipart(const char *bucket_name,
+        const char *object_name, const char* upload_id,
+        std::vector<int32_t>* const p_v_part_num)
+    {
+      return impl_->list_multipart(bucket_name, object_name, upload_id, p_v_part_num);
+    }
+
+    TfsRetType KvMetaClient::abort_multipart(const char *bucket_name,
+        const char *object_name, const char* upload_id)
+    {
+      return impl_->abort_multipart(bucket_name, object_name, upload_id);
+    }
   }
 }
 

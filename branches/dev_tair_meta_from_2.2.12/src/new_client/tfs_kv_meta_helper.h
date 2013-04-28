@@ -65,6 +65,23 @@ namespace tfs
 
       static int do_get_bucket_tag(const uint64_t server_id, const char *bucket_name, common::MAP_STRING *bucket_tag_map);
       static int do_del_bucket_tag(const uint64_t server_id, const char *bucket_name);
+
+      static int do_init_multipart(const uint64_t server_id,
+                                  const char *bucket_name,
+                                  const char *object_name,
+                                  std::string* const upload_id);
+      static int do_upload_multipart(const uint64_t server_id, const char *bucket_name,const char *object_name,
+                                     const char *upload_id, const int32_t part_num,
+                                     const common::ObjectInfo &object_info, const common::UserInfo &user_info);
+      static int do_complete_multipart(const uint64_t server_id, const char *bucket_name,
+                                       const char *object_name, const char* upload_id,
+                                       const std::vector<int32_t>& v_part_num);
+      static int do_list_multipart(const uint64_t server_id, const char *bucket_name,
+                                   const char *object_name, const char *upload_id,
+                                   std::vector<int32_t>* const p_v_part_num);
+      static int do_abort_multipart(const uint64_t server_id, const char *bucket_name,
+                                    const char *object_name, const char *upload_id,
+                                    common::ObjectInfo *object_info, bool *still_have);
     };
   }
 }
