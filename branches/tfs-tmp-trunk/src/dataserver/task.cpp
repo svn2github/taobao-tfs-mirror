@@ -411,8 +411,7 @@ namespace tfs
         memcpy(&header.throughput_, &old_header.throughput_, sizeof(header.throughput_));
         header.info_.version_ = old_header.info_.version_;
         header.seq_no_ = old_header.seq_no_;
-        dest->get_used_offset(header.used_offset_);
-        dest->get_avail_offset(header.avail_offset_);
+        dest->get_marshalling_offset(header.marshalling_offset_);
         ret = dest->write_file_infos(header, finfos_vec, block_id_);
         if (TFS_SUCCESS == ret)
         {

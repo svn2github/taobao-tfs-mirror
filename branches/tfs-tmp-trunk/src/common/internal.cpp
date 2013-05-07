@@ -2014,7 +2014,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; (TFS_SUCCESS == ret) && (i < 3); i++)
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 27); i++)
         {
           ret = Serialization::set_int8(data, data_len, pos, reserve_[i]);
         }
@@ -2076,7 +2076,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; (TFS_SUCCESS == ret) && (i < 3); i++)
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 27); i++)
         {
           ret = Serialization::get_int8(data, data_len, pos, &reserve_[i]);
         }
@@ -2087,7 +2087,7 @@ namespace tfs
 
     int64_t IndexHeaderV2::length() const
     {
-      return info_.length() + throughput_.length() + INT_SIZE * 6;
+      return info_.length() + throughput_.length() + INT_SIZE * 12;
     }
 
     int IndexDataV2::deserialize(const char* data, const int64_t data_len, int64_t& pos)
@@ -2368,6 +2368,11 @@ namespace tfs
         ret = Serialization::set_int32(data, data_len, pos, last_update_time_);
       }
 
+      for (int i = 0; (TFS_SUCCESS == ret) && i < 2; i++)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, reserve_[i]);
+      }
+
       return ret;
     }
 
@@ -2425,12 +2430,17 @@ namespace tfs
         ret = Serialization::get_int32(data, data_len, pos, &last_update_time_);
       }
 
+      for (int i = 0; (TFS_SUCCESS == ret) && i < 2; i++)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &reserve_[i]);
+      }
+
       return ret;
     }
 
     int64_t BlockInfoV2::length() const
     {
-      return 8 * INT_SIZE + 2 * INT64_SIZE;
+      return 10 * INT_SIZE + 2 * INT64_SIZE;
     }
   } /** nameserver **/
 }/** tfs **/

@@ -173,11 +173,8 @@ namespace tfs
       int32_t count = 0;
       for (; iter != blocks.end(); iter++)
       {
-        if (count < MAX_COUNT)
-        {
-          fprintf(fp, "%12"PRI64_PREFIX"u",(*iter));
-        }
-        else
+        fprintf(fp, "%12"PRI64_PREFIX"u",(*iter));
+        if (count >= MAX_COUNT)
         {
           fprintf(fp, "\n%25s", " ");
           count = 0;

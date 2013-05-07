@@ -1182,6 +1182,7 @@ namespace tfs
       int32_t update_size_;
       int32_t update_file_count_;
       int32_t last_update_time_;
+      int32_t reserve_[2];
 
       BlockInfoV2()
       {
@@ -1230,7 +1231,7 @@ namespace tfs
     	};
     	uint16_t used_file_info_bucket_size_;
       int8_t  max_index_num_;
-    	int8_t  reserve_[3];
+    	int8_t  reserve_[27];
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;

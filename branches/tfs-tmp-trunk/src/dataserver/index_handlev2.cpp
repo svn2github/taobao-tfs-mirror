@@ -358,6 +358,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int32_t max_loop = header->file_info_bucket_size_;
+        TBSYS_LOG(DEBUG, "file info bucket size: %d", header->file_info_bucket_size_);
         if (GET_SLOT_TYPE_GEN == type)
         {
           prev = NULL;
@@ -695,18 +696,23 @@ namespace tfs
       {
         if (partial)
         {
+          // only used in recover updated block
           // only update partial header information
           IndexHeaderV2* pheader = get_index_header_();
           assert(NULL != pheader);
           pheader->info_ = header.info_;
           pheader->throughput_ = header.throughput_;
+          pheader->marshalling_offset_ = header.marshalling_offset_;
+          pheader->seq_no_ = header.seq_no_;
         }
         else
         {
           IndexHeaderV2* pheader = get_index_header_();
           assert(NULL != pheader);
           const int32_t file_info_bucket_size = pheader->file_info_bucket_size_;
-          *pheader = header;
+          pheader->info_ = header.info_;
+          pheader->seq_no_ = header.seq_no_;
+          pheader->marshalling_offset_ = header.marshalling_offset_;
           pheader->used_file_info_bucket_size_ = 0;
           pheader->file_info_bucket_size_ = file_info_bucket_size;
           std::vector<common::FileInfoV2>::iterator iter = infos.begin();
@@ -1137,6 +1143,8 @@ namespace tfs
             assert(NULL != pheader);
             pheader->info_ = header.info_;
             pheader->throughput_ = header.throughput_;
+            pheader->marshalling_offset_ = header.marshalling_offset_;
+            pheader->seq_no_ = header.seq_no_;
             if (!infos.empty())
               TBSYS_LOG(WARN, "update verify header, file infos not empty!!!!");
           }
