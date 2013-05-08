@@ -591,7 +591,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           reply->set_size(meta.get_array_index());
-          TBSYS_LOG(DEBUG, "batch openv2 return %d blocks meta.", meta.get_array_index());
+          TBSYS_LOG(DEBUG, "batch openv2 return %"PRI64_PREFIX"d blocks meta.", meta.get_array_index());
           ret = message->reply(reply);
         }
         else

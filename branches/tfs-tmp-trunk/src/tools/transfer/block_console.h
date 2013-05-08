@@ -118,6 +118,7 @@ class TranBlock
 
   private:
     std::string dest_ns_addr_;
+    int32_t src_ds_addr_index_;
     uint64_t dest_ds_id_;
     int32_t cur_offset_;
     int64_t total_tran_size_;

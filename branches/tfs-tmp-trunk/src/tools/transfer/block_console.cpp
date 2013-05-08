@@ -276,6 +276,7 @@ TranBlock::TranBlock(const uint64_t blockid, const std::string& dest_ns_addr,
     dest_ns_addr_(dest_ns_addr), dest_ds_id_(dest_ds_addr),
     cur_offset_(0), total_tran_size_(0), traffic_(traffic), src_ds_addr_count_(0),src_session_(src_session), dest_session_(dest_session)
 {
+  src_ds_addr_index_ = 0;
   src_block_info_.block_id_ = blockid;
   file_set_.clear();
   concealed_files_.clear();
@@ -344,6 +345,7 @@ int TranBlock::get_src_ds()
       std::vector<uint64_t>::const_iterator iter = seg_data.ds_.begin();
       for (src_ds_addr_count_ = 0; iter != seg_data.ds_.end(); ++iter, ++src_ds_addr_count_)
         src_ds_addr_[src_ds_addr_count_] = (*iter);
+      src_ds_addr_index_ = random() % src_ds_addr_count_;
     }
   }
   return ret;
@@ -356,7 +358,7 @@ int TranBlock::read_index()
   gfl_msg.set_return_row(src_block_info_.block_id_);
 
   // fetch data from the first ds
-  int index = random() % src_ds_addr_count_;
+  int index = src_ds_addr_index_;
   int ret = TFS_ERROR;
   NewClient* client = NewClientManager::get_instance().create_client();
   if (NULL != client)
@@ -419,12 +421,14 @@ int TranBlock::read_index()
         tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_);
   }
 
+  TBSYS_LOG(INFO, "read index from ds: %s %s, blockid: %u",
+        tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), ret == TFS_SUCCESS  ? "succ" : "fail", src_block_info_.block_id_);
   return ret;
 }
 
 int TranBlock::read_data()
 {
-  int index = random() % src_ds_addr_count_;
+  int index = src_ds_addr_index_;
   bool eof_flag = false;
   int ret = TFS_SUCCESS;
   int64_t read_size = std::min(traffic_, TRAN_BUFFER_SIZE);
@@ -463,6 +467,8 @@ int TranBlock::read_data()
           if (len < read_size || len == 0)
           {
             eof_flag = true;
+            TBSYS_LOG(INFO, "read raw data from ds: %s end, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, ret: %d, read_size:%ld, len: %d",
+              tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_, cur_offset_, remainder_retrys, ret, read_size, len);
           }
           if (len > 0)
           {
