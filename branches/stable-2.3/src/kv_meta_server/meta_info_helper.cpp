@@ -1049,10 +1049,17 @@ namespace tfs
         vector<KvValue*> kv_value_keys;
         vector<KvValue*> kv_value_values;
 
+        bool first_loop = true;
         string temp_start_key(start_key);
 
+        if (start_key.compare(prefix) < 0)
+        {
+          temp_start_key = prefix;
+          //never handle start_key
+          first_loop = false;
+        }
+
         bool loop = true;
-        bool first_loop = true;
         do
         {
           int32_t res_size = -1;
@@ -1061,6 +1068,7 @@ namespace tfs
 
           limit_size = *limit - actual_size;
 
+          //start_key need to be excluded from a result except for using prefix as start_key.
           int32_t extra = first_loop ? 2 : 1;
           ret = get_range(pkey, temp_start_key, 0, limit_size + extra,
               &kv_value_keys, &kv_value_values, &res_size);
@@ -1104,6 +1112,7 @@ namespace tfs
                 ret = group_objects(object_name, v, prefix, delimiter,
                     v_object_meta_info, v_object_name, s_common_prefix);
               }
+              //If it is first_loop, we need to skip the object which equals start_key.
               else if (object_name.compare(start_key) != 0)
               {
                 ret = group_objects(object_name, v, prefix, delimiter,
@@ -1127,6 +1136,13 @@ namespace tfs
             {
               loop = false;
               *is_truncated = 1;
+              break;
+            }
+
+            if (!prefix.empty() && object_name.compare(prefix) > 0 && object_name.find(prefix) != 0)
+            {
+              TBSYS_LOG(DEBUG, "object after %s can't match", object_name.c_str());
+              loop = false;
               break;
             }
           }
