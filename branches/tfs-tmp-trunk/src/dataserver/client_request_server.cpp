@@ -242,23 +242,33 @@ namespace tfs
             length = file_info.size_ - offset;
           }
 
-          ret = (length <= 0) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+          ret = (length < 0) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
             ReadFileRespMessageV2* resp_msg = new (std::nothrow) ReadFileRespMessageV2();
             assert(NULL != message);
-            char* buffer = resp_msg->alloc_data(length);
-            assert(NULL != buffer);
-            if (INVALID_FAMILY_ID == family_info.family_id_)
+
+            // if length is truncated to 0
+            // reply a packet with length 0 to tell client that it already reach to the end of file
+            if (0 == length)
             {
-              ret = get_block_manager().read(buffer,
-                  length, offset, file_id, flag, block_id, attach_block_id);
-              ret = (ret < 0) ? ret: TFS_SUCCESS;
+              resp_msg->set_length(0);
             }
             else
             {
-              ret = get_data_helper().read_file_degrade(block_id,
-                  file_info, buffer, length, offset, flag, family_info);
+              char* buffer = resp_msg->alloc_data(length);
+              assert(NULL != buffer);
+              if (INVALID_FAMILY_ID == family_info.family_id_)
+              {
+                ret = get_block_manager().read(buffer,
+                    length, offset, file_id, flag, block_id, attach_block_id);
+                ret = (ret < 0) ? ret: TFS_SUCCESS;
+              }
+              else
+              {
+                ret = get_data_helper().read_file_degrade(block_id,
+                    file_info, buffer, length, offset, flag, family_info);
+              }
             }
 
             if (TFS_SUCCESS != ret)
