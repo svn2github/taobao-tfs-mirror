@@ -60,6 +60,13 @@ namespace tfs
             const char* rs_addr = NULL);
 
         int64_t get_app_id() const { return app_id_;}
+#ifdef WITH_TAIR_CACHE
+        void set_remote_cache_info(const char * remote_cache_info);
+#endif
+        void set_client_retry_count(const int64_t count);
+        int64_t get_client_retry_count() const;
+        void set_client_retry_flag(bool retry_flag);
+
         void set_wait_timeout(const int64_t timeout_ms);
         void set_log_level(const char* level);
         void set_log_file(const char* log_file);
@@ -83,14 +90,20 @@ namespace tfs
            const common::TfsUnlinkType action = common::DELETE);
 
         int64_t save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
-            const char* suffix = NULL, const bool is_large_file = false, const bool simple = false);
+            const char* suffix = NULL, const bool is_large_file = false);
         int64_t save_buf(const char* source_data, const int32_t data_len,
-            char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL, const bool simple = false);
+            char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL);
 
         int fetch_file(const char* local_file,
                        const char* file_name, const char* suffix = NULL);
         int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix = NULL);
+
+        bool is_hit_local_cache(const char* tfs_name);
+
+#ifdef WITH_TAIR_CACHE
+        bool is_hit_remote_cache(const char* tfs_name);
+#endif
 
         // for name meta
         TfsRetType create_dir(const int64_t uid, const char* dir_path);
@@ -153,12 +166,10 @@ namespace tfs
             const char* suffix, const common::TfsUnlinkType action);
 
         int64_t save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
-            const int32_t buff_len, const char* suffix = NULL, const bool is_large_file = false,
-            const bool simple = false);
+            const int32_t buff_len, const char* suffix = NULL, const bool is_large_file = false);
 
         int64_t save_buf(const char* ns_addr, const char* source_data, const int32_t data_len,
-            char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL,
-            const bool simple = false);
+            char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL);
 
         int fetch_file(const char* ns_addr, const char* local_file,
                        const char* file_name, const char* suffix);
@@ -303,6 +314,7 @@ namespace tfs
         int32_t init_stat_;
         uint64_t active_rc_ip_;
         size_t next_rc_index_;
+        bool ignore_rc_remote_cache_info_;
 
         common::BaseInfo base_info_;
         common::SessionBaseInfo session_base_info_;
