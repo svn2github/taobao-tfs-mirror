@@ -167,7 +167,7 @@ int compare_crc_by_block_id(const std::string& left_ns_addr, const std::string& 
     if (TFS_SUCCESS == ret)
     {
       if (!right.empty())
-        TBSYS_LOG(WARN, "block : %"PRI64_PREFIX"u, files not consistency, right size: %zd", block, right.size());
+        TBSYS_LOG(WARN, "block : %"PRI64_PREFIX"u, files not consistency, left size: %zd, right size: %zd", block, left.size(),right.size());
     }
   }
   return ret;
@@ -239,7 +239,7 @@ typedef tbutil::Handle<WorkThread> WorkThreadPtr;
 void usage(const char* name)
 {
   fprintf(stderr,"Usage:\n%s -o old_ns_ip:port -n new_ns_ip:port -f input "\
-      "-m modify_time(20110315|20110315183500) -t thread_num -k type -c[-h]\n", name);
+      "-m modify_time(20110315183500) -t thread_num -k type -c[-h]\n", name);
   exit(-1);
 }
 

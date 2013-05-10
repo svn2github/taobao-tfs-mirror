@@ -290,9 +290,9 @@ int main(int argc, char* argv[])
       else
       {
         TfsSession* src_session = new TfsSession(src_ns_ip_port,
-            tfs::common::DEFAULT_BLOCK_CACHE_TIME, tfs::common::DEFAULT_BLOCK_CACHE_ITEMS);
+            tfs::common::DEFAULT_BLOCK_CACHE_TIME, 0);
         TfsSession* dest_session = new TfsSession(dest_ns_ip_port,
-            tfs::common::DEFAULT_BLOCK_CACHE_TIME, tfs::common::DEFAULT_BLOCK_CACHE_ITEMS);
+            tfs::common::DEFAULT_BLOCK_CACHE_TIME, 0);
         if ((ret = src_session->initialize()) != TFS_SUCCESS)
         {
           tbsys::gDelete(src_session);
