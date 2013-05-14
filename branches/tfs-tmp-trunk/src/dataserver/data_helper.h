@@ -78,6 +78,9 @@ namespace tfs
             const int32_t length, const int32_t offset, const int8_t flag,
             const common::FamilyInfoExt& family_info);
 
+        int get_block_replicas(const uint64_t ns_id, const uint64_t block_id,
+            common::VUINT64& servers);
+
       private:
         int new_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
             const bool tmp = false, const uint64_t family_id = common::INVALID_FAMILY_ID ,
@@ -117,6 +120,9 @@ namespace tfs
         int read_file_degrade_ex(const uint64_t block_id, const common::FileInfoV2& finfo,
             char* buffer, const int32_t length, const int32_t offset,
             const common::FamilyInfoExt& family_info, int* erased, common::ECMeta* ec_metas);
+
+        int get_block_replicas_ex(const uint64_t ns_id, const uint64_t block_id,
+            common::VUINT64& servers);
 
       private:
         DataService& service_;

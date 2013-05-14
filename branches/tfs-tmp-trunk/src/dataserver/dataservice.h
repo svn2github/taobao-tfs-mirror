@@ -39,6 +39,7 @@
 #include "data_helper.h"
 #include "task_manager.h"
 #include "traffic_control.h"
+#include "check_manager.h"
 
 namespace tfs
 {
@@ -150,6 +151,7 @@ namespace tfs
       int initialize_sync_mirror_();
       void timeout_();
       void run_task_();
+      void run_check_();
       void rotate_(time_t& last_rotate_log_time, time_t now, time_t zonesec);
 
       private:
@@ -184,6 +186,23 @@ namespace tfs
           DataService& service_;
       };
       typedef tbutil::Handle<RunTaskThreadHelper> RunTaskThreadHelperPtr;
+
+      class RunCheckThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit RunCheckThreadHelper(DataService& service):
+            service_(service)
+          {
+            start();
+          }
+          virtual ~RunCheckThreadHelper(){}
+          void run();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(RunCheckThreadHelper);
+          DataService& service_;
+      };
+      typedef tbutil::Handle<RunCheckThreadHelper> RunCheckThreadHelperPtr;
+
       private:
       DISALLOW_COPY_AND_ASSIGN(DataService);
 
@@ -197,9 +216,11 @@ namespace tfs
       TrafficControl traffic_control_;
       DataServerHeartManager* heart_manager_;
       ClientRequestServer client_request_server_;
+      CheckManager check_manager_;
       std::vector<SyncBase*> sync_mirror_;
       TimeoutThreadHelperPtr  timeout_thread_;
       RunTaskThreadHelperPtr  task_thread_;
+      RunCheckThreadHelperPtr check_thread_;
     };
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

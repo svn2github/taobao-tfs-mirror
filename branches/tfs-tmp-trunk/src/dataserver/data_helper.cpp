@@ -373,6 +373,22 @@ namespace tfs
       return ret;
     }
 
+    int DataHelper::get_block_replicas(const uint64_t ns_id, const uint64_t block_id, VUINT64& servers)
+    {
+      int ret = ((INVALID_SERVER_ID != ns_id) && (INVALID_BLOCK_ID != block_id)) ?
+        TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_replicas_ex(ns_id, block_id, servers);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(DEBUG, "get block replicas fail. ns: %s, blockid: %"PRI64_PREFIX"u",
+              tbsys::CNetUtil::addrToString(ns_id).c_str(), block_id);
+        }
+      }
+      return ret;
+    }
+
     int DataHelper::new_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
         const bool tmp, const uint64_t family_id, const int32_t index_num, const int32_t expire_time)
     {
@@ -1128,5 +1144,48 @@ namespace tfs
 
       return ret;
     }
+
+    int DataHelper::get_block_replicas_ex(const uint64_t ns_id, const uint64_t block_id, VUINT64& servers)
+    {
+      int ret = TFS_SUCCESS;
+      tbnet::Packet* resp_msg = NULL;
+      NewClient* client = NewClientManager::get_instance().create_client();
+      if (NULL != client)
+      {
+        GetBlockInfoMessageV2 msg;
+        msg.set_block_id(block_id);
+        msg.set_mode(T_READ);
+        ret = send_msg_to_server(ns_id, client, &msg, resp_msg);
+        if (TFS_SUCCESS == ret)
+        {
+          if (GET_BLOCK_INFO_RESP_MESSAGE_V2 == resp_msg->getPCode())
+          {
+            GetBlockInfoRespMessageV2* response = dynamic_cast<GetBlockInfoRespMessageV2*>(resp_msg);
+            BlockMeta& meta = response->get_block_meta();
+            for (int32_t i = 0; i < meta.size_; i++)
+            {
+              servers.push_back(meta.ds_[i]);
+            }
+          }
+          else if (STATUS_MESSAGE == resp_msg->getPCode())
+          {
+            StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
+            ret = smsg->get_status();
+          }
+          else
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+          }
+        }
+        NewClientManager::get_instance().destroy_client(client);
+      }
+      else
+      {
+        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+      }
+
+      return ret;
+    }
+
   }
 }

@@ -45,6 +45,7 @@ namespace tfs
         data_management_(*this),
         heart_manager_(NULL),
         client_request_server_(*this),
+        check_manager_(*this),
         timeout_thread_(0),
         task_thread_(0)
     {
@@ -283,6 +284,8 @@ namespace tfs
         assert(0 != task_thread_);
         timeout_thread_  = new (std::nothrow)TimeoutThreadHelper(*this);
         assert(0 != timeout_thread_);
+        check_thread_ = new (std::nothrow)RunCheckThreadHelper(*this);
+        assert(0 != check_thread_);
       }
       return ret;
     }
@@ -423,6 +426,11 @@ namespace tfs
     void DataService::run_task_()
     {
       task_manager_.run_task();
+    }
+
+    void DataService::run_check_()
+    {
+      check_manager_.run_check();
     }
 
     bool DataService::check_response(common::NewClient* client)
@@ -746,6 +754,10 @@ namespace tfs
             case QUERY_EC_META_MESSAGE:
             case COMMIT_EC_META_MESSAGE:
               ret = client_request_server_.handle(packet);
+              break;
+            case REQ_CHECK_BLOCK_MESSAGE:
+            case REPORT_CHECK_BLOCK_MESSAGE:
+              ret = check_manager_.handle(packet);
               break;
             default:
               TBSYS_LOG(ERROR, "process packet pcode: %d\n", pcode);
@@ -1429,6 +1441,11 @@ namespace tfs
     void DataService::RunTaskThreadHelper::run()
     {
       service_.run_task_();
+    }
+
+    void DataService::RunCheckThreadHelper::run()
+    {
+      service_.run_check_();
     }
 
     int ds_async_callback(common::NewClient* client)
