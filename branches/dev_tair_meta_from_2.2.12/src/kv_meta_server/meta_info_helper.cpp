@@ -580,7 +580,7 @@ namespace tfs
             object_info_zero.v_tfs_file_info_.push_back(object_info.v_tfs_file_info_.front());
           }
         }
-
+/*
         //check whether overlap
         if (!is_append)
         {
@@ -664,7 +664,7 @@ namespace tfs
             kv_value_values.clear();
           }while (loop);
         }
-
+*/
         if (TFS_SUCCESS == ret)
         {
           ret = put_object_zero(bucket_name, file_name, &object_info_zero,
@@ -2069,12 +2069,14 @@ namespace tfs
     {
       int ret = (file_name.size() > 0 &&
                  upload_id.size() > 0 && part_num <= PARTNUM_MAX && part_num >= PARTNUM_MIN - 1) ? TFS_SUCCESS : TFS_ERROR;
+      char part_num_buff[INT_SIZE];
+      ret = Serialization::int32_to_char(part_num_buff, INT_SIZE, part_num);
+     // part_num_buff[4] = '\0';
       if (TFS_SUCCESS == ret)
       {
-        char str[10];
-        sprintf(str, "%05d", part_num);
-        string str_num(str);
+        string str_num(part_num_buff, sizeof(part_num_buff));
         new_objectname = DELIMITER_2 + upload_id + DELIMITER_1 + file_name + DELIMITER_1 + str_num;
+        TBSYS_LOG(DEBUG, "new object size is %d", new_objectname.size());
       }
       else
       {
@@ -2221,6 +2223,10 @@ namespace tfs
                 p_v_part_num->push_back(tmp_object_info.meta_info_.max_tfs_file_size_ - PARTNUM_BASE);
                 TBSYS_LOG(DEBUG, "this time part_num is =========: %d", tmp_object_info.meta_info_.max_tfs_file_size_ - PARTNUM_BASE);
               }
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "v_tfs_file_info_.size() is zero");
             }
           }
 
