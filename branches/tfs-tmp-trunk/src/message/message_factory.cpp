@@ -414,6 +414,9 @@ namespace tfs
           case common::BLOCK_FILE_INFO_MESSAGE_V2:
             packet = new BlockFileInfoMessageV2();
             break;
+          case common::REPORT_CHECK_BLOCK_MESSAGE:
+            packet = new ReportCheckBlockMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;
