@@ -88,13 +88,13 @@ namespace tfs
       inline void set_file_size(const int64_t file_size) { file_size_ = file_size; }
 
       bool check_all_finish();
-      bool check_all_successful() const;
+      int check_all_successful() const;
       bool check_has_version_conflict() const;
       int get_member_info(std::pair<uint64_t, common::BlockInfoV2>* members, int32_t& size) const;
       int update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status);
       int update_member_info();   // when received a error packet, use this interface
       void reset_member_info(const time_t now_us);
-      int get_block_info(common::BlockInfoV2& info);
+      bool get_highest_version_block(common::BlockInfoV2& info);
       void dump(const int32_t level, const char* const format = NULL);
       void dump(std::stringstream& desp);
 

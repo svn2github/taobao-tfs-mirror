@@ -172,7 +172,7 @@ namespace tfs
 
             if (TFS_SUCCESS == status)
             {
-              status = lease->check_all_successful() ? TFS_SUCCESS : EXIT_NOT_ALL_SUCCESS;
+              status = lease->check_all_successful();
             }
 
             // if not all success, get error msg
@@ -392,14 +392,13 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           // get the blockinfo with highest version
-          ret = lease->get_block_info(block_info);
+          // commit blockinfo to ns only if at least one ds success
+          if (lease->get_highest_version_block(block_info))
+          {
+            ret = update_block_info(block_info, type);
+          }
           lease_manager_.put(lease);
         }
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = update_block_info(block_info, type);
       }
 
       return ret;

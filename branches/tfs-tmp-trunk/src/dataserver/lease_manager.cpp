@@ -40,7 +40,7 @@ namespace tfs
       {
         members_[index].server_ = (*iter);
         members_[index].info_.version_= INVALID_VERSION;
-        members_[index].status_ = TFS_ERROR;
+        members_[index].status_ = EXIT_NOT_ALL_SUCCESS;
       }
     }
 
@@ -51,12 +51,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int32_t index = 0;
-        for (index = 0; index <MAX_REPLICATION_NUM; ++index)
+        for (index = 0; index < server_size_; ++index)
         {
-          if (members_[index].server_ == INVALID_SERVER_ID)
-          {
-            break;
-          }
           members[index].first = members_[index].server_;
           members[index].second = members_[index].info_;
         }
@@ -65,27 +61,20 @@ namespace tfs
       return ret;
     }
 
-    int Lease::get_block_info(common::BlockInfoV2& info)
+    bool Lease::get_highest_version_block(common::BlockInfoV2& info)
     {
       tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
       int32_t max_version = -1;
-      for (int32_t index = 0; index < MAX_REPLICATION_NUM; ++index)
+      for (int32_t index = 0; index < server_size_; ++index)
       {
-        if (members_[index].server_ == INVALID_SERVER_ID)
+        if ((TFS_SUCCESS == members_[index].status_) &&
+            (members_[index].info_.version_ > max_version))
         {
-          break;
-        }
-
-        if ((TFS_SUCCESS == members_[index].status_) && (members_[index].info_.version_ > max_version))
-        {
-          ret = TFS_SUCCESS; // at least one success
           max_version = members_[index].info_.version_;
           info = members_[index].info_;
         }
       }
-
-      return ret;
+      return max_version >= 0;
     }
 
     int Lease::update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status)
@@ -95,7 +84,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = EXIT_DATASERVER_NOT_FOUND;
-        for (int32_t index = 0; index < MAX_REPLICATION_NUM && TFS_SUCCESS != ret; ++index)
+        for (int32_t index = 0; index < server_size_ && TFS_SUCCESS != ret; ++index)
         {
           ret = server == members_[index].server_ ? TFS_SUCCESS : EXIT_DATASERVER_NOT_FOUND;
           if (TFS_SUCCESS == ret)
@@ -124,7 +113,7 @@ namespace tfs
       for (int32_t index = 0; index < MAX_REPLICATION_NUM; ++index)
       {
         members_[index].info_.version_= INVALID_VERSION;
-        members_[index].status_ = TFS_ERROR;
+        members_[index].status_ = EXIT_NOT_ALL_SUCCESS;
       }
     }
 
@@ -134,9 +123,8 @@ namespace tfs
       if (level <= TBSYS_LOGGER._level)
       {
         std::stringstream str;
-        for (int32_t index = 0; index < MAX_REPLICATION_NUM ; ++index)
+        for (int32_t index = 0; index < server_size_; ++index)
         {
-          if (members_[index].server_ != INVALID_SERVER_ID)
             str << " server: " << tbsys::CNetUtil::addrToString(members_[index].server_) << " version: " << members_[index].info_.version_ << " status: " << members_[index].status_;
         }
         TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s lease id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u, block: %"PRI64_PREFIX"u, info: %s",
@@ -147,13 +135,10 @@ namespace tfs
     void Lease::dump(std::stringstream& desp)
     {
       tbutil::Mutex::Lock lock(mutex_);
-      for (int32_t index = 0; index < MAX_REPLICATION_NUM ; ++index)
+      for (int32_t index = 0; index < server_size_; ++index)
       {
-        if (members_[index].server_ != INVALID_SERVER_ID)
-        {
-          desp << " server: " << tbsys::CNetUtil::addrToString(members_[index].server_) <<
-                  " status: " << members_[index].status_;
-        }
+        desp << " server: " << tbsys::CNetUtil::addrToString(members_[index].server_) <<
+          " status: " << members_[index].status_;
       }
     }
 
@@ -168,27 +153,26 @@ namespace tfs
       return all_finish;
     }
 
-    bool Lease::check_all_successful() const
+    int Lease::check_all_successful() const
     {
       tbutil::Mutex::Lock lock(mutex_);
-      int32_t count = 0;
-      bool all_successful = true ;
-      for (int32_t index = 0; index < MAX_REPLICATION_NUM && all_successful; ++index)
+      int ret = TFS_SUCCESS;
+      for (int32_t index = 0; index < server_size_; index++)
       {
-        if (INVALID_SERVER_ID != members_[index].server_)
+        if (members_[index].status_ != TFS_SUCCESS)
         {
-          ++count;
-          all_successful = members_[index].status_ == TFS_SUCCESS;
+          ret = members_[index].status_;
+          break;
         }
       }
-      return all_successful && count >= server_size_;
+      return ret;
     }
 
     bool Lease::check_has_version_conflict() const
     {
       tbutil::Mutex::Lock lock(mutex_);
       bool has_version_error = false;
-      for (int32_t index = 0; index < MAX_REPLICATION_NUM && !has_version_error; ++index)
+      for (int32_t index = 0; index < server_size_ && !has_version_error; ++index)
       {
         if (INVALID_SERVER_ID != members_[index].server_)
         {
