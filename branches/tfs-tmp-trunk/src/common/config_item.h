@@ -183,13 +183,8 @@ namespace tfs
 // check server
 #define CONF_THREAD_COUNT                             "thread_count"
 #define CONF_CHECK_INTERVAL                           "check_interval"
-#define CONF_OVERLAP_CHECK_TIME                       "overlap_check_time"
-#define CONF_BLOCK_STABLE_TIME                        "block_stable_time"
 #define CONF_CLUSTER_ID                               "cluster_id"
-#define CONF_MASTER_NS_IP                             "master_ns_ip"
-#define CONF_MASTER_NS_PORT                           "master_ns_port"
-#define CONF_SLAVE_NS_IP                              "slave_ns_ip"
-#define CONF_SLAVE_NS_PORT                            "slave_ns_port"
+#define CONF_NS_IP                                    "ns_ip"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

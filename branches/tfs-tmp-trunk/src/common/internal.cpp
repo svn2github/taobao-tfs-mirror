@@ -2442,5 +2442,42 @@ namespace tfs
     {
       return 10 * INT_SIZE + 2 * INT64_SIZE;
     }
+
+    int TimeRange::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &start_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &end_);
+      }
+      return ret;
+    }
+
+    int TimeRange::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, start_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, end_);
+      }
+      return ret;
+    }
+
+    int64_t TimeRange::length() const
+    {
+      return INT64_SIZE * 2;
+    }
+
+
   } /** nameserver **/
 }/** tfs **/

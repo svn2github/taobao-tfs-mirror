@@ -214,13 +214,11 @@ namespace tfs
 
     struct CheckServerParameter
     {
-      int32_t block_stable_time_;
-      int32_t check_interval_;
-      int32_t overlap_check_time_;
-      int32_t thread_count_;
+      uint64_t self_id_;
+      uint64_t ns_id_;
       int32_t cluster_id_;
-      uint64_t master_ns_id_;
-      uint64_t slave_ns_id_;
+      int32_t check_interval_;
+      int32_t thread_count_;
 
       int initialize(const std::string& config_file);
 

@@ -1293,6 +1293,21 @@ namespace tfs
       int64_t end_;
     };
 
+    struct TimeRange
+    {
+      int64_t start_;
+      int64_t end_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+
+      bool include(const int64_t time) const
+      {
+        return (time >= start_) && (time < end_);
+      }
+    };
+
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;
