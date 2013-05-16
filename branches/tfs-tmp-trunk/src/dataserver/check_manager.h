@@ -22,6 +22,8 @@ namespace tfs
 {
   namespace dataserver
   {
+    class SyncBase;
+    class DataHelper;
     class BlockManager;
     class DataService;
     class CheckManager
@@ -30,6 +32,8 @@ namespace tfs
         CheckManager(DataService& service);
         ~CheckManager();
         BlockManager& get_block_manager();
+        DataHelper& get_data_helper();
+        std::vector<SyncBase*>& get_sync_mirror();
 
         void run_check();
         int handle(tbnet::Packet* packet);
@@ -39,8 +43,16 @@ namespace tfs
         int add_check_blocks(ReportCheckBlockMessage* message);
         int report_check_blocks();
         int check_block(const uint64_t block_id);
+        int check_single_block(const uint64_t block_id,
+            std::vector<common::FileInfoV2>& finfos, SyncBase& peer);
+        int process_more_files(SyncBase& peer,
+            const uint64_t block_id, const std::vector<common::FileInfoV2>& more);
+        int process_less_files(SyncBase& peer,
+            const uint64_t block_id, const std::vector<common::FileInfoV2>& less);
         void compare_block_fileinfos(std::vector<common::FileInfoV2>& left,
-            std::vector<common::FileInfoV2>& right, common::VUINT64& more, common::VUINT64& less);
+            std::vector<common::FileInfoV2>& right,
+            std::vector<common::FileInfoV2>& more,
+            std::vector<common::FileInfoV2>& less);
 
      private:
         DataService& service_;

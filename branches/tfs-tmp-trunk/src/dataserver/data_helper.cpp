@@ -382,8 +382,8 @@ namespace tfs
         ret = get_block_replicas_ex(ns_id, block_id, servers);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(DEBUG, "get block replicas fail. ns: %s, blockid: %"PRI64_PREFIX"u",
-              tbsys::CNetUtil::addrToString(ns_id).c_str(), block_id);
+          TBSYS_LOG(DEBUG, "get block replicas fail. ns: %s, blockid: %"PRI64_PREFIX"u, ret: %d",
+              tbsys::CNetUtil::addrToString(ns_id).c_str(), block_id, ret);
         }
       }
       return ret;

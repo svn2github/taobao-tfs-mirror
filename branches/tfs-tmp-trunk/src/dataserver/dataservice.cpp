@@ -841,7 +841,7 @@ namespace tfs
             write_info.block_id_, write_info.file_id_, ret);
       }
       else if (EXIT_BLOCK_DS_VERSION_ERROR == ret || EXIT_BLOCK_NS_VERSION_ERROR == ret ||
-        EXIT_VERSION_CONFLICT_ERROR == ret)
+        EXIT_BLOCK_VERSION_CONFLICT_ERROR == ret)
       {
         message->reply_error_packet(
             TBSYS_LOG_LEVEL(ERROR), ret,

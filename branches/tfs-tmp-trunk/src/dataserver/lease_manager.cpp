@@ -176,7 +176,7 @@ namespace tfs
       {
         if (INVALID_SERVER_ID != members_[index].server_)
         {
-          has_version_error = members_[index].status_ == EXIT_VERSION_CONFLICT_ERROR;
+          has_version_error = members_[index].status_ == EXIT_BLOCK_VERSION_CONFLICT_ERROR;
         }
       }
       return has_version_error;

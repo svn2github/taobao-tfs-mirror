@@ -7,7 +7,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -luuid -lz
 
 bin_PROGRAMS = admintool showsyncoplog rmsyncoplog ssm tfstool performance syncbyfile\
-               read_syncoplog_header repair_block_info
+               read_syncoplog_header 
 if WITH_TAIR_CACHE
 bin_PROGRAMS += clear_remote_block_cache
 endif

@@ -167,7 +167,7 @@ namespace tfs
           {
             if (lease->check_has_version_conflict())
             {
-              status = EXIT_VERSION_CONFLICT_ERROR;
+              status = EXIT_BLOCK_VERSION_CONFLICT_ERROR;
             }
 
             if (TFS_SUCCESS == status)

@@ -248,7 +248,8 @@ namespace tfs
       for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter)
       {
         ret = (*iter)->get_block_info(block_info);
-        if ((TFS_SUCCESS == ret) && range.include(block_info.last_update_time_))
+        if ((TFS_SUCCESS == ret) && !IS_VERFIFY_BLOCK(block_info.block_id_)
+            && range.include(block_info.last_update_time_))
         {
           blocks.push_back(block_info.block_id_);
         }

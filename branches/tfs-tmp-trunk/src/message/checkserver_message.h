@@ -110,7 +110,7 @@ namespace tfs
           return seqno_;
         }
 
-        void set_blocks(const common::VUINT64 blocks)
+        void set_blocks(const common::VUINT64& blocks)
         {
           blocks_ = blocks;
         }

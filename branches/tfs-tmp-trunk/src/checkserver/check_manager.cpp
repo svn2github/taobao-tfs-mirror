@@ -299,27 +299,47 @@ namespace tfs
       while (!stop_)
       {
         seqno_ = Func::get_monotonic_time_us();
-        int ret = fetch_servers();
-        if (TFS_SUCCESS == ret)
-        {
-          TimeRange range;
-          range.start_ = 0;
-          range.end_ = 0x7FFFFFFFFFFFFFFF;
-          ret = fetch_blocks(range);
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          ret = assign_blocks();
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          ret = dispatch_task();
-        }
-
-        sleep(1000);
+        TimeRange range;  // TODO: calculate check time range
+        range.start_ = 0;
+        range.end_ = 0x7FFFFFFFFFFFFFFF;
+        check_blocks(range);
+        sleep(SYSPARAM_CHECKSERVER.check_interval_ * 3600);
       }
+    }
+
+    int CheckManager::check_blocks(const TimeRange& range)
+    {
+      int ret = fetch_servers();
+      if (TFS_SUCCESS == ret)
+      {
+        ret = fetch_blocks(range);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = assign_blocks();
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = dispatch_task();
+      }
+
+      sleep(180);  // TODO
+
+      if (TFS_SUCCESS == ret)
+      {
+        BLOCK_MAP_ITER iter = all_blocks_.begin();
+        for ( ; iter != all_blocks_.end(); iter++)
+        {
+          if (BLOCK_STATUS_DONE != (*iter)->get_status())
+          {
+            TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u check fail.", (*iter)->get_block_id());
+          }
+        }
+      }
+
+      return ret;
     }
 
     void CheckManager::stop_check()

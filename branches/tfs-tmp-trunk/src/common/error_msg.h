@@ -217,6 +217,7 @@ namespace tfs
     const int32_t EXIT_NETWORK_BUSY_ERROR = -8073;
     const int32_t EXIT_NOT_ALL_SUCCESS = -8074;
     const int32_t EXIT_BLOCK_SIZE_OUT_OF_RANGE = -8075;
+    const int32_t EXIT_BLOCK_VERSION_CONFLICT_ERROR = -8076;
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;

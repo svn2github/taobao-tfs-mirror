@@ -217,6 +217,7 @@ namespace tfs
         int assign_blocks();
         int dispatch_task();
         int update_task(message::ReportCheckBlockMessage* message);
+        int check_blocks(const common::TimeRange& range);
 
       private:
         class FetchBlockThread: public tbutil::Thread

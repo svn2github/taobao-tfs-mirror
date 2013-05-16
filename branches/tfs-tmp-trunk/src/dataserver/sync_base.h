@@ -48,6 +48,9 @@ namespace tfs
         void set_pause(const int32_t v);
         int run_sync_mirror();
 
+        std::string get_src_addr() { return src_addr_; }
+        std::string get_dest_addr() { return dest_addr_; }
+
       private:
         SyncBase();
         DISALLOW_COPY_AND_ASSIGN(SyncBase);

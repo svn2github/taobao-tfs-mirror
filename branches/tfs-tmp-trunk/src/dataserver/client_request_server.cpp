@@ -895,7 +895,7 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           // req ns resolve version conflict
-          if (EXIT_VERSION_CONFLICT_ERROR == ret)
+          if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == ret)
           {
             if (TFS_SUCCESS != get_data_manager().resolve_block_version_conflict(attach_block_id, file_id, lease_id))
             {
@@ -1022,7 +1022,7 @@ namespace tfs
       {
         if (TFS_SUCCESS != ret)
         {
-          if (EXIT_VERSION_CONFLICT_ERROR == ret)
+          if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == ret)
           {
             // ignore return value
             if (TFS_SUCCESS != get_data_manager().resolve_block_version_conflict(attach_block_id, file_id, lease_id))

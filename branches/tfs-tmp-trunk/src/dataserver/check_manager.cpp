@@ -41,6 +41,16 @@ namespace tfs
       return service_.get_block_manager();
     }
 
+    inline DataHelper& CheckManager::get_data_helper()
+    {
+      return service_.get_data_helper();
+    }
+
+    std::vector<SyncBase*>& CheckManager::get_sync_mirror()
+    {
+      return service_.get_sync_mirror();
+    }
+
     void CheckManager::run_check()
     {
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
@@ -63,10 +73,11 @@ namespace tfs
 
         if (INVALID_BLOCK_ID != block_id)
         {
-          // TODO: do real check work
           TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u", block_id);
-          // if check success && blockid valid
-          success_blocks_.push_back(block_id);
+          if (TFS_SUCCESS == check_block(block_id))
+          {
+            success_blocks_.push_back(block_id);
+          }
         }
 
         if (pending_blocks_.empty() && (0 == seqno_))
@@ -154,8 +165,85 @@ namespace tfs
 
     int CheckManager::check_block(const uint64_t block_id)
     {
+      IndexHeaderV2 main_header;
+      vector<FileInfoV2> main_finfos;
+      int ret = get_block_manager().traverse(main_header, main_finfos, block_id, block_id);
+      if (TFS_SUCCESS == ret && main_finfos.size() > 0) // ignore empty block
+      {
+        vector<SyncBase*>& sync_mirror = get_sync_mirror();
+        vector<SyncBase*>::iterator iter = sync_mirror.begin();
+        for ( ; (TFS_SUCCESS == ret) && (iter != sync_mirror.end()); iter++)
+        {
+          ret = check_single_block(block_id, main_finfos, **iter);
+        }
+      }
+
+      return ret;
+    }
+
+    int CheckManager::check_single_block(const uint64_t block_id,
+        vector<FileInfoV2>& finfos, SyncBase& peer)
+    {
+      uint64_t peer_ns = Func::get_host_ip(peer.get_dest_addr().c_str());
+      vector<uint64_t> replicas;
+      IndexDataV2 peer_index;
+      int ret = get_data_helper().get_block_replicas(peer_ns, block_id, replicas);
+      if (TFS_SUCCESS == ret)
+      {
+        vector<uint64_t>::iterator iter = replicas.begin();
+        for ( ; iter != replicas.end(); iter++)
+        {
+          ret = get_data_helper().read_index(*iter, block_id, block_id, peer_index);
+          if (TFS_SUCCESS == ret)
+          {
+            break;
+          }
+        }
+      }
+      else if (EXIT_NO_BLOCK == ret || EXIT_BLOCK_NOT_FOUND == ret)
+      {
+        // block exist in peer cluster, we think the peer file list is empty
+        ret = TFS_SUCCESS;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        vector<FileInfoV2> more;
+        vector<FileInfoV2> less;
+        compare_block_fileinfos(finfos, peer_index.finfos_, more, less);
+        ret = process_more_files(peer, block_id, more);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = process_less_files(peer, block_id, less);
+        }
+      }
+
+      return ret;
+    }
+
+    int CheckManager::process_more_files(SyncBase& peer,
+        const uint64_t block_id, const vector<FileInfoV2>& more)
+    {
+      int ret = TFS_SUCCESS;
+      vector<FileInfoV2>::const_iterator iter = more.begin();
+      for ( ; (TFS_SUCCESS == ret) && (iter != more.end()); iter++)
+      {
+        if (0 == iter->status_)  // TODO: process deleted or hiden files
+        {
+          ret = peer.write_sync_log(OPLOG_INSERT, block_id, iter->id_);
+        }
+      }
+      return ret;
+    }
+
+    // TODO: process less files
+    int CheckManager::process_less_files(SyncBase& peer,
+        const uint64_t block_id, const vector<FileInfoV2>& less)
+    {
+      UNUSED(peer);
       UNUSED(block_id);
-      return 0;
+      UNUSED(less);
+      return TFS_SUCCESS;
     }
 
     bool file_info_compare(const FileInfoV2& left, const FileInfoV2& right)
@@ -164,7 +252,7 @@ namespace tfs
     }
 
     void CheckManager::compare_block_fileinfos(vector<FileInfoV2>& left,
-        vector<FileInfoV2>& right, VUINT64& more, VUINT64& less)
+        vector<FileInfoV2>& right, vector<FileInfoV2>& more, vector<FileInfoV2>& less)
     {
       sort(right.begin(), right.end(), file_info_compare);
       std::vector<FileInfoV2>::iterator iter = left.begin();
@@ -172,15 +260,19 @@ namespace tfs
       {
         std::vector<FileInfoV2>::iterator fit = lower_bound(right.begin(),
             right.end(), *iter, file_info_compare);
-        if (fit != right.end())
+        if (fit == right.end())
         {
-          fit->id_ = INVALID_FILE_ID;  // tag it's a checked fileinfo
+          more.push_back(*iter);      // not found
         }
         else
         {
-          if (fit->id_ != iter->id_)
+          if (fit->id_ != iter->id_)  // not found
           {
-            more.push_back(iter->id_);
+            more.push_back(*iter);
+          }
+          else
+          {
+            fit->id_ = INVALID_FILE_ID;  // tag it's a checked fileinfo
           }
         }
       }
@@ -190,7 +282,7 @@ namespace tfs
       {
         if (INVALID_FILE_ID != iter->id_)
         {
-          less.push_back(iter->id_);
+          less.push_back(*iter);
         }
       }
     }
