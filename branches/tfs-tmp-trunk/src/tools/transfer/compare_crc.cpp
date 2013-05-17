@@ -127,7 +127,7 @@ int compare_crc_by_block_id(const std::string& left_ns_addr, const std::string& 
       if ((*iter).modify_time_ < modify_time)
       {
         //TBSYS_LOG(INFO, "FLAG: %d", (*iter).flag_);
-        ret = (*iter).flag_ == FILE_STATUS_DELETE ? TFS_SUCCESS : FILE_STATUS_ERROR;
+        ret = ((*iter).flag_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID)) ? TFS_SUCCESS : FILE_STATUS_ERROR;
         if (TFS_SUCCESS != ret)
         {
           it = right.find((*iter));
@@ -177,7 +177,7 @@ class WorkThread: public tbutil::Thread
 {
  public:
    WorkThread(const int32_t type, const std::string& left_ns_addr, const std::string& right_ns_addr,
-      const int64_t modify_time, std::vector<std::string>& inputs, FILE* success_fp, FILE* fail_fp, const int32_t force):
+      const int64_t modify_time, std::vector<std::string>& inputs, FILE* success_fp, FILE* fail_fp, const int32_t force, const int32_t sleep_ms):
       type_(type),
       left_ns_addr_(left_ns_addr),
       right_ns_addr_(right_ns_addr),
@@ -185,7 +185,8 @@ class WorkThread: public tbutil::Thread
       inputs_(inputs),
       success_fp_(success_fp),
       fail_fp_(fail_fp),
-      force_(force)
+      force_(force),
+      sleep_ms_(sleep_ms)
    {
 
    }
@@ -207,6 +208,7 @@ class WorkThread: public tbutil::Thread
           FILE* fp = TFS_SUCCESS == ret ? success_fp_ : fail_fp_;
           fprintf(fp, "%s", (*iter).c_str());
           fflush(fp);
+          usleep(sleep_ms_ * 1000);
         }
       }
 
@@ -221,6 +223,7 @@ class WorkThread: public tbutil::Thread
           FILE* fp = TFS_SUCCESS == ret ? success_fp_ : fail_fp_;
           fprintf(fp, "%s", (*iter).c_str());
           fflush(fp);
+          usleep(sleep_ms_* 1000);
         }
       }
    }
@@ -233,13 +236,14 @@ private:
   FILE* success_fp_;
   FILE* fail_fp_;
   int32_t force_;
+  int32_t sleep_ms_;
 };
 typedef tbutil::Handle<WorkThread> WorkThreadPtr;
 
 void usage(const char* name)
 {
   fprintf(stderr,"Usage:\n%s -o old_ns_ip:port -n new_ns_ip:port -f input "\
-      "-m modify_time(20110315183500) -t thread_num -k type -c[-h]\n", name);
+      "-m modify_time(20110315183500) -t thread_num -k type -s interval(ms) -c[-h]\n", name);
   exit(-1);
 }
 
@@ -247,9 +251,10 @@ int main(int argc, char** argv)
 {
   int32_t thread_num = 1, i = 0, real_read_check_crc = 0; // default one thread
   int64_t modify_time = 0;
+  int32_t sleep_ms = 0;
   int32_t op_type = OP_FILE;
   std::string old_ns_addr(""), new_ns_addr(""), file_path(""), log_level("info");
-  while ((i = getopt(argc, argv, "o:n:f:m:t:k:l:ch")) != EOF)
+  while ((i = getopt(argc, argv, "o:n:f:m:t:k:s:l:ch")) != EOF)
   {
     switch (i)
     {
@@ -274,6 +279,9 @@ int main(int argc, char** argv)
       case 'c':
         real_read_check_crc  = 1;
         break;
+      case 's':
+        sleep_ms = atoi(optarg);
+        break;
       case 'h':
       default:
         usage(argv[0]);
@@ -282,7 +290,8 @@ int main(int argc, char** argv)
   if (old_ns_addr == ""
       || new_ns_addr == ""
       || file_path == ""
-      || modify_time < 0)
+      || modify_time < 0
+      || sleep_ms < 0)
   {
     usage(argv[0]);
   }
@@ -327,7 +336,7 @@ int main(int argc, char** argv)
     WorkThreadPtr *work_threads = new WorkThreadPtr[thread_num];
     for (index = 0; index < thread_num; ++index)
     {
-      work_threads[index] = new WorkThread(op_type, old_ns_addr, new_ns_addr, modify_time, params[index], success_fp, fail_fp, real_read_check_crc);
+      work_threads[index] = new WorkThread(op_type, old_ns_addr, new_ns_addr, modify_time, params[index], success_fp, fail_fp, real_read_check_crc, sleep_ms);
       work_threads[index]->start();
     }
 
