@@ -33,7 +33,7 @@ namespace tfs
     const char MULTIPART_UPLOAD_KEY = 2;
     const int32_t MAX_LIMIT = 1000;
     const int32_t VERSION_ERROR_RETRY_COUNT = 3;
-    const int64_t MAX_VERSION = 1<<16 - 1;
+    const int64_t MAX_VERSION = 1L<<16 - 1;
     const int32_t MAX_BUCKET_TAG_SIZE = 10;
 
     const int32_t MAX_TAG_KEY_LEN = 128;
