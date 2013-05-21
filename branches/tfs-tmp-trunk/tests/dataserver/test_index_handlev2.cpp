@@ -104,7 +104,7 @@ namespace tfs
       header->info_.version_  = 1;
       header->seq_no_   = 0;
       header->info_.family_id_  = INVALID_FAMILY_ID;
-      header->throughput_.last_update_time_ = time(NULL);
+      header->info_.last_update_time_ = time(NULL);
       header->file_info_bucket_size_ =  super_info->hash_bucket_count_;
 
       uint16_t slot = 0;
@@ -173,7 +173,7 @@ namespace tfs
       header->info_.version_  = 1;
       header->seq_no_   = 0;
       header->info_.family_id_  = INVALID_FAMILY_ID;
-      header->throughput_.last_update_time_ = time(NULL);
+      header->info_.last_update_time_ = time(NULL);
       header->file_info_bucket_size_ =  super_info->hash_bucket_count_;
 
       uint16_t slot = 0;
@@ -331,8 +331,8 @@ namespace tfs
         header.info_.version_  = 1;
         header.seq_no_   = 0;
         header.info_.family_id_ = FAMILY_ID;
-        header.throughput_.last_update_time_ = time(NULL);
-        header.throughput_.last_statistics_time_ = header.throughput_.last_update_time_;
+        header.info_.last_update_time_ = time(NULL);
+        header.throughput_.last_statistics_time_ = header.info_.last_update_time_;
         header.used_file_info_bucket_size_ = random() % 1024 + 1024;
         header.file_info_bucket_size_ = random() % 2048+ 2048;
         std::vector<FileInfoV2> files, rfiles;
