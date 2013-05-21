@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <gtest/gtest.h>
 
+#include "internal.h"
 #include "error_msg.h"
 #include "erasure_code.h"
 
@@ -56,13 +57,13 @@ bool compare_data(const char* left, const char* right, const int size)
   return same;
 }
 
-class ErasureCodeTest: public ::testing::Test
+class TestErasureCode: public ::testing::Test
 {
   public:
-    ErasureCodeTest()
+    TestErasureCode()
     {
     }
-    ~ErasureCodeTest()
+    ~TestErasureCode()
     {
     }
     virtual void SetUp()
@@ -73,15 +74,13 @@ class ErasureCodeTest: public ::testing::Test
     }
 };
 
-TEST_F(ErasureCodeTest, coding)
+TEST_F(TestErasureCode, coding)
 {
   int ret = 0;
   const int k = 5;
   const int m = 3;
   const int size = 1048576;
-  char **data = NULL;
-  data = (char**)malloc((k+m) * sizeof(char*));
-  ASSERT_TRUE(NULL != data);
+  char *data[k+m];
 
   ErasureCode encoder;
 
@@ -145,9 +144,16 @@ TEST_F(ErasureCodeTest, coding)
     EXPECT_TRUE(compare_data(src[i], data[erasures[i]], size));
   }
 
+  for (int i = 0; i < k + m; i++)
+  {
+    if (NULL != data[i])
+    {
+      free(data[i]);
+    }
+  }
 }
 
-TEST_F(ErasureCodeTest, excepiton)
+TEST_F(TestErasureCode, excepiton)
 {
   const int k = 5;
   const int m = 3;
@@ -199,9 +205,15 @@ TEST_F(ErasureCodeTest, excepiton)
 
   ret = decoder.decode(size - 100);
   ASSERT_EQ(EXIT_SIZE_INVALID, ret);
+
+  for (int i = 0; i < k + m; i++)
+  {
+    if (NULL != data[i])
+    {
+      free(data[i]);
+    }
+  }
 }
-
-
 
 int main(int argc, char* argv[])
 {
