@@ -140,23 +140,31 @@ namespace tfs
 
     int CheckManager::add_check_blocks(ReportCheckBlockMessage* message)
     {
-      tbutil::Mutex::Lock lock(mutex_);
-      pending_blocks_.clear();
-      success_blocks_.clear();
-      seqno_ = message->get_seqno();
-      int ret = (seqno_ > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int64_t seqno = message->get_seqno();
+      uint64_t check_server_id = message->get_server_id();
+      const VUINT64& blocks = message->get_blocks();
+      int ret = ((seqno > 0) && (INVALID_SERVER_ID != check_server_id)) ?
+        TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        check_server_id_ = message->get_server_id();
-        VUINT64& blocks = message->get_blocks();
-        VUINT64::iterator iter = blocks.begin();
-        for ( ; iter != blocks.end(); iter++)
-        {
-          pending_blocks_.push_back(*iter);
-        }
-        message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        add_check_blocks(seqno, check_server_id, blocks);
+        ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
       return ret;
+    }
+
+    void CheckManager::add_check_blocks(const int64_t seqno, const uint64_t check_server_id, const common::VUINT64& blocks)
+    {
+      Mutex::Lock lock(mutex_);
+      pending_blocks_.clear();
+      success_blocks_.clear();
+      seqno_ = seqno;
+      check_server_id_ = check_server_id;
+      VUINT64::const_iterator iter = blocks.begin();
+      for ( ; iter != blocks.end(); iter++)
+      {
+        pending_blocks_.push_back(*iter);
+      }
     }
 
     int CheckManager::report_check_blocks()

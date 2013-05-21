@@ -14,9 +14,15 @@
 #ifndef TFS_DATASERVER_CHECKMANAGER_H_
 #define TFS_DATASERVER_CHECKMANAGER_H_
 
-#include "common/error_msg.h"
+#include <Mutex.h>
 #include "common/internal.h"
-#include "common/array_helper.h"
+#include "message/message_factory.h"
+#include "common/error_msg.h"
+#include "ds_define.h"
+
+#ifdef TFS_GTEST
+#include <gtest/gtest.h>
+#endif
 
 namespace tfs
 {
@@ -28,6 +34,11 @@ namespace tfs
     class DataService;
     class CheckManager
     {
+      #ifdef TFS_GTEST
+      friend class TestCheckManager;
+      FRIEND_TEST(TestCheckManager, test_compare_block_fileinfos);
+      #endif
+
       public:
         CheckManager(DataService& service);
         ~CheckManager();
@@ -39,8 +50,9 @@ namespace tfs
         int handle(tbnet::Packet* packet);
 
       private:
-        int get_check_blocks(CheckBlockRequestMessage* message);
-        int add_check_blocks(ReportCheckBlockMessage* message);
+        int get_check_blocks(message::CheckBlockRequestMessage* message);
+        int add_check_blocks(message::ReportCheckBlockMessage* message);
+        void add_check_blocks(const int64_t seqno, const uint64_t check_server_id, const common::VUINT64& blocks);
         int report_check_blocks();
         int check_block(const uint64_t block_id);
         int check_single_block(const uint64_t block_id,
