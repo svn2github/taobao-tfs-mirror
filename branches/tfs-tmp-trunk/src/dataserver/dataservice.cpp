@@ -388,6 +388,10 @@ namespace tfs
 
       if (0 != timeout_thread_)
         timeout_thread_->join();
+
+      if (0 != check_thread_)
+          check_thread_->join();
+
       return TFS_SUCCESS;
     }
 

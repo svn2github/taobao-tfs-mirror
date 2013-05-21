@@ -56,22 +56,25 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       while (!ds_info.is_destroyed())
       {
+        bool need_report = false;
+        int64_t seqno = seqno_;
         uint64_t block_id = INVALID_BLOCK_ID;
         mutex_.lock();
         if (!pending_blocks_.empty())
         {
           block_id = pending_blocks_.front();
           pending_blocks_.pop_front();
-        }
-        else if (seqno_ > 0)
-        {
-          report_check_blocks();
-          // reset check manager status, start a new turn
-          seqno_ = 0;
+
+          // this is the last block that needs to be checked
+          // after check finish, report to checkserver
+          if (pending_blocks_.empty() && (seqno != 0))
+          {
+            need_report = true;
+          }
         }
         mutex_.unlock();
 
-        if (INVALID_BLOCK_ID != block_id)
+        if (!ds_info.is_destroyed() && (INVALID_BLOCK_ID != block_id))
         {
           TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u", block_id);
           if (TFS_SUCCESS == check_block(block_id))
@@ -80,7 +83,17 @@ namespace tfs
           }
         }
 
-        if (pending_blocks_.empty() && (0 == seqno_))
+        // during check the last block, a new task may already come
+        // the previous task will just need to be ignored
+        // so we check if seqno matches here to avoid lock
+        if (!ds_info.is_destroyed() && need_report && (seqno_ == seqno))
+        {
+          report_check_blocks();
+          seqno_ = 0;
+          need_report = false;
+        }
+
+        if (!ds_info.is_destroyed() && pending_blocks_.empty())
         {
           sleep(2);
         }
@@ -127,7 +140,7 @@ namespace tfs
 
     int CheckManager::add_check_blocks(ReportCheckBlockMessage* message)
     {
-      LockT<Mutex> lock(mutex_);
+      tbutil::Mutex::Lock lock(mutex_);
       pending_blocks_.clear();
       success_blocks_.clear();
       seqno_ = message->get_seqno();
@@ -246,45 +259,46 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    bool file_info_compare(const FileInfoV2& left, const FileInfoV2& right)
+    struct FileInfoCompare
     {
-      return left.id_ < right.id_;
-    }
+      bool operator () (const FileInfoV2& left, const FileInfoV2& right)
+      {
+        return left.id_ < right.id_;
+      }
+    };
 
-    void CheckManager::compare_block_fileinfos(vector<FileInfoV2>& left,
-        vector<FileInfoV2>& right, vector<FileInfoV2>& more, vector<FileInfoV2>& less)
+    void CheckManager::compare_block_fileinfos(const vector<FileInfoV2>& left,
+        const vector<FileInfoV2>& right, vector<FileInfoV2>& more, vector<FileInfoV2>& less)
     {
-      sort(right.begin(), right.end(), file_info_compare);
-      std::vector<FileInfoV2>::iterator iter = left.begin();
+      // transform right vector to set for fast search
+      set<FileInfoV2, FileInfoCompare> files;
+      vector<FileInfoV2>::const_iterator iter = right.begin();
+      for ( ; iter != right.end(); iter++)
+      {
+        files.insert(*iter);
+      }
+
+      iter = left.begin();
       for ( ; iter != left.end(); iter++)
       {
-        std::vector<FileInfoV2>::iterator fit = lower_bound(right.begin(),
-            right.end(), *iter, file_info_compare);
-        if (fit == right.end())
+        set<FileInfoV2, FileInfoCompare>::iterator sit = files.find(*iter);
+        if (sit == files.end()) // not found
         {
-          more.push_back(*iter);      // not found
+          more.push_back(*iter);
         }
         else
         {
-          if (fit->id_ != iter->id_)  // not found
-          {
-            more.push_back(*iter);
-          }
-          else
-          {
-            fit->id_ = INVALID_FILE_ID;  // tag it's a checked fileinfo
-          }
+          // TODO: process file status diff
+          files.erase(sit);
         }
       }
 
-      iter = right.begin();
-      for ( ; iter != right.end(); iter++)
+      set<FileInfoV2, FileInfoCompare>::iterator it = files.begin();
+      for ( ; it != files.end(); it++)
       {
-        if (INVALID_FILE_ID != iter->id_)
-        {
-          less.push_back(*iter);
-        }
+        less.push_back(*it);
       }
     }
+
   }
 }

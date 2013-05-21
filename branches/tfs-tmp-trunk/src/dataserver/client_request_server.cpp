@@ -971,7 +971,7 @@ namespace tfs
             for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)
             {
               ret = sync_mirror[i]->write_sync_log(OPLOG_INSERT, attach_block_id, file_id);
-              if (TFS_SUCCESS == ret)
+              if (TFS_SUCCESS != ret)
               {
                 TBSYS_LOG(WARN, "write sync log fail. blockid: %"PRI64_PREFIX"u, "
                     "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, index: %d, ret: %d",

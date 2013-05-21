@@ -49,8 +49,8 @@ namespace tfs
             const uint64_t block_id, const std::vector<common::FileInfoV2>& more);
         int process_less_files(SyncBase& peer,
             const uint64_t block_id, const std::vector<common::FileInfoV2>& less);
-        void compare_block_fileinfos(std::vector<common::FileInfoV2>& left,
-            std::vector<common::FileInfoV2>& right,
+        void compare_block_fileinfos(const std::vector<common::FileInfoV2>& left,
+            const std::vector<common::FileInfoV2>& right,
             std::vector<common::FileInfoV2>& more,
             std::vector<common::FileInfoV2>& less);
 
