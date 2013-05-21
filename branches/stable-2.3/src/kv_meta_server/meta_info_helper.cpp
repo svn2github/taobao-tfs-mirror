@@ -533,7 +533,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = kv_engine_helper_->get_key(key, &kv_value, lock_version);
-        if (TFS_SUCCESS != ret)
+        if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
         {
           ret = EXIT_OBJECT_NOT_EXIST;
         }
@@ -574,10 +574,9 @@ namespace tfs
         ret = get_object_part(bucket_name, file_name, offset_zero, &object_info_zero, &version);
         *object_info = object_info_zero;
         *still_have = false;
-        if (TAIR_RETURN_DATA_NOT_EXIST == ret)
+        if (EXIT_OBJECT_NOT_EXIST == ret)
         {
           TBSYS_LOG(ERROR, "object not exist");
-          ret = EXIT_OBJECT_NOT_EXIST;
         }
       }
       if (TFS_SUCCESS == ret)
@@ -585,13 +584,14 @@ namespace tfs
         if (offset > object_info_zero.meta_info_.big_file_size_)
         {
           TBSYS_LOG(ERROR, "req offset is out of big_file_size_");
-          ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
+          ret = EXIT_READ_OFFSET_ERROR;
         }
       }
 
       if (TFS_SUCCESS == ret)
       {
         bool is_big_file = false;
+
         if (object_info_zero.v_tfs_file_info_.size() > 0)
         {
           if (offset + length <= object_info_zero.v_tfs_file_info_[0].file_size_)
@@ -607,9 +607,9 @@ namespace tfs
         {
           is_big_file = true;
         }
-
         if (is_big_file)//big file
         {
+          TBSYS_LOG(ERROR, "is big_file");
           //op key
           char *start_key_buff = NULL;
           if (TFS_SUCCESS == ret)
@@ -663,6 +663,7 @@ namespace tfs
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
             if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
             {//metainfo exist but data not exist
+              TBSYS_LOG(ERROR, "metainfo exist but data not exist");
               ret = TFS_SUCCESS;
             }
             for(i = 0; i < result_size; ++i)
@@ -701,7 +702,7 @@ namespace tfs
               go_on = false;
             }
 
-            for(i = 0; i < result_size; ++i)//free tair
+            for(i = 0; i < result_size; ++i)//free kv
             {
               kv_value_values[i]->free();
             }
@@ -826,12 +827,12 @@ namespace tfs
           }
         }
 
-        //del from tair
+        //del from kv
         if(TFS_SUCCESS == ret && result_size > 0)
         {
            ret = kv_engine_helper_->delete_keys(vec_keys);
         }
-        for(i = 0; i < result_size; ++i)//free tair
+        for(i = 0; i < result_size; ++i)//free kv
         {
           kv_value_keys[i]->free();
           kv_value_values[i]->free();
@@ -1164,7 +1165,7 @@ namespace tfs
             }
           }
 
-          //delete for tair
+          //delete for kv
           for (int i = 0; i < res_size; ++i)
           {
             kv_value_keys[i]->free();
@@ -1346,7 +1347,7 @@ namespace tfs
         ret = kv_engine_helper_->delete_key(pkey);
       }
 
-      //delete for tair
+      //delete for kv
       for (int i = 0; i < res_size; ++i)
       {
         kv_value_keys[i]->free();
