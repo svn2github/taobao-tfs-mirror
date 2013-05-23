@@ -447,7 +447,8 @@ int TranBlock::read_data()
 
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* rsp = NULL;
-      if(TFS_SUCCESS != send_msg_to_server(src_ds_addr_[index], client, &rrd_msg, rsp))
+      ret = send_msg_to_server(src_ds_addr_[index], client, &rrd_msg, rsp);
+      if(TFS_SUCCESS != ret)
       {
         rsp = NULL;
       }
