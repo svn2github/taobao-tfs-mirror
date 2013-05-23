@@ -1446,14 +1446,14 @@ namespace tfs
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      /*if (TFS_SUCCESS == ret)
-        {
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::get_int64(data, data_len, pos, &family_id_);
-        }
-        if (TFS_SUCCESS == ret)
-        {
+      }
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::get_int32(data, data_len, pos, &family_aid_info_);
-        }*/
+      }
       int32_t size = 0;
       if (TFS_SUCCESS == ret)
       {
@@ -1478,14 +1478,14 @@ namespace tfs
     int FamilyInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      /*if (TFS_SUCCESS == ret)
-        {
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::set_int64(data, data_len, pos, family_id_);
-        }
-        if (TFS_SUCCESS == ret)
-        {
+      }
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::set_int32(data, data_len, pos, family_aid_info_);
-        }*/
+      }
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int32(data, data_len, pos, family_member_.size());
@@ -1505,7 +1505,7 @@ namespace tfs
 
     int64_t FamilyInfo::length() const
     {
-      return /*INT64_SIZE + INT_SIZE + */INT_SIZE + family_member_.size() * (INT_SIZE + INT64_SIZE);
+      return INT64_SIZE + INT_SIZE + INT_SIZE + family_member_.size() * (INT_SIZE + INT64_SIZE);
     }
 
     bool FamilyMemberInfo::operator ==(const FamilyMemberInfo& rhs) const

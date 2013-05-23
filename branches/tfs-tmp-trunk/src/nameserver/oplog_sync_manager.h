@@ -31,7 +31,7 @@
 
 #include "oplog.h"
 #include "block_id_factory.h"
-#include "database_helper.h"
+#include "tair_helper.h"
 
 namespace tfs
 {
@@ -77,7 +77,8 @@ namespace tfs
       common::FileQueueThread* file_queue_thread_;
       BlockIdFactory id_factory_;
       tbutil::Mutex mutex_;
-      DataBaseHelper* dbhelper_;
+      TairHelper* dbhelper_;
+      //DataBaseHelper* dbhelper_;
       tbnet::PacketQueueThread work_thread_;
     };
   }//end namespace nameserver

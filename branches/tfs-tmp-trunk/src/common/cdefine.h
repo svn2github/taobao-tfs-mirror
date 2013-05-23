@@ -74,6 +74,8 @@ static const int32_t FILE_NAME_EXCEPT_SUFFIX_LEN_V2 = 18;
 #define PRI64_PREFIX "ll"
 #endif
 
+#define TFS_GTEST
+
 typedef struct
 {
   uint64_t file_id_;

@@ -118,24 +118,30 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        std::string db_info = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_META_DB_INFOS, "");
+        std::string tair_info = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_TAIR_ADDR, "");
         std::vector<std::string> items;
-        common::Func::split_string(db_info.c_str(), ',', items);
-        ret = items.size() < 3 ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
+        common::Func::split_string(tair_info.c_str(), ',', items);
+        ret = items.size() < 5 ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "db info: %s is invalid", db_info.c_str());
+          TBSYS_LOG(ERROR, "tair info: %s is invalid", tair_info.c_str());
         }
         if (TFS_SUCCESS == ret)
         {
-          dbhelper_ = new DataBaseHelper(items[0], items[1], items[2]);
+          dbhelper_ = new TairHelper(items[0], items[1], items[2], items[3], atoi(items[4].c_str()));
+          ret = dbhelper_->initialize();
+        }
+        if (TFS_SUCCESS == ret)
+        {
           int64_t family_id = 0;
           std::vector<common::FamilyInfo> infos;
           do
           {
             ret = dbhelper_->scan(infos, family_id);
-            if (TFS_SUCCESS == ret)
+            if (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret)
             {
+              if (TAIR_RETURN_SUCCESS == ret)
+                ret = TFS_SUCCESS;
               time_t now = Func::get_monotonic_time();
               std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
               common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
@@ -156,7 +162,7 @@ namespace tfs
               }
             }
           }
-          while (infos.size() > 0 && TFS_SUCCESS == ret);
+          while (infos.size() > 0 && TAIR_HAS_MORE_DATA == ret);
         }
       }
       return ret;
@@ -628,7 +634,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int64_t mysql_ret = -14000;
-        ret = dbhelper_->create_family(family_info, mysql_ret);
+        ret = dbhelper_->create_family(family_info);
         if (TFS_SUCCESS == ret)
           ret = mysql_ret;
       }
@@ -640,10 +646,7 @@ namespace tfs
       int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        int64_t mysql_ret = -14000;
-        ret = dbhelper_->del_family(mysql_ret, family_id);
-        if (TFS_SUCCESS == ret)
-          ret = mysql_ret;
+        ret = dbhelper_->del_family(family_id);
       }
       return ret;
     }

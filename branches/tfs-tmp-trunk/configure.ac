@@ -76,6 +76,15 @@ if  test -z "${TAIR_ROOT}"; then
    TAIR_ROOT="/usr/local"
 fi
 
+if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
+  AC_MSG_ERROR([TAIR_ROOT is not work! expect TAIR_ROOT/include and TAIR_ROOT/lib directory])
+  exit 1;
+fi
+TAIR_STORE_CPPFLAGS="-DWITH_UNIQUE_STORE -I${TAIR_ROOT}/include"
+TAIR_STORE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz"
+AC_SUBST([TAIR_STORE_CPPFLAGS])
+AC_SUBST([TAIR_STORE_LDFLAGS])
+
 AC_ARG_ENABLE([uniquestore],
            AS_HELP_STRING([--enable-uniquestore],
            [enable unique store feature. need TaoBao Tair library support, use --with-tair-root to specify path]),
@@ -92,6 +101,8 @@ fi
 AM_CONDITIONAL([WITH_UNIQUE_STORE],[test x$enable_uniquestore = xyes])
 AC_SUBST([UNIQUE_STORE_CPPFLAGS])
 AC_SUBST([UNIQUE_STORE_LDFLAGS])
+
+
 
 AC_ARG_ENABLE([taircache],
            AS_HELP_STRING([--enable-taircache],

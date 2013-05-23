@@ -60,6 +60,7 @@ namespace tfs
     const int32_t EXIT_RM_DIR_ERROR = -1035;
     const int32_t EXIT_ALREADY_MMAPPED_ERROR = -1036;
     const int32_t EXIT_ALREADY_MMAPPED_MAX_SIZE_ERROR = -1037;
+    const int32_t EXIT_OP_TAIR_ERROR = -1038;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;
@@ -141,6 +142,7 @@ namespace tfs
     const int32_t EXIT_FAMILY_MEMBER_NUM_ERROR = -5053;
     const int32_t EXIT_BLOCK_CANNOT_REINSTATE = -5054;
     const int32_t EXIT_COMMIT_BLOCK_UPDATE_ERROR = -5055;
+    const int32_t EXIT_INITIALIZE_TAIR_ERROR = -5056;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

@@ -110,6 +110,7 @@ namespace tfs
 #define CONF_MAX_DATA_MEMBER_NUM                      "max_data_member_num"
 #define CONF_MAX_CHECK_MEMBER_NUM                     "max_check_member_num"
 #define CONF_MAX_MARSHALLING_QUEUE_TIMEOUT            "max_marshalling_queue_timeout"
+#define CONF_TAIR_ADDR                                "tair_addr"
 
   //dataserver
 #define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
