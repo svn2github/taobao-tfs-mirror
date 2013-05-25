@@ -594,7 +594,7 @@ namespace tfs
 
         if (object_info_zero.v_tfs_file_info_.size() > 0)
         {
-          if (offset + length <= object_info_zero.v_tfs_file_info_[0].file_size_)
+          if (object_info_zero.meta_info_.big_file_size_ == object_info_zero.v_tfs_file_info_[0].file_size_)
           {
             is_big_file = false;
           }
