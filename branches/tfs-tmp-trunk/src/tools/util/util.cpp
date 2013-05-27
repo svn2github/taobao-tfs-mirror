@@ -77,7 +77,7 @@ namespace tfs
           req_msg.set_from_row(block);
           tbnet::Packet* ret_msg= NULL;
           NewClient* client = NewClientManager::get_instance().create_client();
-          ret = send_msg_to_server(server, client, &req_msg, ret_msg);
+          ret = send_msg_to_server(server, client, &req_msg, ret_msg, 5000);
           if (TFS_SUCCESS == ret)
           {
             if (0 == version)

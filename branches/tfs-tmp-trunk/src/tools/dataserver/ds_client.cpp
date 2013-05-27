@@ -182,6 +182,8 @@ int main(int argc, char* argv[])
       }
     }
   }
+
+  NewClientManager::get_instance().destroy();
   return TFS_SUCCESS;
 }
 

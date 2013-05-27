@@ -17,6 +17,8 @@
 #include "common/status_message.h"
 #include "message/block_info_message.h"
 #include "message/block_info_message_v2.h"
+#include "message/file_info_message.h"
+#include "message/read_data_message.h"
 
 #include "tool_util.h"
 
@@ -114,6 +116,118 @@ namespace tfs
     }
 
 
+    int ToolUtil::read_file_info(const uint64_t server_id, const uint64_t block_id, const uint64_t file_id, const int32_t flag, FileInfo& info)
+    {
+      int ret = TFS_SUCCESS;
+      if ((INVALID_SERVER_ID != server_id) &&
+          (INVALID_BLOCK_ID != block_id) &&
+          (INVALID_FILE_ID != file_id))
+      {
+        FileInfoMessage fi_msg;
+        fi_msg.set_block_id(block_id);
+        fi_msg.set_file_id(file_id);
+        fi_msg.set_mode(flag);
+
+        tbnet::Packet* rsp = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        if (NULL != client)
+        {
+          ret = send_msg_to_server(server_id, client, &fi_msg, rsp);
+          if (TFS_SUCCESS == ret)
+          {
+            if (rsp->getPCode() == RESP_FILE_INFO_MESSAGE)
+            {
+              RespFileInfoMessage* resp_msg = dynamic_cast<RespFileInfoMessage*>(rsp);
+              info = *(resp_msg->get_file_info());
+            }
+            else if (rsp->getPCode() == STATUS_MESSAGE)
+            {
+              StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+              TBSYS_LOG(WARN, "read file info fail. error: %s, ret: %d", sm->get_error(), sm->get_status());
+            }
+            else
+            {
+              ret = EXIT_UNKNOWN_MSGTYPE;
+              TBSYS_LOG(WARN, "unknown message type, pcode: %d", rsp->getPCode());
+            }
+          }
+
+          NewClientManager::get_instance().destroy_client(client);
+        }
+        else
+        {
+          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+          TBSYS_LOG(WARN, "create new client error");
+        }
+      }
+      else
+      {
+        ret = EXIT_PARAMETER_ERROR;
+        TBSYS_LOG(WARN, "invalid parameter");
+      }
+
+      return ret;
+    }
+
+    int ToolUtil::read_file_data(const uint64_t server_id, const uint64_t block_id, const uint64_t file_id,
+        const int32_t length, const int32_t offset, const int32_t flag, char* data, int32_t& read_len)
+    {
+      int ret = TFS_SUCCESS;
+      if ((INVALID_SERVER_ID != server_id) &&
+          (INVALID_BLOCK_ID != block_id) &&
+          (INVALID_FILE_ID != file_id) &&
+          (length > 0) &&
+          (offset >= 0) &&
+          (NULL != data))
+      {
+        ReadDataMessage rd_msg;
+        rd_msg.set_block_id(block_id);
+        rd_msg.set_file_id(file_id);
+        rd_msg.set_length(length);
+        rd_msg.set_offset(offset);
+        rd_msg.set_flag(flag);
+
+        tbnet::Packet* rsp = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        if (NULL != client)
+        {
+          ret = send_msg_to_server(server_id, client, &rd_msg, rsp);
+          if (TFS_SUCCESS == ret)
+          {
+            if (rsp->getPCode() == RESP_READ_DATA_MESSAGE)
+            {
+              RespReadDataMessage* resp_msg = dynamic_cast<RespReadDataMessage*>(rsp);
+              read_len = resp_msg->get_length();
+              memcpy(data, resp_msg->get_data(), read_len);
+            }
+            else if (rsp->getPCode() == STATUS_MESSAGE)
+            {
+              StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+              TBSYS_LOG(WARN, "read file data fail. error: %s, ret: %d", sm->get_error(), sm->get_status());
+            }
+            else
+            {
+              ret = EXIT_UNKNOWN_MSGTYPE;
+              TBSYS_LOG(WARN, "unknown message type, pcode: %d", rsp->getPCode());
+            }
+          }
+
+          NewClientManager::get_instance().destroy_client(client);
+        }
+        else
+        {
+          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+          TBSYS_LOG(WARN, "create new client error");
+        }
+      }
+      else
+      {
+        ret = EXIT_PARAMETER_ERROR;
+        TBSYS_LOG(WARN, "invalid parameter");
+      }
+
+      return ret;
+    }
 
     int ToolUtil::show_help(const STR_FUNC_MAP& cmd_map)
     {
