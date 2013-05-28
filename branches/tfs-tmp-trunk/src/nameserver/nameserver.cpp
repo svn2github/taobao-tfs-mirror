@@ -83,7 +83,8 @@ namespace tfs
           {
             uint32_t local_ip = Func::get_local_addr(dev_name);
             NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-            ngi.owner_ip_port_  = tbsys::CNetUtil::ipToAddr(local_ip, get_port());
+            ngi.owner_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, get_port());
+            ngi.heart_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, get_port() + 1);
             bool find_ip_in_dev = Func::is_local_addr(ip_addr_id);
             if (!find_ip_in_dev)
             {
@@ -131,9 +132,10 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        int32_t port = get_listen_port() + 1;
         int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_THREAD_COUNT, 1);
         int32_t report_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_THREAD_COUNT, 2);
-        ret = heart_manager_.initialize(heart_thread_count, report_thread_count);
+        ret = heart_manager_.initialize(heart_thread_count, report_thread_count, port);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "initialize heart manager failed, must be exit, ret: %d", ret);
@@ -228,10 +230,10 @@ namespace tfs
             hret = tbnet::IPacketHandler::KEEP_CHANNEL;
             switch (pcode)
             {
-            case SET_DATASERVER_MESSAGE:
+            /*case SET_DATASERVER_MESSAGE:
             case REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
               heart_manager_.push(bpacket);
-              break;
+              break;*/
             case MASTER_AND_SLAVE_HEART_MESSAGE:
             case HEARTBEAT_AND_NS_HEART_MESSAGE:
               master_slave_heart_manager_.push(bpacket, 0, false);
@@ -324,7 +326,7 @@ namespace tfs
               break;
             default:
               ret = EXIT_UNKNOWN_MSGTYPE;
-              TBSYS_LOG(ERROR, "unknown msg type: %d", pcode);
+              TBSYS_LOG(WARN, "unknown msg type: %d", pcode);
               break;
           }
           if (common::TFS_SUCCESS != ret)

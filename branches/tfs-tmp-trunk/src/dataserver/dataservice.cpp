@@ -355,7 +355,7 @@ namespace tfs
           if (TFS_SUCCESS != ret)
             TBSYS_LOG(ERROR, "nameserver real ip addrr: %s is invalid...", t);
           else
-            ns_ip_port.push_back(Func::str_to_addr(t, addr->port_));
+            ns_ip_port.push_back(Func::str_to_addr(t, (addr->port_ + 1)));
         }
       }
 

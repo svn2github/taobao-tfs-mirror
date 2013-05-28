@@ -866,7 +866,8 @@ namespace tfs
     void LayoutManager::check_all_server_isalive_()
     {
       time_t now = 0;
-      uint64_t* servers = new uint64_t [MAX_PROCESS_NUMS];
+      uint64_t* servers = new (std::nothrow)uint64_t [MAX_PROCESS_NUMS];
+      assert(NULL != servers);
       NsGlobalStatisticsInfo stat_info;
       ArrayHelper<uint64_t> helper(MAX_PROCESS_NUMS, servers);
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
@@ -966,7 +967,7 @@ namespace tfs
           if (!last->is_report_block_expired(now))
           {
             CallDsReportBlockRequestMessage req;
-            req.set_server(ngi.owner_ip_port_);
+            req.set_server(ngi.heart_ip_port_);
             client = NewClientManager::get_instance().create_client();
             if (NULL != client)
               ret = post_msg_to_server(last->id(), client, &req, ns_async_callback);

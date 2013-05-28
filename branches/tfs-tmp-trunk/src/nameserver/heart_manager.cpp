@@ -38,6 +38,9 @@ namespace tfs
   {
     HeartManagement::HeartManagement(NameServer& m) :
       manager_(m),
+      packet_factory_(NULL),
+      streamer_(NULL),
+      transport_(NULL),
       keepalive_queue_header_(*this),
       report_block_queue_header_(*this)
     {
@@ -46,28 +49,97 @@ namespace tfs
 
     HeartManagement::~HeartManagement()
     {
-
+      tbsys::gDelete(packet_factory_);
+      tbsys::gDelete(streamer_);
+      tbsys::gDelete(transport_);
     }
 
-    int HeartManagement::initialize(const int32_t keepalive_thread_count,const int32_t report_block_thread_count)
+    int HeartManagement::initialize(const int32_t keepalive_thread_count,const int32_t report_block_thread_count, const int32_t port)
     {
       keepalive_threads_.setThreadParameter(keepalive_thread_count, &keepalive_queue_header_, this);
       report_block_threads_.setThreadParameter(report_block_thread_count, &report_block_queue_header_, this);
       keepalive_threads_.start();
       report_block_threads_.start();
-      return TFS_SUCCESS;
+      streamer_ = new (std::nothrow)common::BasePacketStreamer();
+      assert(NULL != streamer_);
+      packet_factory_ = new (std::nothrow)message::MessageFactory();
+      assert(NULL != packet_factory_);
+      transport_ = new (std::nothrow)tbnet::Transport();
+      streamer_->set_packet_factory(packet_factory_);
+      assert(NULL != transport_);
+      char spec[32];
+      snprintf(spec, 32, "tcp::%d", port);
+      tbnet::IOComponent* com = transport_->listen(spec, streamer_, this);
+      int32_t ret = (NULL == com) ? EXIT_NETWORK_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "listen port: %d fail", port);
+      }
+      else
+      {
+        transport_->start();
+      }
+      return ret;
     }
 
     void HeartManagement::wait_for_shut_down()
     {
+      if (NULL != transport_)
+        transport_->wait();
       keepalive_threads_.wait();
       report_block_threads_.wait();
     }
 
     void HeartManagement::destroy()
     {
+      if (NULL != transport_)
+        transport_->stop();
       keepalive_threads_.stop(true);
       report_block_threads_.stop(true);
+    }
+
+    tbnet::IPacketHandler::HPRetCode HeartManagement::handlePacket(tbnet::Connection *connection, tbnet::Packet *packet)
+    {
+      tbnet::IPacketHandler::HPRetCode hret = tbnet::IPacketHandler::FREE_CHANNEL;
+      bool bret = (NULL != connection) && (NULL != packet);
+      if (bret)
+      {
+        TBSYS_LOG(DEBUG, "receive pcode : %d", packet->getPCode());
+        if (!packet->isRegularPacket())
+        {
+          bret = false;
+          TBSYS_LOG(WARN, "control packet, pcode: %d, peer ip: %s", dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand(),
+            tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
+        }
+        if (bret)
+        {
+          BasePacket* bpacket = dynamic_cast<BasePacket*>(packet);
+          bpacket->set_connection(connection);
+          bpacket->setExpireTime(MAX_RESPONSE_TIME);
+          bpacket->set_direction(static_cast<DirectionStatus>(bpacket->get_direction()|DIRECTION_RECEIVE));
+
+          if (bpacket->is_enable_dump())
+          {
+            bpacket->dump();
+          }
+          int32_t pcode = bpacket->getPCode();
+          hret = tbnet::IPacketHandler::KEEP_CHANNEL;
+          switch (pcode)
+          {
+          case SET_DATASERVER_MESSAGE:
+          case REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
+            push(bpacket);
+            break;
+          default:
+            hret = tbnet::IPacketHandler::FREE_CHANNEL;
+            bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, unknown msg type: %d, discard, peer ip: %s", pcode, manager_.get_ip_addr(),
+                tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
+            bpacket->free();
+            break;
+          }
+        }
+      }
+      return hret;
     }
 
     /**

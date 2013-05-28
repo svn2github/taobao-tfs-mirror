@@ -139,6 +139,7 @@ namespace tfs
 
     struct NsRuntimeGlobalInformation
     {
+      uint64_t heart_ip_port_;
       uint64_t owner_ip_port_;
       uint64_t peer_ip_port_;
       int64_t switch_time_;
