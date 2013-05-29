@@ -40,12 +40,12 @@ namespace tfs
     {
       public:
         BlockObject():
-        block_id_(common::INVALID_BLOCK_ID), server_size_(0), current_(0)
+        block_id_(common::INVALID_BLOCK_ID), server_size_(0)
         {
         }
 
         BlockObject(const uint64_t block_id):
-          block_id_(block_id), server_size_(0), current_(0)
+          block_id_(block_id), server_size_(0)
         {
         }
 
@@ -56,7 +56,6 @@ namespace tfs
         void reset()
         {
           server_size_ = 0;
-          current_ = 0;
         }
 
         uint64_t get_block_id() const
@@ -100,7 +99,6 @@ namespace tfs
         uint64_t block_id_;
         uint64_t servers_[common::MAX_REPLICATION_NUM];
         int32_t server_size_;
-        int32_t current_;
     };
 
     struct BlockIdCompare

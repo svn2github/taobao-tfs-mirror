@@ -188,17 +188,20 @@ namespace tfs
       bool assigned = false;
       uint64_t server_id = INVALID_SERVER_ID;
       const int32_t replica_size = block.get_server_size();
-      const uint64_t *replicas = block.get_servers();
-      int32_t random_index = rand() % replica_size;
-      for (int index = 0; index < replica_size; index++)
+      if (replica_size > 0)
       {
-        server_id = replicas[(random_index + index) % replica_size];
-        ServerObject query(server_id);
-        SERVER_MAP_ITER sit = all_servers_.find(&query);
-        if ((sit != all_servers_.end()) && (SERVER_STATUS_OK == (*sit)->get_status()))
+        const uint64_t *replicas = block.get_servers();
+        int32_t random_index = rand() % replica_size;
+        for (int index = 0; index < replica_size; index++)
         {
-          assigned = true;
-          break;
+          server_id = replicas[(random_index + index) % replica_size];
+          ServerObject query(server_id);
+          SERVER_MAP_ITER sit = all_servers_.find(&query);
+          if ((sit != all_servers_.end()) && (SERVER_STATUS_OK == (*sit)->get_status()))
+          {
+            assigned = true;
+            break;
+          }
         }
       }
 
@@ -215,7 +218,6 @@ namespace tfs
       int ret = retry_get_all_ds(ns_id, servers);
       if (TFS_SUCCESS == ret)
       {
-        VUINT64 empty;
         VUINT64::iterator iter = servers.begin();
         for ( ; iter != servers.end(); iter++)
         {
