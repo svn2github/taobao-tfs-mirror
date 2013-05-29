@@ -375,6 +375,12 @@ namespace tfs
           case common::RSP_KVMETA_ABORT_MULTIPART_MESSAGE:
             packet = new RspKvMetaAbortMulitpartMessage();
             break;
+          case common::REQ_KVMETA_GET_SERVICE_MESSAGE:
+            packet = new ReqKvMetaGetServiceMessage();
+            break;
+          case common::RSP_KVMETA_GET_SERVICE_MESSAGE:
+            packet = new RspKvMetaGetServiceMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;

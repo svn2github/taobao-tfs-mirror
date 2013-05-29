@@ -47,6 +47,8 @@ namespace tfs
       virtual int initialize(int argc, char* argv[]);
       virtual int destroy_service();
 
+      //list bucket
+      int get_service(message::ReqKvMetaGetServiceMessage *get_service_msg);
       int put_object(message::ReqKvMetaPutObjectMessage* put_object_msg);
       int get_object(message::ReqKvMetaGetObjectMessage* get_object_msg);
       int put_bucket(message::ReqKvMetaPutBucketMessage* put_bucket_msg);

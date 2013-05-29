@@ -136,7 +136,6 @@ namespace tfs
       //init heart
       if (TFS_SUCCESS == ret)
       {
-
         bool ms_ip_same_flag = false;
         ms_ip_same_flag = tbsys::CNetUtil::isLocalAddr(SYSPARAM_KVMETA.ms_ip_port_);
 
@@ -181,6 +180,9 @@ namespace tfs
         base_packet = dynamic_cast<BasePacket*>(packet);
         switch (base_packet->getPCode())
         {
+          case REQ_KVMETA_GET_SERVICE_MESSAGE:
+            ret = get_service(dynamic_cast<ReqKvMetaGetServiceMessage*>(base_packet));
+            break;
           case REQ_KVMETA_PUT_OBJECT_MESSAGE:
             ret = put_object(dynamic_cast<ReqKvMetaPutObjectMessage*>(base_packet));
             break;
@@ -252,6 +254,35 @@ namespace tfs
 
       // always return true. packet will be freed by caller
       return true;
+    }
+
+    int KvMetaService::get_service(ReqKvMetaGetServiceMessage *req_get_service_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_get_service_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::get_service fail, ret: %d", ret);
+      }
+
+      RspKvMetaGetServiceMessage *rsp = new RspKvMetaGetServiceMessage();
+      if (TFS_SUCCESS == ret)
+      {
+        const UserInfo &user_info = req_get_service_msg->get_user_info();
+        ret = meta_info_helper_.list_buckets(rsp->get_mutable_buckets_result(), user_info);
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = req_get_service_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "get service fail");
+        tbsys::gDelete(rsp);
+      }
+      else
+      {
+        ret = req_get_service_msg->reply(rsp);
+        //stat_mgr_.update_entry(tfs_kv_meta_stat_, "get_service", 1);
+      }
+      return ret;
     }
 
     int KvMetaService::put_object(ReqKvMetaPutObjectMessage* req_put_object_msg)
@@ -346,7 +377,7 @@ namespace tfs
       {
         ret = meta_info_helper_.del_object(req_del_object_msg->get_bucket_name(),
                                            req_del_object_msg->get_file_name(),
-                                           &object_info, &still_have);
+                                           &object_info, &still_have, req_del_object_msg->get_user_info());
       }
 
       if (TFS_SUCCESS == ret)
@@ -445,10 +476,11 @@ namespace tfs
         const string& start_key = get_bucket_msg->get_start_key();
         char delimiter = get_bucket_msg->get_delimiter();
         int32_t limit = get_bucket_msg->get_limit();
+        const UserInfo &user_info = get_bucket_msg->get_user_info();
 
         ret = meta_info_helper_.get_bucket(bucket_name, prefix, start_key, delimiter, &limit,
             rsp->get_mutable_v_object_meta_info(), rsp->get_mutable_v_object_name(), rsp->get_mutable_s_common_prefix(),
-            rsp->get_mutable_truncated());
+            rsp->get_mutable_truncated(), user_info);
 
         if (TFS_SUCCESS == ret)
         {
@@ -530,7 +562,7 @@ namespace tfs
         ret = head_bucket_msg->reply(rsp);
         stat_mgr_.update_entry(tfs_kv_meta_stat_, "head_bucket", 1);
       }
-      //stat_info_helper_.put_bucket()
+      //stat_info_helper_.head_bucket()
       return ret;
     }
 
@@ -700,9 +732,18 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        const MAP_STRING_INT *bucket_acl_map = put_bucket_acl_msg->get_bucket_acl_map();
+        const CANNED_ACL acl = put_bucket_acl_msg->get_canned_acl();
+        const MAP_INT64_INT *bucket_acl_map = put_bucket_acl_msg->get_bucket_acl_map();
+        const UserInfo &user_info = put_bucket_acl_msg->get_user_info();
 
-        ret = meta_info_helper_.put_bucket_acl(put_bucket_acl_msg->get_bucket_name(), *bucket_acl_map);
+        if (bucket_acl_map->empty())
+        {
+          ret = meta_info_helper_.put_bucket_acl(put_bucket_acl_msg->get_bucket_name(), acl, user_info);
+        }
+        else
+        {
+          ret = meta_info_helper_.put_bucket_acl(put_bucket_acl_msg->get_bucket_name(), *bucket_acl_map, user_info);
+        }
       }
 
       if (TFS_SUCCESS != ret)
@@ -733,7 +774,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         const string& bucket_name = get_bucket_acl_msg->get_bucket_name();
-        ret = meta_info_helper_.get_bucket_acl(bucket_name, rsp->get_mutable_bucket_acl_map());
+        const UserInfo &user_info = get_bucket_acl_msg->get_user_info();
+        ret = meta_info_helper_.get_bucket_acl(bucket_name, rsp->get_mutable_bucket_acl_map(), user_info);
       }
 
       if (TFS_SUCCESS != ret)

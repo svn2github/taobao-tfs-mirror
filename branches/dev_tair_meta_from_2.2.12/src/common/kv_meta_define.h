@@ -31,9 +31,10 @@ namespace tfs
     const char DASH = '-';
     const char DEFAULT_CHAR = 7;
     const char MULTIPART_UPLOAD_KEY = 2;
+    const int32_t MAX_OWN_BUCKETS_SIZE = 100;
     const int32_t MAX_LIMIT = 1000;
     const int32_t VERSION_ERROR_RETRY_COUNT = 3;
-    const int64_t MAX_VERSION = 1L<<16 - 1;
+    const int64_t MAX_VERSION = (1L<<16) - 1;
     const int32_t MAX_BUCKET_TAG_SIZE = 10;
 
     const int32_t MAX_TAG_KEY_LEN = 128;
@@ -44,6 +45,28 @@ namespace tfs
     typedef std::map<std::string, std::string>::const_iterator MAP_STRING_ITER;
     typedef std::map<std::string, int32_t> MAP_STRING_INT;
     typedef std::map<std::string, int32_t>::const_iterator  MAP_STRING_INT_ITER;
+    typedef std::map<int64_t, int32_t> MAP_INT64_INT;
+    typedef std::map<int64_t, int32_t>::const_iterator MAP_INT64_INT_ITER;
+
+    enum CANNED_ACL
+    {
+      PRIVATE  = 0,
+      PUBLIC_READ = 1,
+      PUBLIC_READ_WRITE = 2,
+      AUTHENTICATED_READ = 3, //0-3 use for bucket and object
+      BUCKET_OWNER_READ = 4,  //just for object
+      BUCKET_OWNER_FULL_CONTROL = 5, //just for object
+      LOG_DELIVERY_WRITE = 6 //just for bucket
+    };
+
+    enum PERMISSION
+    {
+      READ = 1,
+      WRITE = 2,
+      READ_ACP = 4,
+      WRITE_ACP = 8,
+      FULL_CONTROL = READ | WRITE | READ_ACP | WRITE_ACP
+    };
 
     /*------------MULTIPART-------------------------------*/
     const int32_t PARTNUM_BASE = 10000000;//because no meta_info_.max_tfs_file_size_ > PARTNUM_BASE
@@ -136,7 +159,7 @@ namespace tfs
 
       bool has_tag_info_;
       MAP_STRING bucket_tag_map_;
-      MAP_STRING_INT bucket_acl_map_;
+      MAP_INT64_INT bucket_acl_map_;
     };
 
     struct UserInfo
@@ -178,6 +201,18 @@ namespace tfs
       bool is_truncated_;
     };
 
+    typedef std::map<std::string, BucketMetaInfo> MAP_BUCKET_INFO;
+    typedef std::map<std::string, BucketMetaInfo>::const_iterator MAP_BUCKET_INFO_ITER;
+    struct BucketsResult
+    {
+      BucketsResult();
+      int64_t length() const;
+      int serialize(char *data, const int64_t data_len, int64_t &pos) const;
+      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
+
+      int64_t owner_id_;
+      MAP_BUCKET_INFO bucket_info_map_;
+    };
 
   }
 }

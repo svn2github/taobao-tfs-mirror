@@ -219,6 +219,29 @@ namespace tfs
       return impl_->del_bucket_tag(bucket_name);
     }
 
+    TfsRetType RcClient::put_bucket_acl(const char *bucket_name, const CANNED_ACL acl,
+        const UserInfo &user_info)
+    {
+      return impl_->put_bucket_acl(bucket_name, acl, user_info);
+    }
+
+    TfsRetType RcClient::put_bucket_acl(const char *bucket_name, const MAP_INT64_INT &bucket_acl_map,
+        const UserInfo &user_info)
+    {
+      return impl_->put_bucket_acl(bucket_name, bucket_acl_map, user_info);
+    }
+
+    TfsRetType RcClient::get_bucket_acl(const char *bucket_name, MAP_INT64_INT *bucket_acl_map,
+        const UserInfo &user_info)
+    {
+      return impl_->get_bucket_acl(bucket_name, bucket_acl_map, user_info);
+    }
+
+    TfsRetType RcClient::get_service(BucketsResult *buckets_result, const UserInfo &user_info)
+    {
+      return impl_->get_service(buckets_result, user_info);
+    }
+
     TfsRetType RcClient::list_multipart_object(const char *bucket_name, const char *prefix,
         const char *start_key, const char *start_id, const char delimiter, const int32_t limit,
         ListMultipartObjectResult *list_multipart_object_result, const UserInfo &user_info)

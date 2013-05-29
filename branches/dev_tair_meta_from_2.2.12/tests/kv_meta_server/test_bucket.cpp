@@ -99,7 +99,7 @@ TEST_F(BucketTest, test_del_with_no_object)
 
   ObjectInfo object_info1;
   bool still_have = false;
-  ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have);
+  ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
@@ -132,7 +132,7 @@ TEST_F(BucketTest, test_del_with_object)
 
   ObjectInfo object_info1;
   bool still_have = false;
-  ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have);
+  ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
   ret = test_meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(TFS_SUCCESS, ret);
@@ -241,7 +241,7 @@ TEST_F(BucketTest, test_get)
   int32_t limit = 10;
   int8_t is_truncated = -1;
 
-  ret = test_meta_info_helper_->get_bucket(bucket_name, prefix, start_key, delimiter, limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated);
+  ret = test_meta_info_helper_->get_bucket(bucket_name, prefix, start_key, delimiter, &limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
   EXPECT_EQ(0, is_truncated);
   EXPECT_EQ(1, static_cast<int32_t>(s_common_prefix.size()));
@@ -250,9 +250,124 @@ TEST_F(BucketTest, test_get)
 
   ObjectInfo object_info1;
   bool still_have = false;
-  ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have);
+  ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
   ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+}
+
+TEST_F(BucketTest, test_acl)
+{
+  int ret = TFS_SUCCESS;
+  string bucket_name("bucketname");
+  int64_t now_time = 11111;
+
+  BucketMetaInfo bucket_meta_info;
+  bucket_meta_info.create_time_ = now_time;
+
+  UserInfo user_info;
+  user_info.owner_id_ = 212;
+
+  //212 has full_control, 200 has nothing
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  //impact on get_bucket, put_object, del_object, put_bucket_acl, get_bucket_acl
+
+  // get bucket
+  string prefix("objectname/aa");
+  string start_key("objectname/a");
+  char delimiter = '/';
+  vector<ObjectMetaInfo> v_object_meta_info;
+  vector<string> v_object_name;
+  set<string> s_common_prefix;
+  int32_t limit = 10;
+  int8_t is_truncated = -1;
+
+  ret = test_meta_info_helper_->get_bucket(bucket_name, prefix, start_key, delimiter, &limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  user_info.owner_id_ = 200;
+  ret = test_meta_info_helper_->get_bucket(bucket_name, prefix, start_key, delimiter, &limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated, user_info);
+  EXPECT_EQ(EXIT_BUCKET_PERMISSION_DENY, ret);
+
+  //put_object
+  string file_name("objectname/aa/");
+  ObjectInfo object_info;
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, object_info, user_info);
+  EXPECT_EQ(EXIT_BUCKET_PERMISSION_DENY, ret);
+  user_info.owner_id_ = 212;
+  ret = test_meta_info_helper_->put_object(bucket_name, file_name, object_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ObjectInfo object_info1;
+  bool still_have = false;
+  //del object
+  user_info.owner_id_ = 200;
+  ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have, user_info);
+  EXPECT_EQ(EXIT_BUCKET_PERMISSION_DENY, ret);
+  user_info.owner_id_ = 212;
+  ret = test_meta_info_helper_->del_object(bucket_name, file_name, &object_info1, &still_have, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  //put bucket acl
+  MAP_INT64_INT bucket_acl_map;
+  bucket_acl_map.insert(std::make_pair(212, FULL_CONTROL));
+  user_info.owner_id_ = 200;
+  ret = test_meta_info_helper_->put_bucket_acl(bucket_name, bucket_acl_map, user_info);
+  EXPECT_EQ(EXIT_BUCKET_PERMISSION_DENY, ret);
+  user_info.owner_id_ = 212;
+  ret = test_meta_info_helper_->put_bucket_acl(bucket_name, bucket_acl_map, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  //get bucket acl
+  user_info.owner_id_ = 200;
+  ret = test_meta_info_helper_->get_bucket_acl(bucket_name, &bucket_acl_map, user_info);
+  EXPECT_EQ(EXIT_BUCKET_PERMISSION_DENY, ret);
+  user_info.owner_id_ = 212;
+  ret = test_meta_info_helper_->get_bucket_acl(bucket_name, &bucket_acl_map, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+}
+
+TEST_F(BucketTest, test_get_service)
+{
+  int ret = TFS_SUCCESS;
+
+  string bucket_name("bucket");
+  int64_t now_time = static_cast<int64_t>(time(NULL));
+  BucketMetaInfo bucket_meta_info;
+  bucket_meta_info.create_time_ = now_time;
+  UserInfo user_info;
+  user_info.owner_id_ = 222;
+
+  ret = test_meta_info_helper_->put_bucket(bucket_name, bucket_meta_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  string bucket_name1("bucket1");
+  int64_t now_time1 = static_cast<int64_t>(time(NULL));
+  bucket_meta_info.create_time_ = now_time1;
+  user_info.owner_id_ = 222;
+  ret = test_meta_info_helper_->put_bucket(bucket_name1, bucket_meta_info, user_info);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  BucketsResult buckets_result;
+  ret = test_meta_info_helper_->list_buckets(&buckets_result, user_info);
+
+  EXPECT_EQ(222, buckets_result.owner_id_);
+  map<string, BucketMetaInfo>::const_iterator iter = buckets_result.bucket_info_map_.find(bucket_name);
+  EXPECT_EQ(bucket_name, iter->first);
+  EXPECT_EQ(now_time, iter->second.create_time_);
+
+  iter = buckets_result.bucket_info_map_.find(bucket_name1);
+  EXPECT_EQ(bucket_name1, iter->first);
+  EXPECT_EQ(now_time1, iter->second.create_time_);
+
+  ret = test_meta_info_helper_->del_bucket(bucket_name);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+  ret = test_meta_info_helper_->del_bucket(bucket_name1);
   EXPECT_EQ(TFS_SUCCESS, ret);
 }
 

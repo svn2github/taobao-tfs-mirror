@@ -1586,6 +1586,49 @@ namespace tfs
         return ret;
       }
 
+      TfsRetType RcClientImpl::put_bucket_acl(const char *bucket_name, const CANNED_ACL acl,
+          const UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->put_bucket_acl(bucket_name, acl, user_info);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::put_bucket_acl(const char *bucket_name, const MAP_INT64_INT &bucket_acl_map,
+          const UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->put_bucket_acl(bucket_name, bucket_acl_map, user_info);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::get_bucket_acl(const char *bucket_name, MAP_INT64_INT *bucket_acl_map,
+          const UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->get_bucket_acl(bucket_name, bucket_acl_map, user_info);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::get_service(BucketsResult *buckets_result, const UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->get_service(buckets_result, user_info);
+        }
+        return ret;
+      }
+
       TfsRetType RcClientImpl::list_multipart_object(const char *bucket_name, const char *prefix,
           const char *start_key, const char *start_id, const char delimiter, const int32_t limit,
           ListMultipartObjectResult *list_multipart_object_result, const UserInfo &user_info)

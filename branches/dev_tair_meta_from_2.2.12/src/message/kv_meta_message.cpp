@@ -448,6 +448,123 @@ namespace tfs
 
 //-------------------------------------bucket part ---------------------------------------------
 
+    //req_get_service_msg
+    ReqKvMetaGetServiceMessage::ReqKvMetaGetServiceMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_GET_SERVICE_MESSAGE;
+    }
+
+    ReqKvMetaGetServiceMessage::~ReqKvMetaGetServiceMessage(){}
+
+    int ReqKvMetaGetServiceMessage::serialize(Stream& output) const
+    {
+      int32_t iret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaGetServiceMessage::deserialize(Stream& input)
+    {
+      int32_t iret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaGetServiceMessage::length() const
+    {
+      return user_info_.length();
+    }
+
+    //rsp_get_service_msg
+    RspKvMetaGetServiceMessage::RspKvMetaGetServiceMessage()
+    {
+      _packetHeader._pcode = RSP_KVMETA_GET_SERVICE_MESSAGE;
+    }
+
+    RspKvMetaGetServiceMessage::~RspKvMetaGetServiceMessage(){}
+
+    int RspKvMetaGetServiceMessage::serialize(Stream& output) const
+    {
+      int32_t iret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = buckets_result_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(buckets_result_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int RspKvMetaGetServiceMessage::deserialize(Stream& input)
+    {
+      int32_t iret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = buckets_result_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(buckets_result_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t RspKvMetaGetServiceMessage::length() const
+    {
+      return buckets_result_.length() + user_info_.length();
+    }
+
     //req_put_bucket_msg
     ReqKvMetaPutBucketMessage::ReqKvMetaPutBucketMessage()
     {
@@ -1400,15 +1517,31 @@ namespace tfs
 
       if (common::TFS_SUCCESS == iret)
       {
-        MAP_STRING_INT_ITER iter = bucket_acl_map_.begin();
+        MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
         for (; iter != bucket_acl_map_.end() && common::TFS_SUCCESS == iret; iter++)
         {
-          iret = output.set_string(iter->first);
+          iret = output.set_int64(iter->first);
           if (common::TFS_SUCCESS == iret)
           {
             iret = output.set_int32(iter->second);
           }
         }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(static_cast<int32_t>(acl_));
       }
 
       return iret;
@@ -1427,11 +1560,11 @@ namespace tfs
 
       if (common::TFS_SUCCESS == iret)
       {
-        std::string key;
+        int64_t key;
         int32_t value;
         for (int32_t i = 0; i < size && common::TFS_SUCCESS == iret; i++)
         {
-          iret = input.get_string(key);
+          iret = input.get_int64(&key);
           if (common::TFS_SUCCESS == iret)
           {
             iret = input.get_int32(&value);
@@ -1444,6 +1577,21 @@ namespace tfs
         }
       }
 
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(reinterpret_cast<int32_t*>(&acl_));
+      }
+
       return iret;
     }
 
@@ -1452,12 +1600,16 @@ namespace tfs
       int64_t len = common::Serialization::get_string_length(bucket_name_);
       len += INT_SIZE;
 
-      MAP_STRING_INT_ITER iter = bucket_acl_map_.begin();
+      MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
       for (; iter != bucket_acl_map_.end(); iter++)
       {
-        len += common::Serialization::get_string_length(iter->first);
+        len += INT64_SIZE;
         len += INT_SIZE;
       }
+
+      len += user_info_.length();
+
+      len += INT_SIZE;
       return len;
     }
 
@@ -1473,6 +1625,17 @@ namespace tfs
     {
       int32_t iret = output.set_string(bucket_name_);
 
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
       return iret;
     }
 
@@ -1480,12 +1643,22 @@ namespace tfs
     {
       int32_t iret = input.get_string(bucket_name_);
 
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
       return iret;
     }
 
     int64_t ReqKvMetaGetBucketAclMessage::length() const
     {
-      return common::Serialization::get_string_length(bucket_name_);
+      return common::Serialization::get_string_length(bucket_name_) + user_info_.length();
     }
 
     //rsp get bucket acl
@@ -1508,10 +1681,10 @@ namespace tfs
 
       if (common::TFS_SUCCESS == iret)
       {
-        MAP_STRING_INT_ITER iter = bucket_acl_map_.begin();
+        MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
         for (; iter != bucket_acl_map_.end() && common::TFS_SUCCESS == iret; iter++)
         {
-          iret = output.set_string(iter->first);
+          iret = output.set_int64(iter->first);
           if (common::TFS_SUCCESS == iret)
           {
             iret = output.set_int32(iter->second);
@@ -1535,11 +1708,11 @@ namespace tfs
 
       if (common::TFS_SUCCESS == iret)
       {
-        std::string key;
+        int64_t key;
         int32_t value;
         for (int32_t i = 0; i < size && common::TFS_SUCCESS == iret; i++)
         {
-          iret = input.get_string(key);
+          iret = input.get_int64(&key);
           if (common::TFS_SUCCESS == iret)
           {
             iret = input.get_int32(&value);
@@ -1560,10 +1733,10 @@ namespace tfs
       int64_t len = common::Serialization::get_string_length(bucket_name_);
       len += INT_SIZE;
 
-      MAP_STRING_INT_ITER iter = bucket_acl_map_.begin();
+      MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
       for (; iter != bucket_acl_map_.end(); iter++)
       {
-        len += common::Serialization::get_string_length(iter->first);
+        len += INT64_SIZE;
         len += INT_SIZE;
       }
       return len;

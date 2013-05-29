@@ -65,9 +65,19 @@ namespace tfs
                                common::ObjectInfo *object_info,
                                const common::UserInfo &user_info);
 
+      static int do_put_bucket_acl(const uint64_t server_id, const char *bucket_name,
+          const common::CANNED_ACL acl, const common::UserInfo &user_info);
+
+      static int do_put_bucket_acl(const uint64_t server_id, const char *bucket_name,
+          const common::MAP_INT64_INT &bucket_acl_map, const common::UserInfo &user_info);
+      static int do_get_bucket_acl(const uint64_t server_id, const char *bucket_name,
+          common::MAP_INT64_INT *bucket_acl_map, const common::UserInfo &user_info);
+
+      static int do_get_service(const uint64_t server_id, common::BucketsResult *buckets_result,
+          const common::UserInfo &user_info);
+
       static int do_put_bucket_tag(const uint64_t server_id, const char *bucket_name,
           const common::MAP_STRING &bucket_tag_map);
-
       static int do_get_bucket_tag(const uint64_t server_id, const char *bucket_name, common::MAP_STRING *bucket_tag_map);
       static int do_del_bucket_tag(const uint64_t server_id, const char *bucket_name);
 

@@ -349,6 +349,68 @@ namespace tfs
         common::ObjectInfo object_info_;
     };
 
+    class ReqKvMetaGetServiceMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaGetServiceMessage();
+        virtual ~ReqKvMetaGetServiceMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
+      private:
+        common::UserInfo user_info_;
+    };
+
+    class RspKvMetaGetServiceMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaGetServiceMessage();
+        virtual ~RspKvMetaGetServiceMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
+        const common::BucketsResult* get_buckets_result() const
+        {
+          return &buckets_result_;
+        }
+
+        common::BucketsResult* get_mutable_buckets_result()
+        {
+          return &buckets_result_;
+        }
+
+        void set_buckets_result(common::BucketsResult &buckets_result)
+        {
+          buckets_result_ = buckets_result;
+        }
+
+      private:
+        common::BucketsResult buckets_result_;
+        common::UserInfo user_info_;
+    };
+
     class ReqKvMetaPutBucketMessage : public common::BasePacket
     {
       public:
@@ -847,7 +909,6 @@ namespace tfs
           return &v_object_upload_info_;
         }
 
-
       private:
         std::string bucket_name_;
         std::string prefix_;
@@ -1008,24 +1069,46 @@ namespace tfs
           return bucket_name_;
         }
 
-        void set_bucket_acl_map(const common::MAP_STRING_INT &bucket_acl_map)
+        void set_bucket_acl_map(const common::MAP_INT64_INT &bucket_acl_map)
         {
           bucket_acl_map_ = bucket_acl_map;
         }
 
-        const common::MAP_STRING_INT* get_bucket_acl_map() const
+        const common::MAP_INT64_INT* get_bucket_acl_map() const
         {
           return &bucket_acl_map_;
         }
 
-        common::MAP_STRING_INT* get_mutable_bucket_acl_map()
+        common::MAP_INT64_INT* get_mutable_bucket_acl_map()
         {
           return &bucket_acl_map_;
+        }
+
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo &user_info)
+        {
+          user_info_ = user_info;
+        }
+
+        void set_canned_acl(const common::CANNED_ACL acl)
+        {
+          acl_ = acl;
+        }
+
+        const common::CANNED_ACL get_canned_acl() const
+        {
+          return acl_;
         }
 
       private:
         std::string bucket_name_;
-        common::MAP_STRING_INT bucket_acl_map_;
+        common::MAP_INT64_INT bucket_acl_map_;
+        common::UserInfo user_info_;
+        common::CANNED_ACL acl_;
     };
 
     class ReqKvMetaGetBucketAclMessage : public common::BasePacket
@@ -1047,8 +1130,19 @@ namespace tfs
           return bucket_name_;
         }
 
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo &user_info)
+        {
+          user_info_ = user_info;
+        }
+
       private:
         std::string bucket_name_;
+        common::UserInfo user_info_;
     };
 
     class RspKvMetaGetBucketAclMessage : public common::BasePacket
@@ -1070,24 +1164,24 @@ namespace tfs
           return bucket_name_;
         }
 
-        void set_bucket_acl_map(const common::MAP_STRING_INT& bucket_acl_map)
+        void set_bucket_acl_map(const common::MAP_INT64_INT& bucket_acl_map)
         {
           bucket_acl_map_ = bucket_acl_map;
         }
 
-        const common::MAP_STRING_INT* get_bucket_acl_map() const
+        const common::MAP_INT64_INT* get_bucket_acl_map() const
         {
           return &bucket_acl_map_;
         }
 
-        common::MAP_STRING_INT* get_mutable_bucket_acl_map()
+        common::MAP_INT64_INT* get_mutable_bucket_acl_map()
         {
           return &bucket_acl_map_;
         }
 
       private:
         std::string bucket_name_;
-        common::MAP_STRING_INT bucket_acl_map_;
+        common::MAP_INT64_INT bucket_acl_map_;
     };
 
     // init multipart

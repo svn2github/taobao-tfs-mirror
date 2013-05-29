@@ -50,6 +50,15 @@ namespace tfs
             common::BucketMetaInfo *bucket_meta_info,
             const common::UserInfo &user_info);
 
+        TfsRetType put_bucket_acl(const char *bucket_name, const common::CANNED_ACL acl,
+            const common::UserInfo &user_info);
+        TfsRetType put_bucket_acl(const char *bucket_name, const common::MAP_INT64_INT &bucket_acl_map,
+            const common::UserInfo &user_info);
+        TfsRetType get_bucket_acl(const char *bucket_name, common::MAP_INT64_INT *bucket_acl_map,
+            const common::UserInfo &user_info);
+
+        TfsRetType get_service(common::BucketsResult *buckets_result, const common::UserInfo &user_info);
+
         TfsRetType put_bucket_tag(const char *bucket_name, const common::MAP_STRING &bucket_tag_map);
         TfsRetType get_bucket_tag(const char *bucket_name, common::MAP_STRING *bucket_tag_map);
         TfsRetType del_bucket_tag(const char *bucket_name);

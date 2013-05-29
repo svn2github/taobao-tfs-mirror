@@ -181,6 +181,7 @@ namespace tfs
     const int32_t EXIT_BUCKET_NOT_EXIST= -15005;//bucket not exist
     const int32_t EXIT_NEW_TABLE_NOT_EXIST= -15006;//new table not exist
     const int32_t EXIT_NEW_TABLE_INVALID = -15007;//new table invalid
+    const int32_t EXIT_BUCKET_PERMISSION_DENY = -15008; //not grant fit control
 
     const int32_t EXIT_INVALID_OBJECT = -16000;// no meta info or something
     const int32_t EXIT_KV_RETURN_DATA_NOT_EXIST = -16001;//no data in kv
@@ -202,6 +203,10 @@ namespace tfs
 
     const int32_t EXIT_OBJECT_EXIST = -16020; //init multipart fail
     const int32_t EXIT_MULITIPART_LIST_DIFF = -16021;
+
+    const int32_t EXIT_OVER_OWN_BUCKETS_SIZE = -16022; //one owner has max 100 buckets
+    const int32_t EXIT_OWNER_HAS_NO_BUCKETS = -16023;   //owner_id has no buckets
+    const int32_t EXIT_FATAL_OWNER_ID = -16024;         //bucket_meta_info's owner_id neq buckets_result's owner_id
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

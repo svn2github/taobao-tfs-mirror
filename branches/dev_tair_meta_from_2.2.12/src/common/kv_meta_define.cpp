@@ -542,9 +542,7 @@ namespace tfs
     //bucketmetainfo
     BucketMetaInfo::BucketMetaInfo()
       :create_time_(0), owner_id_(0), has_tag_info_(false)
-    {
-      bucket_tag_map_.clear();
-    }
+    {}
 
     int64_t BucketMetaInfo::length() const
     {
@@ -559,6 +557,15 @@ namespace tfs
           len += common::Serialization::get_string_length(iter->first);
           len += common::Serialization::get_string_length(iter->second);
         }
+      }
+
+      //add bucket acl map
+      len += INT_SIZE * 2;
+      MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
+      for (; iter != bucket_acl_map_.end(); iter++)
+      {
+        len += INT64_SIZE;
+        len += INT_SIZE;
       }
 
       return len;
@@ -616,6 +623,29 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKET_META_INFO_BUCKET_ACL_MAP_TAG);
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t size = bucket_acl_map_.size();
+          ret = Serialization::set_int32(data, data_len, pos, size);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
+          for (; iter != bucket_acl_map_.end() && TFS_SUCCESS == ret; iter++)
+          {
+            ret = Serialization::set_int64(data, data_len, pos, iter->first);
+            if (TFS_SUCCESS == ret)
+            {
+              ret = Serialization::set_int32(data, data_len, pos, iter->second);
+            }
+          }
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::set_int32(data, data_len, pos, END_TAG);
       }
       return ret;
@@ -665,6 +695,29 @@ namespace tfs
                     {
                       bucket_tag_map_.insert(std::make_pair(key, value));
                     }
+                  }
+                }
+              }
+              break;
+            case BUCKET_META_INFO_BUCKET_ACL_MAP_TAG:
+              int32_t size;
+              ret = Serialization::get_int32(data, data_len, pos, &size);
+
+              if (TFS_SUCCESS == ret)
+              {
+                int64_t key;
+                int32_t value;
+                for (int32_t i = 0; i < size && TFS_SUCCESS == ret; i++)
+                {
+                  ret = Serialization::get_int64(data, data_len, pos, &key);
+                  if (TFS_SUCCESS == ret)
+                  {
+                    ret = Serialization::get_int32(data, data_len, pos, &value);
+                  }
+
+                  if (TFS_SUCCESS == ret)
+                  {
+                    bucket_acl_map_.insert(std::make_pair(key, value));
                   }
                 }
               }
@@ -759,7 +812,8 @@ namespace tfs
     {
       return INT64_SIZE
         + Serialization::get_string_length(object_name_)
-        + Serialization::get_string_length(upload_id_);
+        + Serialization::get_string_length(upload_id_)
+        + 4 * INT_SIZE;
     }
 
     int ObjectUploadInfo::serialize(char *data, const int64_t data_len, int64_t &pos) const
@@ -847,6 +901,130 @@ namespace tfs
       v_object_upload_info_.clear();
     }
 
+    //BucketsResult
+    BucketsResult::BucketsResult()
+      :owner_id_(0)
+    {}
+
+    int64_t BucketsResult::length() const
+    {
+      int64_t len = INT64_SIZE;
+
+      //owner_id_tag
+      len += INT_SIZE;
+
+      //buckets_result_tag + map_size + end_tag
+      len += 3 * INT_SIZE;
+
+      MAP_BUCKET_INFO_ITER iter = bucket_info_map_.begin();
+      for (; iter != bucket_info_map_.end(); iter++)
+      {
+        len += common::Serialization::get_string_length(iter->first);
+        len += (iter->second).length();
+      }
+
+      return len;
+    }
+
+    int BucketsResult::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKETS_RESULT_OWNER_ID_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, owner_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKETS_RESULT_BUCKET_INFO_MAP_TAG);
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t size = bucket_info_map_.size();
+          ret = Serialization::set_int32(data, data_len, pos, size);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          MAP_BUCKET_INFO_ITER iter = bucket_info_map_.begin();
+          for (; iter != bucket_info_map_.end() && TFS_SUCCESS == ret; iter++)
+          {
+            ret = Serialization::set_string(data, data_len, pos, iter->first);
+            if (TFS_SUCCESS == ret)
+            {
+              (iter->second).serialize(data, data_len, pos);
+            }
+          }
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
+
+      return ret;
+    }
+
+    int BucketsResult::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    {
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
+
+      while (TFS_SUCCESS == ret)
+      {
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
+
+        if (TFS_SUCCESS == ret)
+        {
+          switch (type_tag)
+          {
+            case BUCKETS_RESULT_OWNER_ID_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &owner_id_);
+              break;
+            case BUCKETS_RESULT_BUCKET_INFO_MAP_TAG:
+              int32_t size;
+              ret = Serialization::get_int32(data, data_len, pos, &size);
+
+              if (TFS_SUCCESS == ret)
+              {
+                std::string key;
+                BucketMetaInfo value;
+                for (int32_t i = 0; i < size && TFS_SUCCESS == ret; i++)
+                {
+                  ret = Serialization::get_string(data, data_len, pos, key);
+                  if (TFS_SUCCESS == ret)
+                  {
+                    ret = value.deserialize(data, data_len, pos);
+                  }
+
+                  if (TFS_SUCCESS == ret)
+                  {
+                    bucket_info_map_.insert(std::make_pair(key, value));
+                  }
+                }
+              }
+              break;
+            case END_TAG:
+              ;
+              break;
+            default:
+              TBSYS_LOG(ERROR, "buckets result: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
+          }
+        }
+
+        if (END_TAG == type_tag)
+        {
+          break;
+        }
+      }
+      return ret;
+    }
 
   }
 }

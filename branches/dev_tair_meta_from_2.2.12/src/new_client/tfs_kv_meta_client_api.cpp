@@ -78,6 +78,29 @@ namespace tfs
       return impl_->head_bucket(bucket_name, bucket_meta_info, user_info);
     }
 
+    TfsRetType KvMetaClient::put_bucket_acl(const char *bucket_name, const common::CANNED_ACL acl,
+        const common::UserInfo &user_info)
+    {
+      return impl_->put_bucket_acl(bucket_name, acl, user_info);
+    }
+
+    TfsRetType KvMetaClient::put_bucket_acl(const char *bucket_name, const common::MAP_INT64_INT &bucket_acl_map,
+        const common::UserInfo &user_info)
+    {
+      return impl_->put_bucket_acl(bucket_name, bucket_acl_map, user_info);
+    }
+
+    TfsRetType KvMetaClient::get_bucket_acl(const char *bucket_name, common::MAP_INT64_INT *bucket_acl_map,
+        const common::UserInfo &user_info)
+    {
+      return impl_->get_bucket_acl(bucket_name, bucket_acl_map, user_info);
+    }
+
+    TfsRetType KvMetaClient::get_service(common::BucketsResult *buckets_result, const common::UserInfo &user_info)
+    {
+      return impl_->get_service(buckets_result, user_info);
+    }
+
     TfsRetType KvMetaClient::put_bucket_tag(const char *bucket_name, const common::MAP_STRING &bucket_tag_map)
     {
       return impl_->put_bucket_tag(bucket_name, bucket_tag_map);

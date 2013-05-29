@@ -84,7 +84,7 @@ TEST_F(ObjectTest, test_pwrite_head)
   EXPECT_EQ(10, new_obj_info.meta_info_.big_file_size_);
 
   bool still_have = false;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
@@ -130,8 +130,9 @@ TEST_F(ObjectTest, test_pwrite_middle)
   EXPECT_EQ(30, ret_obj_info.meta_info_.big_file_size_);
 
   bool still_have = false;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &ret_obj_info, &still_have);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &ret_obj_info, &still_have, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
+
   ret = test_meta_info_helper_->del_bucket(bucket_name);
   EXPECT_EQ(TFS_SUCCESS, ret);
 }
@@ -174,7 +175,7 @@ TEST_F(ObjectTest, test_pwrite_overlap)
   EXPECT_EQ(30, ret_obj_info.meta_info_.big_file_size_);
 
   bool still_have = false;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &ret_obj_info, &still_have);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &ret_obj_info, &still_have, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
@@ -230,7 +231,7 @@ TEST_F(ObjectTest, test_pwrite_append)
   EXPECT_EQ(40, ret_obj_info.meta_info_.big_file_size_);
 
   bool still_have = false;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &ret_obj_info, &still_have);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &ret_obj_info, &still_have, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
@@ -278,7 +279,7 @@ TEST_F(ObjectTest, test_pread_head)
   EXPECT_EQ(10, new_obj_info.meta_info_.big_file_size_);
 
   bool still_have1 = true;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have1);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have1, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
@@ -318,7 +319,7 @@ TEST_F(ObjectTest, test_pread_smallfile)
   EXPECT_EQ(false, still_have);
 
   bool still_have1 = true;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have1);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have1, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
@@ -375,7 +376,7 @@ TEST_F(ObjectTest, test_pread_bigfile)
   EXPECT_EQ(false, still_have);
 
   bool still_have1 = true;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have1);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have1, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
@@ -457,7 +458,7 @@ TEST_F(ObjectTest, test_pread_out_of_order)
 
   ObjectInfo new_obj_info3;
   bool still_have3 = true;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info3, &still_have3);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info3, &still_have3, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   ret = test_meta_info_helper_->del_bucket(bucket_name);
@@ -499,7 +500,7 @@ TEST_F(ObjectTest, test_del_smallfile)
 
   ObjectInfo new_obj_info1;
   bool still_have1 = true;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info1, &still_have1);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info1, &still_have1, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
   EXPECT_EQ(131, new_obj_info1.v_tfs_file_info_[0].block_id_);
@@ -558,7 +559,7 @@ TEST_F(ObjectTest, test_del_bigfile)
 
   ObjectInfo new_obj_info;
   bool still_have = true;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
   EXPECT_EQ(131, new_obj_info.v_tfs_file_info_[0].block_id_);
   EXPECT_EQ(132, new_obj_info.v_tfs_file_info_[1].block_id_);
@@ -613,7 +614,7 @@ TEST_F(ObjectTest, test_del_bigfile_no_head)
 
   ObjectInfo new_obj_info;
   bool still_have1 = true;
-  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have1);
+  ret = test_meta_info_helper_->del_object(bucket_name, object_name, &new_obj_info, &still_have1, user_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
   EXPECT_EQ(132, new_obj_info.v_tfs_file_info_[0].block_id_);
   EXPECT_EQ(133, new_obj_info.v_tfs_file_info_[1].block_id_);

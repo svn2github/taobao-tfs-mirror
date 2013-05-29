@@ -212,7 +212,7 @@ int KvMetaHelper::do_list_multipart_object(const uint64_t server_id, const char 
           tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
       ret = EXIT_NETWORK_ERROR;
     }
-    else if (RSP_KVMETA_GET_BUCKET_MESSAGE == rsp->getPCode())
+    else if (RSP_KVMETA_LIST_MULTIPART_OBJECT_MESSAGE == rsp->getPCode())
     {
       RspKvMetaListMultipartObjectMessage* rsp_lmo_msg = dynamic_cast<RspKvMetaListMultipartObjectMessage*>(rsp);
       list_multipart_object_result->limit_ = *(rsp_lmo_msg->get_limit());
@@ -339,6 +339,201 @@ int KvMetaHelper::do_head_bucket(const uint64_t server_id, const char *bucket_na
           "server_addr: %s, bucket_name: %s, "
           "ret: %d, msg type: %d",
           tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_put_bucket_acl(const uint64_t server_id, const char *bucket_name,
+    const CANNED_ACL acl, const UserInfo &user_info)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaPutBucketAclMessage req_pba_msg;
+    req_pba_msg.set_bucket_name(bucket_name);
+    req_pba_msg.set_canned_acl(acl);
+    req_pba_msg.set_user_info(user_info);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_pba_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call put bucket acl fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "put bucket acl return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "put bucket acl fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_put_bucket_acl(const uint64_t server_id, const char *bucket_name,
+    const MAP_INT64_INT &bucket_acl_map, const UserInfo &user_info)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaPutBucketAclMessage req_pba_msg;
+    req_pba_msg.set_bucket_name(bucket_name);
+    req_pba_msg.set_bucket_acl_map(bucket_acl_map);
+    req_pba_msg.set_canned_acl(static_cast<CANNED_ACL>(-1));
+    req_pba_msg.set_user_info(user_info);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_pba_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call put bucket acl fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "put bucket acl return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "put bucket acl fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_get_bucket_acl(const uint64_t server_id, const char *bucket_name,
+    MAP_INT64_INT *bucket_acl_map, const UserInfo &user_info)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name || NULL == bucket_acl_map)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaGetBucketAclMessage req_gba_msg;
+    req_gba_msg.set_bucket_name(bucket_name);
+    req_gba_msg.set_user_info(user_info);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_gba_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call get bucket acl fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_GET_BUCKET_ACL_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaGetBucketAclMessage* rsp_gba_msg = dynamic_cast<RspKvMetaGetBucketAclMessage*>(rsp);
+      *bucket_acl_map = *(rsp_gba_msg->get_bucket_acl_map());
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "get bucket acl fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_get_service(const uint64_t server_id, BucketsResult *buckets_result, const UserInfo &user_info)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == buckets_result)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaGetServiceMessage req_gs_msg;
+    req_gs_msg.set_user_info(user_info);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_gs_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call get service fail,"
+          "server_addr: %s, owner_id: %"PRI64_PREFIX"d, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), user_info.owner_id_, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_GET_SERVICE_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaGetServiceMessage* rsp_gs_msg = dynamic_cast<RspKvMetaGetServiceMessage*>(rsp);
+      *buckets_result = *(rsp_gs_msg->get_mutable_buckets_result());
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "get service fail,"
+          "server_addr: %s, owner_id: %"PRI64_PREFIX"d, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), user_info.owner_id_, ret, rsp->getPCode());
     }
     NewClientManager::get_instance().destroy_client(client);
   }
