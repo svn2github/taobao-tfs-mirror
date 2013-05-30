@@ -65,6 +65,7 @@ namespace tfs
       bool check_balance() const;
       bool check_reinstate(const time_t now) const;
       bool check_marshalling() const;
+      bool check_need_adjust_copies_location(common::ArrayHelper<uint64_t>& adjust_copies, const time_t now) const;
       inline int32_t size() const { return info_.size_;}
       void get_servers(common::ArrayHelper<uint64_t>& servers) const;
       uint64_t get_server(const int8_t index = 0) const;
@@ -79,7 +80,7 @@ namespace tfs
       inline int8_t get_servers_size() const { return server_size_;}
       int scan(common::SSMScanParameter& param) const;
       void dump(int32_t level, const char* file = __FILE__,
-          const int32_t line = __LINE__, const char* function = __FUNCTION__) const;
+          const int32_t line = __LINE__, const char* function = __FUNCTION__, const pthread_t thid = pthread_self()) const;
 
       void callback(LayoutManager& manager);
       void cleanup(common::ArrayHelper<uint64_t>& expires);

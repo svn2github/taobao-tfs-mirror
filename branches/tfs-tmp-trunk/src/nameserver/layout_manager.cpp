@@ -70,6 +70,7 @@ namespace tfs
       last_rotate_log_time_ = 0;
       plan_run_flag_ |= PLAN_RUN_FLAG_MOVE;
       plan_run_flag_ |= PLAN_RUN_FLAG_COMPACT;
+      plan_run_flag_ |= PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION;
       //plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;//TODO
       //plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
       //plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
@@ -518,7 +519,9 @@ namespace tfs
           &SYSPARAM_NAMESERVER.dissolve_task_expired_time_,
           &SYSPARAM_NAMESERVER.compact_update_ratio_,
           &SYSPARAM_NAMESERVER.max_mr_network_bandwith_ratio_,
-          &SYSPARAM_NAMESERVER.max_rw_network_bandwith_ratio_
+          &SYSPARAM_NAMESERVER.max_rw_network_bandwith_ratio_,
+          &SYSPARAM_NAMESERVER.compact_family_member_ratio_,
+          &SYSPARAM_NAMESERVER.max_single_machine_network_bandwith_,
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
@@ -643,10 +646,11 @@ namespace tfs
           const int64_t reinsate_or_dissolve_queue_size = get_family_manager().get_reinstate_or_dissolve_queue_size();
           bool compact_time     = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
           bool marshalling_time = in_hour_range(current, SYSPARAM_NAMESERVER.marshalling_time_lower_, SYSPARAM_NAMESERVER.marshalling_time_upper_);
+          bool adjust_copies_location_time = in_hour_range(current, SYSPARAM_NAMESERVER.adjust_copies_location_time_lower_, SYSPARAM_NAMESERVER.adjust_copies_location_time_upper_);
           if (need > 0)
           {
             now = Func::get_monotonic_time();
-            over = scan_block_(results, need, block_start, MAX_QUERY_BLOCK_NUMS, now, compact_time, marshalling_time);
+            over = scan_block_(results, need, block_start, MAX_QUERY_BLOCK_NUMS, now, compact_time, marshalling_time, adjust_copies_location_time);
             if (over)
               block_start = 0;
           }
@@ -1763,25 +1767,54 @@ namespace tfs
       return ret;
     }
 
+    bool LayoutManager::build_adjust_copies_location_task_(common::ArrayHelper<uint64_t>& copies_location, BlockCollect* block, const time_t now)
+    {
+      bool ret = copies_location.get_array_index() > 0 && NULL != block;
+      if (ret)
+      {
+        bool result = false;
+        uint64_t server = INVALID_SERVER_ID;
+        for (int64_t index = 0; index < copies_location.get_array_index(); ++index)
+        {
+          server = *copies_location.at(index);
+          result = (relieve_relation(block, server, now));
+          if (result)
+          {
+            ret = true;
+            result = get_block_manager().push_to_emergency_replicate_queue(block);
+            if (result)
+              get_block_manager().push_to_delete_queue(block->id(), server);
+          }
+        }
+      }
+      return ret;
+    }
+
     int64_t LayoutManager::has_space_in_task_queue_() const
     {
       return server_manager_.size() - task_manager_.get_running_server_size();
     }
 
     bool LayoutManager::scan_block_(ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, const int32_t max_query_block_num,
-          const time_t now, const bool compact_time, const bool marshalling_time)
+          const time_t now, const bool compact_time, const bool marshalling_time, const bool adjust_copies_location_time)
     {
       results.clear();
       bool ret  = false;
       BlockCollect* block = NULL;
+      uint64_t copies[SYSPARAM_NAMESERVER.max_replication_];
+      ArrayHelper<uint64_t> copies_location(SYSPARAM_NAMESERVER.max_replication_, copies);
       bool over = get_block_manager().scan(results, start, max_query_block_num);
       for (int64_t index = 0; index < results.get_array_index() && need > 0; ++index)
       {
+        copies_location.clear();
         block = *results.at(index);
         assert(NULL != block);
         ret = get_block_manager().need_replicate(block, now);
         if ((ret) && (ret = get_block_manager().push_to_emergency_replicate_queue(block)))
           --need;
+        ret = (!ret && adjust_copies_location_time && (plan_run_flag_ & PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION)
+            && get_block_manager().need_adjust_copies_location(copies_location,block,now));
+        ret = ((ret) && (ret == build_adjust_copies_location_task_(copies_location, block, now)));
         ret = (!ret && compact_time && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT)
             && get_block_manager().need_compact(block,now));
         if ((ret) && (TFS_SUCCESS == (ret = build_compact_task_(block, now))))

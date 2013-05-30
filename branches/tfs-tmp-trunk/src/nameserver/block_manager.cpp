@@ -754,6 +754,17 @@ namespace tfs
       return ret;
     }
 
+    bool BlockManager::need_adjust_copies_location(common::ArrayHelper<uint64_t>& adjust_copies, const BlockCollect* block, const time_t now) const
+    {
+      bool ret = (NULL != block && !block->is_in_family());
+      if (ret)
+      {
+        RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+        ret = block->check_need_adjust_copies_location(adjust_copies, now);
+      }
+      return ret;
+    }
+
     int BlockManager::expand_ratio(int32_t& index, const float expand_ratio)
     {
       if (++index >= MAX_BLOCK_CHUNK_NUMS)

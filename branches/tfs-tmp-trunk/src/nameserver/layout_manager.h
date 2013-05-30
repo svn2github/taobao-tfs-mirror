@@ -141,10 +141,12 @@ namespace tfs
           const common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members, const time_t now);
       bool build_redundant_(int64_t& need, const time_t now);
       int build_marshalling_(int64_t& need, const time_t now);
+      bool build_adjust_copies_location_task_(common::ArrayHelper<uint64_t>& copies_location, BlockCollect* block, const time_t now);
       int64_t has_space_in_task_queue_() const;
 
       bool scan_block_(common::ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start,
-          const int32_t max_query_block_num, const time_t now, const bool compact_time, const bool marshalling_time);
+          const int32_t max_query_block_num, const time_t now, const bool compact_time,
+          const bool marshalling_time, const bool adjust_copies_location_time);
 
       bool scan_family_(common::ArrayHelper<FamilyCollect*>& results, int64_t& need, int64_t& start,
           const int32_t max_query_family_num, const time_t now, const bool compact_time);

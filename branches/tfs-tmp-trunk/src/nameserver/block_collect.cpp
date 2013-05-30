@@ -312,6 +312,43 @@ namespace tfs
       return ret;
     }
 
+    bool BlockCollect::check_need_adjust_copies_location(common::ArrayHelper<uint64_t>& adjust_copies, const time_t now) const
+    {
+      UNUSED(now);
+      bool ret = (!is_creating() && !is_in_family()
+                  && server_size_ > 1 && NULL != servers_
+                  && adjust_copies.get_array_size() >= SYSPARAM_NAMESERVER.max_replication_);
+      if (ret)
+      {
+        uint32_t lan    = 0;
+        uint64_t server = INVALID_SERVER_ID;
+        uint32_t lans[MAX_REPLICATION_NUM] = {0};
+        for (int8_t index = 0; index < SYSPARAM_NAMESERVER.max_replication_; ++index)
+        {
+          server = servers_[index];
+          if (INVALID_SERVER_ID != server)
+          {
+            lan = Func::get_lan(server, SYSPARAM_NAMESERVER.group_mask_);
+            for (int32_t k = 0; k < SYSPARAM_NAMESERVER.max_replication_ && lan != 0; k++)
+            {
+              if (lans[k] == lan)
+              {
+                adjust_copies.push_back(server);
+                break;
+              }
+              if (0 == lans[k])
+              {
+                lans[k] = lan;
+                break;
+              }
+            }
+          }
+        }
+        ret = ((server_size_ - adjust_copies.get_array_index()) > 1);
+      }
+      return ret;
+    }
+
     int BlockCollect::scan(SSMScanParameter& param) const
     {
       int16_t child_type = param.child_type_;
@@ -340,7 +377,7 @@ namespace tfs
       return has_dump ? TFS_SUCCESS : TFS_ERROR;
     }
 
-    void BlockCollect::dump(int32_t level, const char* file, const int32_t line, const char* function) const
+    void BlockCollect::dump(int32_t level, const char* file, const int32_t line, const char* function, const pthread_t thid) const
     {
       if (level >= TBSYS_LOGGER._level)
       {
@@ -355,7 +392,7 @@ namespace tfs
             str += "/";
           }
         }
-        TBSYS_LOGGER.logMessage(level, file, line, function,
+        TBSYS_LOGGER.logMessage(level, file, line, function,thid,
             "family id: %"PRI64_PREFIX"d,block_id: %"PRI64_PREFIX"u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, update_file_count: %d, update_file_size: %d, servers: %s",
             info_.family_id_, info_.block_id_, info_.version_, info_.file_count_,
             info_.size_, info_.del_file_count_, info_.del_size_,
