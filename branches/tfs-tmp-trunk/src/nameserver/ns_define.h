@@ -126,7 +126,7 @@ namespace tfs
       void update(const NsGlobalStatisticsInfo& info);
       static NsGlobalStatisticsInfo& instance();
       void dump(int32_t level, const char* file = __FILE__, const int32_t line = __LINE__, const char* function =
-          __FUNCTION__) const;
+          __FUNCTION__, const pthread_t thid = pthread_self()) const;
       volatile int64_t use_capacity_;
       volatile int64_t total_capacity_;
       volatile int64_t total_block_count_;
@@ -171,7 +171,7 @@ namespace tfs
       void initialize();
       void destroy();
       void dump(const int32_t level, const char* file, const int32_t line,
-            const char* function, const char* format, ...);
+            const char* function, const pthread_t thid, const char* format, ...);
       NsRuntimeGlobalInformation();
       static NsRuntimeGlobalInformation& instance();
       static NsRuntimeGlobalInformation instance_;

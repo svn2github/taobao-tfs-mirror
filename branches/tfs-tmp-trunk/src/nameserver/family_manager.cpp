@@ -115,7 +115,7 @@ namespace tfs
           if (slot_[index].first != INVALID_SERVER_ID)
             str << " server: " << tbsys::CNetUtil::addrToString(slot_[index].first) << " block: " << slot_[index].second;
         }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s %s", NULL == format ? "" : format, str.str().c_str());
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, pthread_self(),"%s %s", NULL == format ? "" : format, str.str().c_str());
       }
     }
 

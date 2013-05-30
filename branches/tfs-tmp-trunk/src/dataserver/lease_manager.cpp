@@ -127,7 +127,7 @@ namespace tfs
         {
             str << " server: " << tbsys::CNetUtil::addrToString(members_[index].server_) << " version: " << members_[index].info_.version_ << " status: " << members_[index].status_;
         }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s lease id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u, block: %"PRI64_PREFIX"u, info: %s",
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, pthread_self(), "%s lease id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u, block: %"PRI64_PREFIX"u, info: %s",
             format == NULL ? "" : format, lease_id_.lease_id_, lease_id_.file_id_, lease_id_.block_, str.str().c_str());
       }
     }

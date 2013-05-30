@@ -137,7 +137,7 @@ namespace tfs
         std::string sstr;
         common::ArrayHelper<uint64_t> helper(server_num_,const_cast<uint64_t*>(servers_), server_num_);
         print_int64(helper, sstr);
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__,
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, pthread_self(),
           "cmd: %s, block: %"PRI64_PREFIX"u, version: %u file_count: %u size: %u delfile_count: %u del_size: %u ds_size: %d, dataserver: %s",
           cmd_ == common::OPLOG_INSERT ? "insert" : cmd_ == common::OPLOG_REMOVE ? "remove" : cmd_ == common::OPLOG_RELIEVE_RELATION ? "release" : cmd_ == common::OPLOG_RENAME ? "rename" : "update",
           info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_,

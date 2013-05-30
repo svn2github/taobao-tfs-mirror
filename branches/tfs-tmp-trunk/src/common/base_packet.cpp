@@ -236,14 +236,14 @@ namespace tfs
     }
 
     int BasePacket::reply_error_packet(const int32_t level, const char* file, const int32_t line,
-               const char* function, const int32_t error_code, const char* fmt, ...)
+               const char* function, pthread_t thid, const int32_t error_code, const char* fmt, ...)
     {
       char msgstr[MAX_ERROR_MSG_LENGTH + 1] = {'\0'};/** include '\0'*/
       va_list ap;
       va_start(ap, fmt);
       vsnprintf(msgstr, MAX_ERROR_MSG_LENGTH, fmt, ap);
       va_end(ap);
-      TBSYS_LOGGER.logMessage(level, file, line, function, "%s, error code: %d", msgstr, error_code);
+      TBSYS_LOGGER.logMessage(level, file, line, function, thid, "%s, error code: %d", msgstr, error_code);
 
       BaseService* service = dynamic_cast<BaseService*>(BaseMain::instance());
       StatusMessage* packet = dynamic_cast<StatusMessage*>(service->get_packet_factory()->createPacket(STATUS_MESSAGE));

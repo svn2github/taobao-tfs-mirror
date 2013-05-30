@@ -56,7 +56,7 @@ namespace tfs
       void get_members(common::ArrayHelper<std::pair<uint64_t, int32_t> >& members) const;
       int scan(common::SSMScanParameter& param) const;
       void dump(int32_t level, const char* file = __FILE__,
-          const int32_t line = __LINE__, const char* function = __FUNCTION__) const;
+          const int32_t line = __LINE__, const char* function = __FUNCTION__, const pthread_t thid = pthread_self()) const;
       inline void set_family_id(const int64_t family_id){ family_id_ = family_id;}
       inline void set_data_member_num(const int16_t data_member_num){SET_DATA_MEMBER_NUM(family_aid_info_, data_member_num);}
       inline void set_check_member_num(const int16_t check_member_num){ SET_CHECK_MEMBER_NUM(family_aid_info_, check_member_num);}

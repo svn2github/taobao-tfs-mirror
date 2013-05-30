@@ -46,7 +46,7 @@ namespace tfs
         virtual void dump(tbnet::DataBuffer& stream) = 0;
         virtual void dump(std::stringstream& stream) = 0;
         virtual void dump(const int32_t level, const char* file, const int32_t line,
-                          const char* function, const char* format, ...) = 0;
+                          const char* function, pthread_t thid, const char* format, ...) = 0;
         virtual void runTimerTask();
         bool operator < (const Task& task) const;
         bool timeout(const time_t now) const;
@@ -93,7 +93,7 @@ namespace tfs
         virtual void dump(tbnet::DataBuffer& stream);
         virtual void dump(std::stringstream& stream);
         virtual void dump(const int32_t level, const char* file, const int32_t line,
-                          const char* function, const char* format, ...);
+                          const char* function, pthread_t thid, const char* format, ...);
       protected:
         DISALLOW_COPY_AND_ASSIGN(ReplicateTask);
         uint64_t* servers_;
@@ -138,7 +138,7 @@ namespace tfs
         virtual void dump(tbnet::DataBuffer& stream);
         virtual void dump(std::stringstream& stream);
         virtual void dump(const int32_t level, const char* file, const int32_t line,
-                          const char* function, const char* format, ...);
+                          const char* function, pthread_t thid, const char* format, ...);
       private:
         DISALLOW_COPY_AND_ASSIGN(ECMarshallingTask);
       protected:

@@ -185,7 +185,7 @@ namespace tfs
     }
 
     void ReplicateTask::dump(const int32_t level, const char* file, const int32_t line,
-         const char* function, const char* format, ...)
+         const char* function, pthread_t thid, const char* format, ...)
     {
       if (level <= TBSYS_LOGGER._level)
       {
@@ -199,7 +199,7 @@ namespace tfs
         {
           str << " " << tbsys::CNetUtil::addrToString(servers_[index]) << "/";
         }
-        TBSYS_LOGGER.logMessage(level, file, line, function, "%s seqno: %"PRI64_PREFIX"d, type: %s, status: %s, block: %"PRI64_PREFIX"u, expired_time: %"PRI64_PREFIX"d, servers: %s",
+        TBSYS_LOGGER.logMessage(level, file, line, function, thid,"%s seqno: %"PRI64_PREFIX"d, type: %s, status: %s, block: %"PRI64_PREFIX"u, expired_time: %"PRI64_PREFIX"d, servers: %s",
             msgstr, seqno_, transform_type_to_str(),
             transform_status_to_str(status_), block_, last_update_time_, str.str().c_str());
       }
@@ -596,7 +596,7 @@ namespace tfs
     }
 
     void ECMarshallingTask::dump(const int32_t level, const char* file, const int32_t line,
-         const char* function, const char* format, ...)
+         const char* function, pthread_t thid, const char* format, ...)
     {
       if (level <= TBSYS_LOGGER._level)
       {
@@ -607,7 +607,7 @@ namespace tfs
         va_end(ap);
         std::stringstream str;
         dump(str);
-        TBSYS_LOGGER.logMessage(level, file, line, function, "%s type: %s, status: %s, expired_time: %"PRI64_PREFIX"d, infomations: %s",
+        TBSYS_LOGGER.logMessage(level, file, line, function, thid, "%s type: %s, status: %s, expired_time: %"PRI64_PREFIX"d, infomations: %s",
           msgstr, transform_type_to_str(), transform_status_to_str(status_), last_update_time_, str.str().c_str());
       }
     }

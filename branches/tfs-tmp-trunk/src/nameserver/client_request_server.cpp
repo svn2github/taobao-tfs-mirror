@@ -217,7 +217,7 @@ namespace tfs
       uint64_t block_id = parameter.block_info_.block_id_;
       if (WRITE_COMPLETE_STATUS_YES !=  parameter.status_)
       {
-        TBSYS_LOG(INFO, "close block: %"PRI64_PREFIX"u successful, but cleint write operation error,lease: %"PRI64_PREFIX"u",
+        TBSYS_LOG(INFO, "close block: %"PRI64_PREFIX"u successful, but client write operation error,lease: %"PRI64_PREFIX"u",
             block_id, parameter.lease_id_);
       }
       else

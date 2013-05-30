@@ -293,7 +293,7 @@ int main(int argc, char* argv[])
         set<uint32_t>::iterator sit = lans.find(lan);
         if (sit != lans.end())
         {
-          TBSYS_LOG(WARN, "block "PRI64_PREFIX" replicas are not location safe.", block_id);
+          TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u replicas are not location safe.", block_id);
           location_safe = false;
           break;
         }

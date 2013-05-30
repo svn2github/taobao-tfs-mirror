@@ -160,7 +160,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    void FamilyCollect::dump(int32_t level, const char* file, const int32_t line, const char* function) const
+    void FamilyCollect::dump(int32_t level, const char* file, const int32_t line, const char* function, const pthread_t thid) const
     {
       if (level >= TBSYS_LOGGER._level)
       {
@@ -179,7 +179,7 @@ namespace tfs
         {
           str <<members_[i].first <<":" << members_[i].second<< ",";
         }
-        TBSYS_LOGGER.logMessage(level, file, line, function,"%s", str.str().c_str());
+        TBSYS_LOGGER.logMessage(level, file, line, function, thid,"%s", str.str().c_str());
       }
     }
 

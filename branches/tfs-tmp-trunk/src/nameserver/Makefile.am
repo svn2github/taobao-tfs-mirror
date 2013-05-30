@@ -7,7 +7,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 #AM_LDFLAGS=-lz -lrt -lpthread -ldl -lgcov
 #AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic ${TCMALLOC_LDFLAGS}
-AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic $(TAIR_STORE_LDFLAGS)
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic $(TAIR_STORE_LDFLAGS) -lsnappy
 
 AM_LDFLAGS+=$(MYSQL_LDFLAGS) 
 

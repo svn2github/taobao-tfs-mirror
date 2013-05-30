@@ -80,9 +80,9 @@ namespace tfs
       return instance_;
     }
 
-    void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function ) const
+    void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function , const pthread_t thid) const
     {
-      TBSYS_LOGGER.logMessage(level, file, line, function,
+      TBSYS_LOGGER.logMessage(level, file, line, function, thid,
           "use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, total_block_count: %"PRI64_PREFIX"d, total_load: %d, max_load: %d, max_block_count: %d, alive_server_count: %d",
           use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_);
     }
@@ -243,14 +243,14 @@ namespace tfs
     }
 
     void NsRuntimeGlobalInformation::dump(const int32_t level, const char* file, const int32_t line,
-            const char* function, const char* format, ...)
+            const char* function, const pthread_t thid, const char* format, ...)
     {
         char msgstr[256] = {'\0'};/** include '\0'*/
         va_list ap;
         va_start(ap, format);
         vsnprintf(msgstr, 256, NULL == format ? "" : format, ap);
         va_end(ap);
-        TBSYS_LOGGER.logMessage(level, file, line, function, "%s, owner_ip_port: %s, other_side_ip_port: %s,switch_time: %s, vip: %s \
+        TBSYS_LOGGER.logMessage(level, file, line, function, thid, "%s, owner_ip_port: %s, other_side_ip_port: %s,switch_time: %s, vip: %s \
           destroy: %s, owner_role: %s, other_side_role: %s, owner_status: %s, other_side_status: %s, leaes_id: %"PRI64_PREFIX"d, lease_expired_time: %"PRI64_PREFIX"d",
           msgstr, tbsys::CNetUtil::addrToString(owner_ip_port_).c_str(), tbsys::CNetUtil::addrToString(peer_ip_port_).c_str(),
           common::Func::time_to_str(switch_time_).c_str(), tbsys::CNetUtil::addrToString(vip_).c_str(),
