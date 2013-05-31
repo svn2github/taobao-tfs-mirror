@@ -778,7 +778,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = kv_engine_helper_->get_key(key, &kv_value, lock_version);
-        if (TFS_SUCCESS != ret)
+        if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
         {
           ret = EXIT_OBJECT_NOT_EXIST;
         }
@@ -820,10 +820,9 @@ namespace tfs
         ret = get_object_part(bucket_name, file_name, offset_zero, &object_info_zero, &version);
         *object_info = object_info_zero;
         *still_have = false;
-        if (TAIR_RETURN_DATA_NOT_EXIST == ret)
+        if (EXIT_OBJECT_NOT_EXIST == ret)
         {
           TBSYS_LOG(ERROR, "object not exist");
-          ret = EXIT_OBJECT_NOT_EXIST;
         }
       }
       if (TFS_SUCCESS == ret)
@@ -831,16 +830,17 @@ namespace tfs
         if (offset > object_info_zero.meta_info_.big_file_size_)
         {
           TBSYS_LOG(ERROR, "req offset is out of big_file_size_");
-          ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
+          ret = EXIT_READ_OFFSET_ERROR;
         }
       }
 
       if (TFS_SUCCESS == ret)
       {
         bool is_big_file = false;
+
         if (object_info_zero.v_tfs_file_info_.size() > 0)
         {
-          if (offset + length <= object_info_zero.v_tfs_file_info_[0].file_size_)
+          if (object_info_zero.meta_info_.big_file_size_ == object_info_zero.v_tfs_file_info_[0].file_size_)
           {
             is_big_file = false;
           }
@@ -853,9 +853,9 @@ namespace tfs
         {
           is_big_file = true;
         }
-
         if (is_big_file)//big file
         {
+          TBSYS_LOG(ERROR, "is big_file");
           //op key
           char *start_key_buff = NULL;
           if (TFS_SUCCESS == ret)
@@ -909,6 +909,7 @@ namespace tfs
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
             if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
             {//metainfo exist but data not exist
+              TBSYS_LOG(ERROR, "metainfo exist but data not exist");
               ret = TFS_SUCCESS;
             }
             for(i = 0; i < result_size; ++i)
@@ -947,7 +948,7 @@ namespace tfs
               go_on = false;
             }
 
-            for(i = 0; i < result_size; ++i)//free tair
+            for(i = 0; i < result_size; ++i)//free kv
             {
               kv_value_values[i]->free();
             }
@@ -1087,12 +1088,12 @@ namespace tfs
           }
         }
 
-        //del from tair
+        //del from kv
         if(TFS_SUCCESS == ret && result_size > 0)
         {
            ret = kv_engine_helper_->delete_keys(vec_keys);
         }
-        for(i = 0; i < result_size; ++i)//free tair
+        for(i = 0; i < result_size; ++i)//free kv
         {
           kv_value_keys[i]->free();
           kv_value_values[i]->free();
@@ -1588,10 +1589,17 @@ namespace tfs
         vector<KvValue*> kv_value_keys;
         vector<KvValue*> kv_value_values;
 
+        bool first_loop = true;
         string temp_start_key(start_key);
 
+        if (start_key.compare(prefix) < 0)
+        {
+          temp_start_key = prefix;
+          //never handle start_key
+          first_loop = false;
+        }
+
         bool loop = true;
-        bool first_loop = true;
         do
         {
           int32_t res_size = -1;
@@ -1600,6 +1608,7 @@ namespace tfs
 
           limit_size = *limit - actual_size;
 
+          //start_key need to be excluded from a result except for using prefix as start_key.
           int32_t extra = first_loop ? 2 : 1;
           ret = get_range(pkey, temp_start_key, 0, limit_size + extra,
               &kv_value_keys, &kv_value_values, &res_size);
@@ -1650,6 +1659,7 @@ namespace tfs
                 ret = group_objects(object_name, kv_value_values[i]->get_data(), kv_value_values[i]->get_size(),
                     prefix, delimiter, v_object_meta_info, v_object_name, s_common_prefix);
               }
+              //If it is first_loop, we need to skip the object which equals start_key.
               else if (object_name.compare(start_key) != 0)
               {
                 ret = group_objects(object_name, kv_value_values[i]->get_data(), kv_value_values[i]->get_size(),
@@ -1675,6 +1685,13 @@ namespace tfs
               *is_truncated = 1;
               break;
             }
+
+            if (!prefix.empty() && object_name.compare(prefix) > 0 && object_name.find(prefix) != 0)
+            {
+              TBSYS_LOG(DEBUG, "object after %s can't match", object_name.c_str());
+              loop = false;
+              break;
+            }
           }
 
           if (loop)
@@ -1694,7 +1711,7 @@ namespace tfs
             }
           }
 
-          //delete for tair
+          //delete for kv
           for (int i = 0; i < res_size; ++i)
           {
             kv_value_keys[i]->free();
@@ -2003,7 +2020,7 @@ namespace tfs
         ret = kv_engine_helper_->delete_key(pkey);
       }
 
-      //delete for tair
+      //delete for kv
       for (int i = 0; i < res_size; ++i)
       {
         kv_value_keys[i]->free();
