@@ -273,7 +273,7 @@ namespace tfs
       object_clear_max_time_ = config.getInt(CONF_SN_DATASERVER, CONF_OBJECT_CLEAR_MAX_TIME, 300);
       if (object_clear_max_time_ <= 0)
         object_clear_max_time_ = 300;
-      max_sync_retry_count_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_COUNT, 5);
+      max_sync_retry_count_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_COUNT, 3);
       max_sync_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_INTERVAL, 30);
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
@@ -503,6 +503,8 @@ namespace tfs
         check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 24);
         thread_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_THREAD_COUNT, 1);
         cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
+        check_retry_turns_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RETRY_TURN, 3);
+        turn_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_TURN_INTERVAL, 180);
       }
 
       if (TFS_SUCCESS == ret)

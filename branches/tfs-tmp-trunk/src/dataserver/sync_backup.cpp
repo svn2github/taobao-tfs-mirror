@@ -135,31 +135,37 @@ namespace tfs
     int TfsMirrorBackup::do_sync(const SyncData *sf)
     {
       int ret = TFS_ERROR;
-      switch (sf->cmd_)
+      int retry = SYSPARAM_DATASERVER.max_sync_retry_count_;
+      for (int index = 0; (TFS_SUCCESS != ret) && (index < retry); index++)
       {
-      case OPLOG_INSERT:
-        ret = copy_file(sf->block_id_, sf->file_id_);
-        break;
-      case OPLOG_REMOVE:
-        ret = remove_file(sf->block_id_, sf->file_id_, static_cast<TfsUnlinkType>(sf->old_file_id_));
-        break;
-      }
-
-      for (int i = 0; i < SYSPARAM_DATASERVER.max_sync_retry_count_ && TFS_SUCCESS != ret; i++)
-      {
-        if (i > 0)
+        if (OPLOG_INSERT == sf->cmd_)
         {
-          int wait_time = i * i;
+          ret = copy_file(sf->block_id_, sf->file_id_);
+        }
+        else if(OPLOG_REMOVE == sf->cmd_)
+        {
+          ret = remove_file(sf->block_id_, sf->file_id_,
+              static_cast<TfsUnlinkType>(sf->old_file_id_));
+          if (file_not_exist(ret)) // if file not exist in dest, copy to dest
+          {
+            ret = copy_file(sf->block_id_, sf->file_id_);
+          }
+        }
+        else
+        {
+          TBSYS_LOG(WARN, "invalid log type, ignore");
+        }
+
+        // the first retry will do immediately
+        if (index > 0)
+        {
+          int32_t wait_time = index * index;
           if (wait_time > SYSPARAM_DATASERVER.max_sync_retry_interval_)
           {
             wait_time = SYSPARAM_DATASERVER.max_sync_retry_interval_;
           }
           sleep(wait_time);
         }
-        FSName fsname(sf->block_id_, sf->file_id_);
-        ret = sync_stat(sf->block_id_, sf->file_id_);
-        TBSYS_LOG(INFO, "sync_stat %s block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u, action: %d, ret: %d, retry_count: %d",
-          fsname.get_name(), sf->block_id_, sf->file_id_, sf->cmd_, ret, i + 1);
       }
 
       return ret;
@@ -171,6 +177,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID == block_id) ? EXIT_BLOCKID_ZERO_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
+        TfsFileStat file_stat;
         int dest_fd = -1;
         int32_t src_fd = tfs_client_->open(block_id, file_id, src_addr_, T_READ | T_FORCE);
         if (src_fd < 0)
@@ -183,7 +190,6 @@ namespace tfs
           ret = tfs_client_->set_option_flag(src_fd, FORCE_STAT);
           if (TFS_SUCCESS == ret)
           {
-            TfsFileStat file_stat;
             ret = tfs_client_->fstat(src_fd, &file_stat);
             if (TFS_SUCCESS != ret) // src file stat fail
             {
@@ -275,7 +281,8 @@ namespace tfs
         if (dest_fd > 0)
         {
           // close destination file anyway
-          int tmp_ret = tfs_client_->close(dest_fd);
+          // derectly set file status to dest file
+          int tmp_ret = tfs_client_->close(dest_fd, NULL, 0, file_stat.flag_);
           if (tmp_ret != TFS_SUCCESS)
           {
             TBSYS_LOG(WARN, "%s close dest tfsfile fail. blockid: %"PRI64_PREFIX"u, fileid: %" PRI64_PREFIX "u. ret: %d",
@@ -308,7 +315,7 @@ namespace tfs
         {
           FileInfoV2 finfo;
           finfo.id_ = file_id;
-          ret = get_block_manager().stat(finfo, READ_DATA_OPTION_FLAG_FORCE, block_id, block_id);
+          ret = get_block_manager().stat(finfo, FORCE_STAT, block_id, block_id);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "stat file %s fail. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u,ret: %d",
@@ -390,11 +397,13 @@ namespace tfs
             // close destination tfsfile anyway
             if (dest_fd > 0)
             {
-              int32_t rt = tfs_client_->close(dest_fd);
+              // directly set file status to dest file
+              int32_t rt = tfs_client_->close(dest_fd, NULL, 0, finfo.status_);
               if (TFS_SUCCESS != rt)
               {
                 TBSYS_LOG(WARN, "close dest file fail.%s blockid: %"PRI64_PREFIX"u, fileid :%" PRI64_PREFIX "u, rt: %d",
                          fsname.get_name(), block_id, file_id, rt);
+                ret = rt;
               }
             }
           }
@@ -409,11 +418,17 @@ namespace tfs
       return ret;
     }
 
-    int TfsMirrorBackup::remove_file(const uint64_t block_id, const uint64_t file_id,
+   int TfsMirrorBackup::remove_file(const uint64_t block_id, const uint64_t file_id,
                                      const TfsUnlinkType action)
     {
+      UNUSED(action);
       FSName fsname(block_id, file_id);
+      FileInfoV2 finfo;
       int32_t ret = common::INVALID_BLOCK_ID != block_id && common::INVALID_FILE_ID != file_id ? TFS_SUCCESS : EXIT_BLOCKID_ZERO_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = stat_file(block_id, file_id, finfo);
+      }
       if (TFS_SUCCESS == ret)
       {
         int32_t dest_fd = tfs_client_->open(block_id, file_id, dest_addr_, T_WRITE|T_NEWBLK);
@@ -430,7 +445,11 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           int64_t file_size = 0;
-          ret = tfs_client_->unlink(file_size, dest_fd, action);
+          int32_t override_action = 0;  // directly set status to dest file
+          SET_OVERRIDE_FLAG(override_action, finfo.status_);
+          ret = tfs_client_->unlink(file_size, dest_fd,
+              static_cast<TfsUnlinkType>(override_action));
+          tfs_client_->close(dest_fd);
         }
       }
 
@@ -439,34 +458,54 @@ namespace tfs
       return ret;
     }
 
-    void TfsMirrorBackup::DoSyncMirrorThreadHelper::run()
+    int TfsMirrorBackup::remote_stat_file(const char* ns_addr,
+        const uint64_t block_id, const uint64_t file_id, FileInfoV2& finfo)
     {
-      sync_base_.run_sync_mirror();
-    }
-
-    int TfsMirrorBackup::get_file_info(const char* nsip, const uint64_t block_id, const uint64_t file_id, TfsFileStat& buf)
-    {
-      FSName fsname(block_id, file_id, tfs_client_->get_cluster_id());
-      int32_t fd = tfs_client_->open(block_id, file_id, nsip, T_READ | T_FORCE);
-      int32_t ret = fd < 0 ? fd : TFS_SUCCESS;
-      if (TFS_SUCCESS != ret)
+      TfsFileStat file_stat;
+      FSName fsname(block_id, file_id);
+      int32_t fd = tfs_client_->open(block_id, file_id, ns_addr, T_READ);
+      int ret = fd > 0 ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(WARN, "open file %s failed, ret: %d, block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u", fsname.get_name(),ret, block_id, file_id);
+        tfs_client_->set_option_flag(fd, FORCE_STAT);
+        ret = tfs_client_->fstat(fd, &file_stat);
+        tfs_client_->close(fd);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        finfo.id_ = file_stat.file_id_;
+        finfo.offset_ = file_stat.offset_;
+        finfo.size_ = file_stat.size_;
+        finfo.modify_time_ = file_stat.modify_time_;
+        finfo.create_time_ = file_stat.modify_time_;
+        finfo.status_ = file_stat.flag_;
+        finfo.crc_ = file_stat.crc_;
       }
       else
       {
-        ret = tfs_client_->set_option_flag(fd, FORCE_STAT);
-        if (TFS_SUCCESS == ret)
-        {
-          ret = tfs_client_->fstat(fd, &buf);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(WARN, "stat file %s failed, ret: %d, block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u, addr: %s", fsname.get_name(),ret, block_id, file_id, nsip);
-          }
-        }
-        tfs_client_->close(fd);
+        TBSYS_LOG(INFO, "remote stat file fail %s, ret: %d, "
+            "block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u, ns addr: %s",
+            fsname.get_name(), ret, block_id, file_id, ns_addr);
+      }
+
+      return ret;
+    }
+
+    int TfsMirrorBackup::stat_file(const uint64_t block_id, const uint64_t file_id, FileInfoV2& finfo)
+    {
+      finfo.id_ = file_id;
+      int ret = get_block_manager().stat(finfo, FORCE_STAT, block_id, block_id);
+      if (EXIT_NO_LOGICBLOCK_ERROR == ret)
+      {
+        ret = remote_stat_file(src_addr_, block_id, file_id, finfo);
       }
       return ret;
+    }
+
+    void TfsMirrorBackup::DoSyncMirrorThreadHelper::run()
+    {
+      sync_base_.run_sync_mirror();
     }
 
     bool TfsMirrorBackup::file_not_exist(int ret)
@@ -475,39 +514,6 @@ namespace tfs
          (EXIT_NO_LOGICBLOCK_ERROR == ret) ||  // ds cannot find logic block
          (EXIT_META_NOT_FOUND_ERROR == ret) ||
          (EXIT_NO_BLOCK == ret));// ds cannot find file in index
-    }
-
-    int TfsMirrorBackup::sync_stat(const uint64_t block_id, const uint64_t file_id)
-    {
-      int ret = TFS_SUCCESS;
-
-      FSName fsname(block_id, file_id);
-      TfsFileStat src_stat;
-      TfsFileStat dest_stat;
-      ret = get_file_info(src_addr_, block_id, file_id, src_stat);
-      if (file_not_exist(ret))   // not exsit in source, just ignore
-      {
-        ret = TFS_SUCCESS;
-      }
-      else if (TFS_SUCCESS == ret)
-      {
-        dest_stat.flag_ = 0;
-        ret = get_file_info(dest_addr_, block_id, file_id, dest_stat);
-        if (file_not_exist(ret)) // not exsit in dest
-        {
-          ret = copy_file(block_id, file_id);
-        }
-
-        if (TFS_SUCCESS == ret)  // just sync stat;
-        {
-          if (src_stat.flag_ != dest_stat.flag_)
-          {
-            int action = (src_stat.flag_ << 4);  // sync flag
-            ret = remove_file(block_id, file_id, static_cast<common::TfsUnlinkType>(action));
-          }
-        }
-      }
-      return ret;
     }
   }
 }

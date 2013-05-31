@@ -424,20 +424,29 @@ namespace tfs
       oper_type = OPER_NONE;
       int8_t status = FILE_STATUS_NOMARL;
       int32_t ret = TFS_SUCCESS, tmp_action = action;
-      if (action > REVEAL)//TODO这里其实是有问题，需要修改，统一使用位来操作
+
+      // TODO: remove this code after all cluster upgraded
+      if (action > OVERRIDE)//TODO这里其实是有问题，需要修改，统一使用位来操作
       {
         status = (action >> 4) & 0x7;
         tmp_action = SYNC;
       }
 
+      if (TEST_OVERRIDE_FLAG(action))
+      {
+        status = GET_OVERRIDE_FLAG(action);
+        tmp_action = OVERRIDE;
+      }
+
       switch(tmp_action)
       {
         case SYNC:
+        case OVERRIDE:
           if ((finfo.status_ & FILE_STATUS_DELETE) != (status & FILE_STATUS_DELETE))
           {
             oper_type = status & FILE_STATUS_DELETE ? OPER_DELETE : OPER_UNDELETE;
-            finfo.status_ = status;
           }
+          finfo.status_ = status;
           break;
         case DELETE:
           ret = (0 != (finfo.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID))) ? EXIT_FILE_STATUS_ERROR : TFS_SUCCESS;
@@ -560,6 +569,10 @@ namespace tfs
         new_finfo.next_   = 0;
       }
       new_finfo.size_ = file_size;
+      if (datafile.get_status() >= 0)
+      {
+        new_finfo.status_ = datafile.get_status();
+      }
       int32_t ret = index_handle_->get_used_offset(new_finfo.offset_);
       if (TFS_SUCCESS == ret)
       {

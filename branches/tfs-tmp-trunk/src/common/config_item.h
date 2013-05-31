@@ -186,6 +186,8 @@ namespace tfs
 #define CONF_CHECK_INTERVAL                           "check_interval"
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_NS_IP                                    "ns_ip"
+#define CONF_CHECK_RETRY_TURN                         "check_retry_turn"
+#define CONF_TURN_INTERVAL                            "turn_interval"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

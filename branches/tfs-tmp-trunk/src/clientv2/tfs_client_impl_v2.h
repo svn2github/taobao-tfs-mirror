@@ -57,7 +57,8 @@ namespace tfs
       int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
       int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
       int fstat(const int fd, common::TfsFileStat* buf);
-      int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0);
+      int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0,
+          const int32_t status = -1);
       int unlink(int64_t& file_size, const int fd, const common::TfsUnlinkType action = common::DELETE);
 
       int stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix = NULL,

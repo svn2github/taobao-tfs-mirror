@@ -67,12 +67,23 @@ namespace tfs
           return atomic_read(&ref_count_);
         }
 
+        inline void set_status(const int32_t status)
+        {
+          status_ = status;
+        }
+
+        inline int32_t get_status() const
+        {
+          return status_;
+        }
+
       private:
         atomic_t ref_count_;    // reference count, only for compatible
         int32_t last_update_;   // last update time, only for compatible
         int32_t fd_;            // temp file descriptor
         int32_t length_;        // current max buffer write length
         uint32_t crc_;          // crc checksum
+        int32_t status_;        // set to file when close called
         std::stringstream path_;// file path
         static const int32_t WRITE_DATA_TMPBUF_SIZE = 2 * 1024 * 1024 + 128;
         char data_[WRITE_DATA_TMPBUF_SIZE]; // data buffer

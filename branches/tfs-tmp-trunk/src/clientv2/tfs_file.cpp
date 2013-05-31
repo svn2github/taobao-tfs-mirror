@@ -371,7 +371,7 @@ namespace tfs
       return (ret != TFS_SUCCESS) ? ret : done;
     }
 
-    int TfsFile::close()
+    int TfsFile::close(const int32_t status)
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = (file_.write_status_ == WRITE_STATUS_OK) ? TFS_SUCCESS : EXIT_CLOSE_FILE_ERROR;
@@ -384,7 +384,7 @@ namespace tfs
         }
         else
         {
-          ret = do_close();
+          ret = do_close(status);
         }
       }
 
@@ -406,6 +406,12 @@ namespace tfs
         {
           ret = do_unlink(action, file_size, false);  // real unlink
         }
+      }
+
+      // tell close should do nothing because unlink fail
+      if (TFS_SUCCESS != ret)
+      {
+        file_.write_status_ = WRITE_STATUS_FAIL;
       }
 
       return ret;
@@ -729,7 +735,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsFile::do_close()
+    int TfsFile::do_close(const int32_t status)
     {
       int ret = TFS_SUCCESS;
       uint64_t server = 0;
@@ -750,6 +756,7 @@ namespace tfs
         msg.set_master_id(file_.get_write_ds());
         msg.set_ds(file_.ds_);
         msg.set_crc(file_.crc_);
+        msg.set_status(status);
         if (file_.has_family())
         {
           msg.set_family_info(file_.family_info_);

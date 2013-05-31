@@ -27,7 +27,8 @@ namespace tfs
     DataFile::DataFile(const uint64_t fn, const std::string& work_dir):
       fd_(-1),
       length_(0),
-      crc_(0)
+      crc_(0),
+      status_(-1)
     {
       atomic_set(&ref_count_, 0);
       path_ << work_dir << "/tmp/" << fn;

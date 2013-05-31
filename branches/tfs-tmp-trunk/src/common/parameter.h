@@ -221,6 +221,8 @@ namespace tfs
       int32_t cluster_id_;
       int32_t check_interval_;
       int32_t thread_count_;
+      int32_t check_retry_turns_;
+      int32_t turn_interval_;
 
       int initialize(const std::string& config_file);
 

@@ -261,7 +261,7 @@ namespace tfs
     }
 
     int DataManager::close_file(const uint64_t block_id, const uint64_t attach_block_id,
-        uint64_t& file_id, const uint64_t lease_id, const uint32_t crc, const bool tmp, BlockInfoV2& local)
+        uint64_t& file_id, const uint64_t lease_id, const uint32_t crc, const int32_t status, const bool tmp, BlockInfoV2& local)
     {
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
@@ -297,6 +297,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
+        data_file.set_status(status);  // status will directly set to file
         ret = get_block_manager().write(file_id, data_file, block_id, attach_block_id, tmp);
         ret = (ret < 0) ? ret: TFS_SUCCESS;  // transform return status
         if (TFS_SUCCESS == ret)

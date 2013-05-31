@@ -74,8 +74,6 @@ static const int32_t FILE_NAME_EXCEPT_SUFFIX_LEN_V2 = 18;
 #define PRI64_PREFIX "ll"
 #endif
 
-#define TFS_GTEST
-
 typedef struct
 {
   uint64_t file_id_;
@@ -129,6 +127,7 @@ typedef enum
   UNDELETE = 2,
   CONCEAL = 4,
   REVEAL = 6,
+  OVERRIDE = 8,
   SYNC = 126
 } TfsUnlinkType;
 

@@ -67,7 +67,7 @@ namespace tfs
         int64_t stat(common::TfsFileStat& file_stat);
         int64_t read(void* buf, const int64_t count, common::TfsFileStat* file_stat = NULL);
         int64_t write(const void* buf, const int64_t count);
-        int close();
+        int close(const int32_t status);
         int unlink(const common::TfsUnlinkType action, int64_t& file_size);
 
         void set_option_flag(const int32_t flag);
@@ -80,7 +80,7 @@ namespace tfs
         int do_read(char* buf, const int64_t count, int64_t& read_len,
             common::TfsFileStat* file_stat = NULL);
         int do_write(const char* buf, int64_t count);
-        int do_close();
+        int do_close(const int32_t status);
         int do_unlink(const int32_t action, int64_t& file_size, const bool prepare = false);
         void transfer_mode(const int32_t mode);
 

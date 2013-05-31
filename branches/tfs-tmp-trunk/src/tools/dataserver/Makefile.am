@@ -13,7 +13,8 @@ bin_PROGRAMS = clear_file_system\
 							 convert_name\
                reload_config\
                reverse_name\
-               tfsping
+               tfsping\
+							 test_file_queue
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
@@ -52,4 +53,6 @@ recover_disk_data_to_cluster_SOURCES = recover_disk_data_to_cluster.cpp
 recover_sync_file_queue_SOURCES = recover_sync_file_queue.cpp
 
 gen_block_prefix_SOURCES = gen_block_prefix.cpp
+
+test_file_queue_SOURCES = test_file_queue.cpp
 #test_load_SOURCES = test_load.cpp

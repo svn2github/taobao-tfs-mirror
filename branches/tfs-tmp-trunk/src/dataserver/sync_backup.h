@@ -85,29 +85,12 @@ namespace tfs
         int copy_file(const uint64_t block_id, const uint64_t file_id);
         int remove_file(const uint64_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
         int remote_copy_file(const uint64_t block_id, const uint64_t file_id);
-        int get_file_info(const char* nsip, const uint64_t block_id, const uint64_t file_id, common::TfsFileStat& buf);
+        int remote_stat_file(const char* ns_addr,
+            const uint64_t block_id, const uint64_t file_id, common::FileInfoV2& finfo);
+        int stat_file(const uint64_t block_id, const uint64_t file_id, common::FileInfoV2& finfo);
 
-        /**
-        * @brief sync file by stat
-        *
-        * sync file to same stat in both clusters
-        *
-        * @param block_id: block id
-        * @param file_id:  file id
-        *
-        * @return
-        */
-        int sync_stat(const uint64_t block_id, const uint64_t file_id);
-
-
-        /**
-         * @brief if file not exist
-         *
-         * @param ret: access return value
-         *
-         * @return
-         */
-        bool file_not_exist(int ret);
+        // check return value to see if file exist in dest cluster
+        bool file_not_exist(const int ret);
 
       class DoSyncMirrorThreadHelper: public tbutil::Thread
       {

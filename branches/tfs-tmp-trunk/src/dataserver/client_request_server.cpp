@@ -473,6 +473,7 @@ namespace tfs
       uint64_t lease_id = message->get_lease_id();
       uint64_t master_id = message->get_master_id();
       uint32_t crc = message->get_crc();
+      int32_t status = message->get_status();
       FamilyInfoExt& family_info = message->get_family_info();
       int64_t family_id = family_info.family_id_;
       bool tmp = message->get_tmp_flag(); // if true, we are writing a tmp block
@@ -550,7 +551,8 @@ namespace tfs
       BlockInfoV2 local;
       if (TFS_SUCCESS == ret)
       {
-        ret = get_data_manager().close_file(block_id, attach_block_id, file_id, lease_id, crc, tmp, local);
+        ret = get_data_manager().close_file(block_id,
+            attach_block_id, file_id, lease_id, crc, status, tmp, local);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "close file fail. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
@@ -1090,7 +1092,7 @@ namespace tfs
           for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)
           {
             ret = sync_mirror[i]->write_sync_log(OPLOG_REMOVE, attach_block_id, file_id);
-            if (TFS_SUCCESS == ret)
+            if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(WARN, "write sync log fail. blockid: %"PRI64_PREFIX"u, "
                   "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, index: %d, ret: %d",

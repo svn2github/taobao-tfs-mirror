@@ -22,7 +22,7 @@ namespace tfs
   {
     CloseFileMessageV2::CloseFileMessageV2():
       attach_block_id_(INVALID_BLOCK_ID),
-      lease_id_(0), master_id_(0), crc_(0), flag_(0), tmp_(0)
+      lease_id_(0), master_id_(0), crc_(0), flag_(0), status_(-1), tmp_(0)
     {
       _packetHeader._pcode = CLOSE_FILE_MESSAGE_V2;
     }
@@ -62,6 +62,11 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int32(flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(status_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -122,6 +127,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = input.get_int32(&status_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = input.get_int8(&tmp_);
       }
 
@@ -146,7 +156,7 @@ namespace tfs
 
     int64_t CloseFileMessageV2::length() const
     {
-      return 5 * INT64_SIZE + 2 * INT_SIZE + INT8_SIZE +
+      return 5 * INT64_SIZE + 3 * INT_SIZE + INT8_SIZE +
              Serialization::get_vint64_length(ds_)
              + family_info_.length();
     }

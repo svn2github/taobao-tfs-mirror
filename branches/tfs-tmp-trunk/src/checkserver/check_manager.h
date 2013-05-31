@@ -44,7 +44,7 @@ namespace tfs
         {
         }
 
-        BlockObject(const uint64_t block_id):
+        explicit BlockObject(const uint64_t block_id):
           block_id_(block_id), server_size_(0)
         {
         }
@@ -119,7 +119,7 @@ namespace tfs
         {
         }
 
-        ServerObject(const uint64_t server_id):
+        explicit ServerObject(const uint64_t server_id):
           server_id_(server_id), status_(SERVER_STATUS_FAIL)
         {
         }

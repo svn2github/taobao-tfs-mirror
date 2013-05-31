@@ -111,6 +111,16 @@ namespace tfs
           return flag_;
         }
 
+        void set_status(const int32_t status)
+        {
+          status_ = status;
+        }
+
+        int32_t get_status() const
+        {
+          return status_;
+        }
+
         void set_family_info(const common::FamilyInfoExt& family_info)
         {
           family_info_ = family_info;
@@ -141,6 +151,7 @@ namespace tfs
         common::FamilyInfoExt family_info_;
         uint32_t crc_;
         int32_t flag_;
+        int32_t status_;  // meanless to normal client
         int8_t tmp_; // meanless to client
     };
 

@@ -198,7 +198,14 @@ namespace tfs
             {
               RespReadDataMessage* resp_msg = dynamic_cast<RespReadDataMessage*>(rsp);
               read_len = resp_msg->get_length();
-              memcpy(data, resp_msg->get_data(), read_len);
+              if (read_len < 0)
+              {
+                ret = read_len;
+              }
+              else
+              {
+                memcpy(data, resp_msg->get_data(), read_len);
+              }
             }
             else if (rsp->getPCode() == STATUS_MESSAGE)
             {

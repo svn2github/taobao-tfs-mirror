@@ -310,7 +310,8 @@ namespace tfs
       return ret;
     }
 
-    int TfsClientImplV2::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len)
+    int TfsClientImplV2::close(const int fd,
+        char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t status)
     {
       int ret = TFS_SUCCESS;
       if (fd < 0)
@@ -326,7 +327,7 @@ namespace tfs
         }
         else
         {
-          ret = tfs_file->close();
+          ret = tfs_file->close(status);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
