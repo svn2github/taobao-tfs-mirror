@@ -110,7 +110,7 @@ AC_ARG_ENABLE([taircache],
            [enable_taircache=${enableval}],
            [enable_taircache="no"])
 if test "${enable_taircache}" = "yes"; then
-        if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
+        if ! test -d "${TAIR_ROOT}/include" -a -d "${TAIR_ROOT}/lib"; then
                 AC_MSG_ERROR([TAIR_ROOT is not work! expect TAIR_ROOT/include and TAIR_ROOT/lib directory])
                 exit 1;
         fi
@@ -230,15 +230,16 @@ AC_CONFIG_FILES([Makefile
                  src/tools/nameserver/Makefile
                  src/tools/adminserver/Makefile
                  src/tools/transfer/Makefile
-                 src/tools/cluster/Makefile])
-                 #src/checkserver/Makefile
-                 #src/tools/mock/Makefile
-                 #tests/Makefile
-                 #tests/batch/Makefile
-                 #tests/rcserver/Makefile
-                 #tests/name_meta_server/Makefile
-                 #tests/common/Makefile
-                 #tests/rootserver/Makefile
-                 #tests/dataserver/Makefile
-                 #tests/intergrate/Makefile])
+                 src/tools/cluster/Makefile
+                 src/checkserver/Makefile
+                 src/tools/mock/Makefile
+                 tests/Makefile
+                 tests/batch/Makefile
+                 tests/rcserver/Makefile
+                 tests/name_meta_server/Makefile
+                 tests/common/Makefile
+                 tests/nameserver/Makefile
+                 tests/rootserver/Makefile
+                 tests/dataserver/Makefile
+                 tests/intergrate/Makefile])
 AC_OUTPUT

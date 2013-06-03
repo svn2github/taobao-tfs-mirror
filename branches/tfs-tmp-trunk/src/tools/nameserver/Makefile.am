@@ -37,7 +37,7 @@ read_syncoplog_header_SOURCES=read_syncoplog_header.cpp
 admintool_SOURCES = admintool.cpp
 performance_SOURCES = performance.cpp
 syncbyfile_SOURCES=sync_by_file.cpp
-repair_block_info_SOURCES=repair_block_info.cpp
+#repair_block_info_SOURCES=repair_block_info.cpp
 if WITH_TAIR_CACHE
 clear_remote_block_cache_SOURCES=clear_remote_block_cache.cpp
 endif
