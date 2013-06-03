@@ -469,7 +469,7 @@ namespace tfs
             {
               ret = manager_.get_manager().get_oplog_sync_mgr().create_family(family_info);
               if (TFS_SUCCESS != ret)
-                TBSYS_LOG(INFO, "add new family in mysql failed, ret: %d, family id: %"PRI64_PREFIX"d", ret, family_info.family_id_);
+                TBSYS_LOG(INFO, "add new family in db failed, ret: %d, family id: %"PRI64_PREFIX"d", ret, family_info.family_id_);
             }
             if (TFS_SUCCESS == ret)//想办法确保BLOCK ID 不会被重用,前期可以不搞
             {

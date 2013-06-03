@@ -633,10 +633,7 @@ namespace tfs
       int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        int64_t mysql_ret = -14000;
         ret = dbhelper_->create_family(family_info);
-        if (TFS_SUCCESS == ret)
-          ret = mysql_ret;
       }
       return ret;
     }

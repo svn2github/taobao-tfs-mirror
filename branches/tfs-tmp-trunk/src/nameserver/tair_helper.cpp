@@ -169,31 +169,62 @@ namespace tfs
       snprintf(start_key, 128, "%010"PRI64_PREFIX"d", start_family_id);
       snprintf(end_key, 128, "%s", max_key_.c_str());
       data_entry tair_pkey(pkey, false);
-      data_entry tair_start_key(start_key, false);
+      data_entry tair_start_key(start_key, true);
       data_entry tair_end_key(end_key, false);
-      std::vector<data_entry*> values;
+      int32_t key_offset = 0;
       int32_t ret = TFS_SUCCESS, retry = 0;
       do
       {
-        tbutil::Mutex::Lock lock(mutex_);
-        ret = tair_client_.get_range(area_, tair_pkey, tair_start_key, tair_end_key, 0, ROW_LIMIT, values);
-      }
-      while (TAIR_HAS_MORE_DATA != ret && TAIR_RETURN_SUCCESS != ret && retry++ < 3);
-      if (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret)
-      {
-        for (uint32_t index = 1; index < values.size() && TFS_SUCCESS == ret; index += 2)
+        std::vector<data_entry*> values;
+        do
         {
-          int64_t pos = 0;
-          family_infos.push_back(FamilyInfo());
-          std::vector<FamilyInfo>::iterator it = family_infos.end() - 1;
-          ret = TFS_SUCCESS != (*it).deserialize((values[index])->get_data(), values[index]->get_size(), pos) ? EXIT_DESERIALIZE_ERROR : TFS_SUCCESS;
-          tbsys::gDelete(values[index]);
+          tbutil::Mutex::Lock lock(mutex_);
+          ret = tair_client_.get_range(area_, tair_pkey, tair_start_key, tair_end_key, key_offset, ROW_LIMIT, values);
         }
-      }
-      else
-      {
-        TBSYS_LOG(WARN, "scan family information error: %d, pkey: %s start_key: %s, end_key: %s", ret, pkey, start_key, end_key);
-      }
+        while (TAIR_RETURN_DATA_NOT_EXIST != ret &&
+            TAIR_HAS_MORE_DATA != ret && TAIR_RETURN_SUCCESS != ret && retry++ < 3);
+        if (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret)
+        {
+          int tmp_ret = TFS_SUCCESS;
+          uint32_t value_size = values.size();
+          for (uint32_t index = 1; index < value_size; index += 2)
+          {
+            int64_t pos = 0;
+            family_infos.push_back(FamilyInfo());
+            std::vector<FamilyInfo>::iterator it = family_infos.end() - 1;
+            tmp_ret = TFS_SUCCESS != (*it).deserialize((values[index])->get_data(),
+                values[index]->get_size(), pos) ? EXIT_DESERIALIZE_ERROR : TFS_SUCCESS;
+            if (TFS_SUCCESS != tmp_ret)
+            {
+              ret = tmp_ret;
+              break;
+            }
+          }
+
+          // rest start key , set key offset to 1 to read from next key
+          if (TAIR_HAS_MORE_DATA == ret)
+          {
+            tair_start_key = data_entry(values[value_size-2]->get_data(),
+                values[value_size-2]->get_size());
+            key_offset = 1;
+          }
+
+          for (uint32_t index = 0; index < values.size(); index++)
+          {
+            tbsys::gDelete(values[index]);
+          }
+        }
+        else if (TAIR_RETURN_DATA_NOT_EXIST == ret)
+        {
+          ret = TFS_SUCCESS;
+          TBSYS_LOG(INFO, "there is no family information currently");
+        }
+        else
+        {
+          TBSYS_LOG(WARN, "scan family information error: %d, pkey: %s start_key: %s, end_key: %s", ret, pkey, start_key, end_key);
+        }
+      } while (TAIR_HAS_MORE_DATA == ret); // if has more data, continue get range
+
       return ret;
     };
   }/** end namespace nameserver **/
