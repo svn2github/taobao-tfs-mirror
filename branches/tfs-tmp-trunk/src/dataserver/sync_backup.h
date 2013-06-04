@@ -13,6 +13,8 @@
  *      - initial release
  *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
+ *   linqing <linqing.zyd@taobao.com>
+ *      - modify 2013-06-03
  *
  */
 #ifndef TFS_DATASERVER_SYNCBACKUP_H_
@@ -39,8 +41,8 @@ namespace tfs
       uint64_t block_id_;
       uint64_t file_id_;
       uint64_t old_file_id_;
-      int32_t retry_count_;
-      int32_t retry_time_;
+      uint32_t retry_time_;
+      int32_t reserve_[6];  // reserve 24 bytes for extention later
     };
 
     class SyncBase;
@@ -108,9 +110,26 @@ namespace tfs
       };
       typedef tbutil::Handle<DoSyncMirrorThreadHelper> DoSyncMirrorThreadHelperPtr;
 
+      class DoFailSyncMirrorThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit DoFailSyncMirrorThreadHelper(SyncBase& sync_base):
+              sync_base_(sync_base)
+          {
+            start();
+          }
+          virtual ~DoFailSyncMirrorThreadHelper(){}
+          void run();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(DoFailSyncMirrorThreadHelper);
+          SyncBase& sync_base_;
+      };
+      typedef tbutil::Handle<DoFailSyncMirrorThreadHelper> DoFailSyncMirrorThreadHelperPtr;
+
     private:
       SyncBase& sync_base_;
       DoSyncMirrorThreadHelperPtr  do_sync_mirror_thread_;
+      DoFailSyncMirrorThreadHelperPtr  do_fail_sync_mirror_thread_;
 
     };
 

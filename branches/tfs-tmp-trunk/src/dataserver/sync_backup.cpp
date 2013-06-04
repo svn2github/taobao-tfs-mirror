@@ -13,6 +13,8 @@
  *      - initial release
  *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
+ *   linqing <linqing.zyd@taobao.com>
+ *      - modify 2013-06-03
  *
  */
 #include <sys/types.h>
@@ -86,7 +88,7 @@ namespace tfs
     }
 
     TfsMirrorBackup::TfsMirrorBackup(SyncBase& sync_base, const char* src_addr, const char* dest_addr):
-        sync_base_(sync_base), do_sync_mirror_thread_(0)
+        sync_base_(sync_base), do_sync_mirror_thread_(0), do_fail_sync_mirror_thread_(0)
     {
       if (NULL != src_addr &&
           strlen(src_addr) > 0 &&
@@ -119,6 +121,8 @@ namespace tfs
         TBSYS_LOG(INFO, "TfsSyncMirror init. source ns addr: %s, destination ns addr: %s", src_addr_, dest_addr_);
         if (do_sync_mirror_thread_ == 0)
           do_sync_mirror_thread_ = new DoSyncMirrorThreadHelper(sync_base_);
+        if (do_fail_sync_mirror_thread_ == 0)
+          do_fail_sync_mirror_thread_ = new DoFailSyncMirrorThreadHelper(sync_base_);
       }
       return ret;
     }
@@ -129,43 +133,30 @@ namespace tfs
       {
         do_sync_mirror_thread_->join();
         do_sync_mirror_thread_ = 0;
+        do_fail_sync_mirror_thread_->join();
+        do_fail_sync_mirror_thread_ = 0;
       }
     }
 
     int TfsMirrorBackup::do_sync(const SyncData *sf)
     {
-      int ret = TFS_ERROR;
-      int retry = SYSPARAM_DATASERVER.max_sync_retry_count_;
-      for (int index = 0; (TFS_SUCCESS != ret) && (index < retry); index++)
+      int ret = TFS_SUCCESS;
+      if (OPLOG_INSERT == sf->cmd_)
       {
-        if (OPLOG_INSERT == sf->cmd_)
+        ret = copy_file(sf->block_id_, sf->file_id_);
+      }
+      else if(OPLOG_REMOVE == sf->cmd_)
+      {
+        ret = remove_file(sf->block_id_, sf->file_id_,
+            static_cast<TfsUnlinkType>(sf->old_file_id_));
+        if (file_not_exist(ret)) // if file not exist in dest, copy to dest
         {
           ret = copy_file(sf->block_id_, sf->file_id_);
         }
-        else if(OPLOG_REMOVE == sf->cmd_)
-        {
-          ret = remove_file(sf->block_id_, sf->file_id_,
-              static_cast<TfsUnlinkType>(sf->old_file_id_));
-          if (file_not_exist(ret)) // if file not exist in dest, copy to dest
-          {
-            ret = copy_file(sf->block_id_, sf->file_id_);
-          }
-        }
-        else
-        {
-          TBSYS_LOG(WARN, "invalid log type, ignore");
-        }
-
-        // the first retry will do immediately
-        if (index > 0)
-        {
-          int32_t wait_time = index * index;
-          if (wait_time > SYSPARAM_DATASERVER.max_sync_retry_interval_)
-          {
-            wait_time = SYSPARAM_DATASERVER.max_sync_retry_interval_;
-          }
-          sleep(wait_time);
-        }
+      }
+      else
+      {
+        TBSYS_LOG(WARN, "invalid log type, ignore");
       }
 
       return ret;
@@ -335,7 +326,7 @@ namespace tfs
               if (TFS_SUCCESS != ret)
               {
                   TBSYS_LOG(WARN, "read file %s fail. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, offset: %d, length %d <> %d, ret: %d",
-                        fsname.get_name(), block_id, file_id, offset, length,result,ret);
+                        fsname.get_name(), block_id, file_id, offset, length, result,ret);
               }
               else
               {
@@ -464,7 +455,7 @@ namespace tfs
       TfsFileStat file_stat;
       FSName fsname(block_id, file_id);
       int32_t fd = tfs_client_->open(block_id, file_id, ns_addr, T_READ);
-      int ret = fd > 0 ? TFS_SUCCESS : TFS_ERROR;
+      int ret = fd < 0 ? fd : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         tfs_client_->set_option_flag(fd, FORCE_STAT);
@@ -506,6 +497,11 @@ namespace tfs
     void TfsMirrorBackup::DoSyncMirrorThreadHelper::run()
     {
       sync_base_.run_sync_mirror();
+    }
+
+    void TfsMirrorBackup::DoFailSyncMirrorThreadHelper::run()
+    {
+      sync_base_.run_fail_sync_mirror();
     }
 
     bool TfsMirrorBackup::file_not_exist(int ret)

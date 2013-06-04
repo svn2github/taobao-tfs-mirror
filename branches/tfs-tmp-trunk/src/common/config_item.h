@@ -145,6 +145,7 @@ namespace tfs
 #define CONF_REPLICATE_THREADCOUNT                    "replicate_threadcount"
 #define CONF_MAX_SYNC_RETRY_COUNT                     "max_sync_retry_count"
 #define CONF_MAX_SYNC_RETRY_INTERVAL                  "max_sync_retry_interval"
+#define CONF_SYNC_FAIL_RETRY_INTERVAL                 "sync_fail_retry_interval"
 #define CONF_MAX_INIT_INDEX_ELEMENT_NUMS              "max_init_index_element_nums"
 #define CONF_MAX_EXTEND_INDEX_ELEMENT_NUMS            "max_extend_index_element_nums"
 
