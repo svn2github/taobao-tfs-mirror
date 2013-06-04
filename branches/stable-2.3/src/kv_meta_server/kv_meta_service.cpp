@@ -280,13 +280,13 @@ namespace tfs
           rsp_get_object_msg->set_still_have(still_have);
           object_info.dump();
 
-          req_get_object_msg->reply(rsp_get_object_msg);
+          ret = req_get_object_msg->reply(rsp_get_object_msg);
           stat_mgr_.update_entry(tfs_kv_meta_stat_, "get_object", 1);
         }
         else
         {
-          req_get_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),
-               ret, "get object fail");
+          ret = req_get_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),
+              ret, "get object fail");
         }
       }
       return ret;
