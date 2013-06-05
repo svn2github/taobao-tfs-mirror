@@ -19,7 +19,7 @@
 TEST_F(TFS_Init,01_put_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA1";
+  const char* bucket_name = "a1a1";
   const char* object_name = "BBB2";
   const char* local_file = RC_2M;
   int64_t req_length = 2*(1<<20);
@@ -53,7 +53,7 @@ TEST_F(TFS_Init,01_put_object)
 TEST_F(TFS_Init,02_put_object_2K)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2K;
   int64_t req_length = 2*(1<<10);
@@ -87,7 +87,7 @@ TEST_F(TFS_Init,02_put_object_2K)
 TEST_F(TFS_Init,03_put_object_5M)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
   int64_t req_length = 5*(1<<20);
@@ -121,7 +121,7 @@ TEST_F(TFS_Init,03_put_object_5M)
 TEST_F(TFS_Init,04_put_object_100M)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_100M;
   int64_t req_length = 100*(1<<20);
@@ -155,7 +155,7 @@ TEST_F(TFS_Init,04_put_object_100M)
 TEST_F(TFS_Init,05_put_object_without_bucket)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -206,7 +206,7 @@ TEST_F(TFS_Init,07_put_object_empty_bucket)
 TEST_F(TFS_Init,08_put_object_double)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -232,7 +232,7 @@ TEST_F(TFS_Init,08_put_object_double)
 TEST_F(TFS_Init,09_put_object_null_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = NULL;
   const char* local_file = RC_2M;
 
@@ -249,7 +249,7 @@ TEST_F(TFS_Init,09_put_object_null_object)
 TEST_F(TFS_Init,10_put_object_empty_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "";
   const char* local_file = RC_2M;
 
@@ -266,7 +266,7 @@ TEST_F(TFS_Init,10_put_object_empty_object)
 TEST_F(TFS_Init,11_put_object_null_local_file)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = NULL;
 
@@ -289,7 +289,7 @@ TEST_F(TFS_Init,11_put_object_null_local_file)
 TEST_F(TFS_Init,12_put_object_empty_local_file)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = "";
 
@@ -312,7 +312,7 @@ TEST_F(TFS_Init,12_put_object_empty_local_file)
 TEST_F(TFS_Init,13_put_object_non_exist_local_file)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = "ABC";
 
@@ -335,7 +335,7 @@ TEST_F(TFS_Init,13_put_object_non_exist_local_file)
 TEST_F(TFS_Init,14_put_object_0_local_file)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_00;
 

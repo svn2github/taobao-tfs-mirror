@@ -19,7 +19,7 @@
 TEST_F(TFS_Init,01_head_bucket)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
   tfs::common::BucketMetaInfo bucket_meta_info;
@@ -38,7 +38,7 @@ TEST_F(TFS_Init,01_head_bucket)
 TEST_F(TFS_Init,02_head_bucket_null)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
   tfs::common::BucketMetaInfo bucket_meta_info;
@@ -56,7 +56,7 @@ TEST_F(TFS_Init,02_head_bucket_null)
 TEST_F(TFS_Init,03_head_bucket_empty)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
   tfs::common::BucketMetaInfo bucket_meta_info;

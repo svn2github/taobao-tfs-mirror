@@ -19,7 +19,7 @@
 TEST_F(TFS_Init,01_pwrite_object_2M)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -68,7 +68,7 @@ TEST_F(TFS_Init,01_pwrite_object_2M)
 TEST_F(TFS_Init,02_pwrite_object_2M_offset_0)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -118,7 +118,7 @@ TEST_F(TFS_Init,02_pwrite_object_2M_offset_0)
 TEST_F(TFS_Init,03_pwrite_object_20M)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -167,7 +167,7 @@ TEST_F(TFS_Init,03_pwrite_object_20M)
 TEST_F(TFS_Init,04_pwrite_object_20M_offset_0)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -217,7 +217,7 @@ TEST_F(TFS_Init,04_pwrite_object_20M_offset_0)
 TEST_F(TFS_Init,05_pwrite_object_with_offset)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -267,7 +267,7 @@ TEST_F(TFS_Init,05_pwrite_object_with_offset)
 TEST_F(TFS_Init,06_pwrite_object_with_length)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -317,7 +317,7 @@ TEST_F(TFS_Init,06_pwrite_object_with_length)
 TEST_F(TFS_Init,07_pwrite_object_non_exist_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
@@ -360,7 +360,7 @@ TEST_F(TFS_Init,07_pwrite_object_non_exist_object)
 TEST_F(TFS_Init,08_pwrite_object_non_exist_object_offset_0)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
@@ -399,7 +399,7 @@ TEST_F(TFS_Init,08_pwrite_object_non_exist_object_offset_0)
 TEST_F(TFS_Init,09_pwrite_object_null_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = NULL;
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
@@ -426,7 +426,7 @@ TEST_F(TFS_Init,09_pwrite_object_null_object)
 TEST_F(TFS_Init,10_pwrite_object_empty_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
@@ -453,7 +453,7 @@ TEST_F(TFS_Init,10_pwrite_object_empty_object)
 TEST_F(TFS_Init,11_pwrite_object_non_exist_bucket)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
 
   tfs::common::UserInfo user_info;
@@ -519,7 +519,7 @@ TEST_F(TFS_Init,13_pwrite_object_empty_bucket)
 TEST_F(TFS_Init,14_pwrite_object_null_buf)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -552,7 +552,7 @@ TEST_F(TFS_Init,14_pwrite_object_null_buf)
 TEST_F(TFS_Init,15_pwrite_object_empty_buf)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -586,7 +586,7 @@ TEST_F(TFS_Init,15_pwrite_object_empty_buf)
 TEST_F(TFS_Init,16_pwrite_object_wrong_offset)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -621,7 +621,7 @@ TEST_F(TFS_Init,16_pwrite_object_wrong_offset)
 TEST_F(TFS_Init,17_pwrite_object_more_offset)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -671,7 +671,7 @@ TEST_F(TFS_Init,17_pwrite_object_more_offset)
 TEST_F(TFS_Init,18_pwrite_object_wrong_length)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -706,7 +706,7 @@ TEST_F(TFS_Init,18_pwrite_object_wrong_length)
 TEST_F(TFS_Init,19_pwrite_object_small_hollow_in_small_file)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2K;
 
@@ -714,7 +714,7 @@ TEST_F(TFS_Init,19_pwrite_object_small_hollow_in_small_file)
   user_info.owner_id_ = 1;
   int req_length = 2*(1<<10);
 
-  //const char*AAA="/home/yiming.czw/kv_meta_test/resouce/aaa";
+  //const char*a1a="/home/yiming.czw/kv_meta_test/resouce/aaa";
   int64_t offset = 2*(1<<10);
   int64_t length = 5*(1<<20);
   char*buf_rcv = new char[length];
@@ -722,21 +722,21 @@ TEST_F(TFS_Init,19_pwrite_object_small_hollow_in_small_file)
   tfs::common::CustomizeInfo customize_info;
 
   const char* pwrite_file_1 = RC_5M;
-  //const char* pwrite_file_1 = AAA;
+  //const char* pwrite_file_1 = a1a;
   int64_t object_offset_1 = 2*(1<<10);
   int64_t pwrite_length_1 = 1<<20;
   char*buf_1 = new char[pwrite_length_1];
   ReadData(pwrite_file_1,buf_1,pwrite_length_1,object_offset_1-req_length);
 
   const char* pwrite_file_2 = RC_5M;
-  //const char* pwrite_file_2 = AAA;
+  //const char* pwrite_file_2 = a1a;
   int64_t object_offset_2= (1<<20)+2*(1<<10);
   int64_t pwrite_length_2 = 3*(1<<20);
   char*buf_2 = new char[pwrite_length_2];
   ReadData(pwrite_file_2,buf_2,pwrite_length_2,object_offset_2-req_length);
 
   const char* pwrite_file_3 = RC_5M;
-  //const char* pwrite_file_3 = AAA;
+  //const char* pwrite_file_3 = a1a;
   int64_t object_offset_3 = 4*(1<<20)+2*(1<<10);
   int64_t pwrite_length_3 = 1<<20;
   char*buf_3 = new char[pwrite_length_3];
@@ -782,7 +782,7 @@ TEST_F(TFS_Init,19_pwrite_object_small_hollow_in_small_file)
 TEST_F(TFS_Init,20_pwrite_object_large_hollow_in_small_file)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2K;
 
@@ -854,7 +854,7 @@ TEST_F(TFS_Init,20_pwrite_object_large_hollow_in_small_file)
 TEST_F(TFS_Init,21_pwrite_object_small_hollow_in_large_file)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2K;
 
@@ -926,7 +926,7 @@ TEST_F(TFS_Init,21_pwrite_object_small_hollow_in_large_file)
 TEST_F(TFS_Init,22_pwrite_object_large_hollow_in_large_file)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2K;
 

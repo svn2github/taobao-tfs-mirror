@@ -19,7 +19,7 @@
 TEST_F(TFS_Init,01_put_bucket)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
 
@@ -61,7 +61,7 @@ TEST_F(TFS_Init,03_put_bucket_empty)
 TEST_F(TFS_Init,04_put_bucket_double)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
 

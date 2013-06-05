@@ -42,7 +42,7 @@ class TFS_Init : public testing::Test
     static void SetUpTestCase()
     {
       const char*kms_addr="10.232.36.210:7201";
-      //const char*kms_addr="10.232.35.41:5977";
+      // const char*kms_addr="10.232.35.40:5977";
       const char*rc_addr="10.232.36.202:9202";
       //const char*rc_addr="10.232.36.200:5755";
       //const char*app_key="tfsNginxA01";
@@ -78,14 +78,14 @@ class TFS_Init_Data : public testing::Test
 
     static void SetUpTestCase()
     {
-      //const char*kms_addr="10.232.35.41:5977";
+      //const char*kms_addr="10.232.35.40:5977";
       const char*kms_addr="10.232.36.210:7201";
       const char*rc_addr="10.232.36.202:9202";
       const char*app_key="Test_11";
 
       tfs::common::UserInfo user_info;
       user_info.owner_id_=1;
-      const char*bucket_name="AAA";
+      const char*bucket_name="a1a";
       const char* local_file=RC_2M;
 
       int Ret ;
@@ -136,7 +136,7 @@ class TFS_Init_Data : public testing::Test
 
     static void TearDownTestCase()
     {
-      const char*bucket_name="AAA";
+      const char*bucket_name="a1a";
       tfs::common::UserInfo user_info;
       user_info.owner_id_=1;
 

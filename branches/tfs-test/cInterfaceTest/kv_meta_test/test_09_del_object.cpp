@@ -19,7 +19,7 @@
 TEST_F(TFS_Init,01_del_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -44,7 +44,7 @@ TEST_F(TFS_Init,01_del_object)
 TEST_F(TFS_Init,02_del_object_2K)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2K;
 
@@ -69,7 +69,7 @@ TEST_F(TFS_Init,02_del_object_2K)
 TEST_F(TFS_Init,03_del_object_5M)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -94,7 +94,7 @@ TEST_F(TFS_Init,03_del_object_5M)
 TEST_F(TFS_Init,04_del_object_100M)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_100M;
 
@@ -119,7 +119,7 @@ TEST_F(TFS_Init,04_del_object_100M)
 TEST_F(TFS_Init,05_del_object_non_exist_bucket)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
 
   tfs::common::UserInfo user_info;
@@ -158,7 +158,7 @@ TEST_F(TFS_Init,07_del_object_empty_bucket)
 TEST_F(TFS_Init,08_del_object_non_exsit_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
 
   tfs::common::UserInfo user_info;
@@ -177,7 +177,7 @@ TEST_F(TFS_Init,08_del_object_non_exsit_object)
 TEST_F(TFS_Init,09_del_object_null_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = NULL;
 
   tfs::common::UserInfo user_info;
@@ -196,7 +196,7 @@ TEST_F(TFS_Init,09_del_object_null_object)
 TEST_F(TFS_Init,10_del_object_empty_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "";
 
   tfs::common::UserInfo user_info;
@@ -215,7 +215,7 @@ TEST_F(TFS_Init,10_del_object_empty_object)
 TEST_F(TFS_Init,11_del_object_double_del)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 

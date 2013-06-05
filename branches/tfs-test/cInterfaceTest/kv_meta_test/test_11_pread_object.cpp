@@ -19,7 +19,7 @@
 TEST_F(TFS_Init,01_pread_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -60,7 +60,7 @@ TEST_F(TFS_Init,01_pread_object)
 TEST_F(TFS_Init,02_pread_object_2K)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2K;
 
@@ -98,7 +98,7 @@ TEST_F(TFS_Init,02_pread_object_2K)
 TEST_F(TFS_Init,03_pread_object_5M)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_5M;
 
@@ -136,7 +136,7 @@ TEST_F(TFS_Init,03_pread_object_5M)
 TEST_F(TFS_Init,04_pread_object_100M)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_100M;
 
@@ -174,7 +174,7 @@ TEST_F(TFS_Init,04_pread_object_100M)
 TEST_F(TFS_Init,05_pread_object_with_offset)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -206,7 +206,7 @@ TEST_F(TFS_Init,05_pread_object_with_offset)
 TEST_F(TFS_Init,06_pread_object_with_length)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -239,7 +239,7 @@ TEST_F(TFS_Init,06_pread_object_with_length)
 TEST_F(TFS_Init,07_pread_object_non_exist_bucket)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
 
 
@@ -297,7 +297,7 @@ TEST_F(TFS_Init,09_pread_object_empty_bucket)
 TEST_F(TFS_Init,10_pread_object_non_exist)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
 
   int64_t offset = 0;
@@ -322,7 +322,7 @@ TEST_F(TFS_Init,10_pread_object_non_exist)
 TEST_F(TFS_Init,11_pread_object_null_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = NULL;
 
 
@@ -348,7 +348,7 @@ TEST_F(TFS_Init,11_pread_object_null_object)
 TEST_F(TFS_Init,12_pread_object_empty_object)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "";
 
 
@@ -374,7 +374,7 @@ TEST_F(TFS_Init,12_pread_object_empty_object)
 TEST_F(TFS_Init,13_pread_object_wrong_offset)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -406,7 +406,7 @@ TEST_F(TFS_Init,13_pread_object_wrong_offset)
 TEST_F(TFS_Init,14_pread_object_more_offset)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -438,7 +438,7 @@ TEST_F(TFS_Init,14_pread_object_more_offset)
 TEST_F(TFS_Init,15_pread_object_wrong_length)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -470,7 +470,7 @@ TEST_F(TFS_Init,15_pread_object_wrong_length)
 TEST_F(TFS_Init,16_pread_object_more_length)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -503,7 +503,7 @@ TEST_F(TFS_Init,16_pread_object_more_length)
 TEST_F(TFS_Init,17_pread_object_more_length_and_offset)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -535,7 +535,7 @@ TEST_F(TFS_Init,17_pread_object_more_length_and_offset)
 TEST_F(TFS_Init,18_pread_object_zore_length_and_offset)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2M;
 
@@ -567,7 +567,7 @@ TEST_F(TFS_Init,18_pread_object_zore_length_and_offset)
 TEST_F(TFS_Init,19_pread_object_with_hollow)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2K;
 
@@ -624,7 +624,7 @@ TEST_F(TFS_Init,19_pread_object_with_hollow)
 TEST_F(TFS_Init,20_pread_object_with_hollow_offset_in_hollow)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2K;
 
@@ -703,7 +703,7 @@ TEST_F(TFS_Init,20_pread_object_with_hollow_offset_in_hollow)
 TEST_F(TFS_Init,21_pread_object_with_hollow_sample)
 {
   int Ret ;
-  const char* bucket_name = "AAA";
+  const char* bucket_name = "a1a";
   const char* object_name = "BBB";
   const char* local_file = RC_2K;
 
