@@ -79,8 +79,11 @@ namespace tfs
       TBSYS_LOG(DEBUG,
           "write data. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, lease: %d",
           write_info.block_id_, write_info.file_id_, write_info.file_number_, lease_id);
+
+      UNUSED(version);
       //if the first fragment, check version
-      int ret = TFS_SUCCESS;
+      // int ret = TFS_SUCCESS;
+      /*
       if (0 == write_info.offset_)
       {
         BlockInfoV2 none;  // not used in old version
@@ -91,6 +94,7 @@ namespace tfs
           return ret;
         }
       }
+      */
 
       // write data to DataFile first
       data_file_mutex_.lock();

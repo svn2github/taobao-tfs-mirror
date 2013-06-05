@@ -16,6 +16,7 @@
 #ifndef TFS_DATASERVER_DATAFILE_H_
 #define TFS_DATASERVER_DATAFILE_H_
 
+#include "Mutex.h"
 #include "common/internal.h"
 
 #ifdef TFS_GTEST
@@ -39,8 +40,8 @@ namespace tfs
         int pwrite(const common::FileInfoInDiskExt& info, const char* data, const int32_t nbytes, const int32_t offset);
         int pread(char*& data, int32_t& nbytes, const int32_t offset);
 
-        inline int32_t length() const { return length_;}
-        inline uint32_t crc() const { return crc_;}
+        inline int32_t length() const { tbutil::Mutex::Lock Lock(mutex_); return length_;}
+        inline uint32_t crc() const { tbutil::Mutex::Lock Lock(mutex_); return crc_;}
 
         inline int32_t get_last_update() const
         {
@@ -68,6 +69,7 @@ namespace tfs
         }
 
       private:
+        tbutil::Mutex mutex_;
         atomic_t ref_count_;    // reference count, only for compatible
         int32_t last_update_;   // last update time, only for compatible
         int32_t fd_;            // temp file descriptor
