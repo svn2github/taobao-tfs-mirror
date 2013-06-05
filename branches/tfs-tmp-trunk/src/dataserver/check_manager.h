@@ -59,11 +59,14 @@ namespace tfs
             std::vector<common::FileInfoV2>& finfos, SyncBase& peer);
         int process_more_files(SyncBase& peer,
             const uint64_t block_id, const std::vector<common::FileInfoV2>& more);
+        int process_diff_files(SyncBase& peer,
+            const uint64_t block_id, const std::vector<common::FileInfoV2>& diff);
         int process_less_files(SyncBase& peer,
             const uint64_t block_id, const std::vector<common::FileInfoV2>& less);
         void compare_block_fileinfos(const std::vector<common::FileInfoV2>& left,
             const std::vector<common::FileInfoV2>& right,
             std::vector<common::FileInfoV2>& more,
+            std::vector<common::FileInfoV2>& diff,
             std::vector<common::FileInfoV2>& less);
 
      private:

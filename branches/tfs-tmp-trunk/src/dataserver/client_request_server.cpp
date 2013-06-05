@@ -1091,7 +1091,7 @@ namespace tfs
           std::vector<SyncBase*>& sync_mirror = service_.get_sync_mirror();
           for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)
           {
-            ret = sync_mirror[i]->write_sync_log(OPLOG_REMOVE, attach_block_id, file_id);
+            ret = sync_mirror[i]->write_sync_log(OPLOG_REMOVE, attach_block_id, file_id, action);
             if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(WARN, "write sync log fail. blockid: %"PRI64_PREFIX"u, "

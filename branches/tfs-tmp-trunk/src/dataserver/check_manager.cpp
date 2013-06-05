@@ -230,9 +230,14 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         vector<FileInfoV2> more;
+        vector<FileInfoV2> diff;
         vector<FileInfoV2> less;
-        compare_block_fileinfos(finfos, peer_index.finfos_, more, less);
+        compare_block_fileinfos(finfos, peer_index.finfos_, more, diff, less);
         ret = process_more_files(peer, block_id, more);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = process_diff_files(peer, block_id, diff);
+        }
         if (TFS_SUCCESS == ret)
         {
           ret = process_less_files(peer, block_id, less);
@@ -249,10 +254,23 @@ namespace tfs
       vector<FileInfoV2>::const_iterator iter = more.begin();
       for ( ; (TFS_SUCCESS == ret) && (iter != more.end()); iter++)
       {
-        if (0 == iter->status_)  // TODO: process deleted or hiden files
+        // ignore deleted and invalid files
+        if (!(iter->status_ & FI_DELETED) && !(iter->status_ & FI_INVALID))
         {
           ret = peer.write_sync_log(OPLOG_INSERT, block_id, iter->id_);
         }
+      }
+      return ret;
+    }
+
+    int CheckManager::process_diff_files(SyncBase& peer,
+        const uint64_t block_id, const vector<FileInfoV2>& diff)
+    {
+      int ret = TFS_SUCCESS;
+      vector<FileInfoV2>::const_iterator iter = diff.begin();
+      for ( ; (TFS_SUCCESS == ret) && (iter != diff.end()); iter++)
+      {
+        ret = peer.write_sync_log(OPLOG_REMOVE, block_id, iter->id_);
       }
       return ret;
     }
@@ -276,7 +294,8 @@ namespace tfs
     };
 
     void CheckManager::compare_block_fileinfos(const vector<FileInfoV2>& left,
-        const vector<FileInfoV2>& right, vector<FileInfoV2>& more, vector<FileInfoV2>& less)
+        const vector<FileInfoV2>& right, vector<FileInfoV2>& more,
+        vector<FileInfoV2>& diff, vector<FileInfoV2>& less)
     {
       // transform right vector to set for fast search
       set<FileInfoV2, FileInfoCompare> files;
@@ -296,7 +315,13 @@ namespace tfs
         }
         else
         {
-          // TODO: process file status diff
+          // file in different status
+          if ((iter->status_ != sit->status_) ||
+              (iter->size_ != sit->size_) ||
+              (iter->crc_ != sit->crc_))
+          {
+            diff.push_back(*iter);
+          }
           files.erase(sit);
         }
       }
