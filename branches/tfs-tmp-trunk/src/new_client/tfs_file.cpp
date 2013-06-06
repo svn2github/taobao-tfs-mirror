@@ -281,12 +281,13 @@ int64_t TfsFile::write_ex(const void* buf, const int64_t count, const int64_t of
       }
       else
       {
-        retry_count = ClientConfig::client_retry_count_;
-        do
-        {
-          ret = write_process();
-          finish_write_process(ret);
-        } while (ret != TFS_SUCCESS && ClientConfig::client_retry_flag_ && --retry_count);
+        UNUSED(retry_count);
+        // retry_count = ClientConfig::client_retry_count_;
+        // do
+        // {
+        ret = write_process();
+        finish_write_process(ret);
+        // } while (ret != TFS_SUCCESS && ClientConfig::client_retry_flag_ && --retry_count);
 
         if (ret != TFS_SUCCESS)
         {

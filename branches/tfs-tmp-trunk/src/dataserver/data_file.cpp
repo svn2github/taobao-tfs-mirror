@@ -47,6 +47,7 @@ namespace tfs
 
     int DataFile::pwrite(const FileInfoInDiskExt& info, const char *data, const int32_t nbytes, const int32_t offset)
     {
+      tbutil::Mutex::Lock Lock(mutex_);
       int32_t ret = (NULL != data && nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -110,6 +111,7 @@ namespace tfs
 
     int DataFile::pread(char*& data, int32_t& nbytes, const int32_t offset)
     {
+      tbutil::Mutex::Lock Lock(mutex_);
       data = NULL;
       int32_t ret = (nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
