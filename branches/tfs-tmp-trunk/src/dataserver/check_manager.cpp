@@ -79,7 +79,9 @@ namespace tfs
           TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u", block_id);
           if (TFS_SUCCESS == check_block(block_id))
           {
+            mutex_.lock();
             success_blocks_.push_back(block_id);
+            mutex_.unlock();
           }
         }
 
@@ -172,13 +174,15 @@ namespace tfs
       ReportCheckBlockMessage rep_msg;
       rep_msg.set_seqno(seqno_);
       VUINT64& blocks = rep_msg.get_blocks();
+      mutex_.lock();
       VUINT64::iterator iter = success_blocks_.begin();
       for ( ; iter != success_blocks_.end(); iter++)
       {
         blocks.push_back(*iter);
       }
+      mutex_.unlock();
 
-      TBSYS_LOG(DEBUG, "report check status to %s", tbsys::CNetUtil::addrToString(check_server_id_).c_str());
+      TBSYS_LOG(INFO, "report check status to %s", tbsys::CNetUtil::addrToString(check_server_id_).c_str());
 
       NewClient* client = NewClientManager::get_instance().create_client();
       return post_msg_to_server(check_server_id_, client, &rep_msg, Task::ds_task_callback);
@@ -186,6 +190,7 @@ namespace tfs
 
     int CheckManager::check_block(const uint64_t block_id)
     {
+      TIMER_START();
       IndexHeaderV2 main_header;
       vector<FileInfoV2> main_finfos;
       int ret = get_block_manager().traverse(main_header, main_finfos, block_id, block_id);
@@ -198,6 +203,9 @@ namespace tfs
           ret = check_single_block(block_id, main_finfos, **iter);
         }
       }
+      TIMER_END();
+      TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u %s, file count: %zd, cost: %"PRI64_PREFIX"d",
+          block_id, (TFS_SUCCESS == ret) ? "success" : "fail", main_finfos.size(), TIMER_DURATION());
 
       return ret;
     }
@@ -225,6 +233,11 @@ namespace tfs
       {
         // block exist in peer cluster, we think the peer file list is empty
         ret = TFS_SUCCESS;
+      }
+      else
+      {
+        TBSYS_LOG(WARN, "read block %"PRI64_PREFIX"u index fail, peer ns: %s, ret: %d",
+            block_id, tbsys::CNetUtil::addrToString(peer_ns).c_str(), ret);
       }
 
       if (TFS_SUCCESS == ret)
@@ -315,10 +328,12 @@ namespace tfs
         }
         else
         {
-          // file in different status
-          if ((iter->status_ != sit->status_) ||
-              (iter->size_ != sit->size_) ||
-              (iter->crc_ != sit->crc_))
+          // size or crc diff, sync file data to peer
+          if ((iter->size_ != sit->size_) || (iter->crc_ != sit->crc_))
+          {
+            more.push_back(*iter);
+          }
+          else if (iter->status_ != sit->status_) // file in diff status, do remove
           {
             diff.push_back(*iter);
           }

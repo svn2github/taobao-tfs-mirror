@@ -249,7 +249,8 @@ namespace tfs
       {
         ret = (*iter)->get_block_info(block_info);
         if ((TFS_SUCCESS == ret) && !IS_VERFIFY_BLOCK(block_info.block_id_)
-            && range.include(block_info.last_update_time_))
+            && range.include(block_info.last_update_time_)
+            && block_info.file_count_ > 0)
         {
           blocks.push_back(block_info.block_id_);
         }
