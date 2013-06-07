@@ -647,7 +647,7 @@ namespace tfs
           //op value
 
           int32_t i;
-          int32_t first = 0;
+          int32_t scan_offset = 0;
           bool go_on = true;
           short scan_type = CMD_RANGE_VALUE_ONLY;//only scan value
           vector<KvValue*> kv_value_keys;
@@ -659,7 +659,7 @@ namespace tfs
           {
             int32_t result_size = 0;
             int64_t last_offset = 0;
-            ret = kv_engine_helper_->scan_keys(start_key, end_key, SCAN_LIMIT, first,
+            ret = kv_engine_helper_->scan_keys(start_key, end_key, SCAN_LIMIT, scan_offset,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
             if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
             {//metainfo exist but data not exist
@@ -691,9 +691,9 @@ namespace tfs
             }
             TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
 
-            if(result_size == SCAN_LIMIT && valid_result < MESS_LIMIT)
+            if ((result_size == SCAN_LIMIT && valid_result < MESS_LIMIT) || EXIT_KV_RETURN_HAS_MORE_DATA == ret)
             {
-              first = 1;
+              scan_offset = 1;
               ret = serialize_key(bucket_name, file_name, last_offset,
                                   &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
             }
@@ -771,7 +771,7 @@ namespace tfs
 
       int32_t limit = MESS_LIMIT;
       int32_t i;
-      int32_t first = 0;
+      int32_t scan_offset = 0;
       short scan_type = CMD_RANGE_ALL;
       vector<KvValue*> kv_value_keys;
       vector<KvValue*> kv_value_values;
@@ -781,7 +781,7 @@ namespace tfs
       int32_t result_size = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit + 1, first,
+        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit + 1, scan_offset,
           &kv_value_keys, &kv_value_values, &result_size, scan_type);
         TBSYS_LOG(DEBUG, "del object, bucekt_name: %s, object_name: %s, "
             "scan ret: %d, limit: %d, result size: %d",
@@ -795,8 +795,13 @@ namespace tfs
           result_size -= 1;
           *still_have = true;
         }
-        if(TFS_SUCCESS == ret)
+        if(TFS_SUCCESS == ret || EXIT_KV_RETURN_HAS_MORE_DATA == ret)
         {
+          if (EXIT_KV_RETURN_HAS_MORE_DATA == ret)
+          {
+            ret = TFS_SUCCESS;
+            *still_have = true;
+          }
           for(i = 0; i < result_size; ++i)
           {
             //key get
@@ -1074,7 +1079,7 @@ namespace tfs
           ret = get_range(pkey, temp_start_key, 0, limit_size + extra,
               &kv_value_keys, &kv_value_values, &res_size);
           // error
-          if (TFS_SUCCESS != ret)
+          if (TFS_SUCCESS != ret && EXIT_KV_RETURN_HAS_MORE_DATA != ret)
           {
             TBSYS_LOG(ERROR, "get range fail, ret: %d", ret);
             break;
@@ -1086,7 +1091,7 @@ namespace tfs
           {
             break;
           }
-          else if (res_size < limit_size + extra)
+          else if (res_size < limit_size + extra && EXIT_KV_RETURN_HAS_MORE_DATA != ret)
           {
             loop = false;
           }
