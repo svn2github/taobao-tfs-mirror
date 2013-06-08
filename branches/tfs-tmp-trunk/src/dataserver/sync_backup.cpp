@@ -120,9 +120,9 @@ namespace tfs
           true : false;
         TBSYS_LOG(INFO, "TfsSyncMirror init. source ns addr: %s, destination ns addr: %s", src_addr_, dest_addr_);
         if (do_sync_mirror_thread_ == 0)
-          do_sync_mirror_thread_ = new DoSyncMirrorThreadHelper(sync_base_);
+          do_sync_mirror_thread_ = new (std::nothrow)DoSyncMirrorThreadHelper(sync_base_);
         if (do_fail_sync_mirror_thread_ == 0)
-          do_fail_sync_mirror_thread_ = new DoFailSyncMirrorThreadHelper(sync_base_);
+          do_fail_sync_mirror_thread_ = new (std::nothrow)DoFailSyncMirrorThreadHelper(sync_base_);
       }
       return ret;
     }
@@ -133,6 +133,9 @@ namespace tfs
       {
         do_sync_mirror_thread_->join();
         do_sync_mirror_thread_ = 0;
+      }
+      if (0 != do_fail_sync_mirror_thread_)
+      {
         do_fail_sync_mirror_thread_->join();
         do_fail_sync_mirror_thread_ = 0;
       }

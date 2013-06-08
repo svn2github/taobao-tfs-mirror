@@ -30,9 +30,6 @@ namespace tfs
       id_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
       last_update_time_(0), startup_time_(0), current_time_(0)
     {
-#ifdef TFS_NS_DEBUG
-      total_elect_num_ = 0;
-#endif
       memset(&total_tp_, 0, sizeof(total_tp_));
       memset(&last_tp_, 0, sizeof(last_tp_));
     }

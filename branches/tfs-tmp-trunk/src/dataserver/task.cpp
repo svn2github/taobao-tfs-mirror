@@ -314,7 +314,7 @@ namespace tfs
       LogicBlock::Iterator* iter = new (std::nothrow) LogicBlock::Iterator(tmpsrc);
       assert(NULL != iter);
 
-      char* buffer = new (std::nothrow) char[MAX_COMPACT_READ_SIZE];
+      char* buffer = new (std::nothrow) char[MAX_SINGLE_FILE_SIZE];
       assert(NULL != buffer);
 
       int32_t new_offset = 0;  // offset to write new file
@@ -327,7 +327,7 @@ namespace tfs
       {
         ret = src->get_index_header(old_header);
       }
-      while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == iter->next(finfo)))
+      while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == (ret = iter->next(finfo))))
       {
         if (finfo->status_ & FI_DELETED)
         {
@@ -337,7 +337,7 @@ namespace tfs
         TBSYS_LOG(DEBUG, "COMPACT: %lu, file_id: %lu, offset: %d, crc: %u, next: %d",
             src->id(), finfo->id_, finfo->offset_, finfo->crc_, finfo->next_);
 
-        if (inner_offset + finfo->size_ > MAX_COMPACT_READ_SIZE)
+        if (inner_offset + finfo->size_ > MAX_SINGLE_FILE_SIZE)
         {
           if (inner_offset > 0)  // buffer not empty, flush first
           {
@@ -389,6 +389,9 @@ namespace tfs
         }
       }
 
+      if (EXIT_BLOCK_NO_DATA == ret)
+        ret = TFS_SUCCESS;
+
       // still has data in buffer, flush it
       if (TFS_SUCCESS == ret && inner_offset > 0)
       {
@@ -430,11 +433,12 @@ namespace tfs
       int offset = 0;
       int length = 0;
       int ret = TFS_SUCCESS;
-      char *buffer = new (std::nothrow) char[MAX_COMPACT_READ_SIZE];
+      const int32_t MAX_READ_SIZE = 2 * 1024 * 1024;
+      char *buffer = new (std::nothrow) char[MAX_READ_SIZE];
       assert(NULL != buffer);
       while ((TFS_SUCCESS == ret) && (offset < finfo.size_))
       {
-        length = std::min(finfo.size_ - offset, MAX_COMPACT_READ_SIZE);
+        length = std::min(finfo.size_ - offset, MAX_READ_SIZE);
         ret = src->pread(buffer, length, finfo.offset_ + offset);
         ret = (ret >= 0) ? TFS_SUCCESS : ret;
         if (TFS_SUCCESS == ret)
@@ -453,7 +457,7 @@ namespace tfs
 
     bool CompactTask::is_big_file(const int32_t size) const
     {
-      return size > LogicBlock::Iterator::MAX_DATA_SIZE;
+      return size > MAX_SINGLE_FILE_SIZE;
     }
 
     ReplicateTask::ReplicateTask(DataService& service, const int64_t seqno,

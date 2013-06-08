@@ -46,7 +46,7 @@ void dump_index_header(const IndexHeaderV2& header)
 
 void dump_file_info_header()
 {
-  printf("%-6s%-20s%-10s%-10s%-5s%-10s%-12s%-20s%-20s\n",
+  printf("%-6s%-28s%-10s%-10s%-5s%-10s%-12s%-20s%-20s\n",
       "SLOT",
       "ID",
       "OFFSET",
@@ -67,7 +67,7 @@ struct InnerIndex
 
 void dump_file_info(const FileInfoV2& file_info, const int slot)
 {
-  printf("%-6d%-20"PRI64_PREFIX"u%-10d%-10d%-5d%-10d%-12u%-20s%-20s\n",
+  printf("%-6d%-28"PRI64_PREFIX"u%-10d%-10d%-5d%-10d%-12u%-20s%-20s\n",
       slot,
       file_info.id_,
       file_info.offset_,

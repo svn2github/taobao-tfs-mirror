@@ -136,7 +136,6 @@ namespace tfs
             int next(common::FileInfoV2*& info);
             const common::FileInfoV2& get_file_info() const;
             const char* get_data(const int32_t offset, const int32_t size) const;
-            static const int32_t MAX_DATA_SIZE = 4 * 1024 * 1024;
           private:
             std::vector<common::FileInfoV2> finfos_;
             LogicBlock* logic_block_;
@@ -144,7 +143,7 @@ namespace tfs
             int32_t used_offset_;//磁盘文件大小(这里的offset是最后一个文件的起始位置)
             int32_t mem_valid_size_;
             int32_t last_read_disk_offset_;
-            char data_[MAX_DATA_SIZE];//从磁盘上读出的数据缓存
+            char data_[common::MAX_SINGLE_FILE_SIZE];//从磁盘上读出的数据缓存
         };
     };
 

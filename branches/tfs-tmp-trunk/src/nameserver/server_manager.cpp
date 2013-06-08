@@ -728,6 +728,30 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int ServerManager::timeout(const int64_t now)
+    {
+      const int32_t MAX_QUERY_COUNT = 32;
+      ServerCollect* server = NULL;
+      ServerCollect* servers[MAX_QUERY_COUNT];
+      ArrayHelper<ServerCollect*> helper(MAX_QUERY_COUNT, servers);
+      tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+      SERVER_TABLE_ITER iter = current_reporting_block_servers_.begin();
+      for (; iter != current_reporting_block_servers_.end() && helper.get_array_index() <MAX_QUERY_COUNT; ++iter)
+      {
+        server = (*iter);
+        assert(NULL != server);
+        if (server->is_report_block_expired(now))
+          helper.push_back(server);
+      }
+      for (int64_t index = 0; index < helper.get_array_index(); ++index)
+      {
+        server = *helper.at(index);
+        current_reporting_block_servers_.erase(server);
+      }
+
+      return helper.get_array_index();
+    }
+
     int ServerManager::choose_replciate_random_choose_server_base_lock_(ServerCollect*& result,
         const common::ArrayHelper<uint64_t>& except, const std::set<uint32_t>& lans) const
     {

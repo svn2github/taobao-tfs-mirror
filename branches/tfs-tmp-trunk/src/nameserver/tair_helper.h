@@ -16,7 +16,6 @@
 #ifndef TFS_NAMESERVER_DATABASE_HELPER_H_
 #define TFS_NAMESERVER_DATABASE_HELPER_H_
 
-#include <mysql.h>
 #include <Timer.h>
 #include <Mutex.h>
 #include "ns_define.h"

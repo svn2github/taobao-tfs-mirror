@@ -870,7 +870,7 @@ namespace tfs
           assert(info->offset_ <= used_offset_);
           last_read_disk_offset_ = info->offset_;
           int32_t disk_data_length = used_offset_ - info->offset_;
-          const int32_t max_data_size = MAX_DATA_SIZE;
+          const int32_t max_data_size = MAX_SINGLE_FILE_SIZE;
           const int32_t MAX_READ_SIZE = std::min(max_data_size, disk_data_length);
           mem_valid_size_ = MAX_READ_SIZE;
           ret = logic_block_->pread(data_, mem_valid_size_, info->offset_);

@@ -161,7 +161,7 @@ namespace tfs
       }
 
     template <typename T>
-      typename TfsVector<T>::iterator TfsVector<T>::find(const_value_type value)
+      typename TfsVector<T>::iterator TfsVector<T>::find(const_value_type value) const
       {
         iterator pos = std::find(start_, finish_, value);
         return pos;

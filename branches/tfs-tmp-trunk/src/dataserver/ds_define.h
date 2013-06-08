@@ -30,7 +30,6 @@ namespace tfs
     static const std::string MAINBLOCK_DIR_PREFIX = "/";
     static const std::string INDEX_DIR_PREFIX = "/index/";
     static const mode_t DIR_MODE = 0755;
-    static const int32_t MAX_COMPACT_READ_SIZE = 8388608;
     static const char DEV_TAG[common::MAX_DEV_TAG_LEN] = "TAOBAO";
     static const int32_t COPY_BETWEEN_CLUSTER = -1;
     static const int32_t BLOCK_VERSION_MAGIC_NUM = 2;

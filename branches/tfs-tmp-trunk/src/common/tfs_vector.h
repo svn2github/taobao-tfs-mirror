@@ -80,7 +80,7 @@ namespace tfs
 
           value_type erase(const_value_type value);
 
-          iterator find(const_value_type value);
+          iterator find(const_value_type value) const;
 
           bool empty() const { return  0 == size(); }
 

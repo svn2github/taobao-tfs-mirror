@@ -121,6 +121,9 @@ namespace tfs
 
       int calc_single_process_max_network_bandwidth(int32_t& max_mr_network_bandwith,
             int32_t& max_rw_network_bandwith, const common::DataServerStatInfo& info) const;
+
+      int timeout(const int64_t now);
+
       private:
       DISALLOW_COPY_AND_ASSIGN(ServerManager);
       ServerCollect* get_(const uint64_t server) const;

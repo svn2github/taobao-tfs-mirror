@@ -35,10 +35,6 @@ namespace tfs
         virtual ~ServerStat();
 
         int deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset);
-
-#ifdef TFS_NS_DEBUG
-        int64_t total_elect_num_;
-#endif
         uint64_t id_;
         int64_t use_capacity_;
         int64_t total_capacity_;

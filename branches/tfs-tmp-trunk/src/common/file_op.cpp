@@ -20,6 +20,7 @@
 #include "error_msg.h"
 #include <Memory.hpp>
 
+#include "lease.h"
 namespace tfs
 {
   namespace common
