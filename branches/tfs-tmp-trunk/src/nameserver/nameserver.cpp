@@ -541,14 +541,18 @@ namespace tfs
         BatchSetBlockInfoMessage* reply = new (std::nothrow)BatchSetBlockInfoMessage();
         assert(NULL != reply);
         ret = layout_manager_.get_client_request_server().batch_open(helper, mode, block_count, meta_helper);
+        TBSYS_LOG(DEBUG, "batch open return %"PRI64_PREFIX"d blocks meta.", meta_helper.get_array_index());
         if (TFS_SUCCESS == ret)
         {
           for (int64_t index = 0; index < meta_helper.get_array_index(); ++index)
           {
             BlockMeta* meta = meta_helper.at(index);
             BlockInfoSeg seg;
-            seg.lease_id_ = meta->lease_id_;
-            seg.version_  = meta->version_;
+            if (mode & (T_WRITE | T_CREATE | T_UNLINK))
+            {
+              seg.lease_id_ = meta->lease_id_;
+              seg.version_  = meta->version_;
+            }
             for (int32_t i = 0; i < meta->size_; ++i)
               seg.ds_.push_back(meta->ds_[i]);
             reply->get_infos().insert(std::make_pair(meta->block_id_, seg));
