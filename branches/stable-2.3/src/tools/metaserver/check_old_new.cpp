@@ -108,7 +108,7 @@ int check(NameMetaClientImpl &client ,string path)
         }
         else if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "get_obejct |%s|%s| unknow error",bucket_name,new_path.c_str() + 1);
+          TBSYS_LOG(ERROR, "[DIFF_INFO] bucket: %s object: %s ",bucket_name, new_path.c_str() + 1);
           break;
         }
         if (offset == 0)
