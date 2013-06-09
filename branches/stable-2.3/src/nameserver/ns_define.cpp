@@ -80,9 +80,9 @@ namespace tfs
       return instance_;
     }
 
-    void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function ) const
+    void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function, const pthread_t thid) const
     {
-      TBSYS_LOGGER.logMessage(level, file, line, function,
+      TBSYS_LOGGER.logMessage(level, file, line, function, thid,
           "use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, total_block_count: %"PRI64_PREFIX"d, total_load: %d, max_load: %d, max_block_count: %d, alive_server_count: %d",
           use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_);
     }
@@ -245,13 +245,14 @@ namespace tfs
       return true;
     }
 
-    void NsRuntimeGlobalInformation::dump(int32_t level, const char* format)
+    void NsRuntimeGlobalInformation::dump(int32_t level, const pthread_t thid, const char* format)
     {
       TBSYS_LOGGER.logMessage(
           level,
           __FILE__,
           __LINE__,
           __FUNCTION__,
+          thid,
           "%s owner ip port: %s, other side ip port: %s, switch time: %s, vip: %s\
 ,destroy flag: %s, owner role: %s, other side role: %s, owner status: %s, other side status: %s\
 , last owner check time: %s, last push owner check packet time: %s",

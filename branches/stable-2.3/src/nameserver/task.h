@@ -59,7 +59,7 @@ namespace tfs
       virtual int handle() = 0;
       virtual int handle_complete(common::BasePacket* msg, bool& all_complete_flag) = 0;
       virtual void dump(tbnet::DataBuffer& stream);
-      virtual void dump(const int32_t level, const char* const format = NULL);
+      virtual void dump(const int32_t level, pthread_t thid, const char* const format = NULL);
       virtual void runTimerTask();
       bool operator < (const Task& task) const;
       bool need_add_server_to_map() const;
@@ -114,7 +114,7 @@ namespace tfs
       virtual int handle_complete(common::BasePacket* msg, bool& all_complete_flag);
       virtual void runTimerTask();
       virtual void dump(tbnet::DataBuffer& stream);
-      virtual void dump(const int32_t level, const char* const format = NULL);
+      virtual void dump(const int32_t level, pthread_t thid, const char* const format = NULL);
       private:
       void check_complete(CompactComplete& value, common::VUINT64& ds_list);
       int do_complete(CompactComplete& value, common::VUINT64& ds_list);

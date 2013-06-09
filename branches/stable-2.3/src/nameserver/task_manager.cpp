@@ -173,7 +173,7 @@ namespace tfs
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(DEBUG, "add task ret: %d, block: %u", ret, id);
-            task->dump(TBSYS_LOG_LEVEL_WARN, "add task failed, rollback,");
+            task->dump(TBSYS_LOG_LEVEL_WARN, pthread_self(), "add task failed, rollback,");
             block_to_tasks_.erase(res.first);
             manager_.get_gc_manager().add(task, now);
           }
@@ -226,7 +226,7 @@ namespace tfs
       PENDING_TASK_CONST_ITER iter = pending_queue_.begin();
       for (; iter != pending_queue_.end(); ++iter)
       {
-        (*iter)->dump(level);
+        (*iter)->dump(level, pthread_self());
       }
     }
 
@@ -386,7 +386,7 @@ namespace tfs
         {
           if (TFS_SUCCESS != task->handle())
           {
-            task->dump(TBSYS_LOG_LEVEL_WARN, "task handle failed");
+            task->dump(TBSYS_LOG_LEVEL_WARN, pthread_self(), "task handle failed");
             remove(task);
           }
         }
@@ -430,7 +430,7 @@ namespace tfs
           ret = TFS_SUCCESS == task->handle_complete(msg, all_complete_flag);
           if (master)
           {
-            task->dump(TBSYS_LOG_LEVEL_INFO, "handle message complete, show result");
+            task->dump(TBSYS_LOG_LEVEL_INFO, pthread_self(), "handle message complete, show result");
             if (all_complete_flag)
               remove(task);
             /*Task* complete[SYSPARAM_NAMESERVER.max_replication_];

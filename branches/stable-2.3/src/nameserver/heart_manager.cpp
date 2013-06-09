@@ -437,7 +437,7 @@ namespace tfs
             if (conflict)
             {
               ret = EXIT_ROLE_ERROR;
-              ngi.dump(TBSYS_LOG_LEVEL_ERROR, "nameserver role coflict, own role: master, other role: master, must be exit");
+              ngi.dump(TBSYS_LOG_LEVEL_ERROR, pthread_self(), "nameserver role coflict, own role: master, other role: master, must be exit");
               NameServer* service = dynamic_cast<NameServer*>(BaseMain::instance());
               if (NULL != service)
               {
@@ -490,7 +490,7 @@ namespace tfs
           }
         }
         NewClientManager::get_instance().destroy_client(client);
-        ngi.dump(TBSYS_LOG_LEVEL_DEBUG);
+        ngi.dump(TBSYS_LOG_LEVEL_DEBUG, pthread_self());
       }
       return ret;
     }

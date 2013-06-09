@@ -2099,8 +2099,7 @@ int cmd_head_object(const VSTRING& param)
 
   if (TFS_SUCCESS == ret)
   {
-    printf("create_time: %"PRI64_PREFIX"d, modify_time: %"PRI64_PREFIX"d, total_size: %"PRI64_PREFIX"d, owner_id: %"PRI64_PREFIX"d \n",
-        object_info.meta_info_.create_time_, object_info.meta_info_.modify_time_, object_info.meta_info_.big_file_size_, object_info.meta_info_.owner_id_);
+    object_info.dump();
   }
   ToolUtil::print_info(ret, "head bucket: %s, object: %s", bucket_name, object_name);
 

@@ -74,7 +74,7 @@ namespace tfs
 
     void Task::runTimerTask()
     {
-      dump(TBSYS_LOG_LEVEL_INFO, "task expired");
+      dump(TBSYS_LOG_LEVEL_INFO, pthread_self(), "task expired");
       status_ = PLAN_STATUS_TIMEOUT;
     }
 
@@ -94,7 +94,7 @@ namespace tfs
       }
     }
 
-    void Task::dump(int32_t level, const char* const format)
+    void Task::dump(int32_t level, pthread_t thid, const char* const format)
     {
       if (level <= TBSYS_LOGGER._level)
       {
@@ -105,7 +105,7 @@ namespace tfs
           runer += tbsys::CNetUtil::addrToString((*iter)->id());
           runer += "/";
         }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d,runer: %s",
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, thid, "%s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d,runer: %s",
             format == NULL ? "" : format, seqno_,
             type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
             ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
@@ -161,7 +161,7 @@ namespace tfs
       }
     }
 
-    void CompactTask::dump(const int32_t level, const char* const format)
+    void CompactTask::dump(const int32_t level, pthread_t thid, const char* const format)
     {
       if (level <= TBSYS_LOGGER._level)
       {
@@ -188,7 +188,7 @@ namespace tfs
               status += "/";
           }
         }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer: %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, thid, "pointer: %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
             this,
             format == NULL ? "" : format,
             seqno_,
