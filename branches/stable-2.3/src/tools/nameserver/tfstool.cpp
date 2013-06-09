@@ -382,15 +382,15 @@ void init()
         "check if file exist", 1, 4, cmd_is_file_exist_meta);
     break;
   case META_KV:
-    g_cmd_map["put_bucket"] = CmdNode("put_bucket bucket_name owner_id", "create a bucket", 2, 2, cmd_put_bucket);
-    g_cmd_map["get_bucket"] = CmdNode("get_bucket bucket_name [ prefix start_key delimiter limit ]", "get a bucket(list object)", 1, 5, cmd_get_bucket);
-    g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name", "delete a bucket", 1, 1, cmd_del_bucket);
-    g_cmd_map["head_bucket"] = CmdNode("head_bucket bucket_name", "stat a bucket", 1, 1, cmd_head_bucket);
+    g_cmd_map["put_bucket"] = CmdNode("put_bucket bucket_name owner_id [app_key]", "create a bucket", 2, 3, cmd_put_bucket);
+    g_cmd_map["get_bucket"] = CmdNode("get_bucket bucket_name [ prefix start_key delimiter limit app_key]", "get a bucket(list object)", 1, 6, cmd_get_bucket);
+    g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name [app_key]", "delete a bucket", 1, 2, cmd_del_bucket);
+    g_cmd_map["head_bucket"] = CmdNode("head_bucket bucket_name [app_key]", "stat a bucket", 1, 2, cmd_head_bucket);
 
-    g_cmd_map["put_object"] = CmdNode("put_object bucket_name object_name local_file owner_id", "put a object", 4, 4, cmd_put_object);
-    g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name local_file", "get a object", 3, 3, cmd_get_object);
-    g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name", "delete a object", 2, 2, cmd_del_object);
-    g_cmd_map["head_object"] = CmdNode("head_object bucket_name object_name", "stat a object", 2, 2, cmd_head_object);
+    g_cmd_map["put_object"] = CmdNode("put_object bucket_name object_name local_file owner_id [app_key]", "put a object", 4, 5, cmd_put_object);
+    g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name local_file [app_key]", "get a object", 3, 4, cmd_get_object);
+    g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name [app_key]", "delete a object", 2, 3, cmd_del_object);
+    g_cmd_map["head_object"] = CmdNode("head_object bucket_name object_name [app_key]", "stat a object", 2, 3, cmd_head_object);
     break;
   }
 }
@@ -1849,12 +1849,24 @@ int cmd_put_bucket(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   int64_t owner_id = strtoll(param[1].c_str(), NULL, 10);
+  char appkey[257];
+  int size = param.size();
+  if (size > 2)
+  {
+    strncpy(appkey, param[2].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
+
   UserInfo user_info;
   user_info.owner_id_ = owner_id;
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
-  int ret = impl.initialize(rc_addr, app_key, app_ip);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
@@ -1883,6 +1895,8 @@ int cmd_get_bucket(const VSTRING& param)
 
   bucket_name = param[0].c_str();
 
+  char appkey[257];
+
   if (size > 1)
   {
     prefix = canonical_param(param[1]);
@@ -1903,6 +1917,16 @@ int cmd_get_bucket(const VSTRING& param)
     limit = atoi(param[4].c_str());
   }
 
+  if (size > 5)
+  {
+    strncpy(appkey, param[5].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
+
   vector<ObjectMetaInfo> v_object_meta_info;
   VSTRING v_object_name;
   set<string> s_common_prefix;
@@ -1911,7 +1935,7 @@ int cmd_get_bucket(const VSTRING& param)
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
-  ret = impl.initialize(rc_addr, app_key, app_ip);
+  ret = impl.initialize(rc_addr, appkey, app_ip);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
@@ -1950,10 +1974,21 @@ int cmd_del_bucket(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   UserInfo user_info;
+  char appkey[257];
+  int size = param.size();
+  if (size > 1)
+  {
+    strncpy(appkey, param[1].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
-  int ret = impl.initialize(rc_addr, app_key, app_ip);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
 
   if (TFS_SUCCESS != ret)
   {
@@ -1972,13 +2007,24 @@ int cmd_del_bucket(const VSTRING& param)
 int cmd_head_bucket(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
+  char appkey[257];
+  int size = param.size();
+  if (size > 1)
+  {
+    strncpy(appkey, param[1].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
 
   BucketMetaInfo bucket_meta_info;
   UserInfo user_info;
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
-  int ret = impl.initialize(rc_addr, app_key, app_ip);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
 
   if (TFS_SUCCESS != ret)
   {
@@ -2007,12 +2053,24 @@ int cmd_put_object(const VSTRING& param)
   const char* object_name = param[1].c_str();
   const char* local_file = expand_path(const_cast<string&>(param[2]));
   int64_t owner_id = strtoll(param[3].c_str(), NULL, 10);
+  char appkey[257];
+  int size = param.size();
+  if (size > 4)
+  {
+    strncpy(appkey, param[4].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
+
   UserInfo user_info;
   user_info.owner_id_ = owner_id;
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
-  int ret = impl.initialize(rc_addr, app_key, app_ip);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
 
   if (TFS_SUCCESS != ret)
   {
@@ -2032,12 +2090,23 @@ int cmd_get_object(const VSTRING& param)
   const char* bucket_name = param[0].c_str();
   const char* object_name = param[1].c_str();
   const char* local_file = expand_path(const_cast<string&>(param[2]));
+  char appkey[257];
+  int size = param.size();
+  if (size > 3)
+  {
+    strncpy(appkey, param[3].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
 
   UserInfo user_info;
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
-  int ret = impl.initialize(rc_addr, app_key, app_ip);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
 
   if (TFS_SUCCESS != ret)
   {
@@ -2057,11 +2126,23 @@ int cmd_del_object(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   const char* object_name = param[1].c_str();
+  char appkey[257];
+  int size = param.size();
+  if (size > 2)
+  {
+    strncpy(appkey, param[2].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
+
   UserInfo user_info;
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
-  int ret = impl.initialize(rc_addr, app_key, app_ip);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
 
   if (TFS_SUCCESS != ret)
   {
@@ -2080,13 +2161,24 @@ int cmd_head_object(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   const char* object_name = param[1].c_str();
+  char appkey[257];
+  int size = param.size();
+  if (size > 2)
+  {
+    strncpy(appkey, param[2].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
 
   ObjectInfo object_info;
   UserInfo user_info;
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
-  int ret = impl.initialize(rc_addr, app_key, app_ip);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
 
   if (TFS_SUCCESS != ret)
   {
