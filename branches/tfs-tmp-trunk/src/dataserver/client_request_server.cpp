@@ -1209,6 +1209,7 @@ namespace tfs
 
     int ClientRequestServer::read_index(message::ReadIndexMessageV2* message)
     {
+      TIMER_START();
       uint64_t block_id = message->get_block_id();
       uint64_t attach_block_id = message->get_attach_block_id();
 
@@ -1233,12 +1234,18 @@ namespace tfs
           ret = message->reply(resp_msg);
         }
       }
+      TIMER_END();
+
+      TBSYS_LOG(DEBUG, "read index fail. blockid: %"PRI64_PREFIX"u, "
+          "attach_block_id: %"PRI64_PREFIX"u, cost: %"PRI64_PREFIX"d, ret: %d",
+          block_id, attach_block_id, TIMER_DURATION(), ret);
 
       return ret;
     }
 
     int ClientRequestServer::write_index(message::WriteIndexMessageV2* message)
     {
+      TIMER_START();
       uint64_t block_id = message->get_block_id();
       uint64_t attach_block_id = message->get_attach_block_id();
       IndexDataV2& index_data = message->get_index_data();
@@ -1276,6 +1283,11 @@ namespace tfs
           }
         }
       }
+      TIMER_END();
+
+      TBSYS_LOG(DEBUG, "write index fail. blockid: %"PRI64_PREFIX"u, "
+          "attach_block_id: %"PRI64_PREFIX"u, tmp: %d, cost: %"PRI64_PREFIX"d, ret: %d",
+          block_id, attach_block_id, tmp, TIMER_DURATION(), ret);
 
       return ret;
     }

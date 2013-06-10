@@ -55,7 +55,7 @@ namespace tfs
         int new_block(const uint64_t logic_block_id, const bool tmp = false, const int64_t family_id = common::INVALID_FAMILY_ID, const int8_t index_num = 0, const int32_t expire_time = DEFAULT_BLOCK_EXPIRE_TIME);
         int del_block(const uint64_t logic_block_id, const bool tmp = false);
         BaseLogicBlock* get(const uint64_t logic_block_id, const bool tmp = false) const;
-        int get_blocks_in_time_range(const common::TimeRange& range, std::vector<uint64_t>& blocks) const;
+        int get_blocks_in_time_range(const common::TimeRange& range, std::vector<uint64_t>& blocks, const int32_t group_count, const int32_t group_seq) const;
         int get_all_block_ids(std::vector<uint64_t>& blocks) const;
         int get_all_block_info(std::set<common::BlockInfo>& blocks) const;
         int get_all_block_info(std::vector<common::BlockInfoV2>& blocks) const;

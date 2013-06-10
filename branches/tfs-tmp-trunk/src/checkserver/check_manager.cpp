@@ -40,12 +40,17 @@ namespace tfs
     static const float   SERVER_SLOT_EXPAND_RATION_DEFAULT = 0.1;
     static const int32_t MAX_BLOCK_CHUNK_NUMS = 1024;
     static const int32_t DEFAULT_NETWORK_RETRY_TIMES = 2;
+    static const int32_t CHECK_TIME_PER_BLOCK = 50; // ms
+    static const int32_t CHECK_TIME_RESERVE = 30;   // seconds
 
     CheckManager::CheckManager(BaseServerHelper* server_helper):
       all_servers_(SERVER_SLOT_INIT_SIZE,
           SERVER_SLOT_EXPAND_DEFAULT,
           SERVER_SLOT_EXPAND_RATION_DEFAULT),
       server_helper_(server_helper),
+      group_count_(1),
+      group_seq_(0),
+      max_dispatch_num_(0),
       seqno_(0),
       stop_(false)
     {
@@ -83,9 +88,15 @@ namespace tfs
     {
       seqno_ = 0;
       all_servers_.clear();
+      // keep block, but clear server list
       for (int index = 0; index < MAX_BLOCK_CHUNK_NUMS; index++)
       {
-        all_blocks_[index].clear();
+        tbutil::Mutex::Lock lock(bmutex_[index]);
+        BLOCK_MAP_ITER iter = all_blocks_[index].begin();
+        for ( ; iter != all_blocks_[index].end(); iter++)
+        {
+          (*iter)->reset();
+        }
       }
     }
 
@@ -211,6 +222,15 @@ namespace tfs
       return assigned ? server_id : INVALID_SERVER_ID;
     }
 
+    int CheckManager::get_group_info()
+    {
+      uint64_t ns_id = SYSPARAM_CHECKSERVER.ns_id_;
+      int ret = retry_get_group_info(ns_id, group_count_, group_seq_);
+      TBSYS_LOG(INFO, "ns: %s, group count: %d, group seq: %d, ret: %d",
+          tbsys::CNetUtil::addrToString(ns_id).c_str(), group_count_, group_seq_, ret);
+      return ret;
+    }
+
     int CheckManager::fetch_servers()
     {
       VUINT64 servers;
@@ -218,6 +238,7 @@ namespace tfs
       int ret = retry_get_all_ds(ns_id, servers);
       if (TFS_SUCCESS == ret)
       {
+        TBSYS_LOG(INFO, "total %zd dataservers",  servers.size());
         VUINT64::iterator iter = servers.begin();
         for ( ; iter != servers.end(); iter++)
         {
@@ -308,6 +329,20 @@ namespace tfs
 
       gDeleteA(workers);
 
+      // used to estimate wait time
+      max_dispatch_num_ = 0;
+      SERVER_MAP_ITER iter = all_servers_.begin();
+      for ( ; iter != all_servers_.end(); iter++)
+      {
+        int64_t current = (*iter)->get_blocks().size();
+        TBSYS_LOG(INFO, "server %s dispatched %"PRI64_PREFIX"d blocks",
+            tbsys::CNetUtil::addrToString((*iter)->get_server_id()).c_str(), current);
+        if (current > max_dispatch_num_)
+        {
+          max_dispatch_num_ = current;
+        }
+      }
+
       return TFS_SUCCESS;
 
     }
@@ -315,9 +350,12 @@ namespace tfs
     int CheckManager::update_task(message::ReportCheckBlockMessage* message)
     {
       int64_t seqno = message->get_seqno();
+      int64_t server_id = message->get_server_id();
+      VUINT64& blocks = message->get_blocks();
+      TBSYS_LOG(INFO, "server %s report seqno %"PRI64_PREFIX"u finish %zd blocks",
+            tbsys::CNetUtil::addrToString(server_id).c_str(), seqno, blocks.size());
       if ((0 != seqno_) && (seqno == seqno_))
       {
-        VUINT64& blocks = message->get_blocks();
         VUINT64::iterator iter = blocks.begin();
         for ( ; iter < blocks.end(); iter++)
         {
@@ -328,9 +366,9 @@ namespace tfs
           if (bit != all_blocks_[slot].end())  // remove succussfully checked block
           {
             // gDelete(*bit);
-            delete(*bit);
             all_blocks_[slot].erase(bit);
-            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u check done.", *iter);
+            delete(*bit);
+            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u check done", *iter);
           }
         }
       }
@@ -342,20 +380,28 @@ namespace tfs
     {
       while (!stop_)
       {
-        clear();  // clear block & server info in last check
+        clear();  // clear servers & keep failed block
         int64_t now = Func::curr_time();
         seqno_ = now;
         TimeRange range;
-        range.end_ = (now / 1000 / 1000) - 5 * 60; // ignore recent 5 minutes modify
-        range.start_ = range.end_ - SYSPARAM_CHECKSERVER.check_interval_ * 3600;
+        range.end_ = (now / 1000 / 1000) - 60; // ignore recent 1 minutes modify
+        range.start_ = range.end_ - SYSPARAM_CHECKSERVER.check_interval_;
         check_blocks(range);
-        sleep(SYSPARAM_CHECKSERVER.check_interval_ * 3600);
+        for (int index = 0; index < SYSPARAM_CHECKSERVER.check_interval_ && !stop_; index++)
+        {
+          sleep(1);  // check if stoped every seconds, may receive stop signal
+        }
       }
     }
 
     int CheckManager::check_blocks(const TimeRange& range)
     {
-      int ret = fetch_servers();
+      int ret = get_group_info();
+      if (TFS_SUCCESS == ret)
+      {
+        ret = fetch_servers();
+      }
+
       if (TFS_SUCCESS == ret)
       {
         int retry_times = SYSPARAM_CHECKSERVER.check_retry_turns_;
@@ -377,7 +423,10 @@ namespace tfs
           }
 
           // wait dataserver check finish
-          sleep(SYSPARAM_CHECKSERVER.turn_interval_);
+          int32_t wait_time = max_dispatch_num_ * CHECK_TIME_PER_BLOCK / 1000 + CHECK_TIME_RESERVE;
+          TBSYS_LOG(INFO, "seqno %"PRI64_PREFIX"u sleep %d seconds to wait dataserver response",
+              seqno_, wait_time);
+          sleep(wait_time);
 
           // if all blocks have been checked
           if (0 == get_block_size())
@@ -398,8 +447,9 @@ namespace tfs
           }
         }
 
-        TBSYS_LOG(INFO, "CHECK RESULT: seqno %"PRI64_PREFIX"d start at %s check %s",
-            seqno_, Func::time_to_str(seqno_/1000000, 0).c_str(), (0 == fail_count) ? "success" : "fail");
+        TBSYS_LOG(INFO, "CHECK RESULT: "
+            "seqno %"PRI64_PREFIX"d start at %s finish. fail count: %"PRI64_PREFIX"d",
+            seqno_, Func::time_to_str(seqno_/1000000, 0).c_str(), fail_count);
       }
 
       return ret;
@@ -408,6 +458,21 @@ namespace tfs
     void CheckManager::stop_check()
     {
       stop_ = true;
+    }
+
+    int CheckManager::retry_get_group_info(const uint64_t ns, int32_t& group_count, int32_t& group_seq)
+    {
+      int ret = TFS_SUCCESS;
+      int retry_times = DEFAULT_NETWORK_RETRY_TIMES;
+      for (int index = 0; index < retry_times; index++)
+      {
+        ret = server_helper_->get_group_info(ns, group_count, group_seq);
+        if (TFS_SUCCESS == ret)
+        {
+          break;
+        }
+      }
+      return ret;
     }
 
     int CheckManager::retry_get_all_ds(const uint64_t ns_id, common::VUINT64& servers)
@@ -448,7 +513,8 @@ namespace tfs
       int retry_times = DEFAULT_NETWORK_RETRY_TIMES;
       for (int index = 0; index < retry_times; index++)
       {
-        ret = server_helper_->fetch_check_blocks(ds_id, range, blocks);
+        ret = server_helper_->fetch_check_blocks(ds_id,
+            range, group_count_, group_seq_, blocks);
         if (TFS_SUCCESS == ret)
         {
           break;
@@ -530,8 +596,6 @@ namespace tfs
               {
                 (*bit)->add_server(*iter);
               }
-
-              // TODO: if server not exist in list, add it to list???
 
               // re-assign block
               uint64_t server_id = check_manager_.assign_block(**bit);

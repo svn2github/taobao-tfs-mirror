@@ -15,6 +15,7 @@
 
 #include "common/client_manager.h"
 #include "common/status_message.h"
+#include "message/server_status_message.h"
 #include "message/block_info_message.h"
 #include "message/block_info_message_v2.h"
 #include "message/file_info_message.h"
@@ -231,6 +232,61 @@ namespace tfs
       {
         ret = EXIT_PARAMETER_ERROR;
         TBSYS_LOG(WARN, "invalid parameter");
+      }
+
+      return ret;
+    }
+
+    int ToolUtil::list_file_v2(const uint64_t server_id, const uint64_t block_id,
+        const uint64_t attach_block_id, std::vector<FileInfoV2>& finfos)
+    {
+      int ret = TFS_SUCCESS;
+      if ((INVALID_SERVER_ID == server_id) ||
+          (INVALID_BLOCK_ID == block_id) ||
+          (INVALID_BLOCK_ID == attach_block_id))
+      {
+        ret = EXIT_PARAMETER_ERROR;
+        TBSYS_LOG(WARN, "invalid parameter");
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        NewClient* client = NewClientManager::get_instance().create_client();
+        if (NULL != client)
+        {
+          GetServerStatusMessage req_gss_msg;
+          req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
+          req_gss_msg.set_return_row(block_id);
+          req_gss_msg.set_from_row(attach_block_id);
+
+          tbnet::Packet* ret_msg = NULL;
+          ret = send_msg_to_server(server_id, client, &req_gss_msg, ret_msg);
+          if (TFS_SUCCESS == ret)
+          {
+            if (BLOCK_FILE_INFO_MESSAGE_V2 == ret_msg->getPCode())
+            {
+              BlockFileInfoMessageV2* bmsg = dynamic_cast<BlockFileInfoMessageV2*>(ret_msg);
+              finfos = *(bmsg->get_fileinfo_list());
+            }
+            else if (STATUS_MESSAGE == ret_msg->getPCode())
+            {
+              StatusMessage* smsg = dynamic_cast<StatusMessage*> (ret_msg);
+              TBSYS_LOG(WARN, "list file. error: %s, ret: %d",
+                  smsg->get_error(), smsg->get_status());
+              ret = smsg->get_status();
+            }
+            else
+            {
+              TBSYS_LOG(WARN, "unknown message type, pcode: %d", ret_msg->getPCode());
+              ret = EXIT_UNKNOWN_MSGTYPE;
+            }
+          }
+        }
+        else
+        {
+          TBSYS_LOG(WARN, "create new client error");
+          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        }
       }
 
       return ret;

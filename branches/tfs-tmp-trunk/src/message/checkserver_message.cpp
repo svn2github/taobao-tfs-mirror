@@ -28,6 +28,14 @@ namespace tfs
       {
         output.pour(range_.length());
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(group_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(group_seq_);
+      }
       return ret;
     }
 
@@ -39,12 +47,20 @@ namespace tfs
       {
         input.drain(range_.length());
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&group_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&group_seq_);
+      }
       return ret;
     }
 
     int64_t CheckBlockRequestMessage::length() const
     {
-      return range_.length();
+      return range_.length() + 2 * INT_SIZE;
     }
 
     int CheckBlockResponseMessage::serialize(common::Stream& output) const

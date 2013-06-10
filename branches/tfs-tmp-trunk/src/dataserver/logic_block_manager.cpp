@@ -239,7 +239,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int LogicBlockManager::get_blocks_in_time_range(const TimeRange& range, std::vector<uint64_t>& blocks) const
+    int LogicBlockManager::get_blocks_in_time_range(const TimeRange& range, std::vector<uint64_t>& blocks, const int32_t group_count, const int32_t group_seq) const
     {
       blocks.clear();
       int32_t ret = TFS_SUCCESS;
@@ -249,6 +249,7 @@ namespace tfs
       {
         ret = (*iter)->get_block_info(block_info);
         if ((TFS_SUCCESS == ret) && !IS_VERFIFY_BLOCK(block_info.block_id_)
+            && static_cast<int>(block_info.block_id_ % group_count) == group_seq
             && range.include(block_info.last_update_time_)
             && block_info.file_count_ > 0)
         {

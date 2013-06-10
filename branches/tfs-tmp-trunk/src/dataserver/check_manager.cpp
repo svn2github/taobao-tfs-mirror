@@ -125,9 +125,12 @@ namespace tfs
     int CheckManager::get_check_blocks(CheckBlockRequestMessage* message)
     {
       const TimeRange& range = message->get_time_range();
+      const int32_t group_count = message->get_group_count();
+      const int32_t group_seq = message->get_group_seq();
       CheckBlockResponseMessage* reply = new (std::nothrow) CheckBlockResponseMessage();
       assert(NULL != reply);
-      int ret = get_block_manager().get_blocks_in_time_range(range, reply->get_blocks());
+      int ret = get_block_manager().get_blocks_in_time_range(range,
+          reply->get_blocks(), group_count, group_seq);
       if (TFS_SUCCESS == ret)
       {
         message->reply(reply);
@@ -171,8 +174,10 @@ namespace tfs
 
     int CheckManager::report_check_blocks()
     {
+      DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
       ReportCheckBlockMessage rep_msg;
       rep_msg.set_seqno(seqno_);
+      rep_msg.set_server_id(info.information_.id_);
       VUINT64& blocks = rep_msg.get_blocks();
       mutex_.lock();
       VUINT64::iterator iter = success_blocks_.begin();
@@ -246,6 +251,10 @@ namespace tfs
         vector<FileInfoV2> diff;
         vector<FileInfoV2> less;
         compare_block_fileinfos(finfos, peer_index.finfos_, more, diff, less);
+        TBSYS_LOG(INFO, "compare %"PRI64_PREFIX"u with %s more %zd diff %zd less %zd",
+            block_id, tbsys::CNetUtil::addrToString(peer_ns).c_str(),
+            more.size(), diff.size(), less.size());
+
         ret = process_more_files(peer, block_id, more);
         if (TFS_SUCCESS == ret)
         {

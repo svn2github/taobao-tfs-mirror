@@ -192,8 +192,6 @@ namespace tfs
       public:
         CheckManager(BaseServerHelper* server_helper);
         ~CheckManager();
-        void clear();
-        void reset_servers();
         int64_t get_seqno() const;
         const BLOCK_MAP* get_blocks() const;
         const SERVER_MAP* get_servers() const;
@@ -206,12 +204,16 @@ namespace tfs
         void add_block(const uint64_t block_id, const uint64_t server_id);
         void add_server(const uint64_t server_id, const uint64_t blocks);
         uint64_t assign_block(const BlockObject& block);
+        int retry_get_group_info(const uint64_t ns, int32_t& group_count, int32_t& group_seq);
         int retry_get_all_ds(const uint64_t ns_id, common::VUINT64& servers);
         int retry_get_block_replicas(const uint64_t ns_id, const uint64_t block_id, common::VUINT64& servers);
         int retry_fetch_check_blocks(const uint64_t ds_id, const common::TimeRange& range, common::VUINT64& blocks);
         int retry_dispatch_check_blocks(const uint64_t ds_id, const int64_t seqno, const common::VUINT64& blocks);
 
       private:
+        void clear();
+        void reset_servers();
+        int get_group_info();
         int fetch_servers();
         int fetch_blocks(const common::TimeRange& time_range);
         int assign_blocks();
@@ -311,6 +313,9 @@ namespace tfs
         SERVER_MAP all_servers_;
         tbutil::Mutex *bmutex_;
         BaseServerHelper* server_helper_;
+        int32_t group_count_;
+        int32_t group_seq_;
+        int64_t max_dispatch_num_;
         int64_t seqno_;  // every check has an unique seqno, use timestamp(us)
         bool stop_;      // check thread stop flag
     };

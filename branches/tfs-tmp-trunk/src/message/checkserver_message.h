@@ -27,7 +27,8 @@ namespace tfs
     class CheckBlockRequestMessage: public common::BasePacket
     {
       public:
-        CheckBlockRequestMessage()
+        CheckBlockRequestMessage():
+          group_count_(1), group_seq_(0)
         {
           _packetHeader._pcode = common::REQ_CHECK_BLOCK_MESSAGE;
         }
@@ -49,8 +50,30 @@ namespace tfs
           return range_;
         }
 
+        void set_group_count(const int32_t group_count)
+        {
+          group_count_ = group_count;
+        }
+
+        int32_t get_group_count() const
+        {
+          return group_count_;
+        }
+
+        void set_group_seq(const int32_t group_seq)
+        {
+          group_seq_ = group_seq;
+        }
+
+        int32_t get_group_seq() const
+        {
+          return group_seq_;
+        }
+
       private:
         common::TimeRange range_;
+        int32_t group_count_;
+        int32_t group_seq_;
     };
 
     class CheckBlockResponseMessage: public common::BasePacket

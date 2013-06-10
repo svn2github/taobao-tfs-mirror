@@ -178,7 +178,7 @@ namespace tfs
       return ret;
     }
 
-    int DefaultServerHelper::fetch_check_blocks(const uint64_t ds_id, const TimeRange& range, common::VUINT64& blocks)
+    int DefaultServerHelper::fetch_check_blocks(const uint64_t ds_id, const TimeRange& range, const int32_t group_count, const int32_t group_seq, common::VUINT64& blocks)
     {
       int ret = (INVALID_SERVER_ID != ds_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -189,6 +189,8 @@ namespace tfs
         {
           CheckBlockRequestMessage msg;
           msg.set_time_range(range);
+          msg.set_group_count(group_count);
+          msg.set_group_seq(group_seq);
           ret = send_msg_to_server(ds_id, client, &msg, resp_msg);
           if (TFS_SUCCESS == ret)
           {
@@ -242,6 +244,73 @@ namespace tfs
             {
               StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
               ret = smsg->get_status();
+            }
+            else
+            {
+              ret = EXIT_UNKNOWN_MSGTYPE;
+            }
+          }
+          NewClientManager::get_instance().destroy_client(client);
+        }
+        else
+        {
+          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        }
+      }
+      return ret;
+    }
+
+    int DefaultServerHelper::get_group_info(const uint64_t ns_id, int32_t& group_count, int32_t& group_seq)
+    {
+      int ret = (INVALID_SERVER_ID != ns_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        string value;
+        ret = get_param_from_ns(ns_id, 22, value);
+        if (TFS_SUCCESS == ret)
+        {
+          group_count = atoi(value.c_str());
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        string value;
+        ret = get_param_from_ns(ns_id, 23, value);
+        if (TFS_SUCCESS == ret)
+        {
+          group_seq = atoi(value.c_str());
+        }
+      }
+
+      return ret;
+    }
+
+    int DefaultServerHelper::get_param_from_ns(const uint64_t ns_id,
+        const int32_t param_index, string& param_value)
+    {
+      int ret = (INVALID_SERVER_ID != ns_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        tbnet::Packet* resp_msg = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        if (NULL != client)
+        {
+          ClientCmdMessage msg;
+          msg.set_cmd(CLIENT_CMD_SET_PARAM);
+          msg.set_value3(param_index);
+          msg.set_value4(0);
+          ret = send_msg_to_server(ns_id, client, &msg, resp_msg);
+          if (TFS_SUCCESS == ret)
+          {
+            if (STATUS_MESSAGE == resp_msg->getPCode())
+            {
+              StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
+              ret = smsg->get_status();
+              if (STATUS_MESSAGE_OK == ret)
+              {
+                param_value = smsg->get_error();
+              }
             }
             else
             {
