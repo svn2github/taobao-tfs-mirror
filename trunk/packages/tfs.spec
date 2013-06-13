@@ -11,14 +11,14 @@ Prefix:%{_prefix}
 Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
-#BuildRequires: t-csrd-tbnet-devel = 1.0.6
-#BuildRequires: MySQL-devel-community = 5.1.48 
-#BuildRequires: tair-devel = 2.3.1.7
-#BuildRequires: boost-devel >= 1.3 
-#BuildRequires: readline-devel
-#BuildRequires: ncurses-devel
-#BuildRequires: google-perftools >= 1.3 
-#BuildRequires: jemalloc-devel >= 2.2
+BuildRequires: t-csrd-tbnet-devel = 1.0.6
+BuildRequires: MySQL-devel-community = 5.1.48 
+BuildRequires: tair-devel = 2.3.1.7
+BuildRequires: boost-devel >= 1.3 
+BuildRequires: readline-devel
+BuildRequires: ncurses-devel
+BuildRequires: google-perftools >= 1.3 
+BuildRequires: jemalloc-devel >= 2.2
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}
