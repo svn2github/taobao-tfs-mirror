@@ -57,7 +57,14 @@ int SyncFileBase::cmp_file_info(const string& file_name, SyncAction& sync_action
   ret = get_file_info(src_ns_addr_, file_name, source_buf);
   if (ret != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "get source file info (%s) failed, ret: %d", file_name.c_str(), ret);
+    if (EXIT_META_NOT_FOUND_ERROR == ret)
+    {
+      TBSYS_LOG(INFO, "source file %s doesn't exist, will not sync", file_name.c_str());
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "get source file info (%s) failed, ret: %d", file_name.c_str(), ret);
+    }
   }
   else
   {

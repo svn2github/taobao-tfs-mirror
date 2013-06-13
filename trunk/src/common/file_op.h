@@ -26,11 +26,11 @@ namespace tfs
 {
   namespace common
   {
-    class FileOperation
+    class FileOps
     {
       public:
-      FileOperation(const std::string& file_name, const int open_flags = O_RDWR | O_LARGEFILE);
-        virtual ~FileOperation();
+        FileOps(const std::string& file_name, const int open_flags = O_RDWR | O_LARGEFILE);
+        virtual ~FileOps();
 
         int open_file();
         void close_file();
@@ -60,8 +60,8 @@ namespace tfs
         }
 
       protected:
-        FileOperation();
-        DISALLOW_COPY_AND_ASSIGN(FileOperation);
+        FileOps();
+        DISALLOW_COPY_AND_ASSIGN(FileOps);
 
         int check_file();
 

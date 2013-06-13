@@ -141,6 +141,7 @@ namespace tfs
 
     int RcService::destroy_service()
     {
+      is_inited_ = false;
       int ret = TFS_SUCCESS;
       is_inited_ = false;
       if (NULL != session_manager_)

@@ -3,7 +3,7 @@ AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbnet \
 						  $(TAIR_META_CPPFLAGS)
 
-AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid $(TAIR_META_LDFLAGS)
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid $(TAIR_META_LDFLAGS) -lsnappy
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\

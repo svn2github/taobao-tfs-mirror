@@ -249,7 +249,7 @@ namespace tfs
         ZoomData zoom_;
     };
 
-    class ReadRawIndexMessage: public common::BasePacket
+    /*class ReadRawIndexMessage: public common::BasePacket
     {
       public:
         ReadRawIndexMessage();
@@ -299,7 +299,7 @@ namespace tfs
       public:
         RespReadRawIndexMessage();
         virtual ~RespReadRawIndexMessage();
-    };
+    };*/
 
  }
 }

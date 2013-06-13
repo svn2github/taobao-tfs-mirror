@@ -21,28 +21,26 @@
 #include <Monitor.h>
 #include "common/internal.h"
 #include "common/error_msg.h"
-#include "logic_block.h"
-#include "blockfile_manager.h"
-#include "dataserver_define.h"
+#include "ds_define.h"
 #include "common/base_packet.h"
 
 namespace tfs
 {
   namespace dataserver
   {
-    class TaskManager;
-
-    class Task
+    class BaseLogicBlock;
+    class BlockManager;
+    class DataHelper;
+    class DataService;
+    class Task : public GCObject
     {
       public:
-        Task(TaskManager& manager, const int64_t seqno,
-          const uint64_t source_id, const int32_t expire_time):
-          manager_(manager), seqno_(seqno), source_id_(source_id), expire_time_(expire_time)
-        {
-          start_time_ = common::Func::get_monotonic_time();
-          task_from_ds_ = false;
-        }
-        virtual ~Task() {}
+        Task(DataService& service, const int64_t seqno,
+          const uint64_t source_id, const int32_t expire_time);
+        virtual ~Task();
+
+        inline DataHelper& get_data_helper();
+        inline BlockManager& get_block_manager();
 
         common::PlanType get_type() const { return type_; }
         void set_type(const common::PlanType type) { type_ = type; }
@@ -52,84 +50,6 @@ namespace tfs
 
         uint64_t get_source_id() const { return source_id_; }
         void set_source_id(const uint64_t source_id) { source_id_ = source_id; }
-
-        /**
-         * @brief send simple request, reply shoule be StatusMessage
-         *
-         * @param server_id: target server
-         * @param message: message content
-         *
-         * @return 0 on sucess
-         */
-        static int send_simple_request(uint64_t server_id, common::BasePacket* message);
-
-        /**
-        * @brief write raw data to block
-        *
-        * @param server_id: ds ip:port
-        * @param block_id: target block id
-        * @param data: data to write
-        * @param length: data length to write
-        * @param offset: data offset in block
-        *
-        * @return 0 on success
-        */
-        static int write_raw_data(const uint64_t server_id, const uint32_t block_id,
-          const char* data, const int32_t length, const int32_t offset,
-          const common::RawDataType type = common::NORMAL_DATA);
-
-        /**
-        * @brief read raw data from block
-        *
-        * @param server_id: ds ip:port
-        * @param block_id: target block id
-        * @param data: data to store read data
-        * @param length: data length to read
-        * @param offset: data offset in block
-        *
-        * @return 0 on success
-        */
-        static int read_raw_data(const uint64_t server_id, const uint32_t block_id,
-          char* data, const int32_t length, const int32_t offset, int32_t& data_file_size);
-
-        /**
-        * @brief batch write index to server
-        *
-        * @param server_id: target ds id
-        * @param block_id: block id
-        * @param cluster: is between cluter copy?
-        * @param remove_flag: transfer or replicate??
-        *
-        * @return 0 on success
-        */
-        static int batch_write_index(const uint64_t server_id, const uint32_t block_id, const int32_t cluster, const int32_t remove_flag);
-
-        /**
-        * @brief write raw index to ds
-        *
-        * @param server_id: target ds id
-        * @param block_id: target block id
-        * @param family_id: family id
-        * @param data: raw index data
-        * @param length: raw index length
-        *
-        * @return 0 on success
-        */
-        static int write_raw_index(const uint64_t server_id, const uint32_t block_id,
-            const int64_t family_id, const common::RawIndexOp index_op, const common::RawIndexVec& index_vec);
-
-       /**
-        * @brief read raw index from ds
-        *
-        * @param server_id: target ds id
-        * @param block_id: target block id
-        * @param data: raw index data
-        * @param length: raw index length
-        *
-        * @return 0 on success
-        */
-        static int read_raw_index(const uint64_t server_id, const uint32_t block_id,
-          const common::RawIndexOp index_op, const uint32_t index_id, char* & data, int32_t& length);
 
         /**
         * @brief DS post response callback function
@@ -144,47 +64,6 @@ namespace tfs
           UNUSED(new_client);
           return common::TFS_SUCCESS;
         }
-
-        /**
-        * @brief check if family info valid
-        *
-        *
-        * @return TFS_SUCCESS on success
-        */
-        static int check_family(const int64_t family_id, const int32_t family_aid_info);
-
-        /**
-        * @brief check if family can do marshalling
-        * check before task
-        *
-        * @return TFS_SUCCESS on success
-        */
-        static int check_marshalling(const int64_t family_id, const int32_t family_aid_info,
-            common::FamilyMemberInfo* family_members);
-
-        /**
-        * @brief check if family can do reinstate
-        *
-        * @return TFS_SUCCESS on success
-        */
-        static int check_reinstate(const int64_t family_id, const int32_t family_aid_info,
-            common::FamilyMemberInfo* family_members, int* erased);
-
-        /**
-        * @brief check if family can do reinstate
-        * check in degrade read
-        *
-        * @return TFS_SUCCESS on success
-        */
-        static int check_reinstate(const common::FamilyInfoExt& family_info,  int* erased);
-
-        /**
-        * @brief check if family can do reinstate
-        *
-        * @return TFS_SUCCESS on success
-        */
-        static int check_dissolve(const int64_t family_id, const int32_t family_aid_info,
-            common::FamilyMemberInfo* family_members);
 
         /**
         * @brief is task from ds??
@@ -209,15 +88,9 @@ namespace tfs
         *
         * @return true if expired
         */
-        bool is_expired()
+        bool is_expired(int64_t now)
         {
-          bool expire = false;
-          int32_t now = common::Func::get_monotonic_time();
-          if (now > start_time_ + expire_time_)
-          {
-            expire = true;
-          }
-          return expire;
+          return now >= start_time_ + expire_time_;
         }
 
         /**
@@ -227,7 +100,7 @@ namespace tfs
         *
         * @return plan status
         */
-        static common::PlanStatus translate_status(const int err_code)
+        common::PlanStatus translate_status(const int err_code)
         {
           common::PlanStatus ret = common::PLAN_STATUS_NONE;
           if (common::TFS_SUCCESS == err_code)
@@ -299,19 +172,25 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(Task);
 
       protected:
-        TaskManager& manager_;
+        DataService& service_;
         common::PlanType type_;
         int64_t seqno_;
         uint64_t source_id_;
-        int32_t start_time_;
+        int64_t start_time_;
         int32_t expire_time_;
         bool task_from_ds_;
     };
 
+    /*
+     * Nameserver dispatch compact task to master ds M
+     * M will dispatch subtask to A, B
+     * M wait for A,B finish subtask
+     * M will report final status to nameserver
+     */
     class CompactTask: public Task
     {
       public:
-        CompactTask(TaskManager& manager, const int64_t seqno,
+        CompactTask(DataService& service, const int64_t seqno,
           const uint64_t source_id, const int32_t expire_time,
           const uint32_t block_id);
         virtual ~CompactTask();
@@ -331,25 +210,30 @@ namespace tfs
       private:
         DISALLOW_COPY_AND_ASSIGN(CompactTask);
 
-        int do_compact(const uint32_t block_id);
-        int real_compact(LogicBlock* src, LogicBlock* dest);
-        int write_big_file(LogicBlock* src, LogicBlock* dest,
-            const common::FileInfo& src_info,
-            const common::FileInfo& dest_info, int32_t woffset);
-        int request_ds_to_compact();
-        void add_response(const uint64_t server, const int status, const common::BlockInfo& info);
+        int do_compact();
+        int real_compact(BaseLogicBlock* src, BaseLogicBlock* dest);
+        int write_big_file(BaseLogicBlock* src, BaseLogicBlock* dest,
+            const common::FileInfoV2& finfo, const int32_t new_offset);
+        int dispatch_sub_task();
+        void add_response(const uint64_t server, const int status, const common::BlockInfoV2& info);
+        bool is_big_file(const int32_t size) const;
 
       protected:
-        uint32_t block_id_;
-        common::BlockInfo info_;
+        uint64_t block_id_;
+        common::BlockInfoV2 info_;
         std::vector<uint64_t> servers_;
         std::vector<std::pair<uint64_t, int8_t> > result_;
     };
 
+    /*
+     * nameserver ask ds A replicate block to B
+     * A then copy block data and index to B
+     * A report final status to B
+     */
     class ReplicateTask: public Task
     {
       public:
-        ReplicateTask(TaskManager& manager, const int64_t seqno,
+        ReplicateTask(DataService& service, const int64_t seqno,
           const uint64_t source_id, const int32_t expire_time,
           const common::ReplBlock& repl_info);
         virtual ~ReplicateTask();
@@ -361,9 +245,9 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN(ReplicateTask);
-
-        bool can_be_replicate(const uint32_t block_id);
-        int do_replicate(const common::ReplBlock& repl_block);
+        int do_replicate();
+        int replicate_data(const int32_t block_size);
+        int replicate_index();
 
       protected:
         common::ReplBlock repl_info_;
@@ -372,12 +256,12 @@ namespace tfs
     class MarshallingTask: public Task
     {
       public:
-        MarshallingTask(TaskManager& manager, const int64_t seqno,
+        MarshallingTask(DataService& service, const int64_t seqno,
           const uint64_t source_id, const int32_t expire_time,
           const int64_t family_id);
         virtual ~MarshallingTask();
 
-        int set_family_member_info(const common::FamilyMemberInfo* members,
+        int set_family_info(const common::FamilyMemberInfo* members,
             const int32_t family_aid_info);
 
         virtual int handle();
@@ -386,8 +270,9 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN(MarshallingTask);
-
         int do_marshalling();
+        int encode_data(common::ECMeta* ec_metas, int32_t& marshalling_len);
+        int backup_index();
 
       protected:
         common::FamilyMemberInfo* family_members_;
@@ -398,24 +283,35 @@ namespace tfs
     class ReinstateTask: public MarshallingTask
     {
       public:
-        ReinstateTask(TaskManager& manager, const int64_t seqno,
+        ReinstateTask(DataService& service, const int64_t seqno,
           const uint64_t source_id, const int32_t expire_time,
           const int64_t family_id);
         virtual ~ReinstateTask();
 
         virtual int handle();
         virtual int report_to_ns(const int status);
+        int set_family_info(const common::FamilyMemberInfo* members,
+            const int32_t family_aid_info, const int* erased);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(ReinstateTask);
-
         int do_reinstate();
+        int decode_data(common::ECMeta* ec_meta, int32_t& marshalling_len);
+        int recover_data_index(common::ECMeta* ec_metas);
+        int recover_check_index(common::ECMeta* ec_metas, const int32_t marshalling_len);
+        int recover_updated_files(const common::IndexDataV2& index_data,
+          const int32_t marshalling_len, uint64_t block_id, const int32_t src, const int32_t dest);
+
+      private:
+        int erased_[common::MAX_MARSHALLING_NUM];
+        common::BlockInfoV2 block_infos_[common::MAX_MARSHALLING_NUM];
+        int32_t reinstate_num_;
     };
 
     class DissolveTask: public MarshallingTask
     {
       public:
-        DissolveTask(TaskManager& manager, const int64_t seqno,
+        DissolveTask(DataService& service, const int64_t seqno,
           const uint64_t source_id, const int32_t expire_time,
           const int64_t family_id);
         virtual ~DissolveTask();
@@ -427,12 +323,10 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN(DissolveTask);
-
-        int request_ds_to_replicate();
-        int request_ds_to_delete();
-        int request_to_clear_family_id();
-
         int do_dissolve();
+        int replicate_data_blocks();
+        int clear_family_id();
+        int delete_parity_blocks();
 
       private:
         std::vector<std::pair<uint64_t, int8_t> > result_;

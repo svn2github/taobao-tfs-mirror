@@ -1,10 +1,10 @@
 AUTOMAKE_OPTIONS=foreign
 
-SUBDIRS = src conf scripts  sql
+SUBDIRS = src conf scripts sql
 pkgdata_datadir=${prefix}/logs
 pkgdata_data_DATA=
 
-DIST_SUBDIRS = src conf scripts tests sql
+DIST_SUBDIRS = src conf scripts sql
 EXTRA_DIST=build.sh \
 	   conf/Makefile.am Makefile.am sql/Makefile.am\
 	   scripts/Makefile.am scripts/Makefile.in scripts/tfs.sh scripts/stfs.sh scripts/start_sync_log.sh scripts/sync.sh scripts/cs_sync.sh\

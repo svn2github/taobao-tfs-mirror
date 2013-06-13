@@ -24,13 +24,13 @@ namespace tfs
 {
   namespace common
   {
-    FileOperation::FileOperation(const std::string& file_name, const int open_flags) :
+    FileOps::FileOps(const std::string& file_name, const int open_flags) :
       fd_(-1), open_flags_(open_flags)
     {
       file_name_ = strdup(file_name.c_str());
     }
 
-    FileOperation::~FileOperation()
+    FileOps::~FileOps()
     {
       if (fd_ > 0)
       {
@@ -45,7 +45,7 @@ namespace tfs
       }
     }
 
-    void FileOperation::close_file()
+    void FileOps::close_file()
     {
       if (fd_ < 0)
       {
@@ -55,7 +55,7 @@ namespace tfs
       fd_ = -1;
     }
 
-    int FileOperation::pread_file(char* buf, const int32_t nbytes, const int64_t offset)
+    int FileOps::pread_file(char* buf, const int32_t nbytes, const int64_t offset)
     {
       int32_t left = nbytes;
       int64_t read_offset = offset;
@@ -108,7 +108,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int FileOperation::pwrite_file(const char* buf, const int32_t nbytes, const int64_t offset)
+    int FileOps::pwrite_file(const char* buf, const int32_t nbytes, const int64_t offset)
     {
       int32_t left = nbytes;
       int64_t write_offset = offset;
@@ -162,7 +162,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int FileOperation::write_file(const char* buf, const int32_t nbytes)
+    int FileOps::write_file(const char* buf, const int32_t nbytes)
     {
       const char *p_tmp = buf;
       int32_t left = nbytes;
@@ -208,7 +208,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int64_t FileOperation::get_file_size()
+    int64_t FileOps::get_file_size()
     {
       int fd = check_file();
       if (fd < 0)
@@ -222,7 +222,7 @@ namespace tfs
       return statbuf.st_size;
     }
 
-    int FileOperation::ftruncate_file(const int64_t length)
+    int FileOps::ftruncate_file(const int64_t length)
     {
       int fd = check_file();
       if (fd < 0)
@@ -231,7 +231,7 @@ namespace tfs
       return ftruncate(fd, length);
     }
 
-    int FileOperation::seek_file(const int64_t offset)
+    int FileOps::seek_file(const int64_t offset)
     {
       int fd = check_file();
       if (fd < 0)
@@ -240,7 +240,7 @@ namespace tfs
       return lseek(fd, offset, SEEK_SET);
     }
 
-    int32_t FileOperation::current_pos()
+    int32_t FileOps::current_pos()
     {
       int fd = check_file();
       if (fd < 0)
@@ -249,7 +249,7 @@ namespace tfs
       return lseek(fd, 0, SEEK_CUR);
     }
 
-    int FileOperation::flush_file()
+    int FileOps::flush_file()
     {
       if (open_flags_ & O_SYNC)
       {
@@ -263,7 +263,7 @@ namespace tfs
       return fsync(fd);
     }
 
-    int FileOperation::flush_data()
+    int FileOps::flush_data()
     {
       if (open_flags_ & O_SYNC)
       {
@@ -277,13 +277,13 @@ namespace tfs
       return fdatasync(fd);
     }
 
-    int FileOperation::unlink_file()
+    int FileOps::unlink_file()
     {
       close_file();
       return ::unlink(file_name_);
     }
 
-    int FileOperation::open_file()
+    int FileOps::open_file()
     {
       if (fd_ > 0)
       {
@@ -299,7 +299,7 @@ namespace tfs
       return fd_;
     }
 
-    int FileOperation::check_file()
+    int FileOps::check_file()
     {
       if (fd_ < 0)
       {

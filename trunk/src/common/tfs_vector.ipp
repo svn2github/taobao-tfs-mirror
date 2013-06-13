@@ -161,7 +161,7 @@ namespace tfs
       }
 
     template <typename T>
-      typename TfsVector<T>::iterator TfsVector<T>::find(const_value_type value)
+      typename TfsVector<T>::iterator TfsVector<T>::find(const_value_type value) const
       {
         iterator pos = std::find(start_, finish_, value);
         return pos;
@@ -272,7 +272,7 @@ namespace tfs
     template <typename T, typename Compare>
       typename TfsSortedVector<T, Compare>::value_type TfsSortedVector<T, Compare>::erase(const_value_type value)
       {
-        value_type return_value;
+        value_type return_value = 0;
         iterator pos = find(value);
         if (storage_.end() != pos)
         {

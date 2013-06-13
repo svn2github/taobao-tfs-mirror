@@ -22,10 +22,12 @@ namespace tfs
 {
   namespace message
   {
+    using namespace common;
+
     ResolveBlockVersionConflictMessage::ResolveBlockVersionConflictMessage():
-      block_(common::INVALID_BLOCK_ID)
+      block_(INVALID_BLOCK_ID)
     {
-      _packetHeader._pcode = common::REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE;
+      _packetHeader._pcode = REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE;
     }
 
     ResolveBlockVersionConflictMessage::~ResolveBlockVersionConflictMessage()
@@ -33,55 +35,64 @@ namespace tfs
 
     }
 
-    int ResolveBlockVersionConflictMessage::deserialize(common::Stream& input)
+    int ResolveBlockVersionConflictMessage::deserialize(Stream& input)
     {
-      int32_t size = 0;
-      int32_t ret = input.get_int32(reinterpret_cast<int32_t*>(&block_));
-      if (common::TFS_SUCCESS == ret)
+      int32_t ret = input.get_int64(reinterpret_cast<int64_t*>(&block_));
+      if (TFS_SUCCESS == ret)
       {
-        ret = input.get_int32(&size);
-      }
-      if (common::TFS_SUCCESS == ret)
-      {
-        std::pair<uint64_t, common::BlockInfo> item;
-        for (int32_t index = 0; index < size && common::TFS_SUCCESS == ret; ++index)
+        ret = input.get_int32(&size_);
+        if (TFS_SUCCESS == ret)
         {
-          ret = input.get_int64(reinterpret_cast<int64_t*>(&item.first));
-          if (common::TFS_SUCCESS == ret)
+          ret = ((size_ >= 0) && (size_ <= MAX_REPLICATION_NUM)) ? TFS_SUCCESS: TFS_ERROR;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t i = 0; (i < size_) && (TFS_SUCCESS == ret); i++)
+        {
+          ret = input.get_int64(reinterpret_cast<int64_t*>(&members_[i].first));
+          if (TFS_SUCCESS == ret)
           {
             int64_t pos = 0;
-            ret = item.second.deserialize(input.get_data(), input.get_data_length(), pos);
-            if (common::TFS_SUCCESS == ret)
-              input.drain(item.second.length());
-          }
-          if (common::TFS_SUCCESS == ret)
-          {
-            members_.push_back(item);
+            ret = members_[i].second.deserialize(input.get_data(), input.get_data_length(), pos);
+            if (TFS_SUCCESS == ret)
+            {
+              input.drain(members_[i].second.length());
+            }
           }
         }
       }
+
       return ret;
     }
 
-    int ResolveBlockVersionConflictMessage::serialize(common::Stream& output) const
+    int ResolveBlockVersionConflictMessage::serialize(Stream& output) const
     {
-      int32_t ret = output.set_int32(block_);
-      if (common::TFS_SUCCESS == ret)
+      int ret = ((size_ >= 0) && (size_ <= MAX_REPLICATION_NUM)) ? TFS_SUCCESS: TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        ret = output.set_int32(members_.size());
+        ret = output.set_int64(block_);
       }
-      if (common::TFS_SUCCESS == ret)
+
+      if (TFS_SUCCESS == ret)
       {
-        std::vector<std::pair<uint64_t, common::BlockInfo> >::const_iterator iter = members_.begin();
-        for (; iter != members_.end() && common::TFS_SUCCESS == ret; ++iter)
+        ret = output.set_int32(size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t i = 0; (i < size_) && (TFS_SUCCESS == ret); i++)
         {
-          ret = output.set_int64(iter->first);
-          if (common::TFS_SUCCESS == ret)
+          ret = output.set_int64(members_[i].first);
+          if (TFS_SUCCESS == ret)
           {
             int64_t pos = 0;
-            ret = iter->second.serialize(output.get_free(), output.get_free_length(), pos);
-            if (common::TFS_SUCCESS == ret)
-              output.pour(iter->second.length());
+            ret = members_[i].second.serialize(output.get_free(), output.get_free_length(), pos);
+            if (TFS_SUCCESS == ret)
+            {
+              output.pour(members_[i].second.length());
+            }
           }
         }
       }
@@ -90,19 +101,16 @@ namespace tfs
 
     int64_t ResolveBlockVersionConflictMessage::length() const
     {
-      int64_t length = common::INT_SIZE * 2;
-      if (!members_.empty())
-      {
-        common::BlockInfo info;
-        length += (members_.size() * (info.length() + common::INT64_SIZE));
-      }
+      int64_t length = INT_SIZE + INT64_SIZE;
+      BlockInfoV2 info;
+      length += size_ * (info.length() + INT64_SIZE);
       return length;
     }
 
     ResolveBlockVersionConflictResponseMessage::ResolveBlockVersionConflictResponseMessage():
-      status_(common::TFS_ERROR)
+      status_(TFS_ERROR)
     {
-      _packetHeader._pcode = common::RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE;
+      _packetHeader._pcode = RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE;
     }
 
     ResolveBlockVersionConflictResponseMessage::~ResolveBlockVersionConflictResponseMessage()
@@ -110,19 +118,19 @@ namespace tfs
 
     }
 
-    int ResolveBlockVersionConflictResponseMessage::deserialize(common::Stream& input)
+    int ResolveBlockVersionConflictResponseMessage::deserialize(Stream& input)
     {
       return input.get_int32(&status_);
     }
 
-    int ResolveBlockVersionConflictResponseMessage::serialize(common::Stream& output) const
+    int ResolveBlockVersionConflictResponseMessage::serialize(Stream& output) const
     {
       return output.set_int32(status_);
     }
 
     int64_t ResolveBlockVersionConflictResponseMessage::length() const
     {
-      return common::INT_SIZE;
+      return INT_SIZE;
     }
   }/** message **/
 }/** tfs **/

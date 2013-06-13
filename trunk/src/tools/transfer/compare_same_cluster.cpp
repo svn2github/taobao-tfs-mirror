@@ -113,9 +113,9 @@ int compare_block(const string& ns_ip, const string& file_path, const string& ou
                   else
                   {
                     BlockFileInfoMessage *bfi_message = dynamic_cast<BlockFileInfoMessage*>(ret_msg);
-                    FILE_INFO_LIST* file_info_list = bfi_message->get_fileinfo_list();
-                    FILE_INFO_LIST::iterator vit = file_info_list->begin();
-                    for (; vit != file_info_list->end();++vit)
+                    FILE_INFO_LIST& file_info_list = bfi_message->get_fileinfo_list();
+                    FILE_INFO_LIST::iterator vit = file_info_list.begin();
+                    for (; vit != file_info_list.end();++vit)
                     {
                       files[index].insert(std::map<uint64_t, FileInfo>::value_type((*vit).id_, (*vit)));
                     }

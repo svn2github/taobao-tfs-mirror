@@ -20,6 +20,7 @@
 #include "common/internal.h"
 #include "common/error_msg.h"
 #include "common/array_helper.h"
+#include "server_collect.h"
 #include "task.h"
 
 #ifdef TFS_GTEST
@@ -50,7 +51,7 @@ namespace tfs
       typedef std::map<uint64_t, Task*> SERVER_TO_TASK;
       typedef SERVER_TO_TASK::iterator SERVER_TO_TASK_ITER;
       typedef SERVER_TO_TASK::const_iterator SERVER_TO_TASK_CONST_ITER;
-      typedef std::map<uint32_t, Task*> BLOCK_TO_TASK;
+      typedef std::map<uint64_t, Task*> BLOCK_TO_TASK;
       typedef BLOCK_TO_TASK::iterator BLOCK_TO_TASK_ITER;
       typedef BLOCK_TO_TASK::const_iterator BLOCK_TO_TASK_CONST_ITER;
       typedef std::set<Task*, TaskCompare> PENDING_TASK;
@@ -78,7 +79,7 @@ namespace tfs
       public:
       explicit TaskManager(LayoutManager& manager);
       virtual ~TaskManager();
-      int add(const uint32_t id, const common::ArrayHelper<uint64_t>& servers,
+      int add(const uint64_t id, const common::ArrayHelper<uint64_t>& servers,
           const common::PlanType type, const time_t now);
       int add(const int64_t family_id, const int32_t family_aid_info, const common::PlanType type,
           const int32_t member_num, const common::FamilyMemberInfo* members, const time_t now);
@@ -89,14 +90,14 @@ namespace tfs
       void dump(const int32_t level, const char* format) const;
       int64_t get_running_server_size() const;
       Task* get_by_id(const uint64_t id) const;
-      bool exist(const uint32_t block) const;
-      bool exist(const uint64_t server) const;
-      bool exist(const int64_t  family_id) const;
+      bool exist_block(const uint64_t block) const;
+      bool exist_server(const uint64_t server) const;
+      bool exist_family(const int64_t  family_id) const;
       bool exist(const common::ArrayHelper<uint64_t>& servers) const;
       bool get_exist_servers(common::ArrayHelper<ServerCollect*>& result, const common::ArrayHelper<ServerCollect*>& servers) const;
       bool has_space_do_task_in_machine(const uint64_t server, const bool target) const;
       bool has_space_do_task_in_machine(const uint64_t server) const;
-      int remove_block_from_dataserver(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now);
+      int remove_block_from_dataserver(const uint64_t server, const uint64_t block, const time_t now);
       int run();
       int handle(common::BasePacket* msg, const int64_t seqno);
       int timeout(const time_t now);
@@ -108,22 +109,22 @@ namespace tfs
       int remove_(const uint64_t server, const bool target = false);
       int remove_(Task* task);
       bool remove_(const common::ArrayHelper<Task*>& tasks);
-      Task* get_(const uint32_t block) const;
-      Task* get_(const BlockCollect* block) const;
-      Task* get_(const uint64_t server) const;
-      Task* get_(const ServerCollect* server) const;
-      Task* get_(const int64_t family_id) const;
+      Task* get_task_by_block_id_(const uint64_t block) const;
+      Task* get_task_by_block_(const BlockCollect* block) const;
+      Task* get_task_by_server_id_(const uint64_t server) const;
+      Task* get_task_by_server_(const ServerCollect* server) const;
+      Task* get_task_by_family_id_(const int64_t family_id) const;
       int64_t get_task_size_in_machine_(int32_t& source_size, int32_t& target_size, const uint64_t server) const;
       int64_t size_() const;
       bool is_insert_block_(const int32_t type, const int32_t member_num, const int32_t index) const;
       bool is_insert_server_(const int32_t type, const int32_t data_member_num, const int32_t index) const;
-      Task* generation_(const uint32_t id, const common::ArrayHelper<uint64_t>& servers,
+      Task* generation_(const uint64_t id, const common::ArrayHelper<uint64_t>& servers,
           const common::PlanType type);
       Task* generation_(const int64_t family_id, const int32_t family_aid_info, const common::PlanType type,
           const int32_t member_num, const common::FamilyMemberInfo* members);
       int insert_(common::ArrayHelper<std::pair<common::FamilyMemberInfo, bool> >& success, Task* task,
           const common::FamilyMemberInfo& info, const bool target, const bool insert_block, const bool insert_server);
-      int remove_block_from_dataserver_(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now);
+      int remove_block_from_dataserver_(const uint64_t server, const uint64_t block, const time_t now);
       private:
       LayoutManager& manager_;
       TASKS tasks_;

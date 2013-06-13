@@ -1,5 +1,5 @@
-/*
- * (C) 2007-2010 Alibaba Group Holding Limited.
+ /*
+ * * (C) 2007-2010 Alibaba Group Holding Limited.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,16 +20,19 @@
 #include "Memory.hpp"
 
 #include "common/func.h"
+#include "common/internal.h"
 #include "common/client_manager.h"
 #include "common/new_client.h"
 #include "common/status_message.h"
+#include "nameserver/ns_define.h"
 #include "message/server_status_message.h"
 #include "message/block_info_message.h"
+#include "message/block_info_message_v2.h"
 #include "message/read_data_message.h"
 #include "message/write_data_message.h"
 #include "message/client_cmd_message.h"
-#include "dataserver/dataserver_define.h"
-#include "dataserver/visit_stat.h"
+#include "message/write_index_message_v2.h"
+#include "message/write_data_message_v2.h"
 #include "new_client/tfs_client_impl.h"
 #include "new_client/fsname.h"
 
@@ -39,7 +42,6 @@ using namespace std;
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::client;
-using namespace tfs::dataserver;
 
 const int64_t TranBlock::TRAN_BUFFER_SIZE = 8 * 1024 * 1024;
 const int64_t TranBlock::WAIT_TIME_OUT = 5000000;
@@ -138,22 +140,22 @@ int BlockConsole::initialize(const string& ts_input_blocks_file, const std::stri
     else
     {
       // load input blocks
-      uint32_t blockid = 0;
-      while (fscanf(input_file_ptr_, "%u", &blockid) != EOF)
+      uint64_t blockid = 0;
+      while (fscanf(input_file_ptr_, "%lu", &blockid) != EOF)
       {
         input_blockids_.insert(blockid);
         ++stat_param_.total_;
       }
 
       // load succ blocks
-      while (fscanf(succ_file_ptr_, "%u", &blockid) != EOF)
+      while (fscanf(succ_file_ptr_, "%lu", &blockid) != EOF)
       {
         succ_blockids_.insert(blockid);
         atomic_inc(&stat_param_.copy_success_);
       }
 
       // load fail blocks
-      while (fscanf(succ_file_ptr_, "%u", &blockid) != EOF)
+      while (fscanf(succ_file_ptr_, "%lu", &blockid) != EOF)
       {
         fail_blockids_.insert(blockid);
         atomic_inc(&stat_param_.copy_failure_);
@@ -166,7 +168,7 @@ int BlockConsole::initialize(const string& ts_input_blocks_file, const std::stri
   return ret;
 }
 
-int BlockConsole::get_transfer_param(uint32_t& blockid, uint64_t& ds_id)
+int BlockConsole::get_transfer_param(uint64_t& blockid, uint64_t& ds_id)
 {
   int ret = TFS_SUCCESS;
   tbutil::Mutex::Lock lock(mutex_);
@@ -206,7 +208,7 @@ int BlockConsole::get_transfer_param(uint32_t& blockid, uint64_t& ds_id)
   return ret;
 }
 
-int BlockConsole::finish_transfer_block(const uint32_t blockid, const int32_t transfer_ret)
+int BlockConsole::finish_transfer_block(const uint64_t blockid, const int32_t transfer_ret)
 {
   FILE* file_ptr = NULL;
   tbutil::Mutex::Lock lock(mutex_);
@@ -223,11 +225,11 @@ int BlockConsole::finish_transfer_block(const uint32_t blockid, const int32_t tr
     file_ptr = fail_file_ptr_;
   }
 
-  TBSYS_LOG(INFO, "begin write blockid: %d to %s file", blockid, TFS_SUCCESS == transfer_ret ? "succ" : "fail");
+  TBSYS_LOG(INFO, "begin write blockid: %"PRI64_PREFIX"u to %s file", blockid, TFS_SUCCESS == transfer_ret ? "succ" : "fail");
   int ret = TFS_SUCCESS;
-  if ((ret = fprintf(file_ptr, "%d\n", blockid)) < 0)
+  if ((ret = fprintf(file_ptr, "%lu\n", blockid)) < 0)
   {
-    TBSYS_LOG(ERROR, "failed to write blockid: %d to %s file", blockid, TFS_SUCCESS == transfer_ret ? "succ" : "fail");
+    TBSYS_LOG(ERROR, "failed to write blockid: %"PRI64_PREFIX"u to %s file", blockid, TFS_SUCCESS == transfer_ret ? "succ" : "fail");
     ret = TFS_ERROR;
   }
 
@@ -240,10 +242,10 @@ int BlockConsole::locate_cur_pos()
 {
   int ret = TFS_SUCCESS;
   // get current copy id
-  uint32_t last_blockid = 0;
+  uint64_t last_blockid = 0;
   if (succ_blockids_.size() > 0)
   {
-    std::set<uint32_t>::iterator sit = succ_blockids_.end();
+    std::set<uint64_t>::iterator sit = succ_blockids_.end();
     --sit;
     last_blockid = *(sit);
     cur_sit_ = input_blockids_.find(last_blockid);
@@ -261,7 +263,7 @@ int BlockConsole::locate_cur_pos()
 
   if (cur_sit_ == input_blockids_.end())
   {
-    TBSYS_LOG(ERROR, "can not find blockid: %u\n", last_blockid);
+    TBSYS_LOG(ERROR, "can not find blockid: %"PRI64_PREFIX"u\n", last_blockid);
     ret = TFS_ERROR;
   }
 
@@ -269,20 +271,19 @@ int BlockConsole::locate_cur_pos()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-TranBlock::TranBlock(const uint32_t blockid, const std::string& dest_ns_addr,
+TranBlock::TranBlock(const uint64_t blockid, const std::string& dest_ns_addr,
     const uint64_t dest_ds_addr, const int64_t traffic, TfsSession* src_session, TfsSession* dest_session) :
     dest_ns_addr_(dest_ns_addr), dest_ds_id_(dest_ds_addr),
-    cur_offset_(0), total_tran_size_(0), traffic_(traffic), src_session_(src_session), dest_session_(dest_session)
+    cur_offset_(0), total_tran_size_(0), traffic_(traffic), src_ds_addr_count_(0),src_session_(src_session), dest_session_(dest_session)
 {
-  seg_data_.seg_info_.block_id_ = blockid;
-  seg_data_.ds_.clear();
+  src_ds_addr_index_ = 0;
+  src_block_info_.block_id_ = blockid;
   file_set_.clear();
   concealed_files_.clear();
 }
 
 TranBlock::~TranBlock()
 {
-  seg_data_.ds_.clear();
   file_set_.clear();
   concealed_files_.clear();
 }
@@ -329,13 +330,22 @@ int TranBlock::run()
 
 int TranBlock::get_src_ds()
 {
-  int ret = src_session_->get_block_info(seg_data_, T_READ);
+  SegmentData seg_data;
+  seg_data.seg_info_.block_id_ = src_block_info_.block_id_;
+  int ret = src_session_->get_block_info(seg_data, T_READ);
   if (TFS_SUCCESS == ret)
   {
-    if (seg_data_.ds_.size() <= 0)
+    ret = seg_data.ds_.empty() ? TFS_ERROR : TFS_SUCCESS;
+    if (TFS_SUCCESS != ret)
     {
-      TBSYS_LOG(ERROR, "get rds fail. block list size is %d, blockid: %u", static_cast<int32_t>(seg_data_.ds_.size()), seg_data_.seg_info_.block_id_);
-      ret = TFS_ERROR;
+      TBSYS_LOG(ERROR, "get rds fail. block list size is %zd, blockid: %u", seg_data.ds_.size(), src_block_info_.block_id_);
+    }
+    else
+    {
+      std::vector<uint64_t>::const_iterator iter = seg_data.ds_.begin();
+      for (src_ds_addr_count_ = 0; iter != seg_data.ds_.end(); ++iter, ++src_ds_addr_count_)
+        src_ds_addr_[src_ds_addr_count_] = (*iter);
+      src_ds_addr_index_ = random() % src_ds_addr_count_;
     }
   }
   return ret;
@@ -345,41 +355,55 @@ int TranBlock::read_index()
 {
   GetServerStatusMessage gfl_msg;
   gfl_msg.set_status_type(GSS_BLOCK_FILE_INFO);
-  gfl_msg.set_return_row(seg_data_.seg_info_.block_id_);
+  gfl_msg.set_return_row(src_block_info_.block_id_);
 
   // fetch data from the first ds
-  int index = 0;
+  int index = src_ds_addr_index_;
   int ret = TFS_ERROR;
   NewClient* client = NewClientManager::get_instance().create_client();
   if (NULL != client)
   {
     tbnet::Packet* rsp = NULL;
-    if ((ret = send_msg_to_server(seg_data_.ds_[index], client, &gfl_msg, rsp)) == TFS_SUCCESS)
+    if ((ret = send_msg_to_server(src_ds_addr_[index], client, &gfl_msg, rsp)) == TFS_SUCCESS)
     {
       if (rsp == NULL)
       {
         ret = TFS_ERROR;
         TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, rsp is null.",
-            tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_);
+            tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_);
       }
       else
       {
         if (BLOCK_FILE_INFO_MESSAGE == rsp->getPCode())
         {
           BlockFileInfoMessage *bfi_msg = dynamic_cast<BlockFileInfoMessage*>(rsp);
-          FILE_INFO_LIST* tmp_file_vector = bfi_msg->get_fileinfo_list();
-          for (FILE_INFO_LIST::iterator fit = tmp_file_vector->begin(); fit != tmp_file_vector->end(); ++fit)
+          FILE_INFO_LIST& tmp_file_vector = bfi_msg->get_fileinfo_list();
+          for (FILE_INFO_LIST::iterator fit = tmp_file_vector.begin(); fit != tmp_file_vector.end(); ++fit)
           {
-            FileInfo finfo = (*fit);
-            file_set_.insert(finfo);
+            FileInfoV2 info;
+            info.id_ = (*fit).id_;
+            info.offset_ = (*fit).offset_;
+            info.size_ = (*fit).size_;
+            info.status_ = (*fit).flag_;
+            info.crc_ = (*fit).crc_;
+            info.create_time_ = (*fit).create_time_;
+            info.modify_time_ = (*fit).modify_time_;
+            info.next_ = 0;
+            file_set_.insert(info);
           }
 
           total_tran_size_ += file_set_.size() * FILEINFO_SIZE;
         }
+        else if (STATUS_MESSAGE == rsp->getPCode())
+        {
+          StatusMessage* msg = dynamic_cast<StatusMessage*>(rsp);
+          TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, error msg: %s",
+              tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_, msg->get_error());
+        }
         else
         {
           TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, unknow msg type: %d",
-              tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_, rsp->getPCode());
+              tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_, rsp->getPCode());
           ret = TFS_ERROR;
         }
       }
@@ -387,22 +411,24 @@ int TranBlock::read_index()
     else
     {
       TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, ret: %d.",
-            tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_, ret);
+            tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_, ret);
     }
     NewClientManager::get_instance().destroy_client(client);
   }
   else
   {
     TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, create client failed.",
-        tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_);
+        tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_);
   }
 
+  TBSYS_LOG(INFO, "read index from ds: %s %s, blockid: %u",
+        tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), ret == TFS_SUCCESS  ? "succ" : "fail", src_block_info_.block_id_);
   return ret;
 }
 
 int TranBlock::read_data()
 {
-  int index = 0;
+  int index = src_ds_addr_index_;
   bool eof_flag = false;
   int ret = TFS_SUCCESS;
   int64_t read_size = std::min(traffic_, TRAN_BUFFER_SIZE);
@@ -415,13 +441,14 @@ int TranBlock::read_data()
     while (remainder_retrys > 0)
     {
       ReadRawDataMessage rrd_msg;
-      rrd_msg.set_block_id(seg_data_.seg_info_.block_id_);
+      rrd_msg.set_block_id(src_block_info_.block_id_);
       rrd_msg.set_offset(cur_offset_);
       rrd_msg.set_length(read_size);
 
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* rsp = NULL;
-      if(TFS_SUCCESS != send_msg_to_server(seg_data_.ds_[index], client, &rrd_msg, rsp))
+      ret = send_msg_to_server(src_ds_addr_[index], client, &rrd_msg, rsp);
+      if(TFS_SUCCESS != ret)
       {
         rsp = NULL;
       }
@@ -430,7 +457,7 @@ int TranBlock::read_data()
       if (NULL == rsp)
       {
         TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, ret: %d",
-            tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_, cur_offset_, remainder_retrys, ret);
+            tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_, cur_offset_, remainder_retrys, ret);
       }
       else if (RESP_READ_RAW_DATA_MESSAGE == rsp->getPCode())
       {
@@ -441,11 +468,13 @@ int TranBlock::read_data()
           if (len < read_size || len == 0)
           {
             eof_flag = true;
+            TBSYS_LOG(INFO, "read raw data from ds: %s end, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, ret: %d, read_size:%ld, len: %d",
+              tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_, cur_offset_, remainder_retrys, ret, read_size, len);
           }
           if (len > 0)
           {
             TBSYS_LOG(DEBUG, "read raw data from ds: %s succ, blockid: %u, offset: %d, len: %d, data: %p",
-                tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_, cur_offset_, len, rsp_rrd_msg->get_data());
+                tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_, cur_offset_, len, rsp_rrd_msg->get_data());
             src_content_buf_.writeBytes(rsp_rrd_msg->get_data(), len);
             cur_offset_ += len;
           }
@@ -453,14 +482,14 @@ int TranBlock::read_data()
         else
         {
           TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, ret: %d",
-              tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_, cur_offset_, remainder_retrys, len);
+              tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_, cur_offset_, remainder_retrys, len);
           ret = len;
         }
       }
       else //unknow type
       {
         TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, unknow msg type: %d",
-            tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_, cur_offset_, remainder_retrys, rsp->getPCode());
+            tbsys::CNetUtil::addrToString(src_ds_addr_[index]).c_str(), src_block_info_.block_id_, cur_offset_, remainder_retrys, rsp->getPCode());
         ret = TFS_ERROR;
       }
 
@@ -505,7 +534,7 @@ int TranBlock::recombine_data()
   if (file_set_.size() <= 0)
   {
     TBSYS_LOG(ERROR, "reform data failed, blockid: %u, offset: %d, file list size: %d",
-        seg_data_.seg_info_.block_id_, cur_offset_, static_cast<int32_t>(file_set_.size()));
+        src_block_info_.block_id_, cur_offset_, static_cast<int32_t>(file_set_.size()));
     ret = TFS_ERROR;
   }
   else
@@ -513,20 +542,20 @@ int TranBlock::recombine_data()
     FileInfoSetIter vit = file_set_.begin();
     for ( ; vit != file_set_.end(); ++vit)
     {
-      const FileInfo& finfo = (*vit);
+      const FileInfoV2& finfo = (*vit);
       //TBSYS_LOG(DEBUG, "file info. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d, size: %d, usize: %d, offset: %d",
-      //    seg_data_.seg_info_.block_id_, finfo.id_, finfo.flag_, finfo.size_, finfo.usize_, finfo.offset_);
+      //    src_block_info_.block_id_, finfo.id_, finfo.flag_, finfo.size_, finfo.usize_, finfo.offset_);
       // skip deleted file
-      if (0 != (finfo.flag_ & (FI_DELETED | FI_INVALID)))
+      if (0 != (finfo.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID)))
       {
         TBSYS_LOG(INFO, "file deleted, skip it. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d",
-            seg_data_.seg_info_.block_id_, finfo.id_, finfo.flag_);
+            src_block_info_.block_id_, finfo.id_, finfo.status_);
         continue;
       }
-      else if (0 != (finfo.flag_ & FI_CONCEAL)) // record conceal file
+      else if (0 != (finfo.status_ & FILE_STATUS_CONCEAL)) // record conceal file
       {
         TBSYS_LOG(INFO, "file concealed. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d",
-            seg_data_.seg_info_.block_id_, finfo.id_, finfo.flag_);
+            src_block_info_.block_id_, finfo.id_, finfo.status_);
         concealed_files_.insert(finfo.id_);
       }
 
@@ -534,87 +563,74 @@ int TranBlock::recombine_data()
       if (0 == finfo.id_)
       {
         TBSYS_LOG(ERROR, "fileid illegal, skip it. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d, size: %d, offset: %d",
-            seg_data_.seg_info_.block_id_, finfo.id_, finfo.flag_, finfo.size_, finfo.offset_);
+            src_block_info_.block_id_, finfo.id_, finfo.status_, finfo.size_, finfo.offset_);
         continue;
       }
 
       // compare file info
       FileInfo* data_finfo = reinterpret_cast<FileInfo*>(src_content_buf_.getData() + finfo.offset_);
-      if (memcmp(&finfo, data_finfo, sizeof(FILEINFO_SIZE)) != 0)
+      if (finfo.id_ != data_finfo->id_)
       {
-        if (finfo.id_ != data_finfo->id_)
-        {
-          TBSYS_LOG(ERROR, "file id conflict in same offset, serious error. blockid: %u, info fileid: %"PRI64_PREFIX"u, offset: %d, data fileid: %"PRI64_PREFIX"u, offset: %d, total len: %d",
-              seg_data_.seg_info_.block_id_, finfo.id_, finfo.offset_, data_finfo->id_, data_finfo->offset_, src_content_buf_.getDataLen());
-        }
-        else if (finfo.modify_time_ != data_finfo->modify_time_)
-        {
-          TBSYS_LOG(WARN, "file modify time conflict in same offset, file updated after get meta info. blockid: %u, fileid: %"PRI64_PREFIX"u <> %"PRI64_PREFIX"d, info modify time: %d, data modify time: %d",
-              seg_data_.seg_info_.block_id_, finfo.id_, data_finfo->id_, finfo.modify_time_, data_finfo->modify_time_);
-        }
-        else
-        {
-          TBSYS_LOG(WARN, "file info conflict in same offset, skip it. blockid: %u, info fileid: %"PRI64_PREFIX"u, flag: %d, size: %d, usize: %d, offset: %d, create time: %d, modify time: %d, crc: %u, data fileid: %"PRI64_PREFIX"u, flag: %d, size: %d, usize: %d, offset: %d, create time: %d, modify time: %d, crc: %u, total len: %d",
-              seg_data_.seg_info_.block_id_, finfo.id_, finfo.flag_, finfo.size_, finfo.usize_,
-              finfo.offset_, finfo.create_time_, finfo.modify_time_, finfo.crc_,
-              data_finfo->id_, data_finfo->flag_, data_finfo->size_, data_finfo->usize_,
-              data_finfo->offset_, data_finfo->create_time_, data_finfo->modify_time_,
-              data_finfo->crc_, src_content_buf_.getDataLen()
-              );
-        }
-
+        TBSYS_LOG(ERROR, "file id conflict in same offset, serious error. blockid: %u, info fileid: %"PRI64_PREFIX"u, offset: %d, data fileid: %"PRI64_PREFIX"u, offset: %d, total len: %d",
+            src_block_info_.block_id_, finfo.id_, finfo.offset_, data_finfo->id_, data_finfo->offset_, src_content_buf_.getDataLen());
         continue;
       }
-
+      if (finfo.modify_time_ != data_finfo->modify_time_)
+      {
+        TBSYS_LOG(WARN, "file modify time conflict in same offset, file updated after get meta info. blockid: %u, fileid: %"PRI64_PREFIX"u <> %"PRI64_PREFIX"d, info modify time: %d, data modify time: %d",
+            src_block_info_.block_id_, finfo.id_, data_finfo->id_, finfo.modify_time_, data_finfo->modify_time_);
+        continue;
+      }
       uint32_t data_crc = 0;
       data_crc = Func::crc(data_crc, src_content_buf_.getData() + finfo.offset_ + FILEINFO_SIZE, finfo.size_);
       if (data_crc != finfo.crc_)
       {
-        TBSYS_LOG(ERROR, "file crc conflict, serious error. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d, size: %d, usize: %d, offset: %d, create time: %d, modify time: %d, crc: %u, data crc: %u",
-            seg_data_.seg_info_.block_id_, finfo.id_, finfo.flag_, finfo.size_, finfo.usize_,
+        TBSYS_LOG(ERROR, "file crc conflict, serious error. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d, size: %d, offset: %d, create time: %d, modify time: %d, crc: %u, data crc: %u",
+            src_block_info_.block_id_, finfo.id_, finfo.status_, finfo.size_,
             finfo.offset_, finfo.create_time_, finfo.modify_time_, finfo.crc_, data_crc);
         continue;
       }
 
-      FileInfo new_info;
+      FileInfoInDiskExt fde;
+      fde.version_ = 0;
+      FileInfoV2 new_info;
       new_info.id_ = finfo.id_;
       new_info.offset_ = dest_content_buf_.getDataLen();
-      new_info.size_ = finfo.size_ + FILEINFO_SIZE;
-      new_info.usize_ = new_info.size_;
+      new_info.size_ = finfo.size_ + FILEINFO_EXT_SIZE;
       new_info.modify_time_ = finfo.modify_time_;
       new_info.create_time_ = finfo.create_time_;
       // maybe have concealed file
-      new_info.flag_ = finfo.flag_;
+      new_info.status_ = finfo.status_;
       new_info.crc_ = finfo.crc_;
-
+      new_info.next_ = 0;
 
       // write to dest buf
-      dest_content_buf_.writeBytes(&new_info, FILEINFO_SIZE);
-      dest_content_buf_.writeBytes(src_content_buf_.getData() + finfo.offset_ + FILEINFO_SIZE, finfo.size_);
-
-      RawMeta dest_meta;
-      dest_meta.set_file_id(new_info.id_);
-      dest_meta.set_offset(new_info.offset_);
-      dest_meta.set_size(new_info.size_);
-      dest_raw_meta_.push_back(dest_meta);
+      dest_content_buf_.writeBytes(&fde, FILEINFO_EXT_SIZE);
+      char* data = (src_content_buf_.getData() + finfo.offset_ + FILEINFO_SIZE);
+      //Func::hex_dump(data, 10, true, TBSYS_LOG_LEVEL_INFO);
+      dest_content_buf_.writeBytes(data,finfo.size_);
+      dest_index_data_.finfos_.push_back(new_info);
     }
   }
 
   // set block info
-  dest_block_info_.block_id_ = seg_data_.seg_info_.block_id_;
-  dest_block_info_.version_ = dest_raw_meta_.size();
-  dest_block_info_.file_count_ = dest_raw_meta_.size();
-  dest_block_info_.size_ = dest_content_buf_.getDataLen();
-  dest_block_info_.del_file_count_ = 0;
-  dest_block_info_.del_size_ = 0;
-  dest_block_info_.seq_no_ = dest_raw_meta_.size();
-
+  memset(&dest_index_data_.header_, 0, sizeof(IndexHeaderV2));
+  dest_index_data_.header_.info_.block_id_ = src_block_info_.block_id_;
+  dest_index_data_.header_.info_.version_ = dest_index_data_.finfos_.size();
+  dest_index_data_.header_.info_.file_count_ = dest_index_data_.finfos_.size();
+  dest_index_data_.header_.info_.size_ = dest_content_buf_.getDataLen();
+  dest_index_data_.header_.info_.del_file_count_ = 0;
+  dest_index_data_.header_.info_.del_size_ = 0;
+  dest_index_data_.header_.seq_no_ = dest_index_data_.finfos_.size();
+  dest_index_data_.header_.used_file_info_bucket_size_ = dest_index_data_.finfos_.size();
+  dest_index_data_.header_.file_info_bucket_size_ = dest_index_data_.finfos_.size();
   return ret;
 }
 
 int TranBlock::check_dest_blk()
 {
   SegmentData dest_seg_data;
+  dest_seg_data.seg_info_.block_id_ = src_block_info_.block_id_;
   int ret = dest_session_->get_block_info(dest_seg_data, T_READ);
   VUINT64 dest_ds = dest_seg_data.ds_;
   if (TFS_SUCCESS == ret)
@@ -622,20 +638,16 @@ int TranBlock::check_dest_blk()
     int32_t ds_size = static_cast<int32_t>(dest_ds.size());
     if (ds_size > 0)
     {
-      TBSYS_LOG(ERROR, "block exists in dest cluster. block list size is %d, blockid: %u", ds_size, seg_data_.seg_info_.block_id_);
+      TBSYS_LOG(ERROR, "block exists in dest cluster. block list size is %d, blockid: %u", ds_size, src_block_info_.block_id_);
+      ret = rm_block_from_ns(dest_ds[0]);
       int i = 0;
-      for (i = 0; i < ds_size; i++)
+      for (i = 0; i < ds_size && TFS_SUCCESS == ret; i++)
       {
-        if ((ret = rm_block_from_ns(dest_ds[i])) != TFS_SUCCESS)
-        {
-          break;
-        }
         if ((ret = rm_block_from_ds(dest_ds[i])) != TFS_SUCCESS)
         {
           break;
         }
       }
-      rm_block_from_ns(dest_ds[0]);
     }
   }
   else
@@ -655,33 +667,29 @@ int TranBlock::write_data()
   while (block_len > 0)
   {
     int64_t remainder_retrys = RETRY_TIMES;
-    while (remainder_retrys > 0)
+    while (remainder_retrys-- > 0)
     {
       cur_len = std::min(static_cast<int64_t>(block_len), TRAN_BUFFER_SIZE);
 
-      WriteRawDataMessage req_wrd_msg;
-      req_wrd_msg.set_block_id(seg_data_.seg_info_.block_id_);
-      req_wrd_msg.set_offset(cur_write_offset);
-      req_wrd_msg.set_length(cur_len);
-      req_wrd_msg.set_data(dest_content_buf_.getData());
+      WriteRawdataMessageV2 req;
+      req.set_block_id(src_block_info_.block_id_);
+      req.set_offset(cur_write_offset);
+      req.set_length(cur_len);
+      req.set_data(dest_content_buf_.getData());
 
       //new block
       if (0 == cur_write_offset)
       {
-        req_wrd_msg.set_new_block(1);
+        req.set_new_flag(true);
       }
 
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* rsp = NULL;
-      if(TFS_SUCCESS != send_msg_to_server(dest_ds_id_, client, &req_wrd_msg, rsp))
-      {
-        rsp = NULL;
-      }
-      if (NULL == rsp)
+      ret = send_msg_to_server(dest_ds_id_, client, &req, rsp);
+      if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "write data failed, blockid: %u, dest_ds: %s, cur_write_offset: %d, cur_len: %d, ret: %d",
-            seg_data_.seg_info_.block_id_, tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), cur_write_offset, cur_len, ret);
-        ret = TFS_ERROR;
+            src_block_info_.block_id_, tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), cur_write_offset, cur_len, ret);
       }
       else
       {
@@ -691,14 +699,14 @@ int TranBlock::write_data()
           if (STATUS_MESSAGE_OK != sm->get_status())
           {
             TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, offset: %d, ret: %d",
-                tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, cur_write_offset, sm->get_status());
+                tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), src_block_info_.block_id_, cur_write_offset, sm->get_status());
             ret = TFS_ERROR;
           }
         }
         else
         {
           TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, offset: %d, unkonw msg type",
-              tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, cur_write_offset);
+              tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), src_block_info_.block_id_, cur_write_offset);
           ret = TFS_ERROR;
         }
 
@@ -709,7 +717,6 @@ int TranBlock::write_data()
 
         if (NULL == rsp)
         {
-          --remainder_retrys;
           continue;
         }
         else
@@ -720,7 +727,7 @@ int TranBlock::write_data()
             block_len = 0;
           }
           TBSYS_LOG(INFO, "write raw data to ds: %s successful, blockid: %u",
-              tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_);
+              tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), src_block_info_.block_id_);
           break;
         }
       }
@@ -737,27 +744,19 @@ int TranBlock::write_data()
 
 int TranBlock::write_index()
 {
-  int ret = TFS_SUCCESS;
-  WriteInfoBatchMessage req_wib_msg;
-  req_wib_msg.set_block_id(seg_data_.seg_info_.block_id_);
-  req_wib_msg.set_offset(0);
-  req_wib_msg.set_length(dest_raw_meta_.size());
-  req_wib_msg.set_raw_meta_list(&dest_raw_meta_);
-  req_wib_msg.set_block_info(&dest_block_info_);
-  req_wib_msg.set_cluster(COPY_BETWEEN_CLUSTER);
+  WriteIndexMessageV2 req_msg;
+  req_msg.set_block_id(dest_index_data_.header_.info_.block_id_);
+  req_msg.set_attach_block_id(dest_index_data_.header_.info_.block_id_);
+  req_msg.set_index_data(dest_index_data_);
+  req_msg.set_cluster_flag(true);
 
-  NewClient* client = NewClientManager::get_instance().create_client();
   tbnet::Packet* rsp = NULL;
-  if(TFS_SUCCESS != send_msg_to_server(dest_ds_id_, client, &req_wib_msg, rsp))
-  {
-    rsp = NULL;
-  }
-
-  if (NULL == rsp)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  int32_t ret = send_msg_to_server(dest_ds_id_, client, &req_msg, rsp);
+  if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "write index failed, blockid: %u, length: %zd, ret: %d",
-        seg_data_.seg_info_.block_id_, dest_raw_meta_.size(), ret);
-    ret = TFS_ERROR;
+        src_block_info_.block_id_, dest_index_data_.finfos_.size(), ret);
   }
   else
   {
@@ -766,15 +765,15 @@ int TranBlock::write_index()
       StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
       if (STATUS_MESSAGE_OK != sm->get_status())
       {
-        TBSYS_LOG(ERROR, "write raw index to ds: %s fail, blockid: %u, file count: %d, ret: %d",
-            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, static_cast<int32_t>(dest_raw_meta_.size()), sm->get_status());
+        TBSYS_LOG(ERROR, "write raw index to ds: %s fail, blockid: %u, file count: %zd, ret: %d",
+            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), src_block_info_.block_id_, dest_index_data_.finfos_.size(), sm->get_status());
         ret = TFS_ERROR;
       }
     }
     else
     {
-      TBSYS_LOG(ERROR, "write raw index to ds: %s fail, blockid: %u, file count: %d, unkonw msg type",
-          tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, static_cast<int32_t>(dest_raw_meta_.size()));
+      TBSYS_LOG(ERROR, "write raw index to ds: %s fail, blockid: %u, file count: %zd",
+            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), src_block_info_.block_id_, dest_index_data_.finfos_.size());
       ret = TFS_ERROR;
     }
   }
@@ -785,31 +784,32 @@ int TranBlock::write_index()
 
 int TranBlock::check_integrity()
 {
-  char data[MAX_READ_SIZE];
-  int ret = TFS_SUCCESS;
-  RawMetaVecIter vit = dest_raw_meta_.begin();
-  if ((ret = TfsClientImpl::Instance()->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false)) != TFS_SUCCESS)
+  int32_t ret = TfsClientImpl::Instance()->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false);
+  if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "TfsClientImpl::Instance().initialize error");
   }
   else
   {
-    for ( ; vit != dest_raw_meta_.end(); ++vit)
+    char data[MAX_READ_SIZE];
+    std::vector<FileInfoV2>::iterator vit = dest_index_data_.finfos_.begin();
+    for ( ; vit != dest_index_data_.finfos_.end(); ++vit)
     {
       int fd = 0;
-      FSName fname_helper;
-      fname_helper.set_block_id(seg_data_.seg_info_.block_id_);
-      fname_helper.set_file_id(vit->get_file_id());
-      if (concealed_files_.find(vit->get_file_id()) != concealed_files_.end())
+      uint64_t file_id = (*vit).id_;
+      FSName fname_helper(src_block_info_.block_id_, (*vit).id_);
+      if (concealed_files_.find(file_id) != concealed_files_.end())
       {
         TBSYS_LOG(INFO, "file concealed, check integrity skip it. blockid: %u, fileid: %"PRI64_PREFIX"u",
-            seg_data_.seg_info_.block_id_, vit->get_file_id());
+            src_block_info_.block_id_, file_id);
         continue;
       }
-      else if ((fd = TfsClientImpl::Instance()->open(fname_helper.get_name(), NULL, dest_ns_addr_.c_str(), T_READ)) != TFS_SUCCESS)
+      fd = TfsClientImpl::Instance()->open(fname_helper.get_name(), NULL, dest_ns_addr_.c_str(), T_READ);
+      ret = fd >= 0 ? TFS_SUCCESS : fd;
+      if (TFS_SUCCESS !=  ret)
       {
         TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
-            seg_data_.seg_info_.block_id_, vit->get_file_id(), ret);
+            src_block_info_.block_id_, file_id, ret);
       }
       else
       {
@@ -823,7 +823,7 @@ int TranBlock::check_integrity()
           if (read_len < 0)
           {
             TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
-                 seg_data_.seg_info_.block_id_, vit->get_file_id(), read_len);
+                 src_block_info_.block_id_, file_id, read_len);
             ret = TFS_ERROR;
             break;
           }
@@ -843,11 +843,11 @@ int TranBlock::check_integrity()
         if (TFS_SUCCESS == ret)
         {
           //FindFileId::set_file_id(vit->get_file_id());
-          FileInfoSetIter fit = find_if(file_set_.begin(), file_set_.end(), FindFileId(vit->get_file_id()));
+          FileInfoSetIter fit = find_if(file_set_.begin(), file_set_.end(), FindFileId(file_id));
           if (fit == file_set_.end())
           {
             TBSYS_LOG(ERROR, "read file is not in src file list, fatal error. blockid: %u, fileid: %"PRI64_PREFIX"u",
-                seg_data_.seg_info_.block_id_, vit->get_file_id());
+                src_block_info_.block_id_, file_id);
             ret = TFS_ERROR;
           }
           else
@@ -855,7 +855,7 @@ int TranBlock::check_integrity()
             if (crc != (*fit).crc_ || total_size != (*fit).size_ || crc != dest_info.crc_ || total_size != dest_info.size_)
             {
               TBSYS_LOG(ERROR, "blockid: %u, meta crc: %u, size: %d, data crc: %u, size: %d, dest crc: %u, size: %"PRI64_PREFIX"d\n",
-                 seg_data_.seg_info_.block_id_, (*fit).crc_, (*fit).size_, crc, total_size, dest_info.crc_, dest_info.size_);
+                 src_block_info_.block_id_, (*fit).crc_, (*fit).size_, crc, total_size, dest_info.crc_, dest_info.size_);
               ret = TFS_ERROR;
             }
           }
@@ -874,7 +874,7 @@ int TranBlock::check_integrity()
     }
 
     TBSYS_LOG(INFO, "blockid: %u check integrity, total: %"PRI64_PREFIX"d, success: %d, fail: %d",
-        seg_data_.seg_info_.block_id_, stat_param_.total_, atomic_read(&stat_param_.copy_success_), atomic_read(&stat_param_.copy_failure_));
+        src_block_info_.block_id_, stat_param_.total_, atomic_read(&stat_param_.copy_success_), atomic_read(&stat_param_.copy_failure_));
     if (atomic_read(&stat_param_.copy_failure_) != 0)
     {
       ret = TFS_ERROR;
@@ -883,19 +883,21 @@ int TranBlock::check_integrity()
 
   return ret;
 }
+
 int TranBlock::rm_block_from_ns(uint64_t ds_id)
 {
   int ret = TFS_SUCCESS;
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
   req_cc_msg.set_value1(ds_id);
-  req_cc_msg.set_value3(seg_data_.seg_info_.block_id_);
+  req_cc_msg.set_value3(src_block_info_.block_id_);
+  req_cc_msg.set_value4(tfs::nameserver::HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION);
 
   NewClient* client = NewClientManager::get_instance().create_client();
   tbnet::Packet* rsp = NULL;
   if((ret = send_msg_to_server(Func::get_host_ip(dest_ns_addr_.c_str()), client, &req_cc_msg, rsp)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "send remove block from ns command failed. block_id: %u, ret: %d", seg_data_.seg_info_.block_id_, ret);
+    TBSYS_LOG(ERROR, "send remove block from ns command failed. block_id: %u, ret: %d", src_block_info_.block_id_, ret);
     rsp = NULL;
   }
   else
@@ -906,35 +908,37 @@ int TranBlock::rm_block_from_ns(uint64_t ds_id)
       if (STATUS_MESSAGE_OK == sm->get_status())
       {
         TBSYS_LOG(INFO, "remove block from ns success, ds_addr: %s, blockid: %u",
-            tbsys::CNetUtil::addrToString(ds_id).c_str(), seg_data_.seg_info_.block_id_);
+            tbsys::CNetUtil::addrToString(ds_id).c_str(), src_block_info_.block_id_);
       }
       else
       {
         TBSYS_LOG(ERROR, "remove block from ns fail, ds_addr: %s, blockid: %u, ret: %d",
-            tbsys::CNetUtil::addrToString(ds_id).c_str(), seg_data_.seg_info_.block_id_, sm->get_status());
+            tbsys::CNetUtil::addrToString(ds_id).c_str(), src_block_info_.block_id_, sm->get_status());
         ret = TFS_ERROR;
       }
     }
     else
     {
       TBSYS_LOG(ERROR, "remove block from ns: %s fail, blockid: %u, unkonw msg type",
-          tbsys::CNetUtil::addrToString(ds_id).c_str(), seg_data_.seg_info_.block_id_);
+          tbsys::CNetUtil::addrToString(ds_id).c_str(), src_block_info_.block_id_);
       ret = TFS_ERROR;
     }
   }
   NewClientManager::get_instance().destroy_client(client);
   return ret;
 }
+
 int TranBlock::rm_block_from_ds(uint64_t ds_id)
 {
   int ret = TFS_SUCCESS;
-  RemoveBlockMessage req_rb_msg;
-  req_rb_msg.set(seg_data_.seg_info_.block_id_);
+  RemoveBlockMessageV2 req_rb_msg;
+  req_rb_msg.set_block_id(src_block_info_.block_id_);
+  req_rb_msg.set_tmp_flag(false);
   NewClient* client = NewClientManager::get_instance().create_client();
   tbnet::Packet* rsp = NULL;
   if((ret = send_msg_to_server(ds_id, client, &req_rb_msg, rsp)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "send remove block from ds command failed. block_id: %u, ret: %d", seg_data_.seg_info_.block_id_, ret);
+    TBSYS_LOG(ERROR, "send remove block from ds command failed. block_id: %u, ret: %d", src_block_info_.block_id_, ret);
     rsp = NULL;
   }
   else
@@ -945,19 +949,60 @@ int TranBlock::rm_block_from_ds(uint64_t ds_id)
       if (STATUS_MESSAGE_OK == sm->get_status())
       {
         TBSYS_LOG(INFO, "remove block from dest ds success, ds_addr: %s, blockid: %u",
-            tbsys::CNetUtil::addrToString(ds_id).c_str(), seg_data_.seg_info_.block_id_);
+            tbsys::CNetUtil::addrToString(ds_id).c_str(), src_block_info_.block_id_);
       }
       else
       {
         TBSYS_LOG(ERROR, "remove block from dest ds fail, ds_addr: %s, blockid: %u, ret: %d",
-            tbsys::CNetUtil::addrToString(ds_id).c_str(), seg_data_.seg_info_.block_id_, sm->get_status());
+            tbsys::CNetUtil::addrToString(ds_id).c_str(), src_block_info_.block_id_, sm->get_status());
         ret = TFS_ERROR;
       }
     }
     else
     {
       TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, unkonw msg type",
-          tbsys::CNetUtil::addrToString(ds_id).c_str(), seg_data_.seg_info_.block_id_);
+          tbsys::CNetUtil::addrToString(ds_id).c_str(), src_block_info_.block_id_);
+      ret = TFS_ERROR;
+    }
+  }
+  NewClientManager::get_instance().destroy_client(client);
+  return ret;
+}
+
+int TranBlock::rm_block_from_ds_v2(uint64_t ds_id)
+{
+  int ret = TFS_SUCCESS;
+  RemoveBlockMessageV2 req_rb_msg;
+  req_rb_msg.set_block_id(src_block_info_.block_id_);
+  req_rb_msg.set_tmp_flag(false);
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* rsp = NULL;
+  if((ret = send_msg_to_server(ds_id, client, &req_rb_msg, rsp)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "send remove block from ds command failed. block_id: %u, ret: %d", src_block_info_.block_id_, ret);
+    rsp = NULL;
+  }
+  else
+  {
+    if (rsp != NULL && STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+      if (STATUS_MESSAGE_OK == sm->get_status())
+      {
+        TBSYS_LOG(INFO, "remove block from dest ds success, ds_addr: %s, blockid: %u",
+            tbsys::CNetUtil::addrToString(ds_id).c_str(), src_block_info_.block_id_);
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "remove block from dest ds fail, ds_addr: %s, blockid: %u, ret: %d",
+            tbsys::CNetUtil::addrToString(ds_id).c_str(), src_block_info_.block_id_, sm->get_status());
+        ret = TFS_ERROR;
+      }
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, unkonw msg type",
+          tbsys::CNetUtil::addrToString(ds_id).c_str(), src_block_info_.block_id_);
       ret = TFS_ERROR;
     }
   }

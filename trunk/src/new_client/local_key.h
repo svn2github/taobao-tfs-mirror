@@ -86,8 +86,7 @@ namespace tfs
       int32_t pri_ds_index_;
       int32_t status_;
       TfsFileEofFlag eof_;
-      common::FamilyInfoExt family_info_;
-
+      //common::FamilyInfoExt family_info_;
       SegmentData() : cache_hit_(CACHE_HIT_NONE), delete_flag_(true), buf_(NULL),
                       inner_offset_(0), file_info_(NULL), pri_ds_index_(PRI_DS_NOT_INIT),
                       status_(SEG_STATUS_NOT_INIT), eof_(TFS_FILE_EOF_FLAG_NO)
@@ -123,43 +122,16 @@ namespace tfs
 
       int64_t get_read_pri_ds() const
       {
-        if (common::INVALID_FAMILY_ID != family_info_.family_id_)
-        {
-          int32_t index = 0;
-          const int32_t member_num = GET_DATA_MEMBER_NUM(family_info_.family_aid_info_) +
-            GET_CHECK_MEMBER_NUM(family_info_.family_aid_info_);
-          for (index = 0; index < member_num; index++)
-          {
-            if (common::INVALID_SERVER_ID != family_info_.members_[index].second)
-            {
-              break;
-            }
-          }
-
-          if (index == member_num)
-          {
-            return 0;
-          }
-          return family_info_.members_[index].second;
-        }
         return ds_[pri_ds_index_];
       }
 
       int64_t get_write_pri_ds() const
       {
-        if (ds_.size() == 0)
-        {
-          return 0;
-        }
         return ds_[0];
       }
 
       int32_t get_orig_pri_ds_index() const
       {
-        if (ds_.size() == 0)
-        {
-          return 0;
-        }
         return seg_info_.file_id_ % ds_.size();
       }
 
@@ -169,21 +141,11 @@ namespace tfs
 
       void set_pri_ds_index(int32_t index)
       {
-        if (ds_.size() == 0)
-        {
-          pri_ds_index_ = 0;
-          return;
-        }
         pri_ds_index_ = index % ds_.size();
       }
 
       int64_t get_last_read_pri_ds() const
       {
-        if (ds_.size() == 0)
-        {
-          return 0;
-        }
-
         int32_t index = 0;
         if (PRI_DS_NOT_INIT != pri_ds_index_)  // read
         {

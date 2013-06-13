@@ -54,19 +54,19 @@ class BlockConsole
     ~BlockConsole();
 
     int initialize(const std::string& ts_input_blocks_file, const std::string& dest_ds_ip_file);
-    int get_transfer_param(uint32_t& blockid, uint64_t& ds_id);
-    int finish_transfer_block(const uint32_t blockid, const int32_t transfer_ret);
+    int get_transfer_param(uint64_t& blockid, uint64_t& ds_id);
+    int finish_transfer_block(const uint64_t blockid, const int32_t transfer_ret);
 
   private:
     int locate_cur_pos();
 
   private:
-    std::set<uint32_t> input_blockids_;
-    std::set<uint32_t> succ_blockids_;
-    std::set<uint32_t> fail_blockids_;
+    std::set<uint64_t> input_blockids_;
+    std::set<uint64_t> succ_blockids_;
+    std::set<uint64_t> fail_blockids_;
     std::set<uint64_t> dest_ds_ids_;
     std::set<uint64_t>::iterator cur_ds_sit_;
-    std::set<uint32_t>::iterator cur_sit_;
+    std::set<uint64_t>::iterator cur_sit_;
     FILE* input_file_ptr_;
     FILE* succ_file_ptr_;
     FILE* fail_file_ptr_;
@@ -76,19 +76,19 @@ class BlockConsole
 
 struct FileInfoCmp
 {
-  bool operator()(const tfs::common::FileInfo& left, const tfs::common::FileInfo& right) const
+  bool operator()(const tfs::common::FileInfoV2& left, const tfs::common::FileInfoV2& right) const
   {
     return (left.offset_ < right.offset_);
   }
 };
 
-typedef std::set<tfs::common::FileInfo, FileInfoCmp> FileInfoSet;
+typedef std::set<tfs::common::FileInfoV2, FileInfoCmp> FileInfoSet;
 typedef FileInfoSet::iterator FileInfoSetIter;
 
 class TranBlock
 {
   public:
-    TranBlock(const uint32_t blockid, const std::string& dest_ns_addr,
+    TranBlock(const uint64_t blockid, const std::string& dest_ns_addr,
         const uint64_t dest_ds_addr, const int64_t traffic, tfs::client::TfsSession* src_session, tfs::client::TfsSession* dest_session);
     ~TranBlock();
 
@@ -109,6 +109,7 @@ class TranBlock
     int check_integrity();
     int rm_block_from_ns(uint64_t ds_id);
     int rm_block_from_ds(uint64_t ds_id);
+    int rm_block_from_ds_v2(uint64_t ds_id);
 
   private:
     static const int64_t WAIT_TIME_OUT;
@@ -116,21 +117,21 @@ class TranBlock
     static const int64_t RETRY_TIMES;
 
   private:
-    //uint32_t block_id_;
     std::string dest_ns_addr_;
+    int32_t src_ds_addr_index_;
     uint64_t dest_ds_id_;
     int32_t cur_offset_;
     int64_t total_tran_size_;
     int64_t traffic_;
+    int32_t src_ds_addr_count_;
+    uint64_t src_ds_addr_[tfs::common::MAX_REPLICATION_NUM];
     tfs::client::TfsSession* src_session_;
     tfs::client::TfsSession* dest_session_;
-    tfs::client::SegmentData seg_data_;
-    //tfs::common::VUINT64 rds_;
     FileInfoSet file_set_;
     tbnet::DataBuffer src_content_buf_;
     tbnet::DataBuffer dest_content_buf_;
-    tfs::common::RawMetaVec dest_raw_meta_;
-    tfs::common::BlockInfo dest_block_info_;
+    tfs::common::BlockInfo  src_block_info_;
+    tfs::common::IndexDataV2 dest_index_data_;
     StatParam stat_param_;
     std::set<uint64_t> concealed_files_;
 };
@@ -141,7 +142,7 @@ class FindFileId
     FindFileId(const uint64_t file_id) : file_id_(file_id)
     {
     }
-    bool operator()(const tfs::common::FileInfo& finfo)
+    bool operator()(const tfs::common::FileInfoV2& finfo)
     {
       return (file_id_ == finfo.id_);
     }

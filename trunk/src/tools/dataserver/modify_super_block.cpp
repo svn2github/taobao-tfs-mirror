@@ -20,7 +20,7 @@
 #include "common/internal.h"
 #include "dataserver/blockfile_manager.h"
 #include "common/parameter.h"
-#include "dataserver/version.h"
+#include "common/version.h"
 #include <stdio.h>
 
 using namespace tfs::common;

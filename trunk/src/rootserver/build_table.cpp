@@ -193,7 +193,7 @@ namespace tfs
         mo.per_mmap_size_ = size;
         tbsys::gDelete(file_);
         file_ = new MMapFile(mo, fd_);
-        iret = file_->map_file(true) ? TFS_SUCCESS : EXIT_MMAP_FILE_ERROR;
+        iret = file_->mmap(true) ? TFS_SUCCESS : EXIT_MMAP_FILE_ERROR;
         if (TFS_SUCCESS == iret)
         {
           if (file_size <= 0)
@@ -205,7 +205,7 @@ namespace tfs
             header_->active_table_version_ = TABLE_VERSION_MAGIC;
             header_->magic_number_  = MAGIC_NUMBER;
             header_->server_item_   = max_server_item;
-            iret = file_->sync_file() ? TFS_SUCCESS : TFS_ERROR;
+            iret = file_->msync() ? TFS_SUCCESS : TFS_ERROR;
           }
           else
           {
@@ -248,7 +248,7 @@ namespace tfs
       int32_t iret = TFS_SUCCESS;
       if (NULL != file_)
       {
-        iret = file_->munmap_file() ? TFS_SUCCESS : TFS_ERROR;
+        iret = file_->munmap() ? TFS_SUCCESS : TFS_ERROR;
         tbsys::gDelete(file_);
       }
       if (fd_ > 0)
@@ -491,7 +491,7 @@ namespace tfs
                   inc_build_version();
                   header_->compress_table_length_ = dest_length;
                   memcpy(compress_tables_, dest, dest_length);
-                  iret = file_->sync_file() ? TFS_SUCCESS : TFS_ERROR;
+                  iret = file_->msync() ? TFS_SUCCESS : TFS_ERROR;
                 }
                 tbsys::gDeleteA(dest);
               }
@@ -615,7 +615,7 @@ namespace tfs
         TBSYS_LOG(DEBUG, "old active version: %"PRI64_PREFIX"d", this->get_active_table_version());
         set_active_version();
         TBSYS_LOG(DEBUG, "new active version: %"PRI64_PREFIX"d", this->get_active_table_version());
-        iret = file_->sync_file() ? TFS_SUCCESS : TFS_ERROR;
+        iret = file_->msync() ? TFS_SUCCESS : TFS_ERROR;
       }
       return iret;
     }
@@ -648,7 +648,7 @@ namespace tfs
             tstr << " " << (*it) << " ";
           }
           tstr << std::endl;
-          TBSYS_LOGGER.logMessage(level, file, line, function, "%s", tstr.str().c_str());
+          TBSYS_LOGGER.logMessage(level, file, line, function, pthread_self(), "%s", tstr.str().c_str());
         }
       }
     }
@@ -690,7 +690,7 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         header_ = reinterpret_cast<TablesHeader*>(file_->get_data());
-        uint64_t* data = static_cast<uint64_t*>(file_->get_data());
+        uint64_t* data = reinterpret_cast<uint64_t*>(file_->get_data());
         int64_t offset = header_->length()/ INT64_SIZE;
         server_tables_ = data + offset;
         offset += max_server_item ;

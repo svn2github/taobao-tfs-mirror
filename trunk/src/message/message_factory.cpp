@@ -121,13 +121,13 @@ namespace tfs
             packet = new  RespListBlockMessage();
             break;
           case common::BLOCK_RAW_META_MESSAGE:
-            packet = new  BlockRawMetaMessage();
+            //packet = new  BlockRawMetaMessage();
             break;
           case common::WRITE_RAW_DATA_MESSAGE:
-            packet = new  WriteRawDataMessage();
+            //packet = new  WriteRawDataMessage();
             break;
           case common::WRITE_INFO_BATCH_MESSAGE:
-            packet = new  WriteInfoBatchMessage();
+            //packet = new  WriteInfoBatchMessage();
             break;
           case common::BLOCK_COMPACT_COMPLETE_MESSAGE:
             packet = new  DsCommitCompactBlockCompleteToNsMessage();
@@ -286,13 +286,13 @@ namespace tfs
             packet = new ECDissolveCommitMessage();
             break;
           case common::READ_RAW_INDEX_MESSAGE:
-            packet = new ReadRawIndexMessage();
+            //packet = new ReadRawIndexMessage();
             break;
           case common::RSP_READ_RAW_INDEX_MESSAGE:
-            packet = new RespReadRawIndexMessage();
+            //packet = new RespReadRawIndexMessage();
             break;
           case common::WRITE_RAW_INDEX_MESSAGE:
-            packet = new WriteRawIndexMessage();
+            //packet = new WriteRawIndexMessage();
             break;
           case common::DS_COMPACT_BLOCK_MESSAGE:
             packet = new DsCompactBlockMessage();
@@ -383,6 +383,90 @@ namespace tfs
             break;
           case common::RSP_KV_RT_GET_TABLE_MESSAGE:
             packet = new GetTableFromKvRtsResponseMessage();
+            break;
+          case common::GET_BLOCK_INFO_MESSAGE_V2:
+            packet = new GetBlockInfoMessageV2();
+            break;
+          case common::GET_BLOCK_INFO_RESP_MESSAGE_V2:
+            packet = new GetBlockInfoRespMessageV2();
+            break;
+          case common::BATCH_GET_BLOCK_INFO_MESSAGE_V2:
+            packet = new BatchGetBlockInfoMessageV2();
+            break;
+          case common::BATCH_GET_BLOCK_INFO_RESP_MESSAGE_V2:
+            packet = new BatchGetBlockInfoRespMessageV2();
+            break;
+          case common::WRITE_FILE_MESSAGE_V2:
+            packet = new WriteFileMessageV2();
+            break;
+          case common::WRITE_FILE_RESP_MESSAGE_V2:
+            packet = new WriteFileRespMessageV2();
+            break;
+          case common::SLAVE_DS_RESP_MESSAGE:
+            packet = new SlaveDsRespMessage();
+            break;
+          case common::CLOSE_FILE_MESSAGE_V2:
+            packet = new CloseFileMessageV2();
+            break;
+          case common::UPDATE_BLOCK_INFO_MESSAGE_V2:
+            packet = new UpdateBlockInfoMessageV2();
+            break;
+          case common::REPAIR_BLOCK_MESSAGE_V2:
+            packet = new RepairBlockMessageV2();
+            break;
+          case common::STAT_FILE_MESSAGE_V2:
+            packet = new StatFileMessageV2();
+            break;
+          case common::STAT_FILE_RESP_MESSAGE_V2:
+            packet = new StatFileRespMessageV2();
+            break;
+          case common::READ_FILE_MESSAGE_V2:
+            packet = new ReadFileMessageV2();
+            break;
+          case common::READ_FILE_RESP_MESSAGE_V2:
+            packet = new ReadFileRespMessageV2();
+            break;
+          case common::UNLINK_FILE_MESSAGE_V2:
+            packet = new UnlinkFileMessageV2();
+            break;
+          case common::NEW_BLOCK_MESSAGE_V2:
+            packet = new NewBlockMessageV2();
+            break;
+          case common::REMOVE_BLOCK_MESSAGE_V2:
+            packet = new RemoveBlockMessageV2();
+            break;
+          case common::READ_RAWDATA_MESSAGE_V2:
+            packet = new ReadRawdataMessageV2();
+            break;
+          case common::READ_RAWDATA_RESP_MESSAGE_V2:
+            packet = new ReadRawdataRespMessageV2();
+            break;
+          case common::WRITE_RAWDATA_MESSAGE_V2:
+            packet = new WriteRawdataMessageV2();
+            break;
+          case common::READ_INDEX_MESSAGE_V2:
+            packet = new ReadIndexMessageV2();
+            break;
+          case common::READ_INDEX_RESP_MESSAGE_V2:
+            packet = new ReadIndexRespMessageV2();
+            break;
+          case common::WRITE_INDEX_MESSAGE_V2:
+            packet = new WriteIndexMessageV2();
+            break;
+          case common::QUERY_EC_META_MESSAGE:
+            packet = new QueryEcMetaMessage();
+            break;
+          case common::QUERY_EC_META_RESP_MESSAGE:
+            packet = new QueryEcMetaRespMessage();
+            break;
+          case common::COMMIT_EC_META_MESSAGE:
+            packet = new CommitEcMetaMessage();
+            break;
+          case common::BLOCK_FILE_INFO_MESSAGE_V2:
+            packet = new BlockFileInfoMessageV2();
+            break;
+          case common::REPORT_CHECK_BLOCK_MESSAGE:
+            packet = new ReportCheckBlockMessage();
             break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);

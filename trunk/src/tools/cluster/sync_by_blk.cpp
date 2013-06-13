@@ -14,6 +14,8 @@
  *
  */
 
+#include <set>
+#include "tools/util/util.h"
 #include "sync_file_base.h"
 #include "common/client_manager.h"
 #include "common/status_message.h"
@@ -24,15 +26,16 @@ using namespace std;
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::client;
+using namespace tfs::tools;
 
-typedef vector<uint32_t> BLOCK_ID_VEC;
-typedef vector<uint32_t>::iterator BLOCK_ID_VEC_ITER;
+typedef vector<uint64_t> BLOCK_ID_VEC;
+typedef vector<uint64_t>::iterator BLOCK_ID_VEC_ITER;
 typedef vector<std::string> FILE_NAME_VEC;
 typedef vector<std::string>::iterator FILE_NAME_VEC_ITER;
 
 struct BlockFileInfo
 {
-  BlockFileInfo(const uint32_t block_id, const FileInfo& file_info)
+  BlockFileInfo(const uint64_t block_id, const FileInfo& file_info)
     : block_id_(block_id)
   {
     memcpy(&file_info_, &file_info, sizeof(file_info));
@@ -40,7 +43,7 @@ struct BlockFileInfo
   ~BlockFileInfo()
   {
   }
-  uint32_t block_id_;
+  uint64_t block_id_;
   FileInfo file_info_;
 };
 
@@ -71,9 +74,37 @@ FILE *g_file_succ = NULL, *g_file_fail = NULL, *g_file_unsync = NULL, *g_file_de
 
 //int get_server_status();
 //int get_diff_block();
-int get_file_list(const string& ns_addr, const uint32_t block_id, BLOCK_FILE_INFO_VEC& v_block_file_info);
-int get_file_list(const string& ns_addr, const uint32_t block_id, FILE_NAME_VEC& v_file_name);
-int sync_file(const string& src_ns_addr, const string& dest_ns_addr, const uint32_t block_id, FileInfo& file_info, const bool force, const int32_t modify_time);
+//int get_file_list(const string& ns_addr, const uint64_t block_id, BLOCK_FILE_INFO_VEC& v_block_file_info);
+int get_file_list(const string& ns_addr, const uint64_t block_id, FILE_NAME_VEC& v_file_name);
+int sync_file(const string& src_ns_addr, const string& dest_ns_addr, const uint64_t block_id, const FileInfo& file_info, const bool force, const int32_t modify_time);
+
+static void get_diff_file_infos(std::multiset<std::string>& src_file_name, std::multiset<std::string>& dest_file_name, std::multiset<std::string>& out_file_name)
+{
+  std::multiset<std::string>::const_iterator iter = dest_file_name.begin();
+  for (; iter != dest_file_name.end(); ++iter)
+  {
+    std::multiset<std::string>::const_iterator it = src_file_name.find((*iter));
+    if (it == src_file_name.end())
+    {
+      TBSYS_LOG(DEBUG, "dest file need to be deleted. file_name: %s", (*iter).c_str());
+      fprintf(g_file_del, "%s\n", (*iter).c_str());
+      out_file_name.insert((*iter));
+    }
+  }
+}
+
+static void unlink_file_list(std::multiset<std::string>& out_v_file_name, const std::string& ns_addr)
+{
+  int64_t size = 0;
+  std::multiset<std::string>::const_iterator iter = out_v_file_name.begin();
+  for (; iter != out_v_file_name.end(); ++iter)
+  {
+    TfsClientImpl::Instance()->unlink(size, (*iter).c_str(), NULL, ns_addr.c_str());
+    fprintf(g_file_del, "%s\n", (*iter).c_str());
+    tbutil::Mutex::Lock lock(g_mutex_);
+    g_sync_stat_.del_count_++;
+  }
+}
 
 class WorkThread : public tbutil::Thread
 {
@@ -98,108 +129,56 @@ class WorkThread : public tbutil::Thread
 
     virtual void run()
     {
-      if (!destroy_)
+      std::vector<uint64_t>::const_iterator iter = v_block_id_.begin();
+      for (; iter != v_block_id_.end() && !destroy_; ++iter)
       {
-        BLOCK_ID_VEC_ITER iter = v_block_id_.begin();
-        for (; iter != v_block_id_.end(); iter++)
+        uint64_t block_id = (*iter);
+        bool block_done = false;
+        TBSYS_LOG(INFO, "sync block started. blockid: %"PRI64_PREFIX"u", block_id);
+
+        std::set<FileInfo, CompareFileInfoByFileId> files;
+        int32_t ret = Util::read_file_infos(src_ns_addr_, block_id, files, 0);
+        if (TFS_SUCCESS == ret)
         {
-          if (!destroy_)
+          std::set<FileInfo, CompareFileInfoByFileId>::const_iterator it = files.begin();
+          for (; it != files.end() && !destroy_; ++it)
           {
-            uint32_t block_id = (*iter);
-            bool block_done = false;
-            TBSYS_LOG(INFO, "sync block started. blockid: %u", block_id);
-
-            BLOCK_FILE_INFO_VEC v_block_file_info;
-            get_file_list(src_ns_addr_, block_id, v_block_file_info);
-            TBSYS_LOG(INFO, "file size: %zd", v_block_file_info.size());
-            BLOCK_FILE_INFO_VEC_ITER file_info_iter = v_block_file_info.begin();
-            for (; file_info_iter != v_block_file_info.end(); file_info_iter++)
-            {
-              if (destroy_)
-              {
-                break;
-              }
-              sync_file(src_ns_addr_, dest_ns_addr_, block_id, (*file_info_iter).file_info_, force_, modify_time_);
-            }
-            block_done = (file_info_iter == v_block_file_info.end());
-
-            if (need_remove_file_)
-            {
-              block_done = false;
-              if (!destroy_)
-              {
-                FILE_NAME_VEC src_v_file_name, dest_v_file_name, diff_v_file_name;
-
-                get_file_list(src_ns_addr_, block_id, src_v_file_name);
-                TBSYS_LOG(INFO, "source file list size: %zd", src_v_file_name.size());
-
-                get_file_list(dest_ns_addr_, block_id, dest_v_file_name);
-                TBSYS_LOG(INFO, "dest file list size: %zd", dest_v_file_name.size());
-
-                get_diff_file_list(src_v_file_name, dest_v_file_name, diff_v_file_name);
-                TBSYS_LOG(INFO, "diff file list size: %zd", diff_v_file_name.size());
-
-                unlink_file_list(diff_v_file_name);
-                TBSYS_LOG(INFO, "unlink file list size: %zd", diff_v_file_name.size());
-
-                block_done = true;
-              }
-            }
-
-            if (block_done)
-            {
-              fprintf(g_blk_done, "%u\n", block_id);
-              TBSYS_LOG(INFO, "sync block finished. blockid: %u", block_id);
-            }
+            sync_file(src_ns_addr_, dest_ns_addr_, block_id, (*it), force_, modify_time_);
           }
+          block_done = it == files.end();
+          if (need_remove_file_)
+          {
+            std::multiset<std::string> src_file_names, dest_file_names, diff_file_names;
+            Util::read_file_infos(src_ns_addr_, block_id, src_file_names, 0);
+            TBSYS_LOG(INFO, "source file list size: %zd", src_file_names.size());
+
+            Util::read_file_infos(dest_ns_addr_, block_id, dest_file_names, 1);
+            TBSYS_LOG(INFO, "dest file list size: %zd", src_file_names.size());
+
+            get_diff_file_infos(src_file_names, dest_file_names, diff_file_names);
+            TBSYS_LOG(INFO, "diff file list size: %zd", diff_file_names.size());
+
+            unlink_file_list(diff_file_names, dest_ns_addr_);
+            TBSYS_LOG(INFO, "unlink file list size: %zd", diff_file_names.size());
+          }
+        }
+        else
+        {
+          TBSYS_LOG(WARN, "get file infos fail, block: %"PRI64_PREFIX"u", block_id);
+        }
+
+        if (block_done)
+        {
+          fprintf(g_blk_done, "%"PRI64_PREFIX"u\n", block_id);
+          TBSYS_LOG(INFO, "sync block finished. blockid: %"PRI64_PREFIX"u", block_id);
         }
       }
     }
 
-    void push_back(uint32_t block_id)
+    void push_back(uint64_t block_id)
     {
       v_block_id_.push_back(block_id);
     }
-
-    void get_diff_file_list(FILE_NAME_VEC& src_v_file_name, FILE_NAME_VEC& dest_v_file_name, FILE_NAME_VEC& out_v_file_name)
-    {
-      FILE_NAME_VEC_ITER dest_iter = dest_v_file_name.begin();
-      for(; dest_iter != dest_v_file_name.end(); dest_iter++)
-      {
-        vector<std::string>::iterator src_iter = src_v_file_name.begin();
-        for(; src_iter != src_v_file_name.end(); src_iter++)
-        {
-          if (*src_iter == *dest_iter)
-          {
-            break;
-          }
-        }
-        if (src_iter == src_v_file_name.end())
-        {
-          TBSYS_LOG(DEBUG, "dest file need to be deleted. file_name: %s", (*dest_iter).c_str());
-          fprintf(g_file_del, "%s\n", (*dest_iter).c_str());
-          out_v_file_name.push_back(*dest_iter);
-        }
-      }
-    }
-
-    int64_t unlink_file_list(vector<std::string>& out_v_file_name)
-    {
-      int64_t size = 0;
-      vector<std::string>::iterator iter = out_v_file_name.begin();
-      for(; iter != out_v_file_name.end(); iter++)
-      {
-        TfsClientImpl::Instance()->unlink(size, (*iter).c_str(), NULL, dest_ns_addr_.c_str());
-        TBSYS_LOG(DEBUG, "unlink file(%s) succeed.", (*iter).c_str());
-        {
-          tbutil::Mutex::Lock lock(g_mutex_);
-          g_sync_stat_.del_count_++;
-        }
-        fprintf(g_file_del, "%s\n", (*iter).c_str());
-      }
-      return size;
-    }
-
   private:
     WorkThread(const WorkThread&);
     string src_ns_addr_;
@@ -409,7 +388,7 @@ int main(int argc, char* argv[])
       char tbuf[256];
       while(fgets(tbuf, 256, fp))
       {
-        uint32_t block_id = strtoul(tbuf, NULL, 10);
+        uint64_t block_id = strtoull(tbuf, NULL, 10);
         v_block_id.push_back(block_id);
       }
       fclose(fp);
@@ -470,95 +449,7 @@ int main(int argc, char* argv[])
 
   return TFS_SUCCESS;
 }
-int get_file_list(const string& ns_addr, const uint32_t block_id, FILE_NAME_VEC& v_file_name)
-{
-  BLOCK_FILE_INFO_VEC v_block_file_info;
-  int ret = get_file_list(ns_addr, block_id, v_block_file_info);
-  if (ret == TFS_SUCCESS)
-  {
-    BLOCK_FILE_INFO_VEC_ITER iter = v_block_file_info.begin();
-    for (; iter != v_block_file_info.end(); iter++)
-    {
-      FSName fsname(iter->block_id_, iter->file_info_.id_, TfsClientImpl::Instance()->get_cluster_id(ns_addr.c_str()));
-      v_file_name.push_back(string(fsname.get_name()));
-    }
-  }
-  return ret;
-}
-int get_file_list(const string& ns_addr, const uint32_t block_id, BLOCK_FILE_INFO_VEC& v_block_file_info)
-{
-  int ret = TFS_ERROR;
-  VUINT64 ds_list;
-  GetBlockInfoMessage gbi_message;
-  gbi_message.set_block_id(block_id);
-
-  tbnet::Packet* rsp = NULL;
-  NewClient* client = NewClientManager::get_instance().create_client();
-  ret = send_msg_to_server(Func::get_host_ip(ns_addr.c_str()), client, &gbi_message, rsp);
-
-  if (rsp != NULL)
-  {
-    if (rsp->getPCode() == SET_BLOCK_INFO_MESSAGE)
-    {
-      ds_list = dynamic_cast<SetBlockInfoMessage*>(rsp)->get_block_ds();
-      if (ds_list.size() > 0)
-      {
-        uint64_t ds_id = ds_list[0];
-        TBSYS_LOG(DEBUG, "ds_ip: %s", tbsys::CNetUtil::addrToString(ds_id).c_str());
-        GetServerStatusMessage req_gss_msg;
-        req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
-        req_gss_msg.set_return_row(block_id);
-
-        int ret_status = TFS_ERROR;
-        tbnet::Packet* ret_msg = NULL;
-        NewClient* new_client = NewClientManager::get_instance().create_client();
-        ret_status = send_msg_to_server(ds_id, new_client, &req_gss_msg, ret_msg);
-
-        //if the information of file can be accessed.
-        if ((ret_status == TFS_SUCCESS))
-        {
-          TBSYS_LOG(DEBUG, "ret_msg->pCODE: %d", ret_msg->getPCode());
-          if (BLOCK_FILE_INFO_MESSAGE == ret_msg->getPCode())
-          {
-            FILE_INFO_LIST* file_info_list = (dynamic_cast<BlockFileInfoMessage*> (ret_msg))->get_fileinfo_list();
-            int32_t i = 0;
-            int32_t list_size = file_info_list->size();
-            for (i = 0; i < list_size; i++)
-            {
-              FileInfo& file_info = file_info_list->at(i);
-              FSName fsname(block_id, file_info.id_, TfsClientImpl::Instance()->get_cluster_id(ns_addr.c_str()));
-              TBSYS_LOG(DEBUG, "block_id: %u, file_id: %"PRI64_PREFIX"u, name: %s\n", block_id, file_info.id_, fsname.get_name());
-              v_block_file_info.push_back(BlockFileInfo(block_id, file_info));
-            }
-          }
-          else if (STATUS_MESSAGE == ret_msg->getPCode())
-          {
-            printf("%s", (dynamic_cast<StatusMessage*> (ret_msg))->get_error());
-          }
-        }
-        else
-        {
-          fprintf(stderr, "Get File list in Block failure\n");
-        }
-        NewClientManager::get_instance().destroy_client(new_client);
-      }
-    }
-    else if (rsp->getPCode() == STATUS_MESSAGE)
-    {
-      ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
-      fprintf(stderr, "get block info from %s fail, error: %s\n", ns_addr.c_str(), dynamic_cast<StatusMessage*>(rsp)->get_error());
-    }
-  }
-  else
-  {
-    fprintf(stderr, "get NULL response message, ret: %d\n", ret);
-  }
-
-  NewClientManager::get_instance().destroy_client(client);
-
-  return ret;
-}
-int sync_file(const string& src_ns_addr, const string& dest_ns_addr, const uint32_t block_id, FileInfo& file_info,
+int sync_file(const string& src_ns_addr, const string& dest_ns_addr, const uint64_t block_id, const FileInfo& file_info,
     const bool force, const int32_t modify_time)
 {
   int ret = TFS_SUCCESS;

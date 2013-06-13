@@ -326,7 +326,7 @@ namespace tfs
         {
           status_type_ = type;
         }
-        inline void set_blocks(const int32_t type, const common::VUINT32* v_blocks)
+        inline void set_blocks(const int32_t type, const common::VUINT64* v_blocks)
         {
           if (type & common::LB_BLOCK)
           {
@@ -334,45 +334,40 @@ namespace tfs
             blocks_ = (*v_blocks);
           }
         }
-        inline const common::VUINT32* get_blocks() const
+        inline common::VUINT64* get_blocks()
         {
           return &blocks_;
         }
-        inline void set_pairs(const int32_t type, std::map<uint32_t, std::vector<uint32_t> >* pairs_)
+        inline void set_pairs(const int32_t type, std::map<uint64_t, std::vector<int32_t> >* pairs)
         {
           if (type & common::LB_PAIRS)
           {
             status_type_ = status_type_ | common::LB_PAIRS;
-            block_pairs_ = (*pairs_);
+            block_pairs_ = (*pairs);
           }
         }
-        inline const std::map<uint32_t, std::vector<uint32_t> >* get_pairs() const
+        inline std::map<uint64_t, std::vector<int32_t> >* get_pairs()
         {
           return &block_pairs_;
         }
-        inline void set_infos(const int32_t type, const std::map<uint32_t, common::BlockInfo*>* v_infos)
+        inline void set_infos(const int32_t type, const std::vector<common::BlockInfoV2>* infos)
         {
           if (type & common::LB_INFOS)
           {
             status_type_ = status_type_ | common::LB_INFOS;
-            block_infos_.clear();
-            std::map<uint32_t, common::BlockInfo*>::const_iterator it;
-            for (it = v_infos->begin(); it != v_infos->end(); it++)
-            {
-              block_infos_[it->first] = *(it->second);
-            }
+            block_infos_ = *infos;
           }
         }
-        inline const std::map<uint32_t, common::BlockInfo>* get_infos() const
+        inline std::vector<common::BlockInfoV2>* get_infos()
         {
           return &block_infos_;
         }
       protected:
         int32_t status_type_;
         int32_t need_free_;
-        common::VUINT32 blocks_;
-        std::map<uint32_t, std::vector<uint32_t> > block_pairs_;
-        std::map<uint32_t, common::BlockInfo> block_infos_;
+        common::VUINT64 blocks_;
+        std::vector<common::BlockInfoV2> block_infos_;
+        std::map<uint64_t, std::vector<int32_t> > block_pairs_;
     };
 
     // block_count, block_id, .....
@@ -470,16 +465,16 @@ namespace tfs
         {
           return block_id_;
         }
-        inline common::FILE_INFO_LIST* get_fileinfo_list()
+        inline common::FILE_INFO_LIST& get_fileinfo_list()
         {
-          return &fileinfo_list_;
+          return fileinfo_list_;
         }
       protected:
-        uint32_t block_id_;
+        uint64_t block_id_;
         common::FILE_INFO_LIST fileinfo_list_;
     };
 
-    class BlockRawMetaMessage:  public common::BasePacket
+    /*class BlockRawMetaMessage:  public common::BasePacket
     {
       public:
         BlockRawMetaMessage();
@@ -502,7 +497,7 @@ namespace tfs
       protected:
         uint32_t block_id_;
         common::RawMetaVec raw_meta_list_;
-    };
+    };*/
 
     class BlockWriteCompleteMessage:  public common::BasePacket
     {

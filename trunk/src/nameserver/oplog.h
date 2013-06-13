@@ -48,7 +48,7 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int64_t length() const;
-      uint32_t seqno_;
+      uint64_t seqno_;
       uint32_t time_;
       uint32_t crc_;
       uint16_t length_;
@@ -61,7 +61,7 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int64_t length() const;
-      uint32_t seqno_;
+      uint64_t seqno_;
       int32_t rotate_seqno_;
       int32_t rotate_offset_;
     };
@@ -72,10 +72,9 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int64_t length() const;
-      uint32_t seqno_;
-      common::BlockInfo info_;
-      common::VUINT32 blocks_;
-      common::VUINT64 servers_;
+      common::BlockInfoV2 info_;
+      uint64_t servers_[common::MAX_REPLICATION_NUM];
+      int8_t server_num_;
       int8_t cmd_;
       void dump(const int32_t level) const;
     };

@@ -230,7 +230,7 @@ namespace tfs
             ServerShow server, old_server;
             if (TFS_SUCCESS == server.ServerBase::deserialize(ret_param.data_, data_len, offset, type))
             {
-              //server.ServerBase::dump();
+              server.ServerBase::dump();
               if (once && ((tbsys::CNetUtil::addrToString(server.id_)) != server_ip_port))
               {
                 break;
@@ -391,7 +391,7 @@ namespace tfs
 
     }
 
-    int ShowInfo::show_block(const int8_t type, const int32_t num, const uint32_t block_id, const int32_t block_chunk_num, int32_t count, const int32_t interval, const string& filename)
+    int ShowInfo::show_block(const int8_t type, const int32_t num, const uint64_t block_id, const int32_t block_chunk_num, int32_t count, const int32_t interval, const string& filename)
     {
       interrupt_ = false;
       is_loop_ = (count == 0);
@@ -468,7 +468,7 @@ namespace tfs
               //block.BlockBase::dump();
               if (once && (block.info_.block_id_ != block_id))
               {
-                TBSYS_LOG(ERROR, "block(%u)(%u) not exists", block.info_.block_id_, block_id);
+                TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", block.info_.block_id_, block_id);
                 break;
               }
               stat.add(block);

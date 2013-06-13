@@ -16,177 +16,113 @@
 #include <vector>
 #include <algorithm>
 #include <functional>
+#include <Memory.hpp>
+#include "common/internal.h"
 #include "common/func.h"
-#include "new_client/tfs_client_api.h"
+#include "clientv2/tfs_client_impl_v2.h"
 #include "util.h"
 #include "thread.h"
 
 using namespace KFS;
 using namespace tfs::common;
-using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace std;
 
-#define FILE_NAME_LEN 18
-
-int serialize(char* oper, vector<std::string>& operlist, int32_t index, int32_t flag)
+int write_file(ThreadParam& param, TfsClientImplV2* tfsclient, const char* tfs_name, vector<std::string>& file_list,
+    TimeConsumed& write_time_consumed, Stater& write_stater, const char* data, vector<std::string>& read_file_list, const bool update)
 {
-  char file_list_name[100];
-  sprintf(file_list_name, "%sf_%d", oper, index);
-  int fd = open(file_list_name, flag, 0660);
-  if (fd == -1)
-  {
-    fprintf(stderr, "index(%d) open %s file failed,  exit, %s=============\n", index, oper, strerror(errno));
-    return -1;
-  }
-
-  const int32_t BUFLEN = 32;
-  char name_buf[BUFLEN];
-  vector<std::string>::iterator start = operlist.begin();
-  vector<std::string>::iterator end = operlist.end();
-  random_shuffle(start, end);
-  vector<std::string>::iterator vit = operlist.begin();
-  for (; vit != operlist.end(); vit++)
-  {
-    sprintf(name_buf, "%s\n", (*vit).c_str());
-    write(fd, name_buf, strlen(name_buf));
-  }
-  close(fd);
-  return 0;
-}
-
-int write_file(ThreadParam& param, TfsClient* tfsclient, char* tfs_name, vector<std::string>& file_list,
-    TimeConsumed& write_time_consumed, Stater& write_stater, const char* data)
-{
-  //uint32_t block_id = 0;
-  //uint64_t file_id = 0;
+  ++write_time_consumed.total_count_;
   bool random = param.max_size_ > param.min_size_;
   uint32_t write_size = param.max_size_;
   Timer timer;
   timer.start();
-  int fd;
-  int ret = retry_open_file(tfsclient, tfs_name, (char*) ".jpg", T_WRITE, fd);
-  //convname(tfs_file->get_file_name(), (char*) ".jpg", block_id, file_id);
-  if (ret != EXIT_SUCCESS)
+  int32_t fd = tfsclient->open(tfs_name, NULL, NULL, T_WRITE);
+  int32_t ret = fd > 0 ? TFS_SUCCESS : fd;
+  if (TFS_SUCCESS == ret)
   {
-    fprintf(stderr, "index:%d, tfsopen failed\n", param.index_);
+    if (random)
+    {
+      struct timeval val;
+      gettimeofday(&val, NULL);
+      srand(val.tv_usec);
+      write_size = rand() % (param.max_size_ - param.min_size_) + param.min_size_;
+    }
+    param.file_size_ += write_size;
+    ret = write_data(tfsclient, fd, const_cast<char*>(data), write_size);
+    ret = ret > 0 ? TFS_SUCCESS : ret;
+  }
+
+  char ret_name[FILE_NAME_LEN_V2+1];
+  if (fd > 0)
+  {
+    int32_t result = tfsclient->close(fd, ret_name, FILE_NAME_LEN_V2+1);
+    ret = TFS_SUCCESS == ret ? result : ret;
+    if (TFS_SUCCESS == ret)
+    {
+      file_list.push_back(ret_name);
+      if (read_file_list.size() < 0xffff && !update)
+        read_file_list.push_back(ret_name);
+    }
+  }
+
+  if (TFS_SUCCESS != ret)
+  {
     ++write_time_consumed.fail_count_;
-    ++write_time_consumed.total_count_;
-    return ret;
   }
-  else
+
+  write_time_consumed.time_consumed_ = timer.consume();
+  write_stater.stat_time_count(write_time_consumed.time_consumed_);
+  write_time_consumed.process();
+  return ret;
+}
+
+int read_file(TfsClientImplV2* tfsclient, const char* tfsname)
+{
+  int32_t ret = (static_cast<int32_t> (strlen(tfsname)) < FILE_NAME_LEN || (tfsname[0] != 'T' && tfsname[0] != 'L')) ? TFS_ERROR : TFS_SUCCESS;
+  if (TFS_SUCCESS == ret)
   {
-    write_time_consumed.time_consumed_ = timer.consume();
-    if (param.profile_)
+    int32_t fd = tfsclient->open(tfsname, NULL, NULL, T_READ);
+    ret = (fd > 0) ? TFS_SUCCESS : fd;
+    if (TFS_SUCCESS == ret)
     {
-      printf("index:%d, tfsopen ok. spend (%" PRI64_PREFIX "d)\n", param.index_,
-          write_time_consumed.time_consumed_);
-    }
-  }
-
-  if (random)
-  {
-    struct timeval val;
-    gettimeofday(&val, NULL);
-    srand(val.tv_usec);
-    write_size = rand() % (param.max_size_ - param.min_size_) + param.min_size_;
-  }
-
-  param.file_size_ += write_size;
-  ret = write_data(tfsclient, fd, const_cast<char*>(data), write_size);
-  if (ret < 0)
-  {
-    fprintf(stderr, "index:%d, tfswrite failed\n", param.index_);
-    tfsclient->close(fd);
-    ++write_time_consumed.fail_count_;
-    ++write_time_consumed.total_count_;
-    return ret;
-  }
-  else
-  {
-    write_time_consumed.time_consumed_ = timer.consume();
-    if (param.profile_)
-    {
-      printf("index:%d, tfswrite completed, spend (%" PRI64_PREFIX "d)\n", param.index_,
-        write_time_consumed.time_consumed_);
-    }
-
-    char ret_name[FILE_NAME_LEN+1];
-    if (!tfs_name)
-      ret = tfsclient->close(fd, ret_name, FILE_NAME_LEN+1);
-    else
-      ret = tfsclient->close(fd);
-    if (ret == TFS_SUCCESS)
-    {
-      write_time_consumed.time_consumed_ = timer.consume();
-      write_stater.stat_time_count(write_time_consumed.time_consumed_);
-      write_time_consumed.process();
-
-      if (param.profile_)
+      uint32_t crc = 0;
+      TfsFileStat stat;
+      memset(&stat, 0, sizeof(stat));
+      int32_t length = 0, total = 0, read_length = 0;
+      char data[MAX_READ_SIZE];
+      do
       {
-        printf("index:%d, tfs_close, completed, spend (%" PRI64_PREFIX "d)\n", param.index_,
-            write_time_consumed.time_consumed_);
+        read_length = stat.size_ <= 0 ? MAX_READ_SIZE : stat.size_ - total;
+        read_length = std::min(MAX_READ_SIZE, read_length);
+        length = tfsclient->readv2(fd, data, read_length, &stat);
+        ret = length >= 0 ? TFS_SUCCESS : length;
+        if (TFS_SUCCESS == ret && length > 0)
+        {
+          total += length;
+          crc = Func::crc(crc, (data), (length));
+        }
       }
-      if (!tfs_name)
-      {
-        file_list.push_back(ret_name);
-      }
-    }
-    else
-    {
-      std::string type = (!tfs_name) ? "writeop" : "updateop";
-      fprintf(stderr, "index:%d, tfs_close failed. type: %s.\n", param.index_, type.c_str());
-      ++write_time_consumed.fail_count_;
-      ++write_time_consumed.total_count_;
-      return ret;
+      while (total < stat.size_  && TFS_SUCCESS == ret);
+      tfsclient->close(fd);
+      if (crc != stat.crc_)
+        TBSYS_LOG(INFO, " crc error. filename : %s, crc: %u<> %u", tfsname, crc, stat.crc_);
+      ret = (total == stat.size_ && crc == stat.crc_ )? TFS_SUCCESS : TFS_ERROR;
     }
   }
-
-  ++write_time_consumed.total_count_;
-  return 0;
+  return ret;
 }
 
 void* mix_worker(void* arg)
 {
-
   ThreadParam param = *(ThreadParam*) (arg);
-
   int32_t read_ratio = 200, write_ratio = 8, delete_ratio = 2, update_ratio = 1;
-  std::string::size_type pos = param.oper_ratio_.find_first_of(":");
-  int32_t i = 0;
-  int32_t pre_pos = 0;
-  while (std::string::npos != pos)
-  {
-    if (0 == i)
-    {
-      read_ratio = atoi(param.oper_ratio_.substr(pre_pos, pos).c_str());
-      if (0 == read_ratio)
-      {
-        fprintf(stderr, "read_ratio can not be zero\n");
-        assert(false);
-      }
-    }
-    else if (1 == i)
-    {
-      write_ratio = atoi(param.oper_ratio_.substr(0, pos).c_str());
-    }
-    else if (2 == i)
-    {
-      delete_ratio = atoi(param.oper_ratio_.substr(0, pos).c_str());
-    }
-    else if (3 == i)
-    {
-      update_ratio = atoi(param.oper_ratio_.substr(0, pos).c_str());
-    }
-
-    i++;
-    pre_pos = pos + 1;
-    param.oper_ratio_ = param.oper_ratio_.substr(pre_pos, std::string::npos);
-    pos = param.oper_ratio_.find_first_of(":");
-  }
-  if ((3 == i) && (param.oper_ratio_.size() > 0))
-  {
-    update_ratio = atoi(param.oper_ratio_.c_str());
-  }
+  std::vector<string> vec;
+  Func::split_string(param.oper_ratio_.c_str(), ':', vec);
+  assert(vec.size() == 4U);
+  read_ratio = atoi((vec[0]).c_str());
+  write_ratio = atoi((vec[1]).c_str());
+  delete_ratio = atoi((vec[2]).c_str());
+  update_ratio = atoi((vec[3]).c_str());
   int32_t PER_READ = 100;
   int32_t PER_WRITE = PER_READ * write_ratio / read_ratio;
   int32_t PER_DELETE = PER_READ * delete_ratio / read_ratio;
@@ -197,152 +133,89 @@ void* mix_worker(void* arg)
       read_ratio, write_ratio, delete_ratio, update_ratio, PER_READ, PER_WRITE, PER_DELETE, PER_UPDATE);
   printf("max_size = %d, min_size = %d, random: %d, count = %d\n", param.max_size_, param.min_size_, param.random_,
       param.file_count_);
-  char file_list_name[100];
-  sprintf(file_list_name, "wf_%d", param.index_);
-  FILE* input_fd = fopen(file_list_name, "rw+");
-  if (NULL == input_fd)
-  {
-    printf("index(%d) open read file failed, exit, %s\n", param.index_, strerror(errno));
-    return NULL;
-  }
-  const int32_t BUFLEN = 32;
-  char name_buf[BUFLEN];
   vector<std::string> update_list, delete_list;
   vector<std::string> read_file_list, write_file_list;
-  while (fgets(name_buf, BUFLEN, input_fd))
-  {
-    name_buf[FILE_NAME_LEN] = '\0';
-    read_file_list.push_back(name_buf);
-  }
-  fclose(input_fd);
-
-  /*
-   param.locker_->lock();
-   TfsSession session;
-   session.init((char*) param.conf_.c_str());
-   param.locker_->unlock();
-   TfsFile tfs_file;
-   tfs_file.set_session(&session);
-   */
   printf("init connection to nameserver:%s\n", param.ns_ip_port_.c_str());
-  TfsClient *tfsclient = TfsClient::Instance();
-	int iret = tfsclient->initialize(param.ns_ip_port_.c_str());
-	if (iret != TFS_SUCCESS)
-	{
-		return NULL;
-	}
+  TfsClientImplV2 *tfsclient = TfsClientImplV2::Instance();
+  int64_t time_start = Func::curr_time();
   Timer timer;
-
   Stater read_stater("read"), write_stater("write"), delete_stater("delete"), update_stater("update");
   TimeConsumed read_time_consumed("read"), write_time_consumed("write"), delete_time_consumed("delete"),
       update_time_consumed("update");
-
-  //random read
-  if (param.random_)
-  {
-    vector<std::string>::iterator start = read_file_list.begin();
-    vector<std::string>::iterator end = read_file_list.end();
-    random_shuffle(start, end);
-  }
-
-  int32_t need_times = param.file_count_ / (PER_READ + PER_DELETE + PER_UPDATE);
-  int32_t exist_times = read_file_list.size() / (PER_READ + PER_DELETE + PER_UPDATE);
-  int32_t loop_times = (need_times <= exist_times) ? need_times : exist_times;
+  int32_t loop_times = param.file_count_ / (PER_READ + PER_DELETE + PER_UPDATE);
   int32_t loop_times_bak = loop_times;
-  //printf("loop_times: %d, need_times: %d, exist_times: %d, filecount: %d, read_file_list size: %d\n", loop_times, need_times, exist_times, param.file_count, read_file_list.size());
-  //for write
-  char* data = new char[param.max_size_];
-  memset(data, 0, param.max_size_);
-  generate_data(data, param.max_size_);
-  //bool random = param.max_size_ > param.min_size_;
-
-  int64_t time_start = Func::curr_time();
-  vector<std::string>::iterator vit = read_file_list.begin();
-  vector<std::string>::iterator bit;
-  while (loop_times > 0)
+	int ret = tfsclient->initialize(param.ns_ip_port_.c_str());
+  if (TFS_SUCCESS == ret)
   {
-    int32_t i = 0;
-    for (i = 0; i < PER_READ; i++)
+    tfsclient->set_log_level(param.log_level_.c_str());
+    //for write
+    char* data = new char[param.max_size_];
+    memset(data, 0, param.max_size_);
+    generate_data(data, param.max_size_);
+    TBSYS_LOG(DEBUG, "GEN data %s", data);
+
+    vector<std::string>::iterator iter;
+    do
     {
-      if (vit == read_file_list.end())
+      int32_t index = 0, random_index;
+      for (index = 0; index < PER_WRITE; ++index)
       {
-        printf("Read File. read file_list reach end. \n");
-        vit = read_file_list.begin();
-      }
-      timer.start();
-      int ret = copy_file(tfsclient, (char*) (*vit).c_str(), -1);
-      if (ret != TFS_SUCCESS)
-      {
-        ++read_time_consumed.fail_count_;
-      }
-      else
-      {
-        read_time_consumed.time_consumed_ = timer.consume();
-        read_stater.stat_time_count(read_time_consumed.time_consumed_);
-        read_time_consumed.process();
+        write_file(param, tfsclient, NULL, write_file_list, write_time_consumed, write_stater, data, read_file_list, false);
       }
 
-      if (param.profile_)
+      for (index = 0; index < PER_READ && !read_file_list.empty(); ++index)
       {
-        printf("read file (%s), (%s)\n", (*vit).c_str(), ret == TFS_SUCCESS ? "success" : "failed");
-        print_rate(ret, read_time_consumed.time_consumed_);
+        timer.start();
+        ++read_time_consumed.total_count_;
+        random_index = random() % read_file_list.size();
+        std::string file_name = read_file_list[random_index];
+        ret = read_file(tfsclient, file_name.c_str());
+        if (TFS_SUCCESS != ret)
+        {
+          ++read_time_consumed.fail_count_;
+        }
+        else
+        {
+          read_time_consumed.time_consumed_ = timer.consume();
+          read_stater.stat_time_count(read_time_consumed.time_consumed_);
+          read_time_consumed.process();
+        }
       }
-      ++read_time_consumed.total_count_;
-      vit++;
+
+      for (index = 0; index < PER_UPDATE && !read_file_list.empty(); ++index)
+      {
+        random_index = random() % read_file_list.size();
+        iter = read_file_list.begin() + random_index;
+        std::string file_name = (*iter);
+        read_file_list.erase(iter);
+        ret = write_file(param, tfsclient, file_name.c_str(), write_file_list, update_time_consumed,
+          update_stater, data, read_file_list, true);
+      }
+
+      for (index = 0; index < PER_DELETE && !read_file_list.empty(); ++index)
+      {
+        ++delete_time_consumed.total_count_;
+        random_index = random() % read_file_list.size();
+        iter = read_file_list.begin() + random_index;
+        std::string file_name = (*iter);
+        read_file_list.erase(iter);
+        timer.start();
+        int64_t file_size;
+        ret = tfsclient->unlink(file_size, file_name.c_str(), NULL);
+        if (TFS_SUCCESS == ret)
+        {
+          delete_time_consumed.time_consumed_ = timer.consume();
+          delete_stater.stat_time_count(delete_time_consumed.time_consumed_);
+          delete_time_consumed.process();
+        }
+        else
+        {
+          ++delete_time_consumed.fail_count_;
+        }
+      }
     }
-
-    for (i = 0; i < PER_WRITE; i++)
-    {
-      write_file(param, tfsclient, NULL, write_file_list, write_time_consumed, write_stater, data);
-    }
-
-    for (i = 0; i < PER_UPDATE; i++)
-    {
-      if (vit == read_file_list.end())
-      {
-        printf("Update File. read file_list reach end. \n");
-        vit = read_file_list.begin();
-      }
-
-      int ret = write_file(param, tfsclient, (char*) (*vit).c_str(), write_file_list, update_time_consumed,
-          update_stater, data);
-      if (0 == ret)
-      {
-        update_list.push_back((*vit).c_str());
-      }
-      vit++;
-    }
-
-    for (i = 0; i < PER_DELETE; i++)
-    {
-      if (vit == read_file_list.end())
-      {
-        printf("Detele File. read file_list reach end. \n");
-        vit = read_file_list.begin();
-      }
-
-      timer.start();
-      int64_t file_size;
-      int ret = tfsclient->unlink(file_size, (char*) (*vit).c_str(), ".jpg");
-      if (ret != TFS_SUCCESS)
-      {
-        printf("thread (%d) unlink file fail (%s)\n", param.index_, (*vit).c_str());
-        ++delete_time_consumed.fail_count_;
-        vit++;
-      }
-      else
-      {
-        delete_time_consumed.time_consumed_ = timer.consume();
-        delete_stater.stat_time_count(delete_time_consumed.time_consumed_);
-        delete_time_consumed.process();
-
-        delete_list.push_back((*vit).c_str());
-        bit = read_file_list.erase(vit);
-        vit = bit;
-      }
-      ++delete_time_consumed.total_count_;
-    }
-    loop_times--;
+    while (loop_times-- > 0);
+    tbsys::gDeleteA(data);
   }
 
   int64_t time_stop = Func::curr_time();
@@ -383,28 +256,6 @@ void* mix_worker(void* arg)
   write_stater.dump_time_stat();
   update_stater.dump_time_stat();
   delete_stater.dump_time_stat();
-
-  for (vector<std::string>::iterator vit = write_file_list.begin(); vit != write_file_list.end(); vit++)
-  {
-    read_file_list.push_back((*vit));
-  }
-  int ret = serialize("w", read_file_list, param.index_, O_CREAT | O_RDWR | O_TRUNC);
-  if (ret)
-  {
-    return NULL;
-  }
-  ret = serialize("u", update_list, param.index_, O_CREAT | O_RDWR | O_APPEND);
-  if (ret)
-  {
-    return NULL;
-  }
-
-  ret = serialize("d", delete_list, param.index_, O_CREAT | O_RDWR | O_APPEND);
-  if (ret)
-  {
-    return NULL;
-  }
-
   return NULL;
 }
 
@@ -415,7 +266,11 @@ int main(int argc, char* argv[])
   int ret = fetch_input_opt(argc, argv, input_param, thread_count);
   if (ret != TFS_SUCCESS || input_param.ns_ip_port_.empty() || thread_count > THREAD_SIZE)
   {
+<<<<<<< .working
     printf("usage: -d ip:port -t thread_count -o ratio(read:write:delete:update) -s random(0/1) -r range\n");
+=======
+    printf("usage: -d ip:port -t thread_count -o ratio(read:write:delete:update) -c count -r range -l log_level\n");
+>>>>>>> .merge-right.r2309
     exit(-1);
   }
 
@@ -437,6 +292,7 @@ int main(int argc, char* argv[])
     param[i].max_size_ = input_param.max_size_;
     param[i].locker_ = &glocker;
     param[i].ns_ip_port_ = input_param.ns_ip_port_;
+    param[i].log_level_ = input_param.log_level_;
     threads[i].start(mix_worker, (void*) &param[i]);
   }
 
@@ -474,5 +330,5 @@ int main(int argc, char* argv[])
   printf("thread_num count filesize     iops    siops     fiops     srate       frate\n");
   printf("%10d  %4d %5.2f  %8.3f %8.3f %8.3f %10.3f  %10.3f\n", thread_count, total_count, asize, iops, siops, fiops,
       srate, frate);
-
+  return 0;
 }

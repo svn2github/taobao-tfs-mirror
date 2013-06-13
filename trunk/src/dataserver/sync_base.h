@@ -13,6 +13,8 @@
  *      - initial release
  *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
+ *   linqing <linqing.zyd@taobao.com>
+ *      - modify 2013-06-03
  *
  */
 #ifndef TFS_DATASERVER_SYNCBASE_H_
@@ -42,11 +44,15 @@ namespace tfs
         int init();
         void stop();
 
-        int write_sync_log(const int32_t cmd, const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id = 0);
+        int write_sync_log(const int32_t cmd, const uint64_t block_id, const uint64_t file_id, const uint64_t old_file_id = 0);
         int reset_log();
         int disable_log();
         void set_pause(const int32_t v);
         int run_sync_mirror();
+        int run_fail_sync_mirror();
+
+        std::string get_src_addr() { return src_addr_; }
+        std::string get_dest_addr() { return dest_addr_; }
 
       private:
         SyncBase();
@@ -57,18 +63,18 @@ namespace tfs
         std::string mirror_dir_;
         std::string src_addr_;
         std::string dest_addr_;
-        bool is_master_;      // master is responsible to sync to the other backup clusters
         bool stop_;
         int32_t pause_;
         int32_t need_sync_;
         int32_t need_sleep_;
         tbutil::Monitor<tbutil::Mutex> sync_mirror_monitor_;
-        tbutil::Monitor<tbutil::Mutex> retry_wait_monitor_;
+        tbutil::Mutex fail_queue_mutex_;
 #if defined(TFS_GTEST)
       public:
 #else
 #endif
         common::FileQueue* file_queue_;
+        common::FileQueue* fail_file_queue_;
         SyncBackup* backup_;
 
       private:

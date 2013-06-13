@@ -67,7 +67,8 @@ namespace tfs
       {
         if (type & BLOCK_TYPE_BLOCK_INFO)
         {
-          fprintf(fp, "  FAMILY_ID BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE   SEQ_NO  COPYS\n");
+          fprintf(fp, "%-10s %-20s %-8s %-8s %-10s %-8s %-10s %-8s %-10s %-8s\n", "FAMILY_ID", "BLOCK_ID", "VERS", "CNT", "SIZE", "DEL_CNT", "DEL_SIZE", "UP_CNT", "UP_SIZE", "COPYS");
+          //fprintf(fp, "  FAMILY_ID BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE   COPYS\n");
         }
         if (type & BLOCK_TYPE_SERVER_LIST)
         {
@@ -99,11 +100,21 @@ namespace tfs
       output.writeInt32(block_count_);
       output.writeInt64(last_update_time_);
       output.writeInt64(startup_time_);
-      output.writeInt64(current_time_);
+
       output.writeInt64(total_tp_.write_byte_);
-      output.writeInt64(total_tp_.write_file_count_);
       output.writeInt64(total_tp_.read_byte_);
+      output.writeInt64(total_tp_.write_file_count_);
       output.writeInt64(total_tp_.read_file_count_);
+      output.writeInt64(total_tp_.unlink_file_count_);
+      output.writeInt64(total_tp_.fail_write_byte_);
+      output.writeInt64(total_tp_.fail_read_byte_);
+      output.writeInt64(total_tp_.fail_write_file_count_);
+      output.writeInt64(total_tp_.fail_read_file_count_);
+      output.writeInt64(total_tp_.fail_unlink_file_count_);
+
+      output.writeInt64(current_time_);
+      output.writeInt32(status_);
+
       length += (output.getDataLen());
 
       return TFS_SUCCESS;
@@ -116,6 +127,7 @@ namespace tfs
       }
       int32_t len = 0;
       len = input.getDataLen();
+
       id_ = input.readInt64();
       use_capacity_ = input.readInt64();
       total_capacity_ = input.readInt64();
@@ -123,11 +135,21 @@ namespace tfs
       block_count_  = input.readInt32();
       last_update_time_ = input.readInt64();
       startup_time_ = input.readInt64();
-      current_time_ = input.readInt64();
+
       total_tp_.write_byte_ = input.readInt64();
-      total_tp_.write_file_count_ = input.readInt64();
       total_tp_.read_byte_ = input.readInt64();
+      total_tp_.write_file_count_ = input.readInt64();
       total_tp_.read_file_count_ = input.readInt64();
+      total_tp_.unlink_file_count_ = input.readInt64();
+      total_tp_.fail_write_byte_ = input.readInt64();
+      total_tp_.fail_read_byte_ = input.readInt64();
+      total_tp_.fail_write_file_count_ = input.readInt64();
+      total_tp_.fail_read_file_count_ = input.readInt64();
+      total_tp_.fail_unlink_file_count_ = input.readInt64();
+
+      current_time_ = input.readInt64();
+      status_ = static_cast<DataServerLiveStatus>(input.readInt32());
+
       length -= (len - input.getDataLen());
       return TFS_SUCCESS;
     }
@@ -141,21 +163,18 @@ namespace tfs
       compute_tp(&total_tp_, time);
       return TFS_SUCCESS;
     }
-    void ServerShow::dump(const uint64_t server_id, const std::set<uint32_t>& blocks, FILE* fp) const
+    void ServerShow::dump(const uint64_t server_id, const std::set<uint64_t>& blocks, FILE* fp) const
     {
       if (fp == NULL) { return; }
 
       fprintf(fp, "%17s ", tbsys::CNetUtil::addrToString(server_id).c_str());
       fprintf(fp, "%6Zd ", blocks.size());
-      std::set<uint32_t>::const_iterator iter = blocks.begin();
+      std::set<uint64_t>::const_iterator iter = blocks.begin();
       int32_t count = 0;
       for (; iter != blocks.end(); iter++)
       {
-        if (count < MAX_COUNT)
-        {
-          fprintf(fp, "%6u",(*iter));
-        }
-        else
+        fprintf(fp, "%12"PRI64_PREFIX"u",(*iter));
+        if (count >= MAX_COUNT)
         {
           fprintf(fp, "\n%25s", " ");
           count = 0;
@@ -167,27 +186,6 @@ namespace tfs
     void ServerShow::dump(const int8_t type, FILE* fp) const
     {
       if (fp == NULL) { return; }
-
-#ifdef TFS_NS_DEBUG
-      fprintf(fp, "%17s %7s %7s %2d%% %6d %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s  %5"PRI64_PREFIX"d %5"PRI64_PREFIX"d %-19s\n",
-            tbsys::CNetUtil::addrToString(id_).c_str(),
-            Func::format_size(use_capacity_).c_str(),
-            Func::format_size(total_capacity_).c_str(),
-            total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_) : 0,
-            block_count_,
-            current_load_,
-            Func::format_size(total_tp_.write_byte_).c_str(),
-            total_tp_.write_file_count_,
-            Func::format_size(total_tp_.read_byte_).c_str(),
-            total_tp_.read_file_count_,
-            Func::format_size(last_tp_.write_byte_).c_str(),
-            last_tp_.write_file_count_,
-            Func::format_size(last_tp_.read_byte_).c_str(),
-            last_tp_.read_file_count_,
-            total_elect_num_,
-            Func::time_to_str(startup_time_).c_str()
-            );
-#else
       if (type & SERVER_TYPE_SERVER_INFO)
       {
         fprintf(fp, "%17s %7s %7s %2d%% %6d %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %-19s\n",
@@ -208,7 +206,6 @@ namespace tfs
             Func::time_to_str(startup_time_).c_str()
             );
       }
-#endif
       if (type & SERVER_TYPE_BLOCK_LIST)
       {
         dump(id_, hold_, fp);
@@ -230,12 +227,13 @@ namespace tfs
       if (fp == NULL) { return; }
       if (type & BLOCK_TYPE_BLOCK_INFO)
       {
-        fprintf(fp, "%10"PRI64_PREFIX"d %10u %6d %10d %10d %10d %10d %10u %8Zd", family_id_, info_.block_id_, info_.version_, info_.file_count_, info_.size_,
-            info_.del_file_count_, info_.del_size_, info_.seq_no_, server_list_.size());
+        fprintf(fp, "%-10"PRI64_PREFIX"d %-20"PRI64_PREFIX"u %-8d %-8d %-10d %-8d %-10d %-8d %-10d %-6Zd", info_.family_id_, info_.block_id_, info_.version_, info_.file_count_, info_.size_,
+            info_.del_file_count_, info_.del_size_, info_.update_file_count_,
+            info_.update_size_, server_list_.size());
       }
       if (type & BLOCK_TYPE_SERVER_LIST)
       {
-        fprintf(fp, "%10u", info_.block_id_);
+        fprintf(fp, "%15"PRI64_PREFIX"u", info_.block_id_);
         std::string server_str = "";
         std::vector<ServerInfo>::const_iterator iter = server_list_.begin();
         for (; iter != server_list_.end(); iter++)

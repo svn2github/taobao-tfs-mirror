@@ -178,6 +178,85 @@ namespace tfs
 
     }
 
+    int ECReinstateCommitMessage::serialize(common::Stream& output) const
+    {
+      int ret = ECMarshallingCommitMessage::serialize(output);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(reinstate_num_);
+      }
+
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < reinstate_num_); i++)
+      {
+        int64_t pos = 0;
+        ret = block_infos_[i].serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == ret)
+        {
+          output.pour(block_infos_[i].length());
+        }
+      }
+
+      return ret;
+    }
+
+    int ECReinstateCommitMessage::deserialize(common::Stream& input)
+    {
+      int ret = ECMarshallingCommitMessage::deserialize(input);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&reinstate_num_);
+      }
+
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < reinstate_num_); i++)
+      {
+        int64_t pos = 0;
+        ret = block_infos_[i].deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == ret)
+        {
+          input.drain(block_infos_[i].length());
+        }
+      }
+
+      return ret;
+    }
+
+    int64_t ECReinstateCommitMessage::length() const
+    {
+      int64_t len = ECMarshallingCommitMessage::length() + INT_SIZE;
+      if (reinstate_num_ > 0)
+      {
+        BlockInfoV2 tmp;
+        len += reinstate_num_ * tmp.length();
+      }
+      return len;
+    }
+
+    int32_t ECReinstateCommitMessage::get_reinstate_num() const
+    {
+      return reinstate_num_;
+    }
+
+    common::BlockInfoV2* ECReinstateCommitMessage::get_reinstate_block_info()
+    {
+      return block_infos_;
+    }
+
+    int ECReinstateCommitMessage::set_reinstate_block_info(common::BlockInfoV2* block_infos, const int32_t reinstate_num)
+    {
+      int ret = ((NULL == block_infos) || (reinstate_num < 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        reinstate_num_ = 0;
+        for (int i = 0; i < reinstate_num; i++)
+        {
+          block_infos_[reinstate_num_++] = block_infos[i];
+        }
+      }
+
+      return ret;
+    }
+
     ECDissolveMessage::ECDissolveMessage()
     {
       _packetHeader._pcode = common::REQ_EC_DISSOLVE_MESSAGE;

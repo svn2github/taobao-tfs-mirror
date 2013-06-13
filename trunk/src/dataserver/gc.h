@@ -13,66 +13,38 @@
  *      - initial release
  *
  */
-#ifndef TFS_DATASERVER_GC_H
-#define TFS_DATASERVER_GC_H
+#ifndef TFS_DATASERVER_GC_H_
+#define TFS_DATASERVER_GC_H_
 
-#include <Timer.h>
 #include <Mutex.h>
-#include "dataserver_define.h"
+#include "ds_define.h"
+
+#ifdef TFS_GTEST
+#include <gtest/gtest.h>
+#endif
 
 namespace tfs
 {
-namespace dataserver
-{
-  class GCObjectManager
+  namespace dataserver
   {
-  public:
-    GCObjectManager();
-    virtual ~GCObjectManager();
-    int add(GCObject* object);
-    void run();
-    int initialize(tbutil::TimerPtr timer);
-    int wait_for_shut_down();
-    void destroy();
-    bool is_init() { return is_init_; }
-    static GCObjectManager& instance()
+    class GCObjectManager
     {
-      return instance_;
-    }
-  #if defined(TFS_GTEST) || defined(TFS_DS_INTEGRATION)
-  public:
-  #else
-  private:
-  #endif
-    DISALLOW_COPY_AND_ASSIGN(GCObjectManager);
-    std::list<GCObject*> object_list_;
-    tbutil::Mutex mutex_;
-    static GCObjectManager instance_;
-    bool is_init_;
-    bool destroy_;
-
-  #if defined(TFS_GTEST) || defined(TFS_DS_INTEGRATION)
-  public:
-  #else
-  private:
-  #endif
-    class ExpireTimerTask: public tbutil::TimerTask
-    {
-    public:
-      explicit ExpireTimerTask(GCObjectManager& manager)
-        :manager_(manager)
-      {
-
-      }
-
-      virtual ~ExpireTimerTask() {}
-      virtual void runTimerTask();
-    private:
-      GCObjectManager& manager_;
+      #ifdef TFS_GTEST
+      friend class GCTest;
+      FRIEND_TEST(GCTest, add);
+      FRIEND_TEST(GCTest, gc);
+      #endif
+      public:
+      GCObjectManager();
+      virtual ~GCObjectManager();
+      int add(GCObject* object, const time_t now = common::Func::get_monotonic_time());
+      int gc(const time_t now);
+      int64_t size() const;
+      private:
+      DISALLOW_COPY_AND_ASSIGN(GCObjectManager);
+      tbutil::Mutex mutex_;
+      std::set<GCObject*>  wait_free_list_;
     };
-    typedef tbutil::Handle<ExpireTimerTask> ExpireTimerTaskPtr;
-  };
-}
-}
-
+  }/** end namespace nameserver **/
+}/** end namespace tfs **/
 #endif

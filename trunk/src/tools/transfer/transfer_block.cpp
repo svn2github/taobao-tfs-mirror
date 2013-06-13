@@ -29,7 +29,6 @@
 #include "common/base_packet_streamer.h"
 #include "message/message_factory.h"
 #include "common/client_manager.h"
-#include "dataserver/visit_stat.h"
 #include "new_client/tfs_client_api.h"
 #include "block_console.h"
 
@@ -37,7 +36,6 @@ using namespace tbsys;
 using namespace tfs::common;
 using namespace tfs::client;
 using namespace tfs::message;
-using namespace tfs::dataserver;
 
 static BasePacketStreamer g_packet_streamer_;
 static MessageFactory g_packet_factory_;
@@ -89,7 +87,7 @@ class WorkThread : public tbutil::Thread
       int ret = TFS_SUCCESS;
       while (!destroy_)
       {
-        uint32_t block_id = 0;
+        uint64_t block_id = 0;
         uint64_t ds_id = 0;
         TIMER_START();
         // get blockid and dsid
@@ -101,7 +99,7 @@ class WorkThread : public tbutil::Thread
         }
         else
         {
-          TBSYS_LOG(INFO, "get transfer param succ, blockid: %u, ds: %s, thread id: %"PRI64_PREFIX"d",
+          TBSYS_LOG(INFO, "get transfer param succ, blockid: %"PRI64_PREFIX"u, ds: %s, thread id: %"PRI64_PREFIX"d",
               block_id, tbsys::CNetUtil::addrToString(ds_id).c_str(), id());
           TranBlock tran_block(block_id, dest_ns_addr_, ds_id, traffic_, src_session_, dest_session_);
           if ((ret = tran_block.run()) != TFS_SUCCESS)
@@ -199,12 +197,13 @@ int main(int argc, char* argv[])
   std::string ts_input_blocks_file;
   std::string log_file = "./tranblk.log";
   std::string pid_file = "./tranblk.pid";
+  std::string log_level("info");
   int64_t traffic_threshold = 1024;
   bool daemon_flag = false;
   bool help = false;
 
   int32_t index = 0;
-  while ((index = getopt(argc, argv, "s:n:f:b:w:t:l:p:dvh")) != EOF)
+  while ((index = getopt(argc, argv, "s:n:f:b:w:t:l:p:k:dvh")) != EOF)
   {
     switch (index)
     {
@@ -235,6 +234,9 @@ int main(int argc, char* argv[])
       case 'd':
         daemon_flag = true;
         break;
+      case 'k':
+        log_level = optarg;
+        break;
       case 'v':
         break;
       case 'h':
@@ -258,6 +260,7 @@ int main(int argc, char* argv[])
     TBSYS_LOGGER.rotateLog(log_file.c_str());
   }
   TBSYS_LOGGER.setMaxFileSize(1024 * 1024 * 1024);
+  TBSYS_LOGGER.setLogLevel(log_level.c_str());
 
   int pid = 0;
   if (daemon_flag)
@@ -287,9 +290,9 @@ int main(int argc, char* argv[])
       else
       {
         TfsSession* src_session = new TfsSession(src_ns_ip_port,
-            tfs::common::DEFAULT_BLOCK_CACHE_TIME, tfs::common::DEFAULT_BLOCK_CACHE_ITEMS);
+            tfs::common::DEFAULT_BLOCK_CACHE_TIME, 0);
         TfsSession* dest_session = new TfsSession(dest_ns_ip_port,
-            tfs::common::DEFAULT_BLOCK_CACHE_TIME, tfs::common::DEFAULT_BLOCK_CACHE_ITEMS);
+            tfs::common::DEFAULT_BLOCK_CACHE_TIME, 0);
         if ((ret = src_session->initialize()) != TFS_SUCCESS)
         {
           tbsys::gDelete(src_session);

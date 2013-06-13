@@ -14,4 +14,4 @@ LDADD = $(UNIQUE_STORE_LDFLAGS)\
         $(TBLIB_ROOT)/lib/libtbnet.a\
         $(TBLIB_ROOT)/lib/libtbsys.a
 
-checkserver_SOURCES = checkserver.cpp checkserver.h server_helper.cpp server_helper.h
+checkserver_SOURCES = service.cpp checkserver.cpp check_manager.cpp default_server_helper.cpp checkserver.h check_manager.h default_server_helper.h base_server_helper.h

@@ -109,25 +109,21 @@ namespace tfs
       memset(&info, 0, sizeof(info));
       info.status_ = DATASERVER_STATUS_ALIVE;
       info.id_ = 0xfffffff0;
-      ServerCollect* invalid_server = NULL;
-
-      bool master = false;
-      bool writable = false;
+      bool master = false, writable = false;
 
       BlockCollect* block = block_manager_.insert_(id, now, set);
       EXPECT_TRUE(NULL != block);
       EXPECT_TRUE(id == block->id());
-      ServerCollect server(info, now);
-      EXPECT_TRUE(block->add(writable, master, invalid_server, &server));
+      uint64_t server = info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block->add(writable, master, server, now));
       EXPECT_EQ(1, block->get_servers_size());
 
-      info.id_++;
-      ServerCollect server2(info, now);
-      EXPECT_TRUE(block->add(writable, master, invalid_server, &server2));
+      uint64_t server2 = ++info.id_;
+      EXPECT_EQ(TFS_SUCCESS, block->add(writable, master, server2, now));
       EXPECT_EQ(2, block->get_servers_size());
 
-      ServerCollect* result[SYSPARAM_NAMESERVER.max_replication_];
-      ArrayHelper<ServerCollect*> helper(SYSPARAM_NAMESERVER.max_replication_, result);
+      uint64_t result[SYSPARAM_NAMESERVER.max_replication_];
+      ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, result);
 
       block_manager_.get_servers(helper, id);
       EXPECT_EQ(2, helper.get_array_index());
@@ -135,10 +131,6 @@ namespace tfs
       helper.clear();
       block_manager_.get_servers(helper, block);
       EXPECT_EQ(2, helper.get_array_index());
-
-      std::vector<uint64_t> servers;
-      block_manager_.get_servers(servers, id);
-      EXPECT_EQ(2U, servers.size());
     }
 
     TEST_F(BlockManagerTest, build_relation)
@@ -150,28 +142,20 @@ namespace tfs
       memset(&info, 0, sizeof(info));
       info.status_ = DATASERVER_STATUS_ALIVE;
       info.id_ = 0xfffffff0;
-      ServerCollect* invalid_server = NULL;
 
-      bool master = false;
-      bool writable = false;
+      bool master = false, writable = false;
 
       BlockCollect* block = block_manager_.insert_(id, now, set);
       EXPECT_TRUE(NULL != block);
       EXPECT_TRUE(id == block->id());
-      ServerCollect server(info, now);
+      uint64_t server = info.id_;
 
-      EXPECT_EQ(EXIT_PARAMETER_ERROR, block_manager_.build_relation_(NULL, writable, master, invalid_server, NULL, now));
-      EXPECT_EQ(EXIT_PARAMETER_ERROR, block_manager_.build_relation_(block, writable, master,invalid_server,  NULL, now));
-      EXPECT_EQ(EXIT_PARAMETER_ERROR, block_manager_.build_relation_(NULL, writable, master, invalid_server, &server, now));
-      EXPECT_EQ(TFS_SUCCESS, block_manager_.build_relation_(block, writable, master, invalid_server, &server, now));
+      EXPECT_EQ(EXIT_PARAMETER_ERROR, block_manager_.build_relation_(NULL, writable, master, server, now));
+      EXPECT_EQ(EXIT_PARAMETER_ERROR, block_manager_.build_relation_(block, writable, master,INVALID_SERVER_ID, now));
+      EXPECT_EQ(TFS_SUCCESS, block_manager_.build_relation_(block, writable, master, server, now));
 
-      ServerCollect* pserver = NULL;
-      BlockCollect* pblock = NULL;
-      block->remove(&server, now, BLOCK_COMPARE_SERVER_BY_POINTER);
-      EXPECT_EQ(EXIT_PARAMETER_ERROR, block_manager_.build_relation(pblock, writable, master, invalid_server, pserver, now));
-      EXPECT_EQ(EXIT_PARAMETER_ERROR, block_manager_.build_relation(block, writable, master, invalid_server, pserver, now));
-      EXPECT_EQ(EXIT_PARAMETER_ERROR, block_manager_.build_relation(pblock, writable, master,invalid_server,  &server, now));
-      EXPECT_EQ(TFS_SUCCESS, block_manager_.build_relation(block, writable, master, invalid_server, &server, now));
+      uint64_t result = block->get_server();
+      EXPECT_TRUE(result == server);
     }
 
     TEST_F(BlockManagerTest, update_block_info)
@@ -181,14 +165,12 @@ namespace tfs
       memset(&info, 0, sizeof(info));
       info.status_ = DATASERVER_STATUS_ALIVE;
       info.id_ = 0xfffffff0;
-      BlockInfo blkinfo;
+      BlockInfoV2 blkinfo;
       memset(&blkinfo, 0, sizeof(blkinfo));
       blkinfo.block_id_ = 100;
       blkinfo.version_  = 10;
-      ServerCollect server(info, now);
-      bool master = false;
-      bool writable = false;
-      bool isnew = false;
+      ServerCollect server(layout_manager_, info, now);
+      bool master = false, writable = false, isnew = false;
 
       BlockCollect* block = NULL;
       EXPECT_EQ(EXIT_PARAMETER_ERROR,block_manager_.update_block_info(block, isnew, writable, master, blkinfo, NULL, now, false));
@@ -220,37 +202,37 @@ namespace tfs
       memset(&info, 0, sizeof(info));
       info.status_ = DATASERVER_STATUS_ALIVE;
       info.id_ = 0xfffffff0;
-
       bool isnew = false;
-      ServerCollect server(info, now);
+      ServerCollect server(layout_manager_, info, now);
       ServerManager server_manager(layout_manager_);
       EXPECT_EQ(TFS_SUCCESS, server_manager.add(info, now, isnew));
       info.id_++;
-      ServerCollect server2(info, now);
+      ServerCollect server2(layout_manager_, info, now);
       EXPECT_EQ(TFS_SUCCESS, server_manager.add(info, now, isnew));
 
-      std::set<BlockInfo> blocks;
+      BlockInfoV2 blocks[10000];
+      common::ArrayHelper<BlockInfoV2> helper(100000, blocks);
       int32_t COUNT = random() %  10000;
       int32_t blk_start = random() % 100000000 + 100000;
-      BlockInfo tmp;
+      BlockInfoV2 tmp;
       for (int32_t i = 0; i < COUNT; i++, blk_start++)
       {
+        memset(&tmp, 0, sizeof(tmp));
         tmp.block_id_ = blk_start;
         tmp.version_  = random() % COUNT + 1;
         tmp.file_count_   = random() % 10000 + 1;
         tmp.size_ = random() % 10000000 + 1;
         tmp.del_file_count_ = random() % 10000;
         tmp.del_size_ = random() % 100000;
-        blocks.insert(tmp);
+        helper.push_back(tmp);
       }
-
-      EXPECT_EQ(TFS_SUCCESS, block_manager_.update_relation(&server, blocks, now));
+      std::vector<uint64_t> expires;
+      EXPECT_EQ(TFS_SUCCESS, block_manager_.update_relation(expires, &server, helper, now));
 
       BlockCollect* pblock = NULL;
-      std::set<BlockInfo>::const_iterator iter = blocks.begin();
-      for (; iter != blocks.end(); ++iter)
+      for (int32_t index = 0; index < helper.get_array_index(); ++index)
       {
-        tmp = (*iter);
+        tmp = *helper.at(index);
         pblock = block_manager_.get(tmp.block_id_);
         EXPECT_TRUE(NULL != pblock);
         EXPECT_TRUE(pblock->id() == tmp.block_id_);
@@ -259,11 +241,10 @@ namespace tfs
         EXPECT_EQ(1, pblock->get_servers_size());
       }
 
-      EXPECT_EQ(TFS_SUCCESS, block_manager_.update_relation(&server2, blocks, now));
-      iter = blocks.begin();
-      for (; iter != blocks.end(); ++iter)
+      EXPECT_EQ(TFS_SUCCESS, block_manager_.update_relation(expires, &server2, helper, now));
+      for (int32_t index = 0; index < helper.get_array_index(); ++index)
       {
-        tmp = (*iter);
+        tmp = *helper.at(index);
         pblock = block_manager_.get(tmp.block_id_);
         EXPECT_TRUE(NULL != pblock);
         EXPECT_TRUE(pblock->id() == tmp.block_id_);
@@ -282,12 +263,7 @@ namespace tfs
       memset(&info, 0, sizeof(info));
       info.status_ = DATASERVER_STATUS_ALIVE;
       info.id_ = 0xfffffff0;
-      ServerCollect* invalid_server = NULL;
-
-      bool set= false;
-      bool writable = false;
-      bool master   = false;
-      ServerCollect server(info, now);
+      bool set = false, writable = false, master = false;
 
       BlockCollect* block = NULL;
       int32_t COUNT = random() %  10000 + MAX_BLOCK_CHUNK_NUMS;
@@ -296,7 +272,7 @@ namespace tfs
       {
         block = block_manager_.insert_(blk_start, now, set);
         EXPECT_TRUE(NULL != block);
-        EXPECT_EQ(TFS_SUCCESS, block_manager_.build_relation(block, writable, master, invalid_server, &server, now));
+        EXPECT_EQ(TFS_SUCCESS, block_manager_.build_relation(block, writable, master, info.id_, now));
       }
 
       SSMScanParameter param;

@@ -115,7 +115,7 @@ namespace tfs
             tstr << " " << (*it) << " ";
           }
           tstr << std::endl;
-          TBSYS_LOGGER.logMessage(level, file, line, function, "%s", tstr.str().c_str());
+          TBSYS_LOGGER.logMessage(level, file, line, function, pthread_self(),"%s", tstr.str().c_str());
         }
       }
     }

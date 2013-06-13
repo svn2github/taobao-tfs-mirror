@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -33,26 +33,25 @@ namespace tfs
     class MMapFile
     {
       public:
-        MMapFile();
-        explicit MMapFile(const int fd);
         MMapFile(const MMapOption& mmap_option, const int fd);
-        ~MMapFile();
+        virtual ~MMapFile();
 
-        bool sync_file();
-        bool map_file(const bool write = false);
-        bool remap_file();
-        void* get_data() const;
-        int32_t get_size() const;
-        bool munmap_file();
+        inline char* get_data() const { return (NULL != data_) ? static_cast<char*>(data_) : NULL;}
+        inline int64_t length() const { return length_;}
 
-      private:
-        bool ensure_file_size(const int32_t size);
+        int mmap(const bool write = false);
+        int munmap();
+        int mremap();
+        int msync();
 
       private:
-        int32_t size_;
-        int fd_;
-        void* data_;
-        common::MMapOption mmap_file_option_;
+        int ensure_file_size_(const int64_t size);
+        MMapFile();
+        DISALLOW_COPY_AND_ASSIGN(MMapFile);
+        void*  data_;
+        int32_t length_;
+        int32_t fd_;
+        MMapOption option_;
     };
   } /** common **/
 } /** tfs **/

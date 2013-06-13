@@ -18,13 +18,11 @@
 #include <stdio.h>
 #include "common/func.h"
 #include "common/define.h"
-#include "new_client/tfs_session.h"
-#include "new_client/tfs_file.h"
 #include "util.h"
 #include "thread.h"
 
 using namespace KFS;
-using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace tfs::common;
 using namespace std;
 
@@ -58,7 +56,7 @@ void* write_worker(void* arg)
   }
 */
   printf("init connection to nameserver:%s\n", param.ns_ip_port_.c_str());
-  TfsClient* tfsclient = TfsClient::Instance();
+  TfsClientImplV2* tfsclient = TfsClientImplV2::Instance();
 	int iret = tfsclient->initialize(param.ns_ip_port_.c_str());
 	if (iret != TFS_SUCCESS)
 	{
@@ -87,15 +85,15 @@ void* write_worker(void* arg)
 
   int32_t i = 0;
   int fd;
-  char ret_name[FILE_NAME_LEN+1];
+  char ret_name[FILE_NAME_LEN_V2+1];
   for (i = 0; i < param.file_count_; ++i)
   {
     timer.start();
 
     // open a remote file
-    ret = retry_open_file(tfsclient, NULL, (char*)".jpg", T_WRITE, fd);
+    ret = retry_open_file(tfsclient, NULL, "", T_WRITE, fd);
     // get block id and file id from remote file name
-    //convname(tfsclient.get_file_name(), (char*)".jpg", block_id, file_id);
+    //convname(tfsclient.get_file_name(), "", block_id, file_id);
     if (ret != EXIT_SUCCESS)
     {
       fprintf(stderr, "index:%d, tfsopen failed\n", param.index_);
@@ -133,7 +131,7 @@ void* write_worker(void* arg)
         printf("index:%d, tfswrite completed, spend (%" PRI64_PREFIX "d)\n", param.index_, time_consumed);
         print_rate(ret, time_consumed);
       }
-      ret = tfsclient->close(fd, ret_name, FILE_NAME_LEN+1);
+      ret = tfsclient->close(fd, ret_name, FILE_NAME_LEN_V2+1);
       if (ret == TFS_SUCCESS)
       {
         time_consumed = timer.consume();
@@ -210,13 +208,17 @@ int main(int argc, char** argv)
   int32_t ret = fetch_input_opt(argc, argv, input_param, thread_count);
   if (ret != TFS_SUCCESS || input_param.ns_ip_port_.empty() || input_param.file_count_ == 0 || thread_count > THREAD_SIZE)
   {
+<<<<<<< .working
     printf("usage: -d nsip:port -c file_count -r size_range(B) -t thread_count\n");
+=======
+    printf("usage: -d nsip:port -t thread_count -c file_count -r size_range\n");
+>>>>>>> .merge-right.r2309
     exit(-1);
   }
 
   if ((input_param.min_size_ > input_param.max_size_) || (0 == input_param.max_size_))
   {
-    printf("usage: -d nsip:port -c file_count -r size_range, must size range. \n");
+    printf("usage: -d nsip:port -t thread_num -c file_count -r size_range, must size range. \n");
     exit(-1);
   }
 

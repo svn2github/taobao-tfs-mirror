@@ -25,7 +25,9 @@
 
 int main(int argc, char* argv[])
 {
-  tfs::nameserver::NameServer service;
-  return service.main(argc, argv);
+  tfs::nameserver::NameServer* service = new tfs::nameserver::NameServer();
+  int32_t ret = service->main(argc, argv);
+  tbsys::gDelete(service);
+  return ret;
 }
 

@@ -23,6 +23,7 @@ namespace tfs
   {
     const uint16_t BlockIdFactory::BLOCK_START_NUMBER = 100;
     const uint16_t BlockIdFactory::SKIP_BLOCK_NUMBER  = 100;
+    const uint64_t BlockIdFactory::MAX_BLOCK_ID = 0xFFFFFFFFFFFF -1;
     BlockIdFactory::BlockIdFactory():
       global_id_(BLOCK_START_NUMBER),
       count_(0),
@@ -43,7 +44,7 @@ namespace tfs
       {
         if (!common::DirectoryOp::create_full_path(path.c_str()))
         {
-          TBSYS_LOG(ERROR, "create directory: %s fail...", path.c_str());
+          TBSYS_LOG(ERROR, "create directory: %s errors : %s", path.c_str(), strerror(errno));
           ret = common::EXIT_GENERAL_ERROR;
         }
         if (common::TFS_SUCCESS == ret)
@@ -58,12 +59,12 @@ namespace tfs
         }
         if (common::TFS_SUCCESS == ret)
         {
-          char data[common::INT_SIZE];
-          int32_t length = ::read(fd_, data, common::INT_SIZE);
-          if (length == common::INT_SIZE)//read successful
+          char data[common::INT64_SIZE];
+          int32_t length = ::read(fd_, data, common::INT64_SIZE);
+          if (length == common::INT64_SIZE)//read successful
           {
             int64_t pos = 0;
-            ret = common::Serialization::get_int32(data, common::INT_SIZE, pos, reinterpret_cast<int32_t*>(&global_id_));
+            ret = common::Serialization::get_int64(data, common::INT64_SIZE, pos, reinterpret_cast<int64_t*>(&global_id_));
             if (common::TFS_SUCCESS != ret)
             {
               TBSYS_LOG(ERROR, "serialize global block id error, ret: %d", ret);
@@ -88,66 +89,89 @@ namespace tfs
       int32_t ret = common::TFS_SUCCESS;
       if (fd_ > 0)
       {
-        ret = update(global_id_);
+        ret = flush_(global_id_);
         ::close(fd_);
       }
       return ret;
     }
 
-    uint32_t BlockIdFactory::generation(const uint32_t id)
-    {
-      bool update_flag = false;
-      uint32_t ret_id = common::INVALID_BLOCK_ID;
-      {
-        tbutil::Mutex::Lock lock(mutex_);
-        ++count_;
-        if (id == 0)
-        {
-          ret_id = ++global_id_;
-        }
-        else
-        {
-          ret_id = id;
-          global_id_ = std::max(global_id_, id);
-        }
-        if (count_ >= SKIP_BLOCK_NUMBER)
-        {
-          update_flag = true;
-          count_ = 0;
-        }
-      }
-      if (update_flag)
-      {
-        int32_t ret = update(ret_id);
-        if (common::TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(WARN, "update global block id failed, id: %u, ret: %d", ret_id, ret);
-          ret_id = common::INVALID_BLOCK_ID;
-        }
-      }
-      return ret_id;
-    }
-
-    uint32_t BlockIdFactory::skip(const int32_t num)
+    uint64_t BlockIdFactory::generation(const bool verify)
     {
       mutex_.lock();
-      global_id_ += num;
-      uint32_t id = global_id_;
-      mutex_.unlock();
-      int32_t ret = update(id);
-      if (common::TFS_SUCCESS != ret)
+      ++count_;
+      uint64_t id = ++global_id_;
+      assert(id <= MAX_BLOCK_ID);
+      bool flush_flag = false;
+      if (count_ >= SKIP_BLOCK_NUMBER)
       {
-        TBSYS_LOG(WARN, "update global block id failed, id: %u, ret: %d", id, ret);
+        flush_flag = true;
+        count_ = 0;
+      }
+      mutex_.unlock();
+      int32_t ret = common::TFS_SUCCESS;
+      if (flush_flag)
+      {
+        ret = flush_(id);
+        if (common::TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "update global block id failed, id: %"PRI64_PREFIX"u, ret: %d", id, ret);
+        }
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        if (verify)
+          id |= 0xFF00000000000000;
       }
       return id;
     }
 
-    int BlockIdFactory::update(const uint32_t id) const
+    int BlockIdFactory::update(const uint64_t id)
+    {
+      bool flush_flag = false;
+      uint64_t tmp_id = IS_VERFIFY_BLOCK(id) ? id & 0x7FFFFFFFFFFFFFFF : id;
+      int32_t ret = (common::INVALID_BLOCK_ID == id) ? common::EXIT_PARAMETER_ERROR : common::TFS_SUCCESS;
+      if (common::TFS_SUCCESS == ret)
+      {
+        tbutil::Mutex::Lock lock(mutex_);
+        ++count_;
+        global_id_ = std::max(global_id_, tmp_id);
+        if (count_ >= SKIP_BLOCK_NUMBER)
+        {
+          flush_flag = true;
+          count_ = 0;
+        }
+      }
+      if (common::TFS_SUCCESS == ret && flush_flag)
+      {
+        ret = flush_(tmp_id);
+        if (common::TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "flush global block id failed, id: %"PRI64_PREFIX"u, ret: %d", tmp_id, ret);
+        }
+      }
+      return ret;
+    }
+
+    uint64_t BlockIdFactory::skip(const int32_t num)
+    {
+      mutex_.lock();
+      global_id_ += num;
+      uint64_t id = global_id_;
+      mutex_.unlock();
+      int32_t ret = update(id);
+      if (common::TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "update global block id failed, id: %"PRI64_PREFIX"u, ret: %d", id, ret);
+      }
+      return id;
+    }
+
+    int BlockIdFactory::flush_(const uint64_t id) const
     {
       assert(fd_ != -1);
-      char data[common::INT_SIZE];
+      char data[common::INT64_SIZE];
       int64_t pos = 0;
-      int32_t ret = common::Serialization::set_int32(data, common::INT_SIZE, pos, id);
+      int32_t ret = common::Serialization::set_int64(data, common::INT64_SIZE, pos, id);
       if (common::TFS_SUCCESS == ret)
       {
         int32_t offset = 0;
@@ -157,14 +181,14 @@ namespace tfs
         do
         {
           ++count;
-          length = ::write(fd_, (data + offset), (common::INT_SIZE - offset));
+          length = ::write(fd_, (data + offset), (common::INT64_SIZE - offset));
           if (length > 0)
           {
             offset += length;
           }
         }
-        while (count < 3 && offset < common::INT_SIZE);
-        ret = common::INT_SIZE == offset ? common::TFS_SUCCESS : common::TFS_ERROR;
+        while (count < 3 && offset < common::INT64_SIZE);
+        ret = common::INT64_SIZE == offset ? common::TFS_SUCCESS : common::TFS_ERROR;
         if (common::TFS_SUCCESS == ret)
           fsync(fd_);
       }

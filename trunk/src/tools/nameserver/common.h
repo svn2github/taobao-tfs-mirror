@@ -119,12 +119,12 @@ namespace tfs
       {}
       ~ParamInfo(){}
       int8_t type_;
-      int32_t num_;
-      int32_t count_;
-      int32_t interval_;
+      uint64_t num_;
+      uint64_t count_;
+      uint64_t interval_;
       std::string filename_;
-      uint32_t block_id_;
-      int32_t block_chunk_num_;
+      uint64_t block_id_;
+      uint64_t block_chunk_num_;
       std::string server_ip_port_;
     };
 
@@ -150,9 +150,9 @@ namespace tfs
         time_t startup_time_;
         time_t current_time_;
         common::DataServerLiveStatus status_;
-        std::set<uint32_t> hold_;
-        std::set<uint32_t> writable_;
-        std::set<uint32_t> master_;
+        std::set<uint64_t> hold_;
+        std::set<uint64_t> writable_;
+        std::set<uint64_t> master_;
     };
 
     struct ServerInfo
@@ -177,8 +177,7 @@ namespace tfs
     class BlockBase
     {
       public:
-        int64_t family_id_;
-        common::BlockInfo info_;
+        common::BlockInfoV2 info_;
         std::vector<ServerInfo> server_list_;
 
         BlockBase();

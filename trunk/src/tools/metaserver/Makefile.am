@@ -4,7 +4,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 						$(MYSQL_CFLAGS)
 						$(READLINE_INCLUDE)
 
-AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid 
+AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid -lsnappy
 
 bin_PROGRAMS = meta_transfer txt2new check_old_new sync_nginx2kv go_tair_for_kv
 

@@ -27,7 +27,7 @@ plank@cs.utk.edu
  */
 
 /*
- * Part of jerasure.h: 
+ * Part of jerasure.h:
  * $Revision: 1.2 $
  * $Date: 2008/08/19 17:40:58 $
  */
@@ -76,21 +76,21 @@ void galois_region_xor(           char *r1,         /* Region 1 */
 void galois_w08_region_multiply(char *region,       /* Region to multiply */
                                   int multby,       /* Number to multiply by */
                                   int nbytes,       /* Number of bytes in region */
-                                  char *r2,         /* If r2 != NULL, products go here.  
+                                  char *r2,         /* If r2 != NULL, products go here.
                                                        Otherwise region is overwritten */
                                   int add);         /* If (r2 != NULL && add) the produce is XOR'd with r2 */
 
 void galois_w16_region_multiply(char *region,       /* Region to multiply */
                                   int multby,       /* Number to multiply by */
                                   int nbytes,       /* Number of bytes in region */
-                                  char *r2,         /* If r2 != NULL, products go here.  
+                                  char *r2,         /* If r2 != NULL, products go here.
                                                        Otherwise region is overwritten */
                                   int add);         /* If (r2 != NULL && add) the produce is XOR'd with r2 */
 
 void galois_w32_region_multiply(char *region,       /* Region to multiply */
                                   int multby,       /* Number to multiply by */
                                   int nbytes,       /* Number of bytes in region */
-                                  char *r2,         /* If r2 != NULL, products go here.  
+                                  char *r2,         /* If r2 != NULL, products go here.
                                                        Otherwise region is overwritten */
                                   int add);         /* If (r2 != NULL && add) the produce is XOR'd with r2 */
 

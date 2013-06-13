@@ -33,7 +33,7 @@ namespace tfs
         inline void set_source_id(const uint64_t source_id) {source_id_ = source_id;}
         inline uint64_t get_source_id() const {return source_id_;}
       private:
-        uint32_t block_id_;
+        uint64_t block_id_;
         uint64_t source_id_;
     };
 
@@ -85,12 +85,12 @@ namespace tfs
         inline void set_status(const int32_t status) { status_ = status;}
         inline uint64_t get_ds_id() const { return ds_id_; }
         inline void set_ds_id(const uint64_t ds_id) { ds_id_ = ds_id; }
-        inline void set_block_info(const common::BlockInfo& info) { info_ = info; }
-        inline common::BlockInfo* get_block_info() { return &info_; }
+        inline void set_block_info(const common::BlockInfoV2& info) { info_ = info; }
+        inline common::BlockInfoV2* get_block_info() { return &info_; }
       private:
         int32_t status_;
         uint64_t ds_id_;
-        common::BlockInfo info_;
+        common::BlockInfoV2 info_;
     };
 
   }

@@ -411,19 +411,19 @@ int cmd_set_run_param(const VSTRING& param)
 
 int cmd_add_block(const VSTRING& param)
 {
-  uint32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
 
   if (0 == block_id)
   {
-    fprintf(stderr, "block_id: %u\n\n", block_id);
+    fprintf(stderr, "block_id: %"PRI64_PREFIX"u\n\n", block_id);
     return TFS_ERROR;
   }
 
   VUINT64 ds_list;
 
-  int ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list, T_WRITE|T_NEWBLK|T_NOLEASE);
+  int ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list, T_WRITE|T_NEWBLK|T_NOLEASE);
 
-  ToolUtil::print_info(ret, "add block %u", block_id);
+  ToolUtil::print_info(ret, "add block %"PRI64_PREFIX"u", block_id);
 
   return ret;
 }
@@ -431,7 +431,7 @@ int cmd_add_block(const VSTRING& param)
 int cmd_remove_block(const VSTRING& param)
 {
   uint32_t flag = 0;
-  uint32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   uint64_t server_id = 0;
   if (param.empty())
   {
@@ -481,26 +481,26 @@ int cmd_remove_block(const VSTRING& param)
 
 int cmd_list_block(const VSTRING& param)
 {
-  uint32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   int ret = TFS_ERROR;
 
   if (block_id <= 0)
   {
-    fprintf(stderr, "invalid block id: %u\n", block_id);
+    fprintf(stderr, "invalid block id: %"PRI64_PREFIX"u\n", block_id);
   }
   else
   {
     VUINT64 ds_list;
-    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list);
-    ToolUtil::print_info(ret, "list block %u", block_id);
+    ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list);
+    ToolUtil::print_info(ret, "list block %"PRI64_PREFIX"u", block_id);
 
     if (TFS_SUCCESS == ret)
     {
       int32_t ds_size = ds_list.size();
-      fprintf(stdout, "------block: %u, has %d replicas------\n", block_id, ds_size);
+      fprintf(stdout, "------block: %"PRI64_PREFIX"u, has %d replicas------\n", block_id, ds_size);
       for (int32_t i = 0; i < ds_size; ++i)
       {
-        fprintf(stdout, "block: %u, (%d)th server: %s \n", block_id, i, tbsys::CNetUtil::addrToString(ds_list[i]).c_str());
+        fprintf(stdout, "block: %"PRI64_PREFIX"u, (%d)th server: %s \n", block_id, i, tbsys::CNetUtil::addrToString(ds_list[i]).c_str());
       }
     }
   }
@@ -509,7 +509,7 @@ int cmd_list_block(const VSTRING& param)
 
 int cmd_load_block(const VSTRING& param)
 {
-  uint32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   uint64_t server_id = Func::get_host_ip(param[1].c_str());
   if (0 == server_id || 0 == block_id)
   {
@@ -533,10 +533,10 @@ int cmd_load_block(const VSTRING& param)
 
 int cmd_compact_block(const VSTRING& param)
 {
-  uint32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   if (0 == block_id)
   {
-    fprintf(stderr, "invalid block id: %u\n", block_id);
+    fprintf(stderr, "invalid block id: %"PRI64_PREFIX"u\n", block_id);
     return TFS_ERROR;
   }
 
@@ -546,18 +546,18 @@ int cmd_compact_block(const VSTRING& param)
 
   int32_t status = TFS_ERROR;
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
-  ToolUtil::print_info(status, "compactblock %u", block_id);
+  ToolUtil::print_info(status, "compactblock %"PRI64_PREFIX"u", block_id);
 
   return status;
 }
 
 int cmd_replicate_block(const VSTRING& param)
 {
-  uint32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   int32_t op_type = atoi(param[1].c_str());
   if (0 == block_id || op_type > 7 || op_type < 1)
   {
-    fprintf(stderr, "invalid param. blockid > 0, type in [1, 7]. blockid: %u, op_type: %d\n", block_id, op_type);
+    fprintf(stderr, "invalid param. blockid > 0, type in [1, 7]. blockid: %"PRI64_PREFIX"u, op_type: %d\n", block_id, op_type);
     return TFS_ERROR;
   }
 
@@ -685,7 +685,7 @@ int cmd_replicate_block(const VSTRING& param)
 
   int32_t status = TFS_ERROR;
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
-  ToolUtil::print_info(status, "replicate block %u %"PRI64_PREFIX"u %"PRI64_PREFIX"u", block_id, src_id, dest_id);
+  ToolUtil::print_info(status, "replicate block %"PRI64_PREFIX"u %"PRI64_PREFIX"u %"PRI64_PREFIX"u", block_id, src_id, dest_id);
 
   return status;
 }

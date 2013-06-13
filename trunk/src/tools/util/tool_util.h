@@ -56,6 +56,14 @@ namespace tfs
     public:
       static int get_block_ds_list(const uint64_t server_id, const uint32_t block_id,
                                    common::VUINT64& ds_list, const int32_t flag = common::T_READ);
+      static int get_block_ds_list_v2(const uint64_t server_id, const uint64_t block_id,
+                                   common::VUINT64& ds_list, const int32_t flag = common::T_READ);
+      static int read_file_info(const uint64_t server_id,
+          const uint64_t block_id, const uint64_t file_id, const int32_t flag, common::FileInfo& info);
+      static int read_file_data(const uint64_t server_id, const uint64_t block_id, const uint64_t file_id,
+        const int32_t length, const int32_t offset, const int32_t flag, char* data, int32_t& read_len);
+      static int list_file_v2(const uint64_t server_id, const uint64_t block_id,
+        const uint64_t attach_block_id, std::vector<common::FileInfoV2>& finfos);
       static int show_help(const STR_FUNC_MAP& cmd_map);
       static void print_info(const int status, const char* fmt, ...);
     };

@@ -89,7 +89,7 @@ namespace tfs
       {
         BasePacket::parse_special_ds(dataservers_, version_, lease_id_);
       }
-      if (common::TFS_SUCCESS == ret)
+      if ((common::TFS_SUCCESS == ret) && input.get_data_length() > 0)
       {
         ret = input.get_int64(reinterpret_cast<int64_t*>(&lease_id_ext_));
       }

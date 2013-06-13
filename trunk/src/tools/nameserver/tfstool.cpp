@@ -39,19 +39,21 @@
 #include "common/base_packet_streamer.h"
 #include "tools/util/tool_util.h"
 #include "tools/util/ds_lib.h"
-#include "new_client/fsname.h"
 #include "new_client/tfs_client_impl.h"
 #include "new_client/tfs_rc_client_api_impl.h"
 #include "new_client/tfs_meta_client_api_impl.h"
+#include "clientv2/tfs_client_impl_v2.h"
+#include "clientv2/fsname.h"
 
 
 using namespace std;
 using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::tools;
 
-static TfsClientImpl* g_tfs_client = NULL;
+static TfsClientImplV2* g_tfs_client = NULL;
 static STR_FUNC_MAP g_cmd_map;
 static int64_t app_id = 1;
 static int64_t uid = 1234;
@@ -247,8 +249,9 @@ int main(int argc, char* argv[])
   }
   else if (nsip != NULL)
   {
-    g_tfs_client = TfsClientImpl::Instance();
-    ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
+    g_tfs_client = TfsClientImplV2::Instance();
+    // ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
+    ret = g_tfs_client->initialize(nsip);
     if (ret != TFS_SUCCESS)
     {
       fprintf(stderr, "init tfs client fail, ret: %d\n", ret);
@@ -345,7 +348,7 @@ void init()
     g_cmd_map["stat"] = CmdNode("stat tfsname", "stat tfs file", 1, 1, cmd_stat_file);
     g_cmd_map["statblk"] = CmdNode("statblk blockid [serverip:port]", "stat a block", 1, 2, cmd_stat_blk);
     g_cmd_map["vcblk"] = CmdNode("vcblk serverip:port count", "visit count block", 2, 2, cmd_visit_count_blk);
-    g_cmd_map["lsf"] = CmdNode("lsf blockid [detail] [serverip:port]" , "list file list in block", 1, 3, cmd_list_file_info);
+    g_cmd_map["lsf"] = CmdNode("lsf blockid [attach_block_id] [detail] [serverip:port]" , "list file list in block", 1, 4, cmd_list_file_info);
     g_cmd_map["listblock"] = CmdNode("listblock blockid", "list block server list", 1, 1, cmd_list_block);
     g_cmd_map["cfi"] = CmdNode("cfi tfsname", "check file info", 1, 1, cmd_check_file_info);
     break;
@@ -539,7 +542,7 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
   const char* suffix = NULL;
   int32_t flag = T_DEFAULT;
   int ret = TFS_SUCCESS;
-  char ret_tfs_name[TFS_FILE_LEN];
+  char ret_tfs_name[TFS_FILE_LEN_V2];
   ret_tfs_name[0] = '\0';
 
 
@@ -570,6 +573,7 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
     }
   }
 
+  /*
   if (unique)
   {
     // TODO: save unique
@@ -579,7 +583,7 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
     }
     else
     {
-      ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix) < 0 ?
+      ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN_V2, local_file, flag, suffix) < 0 ?
           TFS_ERROR : TFS_SUCCESS;
     }
   }
@@ -591,10 +595,28 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
     }
     else
     {
-      ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix) < 0 ?
+      ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN_V2, local_file, flag, suffix) < 0 ?
           TFS_ERROR : TFS_SUCCESS;
     }
   }
+  */
+
+  UNUSED(unique);
+
+  if (NULL != tfs_name)  // update
+  {
+    ret = g_tfs_client->save_file_update(local_file, flag, tfs_name, suffix);
+  }
+  else
+  {
+    ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN_V2, local_file, flag, suffix);
+  }
+
+  if (ret >= 0)
+  {
+    TBSYS_LOG(DEBUG, "save %d bytes data to tfs", ret);
+  }
+  ret = (ret < 0) ? ret : TFS_SUCCESS;
 
   //printf("tfs_name: %s, ret_tfs_name: %s\n", tfs_name, ret_tfs_name);
   ToolUtil::print_info(ret, "put %s => %s", local_file, tfs_name != NULL ? FSName(tfs_name, suffix).get_name() : ret_tfs_name);
@@ -610,7 +632,7 @@ int put_file_raw_ex(const VSTRING& param, const bool is_large)
   char appkey[257];
   //int32_t flag = T_DEFAULT;
   int ret = TFS_SUCCESS;
-  char ret_tfs_name[TFS_FILE_LEN];
+  char ret_tfs_name[TFS_FILE_LEN_V2];
   ret_tfs_name[0] = '\0';
 
   if (size > 1)
@@ -640,7 +662,7 @@ int put_file_raw_ex(const VSTRING& param, const bool is_large)
   }
   else
   {
-    ret = impl.save_file(local_file, ret_tfs_name, TFS_FILE_LEN, suffix, is_large) < 0 ? TFS_ERROR : TFS_SUCCESS;
+    ret = impl.save_file(local_file, ret_tfs_name, TFS_FILE_LEN_V2, suffix, is_large) < 0 ? TFS_ERROR : TFS_SUCCESS;
   }
 
   //printf("tfs_name: %s, ret_tfs_name: %s\n", tfs_name, ret_tfs_name);
@@ -790,7 +812,7 @@ int cmd_get_file(const VSTRING& param)
   const char* tfs_name = canonical_param(param[0]);
   const char* local_file = expand_path(const_cast<string&>(param[1]));
 
-  int ret = g_tfs_client->fetch_file(local_file, tfs_name, NULL);
+  int ret = g_tfs_client->fetch_file(local_file, tfs_name, NULL, READ_DATA_OPTION_FLAG_FORCE);
 
   ToolUtil::print_info(ret, "fetch %s => %s", tfs_name, local_file);
 
@@ -860,10 +882,10 @@ int cmd_stat_file(const VSTRING& param)
 
   if (TFS_SUCCESS == ret)
   {
-    FSName fsname(tfs_name, NULL);
+    tfs::clientv2::FSName fsname(tfs_name, NULL);
     fprintf(stdout,
             "  FILE_NAME:     %s\n"
-            "  BLOCK_ID:      %u\n"
+            "  BLOCK_ID:      %"PRI64_PREFIX"u\n"
             "  FILE_ID:       %" PRI64_PREFIX "u\n"
             "  OFFSET:        %d\n"
             "  SIZE:          %"PRI64_PREFIX"d\n"
@@ -931,11 +953,11 @@ int cmd_stat_blk(const VSTRING& param)
   int ret = TFS_ERROR;
 
   uint64_t server_id = 0;
-  uint32_t block_id = 0;
+  uint64_t block_id = 0;
 
-  if ((block_id = atoi(param[0].c_str())) <= 0)
+  if ((block_id = strtoull(param[0].c_str(), (char**)NULL, 10)) <= 0)
   {
-    fprintf(stderr, "invalid blockid: %u\n", block_id);
+    fprintf(stderr, "invalid blockid: %"PRI64_PREFIX"u\n", block_id);
   }
 
   if (param.size() > 2)
@@ -945,10 +967,10 @@ int cmd_stat_blk(const VSTRING& param)
   else
   {
     VUINT64 ds_list;
-    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list);
+    ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list);
     if (ret != TFS_SUCCESS)
     {
-      fprintf(stderr, "get ds list failed. block_id: %u, ret: %d\n", block_id, ret);
+      fprintf(stderr, "get ds list failed. block_id: %"PRI64_PREFIX"u, ret: %d\n", block_id, ret);
       return ret;
     }
     server_id = ds_list[0];
@@ -986,29 +1008,30 @@ int cmd_visit_count_blk(const VSTRING& param)
 
 int cmd_list_file_info(const VSTRING& param)
 {
-  uint32_t block_id = 0;
+  uint64_t block_id = 0;
+  uint64_t attach_block_id = 0;
   uint64_t server_id = 0;
 
   int32_t show_detail = 0;
 
   int ret = TFS_ERROR;
-  if ((block_id = atoi(param[0].c_str())) <= 0)
+  if ((block_id = strtoull(param[0].c_str(), (char**)NULL, 10)) <= 0)
   {
-    fprintf(stderr, "invalid blockid: %u\n", block_id);
+    fprintf(stderr, "invalid blockid: %"PRI64_PREFIX"u\n", block_id);
     return ret;
   }
 
-  if (param.size() > 2)
+  if (param.size() > 3)
   {
-    server_id = Func::get_host_ip(param[2].c_str());
+    server_id = Func::get_host_ip(param[3].c_str());
   }
   else
   {
     VUINT64 ds_list;
-    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list);
+    ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list);
     if (ret != TFS_SUCCESS)
     {
-      fprintf(stderr, "get ds list failed. block_id: %u, ret: %d\n", block_id, ret);
+      fprintf(stderr, "get ds list failed. block_id: %"PRI64_PREFIX"u, ret: %d\n", block_id, ret);
       return ret;
     }
     server_id = ds_list[0];
@@ -1016,12 +1039,23 @@ int cmd_list_file_info(const VSTRING& param)
 
   if (0 != server_id)
   {
-    if (param.size() > 1 && 0 == strcmp(param[1].c_str(), "detail"))
+    if (param.size() > 2 && 0 == strcmp(param[2].c_str(), "detail"))
     {
       show_detail = 1;
     }
+
+    if (param.size() > 1)
+    {
+      attach_block_id = strtoull(param[1].c_str(), (char**)NULL, 10);
+    }
+    else
+    {
+      attach_block_id = block_id;
+    }
+
     DsTask ds_task(server_id, g_tfs_client->get_cluster_id());
     ds_task.block_id_ = block_id;
+    ds_task.attach_block_id_ = attach_block_id;
     ds_task.mode_ = show_detail;
     ret = DsLib::list_file(ds_task);
   }
@@ -1031,26 +1065,26 @@ int cmd_list_file_info(const VSTRING& param)
 
 int cmd_list_block(const VSTRING& param)
 {
-  uint32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = strtoull(param[0].c_str(), (char**)NULL, 10);
   int ret = TFS_ERROR;
 
   if (block_id <= 0)
   {
-    fprintf(stderr, "invalid block id: %u\n", block_id);
+    fprintf(stderr, "invalid block id: %"PRI64_PREFIX"u\n", block_id);
   }
   else
   {
     VUINT64 ds_list;
-    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list);
+    ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list);
     ToolUtil::print_info(ret, "list block %u", block_id);
 
     if (TFS_SUCCESS == ret)
     {
       int32_t ds_size = ds_list.size();
-      fprintf(stdout, "------block: %u, has %d replicas------\n", block_id, ds_size);
+      fprintf(stdout, "------block: %"PRI64_PREFIX"u, has %d replicas------\n", block_id, ds_size);
       for (int32_t i = 0; i < ds_size; ++i)
       {
-        fprintf(stdout, "block: %u, (%d)th server: %s \n", block_id, i, tbsys::CNetUtil::addrToString(ds_list[i]).c_str());
+        fprintf(stdout, "block: %"PRI64_PREFIX"u, (%d)th server: %s \n", block_id, i, tbsys::CNetUtil::addrToString(ds_list[i]).c_str());
       }
     }
   }
@@ -1069,7 +1103,7 @@ int cmd_check_file_info(const VSTRING& param)
   else
   {
     VUINT64 ds_list;
-    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), fsname.get_block_id(), ds_list);
+    ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), fsname.get_block_id(), ds_list);
     if (ret != TFS_SUCCESS)
     {
       fprintf(stderr, "get block info fail, ret: %d\n", ret);
@@ -1137,7 +1171,7 @@ int cmd_stat_file_raw(const VSTRING& param)
       {
         TBSYS_LOG(DEBUG, "stat %s fail, return %d", tfs_name, ret);
       }
-      int re = impl.close(fd, const_cast<char*>(tfs_name), TFS_FILE_LEN);
+      int re = impl.close(fd, const_cast<char*>(tfs_name), TFS_FILE_LEN_V2);
       if (TFS_SUCCESS != re)
       {
         TBSYS_LOG(DEBUG, "close %s fail, return %d", tfs_name, re);
@@ -1152,7 +1186,7 @@ int cmd_stat_file_raw(const VSTRING& param)
     FSName fsname(tfs_name, NULL);
     fprintf(stdout,
             "  FILE_NAME:     %s\n"
-            "  BLOCK_ID:      %u\n"
+            "  BLOCK_ID:      %"PRI64_PREFIX"u\n"
             "  FILE_ID:       %" PRI64_PREFIX "u\n"
             "  OFFSET:        %d\n"
             "  SIZE:          %"PRI64_PREFIX"d\n"
@@ -1194,11 +1228,11 @@ int cmd_stat_file_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    app_id = strtoll(param[2].c_str(), NULL, 10);
+    app_id = strtoull(param[2].c_str(), NULL, 10);
   }
   if (size > 3)
   {
-    uid = strtoll(param[3].c_str(), NULL, 10);
+    uid = strtoull(param[3].c_str(), NULL, 10);
   }
 
   NameMetaClientImpl impl;
@@ -1257,11 +1291,11 @@ int cmd_ls_dir_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    app_id = strtoll(param[2].c_str(), NULL, 10);
+    app_id = strtoull(param[2].c_str(), NULL, 10);
   }
   if (size > 3)
   {
-    uid = strtoll(param[3].c_str(), NULL, 10);
+    uid = strtoull(param[3].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1359,7 +1393,7 @@ int cmd_create_dir_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    uid = strtoll(param[2].c_str(), NULL, 10);
+    uid = strtoull(param[2].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1394,7 +1428,7 @@ int cmd_create_file_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    uid = strtoll(param[2].c_str(), NULL, 10);
+    uid = strtoull(param[2].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1429,7 +1463,7 @@ int cmd_rm_dir_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    uid = strtoll(param[2].c_str(), NULL, 10);
+    uid = strtoull(param[2].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1514,7 +1548,7 @@ int cmd_rm_file_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    uid = strtoll(param[2].c_str(), NULL, 10);
+    uid = strtoull(param[2].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1562,11 +1596,11 @@ int cmd_put_file_meta(const VSTRING& param)
 
   if (size > 3)
   {
-    app_id = strtoll(param[3].c_str(), NULL, 10);
+    app_id = strtoull(param[3].c_str(), NULL, 10);
   }
   if (size > 4)
   {
-    uid = strtoll(param[4].c_str(), NULL, 10);
+    uid = strtoull(param[4].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1661,11 +1695,11 @@ int cmd_get_file_meta(const VSTRING& param)
 
   if (size > 3)
   {
-    app_id = strtoll(param[3].c_str(), NULL, 10);
+    app_id = strtoull(param[3].c_str(), NULL, 10);
   }
   if (size > 4)
   {
-    uid = strtoll(param[4].c_str(), NULL, 10);
+    uid = strtoull(param[4].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1779,11 +1813,11 @@ int cmd_is_dir_exist_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    app_id = strtoll(param[2].c_str(), NULL, 10);
+    app_id = strtoull(param[2].c_str(), NULL, 10);
   }
   if (size > 3)
   {
-    uid = strtoll(param[3].c_str(), NULL, 10);
+    uid = strtoull(param[3].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;
@@ -1823,11 +1857,11 @@ int cmd_is_file_exist_meta(const VSTRING& param)
 
   if (size > 2)
   {
-    app_id = strtoll(param[2].c_str(), NULL, 10);
+    app_id = strtoull(param[2].c_str(), NULL, 10);
   }
   if (size > 3)
   {
-    uid = strtoll(param[3].c_str(), NULL, 10);
+    uid = strtoull(param[3].c_str(), NULL, 10);
   }
 
   RcClientImpl impl;

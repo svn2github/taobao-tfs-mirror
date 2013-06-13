@@ -7,4 +7,4 @@ AM_LDFLAGS=-lrt -lpthread -ldl
 
 noinst_LIBRARIES = libtfstoolsutil.a
 
-libtfstoolsutil_a_SOURCES = tool_util.h tool_util.cpp ds_lib.cpp ds_lib.h
+libtfstoolsutil_a_SOURCES = tool_util.h tool_util.cpp ds_lib.cpp ds_lib.h util.h util.cpp

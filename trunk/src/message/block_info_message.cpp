@@ -671,7 +671,7 @@ namespace tfs
         need_free_ = 1;
         if (status_type_ & common::LB_BLOCK)//blocks
         {
-          ret = input.get_vint32(blocks_);
+          ret = input.get_vint64(blocks_);
         }
 
         if (common::TFS_SUCCESS == ret
@@ -681,18 +681,18 @@ namespace tfs
           ret = input.get_int32(&size);
           if (common::TFS_SUCCESS == ret)
           {
-            std::vector<uint32_t> tmp;
-            uint32_t block_id = 0;
+            std::vector<int32_t> tmp;
+            uint64_t block_id = 0;
             for (int32_t i = 0; i < size; ++i)
             {
-              ret = input.get_int32(reinterpret_cast<int32_t*> (&block_id));
+              ret = input.get_int64(reinterpret_cast<int64_t*> (&block_id));
               if (common::TFS_SUCCESS == ret)
               {
                 tmp.clear();
                 ret = input.get_vint32(tmp);
                 if (common::TFS_SUCCESS == ret)
                 {
-                  block_pairs_.insert(std::map<uint32_t, std::vector<uint32_t> >::value_type(block_id, tmp));
+                  block_pairs_.insert(std::map<uint64_t, std::vector<int32_t> >::value_type(block_id, tmp));
                 }
                 else
                 {
@@ -715,7 +715,7 @@ namespace tfs
           if (common::TFS_SUCCESS == ret)
           {
             int64_t pos = 0;
-            common::BlockInfo info;
+            common::BlockInfoV2 info;
             for (int32_t i = 0; i < size; ++i)
             {
               pos = 0;
@@ -723,7 +723,7 @@ namespace tfs
               if (common::TFS_SUCCESS == ret)
               {
                 input.drain(info.length());
-                block_infos_.insert(std::map<uint32_t, common::BlockInfo>::value_type(info.block_id_, info));
+                block_infos_.push_back(info);
               }
               else
               {
@@ -742,24 +742,23 @@ namespace tfs
       // m_Blocks
       if (status_type_ & common::LB_BLOCK)
       {
-        len += common::Serialization::get_vint32_length(blocks_);
+        len += common::Serialization::get_vint64_length(blocks_);
       }
       // m_BlockPairs
       if (status_type_ & common::LB_PAIRS)
       {
         len += common::INT_SIZE;
-        std::map<uint32_t, std::vector<uint32_t> >::const_iterator mit = block_pairs_.begin();
+        std::map<uint64_t, std::vector<int32_t> >::const_iterator mit = block_pairs_.begin();
         for (; mit != block_pairs_.end(); mit++)
         {
-          len += common::INT_SIZE;
+          len += common::INT64_SIZE;
           len += common::Serialization::get_vint32_length(mit->second);
         }
       }
       // m_BlockInfos
       if (status_type_ & common::LB_INFOS)
       {
-        len += common::INT_SIZE;
-        common::BlockInfo info;
+        common::BlockInfoV2 info;
         len += block_infos_.size() * info.length();
       }
       return len;
@@ -772,7 +771,7 @@ namespace tfs
       {
         if (status_type_ & common::LB_BLOCK)
         {
-          ret = output.set_vint32(blocks_);
+          ret = output.set_vint64(blocks_);
         }
 
         if (common::TFS_SUCCESS == ret
@@ -781,11 +780,11 @@ namespace tfs
           ret = output.set_int32(block_pairs_.size());
           if (common::TFS_SUCCESS == ret)
           {
-            std::map<uint32_t, std::vector<uint32_t> >:: const_iterator iter =
+            std::map<uint64_t, std::vector<int32_t> >:: const_iterator iter =
               block_pairs_.begin();
             for (; iter != block_pairs_.end(); ++iter)
             {
-              ret = output.set_int32(iter->first);
+              ret = output.set_int64(iter->first);
               if (common::TFS_SUCCESS != ret)
                 break;
               ret = output.set_vint32(iter->second);
@@ -801,14 +800,14 @@ namespace tfs
           ret = output.set_int32(block_infos_.size());
           if (common::TFS_SUCCESS == ret)
           {
-            std::map<uint32_t, common::BlockInfo>::const_iterator iter =
+            std::vector<common::BlockInfoV2>::const_iterator iter =
               block_infos_.begin();
             for (; iter != block_infos_.end(); ++iter)
             {
               int64_t pos = 0;
-              ret = const_cast<common::BlockInfo*>(&(iter->second))->serialize(output.get_free(), output.get_free_length(), pos);
+              ret = iter->serialize(output.get_free(), output.get_free_length(), pos);
               if (common::TFS_SUCCESS == ret)
-                output.pour(iter->second.length());
+                output.pour(iter->length());
               else
                 break;
             }
@@ -976,19 +975,19 @@ namespace tfs
     int BlockFileInfoMessage::deserialize(common::Stream& input)
     {
       int32_t size = 0;
-      int32_t ret = input.get_int32(reinterpret_cast<int32_t*> (&block_id_));
-      if (common::TFS_SUCCESS == ret)
+      int32_t iret = input.get_int32(reinterpret_cast<int32_t*> (&block_id_));
+      if (common::TFS_SUCCESS == iret)
       {
-        ret = input.get_int32(&size);
+        iret = input.get_int32(&size);
       }
-      if (common::TFS_SUCCESS == ret)
+      if (common::TFS_SUCCESS == iret)
       {
         common::FileInfo info;
         for (int32_t i = 0; i < size; ++i)
         {
           int64_t pos = 0;
-          ret = info.deserialize(input.get_data(), input.get_data_length(), pos);
-          if (common::TFS_SUCCESS == ret)
+          iret = info.deserialize(input.get_data(), input.get_data_length(), pos);
+          if (common::TFS_SUCCESS == iret)
           {
             input.drain(info.length());
             fileinfo_list_.push_back(info);
@@ -999,7 +998,7 @@ namespace tfs
           }
         }
       }
-      return ret;
+      return iret;
     }
 
     int64_t BlockFileInfoMessage::length() const
@@ -1010,19 +1009,19 @@ namespace tfs
 
     int BlockFileInfoMessage::serialize(common::Stream& output)  const
     {
-      int32_t ret = output.set_int32(block_id_);
-      if (common::TFS_SUCCESS == ret)
+      int32_t iret = output.set_int32(block_id_);
+      if (common::TFS_SUCCESS == iret)
       {
-        ret = output.set_int32(fileinfo_list_.size());
+        iret = output.set_int32(fileinfo_list_.size());
       }
-      if (common::TFS_SUCCESS == ret)
+      if (common::TFS_SUCCESS == iret)
       {
         common::FILE_INFO_LIST::const_iterator iter = fileinfo_list_.begin();
         for (; iter != fileinfo_list_.end(); ++iter)
         {
           int64_t pos = 0;
-          ret = (*iter).serialize(output.get_free(), output.get_free_length(), pos);
-          if (common::TFS_SUCCESS == ret)
+          iret = (*iter).serialize(output.get_free(), output.get_free_length(), pos);
+          if (common::TFS_SUCCESS == iret)
           {
             output.pour((*iter).length());
           }
@@ -1032,10 +1031,10 @@ namespace tfs
           }
         }
       }
-      return ret;
+      return iret;
     }
 
-    BlockRawMetaMessage::BlockRawMetaMessage() :
+   /*BlockRawMetaMessage::BlockRawMetaMessage() :
       block_id_(0)
     {
       _packetHeader._pcode = common::BLOCK_RAW_META_MESSAGE;
@@ -1106,7 +1105,7 @@ namespace tfs
         }
       }
       return ret;
-    }
+    }*/
 
     BlockWriteCompleteMessage::BlockWriteCompleteMessage() :
       server_id_(0), write_complete_status_(common::WRITE_COMPLETE_STATUS_NO), unlink_flag_(common::UNLINK_FLAG_NO)

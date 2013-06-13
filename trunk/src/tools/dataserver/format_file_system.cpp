@@ -13,12 +13,14 @@
  *      - initial release
  *   chuyu <chuyu@taobao.com>
  *      - modify 2010-03-20
+ *   linqing <linqing.zyd@taobao.com>
+ *      - modify 2012-12-20
  *
  */
 #include <stdio.h>
 #include "common/parameter.h"
-#include "dataserver/blockfile_manager.h"
-#include "dataserver/version.h"
+#include "dataserver/block_manager.h"
+#include "common/version.h"
 
 using namespace tfs::common;
 using namespace tfs::dataserver;
@@ -71,26 +73,14 @@ int main(int argc, char* argv[])
   TBSYS_CONFIG.load(conf_file);
   if ((ret = SYSPARAM_FILESYSPARAM.initialize(server_index)) != TFS_SUCCESS)
   {
-    cerr << "SysParam::load filesystemparam failed:" << conf_file << endl;
+    fprintf(stderr, "SysParam::load filesystemparam failed: %s\n", conf_file);
     return ret;
   }
 
-  cout << "mount name: " << SYSPARAM_FILESYSPARAM.mount_name_ << " max mount size: "
-      << SYSPARAM_FILESYSPARAM.max_mount_size_ << " base fs type: "
-      << SYSPARAM_FILESYSPARAM.base_fs_type_ << " superblock reserve offset: "
-      << SYSPARAM_FILESYSPARAM.super_block_reserve_offset_ << " main block size: "
-      << SYSPARAM_FILESYSPARAM.main_block_size_ << " extend block size: "
-      << SYSPARAM_FILESYSPARAM.extend_block_size_ << " block ratio: "
-      << SYSPARAM_FILESYSPARAM.block_type_ratio_ << " file system version: "
-      << SYSPARAM_FILESYSPARAM.file_system_version_ << " avg inner file size: "
-      << SYSPARAM_FILESYSPARAM.avg_segment_size_ << " hash slot ratio: "
-      << SYSPARAM_FILESYSPARAM.hash_slot_ratio_ << endl;
+  string super_block_path = string(SYSPARAM_FILESYSPARAM.mount_name_) + SUPERBLOCK_NAME;
+  BlockManager block_manager(super_block_path);
+  ret = block_manager.format(SYSPARAM_FILESYSPARAM);
+  printf("format filesystem %s!\n", TFS_SUCCESS == ret ? "successfully" : "failed");
 
-  ret = BlockFileManager::get_instance()->format_block_file_system(SYSPARAM_FILESYSPARAM, speedup);
-  if (ret)
-  {
-    fprintf(stderr, "create tfs file system fail. ret: %d\n", ret);
-    return ret;
-  }
   return 0;
 }

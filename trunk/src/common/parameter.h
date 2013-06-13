@@ -34,6 +34,7 @@ namespace tfs
       int32_t replicate_ratio_;
       int32_t replicate_wait_time_;
       int32_t compact_delete_ratio_;
+      int32_t compact_update_ratio_;
       int32_t compact_max_load_;
       int32_t compact_time_lower_;
       int32_t compact_time_upper_;
@@ -71,6 +72,12 @@ namespace tfs
       int32_t marshalling_task_expired_time_;
       int32_t reinstate_task_expired_time_;
       int32_t dissolve_task_expired_time_;
+      int32_t max_mr_network_bandwith_ratio_;
+      int32_t max_rw_network_bandwith_ratio_;
+      int32_t compact_family_member_ratio_;
+      int32_t max_single_machine_network_bandwith_;
+      int32_t adjust_copies_location_time_lower_;
+      int32_t adjust_copies_location_time_upper_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;
@@ -93,6 +100,8 @@ namespace tfs
       float block_type_ratio_;
       int32_t file_system_version_;
       float hash_slot_ratio_; // 0.5
+      int32_t max_init_index_element_nums_;
+      int32_t max_extend_index_element_nums_;
       static FileSystemParameter fs_parameter_;
       static std::string get_real_mount_name(const std::string& mount_name, const std::string& index);
       static FileSystemParameter& instance()
@@ -129,6 +138,7 @@ namespace tfs
       int32_t dump_stat_info_interval_;
       int32_t max_sync_retry_count_;
       int32_t max_sync_retry_interval_;
+      int32_t sync_fail_retry_interval_;
       static std::string get_real_file_name(const std::string& src_file,
           const std::string& index, const std::string& suffix);
       static int get_real_ds_port(const int ds_port, const std::string& index);
@@ -207,13 +217,13 @@ namespace tfs
 
     struct CheckServerParameter
     {
-      int32_t block_stable_time_;
-      int32_t check_interval_;
-      int32_t overlap_check_time_;
-      int32_t thread_count_;
+      uint64_t self_id_;
+      uint64_t ns_id_;
       int32_t cluster_id_;
-      uint64_t master_ns_id_;
-      uint64_t slave_ns_id_;
+      int32_t check_interval_;
+      int32_t thread_count_;
+      int32_t check_retry_turns_;
+      int32_t turn_interval_;
 
       int initialize(const std::string& config_file);
 

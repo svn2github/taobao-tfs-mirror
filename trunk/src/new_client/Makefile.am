@@ -16,7 +16,7 @@ AM_CPPFLAGS=-fPIC -I${top_srcdir}/src\
 	    $(UNIQUE_STORE_CPPFLAGS)\
 	    $(TAIR_CACHE_CPPFLAGS)
 
-AM_LDFLAGS=-lrt -lpthread -ldl -luuid $(TAIR_CACHE_LDFLAGS)
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid $(TAIR_CACHE_LDFLAGS)
 
 lib_LTLIBRARIES= libtfsclient.la libtfsclient_c.la
 
@@ -27,6 +27,7 @@ api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session
 									tfs_meta_helper.cpp tfs_meta_manager.cpp tfs_meta_client_api_impl.cpp \
 								 	tfs_meta_client_api.cpp tfs_kv_meta_client_impl.cpp tfs_kv_meta_client_api.cpp\
                   tfs_kv_meta_helper.cpp tfs_cluster_manager.cpp\
+								 	encode.h\
 									bg_task.h client_config.h fsname.h gc_file.h gc_worker.h local_key.h\
 									lru.h md5.h segment_container.h tfs_client_api.h tfs_client_capi.h\
 									tfs_client_impl.h tfs_client_metrics.h tfs_file.h tfs_large_file.h\

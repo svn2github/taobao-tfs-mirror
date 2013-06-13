@@ -48,6 +48,7 @@ namespace tfs
       static int list_file(common::DsTask& ds_task);
       static int check_file_info(common::DsTask& ds_task);
       static int read_file_data(common::DsTask& ds_task);
+      static int verify_file_data(common::DsTask& ds_task);
       static int write_file_data(common::DsTask& ds_task);
       static int unlink_file(common::DsTask& ds_task);
       static int rename_file(common::DsTask& ds_task);
@@ -57,6 +58,7 @@ namespace tfs
 
     private:
       static void print_file_info(const char* name, common::FileInfo& file_info);
+      static void print_file_info_v2(const char* name, common::FileInfoV2& file_info);
       static int write_data(const uint64_t server_id, const uint32_t block_id, const char* data, const int32_t length,
                             const int32_t offset, const uint64_t file_id, const uint64_t file_num);
       static int create_file_num(const uint64_t server_id, const uint32_t block_id, const uint64_t file_id, uint64_t& new_file_id,

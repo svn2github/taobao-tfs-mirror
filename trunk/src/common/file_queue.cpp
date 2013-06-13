@@ -160,7 +160,7 @@ int FileQueue::push(const void* const data, const int64_t len)
   TBSYS_LOG(DEBUG, "queue_size_: %d,size: %d,iret: %d, write_filesize_: %d, max_file_size: %u, write_seqno_: %d",
       queue_information_header_.queue_size_, size, ret, queue_information_header_.write_filesize_, max_file_size_,
       queue_information_header_.write_seqno_);
-  return TFS_SUCCESS;
+  return write_header();
 }
 
 QueueItem *FileQueue::pop(int index)
@@ -230,6 +230,7 @@ QueueItem *FileQueue::pop(int index)
         queue_information_header_.pos_[index].seqno_ = queue_information_header_.read_seqno_;
         queue_information_header_.pos_[index].offset_ = queue_information_header_.read_offset_;
         queue_information_header_.read_offset_ += (size + sizeof(int32_t));
+        queue_information_header_.queue_size_--;
         break;
       }
       if (item != NULL)

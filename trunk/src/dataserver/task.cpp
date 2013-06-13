@@ -23,7 +23,9 @@
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "task.h"
-#include "task_manager.h"
+#include "data_helper.h"
+#include "block_manager.h"
+#include "dataservice.h"
 #include "erasure_code.h"
 
 namespace tfs
@@ -34,6 +36,29 @@ namespace tfs
     using namespace message;
     using namespace tbutil;
     using namespace std;
+
+    Task::Task(DataService& service, const int64_t seqno,
+        const uint64_t source_id, const int32_t expire_time):
+        GCObject(common::Func::get_monotonic_time()),
+      service_(service), seqno_(seqno), source_id_(source_id), expire_time_(expire_time)
+    {
+      start_time_ = common::Func::get_monotonic_time();
+      task_from_ds_ = false;
+    }
+
+    Task::~Task()
+    {
+    }
+
+    inline DataHelper& Task::get_data_helper()
+    {
+      return service_.get_data_helper();
+    }
+
+    inline BlockManager& Task::get_block_manager()
+    {
+      return service_.get_block_manager();
+    }
 
     string Task::dump() const
     {
@@ -70,409 +95,9 @@ namespace tfs
       return tmp_stream.str();
     }
 
-    int Task::send_simple_request(uint64_t server_id, common::BasePacket* message)
-    {
-      int ret = TFS_SUCCESS;
-      int status = 0;
-      ret = send_msg_to_server(server_id, message, status);
-      TBSYS_LOG(DEBUG, "send simple request, ret: %d, status: %d", ret, status);
-      if (TFS_SUCCESS == ret && STATUS_MESSAGE_OK != status)
-      {
-        ret = TFS_ERROR;
-      }
-      return ret;
-    }
-
-    int Task::write_raw_data(const uint64_t server_id, const uint32_t block_id,
-        const char* data, const int32_t length, const int32_t offset, const RawDataType type)
-    {
-      int ret = TFS_SUCCESS;
-      WriteRawDataMessage req_wrd_msg;
-      req_wrd_msg.set_block_id(block_id);
-      req_wrd_msg.set_offset(offset);
-      req_wrd_msg.set_length(length);
-      req_wrd_msg.set_data(data);
-
-      //new block		
-      if (0 == offset)
-      {
-        req_wrd_msg.set_new_block(type);
-      }
-
-      ret = send_simple_request(server_id, &req_wrd_msg);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "write raw data to %s fail, blockid: %u, offset: %u, length: %d, ret: %d",
-            tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length, ret);
-      }
-
-      TBSYS_LOG(DEBUG, "write raw data to %s, blockid: %u, offset: %u, length: %d",
-          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length);
-
-      return ret;
-    }
-
-    int Task::read_raw_data(const uint64_t server_id, const uint32_t block_id,
-      char* data, const int32_t length, const int32_t offset, int32_t& data_file_size)
-    {
-      int ret = TFS_SUCCESS;
-      ReadRawDataMessage req_rrd_msg;
-      req_rrd_msg.set_block_id(block_id);
-      req_rrd_msg.set_offset(offset);
-      req_rrd_msg.set_length(length);
-
-      NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL == client)
-      {
-        ret = TFS_ERROR;
-        TBSYS_LOG(ERROR, "create client error");
-      }
-      else
-      {
-        tbnet::Packet* rsp_msg = NULL;
-        if (TFS_SUCCESS == send_msg_to_server(server_id, client, &req_rrd_msg, rsp_msg))
-        {
-          if (rsp_msg->getPCode() == RESP_READ_RAW_DATA_MESSAGE)
-          {
-            RespReadRawDataMessage* message = dynamic_cast<RespReadRawDataMessage*> (rsp_msg);
-            int read_len = message->get_length();
-            if (read_len >= 0)
-            {
-              memcpy(data, message->get_data(), read_len);
-              data_file_size = message->get_data_file_size();
-            }
-            else
-            {
-              ret = read_len;  // error info stored in length
-            }
-          }
-          else
-          {
-            ret = TFS_ERROR;
-            TBSYS_LOG(ERROR, "read raw data from %s fail, blockid: %u, offset: %u, length: %d",
-                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length);
-          }
-        }
-        else
-        {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "read raw data from %s fail, blockid: %u, offset: %u, length: %d",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length);
-        }
-        NewClientManager::get_instance().destroy_client(client);
-      }
-
-      TBSYS_LOG(DEBUG, "read raw data from %s, blockid: %u, offset: %u, length: %d, ret: %d",
-          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length, ret);
-
-      return ret;
-    }
-
-    int Task::batch_write_index(const uint64_t server_id, const uint32_t block_id, const int32_t cluster, const int32_t remove_flag)
-    {
-      int ret = TFS_SUCCESS;
-      RawMetaVec raw_meta_vec;
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        ret = EXIT_NO_LOGICBLOCK_ERROR;
-        TBSYS_LOG(ERROR, "block is not exist. blockid: %u\n", block_id);
-      }
-      else
-      {
-        ret = logic_block->get_meta_infos(raw_meta_vec);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "get meta info fail, server: %s, blockid: %u, ret: %d",
-            tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, ret);
-          ret = TFS_ERROR;
-        }
-        else
-        {
-          WriteInfoBatchMessage req_wib_msg;
-          req_wib_msg.set_block_id(block_id);
-          req_wib_msg.set_offset(0);
-          req_wib_msg.set_length(raw_meta_vec.size());
-          req_wib_msg.set_raw_meta_list(&raw_meta_vec);
-          req_wib_msg.set_block_info(logic_block->get_block_info());
-          req_wib_msg.set_cluster(cluster);
-          req_wib_msg.set_remove_flag(remove_flag);
-
-          ret = send_simple_request(server_id, &req_wib_msg);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u, ret: %d",
-                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, ret);
-          }
-        }
-      }
-
-      TBSYS_LOG(DEBUG, "batch write index. blockid: %u, meta info size: %zd, ret: %d",
-          block_id, raw_meta_vec.size(), ret);
-
-      return ret;
-    }
-
-    int Task::write_raw_index(const uint64_t server_id, const uint32_t block_id,
-        const int64_t family_id, const RawIndexOp index_op, const RawIndexVec& index_vec)
-    {
-      WriteRawIndexMessage wri_msg;
-      wri_msg.set_block_id(block_id);
-      wri_msg.set_family_id(family_id);
-      wri_msg.set_index_op(index_op);
-      wri_msg.set_index_vec(index_vec);
-
-      int ret = TFS_SUCCESS;
-      ret = send_simple_request(server_id, &wri_msg);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "write raw index to %s fail, blockid: %u, index_op: %d, ret: %d",
-            tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op, ret);
-      }
-
-      TBSYS_LOG(DEBUG, "write raw index to %s, blockid: %u, index op: %d, vec size: %zd, ret: %d",
-          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op, index_vec.size(), ret);
-
-      return ret;
-    }
-
-    int Task::read_raw_index(const uint64_t server_id, const uint32_t block_id,
-        const RawIndexOp index_op, const uint32_t index_id, char* & data, int32_t& length)
-    {
-      int ret = TFS_SUCCESS;
-      ReadRawIndexMessage rri_msg;
-      rri_msg.set_block_id(block_id);
-      rri_msg.set_index_op(index_op);
-      rri_msg.set_index_id(index_id);
-
-      NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL == client)
-      {
-        ret = TFS_ERROR;
-        TBSYS_LOG(ERROR, "create client error");
-      }
-      else
-      {
-        tbnet::Packet* rsp_msg = NULL;
-        if (TFS_SUCCESS == send_msg_to_server(server_id, client, &rri_msg, rsp_msg))
-        {
-          if (rsp_msg->getPCode() == RSP_READ_RAW_INDEX_MESSAGE)
-          {
-            RespReadRawIndexMessage* message = dynamic_cast<RespReadRawIndexMessage*> (rsp_msg);
-            length = message->get_length();
-            if (length >= 0)
-            {
-              data = new (std::nothrow) char[length];
-              assert (NULL != data);
-              memcpy(data, message->get_data(), length);
-            }
-            else
-            {
-              ret = length;
-            }
-          }
-          else
-          {
-            ret = TFS_ERROR;
-            TBSYS_LOG(ERROR, "read raw index from %s fail, blockid: %u, index_op: %d",
-                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op);
-          }
-        }
-        else
-        {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "read raw index from %s fail, blockid: %u, index_op: %d",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op);
-        }
-        NewClientManager::get_instance().destroy_client(client);
-      }
-
-      TBSYS_LOG(DEBUG, "read raw index from %s, blockid: %u, index_op: %d, ret: %d",
-          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op, ret);
-
-      return ret;
-    }
-
-    int Task::check_family(const int64_t family_id, const int32_t family_aid_info)
-    {
-      int ret = (INVALID_FAMILY_ID != family_id)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
-        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
-        if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
-        {
-          ret = EXIT_INVALID_ARGU_ERROR;
-        }
-      }
-      return ret;
-    }
-
-    int Task::check_marshalling(const int64_t family_id, const int32_t family_aid_info,
-        common::FamilyMemberInfo* family_members)
-    {
-      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = check_family(family_id, family_aid_info);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        // check if all data ok
-        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
-
-        int normal_count = 0;
-        for (int32_t i = 0; i < data_num; i++)
-        {
-          if (INVALID_BLOCK_ID != family_members[i].block_ &&
-              INVALID_SERVER_ID != family_members[i].server_ &&
-              FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
-          {
-            normal_count++;
-          }
-        }
-
-        if (normal_count < data_num)
-        {
-          TBSYS_LOG(ERROR, "no enough normal node to marshalling, normal count: %d", normal_count);
-          ret = EXIT_NO_ENOUGH_DATA;
-        }
-      }
-
-      return ret;
-    }
-
-    int Task::check_reinstate(const int64_t family_id, const int32_t family_aid_info,
-        common::FamilyMemberInfo* family_members, int* erased)
-    {
-      assert(NULL != erased);
-      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = check_family(family_id, family_aid_info);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
-        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
-        const int32_t member_num = data_num + check_num;
-
-        bool need_recovery = false;
-        int normal_count = 0;
-        for (int32_t i = 0; i < member_num; i++)
-        {
-          // just need data_num nodes to recovery
-          if (INVALID_BLOCK_ID != family_members[i].block_ &&
-              INVALID_SERVER_ID != family_members[i].server_ &&
-              FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
-          {
-            if (normal_count < data_num)
-            {
-              erased[i] = NODE_ALIVE;
-              normal_count++;
-            }
-            else
-            {
-              erased[i] = NODE_UNUSED;
-            }
-          }
-          else
-          {
-            erased[i] = NODE_DEAD;
-            need_recovery = true;
-          }
-        }
-
-        if (normal_count < data_num)
-        {
-          TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
-          ret = EXIT_NO_ENOUGH_DATA;
-        }
-
-        // all node ok, no need to recovery, just return
-        if (TFS_SUCCESS == ret && !need_recovery)
-        {
-          TBSYS_LOG(INFO, "all nodes are normal, no need do recovery");
-          ret = EXIT_NO_NEED_REINSTATE;
-        }
-      }
-
-      return ret;
-    }
-
-    int Task::check_reinstate(const FamilyInfoExt& family_info,  int* erased)
-    {
-      assert(NULL != erased);
-      int ret = check_family(family_info.family_id_, family_info.family_aid_info_);
-
-      if (TFS_SUCCESS == ret)
-      {
-        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
-        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
-        const int32_t member_num = data_num + check_num;
-
-        int normal_count = 0;
-        for (int32_t i = 0; i < member_num; i++)
-        {
-          // just need data_num nodes to recovery
-          if (INVALID_BLOCK_ID != family_info.members_[i].first &&
-              INVALID_SERVER_ID != family_info.members_[i].second)
-          {
-            if (normal_count < data_num)
-            {
-              erased[i] = NODE_ALIVE;
-              normal_count++;
-            }
-            else
-            {
-              erased[i] = NODE_UNUSED;
-            }
-          }
-          else
-          {
-            erased[i] = NODE_DEAD;
-          }
-       }
-
-        if (normal_count < data_num)
-        {
-          TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
-          ret = EXIT_NO_ENOUGH_DATA;
-        }
-      }
-
-      return ret;
-
-    }
-
-    int Task::check_dissolve(const int64_t family_id, const int32_t family_aid_info,
-        common::FamilyMemberInfo* family_members)
-    {
-      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        if (INVALID_FAMILY_ID == family_id)
-        {
-          ret = EXIT_INVALID_ARGU_ERROR;
-        }
-        else
-        {
-          const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info) / 2;
-          const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info) / 2;
-          if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
-          {
-            ret = EXIT_INVALID_ARGU_ERROR;
-          }
-        }
-      }
-      return ret;
-    }
-
-    CompactTask::CompactTask(TaskManager& manager, const int64_t seqno,
+    CompactTask::CompactTask(DataService& service, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time, const uint32_t block_id):
-      Task(manager, seqno, source_id, expire_time)
+      Task(service, seqno, source_id, expire_time)
     {
       type_ = PLAN_TYPE_COMPACT;
       block_id_ = block_id;
@@ -492,7 +117,7 @@ namespace tfs
         {
           if (PLAN_STATUS_TIMEOUT == result_[i].second)
           {
-            ret = false;
+            ret = false;  // this subtask not finish yet
             break;
           }
         }
@@ -505,7 +130,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
       if (task_from_ds())
       {
-        ret = do_compact(block_id_);
+        ret = do_compact();
         int status = translate_status(ret);
         ret = report_to_ds(status);
       }
@@ -516,10 +141,8 @@ namespace tfs
         {
           result_.push_back(std::make_pair(servers_[i], common::PLAN_STATUS_TIMEOUT));
         }
-        ret = request_ds_to_compact();
+        ret = dispatch_sub_task();
       }
-
-      TBSYS_LOG(INFO, "handle compact task, seqno: %"PRI64_PREFIX"d, ret: %d\n", seqno_, ret );
 
       return ret;
     }
@@ -535,14 +158,14 @@ namespace tfs
 
         resp_cpt_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
 
-        TBSYS_LOG(INFO, "handle complete compact task, "
-            "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
-            seqno_, tbsys::CNetUtil::addrToString(resp_cpt_msg->get_ds_id()).c_str(), status, ret);
-
         if (is_completed())
         {
           ret = report_to_ns(status); // status is notused here
         }
+
+        TBSYS_LOG(INFO, "handle complete compact task, "
+            "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
+            seqno_, tbsys::CNetUtil::addrToString(resp_cpt_msg->get_ds_id()).c_str(), status, ret);
       }
       return ret;  // no need return here
     }
@@ -560,7 +183,8 @@ namespace tfs
       return tmp_stream.str();
     }
 
-    void CompactTask::add_response(const uint64_t server, const int status, const common::BlockInfo& info)
+    void CompactTask::add_response(const uint64_t server, const int status,
+        const common::BlockInfoV2& info)
     {
       for (uint32_t i = 0; i < result_.size(); i++)
       {
@@ -576,70 +200,6 @@ namespace tfs
       }
     }
 
-    int CompactTask::do_compact(const uint32_t block_id)
-    {
-      TBSYS_LOG(DEBUG, "compact start blockid: %u\n", block_id);
-      int ret = TFS_SUCCESS;
-      LogicBlock* src_logic_block = NULL;
-      LogicBlock* dest_logic_block = NULL;
-
-      src_logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == src_logic_block)
-      {
-        TBSYS_LOG(ERROR, "src block is not exist. blockid: %u\n", block_id);
-        ret = EXIT_NO_LOGICBLOCK_ERROR;
-      }
-      else
-      {
-        BlockInfo* src_blk = src_logic_block->get_block_info();
-        assert(src_blk->block_id_ == block_id);
-
-        // create the dest block
-        uint32_t physical_block_id = 0;
-        ret = BlockFileManager::get_instance()->new_block(block_id, physical_block_id, C_COMPACT_BLOCK);
-        TBSYS_LOG(DEBUG, "compact new block blockid: %u, physical blockid: %d\n", block_id, physical_block_id);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        dest_logic_block = BlockFileManager::get_instance()->get_logic_block(block_id, C_COMPACT_BLOCK);
-        if (NULL == dest_logic_block)
-        {
-          TBSYS_LOG(ERROR, "get compact dest block fail. blockid: %u\n", block_id);
-          ret = EXIT_NO_LOGICBLOCK_ERROR;
-        }
-        else
-        {
-          ret = real_compact(src_logic_block, dest_logic_block);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "inner real compact blockid: %u fail. ret: %d\n", block_id, ret);
-          }
-          else
-          {
-            TBSYS_LOG(DEBUG, "compact blockid : %u, switch compact blk\n", block_id);
-            BlockFileManager::get_instance()->switch_compact_blk(block_id);
-            if (TFS_SUCCESS != ret)
-            {
-              TBSYS_LOG(ERROR, "compact blockid: %u, switch compact blk fail. ret: %d\n", block_id, ret);
-            }
-          }
-
-          /** must remove one block here */
-
-          TBSYS_LOG(DEBUG, "compact del old blockid: %u\n", block_id);
-          // del serve block
-          ret = BlockFileManager::get_instance()->del_block(block_id, C_COMPACT_BLOCK);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "compact blockid: %u after switch, del old block fail. ret: %d\n", block_id, ret);
-          }
-        }
-      }
-
-      return ret;
-    }
-
     int CompactTask::report_to_ns(const int status)
     {
       UNUSED(status);
@@ -648,10 +208,10 @@ namespace tfs
       cmit_cpt_msg.set_seqno(seqno_);
       cmit_cpt_msg.set_block_info(info_);
       cmit_cpt_msg.set_result(result_);
+      ret = get_data_helper().send_simple_request(source_id_, &cmit_cpt_msg);
 
-      ret = send_simple_request(source_id_, &cmit_cpt_msg);
-
-      TBSYS_LOG(INFO, "compact report to ns. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s, ret: %d",
+      TBSYS_LOG(INFO, "compact report to ns. seqno: %"PRI64_PREFIX"d, "
+          "blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
           seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
 
       return ret;
@@ -659,225 +219,250 @@ namespace tfs
 
     int CompactTask::report_to_ds(const int status)
     {
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       RespDsCompactBlockMessage resp_cpt_msg;
       resp_cpt_msg.set_seqno(seqno_);
-      resp_cpt_msg.set_ds_id(manager_.get_ds_id());
+      resp_cpt_msg.set_ds_id(ds_info.information_.id_);
       resp_cpt_msg.set_status(status);
 
       if (PLAN_STATUS_END == status)
       {
-        LogicBlock* LogicBlock = BlockFileManager::get_instance()->get_logic_block(block_id_);
-        if (NULL == LogicBlock)
+        BlockInfoV2 info;
+        int ret = get_block_manager().get_block_info(info, block_id_);
+        if (TFS_SUCCESS != ret)
         {
           resp_cpt_msg.set_status(PLAN_STATUS_FAILURE);
-          TBSYS_LOG(ERROR, "get block failed. blockid: %u\n", block_id_);
+          TBSYS_LOG(ERROR, "compact get block failed. blockid: %"PRI64_PREFIX"u, ret: %d",
+              block_id_, ret);
         }
         else
         {
-          BlockInfo* blk = LogicBlock->get_block_info();
-          resp_cpt_msg.set_block_info(*blk);
+          resp_cpt_msg.set_block_info(info);
         }
       }
 
-      TBSYS_LOG(INFO, "compact report to ds. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
-        seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
-
+      // post repsonse to master ds, won't care result
       NewClient* client = NewClientManager::get_instance().create_client();
       post_msg_to_server(source_id_, client, &resp_cpt_msg, Task::ds_task_callback);
-      // NewClientManager::get_instance().destroy_client(client);
+
+      TBSYS_LOG(INFO, "compact report to ds. seqno: %"PRI64_PREFIX"d, "
+          "blockid: %"PRI64_PREFIX"u, status: %d, source: %s",
+        seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
+
       return TFS_SUCCESS;
     }
 
-    int CompactTask::request_ds_to_compact()
+    int CompactTask::dispatch_sub_task()
     {
       int ret = TFS_SUCCESS;
-      for (uint32_t i = 0; i < servers_.size() && TFS_SUCCESS == ret; i++)
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      DsCompactBlockMessage req_cpt_msg;
+      req_cpt_msg.set_seqno(seqno_);
+      req_cpt_msg.set_block_id(block_id_);
+      req_cpt_msg.set_source_id(ds_info.information_.id_);
+      req_cpt_msg.set_expire_time(expire_time_);
+      for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers_.size()); i++)
       {
-        DsCompactBlockMessage req_cpt_msg;
-        req_cpt_msg.set_seqno(seqno_);
-        req_cpt_msg.set_block_id(block_id_);
-        req_cpt_msg.set_source_id(manager_.get_ds_id());
-        ret = send_simple_request(servers_[i], &req_cpt_msg);
+        ret = get_data_helper().send_simple_request(servers_[i], &req_cpt_msg);
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to compact, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(servers_[i]).c_str(), ret);
+      }
+      return ret;
+    }
 
-        if (TFS_SUCCESS != ret)
+    int CompactTask::do_compact()
+    {
+      uint64_t block_id = block_id_;
+      BaseLogicBlock* src = NULL;
+      BaseLogicBlock* dest = NULL;
+
+      // create temp block
+      int ret = get_block_manager().new_block(block_id, true);
+      if (TFS_SUCCESS == ret)
+      {
+        src = get_block_manager().get(block_id);
+        ret = (NULL != src) ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        dest = get_block_manager().get(block_id, true);
+        ret = (NULL != dest) ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
+      }
+
+      // do compact work
+      if (TFS_SUCCESS == ret)
+      {
+        ret = real_compact(src, dest);
+      }
+
+      // switch block
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_manager().switch_logic_block(block_id, true);
+        if (TFS_SUCCESS == ret)
         {
-          break;
+          ret = get_block_manager().del_block(block_id, true);
         }
       }
 
       return ret;
     }
 
-    int CompactTask::real_compact(LogicBlock* src, LogicBlock* dest)
+    int CompactTask::real_compact(BaseLogicBlock* src, BaseLogicBlock* dest)
     {
-      assert(NULL != src && NULL != dest);
+      LogicBlock* tmpsrc = dynamic_cast<LogicBlock* >(src);
+      LogicBlock::Iterator* iter = new (std::nothrow) LogicBlock::Iterator(tmpsrc);
+      assert(NULL != iter);
 
-      BlockInfo dest_blk;
-      BlockInfo* src_blk = src->get_block_info();
-      dest_blk.block_id_ = src_blk->block_id_;
-      dest_blk.seq_no_ = src_blk->seq_no_;
-      dest_blk.version_ = src_blk->version_;
-      dest_blk.file_count_ = 0;
-      dest_blk.size_ = 0;
-      dest_blk.del_file_count_ = 0;
-      dest_blk.del_size_ = 0;
+      char* buffer = new (std::nothrow) char[MAX_SINGLE_FILE_SIZE];
+      assert(NULL != buffer);
 
-      dest->set_last_update(time(NULL));
-      TBSYS_LOG(DEBUG, "compact block set last update. blockid: %u\n", dest->get_logic_block_id());
-
-      char* dest_buf = new char[MAX_COMPACT_READ_SIZE];
-      int32_t write_offset = 0, data_len = 0;
-      int32_t w_file_offset = 0;
-      RawMetaVec dest_metas;
-      FileIterator* fit = new FileIterator(src);
-
-      int ret = TFS_SUCCESS;
-      while (fit->has_next())
+      int32_t new_offset = 0;  // offset to write new file
+      int32_t inner_offset = 0; // offset in compact buffer
+      IndexHeaderV2 header, old_header;
+      FileInfoV2* finfo = NULL;
+      vector<FileInfoV2> finfos_vec;
+      int32_t ret = dest->get_index_header(header);
+      if (TFS_SUCCESS == ret)
       {
-        ret = fit->next();
-        if (TFS_SUCCESS != ret)
+        ret = src->get_index_header(old_header);
+      }
+      while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == (ret = iter->next(finfo))))
+      {
+        if (finfo->status_ & FI_DELETED)
         {
-          tbsys::gDeleteA(dest_buf);
-          tbsys::gDelete(fit);
-          return ret;
+          continue;  // ignore deleted file
         }
 
-        const FileInfo* pfinfo = fit->current_file_info();
-        if (pfinfo->flag_ & (FI_DELETED | FI_INVALID))
+        TBSYS_LOG(DEBUG, "COMPACT: %lu, file_id: %lu, offset: %d, crc: %u, next: %d",
+            src->id(), finfo->id_, finfo->offset_, finfo->crc_, finfo->next_);
+
+        if (inner_offset + finfo->size_ > MAX_SINGLE_FILE_SIZE)
         {
-          continue;
-        }
-
-        FileInfo dfinfo = *pfinfo;
-        dfinfo.offset_ = w_file_offset;
-        // the size returned by FileIterator.current_file_info->size is
-        // the size of file content!!!
-        dfinfo.size_ = pfinfo->size_ + sizeof(FileInfo);
-        dfinfo.usize_ = pfinfo->size_ + sizeof(FileInfo);
-        w_file_offset += dfinfo.size_;
-
-        dest_blk.file_count_++;
-        dest_blk.size_ += dfinfo.size_;
-
-        RawMeta tmp_meta;
-        tmp_meta.set_file_id(dfinfo.id_);
-        tmp_meta.set_size(dfinfo.size_);
-        tmp_meta.set_offset(dfinfo.offset_);
-        dest_metas.push_back(tmp_meta);
-
-        // need flush write buffer
-        if ((0 != data_len) && (fit->is_big_file() || data_len + dfinfo.size_ > MAX_COMPACT_READ_SIZE))
-        {
-          TBSYS_LOG(DEBUG, "write one, blockid: %u, write offset: %d\n", dest->get_logic_block_id(),
-              write_offset);
-          ret = dest->write_raw_data(dest_buf, data_len, write_offset);
-          if (TFS_SUCCESS != ret)
+          if (inner_offset > 0)  // buffer not empty, flush first
           {
-            TBSYS_LOG(ERROR, "write raw data fail, blockid: %u, offset %d, readinglen: %d, ret :%d",
-                dest->get_logic_block_id(), write_offset, data_len, ret);
-            tbsys::gDeleteA(dest_buf);
-            tbsys::gDelete(fit);
-            return ret;
+            ret = get_block_manager().pwrite(buffer, inner_offset, new_offset, dest->id(), true);
+            ret = (ret > 0) ? TFS_SUCCESS : ret;
+            if (TFS_SUCCESS == ret)
+            {
+              new_offset += inner_offset;
+              inner_offset = 0;
+              dest->get_used_offset(header.used_offset_);
+              assert(new_offset == header.used_offset_);
+            }
           }
-          write_offset += data_len;
-          data_len = 0;
         }
 
-        if (fit->is_big_file())
+        if (TFS_SUCCESS == ret)
         {
-          ret = write_big_file(src, dest, *pfinfo, dfinfo, write_offset);
-          write_offset += dfinfo.size_;
-        }
-        else
-        {
-          memcpy(dest_buf + data_len, &dfinfo, sizeof(FileInfo));
-          int left_len = MAX_COMPACT_READ_SIZE - data_len;
-          ret = fit->read_buffer(dest_buf + data_len + sizeof(FileInfo), left_len);
-          data_len += dfinfo.size_;
-        }
-        if (TFS_SUCCESS != ret)
-        {
-          tbsys::gDeleteA(dest_buf);
-          tbsys::gDelete(fit);
-          return ret;
-        }
-
-      } // end of iterate
-
-      if (0 != data_len) // flush the last buffer
-      {
-        TBSYS_LOG(DEBUG, "write one, blockid: %u, write offset: %d\n", dest->get_logic_block_id(), write_offset);
-        ret = dest->write_raw_data(dest_buf, data_len, write_offset);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "write raw data fail, blockid: %u, offset %d, readinglen: %d, ret :%d",
-              dest->get_logic_block_id(), write_offset, data_len, ret);
-          tbsys::gDeleteA(dest_buf);
-          tbsys::gDelete(fit);
-          return ret;
+          // special process big file
+          if (is_big_file(finfo->size_))
+          {
+            ret = write_big_file(src, dest, *finfo, new_offset);
+            if (TFS_SUCCESS == ret)
+            {
+              finfo->offset_ = new_offset; // update fileinfo offset
+              finfos_vec.push_back(*finfo);
+              header.info_.file_count_++;
+              header.info_.size_ += finfo->size_;
+              new_offset += finfo->size_;
+            }
+          }
+          else  // the tmp buffer can contains current file, just memcopy it
+          {
+            const char* file_data = iter->get_data(finfo->offset_, finfo->size_);
+            assert(NULL != file_data);
+            memcpy(buffer + inner_offset, file_data, finfo->size_);
+            uint32_t crc = 0;
+            crc = Func::crc(crc, (buffer + inner_offset + 4), (finfo->size_ - 4));
+            if (crc != finfo->crc_)
+            {
+              Func::hex_dump(file_data, 10, true, TBSYS_LOG_LEVEL_INFO);//TODO
+            }
+            assert(crc == finfo->crc_);
+            finfo->offset_ = new_offset + inner_offset; // update fileinfo offset
+            finfos_vec.push_back(*finfo);
+            header.info_.file_count_++;
+            header.info_.size_ += finfo->size_;
+            inner_offset += finfo->size_;
+          }
         }
       }
 
-      tbsys::gDeleteA(dest_buf);
-      tbsys::gDelete(fit);
-      TBSYS_LOG(DEBUG, "compact write complete. blockid: %u\n", dest->get_logic_block_id());
+      if (EXIT_BLOCK_NO_DATA == ret)
+        ret = TFS_SUCCESS;
 
-      ret = dest->batch_write_meta(&dest_blk, &dest_metas, VERSION_INC_STEP_DEFAULT);
-      if (TFS_SUCCESS != ret)
+      // still has data in buffer, flush it
+      if (TFS_SUCCESS == ret && inner_offset > 0)
       {
-        TBSYS_LOG(ERROR, "compact write segment meta failed. blockid: %u, meta size %zd\n", dest->get_logic_block_id(),
-            dest_metas.size());
-        return ret;
+        ret = get_block_manager().pwrite(buffer, inner_offset, new_offset, dest->id(), true);
+        ret = (ret > 0) ? TFS_SUCCESS : ret;
+        if (TFS_SUCCESS == ret)
+        {
+          new_offset += inner_offset;
+          dest->get_used_offset(header.used_offset_);
+          assert(new_offset == header.used_offset_);
+        }
       }
 
-      return TFS_SUCCESS;
-    }
-
-    int CompactTask::write_big_file(LogicBlock* src, LogicBlock* dest, const FileInfo& src_info,
-        const FileInfo& dest_info, int32_t woffset)
-    {
-      int32_t rsize = src_info.size_;
-      int32_t roffset = src_info.offset_ + sizeof(FileInfo);
-      char* buf = new char[MAX_COMPACT_READ_SIZE];
-      int32_t read_len = 0;
-      int ret = TFS_SUCCESS;
-
-      memcpy(buf, &dest_info, sizeof(FileInfo));
-      int32_t data_len = sizeof(FileInfo);
-      while (read_len < rsize)
+      // write new header and index to dest
+      if (TFS_SUCCESS == ret)
       {
-        int32_t cur_read = MAX_COMPACT_READ_SIZE - data_len;
-        if (cur_read > rsize - read_len)
-          cur_read = rsize - read_len;
-        ret = src->read_raw_data(buf + data_len, cur_read, roffset);
-        if (TFS_SUCCESS != ret)
-          break;
-        data_len += cur_read;
-        read_len += cur_read;
-        roffset += cur_read;
-
-        ret = dest->write_raw_data(buf, data_len, woffset);
-        if (TFS_SUCCESS != ret)
-          break;
-        woffset += data_len;
-
-        data_len = 0;
+        header.info_.version_ = old_header.info_.version_;
+        header.info_.update_size_ = old_header.info_.update_size_;
+        header.info_.update_file_count_ = old_header.info_.update_file_count_;
+        memcpy(&header.throughput_, &old_header.throughput_, sizeof(header.throughput_));
+        header.info_.version_ = old_header.info_.version_;
+        header.seq_no_ = old_header.seq_no_;
+        dest->get_marshalling_offset(header.marshalling_offset_);
+        ret = dest->write_file_infos(header, finfos_vec, block_id_);
+        if (TFS_SUCCESS == ret)
+        {
+          dest->update_block_version(VERSION_INC_STEP_COMPACT);
+        }
       }
-
-      tbsys::gDeleteA(buf);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "write big file error, blockid: %u, ret: %d", dest->get_logic_block_id(), ret);
-      }
+      tbsys::gDeleteA(buffer);
+      tbsys::gDelete(iter);
 
       return ret;
     }
 
-    ReplicateTask::ReplicateTask(TaskManager& manager, const int64_t seqno,
+    int CompactTask::write_big_file(BaseLogicBlock* src, BaseLogicBlock* dest,
+        const FileInfoV2& finfo, const int32_t new_offset)
+    {
+      int offset = 0;
+      int length = 0;
+      int ret = TFS_SUCCESS;
+      const int32_t MAX_READ_SIZE = 2 * 1024 * 1024;
+      char *buffer = new (std::nothrow) char[MAX_READ_SIZE];
+      assert(NULL != buffer);
+      while ((TFS_SUCCESS == ret) && (offset < finfo.size_))
+      {
+        length = std::min(finfo.size_ - offset, MAX_READ_SIZE);
+        ret = src->pread(buffer, length, finfo.offset_ + offset);
+        ret = (ret >= 0) ? TFS_SUCCESS : ret;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = get_block_manager().pwrite(buffer, length, new_offset + offset, dest->id(), true);
+          ret = (ret >= 0) ? TFS_SUCCESS : ret;
+          if (TFS_SUCCESS == ret)
+          {
+            offset += length;
+          }
+        }
+      }
+      tbsys::gDeleteA(buffer);
+      return ret;
+    }
+
+    bool CompactTask::is_big_file(const int32_t size) const
+    {
+      return size > MAX_SINGLE_FILE_SIZE;
+    }
+
+    ReplicateTask::ReplicateTask(DataService& service, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time, const common::ReplBlock& repl_info):
-      Task(manager, seqno, source_id, expire_time)
+      Task(service, seqno, source_id, expire_time)
     {
       type_ = PLAN_TYPE_REPLICATE;
       repl_info_ = repl_info;
@@ -888,36 +473,9 @@ namespace tfs
 
     }
 
-    bool ReplicateTask::can_be_replicate(const uint32_t block_id)
-    {
-      bool repl_ok = true;
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        repl_ok = false;
-      }
-      else
-      {
-        if (!task_from_ds() && logic_block->get_family_id() != 0)
-        {
-          repl_ok = false;
-        }
-      }
-      return repl_ok;
-    }
-
     int ReplicateTask::handle()
     {
-      int ret = TFS_SUCCESS;
-      if (!can_be_replicate(repl_info_.block_id_))
-      {
-        ret = EXIT_MOVE_OR_REPLICATE_ERROR;
-      }
-      else
-      {
-        ret = do_replicate(repl_info_);
-      }
-
+      int ret = do_replicate();
       int status = translate_status(ret);
       if (task_from_ds())
       {
@@ -928,8 +486,6 @@ namespace tfs
         ret = report_to_ns(status);
       }
 
-      TBSYS_LOG(INFO, "handle replicate task, seqno: %"PRI64_PREFIX"d, ret: %d\n", seqno_, ret );
-
       return ret;
     }
 
@@ -938,9 +494,13 @@ namespace tfs
       const char* delim = ", ";
       std::stringstream tmp_stream;
       tmp_stream << Task::dump();
-      tmp_stream << "source id: " << tbsys::CNetUtil::addrToString(repl_info_.source_id_) << delim;
-      tmp_stream << "dest id: " << tbsys::CNetUtil::addrToString(repl_info_.destination_id_) << delim;
       tmp_stream << "block id: " << repl_info_.block_id_ << delim;
+      tmp_stream << "source id: ";
+      for (int i = 0; i < repl_info_.source_num_; i++)
+      {
+        tmp_stream << tbsys::CNetUtil::addrToString(repl_info_.source_id_[i]) << " ";
+      }
+      tmp_stream << "dest id: " << tbsys::CNetUtil::addrToString(repl_info_.destination_id_) << delim;
       tmp_stream << "move flag: " << (0 == repl_info_.is_move_? "no": "yes");
       return tmp_stream.str();
     }
@@ -956,19 +516,21 @@ namespace tfs
 
       bool need_remove = false;
       NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL != client)
+      if (NULL == client)
+      {
+        ret = TFS_ERROR;
+      }
+      else
       {
         tbnet::Packet* rsp_msg = NULL;
-        if (TFS_SUCCESS == send_msg_to_server(source_id_, client, &req_rb_msg, rsp_msg))
+        ret = send_msg_to_server(source_id_, client, &req_rb_msg, rsp_msg);
+        if (TFS_SUCCESS == ret)
         {
-          if (STATUS_MESSAGE != rsp_msg->getPCode())
-          {
-            TBSYS_LOG(ERROR, "unknow packet pcode: %d", rsp_msg->getPCode());
-          }
-          else
+          if (STATUS_MESSAGE == rsp_msg->getPCode())
           {
             StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
-            if (repl_info_.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES && STATUS_MESSAGE_REMOVE == sm->get_status())
+            if ((REPLICATE_BLOCK_MOVE_FLAG_YES == repl_info_.is_move_) &&
+                (STATUS_MESSAGE_REMOVE == sm->get_status()))
             {
               need_remove = true;
               ret = TFS_SUCCESS;
@@ -979,28 +541,26 @@ namespace tfs
             }
             else
             {
-              TBSYS_LOG(ERROR, "send repl block complete info: %s\n", sm->get_error());
+              ret = TFS_ERROR;
             }
           }
-        }
-        else
-        {
-          TBSYS_LOG(ERROR, "send repl block complete info to ns error, ret: %d", ret);
+          else
+          {
+            ret = TFS_ERROR;
+          }
         }
         NewClientManager::get_instance().destroy_client(client);
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "create client error");
       }
 
       if (need_remove)
       {
-        int rm_ret = BlockFileManager::get_instance()->del_block(repl_info_.block_id_);
-        TBSYS_LOG(INFO, "send repl block complete info: del blockid: %u, result: %d\n", repl_info_.block_id_, rm_ret);
+        int rm_ret = get_block_manager().del_block(repl_info_.block_id_);
+        TBSYS_LOG(INFO, "send repl block complete info: del blockid: %"PRI64_PREFIX"u, ret: %d\n",
+            repl_info_.block_id_, rm_ret);
       }
 
-      TBSYS_LOG(INFO, "replicate report to ns. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s, ret: %d",
+      TBSYS_LOG(INFO, "replicate report to ns. seqno: %"PRI64_PREFIX"d, "
+          "blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
 
       return ret;
@@ -1008,90 +568,138 @@ namespace tfs
 
     int ReplicateTask::report_to_ds(const int status)
     {
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       RespDsReplicateBlockMessage resp_repl_msg;
       resp_repl_msg.set_seqno(seqno_);
-      resp_repl_msg.set_ds_id(manager_.get_ds_id());
+      resp_repl_msg.set_ds_id(ds_info.information_.id_);
       resp_repl_msg.set_status(status);
 
-      TBSYS_LOG(INFO, "replicate report to ds. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
+      TBSYS_LOG(INFO, "replicate report to ds. seqno: %"PRI64_PREFIX"d, "
+          "blockid: %"PRI64_PREFIX"u, status: %d, source: %s",
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
 
       NewClient* client = NewClientManager::get_instance().create_client();
       post_msg_to_server(source_id_, client, &resp_repl_msg, Task::ds_task_callback);
-      // NewClientManager::get_instance().destroy_client(client);
       return TFS_SUCCESS;
     }
 
-    int ReplicateTask::do_replicate(const ReplBlock& repl_block)
+    int ReplicateTask::replicate_data(const int32_t block_size)
     {
-      uint64_t ds_ip = repl_block.destination_id_;
-      uint32_t block_id = repl_block.block_id_;
-
-      TBSYS_LOG(INFO, "replicating now, seqno: %"PRI64_PREFIX"d, blockid: %u, %s = >%s\n",
-          seqno_, block_id, tbsys::CNetUtil::addrToString(repl_block.source_id_).c_str(),
-          tbsys::CNetUtil::addrToString(ds_ip).c_str());
-
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        TBSYS_LOG(ERROR, "block is not exist, blockid: %u, %s=>%s\n", repl_block.block_id_,
-            tbsys::CNetUtil::addrToString(repl_block.source_id_).c_str(),
-            tbsys::CNetUtil::addrToString(ds_ip).c_str());
-        return TFS_ERROR;
-      }
-
-      //replicate block file
-      int32_t len = 0, offset = 0;
+      int32_t length = 0;
+      int32_t offset = 0;
+      uint64_t block_id = repl_info_.block_id_;
+      uint64_t source_id = repl_info_.source_id_[0];
+      uint64_t dest_id = repl_info_.destination_id_;
+      char data[MAX_READ_SIZE];  // just use 1M stack space
       int ret = TFS_SUCCESS;
-      char tmp_data_buf[MAX_READ_SIZE];
-
-      //this block will not be write or update now, locked by ns
-      int32_t total_len = logic_block->get_data_file_size();
-      do  // use do while to process empty block
+      while ((TFS_SUCCESS == ret) && (offset < block_size))
       {
-        int32_t read_len = MAX_READ_SIZE;
-        if (total_len - offset < MAX_READ_SIZE)
+        length = std::min(block_size - offset, MAX_READ_SIZE);
+        ret = get_data_helper().read_raw_data(source_id, block_id, data, length, offset);
+        if (TFS_SUCCESS == ret)
         {
-          read_len = total_len - offset;
+          ret = get_data_helper().write_raw_data(dest_id, block_id, data, length, offset, true);
+          if (TFS_SUCCESS == ret)
+          {
+            offset += length;
+          }
         }
-        ret = logic_block->read_raw_data(tmp_data_buf, read_len, offset);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "read raw data fail, ip: %s, blockid: %u, offset: %d, reading len: %d, ret: %d",
-              tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, offset, read_len, ret);
-          break;
-        }
-        len = read_len;
-
-        TBSYS_LOG(DEBUG, "copy raw data blockid: %u, offset: %d, read len: %d, total len: %d\n", block_id,
-            offset, len, total_len);
-
-        ret = Task::write_raw_data(ds_ip, block_id, tmp_data_buf, len, offset);
-        if (TFS_SUCCESS != ret)
-        {
-          break;
-        }
-
-        offset += len;
-      } while (offset < total_len);
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = batch_write_index(ds_ip, block_id, repl_block.server_count_, repl_block.is_move_);
       }
 
-      // update block info local
-      if (TFS_SUCCESS == ret)
-      {
-        VersionStep step = repl_block.is_move_ ? VERSION_INC_STEP_NONE: VERSION_INC_STEP_REPLICATE;
-        ret = logic_block->update_block_version(step);
-      }
       return ret;
     }
 
-    MarshallingTask::MarshallingTask(TaskManager& manager, const int64_t seqno,
+    int ReplicateTask::replicate_index()
+    {
+      uint64_t block_id = repl_info_.block_id_;
+      uint64_t dest_id = repl_info_.destination_id_;
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+
+      uint64_t helper[MAX_DATA_MEMBER_NUM];
+      ArrayHelper<uint64_t> attach_blocks(MAX_DATA_MEMBER_NUM, helper);
+      int ret = get_block_manager().get_attach_blocks(attach_blocks, block_id);
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < attach_blocks.get_array_index()); i++)
+      {
+        IndexDataV2 index_data;
+        ret = get_data_helper().read_index(ds_info.information_.id_,
+            block_id, *attach_blocks.at(i), index_data);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = get_data_helper().write_index(dest_id,
+              block_id, *attach_blocks.at(i), index_data, true);
+        }
+      }
+
+      return ret;
+    }
+
+    int ReplicateTask::do_replicate()
+    {
+      uint64_t block_id = repl_info_.block_id_;
+      uint64_t dest_id = repl_info_.destination_id_;
+      int64_t family_id = 0;
+      int32_t block_size = 0;
+      int32_t index_num = 0;
+
+      int ret = get_block_manager().get_family_id(family_id, block_id);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_manager().get_used_offset(block_size, block_id);
+        if ((TFS_SUCCESS == ret) && IS_VERFIFY_BLOCK(block_id))
+        {
+          ret = get_block_manager().get_index_num(index_num, block_id);
+        }
+      }
+
+      // new remote temp block
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_data_helper().new_remote_block(dest_id,
+            block_id, true, family_id, index_num, expire_time_);
+      }
+
+      // replicate data
+      if (TFS_SUCCESS == ret)
+      {
+        ret = replicate_data(block_size);
+      }
+
+      // replicate index
+      if (TFS_SUCCESS == ret)
+      {
+        ret = replicate_index();
+      }
+
+      ECMeta ec_meta;
+      // update source block version
+      if ((TFS_SUCCESS == ret) && (!repl_info_.is_move_))
+      {
+        ec_meta.version_step_ = VERSION_INC_STEP_REPLICATE;
+        for (int i = 0;  (i < repl_info_.source_num_) && (TFS_SUCCESS == ret); i++)
+        {
+          ret = get_data_helper().commit_ec_meta(repl_info_.source_id_[i],
+              block_id, ec_meta, SWITCH_BLOCK_NO);
+        }
+      }
+
+      // when move parity block, marshalling offset should be set to target
+      if (INVALID_FAMILY_ID != family_id)
+      {
+        ret = get_block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
+      }
+
+      // commit block, update version and switch
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_data_helper().commit_ec_meta(dest_id, block_id, ec_meta, SWITCH_BLOCK_YES);
+      }
+
+      return ret;
+    }
+
+    MarshallingTask::MarshallingTask(DataService& service, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time, const int64_t family_id) :
-      Task(manager, seqno, source_id, expire_time)
+      Task(service, seqno, source_id, expire_time)
     {
       type_ = PLAN_TYPE_EC_MARSHALLING;
       family_id_ = family_id;
@@ -1099,14 +707,16 @@ namespace tfs
 
     MarshallingTask::~MarshallingTask()
     {
-      tbsys::gDelete(family_members_);
+      tbsys::gDeleteA(family_members_);
     }
 
-    int MarshallingTask::set_family_member_info(const FamilyMemberInfo* members, const int32_t family_aid_info)
+    int MarshallingTask::set_family_info(const FamilyMemberInfo* members,
+        const int32_t family_aid_info)
     {
-      const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) + GET_CHECK_MEMBER_NUM(family_aid_info);
+      const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) +
+        GET_CHECK_MEMBER_NUM(family_aid_info);
       int32_t ret = TFS_SUCCESS;
-      if (NULL == members || MEMBER_NUM <= 0 || MEMBER_NUM > MAX_MARSHALLING_NUM)
+      if ((NULL == members) || (MEMBER_NUM <= 0) || (MEMBER_NUM) > (MAX_MARSHALLING_NUM))
       {
         ret = EXIT_PARAMETER_ERROR;
       }
@@ -1157,11 +767,12 @@ namespace tfs
       cmit_msg.set_seqno(seqno_);
       cmit_msg.set_status(status);
       cmit_msg.set_family_id(family_id_);
-
       ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
-        ret = send_simple_request(source_id_, &cmit_msg);
+        int32_t status = TFS_ERROR;
+        ret = send_msg_to_server(source_id_, &cmit_msg, status);
+        ret = (ret < 0) ? ret : status;
       }
 
       TBSYS_LOG(INFO, "marshalling report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
@@ -1170,200 +781,213 @@ namespace tfs
       return ret;
     }
 
-    int MarshallingTask::do_marshalling()
+    // for marshalling, ECMeta array size is DATA NUM
+    int MarshallingTask::encode_data(ECMeta* ec_metas, int32_t& marshalling_len)
     {
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
 
       ErasureCode encoder;
-      int32_t encode_total_len = -1;
-      int32_t encode_offset = 0;
-      int32_t encode_len = 0;
-      int32_t block_len[member_num];
+      int32_t offset = 0;
+      int32_t length = 0;
+      int32_t read_len = 0;
       char* data[member_num];
-      char* index_data[member_num];
-      memset(block_len, 0, member_num * sizeof(int32_t));
       memset(data, 0, member_num * sizeof(char*));
-      memset(index_data, 0, member_num * sizeof(char*));
 
-      int ret = check_marshalling(family_id_, family_aid_info_, family_members_);
-      if (TFS_SUCCESS != ret)
+      // get the element with max used_offset
+      ECMeta* max_ele = max_element(ec_metas, ec_metas + data_num, ECMeta::u_compare);
+      marshalling_len = max_ele->used_offset_;
+      // if not align, rollup for encode
+      int unit = ErasureCode::ws_ * ErasureCode::ps_;
+      if (0 != (marshalling_len % unit))
       {
-        return ret;
+        marshalling_len = (marshalling_len / unit + 1) * unit;
       }
 
-      /* family info ok, continue marshalling */
-
       // config encoder parameter, alloc buffer
-      ret = encoder.config(data_num, check_num);
+      int ret = encoder.config(data_num, check_num);
       if (TFS_SUCCESS == ret)
       {
         for (int32_t i = 0; i < member_num; i++)
         {
-          data[i] = new (std::nothrow) char[MAX_READ_SIZE];
+          data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
           assert(NULL != data[i]);
         }
         encoder.bind(data, member_num, MAX_READ_SIZE);
       }
 
       // process block data
-      if (TFS_SUCCESS == ret)
+      while ((TFS_SUCCESS == ret) && (offset < marshalling_len))
       {
-        do
+        length = std::min(marshalling_len - offset, MAX_READ_SIZE);
+
+        // read data from data node
+        for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
         {
-          encode_len = MAX_READ_SIZE;
-          if (encode_total_len > 0 && encode_total_len - encode_offset < MAX_READ_SIZE)
+          read_len = length;
+          if (offset < ec_metas[i].used_offset_)
           {
-            encode_len = encode_total_len - encode_offset;
-          }
-
-          // read data from data node
-          for (int32_t i = 0; i < data_num; i++)
-          {
-            // memset for last piece
-            if (block_len[i] != 0 && encode_offset + encode_len > block_len[i])
+            // read part of buffer, need memset first to ensure data zero
+            // and truncate read length to avoid read invalid data
+            if (offset + length > ec_metas[i].used_offset_)
             {
-              memset(data[i], 0, encode_len * sizeof(char));
-            }
-            uint64_t server_id = family_members_[i].server_;
-            uint32_t block_id = family_members_[i].block_;
-            int32_t data_file_size = 0;
-
-            if  (0 == encode_offset || encode_offset < block_len[i])
-            {
-              ret = read_raw_data(server_id, block_id, data[i], encode_len, encode_offset, data_file_size);
+              memset(data[i], 0, length * sizeof(char));
+              read_len = ec_metas[i].used_offset_ - offset;
             }
 
-            if (TFS_SUCCESS == ret)
-            {
-              block_len[i] = data_file_size;
-              // get total len on first read
-              if (0 == encode_offset && data_file_size > encode_total_len)
-              {
-                encode_total_len = data_file_size;
-
-                // rollup for encode
-                int unit = ErasureCode::ws_ * ErasureCode::ps_;
-                if (0 != (encode_total_len % unit))
-                {
-                  encode_total_len = (encode_total_len / unit + 1) * unit;
-                }
-              }
-            }
-            else
-            {
-              break;
-            }
-          }
-
-          if (TFS_SUCCESS != ret)
-          {
-            break;
-          }
-
-          ret = encoder.encode(encode_len);
-          if (TFS_SUCCESS != ret)
-          {
-            break;
-          }
-
-          // write data to check node
-          for (int32_t i = data_num; i < member_num; i++)
-          {
-            uint64_t server_id = family_members_[i].server_;
-            uint32_t block_id = family_members_[i].block_;
-            ret = write_raw_data(server_id, block_id, data[i], encode_len, encode_offset, PARITY_DATA);
-            if (TFS_SUCCESS != ret)
-            {
-              break;
-            }
-          }
-
-          if (TFS_SUCCESS != ret)
-          {
-            break;
-          }
-
-          // update offset
-          encode_offset += encode_len;
-        } while (encode_offset < encode_total_len);
-      }
-
-      // process block index
-      if (TFS_SUCCESS == ret)
-      {
-        RawIndexVec index_vec;
-
-        for (int i = 0; i < data_num; i++)
-        {
-          uint64_t server_id = family_members_[i].server_;
-          uint32_t block_id = family_members_[i].block_;
-          int32_t length = 0;
-          ret = read_raw_index(server_id, block_id, READ_DATA_INDEX, 0, index_data[i], length);
-          if (TFS_SUCCESS == ret)
-          {
-            TBSYS_LOG(DEBUG, "index info, server_id: %s, block_id: %u, length: %d",
-              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, length);
-            RawIndex raw_index(block_id, index_data[i], length);
-            index_vec.push_back(raw_index);
+            ret = get_data_helper().read_raw_data(family_members_[i].server_,
+                family_members_[i].block_, data[i], read_len, offset);
           }
           else
           {
-            break;
+            memset(data[i], 0, length * sizeof(char));
           }
         }
 
+        // encode data to buffer
         if (TFS_SUCCESS == ret)
         {
-          for (int i = 0; i < check_num; i++)
-          {
-            uint64_t server_id = family_members_[data_num+i].server_;
-            uint32_t block_id = family_members_[data_num+i].block_;
-            ret = write_raw_index(server_id, block_id, family_id_, WRITE_PARITY_INDEX, index_vec);
-            if (TFS_SUCCESS != ret)
-            {
-              break;
-            }
-          }
+          ret = encoder.encode(length);
         }
 
-        // just write family id to data block
+        // write data to check node
+        for (int32_t i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
+        {
+          ret = get_data_helper().write_raw_data(family_members_[i].server_,
+              family_members_[i].block_, data[i], length, offset, true);
+        }
+
+        // one turn success, update offset
         if (TFS_SUCCESS == ret)
         {
-          RawIndexVec empty_index_vec;
-          for (int i = 0; i < data_num; i++)
-          {
-            uint64_t server_id = family_members_[i].server_;
-            uint32_t block_id = family_members_[i].block_;
-            ret = write_raw_index(server_id, block_id, family_id_, WRITE_DATA_INDEX, empty_index_vec);
-            if (TFS_SUCCESS != ret)
-            {
-              break;
-            }
-          }
+          offset += length;
         }
       }
 
       for (int32_t i = 0; i < member_num; i++)
       {
-        tbsys::gDeleteA(data[i]);
-        tbsys::gDeleteA(index_data[i]);
+        tbsys::gFree(data[i]);
       }
 
       return ret;
     }
 
-    ReinstateTask::ReinstateTask(TaskManager& manager, const int64_t seqno,
+    int MarshallingTask::backup_index()
+    {
+      int ret = TFS_SUCCESS;
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
+      {
+        IndexDataV2 index_data;
+        ret = get_data_helper().read_index(family_members_[i].server_,
+            family_members_[i].block_, family_members_[i].block_, index_data);
+        if (TFS_SUCCESS == ret)
+        {
+          // we need record data block's marshalling len in check block
+          index_data.header_.marshalling_offset_ = index_data.header_.used_offset_;
+          index_data.header_.info_.family_id_ = family_id_;
+        }
+        // backup every data block's index to all check blocks
+        for (int j = data_num; (TFS_SUCCESS == ret) && (j < member_num); j++)
+        {
+          ret = get_data_helper().write_index(family_members_[j].server_,
+              family_members_[j].block_, family_members_[i].block_, index_data, true);
+        }
+      }
+      return ret;
+    }
+
+    int MarshallingTask::do_marshalling()
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+      int32_t marshalling_len = 0;
+      ECMeta ec_metas[data_num];
+
+      int ret = TFS_SUCCESS;
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
+      {
+        ret = get_data_helper().query_ec_meta(family_members_[i].server_,
+            family_members_[i].block_, ec_metas[i]);
+      }
+
+      // create parity block
+      for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
+      {
+        ret = get_data_helper().new_remote_block(family_members_[i].server_,
+            family_members_[i].block_, true, family_id_, data_num, expire_time_);
+      }
+
+      // encode data & write to parity block
+      if (TFS_SUCCESS == ret)
+      {
+        ret = encode_data(ec_metas, marshalling_len);
+      }
+
+      // backup index to parity block's index
+      if (TFS_SUCCESS == ret)
+      {
+        ret = backup_index();
+      }
+
+      // commit family id & other infos
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
+        {
+          ec_metas[i].family_id_ = family_id_;
+          // set used_offset as marshalling_offset for data node
+          ec_metas[i].mars_offset_ = ec_metas[i].used_offset_;
+          ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
+            family_members_[i].block_, ec_metas[i]);
+        }
+
+        ECMeta ec_meta;
+        ec_meta.family_id_ = family_id_;
+        ec_meta.mars_offset_ = marshalling_len;
+        for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
+        {
+          ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
+            family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
+        }
+      }
+
+      return ret;
+    }
+
+    ReinstateTask::ReinstateTask(DataService& service, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time, const int64_t family_id) :
-      MarshallingTask(manager, seqno, source_id, expire_time, family_id)
+      MarshallingTask(service, seqno, source_id, expire_time, family_id)
     {
       type_ = PLAN_TYPE_EC_REINSTATE;
+      reinstate_num_ = 0;
     }
 
     ReinstateTask::~ReinstateTask()
     {
 
+    }
+
+    int ReinstateTask::set_family_info(const FamilyMemberInfo* members,
+        const int32_t family_aid_info, const int* erased)
+    {
+      int ret = MarshallingTask::set_family_info(members, family_aid_info);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = (NULL == erased) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) +
+            GET_CHECK_MEMBER_NUM(family_aid_info);
+          memcpy(erased_, erased, MEMBER_NUM * sizeof(int));
+        }
+      }
+      return ret;
     }
 
     int ReinstateTask::handle()
@@ -1378,263 +1002,329 @@ namespace tfs
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
+      int32_t marshalling_len = 0;
+      ECMeta ec_metas[member_num];
 
-      ErasureCode decoder;
-      int32_t decode_total_len = -1;
-      int32_t decode_offset = 0;
-      int32_t decode_len = 0;
-      int32_t block_len[member_num];
-      char* data[member_num];
-      char* index_data[member_num];
-      int erased[member_num];
-      memset(block_len, 0, member_num * sizeof(int32_t));
-      memset(data, 0, member_num * sizeof(char*));
-      memset(index_data, 0, member_num * sizeof(char*));
-      memset(erased, 0, member_num * sizeof(int));
-
-      int ret = check_reinstate(family_id_, family_aid_info_, family_members_, erased);
-      if (TFS_SUCCESS != ret)
+      int ret = TFS_SUCCESS;
+      bool lost_data = false;
+      bool lost_check = false;
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
       {
-        if (EXIT_NO_NEED_REINSTATE == ret)
+        if (ErasureCode::NODE_ALIVE == family_members_[i].status_)
         {
-          ret = TFS_SUCCESS; // no need recovery
+          ret = get_data_helper().query_ec_meta(family_members_[i].server_,
+              family_members_[i].block_, ec_metas[i]);
         }
-        return ret;
+        else if (ErasureCode::NODE_DEAD == family_members_[i].status_)
+        {
+          if (i < data_num)
+          {
+            lost_data = true;
+          }
+          else
+          {
+            lost_check = true;
+          }
+        }
       }
 
-      /* family info ok, continue reinstate*/
+      // create lost block
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
+      {
+        if (ErasureCode::NODE_DEAD != family_members_[i].status_)
+        {
+          continue;  // only query dead nodes
+        }
 
-      // config encoder parameter, alloc buffer
-      ret = decoder.config(data_num, check_num, erased);
+        if (i < data_num)  // create data block
+        {
+          ret = get_data_helper().new_remote_block(family_members_[i].server_,
+            family_members_[i].block_, true, INVALID_FAMILY_ID, 0, expire_time_);
+        }
+        else // create parity block
+        {
+          ret = get_data_helper().new_remote_block(family_members_[i].server_,
+              family_members_[i].block_, true, family_id_, data_num, expire_time_);
+        }
+      }
+
+      // decode data & write to recover target
+      if (TFS_SUCCESS == ret)
+      {
+        ret = decode_data(ec_metas, marshalling_len);
+      }
+
+      // recover data index
+      if ((TFS_SUCCESS == ret) && lost_data)
+      {
+        ret = recover_data_index(ec_metas);
+      }
+
+      // recover check index
+      if ((TFS_SUCCESS == ret) && lost_check)
+      {
+        ret = recover_check_index(ec_metas, marshalling_len);
+      }
+
+      return ret;
+    }
+
+    // for reinstate, ECMeta array size is MEMBER NUM
+    int ReinstateTask::decode_data(ECMeta* ec_metas, int32_t& marshalling_len)
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      ErasureCode decoder;
+      int32_t offset = 0;
+      int32_t length = 0;
+      int32_t read_len = 0;
+      char* data[member_num];
+      memset(data, 0, member_num * sizeof(char*));
+
+      // get the element with max marshalling_offset
+      ECMeta* max_ele = max_element(ec_metas, ec_metas + member_num, ECMeta::m_compare);
+      marshalling_len = max_ele->mars_offset_;
+      // if not align, rollup for encode
+      int unit = ErasureCode::ws_ * ErasureCode::ps_;
+      if (0 != (marshalling_len % unit))
+      {
+        marshalling_len = (marshalling_len / unit + 1) * unit;
+      }
+
+      // config decoder parameter, alloc buffer
+      int ret = decoder.config(data_num, check_num, erased_);
       if (TFS_SUCCESS == ret)
       {
         for (int32_t i = 0; i < member_num; i++)
         {
-          data[i] = new (std::nothrow) char[MAX_READ_SIZE];
+          data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
           assert(NULL != data[i]);
         }
         decoder.bind(data, member_num, MAX_READ_SIZE);
       }
 
-      // process block data
-      if (TFS_SUCCESS == ret)
+      while ((TFS_SUCCESS == ret) && (offset < marshalling_len))
       {
-        do
+        length = std::min(marshalling_len - offset, MAX_READ_SIZE);
+
+        for (int32_t i = 0; i < member_num; i++)
         {
-          decode_len = MAX_READ_SIZE;
-          if (decode_total_len > 0 && decode_total_len - decode_offset < MAX_READ_SIZE)
+          if (ErasureCode::NODE_ALIVE != erased_[i])
           {
-            decode_len = decode_total_len - decode_offset;
+            continue; // not alive, just continue
           }
 
-          // read data from data node
-          for (int32_t i = 0; i < member_num; i++)
+          read_len = length;
+          if (offset < ec_metas[i].mars_offset_)
           {
-            if (NODE_ALIVE != erased[i])
+            // read part of buffer, need memset first to ensure data zero
+            // and truncate read length to avoid read invalid data
+            if (length + offset > ec_metas[i].mars_offset_)
             {
-              continue;
-            }
-            if (block_len[i] != 0 && decode_offset + decode_len > block_len[i])
-            {
-              memset(data[i], 0, decode_len * sizeof(char));
+              memset(data[i], 0, length * sizeof(char));
+              read_len = ec_metas[i].mars_offset_ - offset;
             }
 
-            uint64_t server_id = family_members_[i].server_;
-            uint32_t block_id = family_members_[i].block_;
-            int32_t data_file_size = 0;
-
-            if (0 == decode_offset || decode_offset < block_len[i])
-            {
-              ret = read_raw_data(server_id, block_id, data[i], decode_len, decode_offset, data_file_size);
-            }
-
-            if (TFS_SUCCESS == ret)
-            {
-              block_len[i] = data_file_size;
-              // get total len on first read
-              if (0 == decode_offset && data_file_size > decode_total_len)
-              {
-                decode_total_len = data_file_size;
-
-                // rollup for encode
-                int unit = ErasureCode::ws_ * ErasureCode::ps_;
-                if (0 != (decode_total_len % unit))
-                {
-                  decode_total_len = (decode_total_len / unit + 1) * unit;
-                }
-              }
-            }
-            else
-            {
-              break;
-            }
-          }
-
-          if (TFS_SUCCESS != ret)
-          {
-            break;
-          }
-
-          ret = decoder.decode(decode_len);
-          if (TFS_SUCCESS != ret)
-          {
-            break;
-          }
-
-          // write normal data
-          for (int32_t i = 0; i < data_num; i++)
-          {
-            if (NODE_DEAD != erased[i])
-            {
-              continue;
-            }
-            uint64_t server_id = family_members_[i].server_;
-            uint32_t block_id = family_members_[i].block_;
-            ret = write_raw_data(server_id, block_id, data[i], decode_len, decode_offset);
-            if (TFS_SUCCESS != ret)
-            {
-              break;
-            }
-          }
-
-          if (TFS_SUCCESS != ret)
-          {
-            break;
-          }
-
-          // write parity data
-          for (int32_t i = data_num; i < member_num; i++)
-          {
-            if (NODE_DEAD != erased[i])
-            {
-              continue;
-            }
-            uint64_t server_id = family_members_[i].server_;
-            uint32_t block_id = family_members_[i].block_;
-            ret = write_raw_data(server_id, block_id, data[i], decode_len, decode_offset, PARITY_DATA);
-            if (TFS_SUCCESS != ret)
-            {
-              break;
-            }
-          }
-
-          if (TFS_SUCCESS != ret)
-          {
-            break;
-          }
-
-          // update offset
-          decode_offset += decode_len;
-
-        } while (decode_offset < decode_total_len);
-      }
-
-      // recovery data index
-      if (TFS_SUCCESS == ret)
-      {
-        for (int i = 0; i < data_num; i++)
-        {
-          if (NODE_DEAD != erased[i])
-          {
-            continue;
-          }
-
-          char* target_index = NULL;
-          int32_t length = 0;
-          uint32_t target_block = family_members_[i].block_;
-          uint64_t target_server = family_members_[i].server_;
-
-          for (int j = data_num; j < member_num; j++)
-          {
-            if (NODE_ALIVE == erased[j])
-            {
-              uint64_t server_id = family_members_[j].server_;
-              uint32_t block_id = family_members_[j].block_;
-              ret = read_raw_index(server_id, block_id, READ_PARITY_INDEX, target_block, target_index, length);
-              if (TFS_SUCCESS == ret)
-              {
-                break;
-              }
-            }
-          }
-
-          if (TFS_SUCCESS == ret)
-          {
-            RawIndexVec index_vec;
-            RawIndex raw_index(target_block, target_index, length);
-            index_vec.push_back(raw_index);
-            ret = write_raw_index(target_server, target_block, family_id_, WRITE_DATA_INDEX, index_vec);
-          }
-
-          tbsys::gDelete(target_index);
-
-          if (TFS_SUCCESS != ret)
-          {
-            break;
-          }
-        }
-      }
-
-      // recovery parity index
-      bool miss_parity = false;
-      if (TFS_SUCCESS == ret)
-      {
-        for (int i = data_num; i < member_num; i++)
-        {
-          if (NODE_DEAD == erased[i])
-          {
-            miss_parity = true;
-            break;
-          }
-        }
-      }
-
-      if (TFS_SUCCESS == ret && miss_parity)
-      {
-        RawIndexVec index_vec;
-        for (int i = 0; i < data_num; i++)
-        {
-          uint64_t server_id = family_members_[i].server_;
-          uint32_t block_id = family_members_[i].block_;
-          int32_t length = 0;
-          ret = read_raw_index(server_id, block_id, READ_DATA_INDEX, 0, index_data[i], length);
-          if (TFS_SUCCESS == ret)
-          {
-            TBSYS_LOG(DEBUG, "index info, server_id: %s, block_id: %u, length: %d",
-                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, length);
-            RawIndex raw_index(block_id, index_data[i], length);
-            index_vec.push_back(raw_index);
+            ret = get_data_helper().read_raw_data(family_members_[i].server_,
+                family_members_[i].block_, data[i], read_len, offset);
           }
           else
           {
-            break;
+            // no data to read in this block, just set all data to zero
+            memset(data[i], 0, length * sizeof(char));
           }
         }
 
+        // decode data to buffer
         if (TFS_SUCCESS == ret)
         {
-          for (int i = data_num; i < member_num; i++)
-          {
-            if (NODE_DEAD != erased[i])
-            {
-              continue;
-            }
+          ret = decoder.decode(length);
+        }
 
-            uint64_t server_id = family_members_[i].server_;
-            uint32_t block_id = family_members_[i].block_;
-            ret = write_raw_index(server_id, block_id, family_id_, WRITE_PARITY_INDEX, index_vec);
-            if (TFS_SUCCESS != ret)
-            {
-              break;
-            }
+        // recover data
+        for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
+        {
+          if (ErasureCode::NODE_DEAD != erased_[i])
+          {
+            continue;  // we want to find dead node
           }
+
+          ret = get_data_helper().write_raw_data(family_members_[i].server_,
+              family_members_[i].block_, data[i], length, offset, true);
+        }
+
+        // all success, update offset
+        if (TFS_SUCCESS == ret)
+        {
+          offset += length;
         }
       }
 
       for (int32_t i = 0; i < member_num; i++)
       {
-        tbsys::gDeleteA(data[i]);
-        tbsys::gDeleteA(index_data[i]);
+        tbsys::gFree(data[i]);
+      }
+
+      return ret;
+    }
+
+    int ReinstateTask::recover_data_index(ECMeta* ec_metas)
+    {
+      int ret = TFS_SUCCESS;
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      int32_t pi = -1;
+      for (int i = data_num; i < member_num; i++)
+      {
+        if (ErasureCode::NODE_ALIVE == erased_[i])
+        {
+          pi = i;  // find a alive parity block's index
+          break;
+        }
+      }
+
+      ret = (pi > 0) ? TFS_SUCCESS: EXIT_NO_ENOUGH_DATA;
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
+      {
+        if (ErasureCode::NODE_DEAD != erased_[i])
+        {
+          continue; // we need find dead node to recover
+        }
+
+        IndexDataV2 index_data;
+        ret = get_data_helper().read_index(family_members_[pi].server_,
+            family_members_[pi].block_, family_members_[i].block_, index_data);
+        if (TFS_SUCCESS == ret)
+        {
+          // update lost data node's marshalling len
+          // it's needed when recover check block
+          ec_metas[i].mars_offset_ = index_data.header_.marshalling_offset_;
+          ret = get_data_helper().write_index(family_members_[i].server_,
+              family_members_[i].block_, family_members_[i].block_, index_data, true);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = recover_updated_files(index_data, ec_metas[pi].mars_offset_,
+              family_members_[i].block_, pi, i);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          block_infos_[reinstate_num_++] = index_data.header_.info_;
+        }
+      }
+
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
+      {
+        if (ErasureCode::NODE_DEAD != erased_[i])
+        {
+          continue; // we need find dead node to recover
+        }
+
+        ECMeta ec_meta;
+        ec_meta.family_id_ = family_id_;
+        ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
+            family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
+      }
+
+      return ret;
+    }
+
+    int ReinstateTask::recover_check_index(common::ECMeta* ec_metas, const int32_t marshalling_len)
+    {
+      int ret = TFS_SUCCESS;
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      // all data nodes are alive now, recover check nodes from all data nodes
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
+      {
+        IndexDataV2 index_data;
+        ret = get_data_helper().read_index(family_members_[i].server_,
+            family_members_[i].block_, family_members_[i].block_, index_data);
+        for (int j = data_num; (TFS_SUCCESS == ret) && (j < member_num); j++)
+        {
+          if (ErasureCode::NODE_DEAD != erased_[j])
+          {
+            continue; // we need find dead node to recove
+          }
+          ret = get_data_helper().write_index(family_members_[j].server_,
+              family_members_[j].block_, family_members_[i].block_, index_data, true);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = recover_updated_files(index_data, ec_metas[i].mars_offset_,
+                family_members_[i].block_, i, j);
+          }
+        }
+      }
+
+      // commit every verify block
+      for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
+      {
+        if (ErasureCode::NODE_DEAD != erased_[i])
+        {
+          continue; // we need find dead node to recove
+        }
+
+        ECMeta ec_meta;
+        ec_meta.family_id_ = family_id_;
+        ec_meta.mars_offset_ = marshalling_len;
+        ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
+            family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
+      }
+
+      return ret;
+    }
+
+
+    int ReinstateTask::recover_updated_files(const common::IndexDataV2& index_data,
+      const int32_t marshalling_len, const uint64_t block_id, const int32_t src, const int32_t dest)
+    {
+      int ret = TFS_SUCCESS;
+      bool updated = false;
+      const vector<FileInfoV2>& finfos = index_data.finfos_;
+      for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < finfos.size()); i++)
+      {
+        if (finfos[i].offset_ < marshalling_len)
+        {
+          continue;  // we need find updated files
+        }
+
+        TBSYS_LOG(DEBUG, "recover updated file. blockid: %"PRI64_PREFIX"u, fileid: "
+            "%"PRI64_PREFIX"u, offset: %d", block_id, finfos[i].id_, finfos[i].offset_);
+
+        updated = true;
+        int32_t offset = FILEINFO_EXT_SIZE;  // every file has a header, ignore it
+        int32_t length = finfos[i].size_ - offset;
+        char *data = new (std::nothrow) char[length];
+        assert(NULL != data);
+        ret = get_data_helper().read_file(family_members_[src].server_,
+            family_members_[src].block_, block_id,
+            finfos[i].id_, data, length, offset, READ_DATA_OPTION_FLAG_FORCE);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = get_data_helper().write_file(family_members_[dest].server_,
+              family_members_[dest].block_, block_id,
+              finfos[i].id_, data, length, true);  // write to a temp block
+        }
+        tbsys::gDeleteA(data);
+      }
+
+      if ((TFS_SUCCESS == ret) && updated)
+      {
+        // we just need update header here
+        // because after recover updateed files, block version are changed
+        // so here we set partial flag true
+        IndexDataV2 only_header;
+        only_header.header_ = index_data.header_;
+        ret = get_data_helper().write_index(family_members_[dest].server_,
+            family_members_[dest].block_, family_members_[dest].block_, only_header, true, true);
       }
 
       return ret;
@@ -1647,11 +1337,14 @@ namespace tfs
       cmit_msg.set_seqno(seqno_);
       cmit_msg.set_status(status);
       cmit_msg.set_family_id(family_id_);
-
       ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
-        ret = send_simple_request(source_id_, &cmit_msg);
+        ret = cmit_msg.set_reinstate_block_info(block_infos_, reinstate_num_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_data_helper().send_simple_request(source_id_, &cmit_msg);
       }
 
       TBSYS_LOG(INFO, "reinstate report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
@@ -1660,9 +1353,9 @@ namespace tfs
       return ret;
     }
 
-    DissolveTask::DissolveTask(TaskManager& manager, const int64_t seqno,
+    DissolveTask::DissolveTask(DataService& service, const int64_t seqno,
           const uint64_t source_id, const int expire_time, const int64_t family_id) :
-      MarshallingTask(manager, seqno, source_id, expire_time, family_id)
+      MarshallingTask(service, seqno, source_id, expire_time, family_id)
     {
       type_ = PLAN_TYPE_EC_DISSOLVE;
     }
@@ -1674,7 +1367,7 @@ namespace tfs
 
     bool DissolveTask::is_completed() const
     {
-      bool ret = true;
+      int ret = true;
       for (uint32_t i = 0; i < result_.size(); i++)
       {
         if (PLAN_STATUS_TIMEOUT == result_[i].second)
@@ -1700,16 +1393,10 @@ namespace tfs
         }
       }
 
-      // no need to replicate, task finished
+      // no data block need to replicate
       if (0 == result_.size())
       {
         ret = report_to_ns(PLAN_STATUS_END);
-        if (TFS_SUCCESS == ret)
-        {
-          // success, do clear work, ignore return value
-          request_to_clear_family_id();
-          request_ds_to_delete();
-        }
       }
       else
       {
@@ -1721,12 +1408,7 @@ namespace tfs
 
     int DissolveTask::do_dissolve()
     {
-      int ret = check_dissolve(family_id_, family_aid_info_, family_members_);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = request_ds_to_replicate();
-      }
-      return ret;
+      return replicate_data_blocks();
     }
 
     int DissolveTask::handle_complete(BasePacket* packet)
@@ -1734,7 +1416,8 @@ namespace tfs
       int ret = TFS_SUCCESS;
       if (RESP_DS_REPLICATE_BLOCK_MESSAGE == packet->getPCode())
       {
-        RespDsReplicateBlockMessage* resp_msg = dynamic_cast<RespDsReplicateBlockMessage*> (packet);
+        RespDsReplicateBlockMessage* resp_msg =
+          dynamic_cast<RespDsReplicateBlockMessage*> (packet);
         int status = resp_msg->get_status();
         uint64_t server = resp_msg->get_ds_id();
 
@@ -1751,16 +1434,10 @@ namespace tfs
 
         if (is_completed())
         {
-          ret = report_to_ns(status); // status is not used here
-          if (TFS_SUCCESS == ret)
-          {
-            // success, do clear work, ignore return value
-            request_to_clear_family_id();
-            request_ds_to_delete();
-          }
+          ret = report_to_ns(status);
         }
 
-        TBSYS_LOG(INFO, "handle complete dissolve task, "
+        TBSYS_LOG(INFO, "handle complete dissolve task. "
             "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
             seqno_, tbsys::CNetUtil::addrToString(resp_msg->get_ds_id()).c_str(), status, ret);
       }
@@ -1769,7 +1446,6 @@ namespace tfs
 
     int DissolveTask::report_to_ns(const int status)
     {
-      int ret = TFS_SUCCESS;
       int final_status = status;
       if (PLAN_STATUS_TIMEOUT != final_status) // maybe expired by task manager
       {
@@ -1788,11 +1464,20 @@ namespace tfs
       cmit_msg.set_seqno(seqno_);
       cmit_msg.set_status(final_status);
       cmit_msg.set_family_id(family_id_);
-
-      ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
+      int ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
-        ret = send_simple_request(source_id_, &cmit_msg);
+        ret = get_data_helper().send_simple_request(source_id_, &cmit_msg);
+      }
+
+      if ((PLAN_STATUS_END == final_status) && (TFS_SUCCESS == ret))
+      {
+        if (TFS_SUCCESS == ret)
+        {
+          // success, do clear work, ignore return value
+          clear_family_id();
+          delete_parity_blocks();
+        }
       }
 
       TBSYS_LOG(INFO, "dissolve report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
@@ -1801,46 +1486,74 @@ namespace tfs
       return ret;
     }
 
-    int DissolveTask::request_ds_to_replicate()
+    int DissolveTask::replicate_data_blocks()
     {
       int ret = TFS_SUCCESS;
       int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
       int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_) / 2;
       int32_t total_num = data_num + check_num;
 
-      for (int32_t i = 0; i < data_num; i++)
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
         if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
         {
-          continue;
+          continue;  // lost block, can't to replicate
         }
 
         DsReplicateBlockMessage repl_msg;
         ReplBlock repl_block;
-        memset(&repl_block, 0, sizeof(ReplBlock));
         repl_block.block_id_ = family_members_[i].block_;
-        repl_block.source_id_ = family_members_[i].server_;
+        repl_block.source_id_[0] = family_members_[i].server_;
+        repl_block.source_num_ = 1;  // when dissolve happens, there will be only one source
         repl_block.destination_id_ = family_members_[i+total_num].server_;
+        repl_block.is_move_ = 0;
 
         repl_msg.set_seqno(seqno_);
         repl_msg.set_expire_time(expire_time_);
-        repl_msg.set_source_id(manager_.get_ds_id());
+        repl_msg.set_source_id(ds_info.information_.id_);
         repl_msg.set_repl_info(repl_block);
+        ret = get_data_helper().send_simple_request(family_members_[i].server_, &repl_msg);
 
-        ret = send_simple_request(family_members_[i].server_, &repl_msg);
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to replicate, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
 
-        if (TFS_SUCCESS != ret)
-        {
-          break;
-        }
       }
 
       return ret;
     }
 
-    int DissolveTask::request_ds_to_delete()
+    int DissolveTask::clear_family_id()
+    {
+      int ret = TFS_SUCCESS;
+      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
+      int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_) / 2;
+      int32_t total_num = data_num + check_num;
+
+      for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
+      {
+        if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
+        {
+          continue;  // lost block, needn't clear
+        }
+
+        // ignore return value
+        // if fail, family id will be cleared in next report
+        ECMeta ec_meta;
+        ec_meta.family_id_ = INVALID_FAMILY_ID;
+        get_data_helper().commit_ec_meta(family_members_[i].server_,
+            family_members_[i].block_, ec_meta, SWITCH_BLOCK_NO);
+        get_data_helper().commit_ec_meta(family_members_[i+total_num].server_,
+            family_members_[i+total_num].block_, ec_meta, SWITCH_BLOCK_NO);
+
+        TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to clear family id, ret: %d",
+            seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
+      }
+
+      return ret;
+    }
+
+    int DissolveTask::delete_parity_blocks()
     {
       int ret = TFS_SUCCESS;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
@@ -1850,13 +1563,11 @@ namespace tfs
       {
         if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
         {
-          continue;
+          continue;  // lost block, no need to delete
         }
+        ret = get_data_helper().delete_remote_block(family_members_[i].server_,
+            family_members_[i].block_);
 
-        RemoveBlockMessage del_msg;
-        del_msg.set(family_members_[i].block_);
-
-        ret = send_simple_request(family_members_[i].server_, &del_msg);
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to delete, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
 
@@ -1864,29 +1575,5 @@ namespace tfs
 
       return ret;
     }
-
-    int DissolveTask::request_to_clear_family_id()
-    {
-      int ret = TFS_SUCCESS;
-      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
-
-      for (int32_t i = 0; i < data_num; i++)
-      {
-        if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
-        {
-          continue;
-        }
-
-        RawIndexVec empty_vec;
-        ret = write_raw_index(family_members_[i].server_, family_members_[i].block_,
-            0, WRITE_DATA_INDEX, empty_vec);
-        TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to clear family id, ret: %d",
-            seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
-
-      }
-
-      return ret;
-    }
-
   }
 }

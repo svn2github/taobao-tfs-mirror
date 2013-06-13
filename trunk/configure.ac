@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([tfs], 2.3.0, duolong@taobao.com)
+AC_INIT([tfs], 2.6.0, duolong@taobao.com)
 AC_CONFIG_SRCDIR([src/common/config_item.h])
 
-AM_INIT_AUTOMAKE(tfs, 2.3.0)
+AM_INIT_AUTOMAKE(tfs, 2.6.0)
 # Checks for programs.
 AC_PROG_AWK
 AC_PROG_CXX
@@ -76,6 +76,15 @@ if  test -z "${TAIR_ROOT}"; then
    TAIR_ROOT="/usr/local"
 fi
 
+if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
+  AC_MSG_ERROR([TAIR_ROOT is not work! expect TAIR_ROOT/include and TAIR_ROOT/lib directory])
+  exit 1;
+fi
+TAIR_STORE_CPPFLAGS="-DWITH_UNIQUE_STORE -I${TAIR_ROOT}/include"
+TAIR_STORE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz"
+AC_SUBST([TAIR_STORE_CPPFLAGS])
+AC_SUBST([TAIR_STORE_LDFLAGS])
+
 AC_ARG_ENABLE([uniquestore],
            AS_HELP_STRING([--enable-uniquestore],
            [enable unique store feature. need TaoBao Tair library support, use --with-tair-root to specify path]),
@@ -93,13 +102,15 @@ AM_CONDITIONAL([WITH_UNIQUE_STORE],[test x$enable_uniquestore = xyes])
 AC_SUBST([UNIQUE_STORE_CPPFLAGS])
 AC_SUBST([UNIQUE_STORE_LDFLAGS])
 
+
+
 AC_ARG_ENABLE([taircache],
            AS_HELP_STRING([--enable-taircache],
            [enable tair cache feature. need TaoBao Tair library support, use --with-tair-root to specify path]),
            [enable_taircache=${enableval}],
            [enable_taircache="no"])
 if test "${enable_taircache}" = "yes"; then
-        if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
+        if ! test -d "${TAIR_ROOT}/include" -a -d "${TAIR_ROOT}/lib"; then
                 AC_MSG_ERROR([TAIR_ROOT is not work! expect TAIR_ROOT/include and TAIR_ROOT/lib directory])
                 exit 1;
         fi
@@ -206,7 +217,7 @@ m4_include([tcmalloc.m4])
 
 m4_include([ax_lib_mysql.m4])
 
-AX_LIB_MYSQL([5.1.40])
+AX_LIB_MYSQL([5.0.77])
 
 TS_CHECK_TCMALLOC
 
@@ -220,6 +231,7 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/adminserver/Makefile
                  src/new_client/Makefile
+                 src/clientv2/Makefile
                  src/common/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
@@ -229,7 +241,6 @@ AC_CONFIG_FILES([Makefile
                  src/name_meta_server/Makefile
                  src/kv_meta_server/Makefile
                  src/rootserver/Makefile
-                 src/checkserver/Makefile
                  src/tools/Makefile
                  src/tools/rcserver/Makefile
                  src/tools/util/Makefile
@@ -237,16 +248,17 @@ AC_CONFIG_FILES([Makefile
                  src/tools/nameserver/Makefile
                  src/tools/adminserver/Makefile
                  src/tools/transfer/Makefile
-                 src/tools/mock/Makefile
                  src/tools/cluster/Makefile
-                 src/tools/metaserver/Makefile
-                 tests/Makefile
-                 tests/batch/Makefile
-                 tests/rcserver/Makefile
-                 tests/kv_meta_server/Makefile
-                 tests/name_meta_server/Makefile
-                 tests/common/Makefile
-                 tests/rootserver/Makefile
-                 tests/dataserver/Makefile
-                 tests/intergrate/Makefile])
+                 src/checkserver/Makefile
+                 src/tools/metaserver/Makefile])
+                 #tests/Makefile
+                 #tests/batch/Makefile
+                 #tests/rcserver/Makefile
+                 #tests/kv_meta_server/Makefile
+                 #tests/name_meta_server/Makefile
+                 #tests/common/Makefile
+                 #tests/nameserver/Makefile
+                 #tests/rootserver/Makefile
+                 #tests/dataserver/Makefile
+                 #tests/intergrate/Makefile])
 AC_OUTPUT

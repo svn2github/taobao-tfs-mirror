@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -24,7 +24,9 @@
 
 int main(int argc, char* argv[])
 {
-  tfs::dataserver::DataService service;
-  return service.main(argc, argv);
+  tfs::dataserver::DataService* service = new tfs::dataserver::DataService();
+  int32_t ret = service->main(argc, argv);
+  tbsys::gDelete(service);
+  return ret;
 }
 

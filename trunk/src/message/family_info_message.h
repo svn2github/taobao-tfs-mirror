@@ -50,11 +50,11 @@ namespace tfs
         inline int64_t get_family_id() const { return family_id_;}
         inline void set_family_aid_info(const int32_t family_aid_info) { family_aid_info_ = family_aid_info;}
         inline int32_t get_family_aid_info() { return family_aid_info_;}
-        inline std::vector<std::pair<uint32_t,uint64_t> >& get_members() { return members_;}
+        inline std::pair<uint64_t,uint64_t>*  get_members() { return members_;}
       private:
         int64_t family_id_;
         int32_t family_aid_info_;
-        std::vector<std::pair<uint32_t, uint64_t> > members_;
+        std::pair<uint64_t, uint64_t> members_[common::MAX_MARSHALLING_NUM];
     };
   }/** end namespace message **/
 }/** end namespace tfs **/

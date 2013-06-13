@@ -40,8 +40,8 @@ using namespace tfs::message;
 using namespace tfs::tools;
 
 int list_block(TfsClient* tfs_client, const uint64_t ds_id);
-int get_block_copys(TfsClient* tfs_client, const uint64_t ds_id, VUINT32* vec);
-void print_block(VUINT32* vec);
+int get_block_copys(TfsClient* tfs_client, const uint64_t ds_id, VUINT64* vec);
+void print_block(VUINT64* vec);
 
 static const int32_t MAX_BITS_SIZE = 81920;
 static bitset<MAX_BITS_SIZE> g_flag_;
@@ -110,13 +110,13 @@ int list_block(TfsClient* tfs_client, const uint64_t ds_id)
     tbnet::Packet* ret_msg= NULL;
     if (TFS_SUCCESS == send_msg_to_server(ds_id, client, &req_lb_msg, ret_msg))
     {
-      vector<uint32_t>* block_vec = NULL;
+      vector<uint64_t>* block_vec = NULL;
       TBSYS_LOG(DEBUG, "ds_id: %lu", ds_id);
       if ((ret_status == TFS_SUCCESS) && (ret_msg->getPCode() == RESP_LIST_BLOCK_MESSAGE))
       {
         RespListBlockMessage* resp_lb_msg = dynamic_cast<RespListBlockMessage*> (ret_msg);
 
-        block_vec = const_cast<VUINT32*> (resp_lb_msg->get_blocks());
+        block_vec = const_cast<VUINT64*> (resp_lb_msg->get_blocks());
 
         get_block_copys(tfs_client, ds_id, block_vec);
         print_block(block_vec);
@@ -127,16 +127,16 @@ int list_block(TfsClient* tfs_client, const uint64_t ds_id)
   }
   return ret_status;
 }
-int get_block_copys(TfsClient* tfs_client, uint64_t ds_id, VUINT32* vec)
+int get_block_copys(TfsClient* tfs_client, uint64_t ds_id, VUINT64* vec)
 {
-  vector<uint32_t>::iterator iter = vec->begin();
+  vector<uint64_t>::iterator iter = vec->begin();
   for (; iter != vec->end(); iter++)
   {
     VUINT64 ds_list;
     int ret = ToolUtil::get_block_ds_list(tfs_client->get_server_id(), (*iter), ds_list);
     if (ret != TFS_SUCCESS)
     {
-      fprintf(stderr, "block no exist in nameserver, blockid:%u.\n", (*iter));
+      fprintf(stderr, "block no exist in nameserver, blockid:%"PRI64_PREFIX"u.\n", (*iter));
       return ret;
     }
     int32_t ds_size = static_cast<int32_t> (ds_list.size());
@@ -152,15 +152,15 @@ int get_block_copys(TfsClient* tfs_client, uint64_t ds_id, VUINT32* vec)
 
   return TFS_SUCCESS;
 }
-void print_block(VUINT32* vec)
+void print_block(VUINT64* vec)
 {
-  vector<uint32_t>::iterator vit = vec->begin();
+  vector<uint64_t>::iterator vit = vec->begin();
   for (; vit != vec->end(); vit++)
   {
     int32_t i = distance(vec->begin(), vit);
     if (g_flag_[i])
     {
-      fprintf(stdout, "%d\n", *vit);
+      fprintf(stdout, "%"PRI64_PREFIX"u\n", *vit);
     }
   }
 }

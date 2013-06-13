@@ -31,7 +31,7 @@
 
 #include "oplog.h"
 #include "block_id_factory.h"
-#include "database_helper.h"
+#include "tair_helper.h"
 
 namespace tfs
 {
@@ -56,7 +56,7 @@ namespace tfs
       int replay_helper_do_msg(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
       int replay_helper_do_oplog(const time_t now, const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
 
-      inline uint32_t generation(const uint32_t id = 0) { return id_factory_.generation(id);}
+      inline uint64_t generation(const bool verify) { return id_factory_.generation(verify);}
 
       int create_family_id(int64_t& family_id);
       int create_family(common::FamilyInfo& family_info);
@@ -77,7 +77,8 @@ namespace tfs
       common::FileQueueThread* file_queue_thread_;
       BlockIdFactory id_factory_;
       tbutil::Mutex mutex_;
-      DataBaseHelper* dbhelper_;
+      TairHelper* dbhelper_;
+      //DataBaseHelper* dbhelper_;
       tbnet::PacketQueueThread work_thread_;
     };
   }//end namespace nameserver

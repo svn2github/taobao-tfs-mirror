@@ -29,10 +29,10 @@ namespace tfs
   {
     struct CloseParameter
     {
-      common::BlockInfo block_info_;
+      common::BlockInfoV2 block_info_;
       uint64_t id_;
-      uint32_t lease_id_;
-      common::UnlinkFlag unlink_flag_;
+      uint64_t lease_id_;
+      int32_t  type_;
       common::WriteCompleteStatus status_;
       bool need_new_;
       char error_msg_[256];
@@ -46,12 +46,12 @@ namespace tfs
         virtual ~ClientRequestServer(){}
 
         int keepalive(const common::DataServerStatInfo& info, const time_t now);
-        int report_block(std::vector<uint32_t>& expires, const uint64_t server, const time_t now,
-            const std::set<common::BlockInfoExt>& blocks, const int8_t type);
-        int open(uint32_t& block_id, uint32_t& lease_id, int32_t& version,
-            common::VUINT64& servers, common::FamilyInfoExt& family_info,
-            const int32_t mode, const time_t now);
-        int batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
+        int report_block(std::vector<uint64_t>& expires, const uint64_t server, const time_t now,
+            const common::ArrayHelper<common::BlockInfoV2>& blocks);
+        int open(uint64_t& block_id, uint64_t& lease_id, int32_t& version, common::ArrayHelper<uint64_t>& servers,
+              common::FamilyInfoExt& family_info,const int32_t mode, const time_t now);
+        int batch_open(const common::ArrayHelper<uint64_t>& blocks, const int32_t mode,
+              const int32_t block_count, common::ArrayHelper<common::BlockMeta>& out);
 
         int close(CloseParameter& param);
 
@@ -61,16 +61,16 @@ namespace tfs
 
         int handle(common::BasePacket* msg);
 
-        int resolve_block_version_conflict(const uint32_t block, const std::vector<std::pair<uint64_t, common::BlockInfo> >& info);
+        int resolve_block_version_conflict(const uint64_t block, const common::ArrayHelper<std::pair<uint64_t, common::BlockInfoV2> >& info);
 
-        int open(int32_t& family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& members, const int32_t mode, const int64_t family_id) const;
+        int open(int32_t& family_aid_info, common::ArrayHelper<std::pair<uint64_t, uint64_t> >& members, const int32_t mode, const int64_t family_id) const;
 
       private:
-        int open_read_mode_(common::VUINT64& servers, common::FamilyInfoExt& family_info, const uint32_t block) const;
-        int open_write_mode_(uint32_t& block_id, uint32_t& lease_id, int32_t& version, common::VUINT64& servers,
-            common::FamilyInfoExt& family_info, const int32_t mode, const time_t now);
-        int batch_open_read_mode_(std::map<uint32_t, common::BlockInfoSeg>& out, const common::VUINT32& blocks) const;
-        int batch_open_write_mode_(std::map<uint32_t, common::BlockInfoSeg>& out,const int32_t mode, const int32_t block_count);
+        int open_read_mode_(common::ArrayHelper<uint64_t>& servers, common::FamilyInfoExt& family_info, const uint64_t block) const;
+        int open_write_mode_(uint64_t& block_id, uint64_t& lease_id, int32_t& version, common::ArrayHelper<uint64_t>& servers,
+              common::FamilyInfoExt& family_info, const int32_t mode, const time_t now);
+        int batch_open_read_mode_(common::ArrayHelper<common::BlockMeta>& out, const common::ArrayHelper<uint64_t>& blocks) const;
+        int batch_open_write_mode_(common::ArrayHelper<common::BlockMeta>& out,const int32_t mode, const int32_t block_count);
 
         int  handle_control_load_block(const time_t now, const common::ClientCmdInformation& info, common::BasePacket* message, const int64_t buf_length, char* error_buf);
         int  handle_control_delete_block(const time_t now, const common::ClientCmdInformation& info,const int64_t buf_length, char* error_buf);
@@ -85,7 +85,7 @@ namespace tfs
         bool is_discard(void);
 
       private:
-        volatile uint64_t ref_count_;
+        volatile uint32_t ref_count_;
         LayoutManager& manager_;
     };
   }/** end namespace nameserver **/

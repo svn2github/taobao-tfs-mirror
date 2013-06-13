@@ -16,7 +16,6 @@
 #include <Memory.hpp>
 #include "requester.h"
 #include "message/block_info_message.h"
-#include "message/resolve_block_version_conflict_message.h"
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "common/status_message.h"
@@ -28,10 +27,8 @@ namespace tfs
     using namespace common;
     using namespace message;
 
-    int Requester::init(const uint64_t dataserver_id, const uint64_t ns_ip_port, DataManagement* data_management)
+    int Requester::init(DataManagement* data_management)
     {
-      dataserver_id_ = dataserver_id;
-      ns_ip_port_ = ns_ip_port;
       data_management_ = data_management;
       return TFS_SUCCESS;
     }
@@ -39,7 +36,7 @@ namespace tfs
     int Requester::req_update_block_info(const uint32_t block_id, const UpdateBlockType repair)
     {
       UpdateBlockType tmp_repair = repair;
-      BlockInfo* blk = NULL;
+      BlockInfo blk;
       if (UPDATE_BLOCK_MISSING != tmp_repair)
       {
         int32_t visit_count = 0;
@@ -50,30 +47,23 @@ namespace tfs
         }
         else
         {
-          if (NULL == blk)
-          {
-            TBSYS_LOG(ERROR, "blockid: %u can not find block info.", block_id);
-            tmp_repair = UPDATE_BLOCK_REPAIR;
-          }
-          else
-          {
-            TBSYS_LOG(
-                INFO,
-                "req update block info, blockid: %u, version: %d, file count: %d, size: %d, delfile count: %d, del_size: %d, seqno: %d\n",
-                blk->block_id_, blk->version_, blk->file_count_, blk->size_, blk->del_file_count_, blk->del_size_, blk->seq_no_);
-          }
+          TBSYS_LOG(
+              INFO,
+              "req update block info, blockid: %u, version: %d, file count: %d, size: %d, delfile count: %d, del_size: %d, seqno: %d\n",
+              blk.block_id_, blk.version_, blk.file_count_, blk.size_, blk.del_file_count_, blk.del_size_, blk.seq_no_);
         }
       }
 
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       int ret = TFS_ERROR;
       UpdateBlockInfoMessage ub_msg;
       ub_msg.set_block_id(block_id);
-      ub_msg.set_block(blk);
-      ub_msg.set_server_id(dataserver_id_);
+      ub_msg.set_block(&blk);
+      ub_msg.set_server_id(ds_info.information_.id_);
       ub_msg.set_repair(tmp_repair);
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* return_msg = NULL;
-      ret = send_msg_to_server(ns_ip_port_, client, &ub_msg, return_msg);
+      ret = send_msg_to_server(ds_info.ns_vip_port_, client, &ub_msg, return_msg);
       if (TFS_SUCCESS != ret)
       {
         NewClientManager::get_instance().destroy_client(client);
@@ -105,7 +95,7 @@ namespace tfs
 
       if (need_expire)
       {
-        data_management_->del_single_block(block_id);
+        data_management_->del_single_block(block_id, false);
       }
 
       return ret;
@@ -114,8 +104,9 @@ namespace tfs
     int Requester::req_block_write_complete(const uint32_t block_id,
         const int32_t lease_id, const int32_t success, const UnlinkFlag unlink_flag)
     {
-      TBSYS_LOG(DEBUG, "request block write complete block: %u, lease_id: %u, status: %d, unlink flag: %d", block_id, lease_id, success, unlink_flag);
-      BlockInfo* blk = NULL;
+      TBSYS_LOG(DEBUG, "req block write complete begin id: %u, lease_id: %u\n", block_id, lease_id);
+
+      BlockInfo blk;
       int visit_count = 0;
       int ret = data_management_->get_block_info(block_id, blk, visit_count);
       if (TFS_SUCCESS != ret)
@@ -124,18 +115,22 @@ namespace tfs
         return TFS_ERROR;
       }
 
+      /**  simply use BlockInfo.size to replace block_offset
       BlockInfo tmpblk;
-      memcpy(&tmpblk, blk, sizeof(BlockInfo));
+      memcpy(&tmpblk, &blk, sizeof(BlockInfo));
       ret = data_management_->get_block_curr_size(block_id, tmpblk.size_);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "req block write complete: can not find block, id: %u, ret: %d\n", block_id, ret);
         return TFS_ERROR;
       }
+      */
 
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       BlockWriteCompleteMessage bwc_msg;
-      bwc_msg.set_block(&tmpblk);
-      bwc_msg.set_server_id(dataserver_id_);
+      // bwc_msg.set_block(&tmpblk);
+      bwc_msg.set_block(&blk);
+      bwc_msg.set_server_id(ds_info.information_.id_);
       bwc_msg.set_lease_id(lease_id);
       WriteCompleteStatus wc_status = WRITE_COMPLETE_STATUS_YES;
       if (TFS_SUCCESS != success)
@@ -147,8 +142,7 @@ namespace tfs
 
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* return_msg = NULL;
-      ret = send_msg_to_server(ns_ip_port_, client, &bwc_msg, return_msg);
-
+      ret = send_msg_to_server(ds_info.ns_vip_port_, client, &bwc_msg, return_msg);
 
       if (TFS_SUCCESS != ret)
       {
@@ -167,7 +161,7 @@ namespace tfs
         {
           ret = TFS_ERROR;
           TBSYS_LOG(ERROR, "req block write complete, nsip: %s, error desc: %s, id: %u\n",
-              tbsys::CNetUtil::addrToString(ns_ip_port_).c_str(), sm->get_error(), block_id);
+              tbsys::CNetUtil::addrToString(ds_info.ns_vip_port_).c_str(), sm->get_error(), block_id);
         }
       }
       else
@@ -177,36 +171,6 @@ namespace tfs
         ret = TFS_ERROR;
       }
       NewClientManager::get_instance().destroy_client(client);
-      return ret;
-    }
-
-    int Requester::resolve_block_version_conflict(Lease* lease, const uint32_t block)
-    {
-      int32_t ret = (NULL != lease && INVALID_BLOCK_ID != block) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        lease->dump(TBSYS_LOG_LEVEL_INFO, "resolve block version conflict, information: ");
-        ResolveBlockVersionConflictMessage req_msg;
-        req_msg.set_block(block);
-        ret = lease->get_member_info(req_msg.get_members());
-        if (TFS_SUCCESS == ret)
-        {
-          NewClient* client = NewClientManager::get_instance().create_client();
-          tbnet::Packet* ret_msg = NULL;
-          ret = send_msg_to_server(ns_ip_port_, client, &req_msg, ret_msg);
-          if (TFS_SUCCESS == ret)
-          {
-            ret = RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE == ret_msg->getPCode()
-              ? TFS_SUCCESS : EXIT_RESOLVE_BLOCK_VERSION_CONFLICT_ERROR;
-            if (TFS_SUCCESS == ret)
-            {
-              ResolveBlockVersionConflictResponseMessage* msg = dynamic_cast<ResolveBlockVersionConflictResponseMessage*>(ret_msg);
-              ret = TFS_SUCCESS == msg->get_status() ? TFS_SUCCESS : EXIT_RESOLVE_BLOCK_VERSION_CONFLICT_ERROR;
-            }
-          }
-          NewClientManager::get_instance().destroy_client(client);
-        }
-      }
       return ret;
     }
   }

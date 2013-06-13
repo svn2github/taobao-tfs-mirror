@@ -4,21 +4,23 @@ AM_CPPFLAGS=-I${top_srcdir}/src/nameserver\
 	    -I${top_srcdir}/src/common \
 	    -I$(TBLIB_ROOT)/include/tbsys \
 	    -I$(TBLIB_ROOT)/include/tbnet \
-			$(MYSQL_CFLAGS)
+			$(MYSQL_CFLAGS)\
+			$(TAIR_STORE_CPPFLAGS)
 
 #AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -lgcov
-AM_LDFLAGS=-lpthread -lrt -lm -lgtest $(MYSQL_LDFLAGS)
+AM_LDFLAGS=-lpthread -lrt -lm -lgtest -lsnappy $(MYSQL_LDFLAGS) 
  
 LDADD=$(top_builddir)/src/nameserver/libnameserver.a \
 			$(top_builddir)/src/message/libtfsmessage.a\
       $(top_builddir)/src/common/libtfscommon.a \
+			$(TAIR_STORE_LDFLAGS)\
       $(TBLIB_ROOT)/lib/libtbnet.a \
       $(TBLIB_ROOT)/lib/libtbsys.a \
 			$(MYSQL_LDFLAGS)
 
 noinst_PROGRAMS= test_block_collect test_block_manager test_server_collect test_server_manager\
 test_task test_task_manager test_layout_manager test_gc test_database_helper test_family_collect\
-test_family_manager
+test_family_manager test_tair_helper
 
 test_block_collect_SOURCES=test_block_collect.cpp
 test_block_collect_LDFLAGS=${AM_LDFLAGS} 
@@ -52,6 +54,9 @@ test_family_collect_LDFLAGS=${AM_LDFLAGS}
 
 test_family_manager_SOURCES= test_family_manager.cpp
 test_family_manager_LDFLAGS=${AM_LDFLAGS}
+
+test_tair_helper_SOURCES= test_tair_helper.cpp
+test_tair_helper_LDFLAGS=${AM_LDFLAGS}
 
 #integration_SOURCES= integration.cpp integration_instance.cpp integration_case.cpp
 #integration_LDFLAGS=${AM_LDFLAGS}

@@ -8,6 +8,7 @@ AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -luuid `mysql_config --libs`
 CXXFLAGS= -g
 
 LDADD=$(top_builddir)/src/rcserver/librcserver.a \
+			$(MYSQL_LDFLAGS)\
       $(top_builddir)/src/new_client/.libs/libtfsclient.a \
 			$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a \
@@ -29,15 +30,15 @@ test_session_manager_SOURCES=test_session_manager.cpp
 
 TESTS+=test_app_resource
 check_PROGRAMS+=test_app_resource
-test_app_resource_SOURCES=test_app_resource.cpp
+test_app_resource_SOURCES=test_app_resource.cpp test_database_helper.h
 
 TESTS+=test_base_resource
 check_PROGRAMS+=test_base_resource
-test_base_resource_SOURCES=test_base_resource.cpp
+test_base_resource_SOURCES=test_base_resource.cpp test_database_helper.h
 
 TESTS+=test_resource_manager
 check_PROGRAMS+=test_resource_manager
-test_resource_manager_SOURCES=test_resource_manager.cpp
+test_resource_manager_SOURCES=test_resource_manager.cpp test_database_helper.h
 
 TESTS+=test_ip_replace_helper
 check_PROGRAMS+=test_ip_replace_helper

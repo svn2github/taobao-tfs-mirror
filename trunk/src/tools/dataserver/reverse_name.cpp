@@ -14,9 +14,9 @@
  *
  */
 #include "tbsys.h"
-#include "new_client/fsname.h"
+#include "clientv2/fsname.h"
 
-using namespace tfs::client;
+using namespace tfs::clientv2;
 
 int main(int argc, char** argv)
 {
@@ -26,6 +26,6 @@ int main(int argc, char** argv)
     return -1;
   }
   FSName name(argv[1]);
-  printf("blockid: %u, fileid: %" PRI64_PREFIX "u, seqid: %u\n", name.get_block_id(), name.get_file_id(), name.get_seq_id());
+  printf("blockid: %"PRI64_PREFIX"u, fileid: %" PRI64_PREFIX "u, seqid: %u\n", name.get_block_id(), name.get_file_id(), name.get_seq_id());
   return 0;
 }

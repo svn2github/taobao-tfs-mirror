@@ -80,9 +80,9 @@ namespace tfs
       return instance_;
     }
 
-    void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function ) const
+    void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function , const pthread_t thid) const
     {
-      TBSYS_LOGGER.logMessage(level, file, line, function,
+      TBSYS_LOGGER.logMessage(level, file, line, function, thid,
           "use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, total_block_count: %"PRI64_PREFIX"d, total_load: %d, max_load: %d, max_block_count: %d, alive_server_count: %d",
           use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_);
     }
@@ -165,7 +165,6 @@ namespace tfs
           switch_time_  = now + common::SYSPARAM_NAMESERVER.safe_mode_time_;
           discard_newblk_safe_mode_time_ =  now + common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
         }
-        TBSYS_LOG(INFO, "i %s the master server, switch time: %"PRI64_PREFIX"d", owner_role_ == NS_ROLE_MASTER ? "am" : "am not", switch_time_);
       }
     }
 
@@ -244,14 +243,14 @@ namespace tfs
     }
 
     void NsRuntimeGlobalInformation::dump(const int32_t level, const char* file, const int32_t line,
-            const char* function, const char* format, ...)
+            const char* function, const pthread_t thid, const char* format, ...)
     {
         char msgstr[256] = {'\0'};/** include '\0'*/
         va_list ap;
         va_start(ap, format);
         vsnprintf(msgstr, 256, NULL == format ? "" : format, ap);
         va_end(ap);
-        TBSYS_LOGGER.logMessage(level, file, line, function, "%s, owner_ip_port: %s, other_side_ip_port: %s,switch_time: %s, vip: %s \
+        TBSYS_LOGGER.logMessage(level, file, line, function, thid, "%s, owner_ip_port: %s, other_side_ip_port: %s,switch_time: %s, vip: %s \
           destroy: %s, owner_role: %s, other_side_role: %s, owner_status: %s, other_side_status: %s, leaes_id: %"PRI64_PREFIX"d, lease_expired_time: %"PRI64_PREFIX"d",
           msgstr, tbsys::CNetUtil::addrToString(owner_ip_port_).c_str(), tbsys::CNetUtil::addrToString(peer_ip_port_).c_str(),
           common::Func::time_to_str(switch_time_).c_str(), tbsys::CNetUtil::addrToString(vip_).c_str(),
@@ -270,19 +269,7 @@ namespace tfs
       return instance_;
     }
 
-    std::string& print_servers(const common::ArrayHelper<ServerCollect*>&servers, std::string& result)
-    {
-      ServerCollect* server = NULL;
-      for (int32_t i = 0; i < servers.get_array_index(); ++i)
-      {
-        server = *servers.at(i);
-        result += "/";
-        result += tbsys::CNetUtil::addrToString(server->id());
-      }
-      return result;
-    }
-
-    void print_servers(const common::ArrayHelper<uint64_t>& servers, std::string& result)
+    void print_int64(const common::ArrayHelper<uint64_t>& servers, std::string& result)
     {
       for (int32_t i = 0; i < servers.get_array_index(); ++i)
       {
@@ -291,25 +278,13 @@ namespace tfs
       }
     }
 
-    void print_servers(const std::vector<uint64_t>& servers, std::string& result)
+    void print_int64(const std::vector<uint64_t>& servers, std::string& result)
     {
       std::vector<uint64_t>::const_iterator iter = servers.begin();
       for (; iter != servers.end(); ++iter)
       {
         result += "/";
         result += tbsys::CNetUtil::addrToString((*iter));
-      }
-    }
-
-    void print_blocks(const std::vector<uint32_t>& blocks, std::string& result)
-    {
-      char data[32]={'\0'};
-      std::vector<uint32_t>::const_iterator iter = blocks.begin();
-      for (; iter != blocks.end(); ++iter)
-      {
-        result += "/";
-        snprintf(data, 32, "%d", (*iter));
-        result.append(data);
       }
     }
 

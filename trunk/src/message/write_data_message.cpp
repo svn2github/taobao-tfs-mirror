@@ -247,7 +247,7 @@ namespace tfs
       return iret;
     }
 
-    WriteInfoBatchMessage::WriteInfoBatchMessage() :
+    /*WriteInfoBatchMessage::WriteInfoBatchMessage() :
       cluster_(0)
     {
       _packetHeader._pcode = common::WRITE_INFO_BATCH_MESSAGE;
@@ -389,9 +389,9 @@ namespace tfs
         iret = output.set_int32(remove_flag_);
       }
       return iret;
-    }
+    }*/
 
-    WriteRawIndexMessage::WriteRawIndexMessage():
+    /*WriteRawIndexMessage::WriteRawIndexMessage():
       block_id_(0), index_op_(common::OP_NOT_INIT)
     {
       _packetHeader._pcode = common::WRITE_RAW_INDEX_MESSAGE;
@@ -496,7 +496,7 @@ namespace tfs
         len += index_vec_[i].size_;
       }
       return len;
-    }
+    }*/
 
   }
 }

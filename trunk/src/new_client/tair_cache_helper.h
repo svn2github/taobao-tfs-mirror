@@ -70,19 +70,8 @@ namespace tfs
       int64_t length() const;
       void set_ds_list(const common::VUINT64& ds);
       void clear();
-      void set_family_info(const common::FamilyInfoExt& family_info)
-      {
-        family_info_ = family_info;
-      }
-
-      bool has_family_info() const
-      {
-        return common::INVALID_FAMILY_ID != family_info_.family_id_;
-      }
-
       int32_t version_;
       common::VUINT64 ds_;
-      common::FamilyInfoExt family_info_;
     };
 
     typedef std::vector<BlockCacheKey*> BLK_CACHE_KEY_VEC;

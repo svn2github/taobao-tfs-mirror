@@ -24,18 +24,22 @@ namespace tfs
   {
     class ResolveBlockVersionConflictMessage: public common::BasePacket
     {
+        typedef std::pair<uint64_t, common::BlockInfoV2> BlockMember;
       public:
         ResolveBlockVersionConflictMessage();
         virtual ~ResolveBlockVersionConflictMessage();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        inline std::vector<std::pair<uint64_t, common::BlockInfo> >& get_members() { return members_;}
-        inline void set_block(const uint32_t block) { block_ = block;}
-        inline uint32_t get_block() const { return block_;}
+        inline BlockMember* get_members() { return members_; }
+        inline void set_size(int32_t size) { size_ = size; }
+        inline int32_t get_size() const { return size_; }
+        inline void set_block(const uint64_t block) { block_ = block;}
+        inline uint64_t get_block() const { return block_;}
       private:
-        uint32_t block_;
-        std::vector<std::pair<uint64_t, common::BlockInfo> > members_;
+        uint64_t block_;
+        int32_t size_;
+        std::pair<uint64_t, common::BlockInfoV2> members_[common::MAX_REPLICATION_NUM];
     };
 
     class ResolveBlockVersionConflictResponseMessage: public common::BasePacket

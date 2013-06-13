@@ -24,78 +24,78 @@ namespace tfs
   {
     int FileInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, id_);
+        ret = Serialization::set_int64(data, data_len, pos, id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, offset_);
+        ret = Serialization::set_int32(data, data_len, pos, offset_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, size_);
+        ret = Serialization::set_int32(data, data_len, pos, size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, usize_);
+        ret = Serialization::set_int32(data, data_len, pos, usize_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, modify_time_);
+        ret = Serialization::set_int32(data, data_len, pos, modify_time_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, create_time_);
+        ret = Serialization::set_int32(data, data_len, pos, create_time_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, flag_);
+        ret = Serialization::set_int32(data, data_len, pos, flag_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, crc_);
+        ret = Serialization::set_int32(data, data_len, pos, crc_);
       }
-      return iret;
+      return ret;
     }
 
     int FileInfo::deserialize(const char*data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&id_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &offset_);
+        ret = Serialization::get_int32(data, data_len, pos, &offset_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &size_);
+        ret = Serialization::get_int32(data, data_len, pos, &size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &usize_);
+        ret = Serialization::get_int32(data, data_len, pos, &usize_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &modify_time_);
+        ret = Serialization::get_int32(data, data_len, pos, &modify_time_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &create_time_);
+        ret = Serialization::get_int32(data, data_len, pos, &create_time_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &flag_);
+        ret = Serialization::get_int32(data, data_len, pos, &flag_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&crc_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&crc_));
       }
-      return iret;
+      return ret;
     }
 
     int64_t FileInfo::length() const
@@ -105,95 +105,95 @@ namespace tfs
 
     int SSMScanParameter::serialize(char* data, const int64_t data_len, int64_t& pos ) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, addition_param1_);
+        ret = Serialization::set_int64(data, data_len, pos, addition_param1_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, addition_param2_);
+        ret = Serialization::set_int64(data, data_len, pos, addition_param2_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, start_next_position_);
+        ret = Serialization::set_int32(data, data_len, pos, start_next_position_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, should_actual_count_);
+        ret = Serialization::set_int32(data, data_len, pos, should_actual_count_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int16(data, data_len, pos, child_type_);
+        ret = Serialization::set_int16(data, data_len, pos, child_type_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int8(data, data_len, pos, type_);
+        ret = Serialization::set_int8(data, data_len, pos, type_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int8(data, data_len, pos, end_flag_);
+        ret = Serialization::set_int8(data, data_len, pos, end_flag_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, data_.getDataLen());
+        ret = Serialization::set_int32(data, data_len, pos, data_.getDataLen());
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
         if (data_.getDataLen() > 0)
         {
-          iret = Serialization::set_bytes(data, data_len, pos, data_.getData(), data_.getDataLen());
+          ret = Serialization::set_bytes(data, data_len, pos, data_.getData(), data_.getDataLen());
         }
       }
-      return iret;
+      return ret;
     }
 
     int SSMScanParameter::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, &addition_param1_);
+        ret = Serialization::get_int64(data, data_len, pos, &addition_param1_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, &addition_param2_);
+        ret = Serialization::get_int64(data, data_len, pos, &addition_param2_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&start_next_position_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&start_next_position_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&should_actual_count_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&should_actual_count_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int16(data, data_len, pos, &child_type_);
+        ret = Serialization::get_int16(data, data_len, pos, &child_type_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int8(data, data_len, pos, &type_);
+        ret = Serialization::get_int8(data, data_len, pos, &type_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int8(data, data_len, pos, &end_flag_);
+        ret = Serialization::get_int8(data, data_len, pos, &end_flag_);
       }
       int32_t len = 0;
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &len);
+        ret = Serialization::get_int32(data, data_len, pos, &len);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
         if (len > 0)
         {
           data_.ensureFree(len);
           data_.pourData(len);
-          iret = Serialization::get_bytes(data, data_len, pos, data_.getData(), len);
+          ret = Serialization::get_bytes(data, data_len, pos, data_.getData(), len);
         }
       }
-      return iret;
+      return ret;
     }
 
     int64_t SSMScanParameter::length() const
@@ -203,70 +203,70 @@ namespace tfs
 
     int BlockInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, block_id_);
+        ret = Serialization::set_int32(data, data_len, pos, block_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, version_);
+        ret = Serialization::set_int32(data, data_len, pos, version_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, file_count_);
+        ret = Serialization::set_int32(data, data_len, pos, file_count_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, size_);
+        ret = Serialization::set_int32(data, data_len, pos, size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, del_file_count_);
+        ret = Serialization::set_int32(data, data_len, pos, del_file_count_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, del_size_);
+        ret = Serialization::set_int32(data, data_len, pos, del_size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, seq_no_);
+        ret = Serialization::set_int32(data, data_len, pos, seq_no_);
       }
-      return iret;
+      return ret;
     }
 
     int BlockInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &version_);
+        ret = Serialization::get_int32(data, data_len, pos, &version_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &file_count_);
+        ret = Serialization::get_int32(data, data_len, pos, &file_count_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &size_);
+        ret = Serialization::get_int32(data, data_len, pos, &size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &del_file_count_);
+        ret = Serialization::get_int32(data, data_len, pos, &del_file_count_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &del_size_);
+        ret = Serialization::get_int32(data, data_len, pos, &del_size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&seq_no_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&seq_no_));
       }
-      return iret;
+      return ret;
     }
 
     int64_t BlockInfo::length() const
@@ -274,187 +274,189 @@ namespace tfs
       return INT_SIZE * 7;
     }
 
-    int BlockInfoExt::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    /*int BlockInfoExt::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = block_info_.serialize(data, data_len, pos);
+        ret = block_info_.serialize(data, data_len, pos);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, family_id_);
+        ret = Serialization::set_int64(data, data_len, pos, family_id_);
       }
-      return iret;
+      return ret;
     }
 
     int BlockInfoExt::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = block_info_.deserialize(data, data_len, pos);
+        ret = block_info_.deserialize(data, data_len, pos);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, &family_id_);
+        ret = Serialization::get_int64(data, data_len, pos, &family_id_);
       }
-      return iret;
+      return ret;
     }
 
     int64_t BlockInfoExt::length() const
     {
       BlockInfo info;
       return info.length() + INT64_SIZE;
-    }
+    }*/
 
-    int RawMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    /*int RawMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
 
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fileid_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fileid_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &location_.inner_offset_);
+        ret = Serialization::get_int32(data, data_len, pos, &location_.inner_offset_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &location_.size_);
+        ret = Serialization::get_int32(data, data_len, pos, &location_.size_);
       }
-      return iret;
+      return ret;
     }
     int RawMeta::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, fileid_);
+        ret = Serialization::set_int64(data, data_len, pos, fileid_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, location_.inner_offset_);
+        ret = Serialization::set_int32(data, data_len, pos, location_.inner_offset_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, location_.size_);
+        ret = Serialization::set_int32(data, data_len, pos, location_.size_);
       }
-      return iret;
+      return ret;
     }
     int64_t RawMeta::length() const
     {
       return INT64_SIZE + INT_SIZE * 2;
-    }
+    }*/
 
     int ReplBlock::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, block_id_);
+        ret = Serialization::set_int64(data, data_len, pos, block_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, source_id_);
+        ret = Serialization::set_int32(data, data_len, pos, source_num_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, destination_id_);
+        for (int32_t index = 0; index < source_num_ && TFS_SUCCESS == ret; ++index)
+          ret = Serialization::set_int64(data, data_len, pos, source_id_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, start_time_);
+        ret = Serialization::set_int64(data, data_len, pos, destination_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, is_move_);
+        ret = Serialization::set_int32(data, data_len, pos, start_time_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, server_count_);
+        ret = Serialization::set_int32(data, data_len, pos, is_move_);
       }
-      return iret;
+      return ret;
     }
 
     int ReplBlock::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&block_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&source_id_));
+        ret = Serialization::get_int32(data, data_len, pos, &source_num_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&destination_id_));
+        for (int32_t index = 0; index < source_num_ && TFS_SUCCESS == ret; ++index)
+          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&source_id_[index]));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &start_time_);
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&destination_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &is_move_);
+        ret = Serialization::get_int32(data, data_len, pos, &start_time_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &server_count_);
+        ret = Serialization::get_int32(data, data_len, pos, &is_move_);
       }
-      return iret;
+      return ret;
     }
 
     int64_t ReplBlock::length() const
     {
-      return  INT_SIZE * 4 + INT64_SIZE * 2;
+      return  INT_SIZE * 3 + INT64_SIZE * (2 + source_num_);
     }
 
     int CheckBlockInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = (NULL != data && data_len - pos >= length()) ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = (NULL != data && data_len - pos >= length()) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, block_id_);
+        ret = Serialization::set_int32(data, data_len, pos, block_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, version_);
+        ret = Serialization::set_int32(data, data_len, pos, version_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, file_count_);
+        ret = Serialization::set_int32(data, data_len, pos, file_count_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, total_size_);
+        ret = Serialization::set_int32(data, data_len, pos, total_size_);
       }
-      return iret;
+      return ret;
     }
 
     int CheckBlockInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = (NULL != data && data_len - pos >= length()) ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = (NULL != data && data_len - pos >= length()) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &version_);
+        ret = Serialization::get_int32(data, data_len, pos, &version_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&file_count_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&file_count_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&total_size_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&total_size_));
       }
-      return iret;
+      return ret;
     }
 
     int64_t CheckBlockInfo::length() const
@@ -464,202 +466,317 @@ namespace tfs
 
     int Throughput::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&write_byte_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&write_byte_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&write_file_count_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&write_file_count_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&read_byte_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&read_byte_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&read_file_count_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&read_file_count_));
       }
-      return iret;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&unlink_file_count_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fail_write_byte_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fail_write_file_count_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fail_read_byte_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fail_read_file_count_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fail_unlink_file_count_));
+      }
+      return ret;
     }
     int Throughput::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, write_byte_);
+        ret = Serialization::set_int64(data, data_len, pos, write_byte_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, write_file_count_);
+        ret = Serialization::set_int64(data, data_len, pos, write_file_count_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, read_byte_);
+        ret = Serialization::set_int64(data, data_len, pos, read_byte_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, read_file_count_);
+        ret = Serialization::set_int64(data, data_len, pos, read_file_count_);
       }
-      return iret;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, unlink_file_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, fail_write_byte_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, fail_write_file_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, fail_read_byte_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, fail_read_file_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, fail_unlink_file_count_);
+      }
+
+
+
+      return ret;
     }
 
     int64_t Throughput::length() const
     {
       return INT64_SIZE * 4;
     }
+
     int DataServerStatInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&id_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, &use_capacity_);
+        ret = Serialization::get_int64(data, data_len, pos, &use_capacity_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, &total_capacity_);
+        ret = Serialization::get_int64(data, data_len, pos, &total_capacity_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &current_load_);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::get_int64(data, data_len, pos, &write_bytes_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &block_count_);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::get_int64(data, data_len, pos, &write_file_count_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &last_update_time_);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::get_int64(data, data_len, pos, &read_bytes_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &startup_time_);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::get_int64(data, data_len, pos, &read_file_count_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = total_tp_.deserialize(data, data_len, pos);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::get_int64(data, data_len, pos, &stat_file_count_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &current_time_);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::get_int64(data, data_len, pos, &unlink_file_count_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&status_));
+        ret = Serialization::get_int32(data, data_len, pos, &current_load_);
       }
-      return iret;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &block_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &last_update_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &startup_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &current_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &status_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &total_network_bandwith_);
+      }
+      return ret;
     }
+
     int DataServerStatInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, id_);
+        ret = Serialization::set_int64(data, data_len, pos, id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, use_capacity_);
+        ret = Serialization::set_int64(data, data_len, pos, use_capacity_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, total_capacity_);
+        ret = Serialization::set_int64(data, data_len, pos, total_capacity_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, current_load_);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::set_int64(data, data_len, pos, write_bytes_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, block_count_);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::set_int64(data, data_len, pos, write_file_count_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, last_update_time_);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::set_int64(data, data_len, pos, read_bytes_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, startup_time_);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::set_int64(data, data_len, pos, read_file_count_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = total_tp_.serialize(data, data_len, pos);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::set_int64(data, data_len, pos, stat_file_count_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, current_time_);
+        for (int8_t index = 0; index < 2 && TFS_SUCCESS == ret; ++index)
+          ret =  Serialization::set_int64(data, data_len, pos, unlink_file_count_[index]);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, status_);
+        ret = Serialization::set_int32(data, data_len, pos, current_load_);
       }
-      return iret;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, block_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, last_update_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, startup_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, current_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, status_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, total_network_bandwith_);
+      }
+      return ret;
     }
+
     int64_t DataServerStatInfo::length() const
     {
-      return  INT64_SIZE * 3 + total_tp_.length() + INT_SIZE * 6;
+      return  INT64_SIZE * 15  + INT_SIZE * 7;
     }
+
     int WriteDataInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &offset_);
+        ret = Serialization::get_int32(data, data_len, pos, &offset_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &length_);
+        ret = Serialization::get_int32(data, data_len, pos, &length_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&is_server_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&is_server_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_number_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_number_));
       }
-      return iret;
+      return ret;
     }
     int WriteDataInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, block_id_);
+        ret = Serialization::set_int32(data, data_len, pos, block_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, file_id_);
+        ret = Serialization::set_int64(data, data_len, pos, file_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, offset_);
+        ret = Serialization::set_int32(data, data_len, pos, offset_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, length_);
+        ret = Serialization::set_int32(data, data_len, pos, length_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, is_server_);
+        ret = Serialization::set_int32(data, data_len, pos, is_server_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, file_number_);
+        ret = Serialization::set_int64(data, data_len, pos, file_number_);
       }
-      return iret;
+      return ret;
     }
     int64_t WriteDataInfo::length() const
     {
@@ -668,53 +785,53 @@ namespace tfs
 
     int CloseFileInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&mode_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&mode_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&crc_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&crc_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_number_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_number_));
       }
-      return iret;
+      return ret;
     }
     int CloseFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, block_id_);
+        ret = Serialization::set_int32(data, data_len, pos, block_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, file_id_);
+        ret = Serialization::set_int64(data, data_len, pos, file_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, mode_);
+        ret = Serialization::set_int32(data, data_len, pos, mode_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, crc_);
+        ret = Serialization::set_int32(data, data_len, pos, crc_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, file_number_);
+        ret = Serialization::set_int64(data, data_len, pos, file_number_);
       }
-      return iret;
+      return ret;
     }
     int64_t CloseFileInfo::length() const
     {
@@ -723,46 +840,46 @@ namespace tfs
 
     int RenameFileInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&new_file_id_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&new_file_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&is_server_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&is_server_));
       }
-      return iret;
+      return ret;
     }
 
     int RenameFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, block_id_);
+        ret = Serialization::set_int32(data, data_len, pos, block_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, file_id_);
+        ret = Serialization::set_int64(data, data_len, pos, file_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, new_file_id_);
+        ret = Serialization::set_int64(data, data_len, pos, new_file_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, is_server_);
+        ret = Serialization::set_int64(data, data_len, pos, is_server_);
       }
-      return iret;
+      return ret;
     }
     int64_t RenameFileInfo::length() const
     {
@@ -770,29 +887,29 @@ namespace tfs
     }
     int ServerMetaInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &capacity_);
+        ret = Serialization::get_int32(data, data_len, pos, &capacity_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &available_);
+        ret = Serialization::get_int32(data, data_len, pos, &available_);
       }
-      return iret;
+      return ret;
     }
     int ServerMetaInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, capacity_);
+        ret = Serialization::set_int32(data, data_len, pos, capacity_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, available_);
+        ret = Serialization::set_int32(data, data_len, pos, available_);
       }
-      return iret;
+      return ret;
     }
 
     int64_t ServerMetaInfo::length() const
@@ -801,38 +918,38 @@ namespace tfs
     }
     int SegmentHead::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &count_);
+        ret = Serialization::get_int32(data, data_len, pos, &count_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, &size_);
+        ret = Serialization::get_int64(data, data_len, pos, &size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_bytes(data, data_len, pos, reserve_,SEGMENT_HEAD_RESERVE_SIZE);
+        ret = Serialization::get_bytes(data, data_len, pos, reserve_,SEGMENT_HEAD_RESERVE_SIZE);
       }
-      return iret;
+      return ret;
 
     }
     int SegmentHead::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, count_);
+        ret = Serialization::set_int32(data, data_len, pos, count_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, size_);
+        ret = Serialization::set_int64(data, data_len, pos, size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_bytes(data, data_len, pos, reserve_, SEGMENT_HEAD_RESERVE_SIZE);
+        ret = Serialization::set_bytes(data, data_len, pos, reserve_, SEGMENT_HEAD_RESERVE_SIZE);
       }
-      return iret;
+      return ret;
     }
     int64_t SegmentHead::length() const
     {
@@ -840,53 +957,53 @@ namespace tfs
     }
     int SegmentInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, &offset_);
+        ret = Serialization::get_int64(data, data_len, pos, &offset_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &size_);
+        ret = Serialization::get_int32(data, data_len, pos, &size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &crc_);
+        ret = Serialization::get_int32(data, data_len, pos, &crc_);
       }
-      return iret;
+      return ret;
     }
     int SegmentInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, block_id_);
+        ret = Serialization::set_int32(data, data_len, pos, block_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, file_id_);
+        ret = Serialization::set_int64(data, data_len, pos, file_id_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int64(data, data_len, pos, offset_);
+        ret = Serialization::set_int64(data, data_len, pos, offset_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, size_);
+        ret = Serialization::set_int32(data, data_len, pos, size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, crc_);
+        ret = Serialization::set_int32(data, data_len, pos, crc_);
       }
-      return iret;
+      return ret;
     }
     int64_t SegmentInfo::length() const
     {
@@ -895,95 +1012,160 @@ namespace tfs
 
     int ClientCmdInformation::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
-      if (common::TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, cmd_);
+        ret = common::Serialization::set_int32(data, data_len, pos, cmd_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int64(data, data_len, pos, value1_);
+        ret = common::Serialization::set_int64(data, data_len, pos, value1_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, value3_);
+        ret = common::Serialization::set_int64(data, data_len, pos, value3_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, value4_);
+        ret = common::Serialization::set_int64(data, data_len, pos, value4_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int64(data, data_len, pos, value2_);
+        ret = common::Serialization::set_int64(data, data_len, pos, value2_);
       }
-      return iret;
+      return ret;
     }
 
     int ClientCmdInformation::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
-      if (common::TFS_SUCCESS == iret)
+      // change value3&value4 to 64bits, must compatible with old client
+      // int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      int32_t ret = TFS_SUCCESS;
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&cmd_));
+        ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&cmd_));
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value1_));
+        ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value1_));
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&value3_));
+        ret = common::Serialization::get_int64(data, data_len, pos, &value3_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&value4_));
+        ret = common::Serialization::get_int64(data, data_len, pos, &value4_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret && data_len > pos)
       {
-        iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value2_));
+        ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value2_));
       }
-      return iret;
+      return ret;
     }
 
     int64_t ClientCmdInformation::length() const
     {
-      return common::INT_SIZE * 3 + common::INT64_SIZE * 2;
+      return common::INT_SIZE + common::INT64_SIZE * 4;
+    }
+
+    int ToolsClientCmdInformation::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::set_int32(data, data_len, pos, cmd_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::set_int64(data, data_len, pos, value1_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::set_int64(data, data_len, pos, value3_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::set_int64(data, data_len, pos, value4_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::set_int64(data, data_len, pos, value2_);
+      }
+      return ret;
+    }
+
+    int ToolsClientCmdInformation::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&cmd_));
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value1_));
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int64(data, data_len, pos, &value3_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int64(data, data_len, pos, &value4_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value2_));
+      }
+      return ret;
+    }
+
+    int64_t ToolsClientCmdInformation::length() const
+    {
+      return common::INT_SIZE + common::INT64_SIZE * 4;
+    }
+
+    bool MMapOption::check() const
+    {
+      return (max_mmap_size_ > 0 && first_mmap_size_ >= 0 && per_mmap_size_ > 0
+             && first_mmap_size_ <= max_mmap_size_ && per_mmap_size_ <= max_mmap_size_);
     }
 
     int MMapOption::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, max_mmap_size_);
+        ret = Serialization::set_int32(data, data_len, pos, max_mmap_size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, first_mmap_size_);
+        ret = Serialization::set_int32(data, data_len, pos, first_mmap_size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, per_mmap_size_);
+        ret = Serialization::set_int32(data, data_len, pos, per_mmap_size_);
       }
-      return iret;
+      return ret;
     }
 
     int MMapOption::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &max_mmap_size_);
+        ret = Serialization::get_int32(data, data_len, pos, &max_mmap_size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &first_mmap_size_);
+        ret = Serialization::get_int32(data, data_len, pos, &first_mmap_size_);
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == ret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, &per_mmap_size_);
+        ret = Serialization::get_int32(data, data_len, pos, &per_mmap_size_);
       }
-      return iret;
+      return ret;
     }
 
     int64_t MMapOption::length() const
@@ -993,194 +1175,193 @@ namespace tfs
 
     int SuperBlock::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
-      if (common::TFS_SUCCESS == iret)
+      int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, MAX_DEV_TAG_LEN);
+        ret = common::Serialization::set_int32(data, data_len, pos, MAX_DEV_TAG_LEN);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_bytes(data, data_len, pos, mount_tag_, MAX_DEV_TAG_LEN);
+        ret = common::Serialization::set_bytes(data, data_len, pos, mount_tag_, MAX_DEV_TAG_LEN);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, time_);
+        ret = common::Serialization::set_int32(data, data_len, pos, time_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, common::MAX_DEV_NAME_LEN);
+        ret = common::Serialization::set_int32(data, data_len, pos, common::MAX_DEV_NAME_LEN);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_bytes(data, data_len, pos, mount_point_, MAX_DEV_NAME_LEN);
+        ret = common::Serialization::set_bytes(data, data_len, pos, mount_point_, MAX_DEV_NAME_LEN);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int64(data, data_len, pos, mount_point_use_space_);
+        ret = common::Serialization::set_int64(data, data_len, pos, mount_point_use_space_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, base_fs_type_);
+        ret = common::Serialization::set_int32(data, data_len, pos, base_fs_type_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, superblock_reserve_offset_);
+        ret = common::Serialization::set_int32(data, data_len, pos, superblock_reserve_offset_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, bitmap_start_offset_);
+        ret = common::Serialization::set_int32(data, data_len, pos, bitmap_start_offset_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, avg_segment_size_);
+        ret = common::Serialization::set_int32(data, data_len, pos, avg_segment_size_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, static_cast<int32_t>(block_type_ratio_));
+        ret = common::Serialization::set_int32(data, data_len, pos, static_cast<int32_t>(block_type_ratio_));
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, main_block_count_);
+        ret = common::Serialization::set_int32(data, data_len, pos, main_block_count_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, main_block_size_);
+        ret = common::Serialization::set_int32(data, data_len, pos, main_block_size_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, extend_block_count_);
+        ret = common::Serialization::set_int32(data, data_len, pos, extend_block_count_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, extend_block_size_);
+        ret = common::Serialization::set_int32(data, data_len, pos, extend_block_size_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, used_block_count_);
+        ret = common::Serialization::set_int32(data, data_len, pos, used_block_count_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, used_extend_block_count_);
+        ret = common::Serialization::set_int32(data, data_len, pos, used_extend_block_count_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, static_cast<int32_t>(hash_slot_ratio_));
+        ret = common::Serialization::set_int32(data, data_len, pos, static_cast<int32_t>(hash_slot_ratio_));
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, hash_slot_size_);
+        ret = common::Serialization::set_int32(data, data_len, pos, hash_slot_size_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = mmap_option_.serialize(data, data_len, pos);
+        ret = mmap_option_.serialize(data, data_len, pos);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, version_);
+        ret = common::Serialization::set_int32(data, data_len, pos, version_);
       }
-      return iret;
+      return ret;
     }
 
     int SuperBlock::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      printf("%s", dynamic_parameter_str[0]);
-      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       int32_t str_length = 0;
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &str_length);
+        ret = common::Serialization::get_int32(data, data_len, pos, &str_length);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = str_length > 0 && str_length <= common::MAX_DEV_NAME_LEN ? common::TFS_SUCCESS : common::TFS_ERROR;
-        if (common::TFS_SUCCESS == iret)
+        ret = str_length > 0 && str_length <= common::MAX_DEV_NAME_LEN ? common::TFS_SUCCESS : common::TFS_ERROR;
+        if (common::TFS_SUCCESS == ret)
         {
-          iret = common::Serialization::get_bytes(data, data_len, pos, mount_tag_, str_length);
+          ret = common::Serialization::get_bytes(data, data_len, pos, mount_tag_, str_length);
         }
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &time_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &time_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
         str_length = 0;
-        iret = common::Serialization::get_int32(data, data_len, pos, &str_length);
+        ret = common::Serialization::get_int32(data, data_len, pos, &str_length);
       }
 
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = str_length > 0 && str_length <= common::MAX_DEV_NAME_LEN ? common::TFS_SUCCESS : common::TFS_ERROR;
-        if (common::TFS_SUCCESS == iret)
+        ret = str_length > 0 && str_length <= common::MAX_DEV_NAME_LEN ? common::TFS_SUCCESS : common::TFS_ERROR;
+        if (common::TFS_SUCCESS == ret)
         {
-          iret = common::Serialization::get_bytes(data, data_len, pos, mount_point_, str_length);
+          ret = common::Serialization::get_bytes(data, data_len, pos, mount_point_, str_length);
         }
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int64(data, data_len, pos, &mount_point_use_space_);
+        ret = common::Serialization::get_int64(data, data_len, pos, &mount_point_use_space_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&base_fs_type_));
+        ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&base_fs_type_));
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &superblock_reserve_offset_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &superblock_reserve_offset_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &bitmap_start_offset_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &bitmap_start_offset_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &avg_segment_size_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &avg_segment_size_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_type_ratio_));
+        ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_type_ratio_));
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &main_block_count_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &main_block_count_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &main_block_size_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &main_block_size_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &extend_block_count_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &extend_block_count_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &extend_block_size_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &extend_block_size_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &used_block_count_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &used_block_count_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &used_extend_block_count_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &used_extend_block_count_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&hash_slot_ratio_));
+        ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&hash_slot_ratio_));
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &hash_slot_size_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &hash_slot_size_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = mmap_option_.deserialize(data, data_len, pos);
+        ret = mmap_option_.deserialize(data, data_len, pos);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, &version_);
+        ret = common::Serialization::get_int32(data, data_len, pos, &version_);
       }
-      return iret;
+      return ret;
     }
     int64_t SuperBlock::length() const
     {
@@ -1211,7 +1392,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[43] = {
+    const char* dynamic_parameter_str[48] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1254,20 +1435,25 @@ namespace tfs
         "compact_task_expired_time",
         "marshalling_task_expired_time",
         "reinstate_task_expired_time",
-        "dissolve_task_expired_time"
+        "dissolve_task_expired_time",
+        "compact_update_ratio",
+        "max_mr_network_bandwith_ratio",
+        "max_rw_network_bandwith_ratio",
+        "compact_family_member_ratio",
+        "max_single_machine_network_bandwith"
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      /*if (TFS_SUCCESS == ret)
-        {
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::get_int64(data, data_len, pos, &family_id_);
-        }
-        if (TFS_SUCCESS == ret)
-        {
+      }
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::get_int32(data, data_len, pos, &family_aid_info_);
-        }*/
+      }
       int32_t size = 0;
       if (TFS_SUCCESS == ret)
       {
@@ -1275,11 +1461,11 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        uint32_t block = 0;
+        uint64_t block = 0;
         int32_t version = 0;
         for (int32_t i = 0; i < size && TFS_SUCCESS == ret; ++i)
         {
-          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block));
+          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&block));
           if (TFS_SUCCESS == ret)
             ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&version));
           if (TFS_SUCCESS == ret)
@@ -1292,24 +1478,24 @@ namespace tfs
     int FamilyInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      /*if (TFS_SUCCESS == ret)
-        {
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::set_int64(data, data_len, pos, family_id_);
-        }
-        if (TFS_SUCCESS == ret)
-        {
+      }
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::set_int32(data, data_len, pos, family_aid_info_);
-        }*/
+      }
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int32(data, data_len, pos, family_member_.size());
       }
       if (TFS_SUCCESS == ret)
       {
-        std::vector<std::pair<uint32_t, int32_t> >::const_iterator iter = family_member_.begin();
+        std::vector<std::pair<uint64_t, int32_t> >::const_iterator iter = family_member_.begin();
         for (; iter != family_member_.end() && TFS_SUCCESS == ret; ++iter)
         {
-          ret = Serialization::set_int32(data, data_len, pos, (*iter).first);
+          ret = Serialization::set_int64(data, data_len, pos, (*iter).first);
           if (TFS_SUCCESS == ret)
             ret = Serialization::set_int32(data, data_len, pos, (*iter).second);
         }
@@ -1319,7 +1505,7 @@ namespace tfs
 
     int64_t FamilyInfo::length() const
     {
-      return /*INT64_SIZE + INT_SIZE + */(family_member_.size() * INT_SIZE * 2);
+      return INT64_SIZE + INT_SIZE + INT_SIZE + family_member_.size() * (INT_SIZE + INT64_SIZE);
     }
 
     bool FamilyMemberInfo::operator ==(const FamilyMemberInfo& rhs) const
@@ -1336,7 +1522,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&block_));
       }
       if (TFS_SUCCESS == ret)
       {
@@ -1358,7 +1544,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, block_);
+        ret = Serialization::set_int64(data, data_len, pos, block_);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -1373,41 +1559,111 @@ namespace tfs
 
     int64_t FamilyMemberInfo::length() const
     {
-      return INT64_SIZE + INT_SIZE * 3;
+      return INT64_SIZE * 2 + INT_SIZE * 2;
     }
 
+
+    uint64_t FamilyInfoExt::get_block(uint64_t server_id) const
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      uint64_t block_id = INVALID_BLOCK_ID;
+      for (int i = member_num - 1; (INVALID_BLOCK_ID == block_id) && (i >= 0); i--)
+      {
+        if (members_[i].second == server_id)
+        {
+          block_id = members_[i].first;
+        }
+      }
+      return block_id;
+    }
+
+    uint64_t FamilyInfoExt::get_server(uint64_t block_id) const
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      uint64_t server_id = INVALID_SERVER_ID;
+      for (int i = member_num - 1; (INVALID_BLOCK_ID == server_id) && (i >= 0); i--)
+      {
+        if (members_[i].first == block_id)
+        {
+          server_id = members_[i].second;
+        }
+      }
+      return server_id;
+    }
+
+    void FamilyInfoExt::get_check_servers(std::vector<uint64_t>& servers) const
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      servers.clear();
+      for (int i = data_num; i < member_num; i++)
+      {
+        servers.push_back(members_[i].second);
+      }
+    }
+
+    int32_t FamilyInfoExt::get_alive_data_num() const
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+
+      int32_t count = 0;
+      for (int32_t i = 0; i < data_num; i++)
+      {
+        if (INVALID_SERVER_ID != members_[i].second)
+        {
+          count++;
+        }
+      }
+      return count;
+    }
+
+    int32_t FamilyInfoExt::get_alive_check_num() const
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      int32_t count = 0;
+      for (int32_t i = data_num; i < member_num; i++)
+      {
+        if (INVALID_SERVER_ID != members_[i].second)
+        {
+          count++;
+        }
+      }
+      return count;
+    }
 
     int FamilyInfoExt::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (common::TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret)
       {
         ret = Serialization::get_int64(data, data_len, pos, &family_id_);
       }
-      if (common::TFS_SUCCESS == ret)
+
+      if ((TFS_SUCCESS == ret) && (INVALID_FAMILY_ID != family_id_))
       {
         ret = Serialization::get_int32(data, data_len, pos, &family_aid_info_);
-      }
-      if (common::TFS_SUCCESS == ret)
-      {
-        const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-        for (uint32_t index = 0; index < MEMBER_NUM && common::TFS_SUCCESS == ret; ++index)
+        if (TFS_SUCCESS == ret)
         {
-          std::pair<uint32_t, uint64_t> member;
-          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&member.first));
-          if (common::TFS_SUCCESS == ret)
+          const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+          for (uint32_t i = 0; (i < MEMBER_NUM) && (TFS_SUCCESS == ret); i++)
           {
-            ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&member.second));
+            ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&members_[i].first));
+            if (TFS_SUCCESS == ret)
+            {
+              ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&members_[i].second));
+            }
           }
-          if (common::TFS_SUCCESS == ret)
-          {
-            members_.push_back(member);
-          }
-        }
-
-        if (members_.size() != MEMBER_NUM)
-        {
-          ret = EXIT_SERIALIZE_ERROR;
         }
       }
 
@@ -1418,28 +1674,23 @@ namespace tfs
     int FamilyInfoExt::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (common::TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int64(data, data_len, pos, family_id_);
       }
-      if (common::TFS_SUCCESS == ret)
+
+      if ((TFS_SUCCESS == ret) && (INVALID_FAMILY_ID != family_id_))
       {
         ret = Serialization::set_int32(data, data_len, pos, family_aid_info_);
-      }
-
-      if (common::TFS_SUCCESS == ret)
-      {
-        const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-        ret = members_.size() == MEMBER_NUM ? common::TFS_SUCCESS : common::EXIT_SERIALIZE_ERROR;
-        if (common::TFS_SUCCESS == ret)
+        if (TFS_SUCCESS == ret)
         {
-          std::vector<std::pair<uint32_t, uint64_t> >::const_iterator iter = members_.begin();
-          for (; iter != members_.end() && common::TFS_SUCCESS == ret; ++iter)
+          const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+          for (uint32_t i = 0; (i < MEMBER_NUM) && (TFS_SUCCESS == ret); i++)
           {
-            ret = Serialization::set_int32(data, data_len, pos, iter->first);
-            if (common::TFS_SUCCESS == ret)
+            ret = Serialization::set_int64(data, data_len, pos, members_[i].first);
+            if (TFS_SUCCESS == ret)
             {
-              ret = Serialization::set_int64(data, data_len, pos, iter->second);
+              ret = Serialization::set_int64(data, data_len, pos, members_[i].second);
             }
           }
         }
@@ -1450,9 +1701,783 @@ namespace tfs
 
     int64_t FamilyInfoExt::length() const
     {
-      const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-      return common::INT64_SIZE + common::INT_SIZE + MEMBER_NUM * (INT_SIZE + INT64_SIZE);
+      int64_t len = INT64_SIZE;
+      if (INVALID_FAMILY_ID != family_id_)
+      {
+        const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+        len += (INT_SIZE + MEMBER_NUM * (INT64_SIZE + INT64_SIZE));
+      }
+      return len;
+   }
+
+    int BlockMeta::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = ((size_ >= 0) && (size_ <= MAX_REPLICATION_NUM)) ? TFS_SUCCESS: TFS_ERROR;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, block_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t i = 0; i < size_; i++)
+        {
+          ret = Serialization::set_int64(data, data_len, pos, ds_[i]);
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, version_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = family_info_.serialize(data, data_len, pos);
+      }
+
+      return ret;
     }
+
+    int BlockMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t* >(&block_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &size_);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = ((size_ >= 0) && (size_ <= MAX_REPLICATION_NUM)) ? TFS_SUCCESS: TFS_ERROR;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t i = 0; i < size_; i++)
+        {
+          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t* >(&ds_[i]));
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &version_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = family_info_.deserialize(data, data_len, pos);
+      }
+
+      return ret;
+    }
+
+    int64_t BlockMeta::length() const
+    {
+      return INT64_SIZE + INT_SIZE * 2 + size_ * INT64_SIZE + family_info_.length();
+    }
+
+    int FileSegment::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, block_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, file_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, length_);
+      }
+
+      return ret;
+    }
+
+    int FileSegment::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t *>(&block_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t *>(&file_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &length_);
+      }
+
+      return ret;
+    }
+
+    int64_t FileSegment::length() const
+    {
+      return (2 * INT64_SIZE + 2 * INT_SIZE);
+    }
+
+    int ThroughputV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int64_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      ret = Serialization::set_int64(data, data_len, pos, write_bytes_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, read_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, update_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, unlink_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, write_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, read_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, update_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, unlink_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, last_statistics_time_);
+      }
+
+      return ret;
+    }
+
+    int ThroughputV2::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int64_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      ret = Serialization::get_int64(data, data_len, pos, &write_bytes_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &read_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &update_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &unlink_bytes_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &write_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &read_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &update_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &unlink_visit_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &last_statistics_time_);
+      }
+
+      return ret;
+
+    }
+    int64_t ThroughputV2::length() const
+    {
+      return INT64_SIZE * 9;
+    }
+
+    bool IndexHeaderV2::check_need_mremap(const double threshold) const
+    {
+      bool ret = (file_info_bucket_size_ > 0 && used_file_info_bucket_size_ > 0);
+      if (ret)
+      {
+        double ratio = static_cast<double>(used_file_info_bucket_size_) / static_cast<double>(file_info_bucket_size_);
+        ret = ratio >= threshold;
+        //TBSYS_LOG(INFO, "need remap %d, %e, %e", ret, ratio, threshold);
+      }
+      return ret;
+    }
+
+    int IndexHeaderV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = info_.serialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = throughput_.serialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, used_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, avail_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, marshalling_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, seq_no_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int16(data, data_len, pos, file_info_bucket_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int16(data, data_len, pos, used_file_info_bucket_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int8(data, data_len, pos, max_index_num_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 27); i++)
+        {
+          ret = Serialization::set_int8(data, data_len, pos, reserve_[i]);
+        }
+      }
+
+      return ret;
+    }
+
+    int IndexHeaderV2::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = info_.deserialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = throughput_.deserialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &used_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &avail_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &marshalling_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos,
+            reinterpret_cast<int32_t* >(&seq_no_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int16(data, data_len, pos,
+            reinterpret_cast<int16_t* >(&file_info_bucket_size_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int16(data, data_len, pos,
+            reinterpret_cast<int16_t* >(&used_file_info_bucket_size_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int8(data, data_len, pos, &max_index_num_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 27); i++)
+        {
+          ret = Serialization::get_int8(data, data_len, pos, &reserve_[i]);
+        }
+      }
+
+      return ret;
+    }
+
+    int64_t IndexHeaderV2::length() const
+    {
+      return info_.length() + throughput_.length() + INT_SIZE * 12;
+    }
+
+    int IndexDataV2::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = header_.deserialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t finfo_size = 0;
+        FileInfoV2 finfo;
+        ret = Serialization::get_int32(data, data_len, pos, &finfo_size);
+        for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < finfo_size); i++)
+        {
+          ret =  finfo.deserialize(data, data_len, pos);
+          if (TFS_SUCCESS == ret)
+          {
+            finfos_.push_back(finfo);
+          }
+        }
+        if (finfo_size != static_cast<int32_t>(finfos_.size()))
+        {
+          ret = TFS_ERROR;
+        }
+      }
+
+      return ret;
+    }
+
+    int IndexDataV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = header_.serialize(data, data_len, pos);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, finfos_.size());
+        for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < finfos_.size()); i++)
+        {
+          ret =  finfos_[i].serialize(data, data_len, pos);
+        }
+      }
+
+      return ret;
+    }
+
+    int64_t IndexDataV2::length() const
+    {
+      int64_t len = header_.length() + INT_SIZE;
+      for (uint32_t i = 0; i < finfos_.size(); i++)
+      {
+        len += finfos_[i].length();
+      }
+      return len;
+    }
+
+    int ECMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t* >(&family_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &used_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &mars_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &version_step_);
+      }
+
+      return ret;
+    }
+
+    int ECMeta::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, family_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, used_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, mars_offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, version_step_);
+      }
+
+      return ret;
+    }
+
+    int64_t ECMeta::length() const
+    {
+      return INT64_SIZE + INT_SIZE * 3;
+    }
+
+    int FileInfoV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, id_);
+      }
+
+      if ((TFS_SUCCESS == ret) && (INVALID_FILE_ID != id_))
+      {
+        ret = Serialization::set_int32(data, data_len, pos, offset_);
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, size_);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int8(data, data_len, pos, status_);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, crc_);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, modify_time_);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, create_time_);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::set_int16(data, data_len, pos, next_);
+        }
+      }
+
+      return ret;
+    }
+
+    int FileInfoV2::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t *>(&id_));
+      }
+
+      if ((TFS_SUCCESS == ret) && (INVALID_FILE_ID != id_))
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &offset_);
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t size = 0;
+          ret = Serialization::get_int32(data, data_len, pos, &size);
+          size_ = size;
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          int8_t status = 0;
+          ret = Serialization::get_int8(data, data_len, pos, &status);
+          status_ = status;
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t *>(&crc_));
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::get_int32(data, data_len, pos, &modify_time_);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::get_int32(data, data_len, pos, &create_time_);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = Serialization::get_int16(data, data_len, pos, reinterpret_cast<int16_t *>(&next_));
+        }
+      }
+
+      return ret;
+    }
+
+    int64_t FileInfoV2::length() const
+    {
+      int64_t len = INT64_SIZE;
+      if (INVALID_FILE_ID !=  id_)
+      {
+        len += 5 * INT_SIZE + INT8_SIZE + INT16_SIZE;
+      }
+      return len;
+    }
+
+    int BlockInfoV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, block_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, family_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, version_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, file_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, del_file_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, del_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, update_file_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, update_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, last_update_time_);
+      }
+
+      for (int i = 0; (TFS_SUCCESS == ret) && i < 2; i++)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, reserve_[i]);
+      }
+
+      return ret;
+    }
+
+    int BlockInfoV2::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t *>(&block_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t *>(&family_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &version_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &file_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &del_file_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &del_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &update_file_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &update_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &last_update_time_);
+      }
+
+      for (int i = 0; (TFS_SUCCESS == ret) && i < 2; i++)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &reserve_[i]);
+      }
+
+      return ret;
+    }
+
+    int64_t BlockInfoV2::length() const
+    {
+      return 10 * INT_SIZE + 2 * INT64_SIZE;
+    }
+
+    int TimeRange::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &start_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &end_);
+      }
+      return ret;
+    }
+
+    int TimeRange::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, start_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, end_);
+      }
+      return ret;
+    }
+
+    int64_t TimeRange::length() const
+    {
+      return INT64_SIZE * 2;
+    }
+
 
   } /** nameserver **/
 }/** tfs **/

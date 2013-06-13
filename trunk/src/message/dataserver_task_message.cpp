@@ -34,7 +34,7 @@ namespace tfs
       int32_t ret = input.get_int64(&seqno_);
       if (common::TFS_SUCCESS == ret)
       {
-        ret = input.get_int32( reinterpret_cast<int32_t*> (&block_id_));
+        ret = input.get_int64( reinterpret_cast<int64_t*> (&block_id_));
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -49,7 +49,7 @@ namespace tfs
 
     int64_t DsCompactBlockMessage::length() const
     {
-      return 2 * common::INT_SIZE + 2 * common::INT64_SIZE;
+      return 2 * common::INT_SIZE + 3 * common::INT64_SIZE;
     }
 
     int DsCompactBlockMessage::serialize(common::Stream& output) const
@@ -57,7 +57,7 @@ namespace tfs
       int32_t ret = output.set_int64(seqno_);
       if (common::TFS_SUCCESS == ret)
       {
-        ret = output.set_int32(block_id_);
+        ret = output.set_int64(block_id_);
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -107,7 +107,7 @@ namespace tfs
 
     int64_t DsReplicateBlockMessage::length() const
     {
-      return common::INT_SIZE + 2 * common::INT64_SIZE + sizeof(common::ReplBlock);
+      return common::INT_SIZE + 2 * common::INT64_SIZE + repl_info_.length();
     }
 
     int DsReplicateBlockMessage::serialize(common::Stream& output) const

@@ -33,7 +33,7 @@ namespace tfs
       int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::set_int32(data, data_len, pos, seqno_);
+        ret = common::Serialization::set_int64(data, data_len, pos, seqno_);
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -63,7 +63,7 @@ namespace tfs
       int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&seqno_));
+        ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&seqno_));
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -89,14 +89,14 @@ namespace tfs
     }
     int64_t OpLogHeader::length() const
     {
-      return common::INT_SIZE * 4;
+      return common::INT_SIZE * 3 + common::INT64_SIZE;
     }
     int OpLogRotateHeader::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::set_int32(data, data_len, pos, seqno_);
+        ret = common::Serialization::set_int64(data, data_len, pos, seqno_);
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -113,7 +113,7 @@ namespace tfs
       int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&seqno_));
+        ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&seqno_));
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -127,21 +127,21 @@ namespace tfs
     }
     int64_t OpLogRotateHeader::length() const
     {
-      return common::INT_SIZE * 3;
+      return common::INT_SIZE * 2  + common::INT64_SIZE;
     }
+
     void BlockOpLog::dump(const int32_t level) const
     {
       if (level <= TBSYS_LOGGER._level)
       {
-        std::string bstr;
         std::string sstr;
-        print_servers(servers_, sstr);
-        print_blocks(blocks_, bstr);
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__,
-          "cmd: %s, block_ids: %s version: %u file_count: %u size: %u delfile_count: %u del_size: %u seqno: %u, ds_size: %zd, dataserver: %s",
+        common::ArrayHelper<uint64_t> helper(server_num_,const_cast<uint64_t*>(servers_), server_num_);
+        print_int64(helper, sstr);
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, pthread_self(),
+          "cmd: %s, block: %"PRI64_PREFIX"u, version: %u file_count: %u size: %u delfile_count: %u del_size: %u ds_size: %d, dataserver: %s",
           cmd_ == common::OPLOG_INSERT ? "insert" : cmd_ == common::OPLOG_REMOVE ? "remove" : cmd_ == common::OPLOG_RELIEVE_RELATION ? "release" : cmd_ == common::OPLOG_RENAME ? "rename" : "update",
-          bstr.c_str(), info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_,
-          info_.seq_no_, servers_.size(), sstr.c_str());
+          info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_,
+          server_num_, sstr.c_str());
       }
     }
 
@@ -158,30 +158,13 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::set_int8(data, data_len, pos, blocks_.size());
+        ret = common::Serialization::set_int8(data, data_len, pos, server_num_);
       }
       if (common::TFS_SUCCESS == ret)
       {
-        std::vector<uint32_t>::const_iterator iter = blocks_.begin();
-        for (; iter != blocks_.end(); ++iter)
+        for (int8_t index = 0; index < server_num_ && common::TFS_SUCCESS == ret; ++index)
         {
-          ret =  common::Serialization::set_int32(data, data_len, pos, (*iter));
-          if (common::TFS_SUCCESS != ret)
-            break;
-        }
-      }
-      if (common::TFS_SUCCESS == ret)
-      {
-        ret = common::Serialization::set_int8(data, data_len, pos, servers_.size());
-      }
-      if (common::TFS_SUCCESS == ret)
-      {
-        std::vector<uint64_t>::const_iterator iter = servers_.begin();
-        for (; iter != servers_.end(); ++iter)
-        {
-          ret =  common::Serialization::set_int64(data, data_len, pos, (*iter));
-          if (common::TFS_SUCCESS != ret)
-            break;
+          ret = common::Serialization::set_int64(data, data_len, pos, servers_[index]);
         }
       }
       return ret;
@@ -200,37 +183,13 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        int8_t size = 0;
-        ret = common::Serialization::get_int8(data, data_len, pos, &size);
-        if (common::TFS_SUCCESS == ret)
-        {
-          uint32_t block_id = 0;
-          for (int8_t i = 0; i < size; ++i)
-          {
-            ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id));
-            if (common::TFS_SUCCESS == ret)
-              blocks_.push_back(block_id);
-            else
-              break;
-          }
-        }
+        ret = common::Serialization::get_int8(data, data_len, pos, &server_num_);
       }
-
       if (common::TFS_SUCCESS == ret)
       {
-        int8_t size = 0;
-        ret = common::Serialization::get_int8(data, data_len, pos, &size);
-        if (common::TFS_SUCCESS == ret)
+        for (int8_t index = 0; index < server_num_ && common::TFS_SUCCESS == ret; ++index)
         {
-          uint64_t server = 0;
-          for (int8_t i = 0; i < size; ++i)
-          {
-            ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&server));
-            if (common::TFS_SUCCESS == ret)
-              servers_.push_back(server);
-            else
-              break;
-          }
+          ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&servers_[index]));
         }
       }
       return ret;
@@ -238,9 +197,7 @@ namespace tfs
 
     int64_t BlockOpLog::length(void) const
     {
-      return common::INT8_SIZE + info_.length() + common::INT8_SIZE
-            + blocks_.size() * common::INT_SIZE + common::INT8_SIZE
-            + servers_.size() * common::INT64_SIZE;
+      return common::INT8_SIZE * 2 + info_.length() + server_num_ * common::INT64_SIZE;
     }
 
     OpLog::OpLog(const std::string& logname, const int32_t max_log_slot_size) :

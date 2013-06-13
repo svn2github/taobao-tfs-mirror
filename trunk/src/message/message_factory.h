@@ -52,6 +52,16 @@
 #include "family_info_message.h"
 #include "kv_meta_message.h"
 #include "kv_rts_message.h"
+#include "block_info_message_v2.h"
+#include "write_file_message_v2.h"
+#include "read_file_message_v2.h"
+#include "close_file_message_v2.h"
+#include "unlink_file_message_v2.h"
+#include "read_data_message_v2.h"
+#include "write_data_message_v2.h"
+#include "read_index_message_v2.h"
+#include "write_index_message_v2.h"
+#include "ec_meta_message.h"
 
 namespace tfs
 {

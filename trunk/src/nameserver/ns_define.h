@@ -64,7 +64,8 @@ namespace tfs
     enum HandleDeleteBlockFlag
     {
       HANDLE_DELETE_BLOCK_FLAG_BOTH = 1,
-      HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION = 2
+      HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION = 2,
+      HANDLE_DELETE_BLOCK_FLAG_ONLY_DS = 4,
     };
 
     enum NsKeepAliveType
@@ -125,7 +126,7 @@ namespace tfs
       void update(const NsGlobalStatisticsInfo& info);
       static NsGlobalStatisticsInfo& instance();
       void dump(int32_t level, const char* file = __FILE__, const int32_t line = __LINE__, const char* function =
-          __FUNCTION__) const;
+          __FUNCTION__, const pthread_t thid = pthread_self()) const;
       volatile int64_t use_capacity_;
       volatile int64_t total_capacity_;
       volatile int64_t total_block_count_;
@@ -138,6 +139,7 @@ namespace tfs
 
     struct NsRuntimeGlobalInformation
     {
+      uint64_t heart_ip_port_;
       uint64_t owner_ip_port_;
       uint64_t peer_ip_port_;
       int64_t switch_time_;
@@ -169,7 +171,7 @@ namespace tfs
       void initialize();
       void destroy();
       void dump(const int32_t level, const char* file, const int32_t line,
-            const char* function, const char* format, ...);
+            const char* function, const pthread_t thid, const char* format, ...);
       NsRuntimeGlobalInformation();
       static NsRuntimeGlobalInformation& instance();
       static NsRuntimeGlobalInformation instance_;
@@ -178,9 +180,7 @@ namespace tfs
     static const int32_t THREAD_STATCK_SIZE = 16 * 1024 * 1024;
     static const int32_t MAX_SERVER_NUMS = 3000;
     static const int32_t MAX_PROCESS_NUMS = MAX_SERVER_NUMS * 12;
-    //static const int32_t MAX_BLOCK_CHUNK_NUMS = 512;
     static const int32_t MAX_BLOCK_CHUNK_NUMS = 10240 * 4;
-    static const int32_t MAX_REPLICATION = 64;
     static const int32_t MAX_WRITE_FILE_COUNT = 256;
 
     static const uint64_t GB = 1 * 1024 * 1024 * 1024;
@@ -199,14 +199,9 @@ namespace tfs
 
     static const int32_t MAX_TASK_RESERVE_TIME = 5;
 
-    class BlockCollect;
-    class ServerCollect;
-
     extern int ns_async_callback(common::NewClient* client);
-    extern std::string& print_servers(const common::ArrayHelper<ServerCollect*>&servers, std::string& result);
-    extern void print_servers(const common::ArrayHelper<uint64_t>&servers, std::string& result);
-    extern void print_servers(const std::vector<uint64_t>& servers, std::string& result);
-    extern void print_blocks(const std::vector<uint32_t>& blocks, std::string& result);
+    extern void print_int64(const common::ArrayHelper<uint64_t>&servers, std::string& result);
+    extern void print_int64(const std::vector<uint64_t>& servers, std::string& result);
  }/** nameserver **/
 }/** tfs **/
 

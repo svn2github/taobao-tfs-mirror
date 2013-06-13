@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   daozong <daozong@taobao.com> 
+ *   daozong <daozong@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -24,7 +24,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "common/error_msg.h"
-#include "dataserver_define.h"
+//#include "dataserver_define.h"
 
 namespace tfs
 {

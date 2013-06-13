@@ -59,7 +59,6 @@ namespace tfs
       family_aid_info_(0)
     {
       _packetHeader._pcode = common::RSP_GET_FAMILY_INFO_MESSAGE;
-      members_.clear();
     }
 
     GetFamilyInfoResponseMessage::~GetFamilyInfoResponseMessage()
@@ -75,18 +74,17 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-        for (uint32_t index = 0; index < MEMBER_NUM && common::TFS_SUCCESS == ret; ++index)
+        int32_t index = 0;
+        const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+        for (index = 0; index < MEMBER_NUM && common::TFS_SUCCESS == ret; ++index)
         {
-          std::pair<uint32_t, uint64_t> item;
-          ret = input.get_int32(reinterpret_cast<int32_t*>(&item.first));
+          std::pair<uint64_t, uint64_t>* item = &members_[index];
+          ret = input.get_int64(reinterpret_cast<int64_t*>(&item->first));
           if (common::TFS_SUCCESS == ret)
-            ret = input.get_int64(reinterpret_cast<int64_t*>(&item.second));
-          if (common::TFS_SUCCESS == ret)
-            members_.push_back(item);
+            ret = input.get_int64(reinterpret_cast<int64_t*>(&item->second));
         }
         if (common::TFS_SUCCESS == ret)
-          ret = members_.size() == MEMBER_NUM ? common::TFS_SUCCESS : common::EXIT_DESERIALIZE_ERROR;
+          ret = index == MEMBER_NUM ? common::TFS_SUCCESS : common::EXIT_DESERIALIZE_ERROR;
       }
       return ret;
     }
@@ -94,7 +92,7 @@ namespace tfs
     int64_t GetFamilyInfoResponseMessage::length() const
     {
       const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-      return common::INT64_SIZE + common::INT_SIZE + MEMBER_NUM * (common::INT64_SIZE + common::INT_SIZE);
+      return common::INT64_SIZE + common::INT_SIZE + MEMBER_NUM * (common::INT64_SIZE + common::INT64_SIZE);
     }
 
     int GetFamilyInfoResponseMessage::serialize(common::Stream& output)  const
@@ -106,18 +104,13 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-        ret = members_.size() == MEMBER_NUM ? common::TFS_SUCCESS : common::EXIT_SERIALIZE_ERROR;
-        if (common::TFS_SUCCESS == ret)
-        {
-          std::vector<std::pair<uint32_t, uint64_t> >::const_iterator iter = members_.begin();
-          for (; iter != members_.end() && common::TFS_SUCCESS == ret; ++iter)
+        const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+        for (int32_t index = 0; index < MEMBER_NUM; ++index)
           {
-            ret = output.set_int32(iter->first);
+            ret = output.set_int64(members_[index].first);
             if (common::TFS_SUCCESS == ret)
-              ret = output.set_int64(iter->second);
+              ret = output.set_int64(members_[index].second);
           }
-        }
       }
       return ret;
     }

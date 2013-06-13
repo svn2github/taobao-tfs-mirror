@@ -87,6 +87,7 @@ namespace tfs
 
 #define CONF_COMPACT_HOUR_RANGE                       "compact_hour_range"
 #define CONF_COMPACT_DELETE_RATIO                     "compact_delete_ratio"
+#define CONF_COMPACT_UPDATE_RATIO                     "compact_update_ratio"
 #define CONF_COMPACT_MAX_LOAD                         "compact_max_load"
 #define CONF_REPLICATE_RATIO                          "replicate_ratio"
 #define CONF_REPL_WAIT_TIME                           "repl_wait_time"
@@ -111,6 +112,7 @@ namespace tfs
 #define CONF_MAX_DATA_MEMBER_NUM                      "max_data_member_num"
 #define CONF_MAX_CHECK_MEMBER_NUM                     "max_check_member_num"
 #define CONF_MAX_MARSHALLING_QUEUE_TIMEOUT            "max_marshalling_queue_timeout"
+#define CONF_TAIR_ADDR                                "tair_addr"
 
   //dataserver
 #define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
@@ -145,6 +147,9 @@ namespace tfs
 #define CONF_REPLICATE_THREADCOUNT                    "replicate_threadcount"
 #define CONF_MAX_SYNC_RETRY_COUNT                     "max_sync_retry_count"
 #define CONF_MAX_SYNC_RETRY_INTERVAL                  "max_sync_retry_interval"
+#define CONF_SYNC_FAIL_RETRY_INTERVAL                 "sync_fail_retry_interval"
+#define CONF_MAX_INIT_INDEX_ELEMENT_NUMS              "max_init_index_element_nums"
+#define CONF_MAX_EXTEND_INDEX_ELEMENT_NUMS            "max_extend_index_element_nums"
 
 //rc
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"
@@ -182,13 +187,10 @@ namespace tfs
 // check server
 #define CONF_THREAD_COUNT                             "thread_count"
 #define CONF_CHECK_INTERVAL                           "check_interval"
-#define CONF_OVERLAP_CHECK_TIME                       "overlap_check_time"
-#define CONF_BLOCK_STABLE_TIME                        "block_stable_time"
 #define CONF_CLUSTER_ID                               "cluster_id"
-#define CONF_MASTER_NS_IP                             "master_ns_ip"
-#define CONF_MASTER_NS_PORT                           "master_ns_port"
-#define CONF_SLAVE_NS_IP                              "slave_ns_ip"
-#define CONF_SLAVE_NS_PORT                            "slave_ns_port"
+#define CONF_NS_IP                                    "ns_ip"
+#define CONF_CHECK_RETRY_TURN                         "check_retry_turn"
+#define CONF_TURN_INTERVAL                            "turn_interval"
 
 //kv meta server
 #define CONF_TAIR_MASTER                             "tair_master"

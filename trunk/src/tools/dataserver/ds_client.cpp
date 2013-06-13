@@ -30,7 +30,9 @@
 #include "common/client_manager.h"
 #include "message/message_factory.h"
 #include "tools/util/ds_lib.h"
+#include "clientv2/fsname.h"
 
+using namespace tfs::clientv2;
 using namespace tfs::common;
 using namespace tfs::tools;
 using namespace std;
@@ -48,6 +50,7 @@ enum CmdSet
   CMD_CREATE_FILE_ID,
   CMD_LIST_FILE,
   CMD_READ_FILE_DATA,
+  CMD_VERIFY_FILE_DATA,
   CMD_WRITE_FILE_DATA,
   CMD_UNLINK_FILE,
   CMD_RENAME_FILE,
@@ -163,7 +166,6 @@ int main(int argc, char* argv[])
     int i = optind;
     if (iex)
     {
-      printf("with i\n");
       for (i = optind; i < argc; i++)
       {
         param.clear();
@@ -173,7 +175,6 @@ int main(int argc, char* argv[])
     }
     else
     {
-      printf("without i\n");
       for (i = optind; i < argc; i++)
       {
         param.clear();
@@ -181,6 +182,8 @@ int main(int argc, char* argv[])
       }
     }
   }
+
+  NewClientManager::get_instance().destroy();
   return TFS_SUCCESS;
 }
 
@@ -197,6 +200,7 @@ void init()
   cmd_map["create_file_id"] = CMD_CREATE_FILE_ID;
   cmd_map["list_file"] = CMD_LIST_FILE;
   cmd_map["read_file_data"] = CMD_READ_FILE_DATA;
+  cmd_map["verify_file_data"] = CMD_VERIFY_FILE_DATA;
   cmd_map["write_file_data"] = CMD_WRITE_FILE_DATA;
   cmd_map["unlink_file"] = CMD_UNLINK_FILE;
   cmd_map["rename_file"] = CMD_RENAME_FILE;
@@ -326,7 +330,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("delete a block in dataserver.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ret = DsLib::remove_block(ds_task);
       break;
@@ -355,7 +359,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("get the information of a block in the dataserver.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ret = DsLib::get_block_info(ds_task);
       break;
@@ -368,7 +372,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("reset the version of the block in dataserver.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ret = DsLib::reset_block_version(ds_task);
       break;
@@ -381,8 +385,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("add a new file_id.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_new_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_new_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ds_task.new_file_id_ = ds_new_file_id;
       ret = DsLib::create_file_id(ds_task);
@@ -396,36 +400,70 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("list all the files in a block.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
+      ds_task.attach_block_id_ = ds_block_id;
       ds_task.mode_ = 1;
       ret = DsLib::list_file(ds_task);
       break;
     }
   case CMD_READ_FILE_DATA:
     {
-      if (param.size() != 3)
+      if (param.size() != 4)
       {
-        printf("Usage:read_file_data blockid fileid local_file_name\n");
+        printf("Usage:read_file_data blockid attach_blockid fileid local_file_name\n");
         printf("download a tfs file to local.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+
+      uint64_t ds_attach_block_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_file_id = strtoull(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
+      ds_task.attach_block_id_ = ds_attach_block_id;
       ds_task.new_file_id_ = ds_file_id;
-      snprintf(ds_task.local_file_, MAX_PATH_LENGTH, "%s", param[2].c_str());
+      snprintf(ds_task.local_file_, MAX_PATH_LENGTH, "%s", param[3].c_str());
       ret = DsLib::read_file_data(ds_task);
       if (TFS_SUCCESS == ret)
       {
-        printf("download tfs file %u, %"PRI64_PREFIX "u to local file %s success.\n", ds_task.block_id_, ds_task.new_file_id_, ds_task.local_file_);
+        printf("download tfs file %"PRI64_PREFIX"u, %"PRI64_PREFIX"u, %"PRI64_PREFIX"u ====> local file %s success.\n", ds_task.block_id_, ds_task.attach_block_id_, ds_task.new_file_id_, ds_task.local_file_);
       }
       else
       {
-        printf("download tfs file %u, %"PRI64_PREFIX "u to local file %s fail.\n", ds_task.block_id_, ds_task.new_file_id_, ds_task.local_file_);
+        printf("download tfs file %"PRI64_PREFIX"u, %"PRI64_PREFIX "u to local file %s fail.\n", ds_task.block_id_, ds_task.new_file_id_, ds_task.local_file_);
       }
       break;
     }
+  case CMD_VERIFY_FILE_DATA:
+    {
+      if (param.size() != 2)
+      {
+        printf("Usage:read_file_data blockid fileid\n");
+        printf("check if tfs data crc match.\n");
+        break;
+      }
+      uint64_t block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+
+      ds_task.block_id_ = block_id;
+      ds_task.attach_block_id_ = block_id;
+      ds_task.new_file_id_ = file_id;
+
+      ret = DsLib::verify_file_data(ds_task);
+      if (TFS_SUCCESS == ret)
+      {
+        printf ("verify file success. blockid: %"PRI64_PREFIX"u, %"PRI64_PREFIX"u\n",
+            block_id, file_id);
+      }
+      else
+      {
+        printf ("verify file fail. blockid: %"PRI64_PREFIX"u, %"PRI64_PREFIX"u\n",
+            block_id, file_id);
+      }
+
+      break;
+    }
+
   case CMD_WRITE_FILE_DATA:
     {
       if (param.size() != 3)
@@ -434,8 +472,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("upload a local file to this dataserver.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ds_task.new_file_id_ = ds_file_id;
       snprintf(ds_task.local_file_, MAX_PATH_LENGTH, "%s", param[2].c_str());
@@ -454,8 +492,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("delete a file.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       int32_t unlink_type = 0;
       int32_t option_flag = 0;
       int32_t is_master = 0;
@@ -487,9 +525,9 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("rename file id.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_old_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_new_file_id = strtoul(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_old_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_new_file_id = strtoull(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
       ds_task.block_id_ = ds_block_id;
       ds_task.old_file_id_ = ds_old_file_id;
       ds_task.new_file_id_ = ds_new_file_id;
@@ -506,7 +544,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("get the file information.\n");
         break;
       }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       int32_t ds_mode = 1;
       if (3 == param.size())
@@ -530,7 +568,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         break;
       }
 
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint32_t ds_crc = strtoul(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
 
@@ -564,21 +602,6 @@ int switch_cmd(const int cmd, VSTRING & param)
       ds_task.option_flag_ = ds_error_flag;
       ds_task.failed_servers_ = fail_servers;
       ret = DsLib::send_crc_error(ds_task);
-      break;
-    }
-  case CMD_LIST_BITMAP:
-    {
-      if (param.size() != 1)
-      {
-        printf("Usage:list_bitmap type\n");
-        printf("      type  0|1,  0          => normal bitmap\n\
-                                  1          => error bitmap\n");
-        printf("list the bitmap of the server.\n");
-        break;
-      }
-      int type = atoi(const_cast<char*> (param[0].c_str()));
-      ds_task.list_block_type_ = type;
-      ret = DsLib::list_bitmap(ds_task);
       break;
     }
   case CMD_UNKNOWN:
@@ -642,6 +665,7 @@ int show_help(VSTRING &)
     "get_block_info  block_id                                                    get the information of a block in the dataserver.\n"
     "list_file  block_id                                                         list all the files in a block.\n"
     "read_file_data  blockid fileid local_file_name                              download a tfs file to local.\n"
+    "verify_file_data  tfs_file_name                                             check tfs file data crc.\n"
     "write_file_data block_id file_id local_file_name                            upload a local file to tfs\n"
     "unlink_file  block_id file_id [unlink_type] [option_flag] [is_master]       delete a file.\n"
     "read_file_info  block_id file_id [ds_mode]                                  get the file information.\n"

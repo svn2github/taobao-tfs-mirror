@@ -13,12 +13,14 @@
  *      - initial release
  *   chuyu <chuyu@taobao.com>
  *      - modify 2010-03-20
+ *   linqing <linqing.zyd@taobao.com>
+ *      - modify 2012-12-20
  *
  */
 #include <stdio.h>
 #include "common/parameter.h"
-#include "dataserver/blockfile_manager.h"
-#include "dataserver/version.h"
+#include "dataserver/block_manager.h"
+#include "common/version.h"
 
 using namespace tfs::dataserver;
 using namespace tfs::common;
@@ -74,11 +76,17 @@ int main(int argc, char* argv[])
     return ret;
   }
 
-  ret = BlockFileManager::get_instance()->clear_block_file_system(SYSPARAM_FILESYSPARAM);
-  if (ret)
+  string super_block_path = string(SYSPARAM_FILESYSPARAM.mount_name_) + SUPERBLOCK_NAME;
+  BlockManager block_manager_(super_block_path);
+  ret = block_manager_.cleanup(SYSPARAM_FILESYSPARAM);
+  if (TFS_SUCCESS != ret)
   {
     fprintf(stderr, "clear tfs file system fail. ret: %d, error: %d, desc: %s\n", ret, errno, strerror(errno));
     return ret;
+  }
+  else
+  {
+    printf("clear file system successfully!\n");
   }
   return 0;
 }

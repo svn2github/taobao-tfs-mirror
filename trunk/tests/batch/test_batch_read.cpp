@@ -16,13 +16,13 @@
 #include "util.h"
 #include "thread.h"
 #include "common/func.h"
-#include "new_client/tfs_client_api.h"
+#include "clientv2/tfs_client_impl_v2.h"
 #include <vector>
 #include <algorithm>
 #include <functional>
 
 using namespace KFS;
-using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace tfs::common;
 using namespace std;
 
@@ -37,7 +37,7 @@ void sign_handler(int32_t sig)
   }
 }
 
-#define FILE_NAME_LEN 18
+//#define FILE_NAME_LEN 18
 
 void* read_worker(void* arg)
 {
@@ -48,7 +48,7 @@ void* read_worker(void* arg)
   FILE* input_fd = fopen(file_list_name, "rb");
   if (NULL == input_fd)
   {
-    printf("index(%d) open read file failed, exit\n", param.index_);
+    printf("file_list_name:%s open read file failed, index: %d, exit\n", file_list_name, param.index_);
     return NULL;
   }
 
@@ -61,7 +61,7 @@ void* read_worker(void* arg)
      tfs_file.set_session(&session);
      */
   printf("init connection to nameserver:%s\n", param.ns_ip_port_.c_str());
-  TfsClient* tfsclient = TfsClient::Instance();
+  TfsClientImplV2* tfsclient = TfsClientImplV2::Instance();
   int iret = tfsclient->initialize(param.ns_ip_port_.c_str());
   if (iret == TFS_ERROR)
   {
@@ -200,7 +200,11 @@ int main(int argc, char* argv[])
   int32_t ret = fetch_input_opt(argc, argv, input_param, thread_count);
   if (ret != TFS_SUCCESS || input_param.ns_ip_port_.empty() || thread_count > THREAD_SIZE)
   {
+<<<<<<< .working
     printf("usage: -d nsip:port -c file_count -t thread_count -s random(0/1)\n");
+=======
+    printf("usage: -d nsip:port -t thread_num -c file_count -s random(0/1)\n");
+>>>>>>> .merge-right.r2309
     exit(-1);
   }
 

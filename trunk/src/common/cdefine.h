@@ -43,6 +43,9 @@ static const int32_t FILE_NAME_EXCEPT_SUFFIX_LEN = 12;
 static const int32_t MAX_FILE_NAME_LEN = 128;
 static const int32_t MAX_SUFFIX_LEN = MAX_FILE_NAME_LEN - TFS_FILE_LEN;
 static const int32_t STANDARD_SUFFIX_LEN = 4;
+static const int32_t FILE_NAME_LEN_V2 = 26;
+static const int32_t TFS_FILE_LEN_V2 = FILE_NAME_LEN_V2 + 1;
+static const int32_t FILE_NAME_EXCEPT_SUFFIX_LEN_V2 = 18;
 
 #else
 
@@ -124,6 +127,7 @@ typedef enum
   UNDELETE = 2,
   CONCEAL = 4,
   REVEAL = 6,
+  OVERRIDE = 8,
   SYNC = 126
 } TfsUnlinkType;
 
@@ -137,7 +141,8 @@ typedef enum
 typedef enum
 {
   READ_DATA_OPTION_FLAG_NORMAL = 0,
-  READ_DATA_OPTION_FLAG_FORCE = 1
+  READ_DATA_OPTION_FLAG_FORCE = 1,
+  READ_DATA_OPTION_WITH_FINFO = 2
 } ReadDataOptionFlag;
 
 typedef enum
@@ -153,4 +158,11 @@ typedef enum
   USE_CACHE_FLAG_REMOTE = 0x02
 } UseCacheFlag;
 
+typedef enum _FileStatus
+{
+  FILE_STATUS_NOMARL = 0,
+  FILE_STATUS_DELETE = 1,
+  FILE_STATUS_INVALID= 2,
+  FILE_STATUS_CONCEAL= 4
+}FileStatus;
 #endif

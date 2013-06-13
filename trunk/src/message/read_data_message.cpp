@@ -481,7 +481,7 @@ namespace tfs
       return read_data_info_.length() + sizeof(ZoomData);
     }
 
-    ReadRawIndexMessage::ReadRawIndexMessage():
+    /*ReadRawIndexMessage::ReadRawIndexMessage():
       block_id_(0), index_id_(0), index_op_(common::OP_NOT_INIT)
     {
       _packetHeader._pcode = common::READ_RAW_INDEX_MESSAGE;
@@ -535,6 +535,6 @@ namespace tfs
     RespReadRawIndexMessage::~RespReadRawIndexMessage()
     {
 
-    }
+    }*/
   }
 }

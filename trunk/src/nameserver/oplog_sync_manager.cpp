@@ -118,33 +118,39 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        std::string db_info = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_META_DB_INFOS, "");
+        std::string tair_info = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_TAIR_ADDR, "");
         std::vector<std::string> items;
-        common::Func::split_string(db_info.c_str(), ',', items);
-        ret = items.size() < 3 ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
+        common::Func::split_string(tair_info.c_str(), ',', items);
+        ret = items.size() < 5 ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "db info: %s is invalid", db_info.c_str());
+          TBSYS_LOG(ERROR, "tair info: %s is invalid", tair_info.c_str());
         }
         if (TFS_SUCCESS == ret)
         {
-          dbhelper_ = new DataBaseHelper(items[0], items[1], items[2]);
+          dbhelper_ = new TairHelper(items[0], items[1], items[2], items[3], atoi(items[4].c_str()));
+          ret = dbhelper_->initialize();
+        }
+        if (TFS_SUCCESS == ret)
+        {
           int64_t family_id = 0;
           std::vector<common::FamilyInfo> infos;
           do
           {
             ret = dbhelper_->scan(infos, family_id);
-            if (TFS_SUCCESS == ret)
+            if (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret)
             {
+              if (TAIR_RETURN_SUCCESS == ret)
+                ret = TFS_SUCCESS;
               time_t now = Func::get_monotonic_time();
-              std::pair<uint32_t, int32_t> members[MAX_MARSHALLING_NUM];
-              common::ArrayHelper<std::pair<uint32_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
+              std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
+              common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
               std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
               for (; iter != infos.end(); ++iter)
               {
                 helper.clear();
                 family_id = (*iter).family_id_;
-                std::vector<std::pair<uint32_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
+                std::vector<std::pair<uint64_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
                 for (; it != (*iter).family_member_.end(); ++it)
                 {
                   helper.push_back(std::make_pair((*it).first, (*it).second));
@@ -156,7 +162,7 @@ namespace tfs
               }
             }
           }
-          while (infos.size() > 0 && TFS_SUCCESS == ret);
+          while (infos.size() > 0 && TAIR_HAS_MORE_DATA == ret);
         }
       }
       return ret;
@@ -204,7 +210,7 @@ namespace tfs
       int32_t ret = ((NULL != data) && (length > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ngi.dump(TBSYS_LOG_LEVEL(DEBUG), "write oplog");
+        //ngi.dump(TBSYS_LOG_LEVEL(DEBUG), "write oplog");
         if (ngi.is_master()
             && !ngi.is_destroyed()
             && ngi.has_valid_lease(now))
@@ -414,7 +420,7 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          if (oplog.servers_.empty() || (oplog.blocks_.empty()))
+          if (oplog.server_num_ <= 0)
           {
             TBSYS_LOG(INFO, "play log error, data: %s, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
             ret = EXIT_PLAY_LOG_ERROR;
@@ -422,35 +428,30 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          std::vector<uint32_t>::const_iterator iter = oplog.blocks_.begin();
           if (OPLOG_UPDATE == oplog.cmd_)
           {
             bool addnew = false;
             ret = manager_.update_block_info(oplog.info_, oplog.servers_[0], now, addnew);
             if (TFS_SUCCESS != ret)
             {
-              TBSYS_LOG(INFO, "update block information error, block: %u, server: %s",
+              TBSYS_LOG(INFO, "update block information error, block: %"PRI64_PREFIX"u, server: %s",
                   oplog.info_.block_id_, CNetUtil::addrToString(oplog.servers_[0]).c_str());
             }
           }
           else if (OPLOG_INSERT == oplog.cmd_)
           {
-            for (; iter != oplog.blocks_.end(); ++iter)
-            {
-              uint32_t block_id = (*iter);
               BlockCollect* block = NULL;
-              uint32_t tmp_block_id = id_factory_.generation(block_id);
-              ret = INVALID_BLOCK_ID != tmp_block_id ? TFS_SUCCESS : TFS_ERROR;
+              ret = id_factory_.update(oplog.info_.block_id_);
               if (TFS_SUCCESS != ret)
               {
-                TBSYS_LOG(INFO, "generation block id: %u failed, ret: %d", block_id, ret);
+                TBSYS_LOG(INFO, "update block id: %"PRI64_PREFIX"u failed, ret: %d", oplog.info_.block_id_, ret);
               }
               else
               {
-                block = manager_.get_block_manager().get(block_id);
+                block = manager_.get_block_manager().get(oplog.info_.block_id_);
                 if (NULL == block)
                 {
-                  block = manager_.get_block_manager().insert(block_id, now);
+                  block = manager_.get_block_manager().insert(oplog.info_.block_id_, now);
                   ret = NULL == block ? EXIT_PLAY_LOG_ERROR : TFS_SUCCESS;
                 }
                 if (TFS_SUCCESS == ret)
@@ -462,38 +463,29 @@ namespace tfs
               if (TFS_SUCCESS == ret)
               {
                 ServerCollect* server = NULL;
-                std::vector<uint64_t>::iterator s_iter = oplog.servers_.begin();
-                for (; s_iter != oplog.servers_.end(); ++s_iter)
+                for (int8_t index = 0; index < oplog.server_num_; ++index)
                 {
-                  server = manager_.get_server_manager().get((*s_iter));
+                  server = manager_.get_server_manager().get(oplog.servers_[index]);
                   manager_.build_relation(block, server, now);
                 }
               }
-            }
           }
           else if (OPLOG_REMOVE== oplog.cmd_)
           {
             GCObject* pgcobject = NULL;
-            for (; iter != oplog.blocks_.end(); ++iter)
-            {
-              manager_.get_block_manager().remove(pgcobject, (*iter));
-              manager_.get_gc_manager().add(pgcobject);
-            }
+            manager_.get_block_manager().remove(pgcobject, oplog.info_.block_id_);
+            manager_.get_gc_manager().add(pgcobject);
           }
           else if (OPLOG_RELIEVE_RELATION == oplog.cmd_)
           {
-            for (; iter != oplog.blocks_.end(); ++iter)
+            for (int8_t index = 0; index < oplog.server_num_; ++index)
             {
-              std::vector<uint64_t>::iterator s_iter = oplog.servers_.begin();
-              for (; s_iter != oplog.servers_.end(); ++s_iter)
+              ServerCollect* server = manager_.get_server_manager().get(oplog.servers_[index]);
+              BlockCollect*  block  = manager_.get_block_manager().get(oplog.info_.block_id_);
+              if (!manager_.relieve_relation(block, server, now))//id
               {
-                ServerCollect* server = manager_.get_server_manager().get((*s_iter));
-                BlockCollect*  block  = manager_.get_block_manager().get((*iter));
-                if (!manager_.relieve_relation(block, server, now))//id
-                {
-                  TBSYS_LOG(INFO, "relieve relation between block: %u and server: %s failed",
-                      (*iter), CNetUtil::addrToString((*s_iter)).c_str());
-                }
+                TBSYS_LOG(INFO, "relieve relation between block: %"PRI64_PREFIX"u and server: %s failed",
+                    oplog.info_.block_id_, CNetUtil::addrToString(oplog.servers_[index]).c_str());
               }
             }
           }
@@ -641,10 +633,7 @@ namespace tfs
       int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        int64_t mysql_ret = -14000;
-        ret = dbhelper_->create_family(family_info, mysql_ret);
-        if (TFS_SUCCESS == ret)
-          ret = mysql_ret;
+        ret = dbhelper_->create_family(family_info);
       }
       return ret;
     }
@@ -654,10 +643,7 @@ namespace tfs
       int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        int64_t mysql_ret = -14000;
-        ret = dbhelper_->del_family(mysql_ret, family_id);
-        if (TFS_SUCCESS == ret)
-          ret = mysql_ret;
+        ret = dbhelper_->del_family(family_id);
       }
       return ret;
     }

@@ -308,6 +308,34 @@ namespace tfs
       DEGRADE_READ_DATA_MESSAGE = 110,
       REQ_CHECK_BLOCK_MESSAGE = 200,
       RSP_CHECK_BLOCK_MESSAGE = 201,
+      GET_BLOCK_INFO_MESSAGE_V2 = 202,
+      GET_BLOCK_INFO_RESP_MESSAGE_V2 = 203,
+      BATCH_GET_BLOCK_INFO_MESSAGE_V2 = 204,
+      BATCH_GET_BLOCK_INFO_RESP_MESSAGE_V2 = 205,
+      WRITE_FILE_MESSAGE_V2 = 206,
+      WRITE_FILE_RESP_MESSAGE_V2 = 207,
+      SLAVE_DS_RESP_MESSAGE = 208,
+      CLOSE_FILE_MESSAGE_V2 = 209,
+      UPDATE_BLOCK_INFO_MESSAGE_V2 = 210,
+      REPAIR_BLOCK_MESSAGE_V2 = 211,
+      STAT_FILE_MESSAGE_V2 = 212,
+      STAT_FILE_RESP_MESSAGE_V2 = 213,
+      READ_FILE_MESSAGE_V2 = 214,
+      READ_FILE_RESP_MESSAGE_V2 = 215,
+      UNLINK_FILE_MESSAGE_V2 = 216,
+      NEW_BLOCK_MESSAGE_V2 = 217,
+      REMOVE_BLOCK_MESSAGE_V2 = 218,
+      READ_RAWDATA_MESSAGE_V2 = 219,
+      READ_RAWDATA_RESP_MESSAGE_V2 = 220,
+      WRITE_RAWDATA_MESSAGE_V2 = 221,
+      READ_INDEX_MESSAGE_V2 = 222,
+      READ_INDEX_RESP_MESSAGE_V2 = 223,
+      WRITE_INDEX_MESSAGE_V2 = 224,
+      QUERY_EC_META_MESSAGE = 225,
+      QUERY_EC_META_RESP_MESSAGE = 226,
+      COMMIT_EC_META_MESSAGE = 227,
+      BLOCK_FILE_INFO_MESSAGE_V2 = 228,
+      REPORT_CHECK_BLOCK_MESSAGE = 229,
 
       REQ_KVMETA_GET_OBJECT_MESSAGE = 300,
       RSP_KVMETA_GET_OBJECT_MESSAGE = 301,
@@ -369,7 +397,7 @@ namespace tfs
       int64_t get_data_length() const { return stream_.get_data_length();}
       virtual int reply(BasePacket* packet);
       int reply_error_packet(const int32_t level, const char* file, const int32_t line,
-               const char* function, const int32_t error_code, const char* fmt, ...);
+               const char* function, pthread_t thid, const int32_t error_code, const char* fmt, ...);
       virtual void dump() const {}
 
       inline bool is_enable_dump() const { return dump_flag_;}

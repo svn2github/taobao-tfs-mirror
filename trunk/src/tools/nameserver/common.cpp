@@ -24,9 +24,6 @@ namespace tfs
       id_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
       last_update_time_(0), startup_time_(0), current_time_(0)
     {
-#ifdef TFS_NS_DEBUG
-      total_elect_num_ = 0;
-#endif
       memset(&total_tp_, 0, sizeof(total_tp_));
       memset(&last_tp_, 0, sizeof(last_tp_));
     }
@@ -41,9 +38,6 @@ namespace tfs
         return TFS_ERROR;
       }
       int32_t len = input.getDataLen();
-#ifdef TFS_NS_DEBUG
-      total_elect_num_ = input.readInt64();
-#endif
       id_ = input.readInt64();
       use_capacity_ = input.readInt64();
       total_capacity_ = input.readInt64();
@@ -52,11 +46,18 @@ namespace tfs
       last_update_time_ = input.readInt64();
       startup_time_ = input.readInt64();
       total_tp_.write_byte_ = input.readInt64();
-      total_tp_.write_file_count_ = input.readInt64();
       total_tp_.read_byte_ = input.readInt64();
+      total_tp_.write_file_count_ = input.readInt64();
       total_tp_.read_file_count_ = input.readInt64();
+      total_tp_.unlink_file_count_ = input.readInt64();
+      total_tp_.fail_write_byte_ = input.readInt64();
+      total_tp_.fail_read_byte_ = input.readInt64();
+      total_tp_.fail_write_file_count_ = input.readInt64();
+      total_tp_.fail_read_file_count_ = input.readInt64();
+      total_tp_.fail_unlink_file_count_ = input.readInt64();
       current_time_ = input.readInt64();
       status_ = (DataServerLiveStatus)input.readInt32();
+
       offset += (len - input.getDataLen());
 
       if (type & SERVER_TYPE_BLOCK_LIST)
@@ -65,7 +66,7 @@ namespace tfs
         int32_t hold_size = input.readInt32();
         while (hold_size > 0)
         {
-          hold_.insert(input.readInt32());
+          hold_.insert(input.readInt64());
           hold_size--;
         }
         offset += (len - input.getDataLen());
@@ -77,7 +78,7 @@ namespace tfs
         int32_t writable_size = input.readInt32();
         while (writable_size > 0)
         {
-          writable_.insert(input.readInt32());
+          writable_.insert(input.readInt64());
           writable_size--;
         }
         offset += (len - input.getDataLen());
@@ -89,7 +90,7 @@ namespace tfs
         int32_t master_size = input.readInt32();
         while (master_size > 0)
         {
-          master_.insert(input.readInt32());
+          master_.insert(input.readInt64());
           master_size--;
         }
         offset += (len - input.getDataLen());
@@ -134,8 +135,12 @@ namespace tfs
       {
         return TFS_ERROR;
       }
+
+      int64_t pos = 0;
       int32_t len = input.getDataLen();
-      input.readBytes(&info_, sizeof(info_));
+      int32_t ret = info_.deserialize(input.getData(), input.getDataLen(), pos);
+      if (TFS_SUCCESS == ret)
+        input.drainData(info_.length());
 
       int8_t server_size = input.readInt8();
       while (server_size > 0)
@@ -145,15 +150,15 @@ namespace tfs
         server_list_.push_back(server_info);
         server_size--;
       }
-      family_id_ = input.readInt64();
+
       offset += (len - input.getDataLen());
       return TFS_SUCCESS;
     }
 
     void BlockBase::dump() const
     {
-      TBSYS_LOG(INFO, "family_id: %"PRI64_PREFIX"d,block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %u, copys: %Zd",
-          family_id_, info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_, info_.seq_no_, server_list_.size());
+      TBSYS_LOG(INFO, "family_id: %"PRI64_PREFIX"d,block_id: %"PRI64_PREFIX"u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, copys: %Zd",
+          info_.family_id_, info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_, server_list_.size());
     }
   }
 }

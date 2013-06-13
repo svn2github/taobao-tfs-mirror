@@ -55,11 +55,6 @@ namespace tfs
       return impl_->get_app_id();
     }
 
-    void RcClient::set_remote_cache_info(const char * remote_cache_info)
-    {
-      impl_->set_remote_cache_info(remote_cache_info);
-    }
-
     void RcClient::set_client_retry_count(const int64_t count)
     {
       impl_->set_client_retry_count(count);
@@ -75,10 +70,16 @@ namespace tfs
       impl_->set_client_retry_flag(retry_flag);
     }
 
+#ifdef WITH_TAIR_CACHE
+    void RcClient::set_remote_cache_info(const char * remote_cache_info)
+    {
+      impl_->set_remote_cache_info(remote_cache_info);
+    }
+#endif
+
     void RcClient::set_wait_timeout(const int64_t timeout_ms)
     {
       impl_->set_wait_timeout(timeout_ms);
-      return;
     }
 
     void RcClient::set_log_level(const char* level)
@@ -147,15 +148,15 @@ namespace tfs
     }
 
     int64_t RcClient::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
-        const char *suffix, const bool is_large_file, const bool simple)
+        const char *suffix, const bool is_large_file)
     {
-      return impl_->save_file(local_file, tfs_name_buff, buff_len, suffix, is_large_file, simple);
+      return impl_->save_file(local_file, tfs_name_buff, buff_len, suffix, is_large_file);
     }
 
     int64_t RcClient::save_buf(const char* source_data, const int32_t data_len,
-        char* tfs_name_buff, const int32_t buff_len, const char* suffix, const bool simple)
+        char* tfs_name_buff, const int32_t buff_len, const char* suffix)
     {
-      return impl_->save_buf(source_data, data_len, tfs_name_buff, buff_len, suffix, simple);
+      return impl_->save_buf(source_data, data_len, tfs_name_buff, buff_len, suffix);
     }
 
     int RcClient::fetch_file(const char* local_file,

@@ -82,14 +82,10 @@ namespace tfs
       info.status_ = DATASERVER_STATUS_ALIVE;
       info.id_ = 0xfffffff0;
       const int32_t MAX_SERVER_NUM = 16;
-
-      ServerCollect server(info, now);
-      info.id_++;
-      ServerCollect server2(info, now);
-      ServerCollect* servers[MAX_SERVER_NUM];
-      ArrayHelper<ServerCollect*> runer(MAX_SERVER_NUM, servers);
-      runer.push_back(&server);
-      runer.push_back(&server2);
+      uint64_t servers[MAX_SERVER_NUM];
+      ArrayHelper<uint64_t> runer(MAX_SERVER_NUM, servers);
+      runer.push_back(info.id_);
+      runer.push_back(++info.id_);
 
       uint32_t id = 100;
       PlanType type = PLAN_TYPE_REPLICATE;
@@ -102,7 +98,7 @@ namespace tfs
       uint64_t seqno = manager_.get_task_manager().seqno_;
       Task* task = manager_.get_task_manager().get_by_id(seqno);
       EXPECT_TRUE(NULL != task);
-      Task* ptask = manager_.get_task_manager().get_(id);
+      Task* ptask = manager_.get_task_manager().get_task_by_block_id_(id);
       EXPECT_TRUE(NULL != ptask);
       EXPECT_TRUE(task == ptask);
       EXPECT_TRUE(task->seqno_ == ptask->seqno_);
@@ -209,7 +205,7 @@ namespace tfs
       seqno = manager_.get_task_manager().seqno_;
       Task* task = manager_.get_task_manager().get_by_id(seqno);
       EXPECT_TRUE(task->type_ == PLAN_TYPE_EC_MARSHALLING);
-      task->dump(TBSYS_LOG_LEVEL_DEBUG);
+      task->dump(TBSYS_LOG_LEVEL(DEBUG),"");
 
       EXPECT_EQ(TFS_SUCCESS, manager_.get_task_manager().remove(task));
       manager_.get_task_manager().pending_queue_.clear();
@@ -229,7 +225,7 @@ namespace tfs
       seqno = manager_.get_task_manager().seqno_;
       task = manager_.get_task_manager().get_by_id(seqno);
       EXPECT_TRUE(task->type_ == PLAN_TYPE_EC_REINSTATE);
-      task->dump(TBSYS_LOG_LEVEL_DEBUG);
+      task->dump(TBSYS_LOG_LEVEL(DEBUG),"");
 
       EXPECT_EQ(TFS_SUCCESS, manager_.get_task_manager().remove(task));
       manager_.get_task_manager().pending_queue_.clear();
@@ -273,7 +269,7 @@ namespace tfs
       seqno = manager_.get_task_manager().seqno_;
       task = manager_.get_task_manager().get_by_id(seqno);
       EXPECT_TRUE(task->type_ == PLAN_TYPE_EC_DISSOLVE);
-      task->dump(TBSYS_LOG_LEVEL_DEBUG);
+      task->dump(TBSYS_LOG_LEVEL(DEBUG),"");
 
       EXPECT_EQ(TFS_SUCCESS, manager_.get_task_manager().remove(task));
       manager_.get_task_manager().pending_queue_.clear();
@@ -292,14 +288,10 @@ namespace tfs
       info.status_ = DATASERVER_STATUS_ALIVE;
       info.id_ = 0xfffffff0;
       const int32_t MAX_SERVER_NUM = 16;
-
-      ServerCollect server(info, now);
-      info.id_++;
-      ServerCollect server2(info, now);
-      ServerCollect* servers[MAX_SERVER_NUM];
-      ArrayHelper<ServerCollect*> runer(MAX_SERVER_NUM, servers);
-      runer.push_back(&server);
-      runer.push_back(&server2);
+      uint64_t servers[MAX_SERVER_NUM];
+      ArrayHelper<uint64_t> runer(MAX_SERVER_NUM, servers);
+      runer.push_back(info.id_);
+      runer.push_back(++info.id_);
 
       uint32_t id = 100;
       PlanType type = PLAN_TYPE_REPLICATE;
@@ -311,13 +303,13 @@ namespace tfs
       uint64_t seqno = manager_.get_task_manager().seqno_;
       Task* task = manager_.get_task_manager().get_by_id(seqno);
       EXPECT_TRUE(NULL != task);
-      Task* block_to_task = manager_.get_task_manager().get_(id);
-      Task* server_to_task = manager_.get_task_manager().get_(info.id_);
+      Task* block_to_task = manager_.get_task_manager().get_task_by_block_id_(id);
+      Task* server_to_task = manager_.get_task_manager().get_task_by_server_id_(info.id_);
       EXPECT_TRUE(task == block_to_task);
       EXPECT_TRUE(task == server_to_task);
-      EXPECT_TRUE(manager_.get_task_manager().exist(id));
-      EXPECT_TRUE(manager_.get_task_manager().exist(info.id_));
-      EXPECT_TRUE(manager_.get_task_manager().exist(info.id_ - 1));
+      EXPECT_TRUE(manager_.get_task_manager().exist_block(id));
+      EXPECT_TRUE(manager_.get_task_manager().exist_server(info.id_));
+      EXPECT_TRUE(manager_.get_task_manager().exist_server(info.id_ - 1));
 
       EXPECT_EQ(TFS_SUCCESS, manager_.get_task_manager().remove(task));
       manager_.get_task_manager().pending_queue_.clear();
@@ -325,30 +317,30 @@ namespace tfs
       EXPECT_TRUE(NULL == task);
       EXPECT_EQ(0U, manager_.get_task_manager().machine_to_tasks_.size());
       EXPECT_EQ(0U, manager_.get_task_manager().block_to_tasks_.size());
-      block_to_task = manager_.get_task_manager().get_(id);
-      server_to_task = manager_.get_task_manager().get_(info.id_);
+      block_to_task = manager_.get_task_manager().get_task_by_block_id_(id);
+      server_to_task = manager_.get_task_manager().get_task_by_server_id_(info.id_);
       EXPECT_TRUE(NULL == block_to_task);
       EXPECT_TRUE(NULL == server_to_task);
-      server_to_task = manager_.get_task_manager().get_(info.id_);
+      server_to_task = manager_.get_task_manager().get_task_by_server_id_(info.id_);
       EXPECT_TRUE(NULL == server_to_task);
-      EXPECT_FALSE(manager_.get_task_manager().exist(id));
-      EXPECT_FALSE(manager_.get_task_manager().exist(info.id_));
-      EXPECT_FALSE(manager_.get_task_manager().exist(info.id_ - 1));
+      EXPECT_FALSE(manager_.get_task_manager().exist_block(id));
+      EXPECT_FALSE(manager_.get_task_manager().exist_server(info.id_));
+      EXPECT_FALSE(manager_.get_task_manager().exist_server(info.id_ - 1));
 
       type = PLAN_TYPE_COMPACT;
       EXPECT_EQ(TFS_SUCCESS, manager_.get_task_manager().add(id, runer, type, now));
       EXPECT_EQ(0U, manager_.get_task_manager().machine_to_tasks_.size());
       EXPECT_EQ(1U, manager_.get_task_manager().block_to_tasks_.size());
       EXPECT_EQ(1U, manager_.get_task_manager().pending_queue_.size());
-      block_to_task = manager_.get_task_manager().get_(id);
-      server_to_task = manager_.get_task_manager().get_(info.id_);
+      block_to_task = manager_.get_task_manager().get_task_by_block_id_(id);
+      server_to_task = manager_.get_task_manager().get_task_by_server_id_(info.id_);
       EXPECT_TRUE(NULL != block_to_task);
       EXPECT_TRUE(NULL == server_to_task);
-      server_to_task = manager_.get_task_manager().get_(info.id_ - 1);
+      server_to_task = manager_.get_task_manager().get_task_by_server_id_(info.id_ - 1);
       EXPECT_TRUE(NULL == server_to_task);
-      EXPECT_TRUE(manager_.get_task_manager().exist(id));
-      EXPECT_FALSE(manager_.get_task_manager().exist(info.id_));
-      EXPECT_FALSE(manager_.get_task_manager().exist(info.id_ - 1));
+      EXPECT_TRUE(manager_.get_task_manager().exist_block(id));
+      EXPECT_FALSE(manager_.get_task_manager().exist_server(info.id_));
+      EXPECT_FALSE(manager_.get_task_manager().exist_server(info.id_ - 1));
     }
 
     TEST_F(TaskManagerTest, has_space_do_task_in_machine)
@@ -361,8 +353,8 @@ namespace tfs
       info.id_ = BASE_SERVER_ID;
 
       const int32_t MAX_SERVER_NUM = 16;
-      ServerCollect* servers[MAX_SERVER_NUM];
-      ArrayHelper<ServerCollect*> runer(MAX_SERVER_NUM, servers);
+      uint64_t servers[MAX_SERVER_NUM];
+      ArrayHelper<uint64_t> runer(MAX_SERVER_NUM, servers);
 
       uint32_t id = 100;
       uint32_t COUNT = SYSPARAM_NAMESERVER.max_task_in_machine_nums_ - 1;
@@ -373,12 +365,10 @@ namespace tfs
         runer.clear();
         info.id_ = tbsys::CNetUtil::strToAddr("172.24.80.21", 3200 + i);
         TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(info.id_).c_str());
-        ServerCollect server(info, now);
+        runer.push_back(info.id_);
         info.id_ = tbsys::CNetUtil::strToAddr("172.24.80.22", 3200 + i);
         TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(info.id_).c_str());
-        ServerCollect server2(info, now);
-        runer.push_back(&server);
-        runer.push_back(&server2);
+        runer.push_back(info.id_);
         EXPECT_EQ(TFS_SUCCESS, manager_.get_task_manager().add((id+i), runer, type, now));
       }
       EXPECT_EQ(COUNT, manager_.get_task_manager().block_to_tasks_.size());
@@ -387,15 +377,13 @@ namespace tfs
       COUNT = SYSPARAM_NAMESERVER.max_task_in_machine_nums_ + 1;
       for (; i < COUNT; i++)
       {
+        runer.clear();
         info.id_ = tbsys::CNetUtil::strToAddr("172.24.80.21", 3200 + i);
         TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(info.id_).c_str());
-        ServerCollect server(info, now);
+        runer.push_back(info.id_);
         info.id_ = tbsys::CNetUtil::strToAddr("172.24.80.22", 3200 + i);
         TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(info.id_).c_str());
-        runer.clear();
-        ServerCollect server2(info, now);
-        runer.push_back(&server);
-        runer.push_back(&server2);
+        runer.push_back(info.id_);
         EXPECT_EQ(TFS_SUCCESS, manager_.get_task_manager().add((id+i), runer, type, now));
       }
       EXPECT_EQ(COUNT, manager_.get_task_manager().block_to_tasks_.size());
@@ -407,15 +395,13 @@ namespace tfs
       COUNT = SYSPARAM_NAMESERVER.max_task_in_machine_nums_ /2;
       for (; i < COUNT; i++)
       {
+        runer.clear();
         info.id_ = tbsys::CNetUtil::strToAddr("172.24.80.21", 3200 + i);
         TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(info.id_).c_str());
-        ServerCollect server(info, now);
+        runer.push_back(info.id_);
         info.id_ = tbsys::CNetUtil::strToAddr("172.24.80.22", 3200 + i);
         TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(info.id_).c_str());
-        ServerCollect server2(info, now);
-        runer.clear();
-        runer.push_back(&server);
-        runer.push_back(&server2);
+        runer.push_back(info.id_);
         EXPECT_EQ(TFS_SUCCESS, manager_.get_task_manager().add((id+i), runer, type, now));
       }
       EXPECT_TRUE(manager_.get_task_manager().has_space_do_task_in_machine(BASE_SERVER_ID, true));
@@ -425,22 +411,20 @@ namespace tfs
       COUNT = SYSPARAM_NAMESERVER.max_task_in_machine_nums_ /2 + 1;
       for (i = 0; i < COUNT; i++)
       {
-        info.id_ = tbsys::CNetUtil::strToAddr("172.24.80.21", 3200 + i);
-        TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(info.id_).c_str());
-        ServerCollect server(info, now);
-        info.id_ = tbsys::CNetUtil::strToAddr("172.24.80.22", 3200 + i);
-        TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(info.id_).c_str());
-        ServerCollect server2(info, now);
+        uint64_t server = tbsys::CNetUtil::strToAddr("172.24.80.21", 3200 + i);
+        TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(server).c_str());
+        uint64_t server2 = tbsys::CNetUtil::strToAddr("172.24.80.22", 3200 + i);
+        TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(server2).c_str());
         runer.clear();
         if (i % 2 == 0)
         {
-          runer.push_back(&server);
-          runer.push_back(&server2);
+          runer.push_back(server);
+          runer.push_back(server2);
         }
         else
         {
-          runer.push_back(&server2);
-          runer.push_back(&server);
+          runer.push_back(server2);
+          runer.push_back(server);
         }
         EXPECT_EQ(TFS_SUCCESS, manager_.get_task_manager().add((id+i), runer, type, now));
       }
@@ -451,22 +435,20 @@ namespace tfs
       COUNT = SYSPARAM_NAMESERVER.max_task_in_machine_nums_  + 4;
       for (i = 0; i < COUNT; i++)
       {
-        info.id_ = tbsys::CNetUtil::strToAddr("172.24.80.21", 3200 + i);
-        TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(info.id_).c_str());
-        ServerCollect server(info, now);
-        info.id_ = tbsys::CNetUtil::strToAddr("172.24.80.22", 3200 + i);
-        TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(info.id_).c_str());
-        ServerCollect server2(info, now);
+        uint64_t server = tbsys::CNetUtil::strToAddr("172.24.80.21", 3200 + i);
+        TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(server).c_str());
+        uint64_t server2 = tbsys::CNetUtil::strToAddr("172.24.80.22", 3200 + i);
+        TBSYS_LOG(DEBUG, "addr: %s", tbsys::CNetUtil::addrToString(server2).c_str());
         runer.clear();
         if (i % 2 == 0)
         {
-          runer.push_back(&server);
-          runer.push_back(&server2);
+          runer.push_back(server);
+          runer.push_back(server2);
         }
         else
         {
-          runer.push_back(&server2);
-          runer.push_back(&server);
+          runer.push_back(server2);
+          runer.push_back(server);
         }
         EXPECT_EQ(TFS_SUCCESS, manager_.get_task_manager().add((id+i), runer, type, now));
       }

@@ -1,13 +1,13 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
       $(TAIR_CACHE_CPPFLAGS)\
 	    -I$(TBLIB_ROOT)/include/tbsys\
-            -I$(TBLIB_ROOT)/include/tbnet\
+      -I$(TBLIB_ROOT)/include/tbnet\
 	    $(READLINE_INCLUDE)
 
-AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid
+AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -luuid -lz -lsnappy
 
 bin_PROGRAMS = admintool showsyncoplog rmsyncoplog ssm tfstool performance syncbyfile\
-               read_syncoplog_header repair_block_info
+               read_syncoplog_header  check_replication repair_file_tool
 if WITH_TAIR_CACHE
 bin_PROGRAMS += remote_block_cache_tool
 endif
@@ -15,12 +15,14 @@ endif
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/dataserver/libdataserver.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
+	$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(UNIQUE_STORE_LDFLAGS)\
   $(TAIR_CACHE_LDFLAGS) \
 	$(TBLIB_ROOT)/lib/libtbnet.a\
-	$(TBLIB_ROOT)/lib/libtbsys.a
+	$(TBLIB_ROOT)/lib/libtbsys.a\
+	-lz
 
 showsyncoplog_SOURCES = showsyncoplog.cpp
 
@@ -35,7 +37,10 @@ read_syncoplog_header_SOURCES=read_syncoplog_header.cpp
 admintool_SOURCES = admintool.cpp
 performance_SOURCES = performance.cpp
 syncbyfile_SOURCES=sync_by_file.cpp
-repair_block_info_SOURCES=repair_block_info.cpp
+#repair_block_info_SOURCES=repair_block_info.cpp
 if WITH_TAIR_CACHE
 remote_block_cache_tool_SOURCES=remote_block_cache_tool.cpp
 endif
+
+check_replication_SOURCES=check_replication.cpp
+repair_file_tool_SOURCES=repair_file_tool.cpp

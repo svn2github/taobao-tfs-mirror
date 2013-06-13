@@ -38,12 +38,6 @@ namespace tfs
     {
       time_t last_time_;
       common::VUINT64 ds_;
-      common::FamilyInfoExt family_info_;  // optimize memory usage later
-
-      bool has_family_info() const
-      {
-        return common::INVALID_FAMILY_ID != family_info_.family_id_;
-      }
     };
 
     class TfsSession
@@ -62,11 +56,9 @@ namespace tfs
       int get_block_info(SegmentData& seg_data, int32_t flag);
       int get_block_info(SEG_DATA_LIST& seg_list, const int32_t flag);
 
-      void insert_local_block_cache(const uint32_t block_id, const common::VUINT64& rds, const common::FamilyInfoExt* family_info = NULL);
+      void insert_local_block_cache(const uint32_t block_id, const common::VUINT64& rds);
       void remove_local_block_cache(const uint32_t block_id);
       bool is_hit_local_cache(const uint32_t block_id);
-
-      bool is_expired(const BlockCache& block_cache) const;
 
       inline int32_t get_cluster_id() const
       {
@@ -122,7 +114,7 @@ namespace tfs
       TfsSession();
       DISALLOW_COPY_AND_ASSIGN(TfsSession);
       int get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag);
-      int get_block_info_ex(uint32_t& block_id, common::VUINT64& rds, common::FamilyInfoExt&, const int32_t flag);
+      int get_block_info_ex(uint32_t& block_id, common::VUINT64& rds, const int32_t flag);
       int get_cluster_id_from_ns();
     public:
       int get_cluster_group_count_from_ns();
@@ -143,9 +135,10 @@ namespace tfs
       static TairCacheHelper* remote_cache_helper_;
     public:
       int init_remote_cache_helper();
+      bool is_hit_remote_cache(uint32_t block_id);
       bool check_init();
-      void insert_remote_block_cache(const uint32_t block_id, const common::VUINT64& rds, const common::FamilyInfoExt* family_info = NULL);
-      int query_remote_block_cache(const uint32_t block_id, common::VUINT64& rds, common::FamilyInfoExt& family_info);
+      void insert_remote_block_cache(const uint32_t block_id, const common::VUINT64& rds);
+      int query_remote_block_cache(const uint32_t block_id, common::VUINT64& rds);
       int query_remote_block_cache(const SEG_DATA_LIST& seg_list, int& remote_hit_count);
       void remove_remote_block_cache(const uint32_t block_id);
 #endif

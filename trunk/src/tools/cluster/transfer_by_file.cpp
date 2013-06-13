@@ -29,7 +29,7 @@
 #include "common/directory_op.h"
 #include "new_client/fsname.h"
 #include "new_client/tfs_client_impl.h"
-#include "dataserver/dataserver_define.h"
+#include "dataserver/ds_define.h"
 #include "common/internal.h"
 
 using namespace std;

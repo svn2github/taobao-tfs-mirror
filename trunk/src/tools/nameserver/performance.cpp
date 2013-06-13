@@ -95,7 +95,8 @@ tbutil::Mutex mutex_;
 StatParam gstat_;
 StatParam gtotal_stat_;
 static FILE* gdump_file = NULL;
-static const int32_t READ_MAX_SIZE = 32;
+static const int32_t READ_MAX_SIZE = 1 * 1024 * 1024;
+int32_t MAX_FILE_SIZE = 150  * 1024;
 
 enum ModeType
 {
@@ -351,9 +352,8 @@ class WorkThread : public tbutil::Thread
         TBSYS_LOG(ERROR, "tfsclient initialize failed");
         return ;
       }
-      static const int32_t DATA_MAX_SIZE = 128;
-      char data[ DATA_MAX_SIZE];
-      generate_data(data, DATA_MAX_SIZE);
+      char data[MAX_FILE_SIZE];
+      generate_data(data, MAX_FILE_SIZE);
       int32_t loop = 0;
       const int32_t MAX_READ_COUNT = read_ratio_ *  BASE_MAX_COUNT;
       const int32_t MAX_WRITE_COUNT = write_ratio_ * BASE_MAX_COUNT;
@@ -362,7 +362,7 @@ class WorkThread : public tbutil::Thread
       {
         if (mode_ & WRITE_TYPE)
         {
-          if (write_file(tfs_name_created, data, DATA_MAX_SIZE, stat_) != TFS_SUCCESS)
+          if (write_file(tfs_name_created, data, MAX_FILE_SIZE, stat_) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "write file(%s) fail", file_path_.c_str());
           }
@@ -418,7 +418,7 @@ class WorkThread : public tbutil::Thread
           int32_t i = 0;
           while ( i < MAX_WRITE_COUNT )
           {
-            if (write_file(tfs_name_created, data, DATA_MAX_SIZE, stat_) != TFS_SUCCESS)
+            if (write_file(tfs_name_created, data, MAX_FILE_SIZE, stat_) != TFS_SUCCESS)
             {
               TBSYS_LOG(ERROR, "write file(%s) fail", file_path_.c_str());
             }
@@ -524,6 +524,7 @@ void helper()
     "-f                 the filename of tfsname list\n"
     "-p                 pid file name\n"
     "-g                 log file name\n"
+    "-c                 max file size\n"
     "-d                 Run as a daemon\n"
     "-h                 Show this message\n"
     "-v                 Show porgram version\n";
@@ -569,7 +570,7 @@ int main(int argc, char* argv[])
   int8_t mode  = 1;
   bool help = false;
   bool daemon = false;
-  while ((index = getopt(argc, argv, "s:t:m:o:l:b:i:f:p:g:dvh")) != EOF)
+  while ((index = getopt(argc, argv, "s:t:m:o:l:b:i:f:p:g:c:dvh")) != EOF)
   {
     switch (index)
     {
@@ -612,6 +613,9 @@ int main(int argc, char* argv[])
         break;
       case 'g':
         log_file = optarg;
+        break;
+      case 'c':
+        MAX_FILE_SIZE = atoll(optarg);
         break;
       case 'v':
         break;

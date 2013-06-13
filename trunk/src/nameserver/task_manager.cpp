@@ -99,7 +99,7 @@ namespace tfs
       }
     }
 
-    int TaskManager::add(const uint32_t id, const ArrayHelper<uint64_t>& servers,
+    int TaskManager::add(const uint64_t id, const ArrayHelper<uint64_t>& servers,
             const PlanType type, const time_t now)
     {
       //这里只判断Block是否正在写一次的原因: 因为add task到几个列表是不能被打断的，如果打断了处理的逻辑会很复杂
@@ -123,12 +123,12 @@ namespace tfs
           {
             int64_t index = 0;
             uint64_t server = INVALID_SERVER_ID;
-            std::pair<uint64_t, bool> success[SYSPARAM_NAMESERVER.max_replication_];
-            ArrayHelper<std::pair<uint64_t, bool> > helper(SYSPARAM_NAMESERVER.max_replication_, success);
+            std::pair<uint64_t, bool> success[MAX_REPLICATION_NUM];
+            ArrayHelper<std::pair<uint64_t, bool> > helper(MAX_REPLICATION_NUM, success);
             for (index = 0; index < servers.get_array_index() && TFS_SUCCESS == ret; ++index)
             {
               server = *servers.at(index);
-              if (task->type_ != PLAN_TYPE_COMPACT)
+              if (task->type_ != PLAN_TYPE_COMPACT && index < 2)
               {
                 std::pair<MACHINE_TO_TASK_ITER, bool> mrs;
                 uint64_t machine_ip = (server & 0xFFFFFFFF);
@@ -139,9 +139,9 @@ namespace tfs
                   mit = mrs.first;
                 }
                 ret = mit->second.add(server, task, is_target(index));
+                if (TFS_SUCCESS == ret)
+                  helper.push_back(std::make_pair(server, is_target(index)));
               }
-              if (TFS_SUCCESS == ret)
-                 helper.push_back(std::make_pair(server, is_target(index)));
             }
 
             //rollback
@@ -214,7 +214,7 @@ namespace tfs
                 bool insert_server= is_insert_server_(type, DATA_MEMBER_NUM, index);
                 ret = insert_(helper, task, members[index], target, insert_block, insert_server);
                 if (TFS_SUCCESS != ret)
-                  TBSYS_LOG(INFO, "family_id : %ld, block: %u, server: %lu", family_id, members[index].block_, members[index].server_);
+                  TBSYS_LOG(INFO, "family_id : %"PRI64_PREFIX"d, block: %"PRI64_PREFIX"u, server: %"PRI64_PREFIX"u", family_id, members[index].block_, members[index].server_);
               }
             }
 
@@ -301,7 +301,7 @@ namespace tfs
       if (level <= TBSYS_LOGGER._level)
       {
         RWLock::Lock lock(rwmutex_, READ_LOCKER);
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s, tasks size: %zd, block_to_task size: %zd, machine_to_task size: %"PRI64_PREFIX"d, pening_queue_size: %zd",
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__,pthread_self(), "%s, tasks size: %zd, block_to_task size: %zd, machine_to_task size: %"PRI64_PREFIX"d, pening_queue_size: %zd",
           format == NULL ? "" : format, tasks_.size(), block_to_tasks_.size(), size_(), pending_queue_.size());
         TASKS_CONST_ITER it = tasks_.begin();
         for (; it != tasks_.end(); ++it)
@@ -325,22 +325,22 @@ namespace tfs
       return size_();
     }
 
-    bool TaskManager::exist(const uint32_t block) const
+    bool TaskManager::exist_block(const uint64_t block) const
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      return (NULL != get_(block));
+      return (NULL != get_task_by_block_id_(block));
     }
 
-    bool TaskManager::exist(const uint64_t server) const
+    bool TaskManager::exist_server(const uint64_t server) const
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      return (NULL != get_(server));
+      return (NULL != get_task_by_server_id_(server));
     }
 
-    bool TaskManager::exist(const int64_t family_id) const
+    bool TaskManager::exist_family(const int64_t family_id) const
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      return (NULL != get_(family_id));
+      return (NULL != get_task_by_family_id_(family_id));
     }
 
     bool TaskManager::exist(const ArrayHelper<uint64_t>& servers) const
@@ -352,7 +352,7 @@ namespace tfs
         for (int64_t index = 0; index < servers.get_array_index() && ret; ++index)
         {
           server = *servers.at(index);
-          ret = exist(server);
+          ret = exist_server(server);
         }
       }
       return ret;
@@ -369,7 +369,7 @@ namespace tfs
         {
           server = *servers.at(i);
           assert(NULL != server);
-          ret = exist(server->id());
+          ret = exist_server(server->id());
           if (ret)
             result.push_back(server);
         }
@@ -396,10 +396,10 @@ namespace tfs
       return total < SYSPARAM_NAMESERVER.max_task_in_machine_nums_;
     }
 
-    int TaskManager::remove_block_from_dataserver(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now)
+    int TaskManager::remove_block_from_dataserver(const uint64_t server, const uint64_t block, const time_t now)
     {
-      int32_t ret = remove_block_from_dataserver_(server, block, seqno, now);
-      TBSYS_LOG(INFO, "send remove block: %u command on server : %s %s",
+      int32_t ret = remove_block_from_dataserver_(server, block, now);
+      TBSYS_LOG(INFO, "send remove block: %"PRI64_PREFIX"u command on server : %s %s",
         block, tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
       return ret;
     }
@@ -410,25 +410,24 @@ namespace tfs
      * @param [in] block, the one need expired.
      * @return TFS_SUCCESS success.
      */
-    int TaskManager::remove_block_from_dataserver_(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now)
+    int TaskManager::remove_block_from_dataserver_(const uint64_t server, const uint64_t block, const time_t now)
     {
-      RemoveBlockMessage rbmsg;
-      rbmsg.set(block);
-      rbmsg.set_seqno(seqno);
-      rbmsg.set_response_flag(REMOVE_BLOCK_RESPONSE_FLAG_NO);
-      BlockInfo info;
+      RemoveBlockMessageV2 rbmsg;
+      rbmsg.set_block_id(block);
+      BlockInfoV2 info;
       info.block_id_ = block;
-      std::vector<uint32_t> blocks;
-      std::vector<uint64_t> servers;
-      blocks.push_back(block);
-      servers.push_back(server);
-      manager_.block_oplog_write_helper(OPLOG_RELIEVE_RELATION, info, blocks, servers, now);
+      uint64_t servers[1];
+      common::ArrayHelper<uint64_t> helper(1,servers);
+      helper.push_back(server);
+      manager_.block_oplog_write_helper(OPLOG_RELIEVE_RELATION, info, helper, now);
+      std::vector<uint64_t> targets;
+      targets.push_back(server);
 
       NewClient* client = NewClientManager::get_instance().create_client();
       int32_t ret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = client->async_post_request(servers, &rbmsg, ns_async_callback);
+        ret = client->async_post_request(targets, &rbmsg, ns_async_callback);
         if (TFS_SUCCESS != ret)
           NewClientManager::get_instance().destroy_client(client);
       }
@@ -497,7 +496,7 @@ namespace tfs
         }
         else
         {
-          const uint32_t block  = 0xfffffffa;
+          const uint64_t block  = 0xfffffffa;
           const int32_t MAX_NUM = 2;
           int64_t family_id = 0xfffffffffffffffa;
           int32_t family_aid_info;
@@ -591,7 +590,7 @@ namespace tfs
         {
           ReplicateTask* ptask = dynamic_cast<ReplicateTask*>(task);
           block_to_tasks_.erase(ptask->block_);
-          for (int8_t index = 0; index < ptask->server_num_; ++index)
+          for (int8_t index = 0; index < ptask->server_num_ && index < 2; ++index)
           {
             if (PLAN_TYPE_COMPACT != type)
               remove_(ptask->servers_[index], is_target(index));
@@ -658,18 +657,18 @@ namespace tfs
       return all_complete;
     }
 
-    Task* TaskManager::get_(const uint32_t block) const
+    Task* TaskManager::get_task_by_block_id_(const uint64_t block) const
     {
       BLOCK_TO_TASK_CONST_ITER iter = block_to_tasks_.find(block);
       return (block_to_tasks_.end() == iter) ? NULL : iter->second;
     }
 
-    Task* TaskManager::get_(const BlockCollect* block) const
+    Task* TaskManager::get_task_by_block_(const BlockCollect* block) const
     {
-      return (NULL != block) ? get_(block->id()) : NULL;
+      return (NULL != block) ? get_task_by_block_id_(block->id()) : NULL;
     }
 
-    Task* TaskManager::get_(const uint64_t server) const
+    Task* TaskManager::get_task_by_server_id_(const uint64_t server) const
     {
       Task* task = NULL;
       uint64_t machine_ip = server & 0xFFFFFFFF;
@@ -679,12 +678,12 @@ namespace tfs
       return task;
     }
 
-    Task* TaskManager::get_(const ServerCollect* server) const
+    Task* TaskManager::get_task_by_server_(const ServerCollect* server) const
     {
-      return (NULL != server) ? get_(server->id()) : NULL;
+      return (NULL != server) ? get_task_by_server_id_(server->id()) : NULL;
     }
 
-    Task* TaskManager::get_(const int64_t family_id) const
+    Task* TaskManager::get_task_by_family_id_(const int64_t family_id) const
     {
       Task* task = NULL;
       FAMILY_TO_TASK_CONST_ITER iter = family_to_tasks_.find(family_id);
@@ -700,7 +699,7 @@ namespace tfs
       return machine_to_tasks_.end() == iter ? 0 : iter->second.size(source_size, target_size);
     }
 
-    Task* TaskManager::generation_(const uint32_t id, const ArrayHelper<uint64_t>& servers, const PlanType type)
+    Task* TaskManager::generation_(const uint64_t id, const ArrayHelper<uint64_t>& servers, const PlanType type)
     {
       Task* result = NULL;
       if (type == PLAN_TYPE_REPLICATE)
@@ -752,7 +751,7 @@ namespace tfs
 
     bool TaskManager::is_insert_block_(const int32_t type, const int32_t member_num, const int32_t index) const
     {
-      return (PLAN_TYPE_EC_DISSOLVE == type) ? (index > member_num / 2) : true;
+      return (PLAN_TYPE_EC_DISSOLVE == type) ? (index >= member_num / 2) : true;
     }
 
     bool TaskManager::is_insert_server_(const int32_t type, const int32_t data_member_num, const int32_t index) const

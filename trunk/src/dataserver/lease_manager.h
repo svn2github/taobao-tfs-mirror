@@ -18,11 +18,12 @@
 
 #include <Timer.h>
 #include <Mutex.h>
+#include "common/func.h"
 #include "common/atomic.h"
 #include "common/internal.h"
 #include "common/lock.h"
 #include "data_file.h"
-#include "dataserver_define.h"
+#include "ds_define.h"
 
 namespace tfs
 {
@@ -38,15 +39,15 @@ namespace tfs
     {
       uint64_t server_;
       int32_t  status_;
-      common::BlockInfo info_;
+      common::BlockInfoV2 info_;
     };
 
     struct LeaseId
     {
       uint64_t lease_id_;
       uint64_t file_id_;
-      uint32_t block_;
-      LeaseId(const uint64_t lease_id, const uint64_t file_id, const uint32_t block) :
+      uint64_t block_;
+      LeaseId(const uint64_t lease_id, const uint64_t file_id, const uint64_t block) :
         lease_id_(lease_id), file_id_(file_id), block_(block) {}
       bool operator < (const LeaseId& lease) const
       {
@@ -65,23 +66,46 @@ namespace tfs
     class Lease
     {
     public:
-      Lease(const LeaseId& lease_id, const int64_t now, const std::vector<uint64_t>& servers);
+      Lease(const LeaseId& lease_id, const int64_t now_us, const common::VUINT64& servers);
       virtual ~Lease() {}
 
-      inline uint32_t inc_ref() { return common::atomic_inc(&ref_count_);}
-      inline uint32_t dec_ref() { return common::atomic_dec(&ref_count_);}
-      inline void update_last_time(const int64_t now) { last_update_time_ = now;}
-      inline bool timeout(const int64_t now) { return now > last_update_time_ + common::SYSPARAM_DATASERVER.expire_data_file_time_;}
-      bool check_all_successful() const;
+      int32_t inc_ref() { tbutil::Mutex::Lock lock(mutex_); return ++ref_count_;}
+      int32_t dec_ref() { tbutil::Mutex::Lock lock(mutex_); return --ref_count_;}
+
+      // we need to stat every request's real process time
+      inline int64_t get_req_cost_time_us(const time_t now_us = common::Func::get_monotonic_time_us()) {return now_us - req_begin_time_; }
+
+      // client call write, but never close, lease need to be expired
+      inline void update_last_time_us(const int64_t now_us) { last_update_time_ = now_us;}
+      inline bool timeout(const int64_t now_us)
+      {
+        return now_us > last_update_time_ +
+          common::SYSPARAM_DATASERVER.expire_data_file_time_ * 1000000;
+      }
+
+      // unlink need return file_size to client for nginx log statistics
+      inline int64_t get_file_size() { return file_size_; }
+      inline void set_file_size(const int64_t file_size) { file_size_ = file_size; }
+
+      bool check_all_finish();
+      int check_all_successful() const;
       bool check_has_version_conflict() const;
-      int get_member_info(std::vector<std::pair<uint64_t, common::BlockInfo> >& members) const;
-      int update_member_info(const uint64_t server, const common::BlockInfo& info, const int32_t status);
-      void reset_member_info();
+      int get_member_info(std::pair<uint64_t, common::BlockInfoV2>* members, int32_t& size) const;
+      int update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status);
+      int update_member_info();   // when received a error packet, use this interface
+      void reset_member_info(const time_t now_us);
+      bool get_highest_version_block(common::BlockInfoV2& info);
       void dump(const int32_t level, const char* const format = NULL);
+      void dump(std::stringstream& desp);
 
       LeaseId lease_id_;
-      int64_t  last_update_time_;
-      uint32_t ref_count_;
+      int64_t last_update_time_;  // micro seconds
+      int64_t req_begin_time_;    // micro seconds
+      int64_t file_size_;
+      int32_t ref_count_;
+      int8_t server_size_;
+      int8_t done_server_size_;
+      tbutil::Mutex mutex_;
       LeaseMemberInfo members_[common::MAX_REPLICATION_NUM];
     private:
       DISALLOW_COPY_AND_ASSIGN(Lease);
@@ -90,8 +114,8 @@ namespace tfs
     class WriteLease: public Lease
     {
     public:
-      WriteLease(const LeaseId& lease_id, const int64_t now, const std::vector<uint64_t>& servers);
-      virtual ~WriteLease() {}
+      WriteLease(const LeaseId& lease_id, const int64_t now_us, const common::VUINT64& servers);
+      virtual ~WriteLease();
       DataFile& get_data_file() { return data_file_;}
     private:
       DataFile data_file_;
@@ -107,14 +131,14 @@ namespace tfs
       LeaseManager();
       virtual ~LeaseManager();
 
-      void generation(LeaseId& lease_id, const int64_t now, const int8_t type, const std::vector<uint64_t>& servers);
-      Lease* get(const LeaseId& lease_id, const int64_t now) const;
+      void generation(LeaseId& lease_id, const int64_t now_us, const int8_t type, const common::VUINT64& servers);
+      Lease* get(const LeaseId& lease_id, const int64_t now_us) const;
       void put(Lease* lease);
       int remove(const LeaseId& lease_id);
-      int timeout(const int64_t now);
+      int timeout(const int64_t now_us);
       int64_t size() const;
       bool has_out_of_limit() const;
-      uint64_t gen_lease_id();//这个函数的作用是: 为了向2.4以下的版本赚容，只能被create_file_number调用
+      uint64_t gen_lease_id(); // in old version, it's create_file_number
     private:
       uint64_t base_lease_id_;
       LEASE_MAP leases_;

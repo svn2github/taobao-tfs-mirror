@@ -13,14 +13,21 @@
  *      - initial release
  *
  */
-
+#include <stdlib.h>
+#include <libgen.h>
+#include <TbThread.h>
+#include "common/internal.h"
+#include "common/directory_op.h"
+#include "common/new_client.h"
+#include "common/client_manager.h"
 #include "common/status_message.h"
 #include "message/server_status_message.h"
 #include "message/block_info_message.h"
+#include "message/block_info_message_v2.h"
 #include "new_client/tfs_client_impl.h"
+#include "new_client/fsname.h"
 #include "tools/util/tool_util.h"
-#include "compare_crc.h"
-
+#include "tools/util/util.h"
 
 using namespace std;
 using namespace tfs::common;
@@ -28,43 +35,195 @@ using namespace tfs::client;
 using namespace tfs::message;
 using namespace tfs::tools;
 
-
-TfsClientImpl* g_tfs_client = NULL;
-FILE *g_succ_file = NULL, *g_fail_file = NULL, *g_error_file = NULL, *g_unsync_file = NULL;
-vector<string> g_input_lines;
-
-static const int32_t META_FLAG_ABNORMAL = -9800;
-struct log_file g_log_fp[] =
+enum CompareResult
 {
-  {&g_succ_file, "/succ_file"},
-  {&g_fail_file, "/fail_file"},
-  {&g_error_file, "/error_file"},
-  {&g_unsync_file, "/unsync_file"},
-  {NULL, NULL}
+  COMPARE_SUCCESS,
+  COMPARE_FAIL,
+  COMPARE_DIFF
 };
 
-enum OpType
+static const int32_t OP_FILE = 0;
+static const int32_t OP_BLOCK = 1;
+static bool compare_crc(const FileInfo& left, const FileInfo& right)
 {
-  OP_FILE,
-  OP_BLOCK
-};
+  return left.crc_ == right.crc_;
+}
+static CompareResult compare_crc_by_filename(const std::string& left_ns_addr, const std::string& right_ns_addr,
+  const std::string& filename, const int64_t modify_time, const int32_t force)
+{
+  CompareResult cmp_result = COMPARE_SUCCESS;
+  FileInfo left, right;
+  memset(&left, 0, sizeof(left));
+  memset(&right, 0, sizeof(right));
+  int32_t left_ret  = Util::read_file_info(left_ns_addr, filename, left);
+  int32_t right_ret = Util::read_file_info(right_ns_addr, filename, right);
+  int32_t ret = ((left_ret == TFS_SUCCESS || left_ret == META_FLAG_ABNORMAL) && (right_ret == TFS_SUCCESS || right_ret == META_FLAG_ABNORMAL)) ? TFS_SUCCESS : EXIT_CHECK_CRC_ERROR;
+  if (TFS_SUCCESS != ret)
+  {
+    cmp_result = COMPARE_FAIL;
+    TBSYS_LOG(WARN, "get file %s file information error, left_ret: %d, right_ret: %d", filename.c_str(), left_ret, right_ret);
+  }
+  else
+  {
+    if (left.modify_time_ < modify_time)
+    {
+      if (TFS_SUCCESS == left_ret && TFS_SUCCESS == right_ret)
+      {
+        ret = compare_crc(left, right) ? TFS_SUCCESS : EXIT_CHECK_CRC_ERROR;
+      }
 
-struct CmdParameter
+      if (TFS_SUCCESS == left_ret && META_FLAG_ABNORMAL == right_ret)
+      {
+        ret = FILE_STATUS_ERROR;
+        TBSYS_LOG(INFO, "file %s status not consistency, left: %d, right: %d", filename.c_str(), left.flag_, right.flag_);
+      }
+
+      if (META_FLAG_ABNORMAL == left_ret && TFS_SUCCESS == right_ret)
+      {
+        ret = left.flag_ == FILE_STATUS_DELETE ? TFS_SUCCESS : FILE_STATUS_ERROR;
+        if (TFS_SUCCESS != ret)
+          TBSYS_LOG(INFO, "file %s status not consistency, left: %d, right: %d", filename.c_str(), left.flag_, right.flag_);
+      }
+
+      if (META_FLAG_ABNORMAL == left_ret && META_FLAG_ABNORMAL == right_ret)
+      {
+        ret = left.flag_ == right.flag_ ? TFS_SUCCESS : FILE_STATUS_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = compare_crc(left, right) ? TFS_SUCCESS : EXIT_CHECK_CRC_ERROR;
+        }
+        else
+        {
+          TBSYS_LOG(INFO, "file %s status not consistency, left: %d, right: %d",
+              filename.c_str(), left.flag_, right.flag_);
+        }
+      }
+
+      if (TFS_SUCCESS == ret && left.flag_ != FILE_STATUS_DELETE && 1 == force)
+      {
+        uint32_t left_crc = 0;
+        uint32_t right_crc = 0;
+        left_ret  = Util::read_file_real_crc(left_ns_addr, filename, left_crc);
+        right_ret = Util::read_file_real_crc(right_ns_addr, filename, right_crc);
+        ret = (left_ret == TFS_SUCCESS && right_ret == TFS_SUCCESS) ? TFS_SUCCESS : EXIT_CHECK_CRC_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = left_crc == right_crc ? TFS_SUCCESS : EXIT_CHECK_CRC_ERROR;
+        }
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        cmp_result = COMPARE_DIFF;
+      }
+    }
+  }
+  return cmp_result;
+}
+
+static CompareResult compare_crc_by_block_id(const std::string& left_ns_addr, const std::string& right_ns_addr,
+  const uint64_t block, const int64_t modify_time, const int32_t force)
 {
-  enum OpType op_type_;
-  string old_tfs_client_;
-  string new_tfs_client_;
-  string modify_time_;
-  int64_t index_;
-  int64_t len_;
-};
+  CompareResult cmp_result = COMPARE_SUCCESS;
+  std::set<FileInfo, CompareFileInfoByFileId > left, right;
+  int32_t left_ret = Util::read_file_infos(left_ns_addr, block, left, 0);
+  int32_t right_ret = Util::read_file_infos(right_ns_addr, block, right, 1);
+  int32_t ret = (left_ret == TFS_SUCCESS && right_ret == TFS_SUCCESS) ? TFS_SUCCESS : EXIT_FILE_INFO_ERROR;
+  if (TFS_SUCCESS != ret)
+  {
+    cmp_result = COMPARE_FAIL;
+    TBSYS_LOG(WARN, "get file informations erorr, block: %"PRI64_PREFIX"u, left_ret: %d, right_ret: %d", block, left_ret, right_ret);
+  }
+  else
+  {
+    // when we successfully got two filelist, the result must be SUCCESS or DIFF
+    std::set<FileInfo, CompareFileInfoByFileId>::iterator iter = left.begin();
+    std::set<FileInfo, CompareFileInfoByFileId>::iterator it;
+    for (; iter != left.end(); ++iter)  // compare every file in left
+    {
+      if ((*iter).modify_time_ < modify_time) // ignore modified file after transfer
+      {
+        // ignore deleted or invalid file
+        ret = ((*iter).flag_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID)) ? TFS_SUCCESS : FILE_STATUS_ERROR;
+        if (TFS_SUCCESS != ret)
+        {
+          it = right.find((*iter));
+          ret = (it == right.end()) ? FILE_STATUS_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
+          {
+            ret = (*iter).flag_ == (*it).flag_ ? TFS_SUCCESS : FILE_STATUS_ERROR;
+            if (TFS_SUCCESS == ret)
+            {
+              ret = compare_crc((*iter), (*it)) ? TFS_SUCCESS : EXIT_CHECK_CRC_ERROR;
+            }
+            right.erase(it);
+            if (TFS_SUCCESS == ret && 1 == force)
+            {
+              uint32_t left_crc = 0;
+              uint32_t right_crc = 0;
+              FSName name(block, (*iter).id_);
+              left_ret  = Util::read_file_real_crc(left_ns_addr, name.get_name(), left_crc);
+              right_ret = Util::read_file_real_crc(right_ns_addr, name.get_name(), right_crc);
+              //TBSYS_LOG(INFO, "BLOCK: %lu, FILEID: %lu, left_crc : %u, right_crc: %u, left_ret: %d, right_ret: %d", block, (*iter).id_, left_crc, right_crc, left_ret, right_ret);
+              ret = (left_ret == TFS_SUCCESS && right_ret == TFS_SUCCESS) ? TFS_SUCCESS : EXIT_CHECK_CRC_ERROR;
+              if (TFS_SUCCESS == ret)
+              {
+                ret = left_crc == right_crc ? TFS_SUCCESS : EXIT_CHECK_CRC_ERROR;
+              }
+            }
+
+            if (TFS_SUCCESS != ret)
+            {
+              cmp_result = COMPARE_DIFF;
+              TBSYS_LOG(INFO, "DIFF: blockid: %lu, fileid: %lu, left_status: %d,"
+                  "right_status: %d, left_crc : %u, right_crc: %u",
+                  block, (*iter).id_, iter->flag_, it->flag_, iter->crc_, it->crc_);
+            }
+          }
+          else
+          {
+            cmp_result = COMPARE_DIFF;
+            TBSYS_LOG(INFO, "MORE: blockid: %lu, fileid: %lu, left_status: %d, left_crc : %u",
+                block, iter->id_, iter->flag_, iter->crc_);
+          }
+        }
+        else
+        {
+          right.erase((*iter));
+        }
+      }
+    }
+
+    // some file modified after transfer in source cluster
+    // so it's normal the right is not empty after compare
+    it = right.begin();
+    for ( ; it != right.end(); it++)
+    {
+      TBSYS_LOG(INFO, "LESS: blockid: %lu, fileid: %lu, right_status: %d, right_crc : %u",
+          block, it->id_, it->flag_, it->crc_);
+    }
+  }
+  return cmp_result;
+}
 
 class WorkThread: public tbutil::Thread
 {
  public:
-   WorkThread(CmdParameter param)
+   WorkThread(const int32_t type, const std::string& left_ns_addr, const std::string& right_ns_addr,
+      const int64_t modify_time, std::vector<std::string>& inputs, FILE* success_fp, FILE* fail_fp, FILE* diff_fp, const int32_t force, const int32_t sleep_ms):
+      type_(type),
+      left_ns_addr_(left_ns_addr),
+      right_ns_addr_(right_ns_addr),
+      modify_time_(modify_time),
+      inputs_(inputs),
+      success_fp_(success_fp),
+      fail_fp_(fail_fp),
+      diff_fp_(diff_fp),
+      force_(force),
+      sleep_ms_(sleep_ms),
+      stop_(false)
    {
-     param_ = param;
+
    }
 
    ~WorkThread()
@@ -72,562 +231,322 @@ class WorkThread: public tbutil::Thread
 
    }
 
+    void reload_interval(int flag)
+    {
+      switch (flag)
+      {
+        case 1:
+          sleep_ms_ *= 2;
+          break;
+        case -1:
+          sleep_ms_ /= 2;
+          break;
+        default:
+          TBSYS_LOG(WARN, "invalid flag");
+      }
+      TBSYS_LOG(INFO, "reload sleep interval, flag: %d, sleep_ms: %d", flag, sleep_ms_);
+    }
+
+    void destroy()
+    {
+      stop_ = true;
+    }
+
    void run()
    {
-    if (OP_FILE == param_.op_type_)
-    {
-       get_crc_from_tfsname_list(param_.old_tfs_client_, param_.new_tfs_client_,
-           param_.modify_time_, param_.index_, param_.len_);
-    }
-    else if(OP_BLOCK == param_.op_type_)
-    {
-       get_crc_from_block_list(param_.old_tfs_client_, param_.new_tfs_client_,
-           param_.modify_time_, param_.index_, param_.len_);
-    }
+      std::vector<std::string>::iterator iter = inputs_.begin();
+      if (type_ == OP_FILE)
+      {
+        for (; iter != inputs_.end() && !stop_; ++iter)
+        {
+          CompareResult result = compare_crc_by_filename(left_ns_addr_, right_ns_addr_, (*iter), modify_time_, force_);
+          FILE* fp = NULL;
+          if (COMPARE_SUCCESS == result)
+          {
+            fp = success_fp_;
+          }
+          else if (COMPARE_FAIL == result)
+          {
+            fp = fail_fp_;
+          }
+          else
+          {
+            fp = diff_fp_;
+          }
+          fprintf(fp, "%s", (*iter).c_str());
+          fflush(fp);
+          usleep(sleep_ms_ * 1000);
+        }
+      }
+
+      if (type_ == OP_BLOCK)
+      {
+        uint64_t block = 0;
+        for (; iter != inputs_.end() && !stop_; ++iter)
+        {
+          block = atoll((*iter).c_str());
+          CompareResult result = compare_crc_by_block_id(left_ns_addr_, right_ns_addr_, block, modify_time_, force_);
+          FILE* fp = NULL;
+          if (COMPARE_SUCCESS == result)
+          {
+            fp = success_fp_;
+          }
+          else if (COMPARE_FAIL == result)
+          {
+            fp = fail_fp_;
+          }
+          else
+          {
+            fp = diff_fp_;
+          }
+
+          fprintf(fp, "%s", (*iter).c_str());
+          fflush(fp);
+          usleep(sleep_ms_* 1000);
+        }
+      }
    }
 private:
-  CmdParameter param_;
+  int32_t type_;
+  std::string left_ns_addr_;
+  std::string right_ns_addr_;
+  int64_t modify_time_;
+  std::vector<std::string>& inputs_;
+  FILE* success_fp_;
+  FILE* fail_fp_;
+  FILE* diff_fp_;
+  int32_t force_;
+  int32_t sleep_ms_;
+  bool stop_;
 };
-
-
 typedef tbutil::Handle<WorkThread> WorkThreadPtr;
 
-int init_log_file(char* dir_path)
+static int32_t thread_num = 1;
+static WorkThreadPtr* work_threads = NULL;
+
+static void interruptcallback(int signal)
 {
-  char log_path[256];
-  snprintf(log_path, 256, "%s%s", dirname(dir_path), "/cmp_log");
-  DirectoryOp::create_directory(log_path);
-  for (int i = 0; g_log_fp[i].file_; i++)
+  TBSYS_LOG(INFO, "receive signal: %d", signal);
+  bool destory_flag = false;
+  int reload_flag = 0;
+  switch (signal)
   {
-    char file_path[256];
-    snprintf(file_path, 256, "%s%s", log_path, g_log_fp[i].file_);
-    *g_log_fp[i].fp_ = fopen(file_path, "w");
-    if (!*g_log_fp[i].fp_)
-    {
-      TBSYS_LOG(ERROR, "open file fail %s : %s:", g_log_fp[i].file_, strerror(errno));
-      return TFS_ERROR;
-    }
-  }
-  return TFS_SUCCESS;
-}
-
-int load_input_file(const char* input_file)
-{
-  char buf[256];
-  int ret = TFS_SUCCESS;
-
-  g_input_lines.clear();
-  FILE *fp = fopen(input_file, "r");
-  if (NULL == fp)
-  {
-      TBSYS_LOG(ERROR, "open file fail %s : %s:", input_file, strerror(errno));
-      ret = -errno;
-  }
-  else
-  {
-    while( NULL != fgets(buf, 256, fp))
-    {
-      string str(buf, strlen(buf) - 1);
-      g_input_lines.push_back(str);
-    }
-    fclose(fp);
-  }
-  return ret;
-}
-
-
-int get_meta_crc(const string& tfs_client, const char* tfs_file_name, TfsFileStat* finfo)
-{
-  if (finfo == NULL)
-  {
-    TBSYS_LOG(WARN, "invalid pointer");
-    return TFS_ERROR;
-  }
-  int tfs_fd = 0;
-  if ((tfs_fd = g_tfs_client->open(tfs_file_name, NULL, tfs_client.c_str(), T_READ)) < 0)
-  {
-    TBSYS_LOG(WARN, "open tfsfile fail");
-    return TFS_ERROR;
-  }
-
-  if (g_tfs_client->fstat(tfs_fd, finfo, FORCE_STAT) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(WARN, "fstat tfsfile fail: %s", tfs_file_name);
-    g_tfs_client->close(tfs_fd);
-    return TFS_ERROR;
-  }
-
-  if (finfo->flag_ == 1 || finfo->flag_ == 4 || finfo->flag_ == 5)
-  {
-    g_tfs_client->close(tfs_fd);
-    return META_FLAG_ABNORMAL;
-  }
-  g_tfs_client->close(tfs_fd);
-  return TFS_SUCCESS;
-}
-
-int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* crc)
-{
-  if(crc == NULL)
-  {
-    TBSYS_LOG(ERROR,"Pointer to real crc value is NULL");
-    return TFS_ERROR;
-  }
-
-  int tfs_fd = 0;
-  if ((tfs_fd = g_tfs_client->open(tfs_file_name, NULL, tfs_client.c_str(), T_READ)) < 0)
-  {
-    TBSYS_LOG(ERROR, "open tfsfile fail file name %s", tfs_file_name);
-    return TFS_ERROR;
-  }
-
-  char data[MAX_READ_SIZE]={'\0'};
-  uint32_t crc_tmp = 0;
-  int total_size = 0,rlen=0;
-  for(;;)
-  {
-    rlen = g_tfs_client->read(tfs_fd, data, MAX_READ_SIZE);
-    if (rlen < 0)
-    {
-      TBSYS_LOG(ERROR, "read tfsfile fail: file_name %s", tfs_file_name);
-      g_tfs_client->close(tfs_fd);
-      return TFS_ERROR;
-    }
-    if (rlen == 0)
+    case SIGUSR1:
+      reload_flag = 1;
       break;
-    crc_tmp = Func::crc(crc_tmp, data, rlen);
-    total_size += rlen;
-    if (rlen != MAX_READ_SIZE)
+    case SIGUSR2:
+      reload_flag = -1;
+      break;
+    case SIGTERM:
+    case SIGINT:
+    default:
+      destory_flag = true;
       break;
   }
-  *crc = crc_tmp;
-  g_tfs_client->close(tfs_fd);
-  return TFS_SUCCESS;
-}
 
-int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_client,
-    const char* tfs_file_name, const string& modify_time)
-{
-  int ret = TFS_SUCCESS;
-  uint32_t old_real_crc = 0;
-  uint32_t new_real_crc = 0;
-  TfsFileStat old_info, new_info;
-  memset(&old_info, 0, sizeof(TfsFileStat));
-  memset(&new_info, 0, sizeof(TfsFileStat));
-
-  bool skip_flag = false;
-  cmp_stat_.total_count_++;
-  // failed to get meta crc in old cluster
-  int src_ret = get_meta_crc(old_tfs_client, tfs_file_name, &old_info);
-  if (TFS_SUCCESS != src_ret && META_FLAG_ABNORMAL != src_ret)  //no need to stat old file
+  if (work_threads != NULL)
   {
-    TBSYS_LOG(ERROR, "%s failed in old cluster, ret: %d", tfs_file_name, src_ret);
-    ret = TFS_ERROR;
-  }
-  else
-  {
-    int dest_ret = get_meta_crc(new_tfs_client, tfs_file_name, &new_info);
-    //check src modify time
-    if (old_info.modify_time_ >= tbsys::CTimeUtil::strToTime(const_cast<char*>(modify_time.c_str())))
+    for (int32_t i = 0; i < thread_num; ++i)
     {
-      //skip
-      skip_flag = true;
-      cmp_stat_.skip_count_++;
-    }
-    else
-    {
-      if (META_FLAG_ABNORMAL == src_ret) // flag modify in old cluster, check new flag
+      if (work_threads[i] != 0)
       {
-        if (TFS_ERROR == dest_ret) //dest file is not exist
+        if (destory_flag)
         {
-          if (old_info.flag_ & 1) //src is delete
-          {
-          }
-          else
-          {
-            ret = TFS_ERROR;
-            TBSYS_LOG(ERROR, "%s not exist in new cluster, src flag: %d",
-                tfs_file_name, old_info.flag_);
-          }
+          work_threads[i]->destroy();
         }
-        else if (META_FLAG_ABNORMAL == dest_ret) //dest file flag is abnormal
+        else if (0 != reload_flag)
         {
-          if (old_info.flag_ & 1 && !(new_info.flag_ & 1)) //fail
-          {
-            ret = TFS_ERROR;
-          }
-          else if (!(old_info.flag_ & 1) && (old_info.flag_ & 4) && !(new_info.flag_ & 4))
-          {
-            ret = TFS_ERROR;
-          }
-
-          if (TFS_ERROR == ret)
-          {
-            TBSYS_LOG(ERROR, "%s flag is conflict, src flag: %d, dest flag: %d",
-                tfs_file_name, old_info.flag_, new_info.flag_);
-          }
-        }
-        else //dest file is normal
-        {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "%s flag is conflict, src flag: %d, dest flag: %d",
-              tfs_file_name, old_info.flag_, new_info.flag_);
-        }
-      }
-      else // success
-      {
-        if (TFS_SUCCESS != dest_ret)
-        {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "%s fail, src flag: %d, dest flag: %d, dest ret: %d",
-              tfs_file_name, old_info.flag_, new_info.flag_, dest_ret);
-        }
-        // compare real crc
-      }
-    }
-  }
-
-  if (TFS_ERROR == ret)
-  {
-    if (TFS_SUCCESS != src_ret && META_FLAG_ABNORMAL != src_ret)
-    {
-      fprintf(g_error_file, "%s\n", tfs_file_name);
-      cmp_stat_.error_count_++;
-    }
-    else
-    {
-      fprintf(g_fail_file, "%s\n", tfs_file_name);
-      cmp_stat_.fail_count_++;
-    }
-  }
-  else if (META_FLAG_ABNORMAL == src_ret)
-  {
-    TBSYS_LOG(ERROR, "meta flag abnormal");
-    fprintf(g_error_file, "%s\n", tfs_file_name);
-    cmp_stat_.error_count_++;
-  }
-  else
-  {
-    if (!skip_flag)
-    {
-      if (get_real_crc(new_tfs_client, tfs_file_name, &new_real_crc) != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "get dest file fail: %s",tfs_file_name);
-        fprintf(g_fail_file, "%s\n", tfs_file_name);
-        cmp_stat_.error_count_++;
-      }
-      else
-      {
-        if ((old_info.crc_ == new_info.crc_) && (old_info.crc_ == new_real_crc))
-        {
-          TBSYS_LOG(DEBUG, "%s success",tfs_file_name);
-          fprintf(g_succ_file, "%s\n", tfs_file_name);
-          cmp_stat_.succ_count_++;
-        }
-        else
-        {
-          if (get_real_crc(old_tfs_client, tfs_file_name, &old_real_crc) != TFS_SUCCESS)
-          {
-            TBSYS_LOG(ERROR, "get src file fail: %s",tfs_file_name);
-            fprintf(g_error_file, "%s\n", tfs_file_name);
-            cmp_stat_.error_count_++;
-          }
-          else
-          {
-            if (old_info.crc_ != old_real_crc)
-            {
-              TBSYS_LOG(ERROR, "%s failed as : old cluster crc not same",tfs_file_name);
-              fprintf(g_error_file, "%s\n", tfs_file_name);
-              cmp_stat_.error_count_++;
-              ret = TFS_ERROR;
-            }
-            else
-            {
-              int tfs_fd_old = 0;
-              tfs_fd_old = g_tfs_client->open(tfs_file_name, NULL, old_tfs_client.c_str(), T_READ);
-              TfsFileStat finfo;
-              g_tfs_client->fstat(tfs_fd_old, &finfo);
-              FSName fsname;
-              fsname.set_name(tfs_file_name);
-
-              if(finfo.modify_time_ <= tbsys::CTimeUtil::strToTime(const_cast<char*>(modify_time.c_str())))
-              {
-                TBSYS_LOG(ERROR, "%s failed with Other reason, at block : %u : %s: %u %u %u %u",tfs_file_name,
-                    fsname.get_block_id(),
-                    Func::time_to_str(finfo.modify_time_).c_str(),
-                    old_info.crc_, old_real_crc,
-                    new_info.crc_, new_real_crc);
-                fprintf(g_fail_file, "%s\n", tfs_file_name);
-                cmp_stat_.fail_count_++;
-              }
-              else
-              {
-                TBSYS_LOG(ERROR, "%s failed as modified at %s",tfs_file_name,Func::time_to_str(finfo.modify_time_).c_str());
-                fprintf(g_unsync_file, "%s\n", tfs_file_name);
-                cmp_stat_.unsync_count_++;
-              }
-              g_tfs_client->close(tfs_fd_old);
-            }
-          }
+          work_threads[i]->reload_interval(reload_flag);
         }
       }
     }
   }
-  return ret;
-}
-
-int get_crc_from_tfsname_list(const string& old_tfs_client, const string& new_tfs_client,   const string& modify_time, int64_t index, int64_t len)
-{
-  int64_t i = 0;
-  const char *tmp_file_name = NULL;
-  for (i = 0; i < len; i++)
-  {
-    tmp_file_name = g_input_lines[index+i].c_str();
-    get_crc_from_filename(old_tfs_client, new_tfs_client, tmp_file_name, modify_time);
-  }
-  return TFS_SUCCESS;
-}
-
-int get_crc_from_block_list(const string& old_tfs_client, const string& new_tfs_client,
-    const string& modify_time, int64_t index, int64_t len)
-{
-  int ret = TFS_ERROR;
-  uint32_t block_id = 0;
-  int64_t i = 0;
-
-  for (i = 0; i < len; i++)
-  {
-    block_id = atol(g_input_lines[index+i].c_str());
-    VUINT64 ds_list;
-    ToolUtil::get_block_ds_list(Func::get_host_ip(old_tfs_client.c_str()), block_id, ds_list);
-    if(ds_list.size() > 0)
-    {
-      uint64_t ds_id = ds_list[0];
-
-      FILE_INFO_LIST file_list;
-      GetServerStatusMessage gss_message;
-      gss_message.set_status_type(GSS_BLOCK_FILE_INFO);
-      gss_message.set_return_row(block_id);
-
-      NewClient* client = NewClientManager::get_instance().create_client();
-      tbnet::Packet* ret_message = NULL;
-      if (NULL != client)
-      {
-        if ((ret = send_msg_to_server(ds_id, client, &gss_message, ret_message)) == TFS_SUCCESS)
-        {
-          if (ret_message->getPCode() == BLOCK_FILE_INFO_MESSAGE)
-          {
-            BlockFileInfoMessage *bfi_message = (BlockFileInfoMessage*)ret_message;
-            FILE_INFO_LIST* file_info_list = bfi_message->get_fileinfo_list();
-            FILE_INFO_LIST::iterator vit = file_info_list->begin();
-            for ( ; vit != file_info_list->end(); ++vit)
-            {
-              file_list.push_back(*vit);
-            }
-          }
-          else if (ret_message->getPCode() == STATUS_MESSAGE)
-          {
-            StatusMessage* sm = reinterpret_cast<StatusMessage*> (ret_message);
-            if (sm->get_error() != NULL)
-            {
-              TBSYS_LOG(ERROR, "%s", sm->get_error());
-              ret = TFS_ERROR;
-            }
-          }
-        }
-        else
-        {
-          TBSYS_LOG(ERROR, "send message to server failed. ds_addr: %s, pcode: %d, ret: %d",
-              tbsys::CNetUtil::addrToString(ds_id).c_str(), gss_message.getPCode(), ret);
-        }
-        NewClientManager::get_instance().destroy_client(client);
-      }
-      else
-      {
-        TBSYS_LOG(ERROR,"create client error");
-      }
-
-      if (ret == TFS_SUCCESS)
-      {
-        FILE_INFO_LIST::iterator vit = file_list.begin();
-        int i = 0;
-        for ( ; vit != file_list.end(); ++vit)
-        {
-          ++i;
-          FSName fsname(block_id, vit->id_, g_tfs_client->get_cluster_id(old_tfs_client.c_str()));
-          TBSYS_LOG(DEBUG, "gene file i: %d, blockid: %u, fileid: %"PRI64_PREFIX"u, %s",
-              i, block_id, (vit)->id_, fsname.get_name());
-          get_crc_from_filename(old_tfs_client, new_tfs_client, fsname.get_name(), modify_time);
-        }
-
-        file_list.clear();
-      }
-    }
-    else
-    {
-      TBSYS_LOG(ERROR,"get block info for blockid: %u failure.",block_id);
-    }
- }
- return ret;
 }
 
 void usage(const char* name)
 {
-  fprintf(stderr,"Usage:\n%s -o old_ns_ip:port -n new_ns_ip:port -f file_list \
-      -m modify_time(20110315|20110315183500) -t thread_num [-h]\n", name);
-  fprintf(stderr,"%s -o old_ns_ip:port -n new_ns_ip:port -b block_list \
-      -m modify_time(20110315|20110315183500) -t thread_num [-h]\n", name);
-  exit(TFS_ERROR);
+  fprintf(stderr,"Usage:\n%s -o old_ns_ip:port -n new_ns_ip:port -f input "
+      "-m modify_time(20110315183500) -t thread_num -k type -s interval(ms)"
+      "-r ouput_dir -l log_level -d(daemon) -c[-h]\n", name);
+  fprintf(stderr, " -k type\n");
+  fprintf(stderr, "    0: compare by file\n");
+  fprintf(stderr, "    1: compare by block\n");
+  fprintf(stderr, " -r output direcotry\n");
+  fprintf(stderr, "    all the output file and log file will be in this dir\n");
+  fprintf(stderr, " -c\n");
+  fprintf(stderr, "    if turn this flag on, data crc will be compared\n");
+  fprintf(stderr, " receive signal\n");
+  fprintf(stderr, "     USR1: increase sleep interval to double\n");
+  fprintf(stderr, "     USR1: decrease sleep interval to half\n");
+
+  exit(-1);
 }
 
 int main(int argc, char** argv)
 {
-  int iret = TFS_ERROR;
-  if(argc < 11)
-  {
-    usage(argv[0]);
-  }
-
-  int thread_num = 1; // default one thread
-  enum OpType op_type = OP_FILE;
-  string old_ns_ip = "", new_ns_ip = "";
-  string modify_time = "";
-  string input_file = "";
-  int i = 0;
-  while ((i = getopt(argc, argv, "o:n:f:b:m:t:h")) != EOF)
+  int ret = TFS_SUCCESS;
+  int32_t i = 0, real_read_check_crc = 0; // default one thread
+  int64_t modify_time = 0;
+  int32_t sleep_ms = 0;
+  int32_t op_type = OP_FILE;
+  bool daemon_flag = false;
+  std::string old_ns_addr(""), new_ns_addr(""), file_path(""), work_dir(""), log_level("info");
+  while ((i = getopt(argc, argv, "o:n:f:m:t:k:s:l:r:dch")) != EOF)
   {
     switch (i)
     {
       case 'o':
-        old_ns_ip = optarg;
+        old_ns_addr = optarg;
         break;
       case 'n':
-        new_ns_ip = optarg;
+        new_ns_addr = optarg;
         break;
       case 'f':
-        input_file = optarg;
-        op_type = OP_FILE;
+        file_path   = optarg;
         break;
-      case 'b':
-        input_file = optarg;
-        op_type = OP_BLOCK;
+      case 'k':
+        op_type = atoi(optarg);
         break;
       case 'm':
-        modify_time = optarg;
+        modify_time = tbsys::CTimeUtil::strToTime(optarg);
         break;
       case 't':
         thread_num = atoi(optarg);
+        break;
+      case 'l':
+        log_level = optarg;
+        break;
+      case 'c':
+        real_read_check_crc  = 1;
+        break;
+      case 'd':
+        daemon_flag = true;
+        break;
+      case 's':
+        sleep_ms = atoi(optarg);
+        break;
+      case 'r':
+        work_dir = optarg;
         break;
       case 'h':
       default:
         usage(argv[0]);
     }
   }
-
-  int time_len = modify_time.length();
-  if (old_ns_ip.empty() || old_ns_ip == " "
-      || old_ns_ip.empty() || old_ns_ip == " "
-      || input_file.empty() || input_file == " "
-      || modify_time.empty() || time_len < 8
-      || (time_len > 8 && time_len < 14))
+  if (old_ns_addr == ""
+      || new_ns_addr == ""
+      || file_path == ""
+      || modify_time < 0
+      || sleep_ms < 0)
   {
     usage(argv[0]);
   }
 
-  if (modify_time.length() == 8)
+  char log_path[256];
+  if (work_dir == "") // use default output dir
   {
-    modify_time += "000000";
-  }
-
-  memset(&cmp_stat_, 0, sizeof(cmp_stat_));
-
-  if (init_log_file(argv[0]) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "init log file fail");
-    return TFS_ERROR;
-  }
-
-  TBSYS_LOGGER.setLogLevel("warn");
-  string old_tfs_client, new_tfs_client;
-  old_tfs_client = old_ns_ip;
-  new_tfs_client = new_ns_ip;
-  g_tfs_client = TfsClientImpl::Instance();
-  iret = g_tfs_client->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false);
-
-  if (iret != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "initialize tfs client failed, ret: %d", iret);
+    snprintf(log_path, 256, "%s%s", dirname(argv[0]), "/cmp_log");
   }
   else
   {
-    // load input file
-    iret = load_input_file(input_file.c_str());
-    if(TFS_SUCCESS != iret)
-    {
-      TBSYS_LOG(ERROR, "load input file error, ret: %d", iret);
-      return iret;
-    }
-
-    // create thread by parameter
-    vector<CmdParameter> thread_params;
-    int avg_len = g_input_lines.size() / thread_num;
-    for(i = 0;  i < thread_num; i++)
-    {
-      CmdParameter param;
-      param.old_tfs_client_ = old_tfs_client;
-      param.new_tfs_client_ = new_tfs_client;
-      param.modify_time_ = modify_time;
-      param.index_ = i * avg_len;
-      param.len_ = avg_len;
-      if (i == thread_num-1) // the last thread may have more tasks
-      {
-        param.len_ += g_input_lines.size() % thread_num;
-      }
-      param.op_type_ = op_type;
-      thread_params.push_back(param);
-    }
-
-    // run threads
-    WorkThreadPtr *work_threads = new WorkThreadPtr[thread_num];
-    for (i = 0; i < thread_num; i++)
-    {
-      work_threads[i] = new WorkThread(thread_params[i]);
-      try
-      {
-        work_threads[i]->start();
-      }
-      catch (exception e)
-      {
-        TBSYS_LOG(ERROR, "start thread exception: %s", e.what());
-      }
-    }
-
-    // join threads
-    for (i = 0; i < thread_num; i++)
-    {
-      try
-      {
-        work_threads[i]->join();
-      }
-      catch (exception e)
-      {
-        TBSYS_LOG(ERROR, "join thread exception: %s", e.what());
-      }
-    }
-
-    // delete threads
-     delete [] work_threads;
+    snprintf(log_path, 256, "%s", work_dir.c_str());
   }
+  DirectoryOp::create_directory(log_path);
 
-  for (i = 0; g_log_fp[i].fp_; i++)
+  // init log and daemon
+  if (TFS_SUCCESS == ret)
   {
-    fclose(*g_log_fp[i].fp_);
+    string log_file = string(log_path) + string("/compare_crc.log");
+    string pid_file = string(log_path) + string("/compare_crc.pid");
+    if (log_file.size() != 0)
+    {
+      TBSYS_LOGGER.rotateLog(log_file.c_str());
+    }
+    TBSYS_LOGGER.setMaxFileSize(1024 * 1024 * 1024);
+    TBSYS_LOGGER.setLogLevel(log_level.c_str());
+
+    int pid = 0;
+    if (daemon_flag)
+    {
+      pid = Func::start_daemon(pid_file.c_str(), log_file.c_str());
+    }
+
+    // parent process just exit
+    if (0 != pid)
+    {
+      return 0;
+    }
   }
 
-  TBSYS_LOG(WARN, "total_count: %"PRI64_PREFIX"d, succ_count: %"PRI64_PREFIX"d, fail_count: %"PRI64_PREFIX"d"
-      ", error_count: %"PRI64_PREFIX"d, unsync_count: %"PRI64_PREFIX"d, skip_count: %"PRI64_PREFIX"d",
-      cmp_stat_.total_count_, cmp_stat_.succ_count_, cmp_stat_.fail_count_, cmp_stat_.error_count_, cmp_stat_.unsync_count_,
-      cmp_stat_.skip_count_);
-  return iret;
+  char path[256];
+  snprintf(path, 256, "%s%s", log_path, "/success");
+  FILE* success_fp = fopen(path, "w");
+  memset(path, 0, 256);
+  snprintf(path, 256, "%s%s", log_path, "/fail");
+  FILE* fail_fp = fopen(path, "w");
+  memset(path, 0, 256);
+  snprintf(path, 256, "%s%s", log_path, "/diff");
+  FILE* diff_fp = fopen(path, "a");  // append to one file for simplicity
+  ret = (NULL == success_fp || NULL == fail_fp || NULL == diff_fp) ? EXIT_OPEN_FILE_ERROR : TFS_SUCCESS;
+  std::vector<std::string> params[thread_num];
+  if (TFS_SUCCESS == ret)
+  {
+    FILE* fp = fopen(file_path.c_str(), "r");
+    ret = (NULL == fp) ? EXIT_OPEN_FILE_ERROR : TFS_SUCCESS;
+    if (TFS_SUCCESS == ret)
+    {
+      char line[256];
+      while (NULL != fgets(line, 256, fp))
+      {
+        int32_t index = random() % thread_num;
+        params[index].push_back(line);
+      }
+    }
+    if (NULL != fp)
+      ::fclose(fp);
+  }
+
+  if (TFS_SUCCESS == ret)
+  {
+    ret = TfsClientImpl::Instance()->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false);
+  }
+
+  if (TFS_SUCCESS == ret)
+  {
+    int32_t index = 0;
+    work_threads = new WorkThreadPtr[thread_num];
+    for (index = 0; index < thread_num; ++index)
+    {
+      work_threads[index] = new WorkThread(op_type, old_ns_addr, new_ns_addr, modify_time, params[index], success_fp, fail_fp, diff_fp, real_read_check_crc, sleep_ms);
+      work_threads[index]->start();
+    }
+
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
+    signal(SIGINT, interruptcallback);
+    signal(SIGTERM, interruptcallback);
+    signal(SIGUSR1, interruptcallback);
+    signal(SIGUSR2, interruptcallback);
+
+    for (index = 0; index < thread_num; ++index)
+    {
+      work_threads[index]->join();
+    }
+
+    tbsys::gDeleteA(work_threads);
+  }
+
+  if (NULL != success_fp)
+    ::fclose(success_fp);
+  if (NULL != fail_fp)
+    ::fclose(fail_fp);
+  if (NULL != diff_fp)
+    ::fclose(diff_fp);
+
+  //TBSYS_LOG(WARN, "total_count: %"PRI64_PREFIX"d, succ_count: %"PRI64_PREFIX"d, fail_count: %"PRI64_PREFIX"d"
+  //    ", error_count: %"PRI64_PREFIX"d, unsync_count: %"PRI64_PREFIX"d, skip_count: %"PRI64_PREFIX"d",
+  //    cmp_stat_.total_count_, cmp_stat_.succ_count_, cmp_stat_.fail_count_, cmp_stat_.error_count_, cmp_stat_.unsync_count_,
+  //    cmp_stat_.skip_count_);
+  return ret;
 }
 

@@ -48,12 +48,12 @@ namespace tfs
         int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         virtual int64_t length() const;
         void dump(void) const;
-        inline void set_block_info(const common::BlockInfo& block_info) { block_info_ = block_info;}
-        inline common::BlockInfo& get_block_info() { return block_info_;}
+        inline void set_block_info(const common::BlockInfoV2& block_info) { block_info_ = block_info;}
+        inline common::BlockInfoV2& get_block_info() { return block_info_;}
         inline const std::vector<std::pair<uint64_t, int8_t> >& get_result() const { return result_;}
         inline void set_result(const std::vector<std::pair<uint64_t, int8_t> >& result) { result_ = result;}
       protected:
-        common::BlockInfo block_info_;
+        common::BlockInfoV2 block_info_;
         std::vector<std::pair<uint64_t, int8_t> > result_;
     };
   }

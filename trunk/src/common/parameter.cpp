@@ -65,6 +65,12 @@ namespace tfs
       marshalling_task_expired_time_ = 360;
       reinstate_task_expired_time_ = 240;
       dissolve_task_expired_time_  = 120;
+      max_mr_network_bandwith_ratio_ = 50;
+      max_rw_network_bandwith_ratio_ = 50;
+      compact_family_member_ratio_   = 30;
+      max_single_machine_network_bandwith_ = 120;//120MB
+      adjust_copies_location_time_lower_   = 6;
+      adjust_copies_location_time_upper_   = 12;
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
       report_block_time_interval_min_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL_MIN, 0);
       max_write_timeout_= TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_TIMEOUT, 3);
@@ -94,7 +100,7 @@ namespace tfs
       // roundup to 1M
       int32_t writeBlockSize = (int32_t)(((double) max_block_size * block_use_ratio) / 100);
       max_block_size_ = (writeBlockSize & 0xFFF00000) + 1024 * 1024;
-      max_block_size_ = std::max(max_block_size_, max_block_size);
+      max_block_size_ = std::min(max_block_size_, max_block_size);
 
       max_replication_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_REPLICATION, 2);
 
@@ -129,6 +135,11 @@ namespace tfs
       if (compact_delete_ratio_ <= 0)
         compact_delete_ratio_ = 15;
       compact_delete_ratio_ = std::min(compact_delete_ratio_, 100);
+
+      compact_update_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_UPDATE_RATIO, 10);
+      if (compact_update_ratio_ <= 0)
+        compact_update_ratio_ = 10;
+      compact_update_ratio_  = std::min(compact_update_ratio_, 100);
       const char* compact_time_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_COMPACT_HOUR_RANGE, "2~6");
       set_hour_range(compact_time_str, compact_time_lower_, compact_time_upper_);
       compact_max_load_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_MAX_LOAD, 100);
@@ -265,8 +276,9 @@ namespace tfs
       object_clear_max_time_ = config.getInt(CONF_SN_DATASERVER, CONF_OBJECT_CLEAR_MAX_TIME, 300);
       if (object_clear_max_time_ <= 0)
         object_clear_max_time_ = 300;
-      max_sync_retry_count_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_COUNT, 5);
+      max_sync_retry_count_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_COUNT, 3);
       max_sync_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_INTERVAL, 30);
+      sync_fail_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_SYNC_FAIL_RETRY_INTERVAL, 300);
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 
@@ -278,7 +290,7 @@ namespace tfs
 
     int DataServerParameter::get_real_ds_port(const int ds_port, const std::string& index)
     {
-      return ds_port + ((atoi((index.c_str())) - 1) * PORT_PER_PROCESS);
+      return ds_port + ((atoi((index.c_str())) - 1));
     }
 
     int FileSystemParameter::initialize(const std::string& index)
@@ -336,6 +348,9 @@ namespace tfs
         TBSYS_LOG(ERROR, "%s error :%s", CONF_HASH_SLOT_RATIO, tmp_hash_ratio);
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }
+
+      max_init_index_element_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_MAX_INIT_INDEX_ELEMENT_NUMS, 2048);
+      max_extend_index_element_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_MAX_EXTEND_INDEX_ELEMENT_NUMS, 136);
 
       return TFS_SUCCESS;
     }
@@ -485,57 +500,52 @@ namespace tfs
       if (EXIT_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "load config file erro.");
-        return TFS_ERROR;
-      }
-
-      // block stalbe time, default 5min
-      block_stable_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_STABLE_TIME, 5);
-
-      // default interval: 1 day
-      check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 1440);
-
-      // default no overlap
-      overlap_check_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_OVERLAP_CHECK_TIME, 0);
-
-      // thread count to check dataserver
-      thread_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_THREAD_COUNT, 1);
-
-      // cluster id
-      cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
-
-      // master and slave address info
-      const char* master_ns_ip  = config.getString(CONF_SN_CHECKSERVER, CONF_MASTER_NS_IP, NULL);
-      if (NULL == master_ns_ip)
-      {
-        TBSYS_LOG(ERROR, "master_ns_ip config item not found.");
         ret = TFS_ERROR;
       }
       else
       {
-        int master_ns_port = config.getInt(CONF_SN_CHECKSERVER, CONF_MASTER_NS_PORT, -1);
-        if (-1 == master_ns_port)
+        check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 24);
+        thread_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_THREAD_COUNT, 1);
+        cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
+        check_retry_turns_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RETRY_TURN, 3);
+        turn_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_TURN_INTERVAL, 180);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        const char* self_ip = config.getString(CONF_SN_PUBLIC, CONF_IP_ADDR);
+        int32_t self_port = config.getInt(CONF_SN_PUBLIC, CONF_PORT);
+        if ((NULL != self_ip) && (self_port > 0))
         {
-          master_ns_id_ = 0;
-          TBSYS_LOG(ERROR, "master_ns_ip config item not found.");
-          ret = TFS_ERROR;
+          self_id_ = Func::str_to_addr(self_ip, self_port);
         }
         else
         {
-          master_ns_id_ = Func::str_to_addr(master_ns_ip, master_ns_port);
+          TBSYS_LOG(DEBUG, "ip_addr or port config item not found");
+          ret = TFS_ERROR;
         }
       }
 
-      const char* slave_ns_ip  = config.getString(CONF_SN_CHECKSERVER, CONF_SLAVE_NS_IP, NULL);
-      if (NULL != slave_ns_ip)
+      if (TFS_SUCCESS == ret)
       {
-        int slave_ns_port = config.getInt(CONF_SN_CHECKSERVER, CONF_SLAVE_NS_PORT, -1);
-        if (-1 != slave_ns_port)
+        const char* ns_ip  = config.getString(CONF_SN_CHECKSERVER, CONF_NS_IP, NULL);
+        if (NULL != ns_ip)
         {
-          slave_ns_id_ = Func::str_to_addr(slave_ns_ip, slave_ns_port);
+          std::vector<std::string> ns_ip_parts;
+          common::Func::split_string(ns_ip, ':', ns_ip_parts);
+          if (2 == ns_ip_parts.size())
+          {
+            ns_id_ = Func::str_to_addr(ns_ip_parts[0].c_str(), atoi(ns_ip_parts[1].c_str()));
+          }
+          else
+          {
+            ret = TFS_ERROR;
+          }
         }
         else
         {
-          slave_ns_id_ = 0;
+          TBSYS_LOG(ERROR, "ns_ip config item not found.");
+          ret = TFS_ERROR;
         }
       }
 
