@@ -171,21 +171,12 @@ namespace tfs
       data_entry tair_pkey(pkey, false);
       data_entry tair_start_key(start_key, true);
       data_entry tair_end_key(end_key, false);
-      std::vector<data_entry*> values;
       int32_t key_offset = 0;
       int32_t ret = TFS_SUCCESS, retry = 0;
-
       do
       {
-        tbutil::Mutex::Lock lock(mutex_);
-        ret = tair_client_.get_range(area_, tair_pkey, tair_start_key, tair_end_key, 0, ROW_LIMIT, values);
-      }
-      while (TAIR_HAS_MORE_DATA != ret && TAIR_RETURN_SUCCESS != ret
-              && TAIR_RETURN_DATA_NOT_EXIST != ret && retry++ < 3);
-
-      if (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret)
-      {
-        for (uint32_t index = 1; index < values.size() && TFS_SUCCESS == ret; index += 2)
+        std::vector<data_entry*> values;
+        do
         {
           tbutil::Mutex::Lock lock(mutex_);
           ret = tair_client_.get_range(area_, tair_pkey, tair_start_key, tair_end_key, key_offset, ROW_LIMIT, values);
