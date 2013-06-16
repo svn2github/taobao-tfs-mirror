@@ -172,11 +172,11 @@ namespace tfs
       return logic_block_manager_.get(logic_block_id, tmp);
     }
 
-    int BlockManager::get_blocks_in_time_range(const common::TimeRange& range, std::vector<uint64_t>& blocks) const
+    int BlockManager::get_blocks_in_time_range(const common::TimeRange& range, std::vector<uint64_t>& blocks, const int32_t group_count, const int32_t group_seq) const
     {
       blocks.clear();
       RWLock::Lock lock(mutex_, READ_LOCKER);
-      return logic_block_manager_.get_blocks_in_time_range(range, blocks);
+      return logic_block_manager_.get_blocks_in_time_range(range, blocks, group_count, group_seq);
     }
 
     int BlockManager::get_all_block_ids(std::vector<uint64_t>& blocks) const
