@@ -652,6 +652,7 @@ int main(int argc,char** argv)
       {
         do_cmd(argv[i]);
       }
+      g_show_info.clean_last_file();
     }
     else
     {

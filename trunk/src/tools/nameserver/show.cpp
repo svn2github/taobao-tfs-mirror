@@ -36,7 +36,7 @@ namespace tfs
       char pid_tmp[16];
       sprintf(pid_tmp, "%d", getpid());
       string pid(pid_tmp);
-      LAST_DS_FILE = "/tmp/.tfs_last_ds_" + pid;
+      LAST_DS_FILE = "/tmp/.tfs_last_ds_v2_" + pid;
 
       return TFS_SUCCESS;
     }
