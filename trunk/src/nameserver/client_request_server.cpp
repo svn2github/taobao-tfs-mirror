@@ -323,7 +323,8 @@ namespace tfs
                 }
                 else
                 {
-                  ret = block->get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_ ? TFS_SUCCESS : EXIT_BLOCK_ALREADY_EXIST;
+                  int32_t least_copies = (INVALID_FAMILY_ID == block->get_family_id()) ? SYSPARAM_NAMESERVER.max_replication_ : 1;
+                  ret = block->get_servers_size() >= least_copies ? TFS_SUCCESS : EXIT_BLOCK_ALREADY_EXIST;
                 }
               }
               if (EXIT_BLOCK_NOT_FOUND == ret)

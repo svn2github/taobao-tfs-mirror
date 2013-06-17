@@ -344,7 +344,7 @@ namespace tfs
             }
           }
         }
-        ret = ((server_size_ - adjust_copies.get_array_index()) > 1);
+        ret = ((server_size_ - adjust_copies.get_array_index()) >= 1);
       }
       return ret;
     }
