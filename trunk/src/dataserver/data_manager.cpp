@@ -83,8 +83,8 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           lease->reset_member_info(now_us); // reset on every reqeust
-          lease_manager_.put(lease);
         }
+        lease_manager_.put(lease);
       }
 
       return ret;
@@ -117,8 +117,8 @@ namespace tfs
                   smsg->get_block_info(), smsg->get_status());
             }
           }
-          lease_manager_.put(lease);
         }
+        lease_manager_.put(lease);
       }
 
       return ret;
@@ -140,8 +140,8 @@ namespace tfs
         {
           DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
           ret = lease->update_member_info(ds_info.information_.id_, info, error_code);
-          lease_manager_.put(lease);
         }
+        lease_manager_.put(lease);
       }
 
       return ret;
@@ -187,8 +187,8 @@ namespace tfs
 
             req_cost_time  = lease->get_req_cost_time_us();
           }
-          lease_manager_.put(lease);
         }
+        lease_manager_.put(lease);
       }
 
       return all_finish;
@@ -253,8 +253,8 @@ namespace tfs
           ret = data_file.pwrite(none, buffer, length, offset);
           ret = (ret < 0) ? ret : TFS_SUCCESS; // transform return status
           lease->update_last_time_us(now_us);
-          lease_manager_.put(lease);
         }
+        lease_manager_.put(lease);
       }
 
       return  ret;
@@ -371,8 +371,8 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           lease->set_file_size(file_size);
-          lease_manager_.put(lease);
         }
+        lease_manager_.put(lease);
       }
 
       return ret;
@@ -396,12 +396,13 @@ namespace tfs
         {
           // get the blockinfo with highest version
           // commit blockinfo to ns only if at least one ds success
+
           if (lease->get_highest_version_block(block_info))
           {
             ret = update_block_info(block_info, type);
           }
-          lease_manager_.put(lease);
         }
+        lease_manager_.put(lease);
       }
 
       return ret;
@@ -464,11 +465,11 @@ namespace tfs
        int32_t member_size = 0;
        req_msg.set_block(block_id);
        ret = lease->get_member_info(req_msg.get_members(), member_size);
-       lease_manager_.put(lease);
        if (TFS_SUCCESS == ret)
        {
          req_msg.set_size(member_size);
        }
+
 
        NewClient* client = NULL;
        if (TFS_SUCCESS == ret)
@@ -498,10 +499,9 @@ namespace tfs
          }
          NewClientManager::get_instance().destroy_client(client);
        }
-
      }
+     lease_manager_.put(lease);
      return ret;
-
     }
 
     int DataManager::timeout(const time_t now_us)

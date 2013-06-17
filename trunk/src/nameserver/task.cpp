@@ -141,10 +141,11 @@ namespace tfs
         ReplicateBlockMessage msg;
         ReplBlock block;
         block.block_id_ = block_;
+        int32_t source_index = 0;
         for (int32_t index = 0; index < server_num_; ++index)
         {
           if (1 != index)
-            block.source_id_[index] = servers_[index];
+            block.source_id_[source_index++] = servers_[index];
         }
         block.destination_id_ = servers_[1];
         block.start_time_ = Func::get_monotonic_time();

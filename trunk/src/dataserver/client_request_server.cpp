@@ -1285,7 +1285,7 @@ namespace tfs
       }
       TIMER_END();
 
-      TBSYS_LOG(DEBUG, "write index fail. blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(DEBUG, "write index. blockid: %"PRI64_PREFIX"u, "
           "attach_block_id: %"PRI64_PREFIX"u, tmp: %d, cost: %"PRI64_PREFIX"d, ret: %d",
           block_id, attach_block_id, tmp, TIMER_DURATION(), ret);
 

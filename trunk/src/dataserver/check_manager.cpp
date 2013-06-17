@@ -297,13 +297,16 @@ namespace tfs
       return ret;
     }
 
-    // TODO: process less files
     int CheckManager::process_less_files(SyncBase& peer,
         const uint64_t block_id, const vector<FileInfoV2>& less)
     {
-      UNUSED(peer);
-      UNUSED(block_id);
-      UNUSED(less);
+      vector<FileInfoV2>::const_iterator iter = less.begin();
+      for ( ; iter != less.end(); iter++)
+      {
+        // TODO: process less file in master cluster
+        TBSYS_LOG(INFO, "less file in %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+            peer.get_dest_addr().c_str(), block_id, iter->id_);
+      }
       return TFS_SUCCESS;
     }
 

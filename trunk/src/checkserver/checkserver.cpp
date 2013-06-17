@@ -75,6 +75,10 @@ namespace tfs
     int CheckServer::destroy_service()
     {
       check_manager_.stop_check();
+      if (0 != check_thread_)
+      {
+        check_thread_->join();
+      }
       return TFS_SUCCESS;
     }
 

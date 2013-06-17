@@ -350,7 +350,7 @@ namespace tfs
     int CheckManager::update_task(message::ReportCheckBlockMessage* message)
     {
       int64_t seqno = message->get_seqno();
-      int64_t server_id = message->get_server_id();
+      uint64_t server_id = message->get_server_id();
       VUINT64& blocks = message->get_blocks();
       TBSYS_LOG(INFO, "server %s report seqno %"PRI64_PREFIX"u finish %zd blocks",
             tbsys::CNetUtil::addrToString(server_id).c_str(), seqno, blocks.size());
