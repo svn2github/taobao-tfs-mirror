@@ -38,7 +38,7 @@ do
   data=`mysql_op "select distinct app_id from t_meta_info where app_id > $start_appid order by app_id asc limit $ROW_LIMIT;" | awk 'NR>1{print $0}'`
   if [ -n "$data" ]; then
     #get last appid as next_start_appid
-    start_appid=`echo $data | awk '{x=$0}END{print x}'`
+    start_appid=`echo $data | awk '{print $NF}'`
   else
     break
   fi
@@ -51,22 +51,23 @@ do
     do
       res=`mysql_op "select distinct uid from t_meta_info where app_id = $app_id and uid > $start_uid order by uid asc limit $ROW_LIMIT;" | awk 'NR > 1{print $0}'`
       if [ -n "$res" ]; then
-        start_uid=`echo $res | awk '{x=$0}END{print x}'`
+        start_uid=`echo $res | awk '{print $NF}'`
         for uid in $res
         do
           echo "$app_id, $uid" >> $out_file
         done
       fi
 
-      if [ `echo $res | wc -l` -lt $ROW_LIMIT ];then
+      if [ `echo $res | wc -w` -lt $ROW_LIMIT ];then
         break;
       fi
     done
   done
 
-  if [ `echo $data | wc -l` -lt $ROW_LIMIT ];then
+  if [ `echo $data | wc -w` -lt $ROW_LIMIT ];then
     break;
   fi
+
 done
 
 echo "dump appid, uid per line successful"

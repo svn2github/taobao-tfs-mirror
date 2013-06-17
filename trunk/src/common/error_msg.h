@@ -273,10 +273,12 @@ namespace tfs
     const int32_t EXIT_KV_RETURN_VERSION_ERROR = -17003;
     const int32_t EXIT_KV_SCAN_ERROR = -17004;
 
-    const int32_t EXIT_OBJECT_OVERLAP = -17004;// pwrite object overlap
+    const int32_t EXIT_OBJECT_OVERLAP = -17005;// pwrite object overlap
     const int32_t EXIT_OBJECT_NOT_EXIST = -17006; //get_key(key not exist, object type)
     const int32_t EXIT_BUCKET_EXIST = -17007;// bucket already exist
     const int32_t EXIT_INVALID_KV_META_SERVER = -17008;// no kv meta server
+    const int32_t EXIT_KV_RETURN_HAS_MORE_DATA = -17009; //tair return over 1M of get range once
+
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

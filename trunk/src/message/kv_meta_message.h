@@ -454,6 +454,11 @@ namespace tfs
           limit_ = limit;
         }
 
+        int32_t get_mutable_limit() const
+        {
+          return limit_;
+        }
+
         const int32_t get_limit() const
         {
           return limit_;

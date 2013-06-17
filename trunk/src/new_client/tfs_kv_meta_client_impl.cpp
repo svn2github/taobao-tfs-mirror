@@ -425,7 +425,7 @@ namespace tfs
       {
         ObjectInfo object_info_null;
         object_info_null.has_meta_info_ = true;
-        object_info_null.has_customize_info_ = true;
+        object_info_null.has_customize_info_ = false;
         object_info_null.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
 
         ret = do_put_object(bucket_name, object_name, object_info_null, user_info);
@@ -491,7 +491,7 @@ namespace tfs
               if (0 == iter->offset_)
               {
                 object_info.has_meta_info_ = true;
-                object_info.has_customize_info_ = true;
+                object_info.has_customize_info_ = false;
                 object_info.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
                 TBSYS_LOG(DEBUG, "first object info, will put meta info.");
                 object_info.meta_info_.dump();
@@ -612,7 +612,7 @@ namespace tfs
 
           TBSYS_LOG(DEBUG, "vector size ================= is: %lu", object_info.v_tfs_file_info_.size());
 
-          cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_) - offset, left_length);
+          cur_length = min(static_cast<int64_t>(object_info.meta_info_.big_file_size_) - cur_offset, left_length);
 
           // read tfs
           read_length = read_data(object_info.v_tfs_file_info_,

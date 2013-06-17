@@ -11,7 +11,7 @@ Prefix:%{_prefix}
 Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
-BuildRequires: t-csrd-tbnet-devel = 1.0.6
+BuildRequires: t-csrd-tbnet-devel = 1.0.8
 BuildRequires: MySQL-devel-community = 5.1.48 
 BuildRequires: tair-devel = 2.3.1.7
 BuildRequires: boost-devel >= 1.3 

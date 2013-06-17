@@ -30,7 +30,7 @@ namespace tfs
     const char DEFAULT_CHAR = 7;
     const int32_t MAX_LIMIT = 1000;
     const int32_t VERSION_ERROR_RETRY_COUNT = 3;
-    const int64_t MAX_VERSION = 1<<15 - 1;
+    const int64_t MAX_VERSION = (1L<<16) - 1;
 
     struct TfsFileInfo
     {

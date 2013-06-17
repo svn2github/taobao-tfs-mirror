@@ -533,7 +533,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = kv_engine_helper_->get_key(key, &kv_value, lock_version);
-        if (TFS_SUCCESS != ret)
+        if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
         {
           ret = EXIT_OBJECT_NOT_EXIST;
         }
@@ -574,10 +574,9 @@ namespace tfs
         ret = get_object_part(bucket_name, file_name, offset_zero, &object_info_zero, &version);
         *object_info = object_info_zero;
         *still_have = false;
-        if (TAIR_RETURN_DATA_NOT_EXIST == ret)
+        if (EXIT_OBJECT_NOT_EXIST == ret)
         {
           TBSYS_LOG(ERROR, "object not exist");
-          ret = EXIT_OBJECT_NOT_EXIST;
         }
       }
       if (TFS_SUCCESS == ret)
@@ -585,16 +584,17 @@ namespace tfs
         if (offset > object_info_zero.meta_info_.big_file_size_)
         {
           TBSYS_LOG(ERROR, "req offset is out of big_file_size_");
-          ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
+          ret = EXIT_READ_OFFSET_ERROR;
         }
       }
 
       if (TFS_SUCCESS == ret)
       {
         bool is_big_file = false;
+
         if (object_info_zero.v_tfs_file_info_.size() > 0)
         {
-          if (offset + length <= object_info_zero.v_tfs_file_info_[0].file_size_)
+          if (object_info_zero.meta_info_.big_file_size_ == object_info_zero.v_tfs_file_info_[0].file_size_)
           {
             is_big_file = false;
           }
@@ -607,9 +607,9 @@ namespace tfs
         {
           is_big_file = true;
         }
-
         if (is_big_file)//big file
         {
+          TBSYS_LOG(ERROR, "is big_file");
           //op key
           char *start_key_buff = NULL;
           if (TFS_SUCCESS == ret)
@@ -647,7 +647,7 @@ namespace tfs
           //op value
 
           int32_t i;
-          int32_t first = 0;
+          int32_t scan_offset = 0;
           bool go_on = true;
           short scan_type = CMD_RANGE_VALUE_ONLY;//only scan value
           vector<KvValue*> kv_value_keys;
@@ -659,10 +659,11 @@ namespace tfs
           {
             int32_t result_size = 0;
             int64_t last_offset = 0;
-            ret = kv_engine_helper_->scan_keys(start_key, end_key, SCAN_LIMIT, first,
+            ret = kv_engine_helper_->scan_keys(start_key, end_key, SCAN_LIMIT, scan_offset,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
             if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
             {//metainfo exist but data not exist
+              TBSYS_LOG(ERROR, "metainfo exist but data not exist");
               ret = TFS_SUCCESS;
             }
             for(i = 0; i < result_size; ++i)
@@ -690,9 +691,9 @@ namespace tfs
             }
             TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
 
-            if(result_size == SCAN_LIMIT && valid_result < MESS_LIMIT)
+            if ((result_size == SCAN_LIMIT && valid_result < MESS_LIMIT) || EXIT_KV_RETURN_HAS_MORE_DATA == ret)
             {
-              first = 1;
+              scan_offset = 1;
               ret = serialize_key(bucket_name, file_name, last_offset,
                                   &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
             }
@@ -701,7 +702,7 @@ namespace tfs
               go_on = false;
             }
 
-            for(i = 0; i < result_size; ++i)//free tair
+            for(i = 0; i < result_size; ++i)//free kv
             {
               kv_value_values[i]->free();
             }
@@ -770,7 +771,7 @@ namespace tfs
 
       int32_t limit = MESS_LIMIT;
       int32_t i;
-      int32_t first = 0;
+      int32_t scan_offset = 0;
       short scan_type = CMD_RANGE_ALL;
       vector<KvValue*> kv_value_keys;
       vector<KvValue*> kv_value_values;
@@ -780,7 +781,7 @@ namespace tfs
       int32_t result_size = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit + 1, first,
+        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit + 1, scan_offset,
           &kv_value_keys, &kv_value_values, &result_size, scan_type);
         TBSYS_LOG(DEBUG, "del object, bucekt_name: %s, object_name: %s, "
             "scan ret: %d, limit: %d, result size: %d",
@@ -794,8 +795,13 @@ namespace tfs
           result_size -= 1;
           *still_have = true;
         }
-        if(TFS_SUCCESS == ret)
+        if(TFS_SUCCESS == ret || EXIT_KV_RETURN_HAS_MORE_DATA == ret)
         {
+          if (EXIT_KV_RETURN_HAS_MORE_DATA == ret)
+          {
+            ret = TFS_SUCCESS;
+            *still_have = true;
+          }
           for(i = 0; i < result_size; ++i)
           {
             //key get
@@ -826,12 +832,12 @@ namespace tfs
           }
         }
 
-        //del from tair
+        //del from kv
         if(TFS_SUCCESS == ret && result_size > 0)
         {
            ret = kv_engine_helper_->delete_keys(vec_keys);
         }
-        for(i = 0; i < result_size; ++i)//free tair
+        for(i = 0; i < result_size; ++i)//free kv
         {
           kv_value_keys[i]->free();
           kv_value_values[i]->free();
@@ -1016,7 +1022,7 @@ namespace tfs
     }
 
     int MetaInfoHelper::list_objects(const KvKey& pkey, const std::string& prefix,
-        const std::string& start_key, const char delimiter, const int32_t limit,
+        const std::string& start_key, const char delimiter, int32_t *limit,
         std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
         std::set<std::string>* s_common_prefix, int8_t* is_truncated)
     {
@@ -1025,15 +1031,16 @@ namespace tfs
       if (NULL == v_object_meta_info ||
           NULL == v_object_name ||
           NULL == s_common_prefix ||
-          NULL == is_truncated)
+          NULL == is_truncated ||
+          NULL == limit)
       {
         ret = TFS_ERROR;
       }
 
-      if (limit > MAX_LIMIT || limit < 0)
+      if (*limit > MAX_LIMIT or *limit < 0)
       {
-        TBSYS_LOG(ERROR, "%s", "limit param error");
-        ret = TFS_ERROR;
+        TBSYS_LOG(WARN, "limit: %d will be cutoff", *limit);
+        *limit = MAX_LIMIT;
       }
 
       if (TFS_SUCCESS == ret)
@@ -1042,13 +1049,21 @@ namespace tfs
         v_object_name->clear();
         s_common_prefix->clear();
 
-        int32_t limit_size = limit;
+        int32_t limit_size = *limit;
         *is_truncated = 0;
 
         vector<KvValue*> kv_value_keys;
         vector<KvValue*> kv_value_values;
 
+        bool first_loop = true;
         string temp_start_key(start_key);
+
+        if (start_key.compare(prefix) < 0)
+        {
+          temp_start_key = prefix;
+          //never handle start_key
+          first_loop = false;
+        }
 
         bool loop = true;
         do
@@ -1057,12 +1072,14 @@ namespace tfs
           int32_t actual_size = static_cast<int32_t>(v_object_name->size()) +
             static_cast<int32_t>(s_common_prefix->size());
 
-          limit_size = limit - actual_size;
+          limit_size = *limit - actual_size;
 
-          ret = get_range(pkey, temp_start_key,  0, limit_size + 1,
-                          &kv_value_keys, &kv_value_values, &res_size);
+          //start_key need to be excluded from a result except for using prefix as start_key.
+          int32_t extra = first_loop ? 2 : 1;
+          ret = get_range(pkey, temp_start_key, 0, limit_size + extra,
+              &kv_value_keys, &kv_value_values, &res_size);
           // error
-          if (TFS_SUCCESS != ret)
+          if (TFS_SUCCESS != ret && EXIT_KV_RETURN_HAS_MORE_DATA != ret)
           {
             TBSYS_LOG(ERROR, "get range fail, ret: %d", ret);
             break;
@@ -1074,7 +1091,7 @@ namespace tfs
           {
             break;
           }
-          else if (res_size < limit_size + 1)
+          else if (res_size < limit_size + extra && EXIT_KV_RETURN_HAS_MORE_DATA != ret)
           {
             loop = false;
           }
@@ -1096,7 +1113,18 @@ namespace tfs
             }
             else if (offset == 0)
             {
-              ret = group_objects(object_name, v, prefix, delimiter, v_object_meta_info, v_object_name, s_common_prefix);
+              if (!first_loop)
+              {
+                ret = group_objects(object_name, v, prefix, delimiter,
+                    v_object_meta_info, v_object_name, s_common_prefix);
+              }
+              //If it is first_loop, we need to skip the object which equals start_key.
+              else if (object_name.compare(start_key) != 0)
+              {
+                ret = group_objects(object_name, v, prefix, delimiter,
+                    v_object_meta_info, v_object_name, s_common_prefix);
+              }
+
               if (TFS_SUCCESS != ret)
               {
                 TBSYS_LOG(ERROR, "group objects fail, ret: %d", ret);
@@ -1110,10 +1138,17 @@ namespace tfs
             }
 
             if (static_cast<int32_t>(s_common_prefix->size()) +
-                static_cast<int32_t>(v_object_name->size()) >= limit)
+                static_cast<int32_t>(v_object_name->size()) >= *limit)
             {
               loop = false;
               *is_truncated = 1;
+              break;
+            }
+
+            if (!prefix.empty() && object_name.compare(prefix) > 0 && object_name.find(prefix) != 0)
+            {
+              TBSYS_LOG(DEBUG, "object after %s can't match", object_name.c_str());
+              loop = false;
               break;
             }
           }
@@ -1135,7 +1170,7 @@ namespace tfs
             }
           }
 
-          //delete for tair
+          //delete for kv
           for (int i = 0; i < res_size; ++i)
           {
             kv_value_keys[i]->free();
@@ -1143,6 +1178,7 @@ namespace tfs
           }
           kv_value_keys.clear();
           kv_value_values.clear();
+          first_loop = false;
         } while (loop);// end of while
       }// end of if
       return ret;
@@ -1257,7 +1293,7 @@ namespace tfs
     }
 
     int MetaInfoHelper::get_bucket(const std::string& bucket_name, const std::string& prefix,
-        const std::string& start_key, const char delimiter, const int32_t limit,
+        const std::string& start_key, const char delimiter, int32_t *limit,
         vector<ObjectMetaInfo>* v_object_meta_info, VSTRING* v_object_name, set<string>* s_common_prefix,
         int8_t* is_truncated)
     {
@@ -1268,8 +1304,8 @@ namespace tfs
       pkey.key_size_ = bucket_name.length();
       pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
 
-      TBSYS_LOG(DEBUG, "get bucket: %s, prefix: %s, start_key: %s, delimiter: %c, limit: %d",
-                bucket_name.c_str(), prefix.c_str(), start_key.c_str(), delimiter, limit);
+      TBSYS_LOG(DEBUG, "get bucket: %s, prefix: %s, start_key: %s, delimiter: %c",
+                bucket_name.c_str(), prefix.c_str(), start_key.c_str(), delimiter);
       // check bucket whether exist
       if (TFS_SUCCESS == ret)
       {
@@ -1316,7 +1352,7 @@ namespace tfs
         ret = kv_engine_helper_->delete_key(pkey);
       }
 
-      //delete for tair
+      //delete for kv
       for (int i = 0; i < res_size; ++i)
       {
         kv_value_keys[i]->free();

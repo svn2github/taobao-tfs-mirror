@@ -7,7 +7,9 @@ TFS_MOCK_DS_CONF=${TFS_HOME}/conf/mock_ds.conf
 TFS_ADMIN_CONF=${TFS_HOME}/conf/ads.conf
 TFS_RC_CONF=${TFS_HOME}/conf/rc.conf
 TFS_RS_CONF=${TFS_HOME}/conf/rs.conf
+TFS_KV_RS_CONF=${TFS_HOME}/conf/kv_rs.conf
 TFS_META_CONF=${TFS_HOME}/conf/meta.conf
+TFS_KV_META_CONF=${TFS_HOME}/conf/kv_meta.conf
 BIN_DIR=${TFS_HOME}/bin
 NS_BIN=${BIN_DIR}/nameserver
 DS_BIN=${BIN_DIR}/dataserver
@@ -15,14 +17,18 @@ ADMIN_BIN=${BIN_DIR}/adminserver
 MOCK_DS_BIN=${BIN_DIR}/mock_data_server
 RC_BIN=${BIN_DIR}/rcserver
 RS_BIN=${BIN_DIR}/rootserver
+KV_RS_BIN=${BIN_DIR}/kvrootserver
 META_BIN=${BIN_DIR}/metaserver
+KV_META_BIN=${BIN_DIR}/kvmetaserver
 NS_CMD="${NS_BIN} -f ${TFS_NS_CONF} -d"
 DS_CMD="${DS_BIN} -f ${TFS_DS_CONF} -d -i"
 ADMIN_CMD="${ADMIN_BIN} -f ${TFS_ADMIN_CONF} -d -s"
 MOCK_DS_CMD="${MOCK_DS_BIN} -f ${TFS_MOCK_DS_CONF} -d -i"
 RC_CMD="${RC_BIN} -f ${TFS_RC_CONF} -d"
 RS_CMD="${RS_BIN} -f ${TFS_RS_CONF} -d"
+KV_RS_CMD="${KV_RS_BIN} -f ${TFS_KV_RS_CONF} -d"
 META_CMD="${META_BIN} -f ${TFS_META_CONF} -d"
+KV_META_CMD="${KV_META_BIN} -f ${TFS_KV_META_CONF} -d"
 UP_TIME=4
 DOWN_TIME=8
 
@@ -45,7 +51,7 @@ succ_echo()
 
 print_usage()
 {
-    warn_echo "Usage: $0 [start_ns | check_ns | stop_ns | start_ds ds_index | check_ds | stop_ds ds_index | stop_ds_all | admin_ns | admin_ds | check_admin | stop_admin | start_rc | check_rc | stop_rc | start_rs | check_rs | stop_rs | start_meta | check_meta | stop_meta]"
+    warn_echo "Usage: $0 [start_ns | check_ns | stop_ns | start_ds ds_index | check_ds | stop_ds ds_index | start_ds_all | stop_ds_all | admin_ns | admin_ds | check_admin | stop_admin | start_rc | check_rc | stop_rc | start_rs | check_rs | stop_rs | start_meta | check_meta | stop_meta | start_kv_rs| check_kv_rs | stop_kv_rs | start_kv_meta | check_kv_meta | stop_kv_meta]"
     warn_echo "ds_index format : 2-4 OR 2,4,3 OR 2-4,6,7 OR '2-4 5,7,8'"
 }
 
@@ -124,6 +130,22 @@ get_info()
                 echo "metaserver"
             fi
             ;;
+        kv_rs)
+            if [ $2 -gt 0 ]
+            then
+                echo "${KV_RS_CMD}"
+            else
+                echo "kvrootserver"
+            fi
+            ;;
+        kv_meta)
+            if [ $2 -gt 0 ]
+            then
+                echo "${KV_META_CMD}"
+            else
+                echo "kvmetaserver"
+            fi
+            ;;
         *)
             exit 1
     esac
@@ -185,6 +207,12 @@ check_run()
             ;;
         meta)
             grep_cmd="${META_CMD}"
+            ;;
+        kv_rs)
+            grep_cmd="${KV_RS_CMD}"
+            ;;
+        kv_meta)
+            grep_cmd="${KV_META_CMD}"
             ;;
         *)
             exit 1
@@ -516,6 +544,53 @@ stop_meta()
     do_stop "meta" 0
 }
 
+start_kv_rs()
+{
+    do_start "kv_rs" 0
+}
+
+check_kv_rs()
+{
+    ret_pid=`check_run kv_rs`
+    if [ $ret_pid -gt 0 ]
+    then
+        succ_echo "kvrootserver is running pid: $ret_pid"
+    elif [ $ret_pid -eq 0 ]
+    then
+        fail_echo "kvrootserver is NOT running"
+    else
+        fail_echo "more than one same kvrootserver is running"
+    fi
+}
+
+stop_kv_rs()
+{
+    do_stop "kv_rs" 0
+}
+
+start_kv_meta()
+{
+    do_start "kv_meta" 0
+}
+
+check_kv_meta()
+{
+    ret_pid=`check_run kv_meta`
+    if [ $ret_pid -gt 0 ]
+    then
+        succ_echo "kvmetaserver is running pid: $ret_pid"
+    elif [ $ret_pid -eq 0 ]
+    then
+        fail_echo "kvmetaserver is NOT running"
+    else
+        fail_echo "more than one same kvmetaserver is running"
+    fi
+}
+
+stop_kv_meta()
+{
+    do_stop "kv_meta" 0
+}
 ########################
 case "$1" in
     start_ns)
@@ -593,6 +668,24 @@ case "$1" in
         ;;
     stop_meta)
         stop_meta
+        ;;
+    start_kv_rs)
+        start_kv_rs
+        ;;
+    check_kv_rs)
+        check_kv_rs
+        ;;
+    stop_kv_rs)
+        stop_kv_rs
+        ;;
+    start_kv_meta)
+        start_kv_meta
+        ;;
+    check_kv_meta)
+        check_kv_meta
+        ;;
+    stop_kv_meta)
+        stop_kv_meta
         ;;
     *)
         print_usage

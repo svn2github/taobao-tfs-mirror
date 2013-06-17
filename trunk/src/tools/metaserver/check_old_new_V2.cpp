@@ -40,7 +40,9 @@ int64_t old_server_id = 0;
 int64_t new_server_id = 0;
 int64_t app_id = 0;
 int64_t uid = 0;
-
+char buff[500];
+char *p = NULL;
+char *q = NULL;
 static tfs::message::MessageFactory gfactory;
 static tfs::common::BasePacketStreamer gstreamer;
 
@@ -85,7 +87,28 @@ int check(NameMetaClientImpl &client ,string path)
       client.read_frag_info(app_id, uid, new_path.c_str(), *frag_info);
 
       char *bucket_name = new char[256];
-      sprintf(bucket_name, "%ld^%ld", app_id, uid);
+      new_path.copy(buff, new_path.size(), 0);
+      p = NULL;
+      q = NULL;
+      //for hash
+      q = buff + 1;
+      while(1)
+      {
+        p = NULL;
+        p = strchr(q, '/');
+        if (NULL == p)
+        {
+          break;
+        }
+        q = p + 1;
+      }
+
+      int pre_len = q - buff;
+      char * de = q;
+      int64_t hashnum;
+      hashnum = (tbsys::CStringUtil::murMurHash((const void*)de, new_path.size() - pre_len) - 1) % 10243 + 1;
+
+      sprintf(bucket_name, "%ld^%ld", app_id, hashnum);
       ObjectInfo *base_object_info = new ObjectInfo();
       ObjectInfo *object_info = new ObjectInfo();
       UserInfo *user_info = new UserInfo();
@@ -108,7 +131,7 @@ int check(NameMetaClientImpl &client ,string path)
         }
         else if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "[DIFF_INFO] bucket: %s object: %s ",bucket_name, new_path.c_str() + 1);
+          TBSYS_LOG(ERROR, "get_obejct |%s|%s| unknow error",bucket_name,new_path.c_str() + 1);
           break;
         }
         if (offset == 0)
