@@ -49,6 +49,34 @@ namespace tfs
         void dump(const int8_t flag, FILE* fp) const;
     };
 
+    class BlockDistributionShow : public BlockBase
+    { 
+      public:
+        BlockDistributionShow() : has_same_ip_(false), has_same_ip_rack_(false){}
+        virtual ~BlockDistributionShow();
+        bool check_block_ip_distribution();
+        bool check_block_rack_distribution(std::string& rack_ip_mask);
+        void dump_ip(FILE* fp) const;
+        void dump_rack(FILE* fp) const;
+
+        bool has_same_ip_;
+        bool has_same_ip_rack_;
+        std::map<uint32_t, std::vector<uint64_t>* > ip_servers_;
+        std::map<uint32_t, std::vector<uint64_t>* > ip_rack_servers_;
+    };
+
+    class RackBlockShow
+    {       
+      public:
+        RackBlockShow() : total_block_replicate_count_(0){}
+        virtual ~RackBlockShow();
+        void add(BlockShow& block, std::string& rack_ip_mask);
+        void dump(const int8_t flag, std::string& server_ip_port,  FILE* fp) const;
+      private:
+        std::map<uint32_t, std::vector<uint64_t> *> rack_blocks_;
+        int64_t total_block_replicate_count_;
+    }; 
+
     class MachineShow
     {
       public:
@@ -97,6 +125,18 @@ namespace tfs
         int add(MachineShow& machine);
         int add(BlockShow& block);
         void dump(const int8_t flag, const int8_t sub_flag, FILE* fp) const;
+    };
+
+    struct BlockDistributionStruct
+    {
+      public:
+        BlockDistributionStruct();
+        ~BlockDistributionStruct();
+        int32_t total_block_count_;
+        int32_t ip_same_block_count_;
+        int32_t ip_rack_same_block_count_;
+        void add(BlockDistributionShow& block);
+        void dump(const int8_t flag,  FILE* fp) const;
     };
   }
 }
