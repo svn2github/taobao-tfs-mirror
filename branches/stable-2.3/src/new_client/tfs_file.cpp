@@ -1275,7 +1275,12 @@ int TfsFile::async_rsp_read_file(common::BasePacket* rsp, const uint16_t index)
   else
   {
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::read_success_, 1);
+    if (static_cast<uint32_t>(seg_data->get_last_read_pri_ds()) == LocalResource::get_instance()->local_ip_)
+    {
+      BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::local_read_, 1);
+    }
   }
+
   return ret;
 }
 
@@ -1437,6 +1442,10 @@ int TfsFile::async_rsp_read_file_v2(common::BasePacket* rsp, const uint16_t inde
   else
   {
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::read_success_, 1);
+    if (static_cast<uint32_t>(seg_data->get_last_read_pri_ds()) == LocalResource::get_instance()->local_ip_)
+    {
+      BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::local_read_, 1);
+    }
   }
   return ret;
 }
@@ -1623,6 +1632,10 @@ int TfsFile::async_rsp_stat_file(common::BasePacket* rsp, const uint16_t index)
   else
   {
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::stat_success_, 1);
+    if (static_cast<uint32_t>(seg_data->get_last_read_pri_ds()) == LocalResource::get_instance()->local_ip_)
+    {
+      BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::local_read_, 1);
+    }
   }
 
   return ret;

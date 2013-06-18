@@ -41,6 +41,7 @@ namespace tfs
       static std::string write_fail_;
       static std::string unlink_success_;
       static std::string unlink_fail_;
+      static std::string local_read_;
 
       static std::string client_cache_stat_;
       static std::string local_cache_hit_;

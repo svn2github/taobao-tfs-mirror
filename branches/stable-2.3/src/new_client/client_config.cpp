@@ -29,6 +29,7 @@ string StatItem::write_success_ = "write_success";
 string StatItem::write_fail_ = "write_fail";
 string StatItem::unlink_success_ = "unlink_success";
 string StatItem::unlink_fail_ = "unlink_fail";
+string StatItem::local_read_ = "local_read";
 string StatItem::client_cache_stat_ = "client_cache_stat";
 string StatItem::local_cache_hit_ = "local_cache_hit";
 string StatItem::local_cache_miss_ = "local_cache_miss";
