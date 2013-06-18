@@ -49,6 +49,7 @@ int BgTask::initialize()
     access_ptr->add_sub_key(StatItem::write_fail_);
     access_ptr->add_sub_key(StatItem::unlink_success_);
     access_ptr->add_sub_key(StatItem::unlink_fail_);
+    access_ptr->add_sub_key(StatItem::local_read_);
 
     StatEntry<string, string>::StatEntryPtr cache_ptr =
       new StatEntry<string, string>(StatItem::client_cache_stat_, current, true);
