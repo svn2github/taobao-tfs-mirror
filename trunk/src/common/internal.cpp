@@ -1587,7 +1587,7 @@ namespace tfs
       const int32_t member_num = data_num + check_num;
 
       uint64_t server_id = INVALID_SERVER_ID;
-      for (int i = member_num - 1; (INVALID_BLOCK_ID == server_id) && (i >= 0); i--)
+      for (int i = member_num - 1; (INVALID_SERVER_ID == server_id) && (i >= 0); i--)
       {
         if (members_[i].first == block_id)
         {
@@ -1595,6 +1595,42 @@ namespace tfs
         }
       }
       return server_id;
+    }
+
+    int32_t FamilyInfoExt::get_index_by_server(uint64_t server_id) const
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      int32_t index = 0;
+      for (; index < member_num; index++)
+      {
+        if (members_[index].second == server_id)
+        {
+          break;
+        }
+      }
+
+      return (index < member_num) ? index : -1;
+    }
+
+    int32_t FamilyInfoExt::get_index_by_block(uint64_t block_id) const
+    {
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      int32_t index = 0;
+      for (; index < member_num; index++)
+      {
+        if (members_[index].first == block_id)
+        {
+          break;
+        }
+      }
+
+      return (index < member_num) ? index : -1;
     }
 
     void FamilyInfoExt::get_check_servers(std::vector<uint64_t>& servers) const

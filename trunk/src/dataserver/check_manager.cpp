@@ -76,7 +76,6 @@ namespace tfs
 
         if (!ds_info.is_destroyed() && (INVALID_BLOCK_ID != block_id))
         {
-          TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u", block_id);
           if (TFS_SUCCESS == check_block(block_id))
           {
             mutex_.lock();
@@ -251,7 +250,7 @@ namespace tfs
         vector<FileInfoV2> diff;
         vector<FileInfoV2> less;
         compare_block_fileinfos(finfos, peer_index.finfos_, more, diff, less);
-        TBSYS_LOG(INFO, "compare %"PRI64_PREFIX"u with %s more %zd diff %zd less %zd",
+        TBSYS_LOG(INFO, "compare block %"PRI64_PREFIX"u with %s more %zd diff %zd less %zd",
             block_id, tbsys::CNetUtil::addrToString(peer_ns).c_str(),
             more.size(), diff.size(), less.size());
 

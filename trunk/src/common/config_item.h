@@ -186,6 +186,7 @@ namespace tfs
 
 // check server
 #define CONF_THREAD_COUNT                             "thread_count"
+#define CONF_CHECK_SPAN                               "check_span"
 #define CONF_CHECK_INTERVAL                           "check_interval"
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_NS_IP                                    "ns_ip"

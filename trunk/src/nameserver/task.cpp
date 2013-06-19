@@ -165,7 +165,7 @@ namespace tfs
     void ReplicateTask::dump(tbnet::DataBuffer& stream)
     {
       Task::dump(stream);
-      stream.writeInt32(block_);
+      stream.writeInt64(block_);
       stream.writeInt32(server_num_);
       for (int8_t index = 0; index < server_num_ && NULL != servers_; ++index)
       {
@@ -572,14 +572,15 @@ namespace tfs
     void ECMarshallingTask::dump(tbnet::DataBuffer& stream)
     {
       Task::dump(stream);
-      stream.writeInt32(family_id_);
+      stream.writeInt64(family_id_);
       stream.writeInt32(family_aid_info_);
       const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
       for (int32_t index =  0; index < MEMBER_NUM; ++index)
       {
         stream.writeInt64(family_members_[index].server_);
-        stream.writeInt32(family_members_[index].block_);
+        stream.writeInt64(family_members_[index].block_);
         stream.writeInt32(family_members_[index].version_);
+        stream.writeInt32(family_members_[index].status_);
       }
     }
 

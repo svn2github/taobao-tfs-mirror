@@ -221,6 +221,7 @@ namespace tfs
       uint64_t ns_id_;
       int32_t cluster_id_;
       int32_t check_interval_;
+      int32_t check_span_;
       int32_t thread_count_;
       int32_t check_retry_turns_;
       int32_t turn_interval_;

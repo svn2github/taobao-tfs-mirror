@@ -380,14 +380,20 @@ namespace tfs
     {
       while (!stop_)
       {
+        TIMER_START();
         clear();  // clear servers & keep failed block
         int64_t now = Func::curr_time();
         seqno_ = now;
         TimeRange range;
-        range.end_ = (now / 1000 / 1000) - 60; // ignore recent 1 minutes modify
-        range.start_ = range.end_ - SYSPARAM_CHECKSERVER.check_interval_;
+        range.end_ = (now / 1000000) - 60; // ignore recent 1 minutes modify
+        range.start_ = range.end_ - SYSPARAM_CHECKSERVER.check_span_;
+        range.start_ = std::max(range.start_, 0L);  // if start equals 0, do full check
         check_blocks(range);
-        for (int index = 0; index < SYSPARAM_CHECKSERVER.check_interval_ && !stop_; index++)
+        TIMER_END();
+
+        int32_t wait_time = SYSPARAM_CHECKSERVER.check_interval_ - TIMER_DURATION() / 1000000;
+        wait_time = std::max(wait_time, 0);
+        for (int index = 0; index < wait_time && !stop_; index++)
         {
           sleep(1);  // check if stoped every seconds, may receive stop signal
         }
@@ -397,27 +403,27 @@ namespace tfs
     int CheckManager::check_blocks(const TimeRange& range)
     {
       int ret = get_group_info();
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && !stop_)
       {
         ret = fetch_servers();
       }
 
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && !stop_)
       {
         int retry_times = SYSPARAM_CHECKSERVER.check_retry_turns_;
-        while (retry_times--)
+        while (retry_times-- && !stop_)
         {
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS == ret && !stop_)
           {
             ret = fetch_blocks(range);
           }
 
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS == ret && !stop_)
           {
             ret = assign_blocks();
           }
 
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS == ret && !stop_)
           {
             ret = dispatch_task();
           }
@@ -588,6 +594,8 @@ namespace tfs
             VUINT64 replicas;
             int ret = check_manager_.retry_get_block_replicas(SYSPARAM_CHECKSERVER.ns_id_,
                 (*bit)->get_block_id(), replicas);
+            TBSYS_LOG(INFO, "update block %"PRI64_PREFIX"u replica info from ns",
+                (*bit)->get_block_id());
             if (TFS_SUCCESS == ret)
             {
               (*bit)->reset();

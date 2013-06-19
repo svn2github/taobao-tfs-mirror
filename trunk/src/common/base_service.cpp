@@ -85,6 +85,7 @@ namespace tfs
 
     bool BaseService::push(BasePacket* packet, bool block)
     {
+      TBSYS_LOG(DEBUG, "main worker queue size: %zd", main_workers_.size());
       return main_workers_.push(packet, work_queue_size_, block);
     }
 

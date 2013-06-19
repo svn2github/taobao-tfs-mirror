@@ -55,6 +55,7 @@ namespace tfs
 
         void reset()
         {
+          tbutil::Mutex::Lock lock(mutex_);
           server_size_ = 0;
         }
 
@@ -70,6 +71,7 @@ namespace tfs
 
         void add_server(const uint64_t server_id)
         {
+          tbutil::Mutex::Lock lock(mutex_);
           bool found = false;
           for (int index = 0; index < server_size_; index++)
           {
@@ -92,6 +94,7 @@ namespace tfs
 
         const int32_t get_server_size() const
         {
+          tbutil::Mutex::Lock lock(mutex_);
           return server_size_;
         }
 
@@ -99,6 +102,7 @@ namespace tfs
         uint64_t block_id_;
         uint64_t servers_[common::MAX_REPLICATION_NUM];
         int32_t server_size_;
+        tbutil::Mutex mutex_;
     };
 
     struct BlockIdCompare
@@ -130,6 +134,7 @@ namespace tfs
 
         void reset()
         {
+          tbutil::Mutex::Lock lock(mutex_);
           blocks_.clear();
         }
 
@@ -145,6 +150,7 @@ namespace tfs
 
         void add_block(const uint64_t block_id)
         {
+          tbutil::Mutex::Lock lock(mutex_);
           blocks_.push_back(block_id);
         }
 
@@ -167,6 +173,7 @@ namespace tfs
         uint64_t server_id_;
         common::VUINT64 blocks_;
         ServerStatus status_;
+        tbutil::Mutex mutex_;
     };
 
     struct ServerIdCompare

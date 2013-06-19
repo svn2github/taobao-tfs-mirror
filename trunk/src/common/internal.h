@@ -354,9 +354,9 @@ namespace tfs
     enum PlanType
     {
       PLAN_TYPE_REPLICATE = 0,
+      PLAN_TYPE_EC_REINSTATE,
       PLAN_TYPE_MOVE,
       PLAN_TYPE_COMPACT,
-      PLAN_TYPE_EC_REINSTATE,
       PLAN_TYPE_EC_DISSOLVE,
       PLAN_TYPE_EC_MARSHALLING
     };
@@ -905,6 +905,12 @@ namespace tfs
 
       // get parity server list
       void get_check_servers(std::vector<uint64_t>& servers) const;
+
+      // get index by server id
+      int32_t get_index_by_server(uint64_t server_id) const;
+
+      // get index by block id
+      int32_t get_index_by_block(uint64_t block_id) const;
 
       // get alive data num
       int32_t get_alive_data_num() const;

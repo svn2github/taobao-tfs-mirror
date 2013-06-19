@@ -504,7 +504,12 @@ namespace tfs
       }
       else
       {
-        check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 24);
+        check_span_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_SPAN, 86400); // recent day
+        if (0 == check_span_)
+        {
+          check_span_ = INT_MAX;
+        }
+        check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 86400);  // check every day
         thread_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_THREAD_COUNT, 1);
         cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
         check_retry_turns_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RETRY_TURN, 3);
