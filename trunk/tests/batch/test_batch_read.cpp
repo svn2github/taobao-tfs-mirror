@@ -200,11 +200,7 @@ int main(int argc, char* argv[])
   int32_t ret = fetch_input_opt(argc, argv, input_param, thread_count);
   if (ret != TFS_SUCCESS || input_param.ns_ip_port_.empty() || thread_count > THREAD_SIZE)
   {
-<<<<<<< .working
     printf("usage: -d nsip:port -c file_count -t thread_count -s random(0/1)\n");
-=======
-    printf("usage: -d nsip:port -t thread_num -c file_count -s random(0/1)\n");
->>>>>>> .merge-right.r2309
     exit(-1);
   }
 

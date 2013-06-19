@@ -266,11 +266,7 @@ int main(int argc, char* argv[])
   int ret = fetch_input_opt(argc, argv, input_param, thread_count);
   if (ret != TFS_SUCCESS || input_param.ns_ip_port_.empty() || thread_count > THREAD_SIZE)
   {
-<<<<<<< .working
-    printf("usage: -d ip:port -t thread_count -o ratio(read:write:delete:update) -s random(0/1) -r range\n");
-=======
-    printf("usage: -d ip:port -t thread_count -o ratio(read:write:delete:update) -c count -r range -l log_level\n");
->>>>>>> .merge-right.r2309
+    printf("usage: -d ip:port -c count -t thread_count -o ratio(read:write:delete:update) -s random(0/1) -r range(low:high Bytes)\n");
     exit(-1);
   }
 
