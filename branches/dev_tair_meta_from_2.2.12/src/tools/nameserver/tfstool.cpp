@@ -170,7 +170,7 @@ int cmd_head_bucket(const VSTRING& param);
 int cmd_put_bucket_tag(const VSTRING &param);
 int cmd_get_bucket_tag(const VSTRING &param);
 int cmd_del_bucket_tag(const VSTRING &param);
-int cmd_list_mul_obj(const VSTRING &param);
+//int cmd_list_mul_obj(const VSTRING &param);
 
 //for test
 int cmd_pwrite_object(const VSTRING& param);
@@ -182,6 +182,9 @@ int cmd_put_object(const VSTRING& param);
 int cmd_get_object(const VSTRING& param);
 int cmd_del_object(const VSTRING& param);
 int cmd_head_object(const VSTRING& param);
+
+int cmd_apply_authorize(const VSTRING& param);
+int cmd_get_authorize(const VSTRING& param);
 
 int cmd_init_multipart(const VSTRING& param);
 int cmd_upload_multipart(const VSTRING& param);
@@ -404,7 +407,7 @@ void init()
     g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name", "delete a bucket", 1, 1, cmd_del_bucket);
     g_cmd_map["head_bucket"] = CmdNode("head_bucket bucket_name", "stat a bucket", 1, 1, cmd_head_bucket);
 /*
-    g_cmd_map["list_mul_obj"] = CmdNode("list_mul_obj bucket_name [prefix start_key start_id delimiter limit]", "list multipart objects", 1, 6, cmd_list_mul_obj);
+  //  g_cmd_map["list_mul_obj"] = CmdNode("list_mul_obj bucket_name [prefix start_key start_id delimiter limit]", "list multipart objects", 1, 6, cmd_list_mul_obj);
 */
     g_cmd_map["put_bucket_tag"] = CmdNode("put_bucket_tag bucket_name map_size key value [key value]", "put bucket tag", 4, 22, cmd_put_bucket_tag);
     g_cmd_map["get_bucket_tag"] = CmdNode("get_bucket_tag bucket_name", "get bucket tag", 1, 1, cmd_get_bucket_tag);
@@ -419,6 +422,9 @@ void init()
     g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name local_file", "get a object", 3, 3, cmd_get_object);
     g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name", "delete a object", 2, 2, cmd_del_object);
     g_cmd_map["head_object"] = CmdNode("head_object bucket_name object_name", "stat a object", 2, 2, cmd_head_object);
+
+    g_cmd_map["apply_authorize"] = CmdNode("apply_authorize user_name", "apply authorize (access id and secret key)", 1, 1, cmd_apply_authorize);
+    g_cmd_map["get_authorize"] = CmdNode("get_authorize access_key_id", "get authorize (use_name and secret key)", 1, 1, cmd_get_authorize);
 
     g_cmd_map["init_multipart"] = CmdNode("init_multipart bucket_name object_name", "init multipart", 2, 2, cmd_init_multipart);
     g_cmd_map["upload_multipart"] = CmdNode("upload_multipart bucket_name object_name local_file owner_id upload_id part_num",
@@ -2061,8 +2067,8 @@ int cmd_list_mul_obj(const VSTRING& param)
   ToolUtil::print_info(ret, "get bucket %s", bucket_name);
   return ret;
 }
-
 */
+
 int cmd_del_bucket(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
@@ -2494,6 +2500,62 @@ int cmd_head_object(const VSTRING& param)
         object_info.meta_info_.create_time_, object_info.meta_info_.modify_time_, object_info.meta_info_.big_file_size_, object_info.meta_info_.owner_id_);
   }
   ToolUtil::print_info(ret, "head bucket: %s, object: %s", bucket_name, object_name);
+
+  return ret;
+}
+
+int cmd_apply_authorize(const VSTRING& param)
+{
+  const char* user_name = param[0].c_str();
+  char access_key_id[21];
+  char access_secret_key[41];
+
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.apply_authorize(user_name, access_key_id, access_secret_key);
+  }
+
+  if (TFS_SUCCESS == ret)
+  {
+    ToolUtil::print_info(ret, "apply authorize: user:%s, key_id:%s, secret_key:%s", user_name, access_key_id, access_secret_key);
+  }
+
+  return ret;
+}
+
+int cmd_get_authorize(const VSTRING& param)
+{
+  const char* access_key_id = param[0].c_str();
+  char user_name[256];
+  char access_secret_key[41];
+
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.get_authorize(access_key_id, user_name, access_secret_key);
+  }
+
+  if (TFS_SUCCESS == ret)
+  {
+    ToolUtil::print_info(ret, "get authorize: key_id:%s success, user:%s, secret_key:%s", access_key_id, user_name, access_secret_key);
+  }
 
   return ret;
 }

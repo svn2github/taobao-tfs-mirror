@@ -219,6 +219,12 @@ namespace tfs
           case REQ_KVMETA_DEL_BUCKET_TAG_MESSAGE:
             ret = del_bucket_tag(dynamic_cast<ReqKvMetaDelBucketTagMessage*>(base_packet));
             break;
+          case REQ_KV_APPLY_AUTHORIZE_MESSAGE:
+            ret = apply_authorize(dynamic_cast<ReqApplyAuthorizeMessage*>(base_packet));
+            break;
+          case REQ_KV_GET_AUTHORIZE_MESSAGE:
+            ret = get_authorize(dynamic_cast<ReqGetAuthorizeMessage*>(base_packet));
+            break;
           case REQ_KVMETA_PUT_BUCKET_ACL_MESSAGE:
             ret = put_bucket_acl(dynamic_cast<ReqKvMetaPutBucketAclMessage*>(base_packet));
             break;
@@ -719,6 +725,68 @@ namespace tfs
       return ret;
     }
 
+    int KvMetaService::apply_authorize(ReqApplyAuthorizeMessage* req_apply_authorize_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_apply_authorize_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "apply authorize mess is null, ret: %d", ret);
+      }
+      std::string access_key_id_;
+      std::string access_secret_key_;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.apply_authorize(req_apply_authorize_msg->get_user_name(),
+                                                &access_key_id_, &access_secret_key_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        RspApplyAuthorizeMessage* rsp_apply_authorize_msg = new(std::nothrow) RspApplyAuthorizeMessage();
+        assert(NULL != rsp_apply_authorize_msg);
+        rsp_apply_authorize_msg->set_access_key_id(access_key_id_);
+        rsp_apply_authorize_msg->set_access_secret_key(access_secret_key_);
+
+        req_apply_authorize_msg->reply(rsp_apply_authorize_msg);
+      }
+      else
+      {
+        req_apply_authorize_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "apply authorize fail");
+      }
+      return ret;
+    }
+
+    int KvMetaService::get_authorize(ReqGetAuthorizeMessage* req_get_authorize_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_get_authorize_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "get authorize mess is null, ret: %d", ret);
+      }
+      common::AuthorizeValueInfo authorize_info;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.get_authorize(req_get_authorize_msg->get_access_key_id(), &authorize_info);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        RspGetAuthorizeMessage* rsp_get_authorize_msg = new(std::nothrow) RspGetAuthorizeMessage();
+        assert(NULL != rsp_get_authorize_msg);
+        rsp_get_authorize_msg->set_authorize_info(authorize_info);
+
+        req_get_authorize_msg->reply(rsp_get_authorize_msg);
+      }
+      else
+      {
+        req_get_authorize_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "get authorize fail");
+      }
+      return ret;
+    }
     //about bucket acl
     int KvMetaService::put_bucket_acl(ReqKvMetaPutBucketAclMessage* put_bucket_acl_msg)
     {

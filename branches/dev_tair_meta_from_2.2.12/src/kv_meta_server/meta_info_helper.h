@@ -88,6 +88,13 @@ namespace tfs
         int get_bucket_tag(const std::string &bucket_name, common::MAP_STRING *bucket_tag_map);
         int del_bucket_tag(const std::string &bucket_name);
 
+        int get_authorize(const std::string &access_key_id, common::AuthorizeValueInfo* authorize_info);
+        int put_authorize(const std::string &user_name, std::string& access_key_id, std::string& access_secret_key);
+        int apply_authorize(const std::string& user_name,
+                    std::string* access_key_id, std::string* access_secret_key);
+
+        int put_bucket_acl(const std::string &bucket_name, const common::MAP_STRING_INT &bucket_acl_map);
+        int get_bucket_acl(const std::string &bucket_name, common::MAP_STRING_INT *bucket_acl_map);
         int put_bucket_acl(const std::string &bucket_name,
             const common::MAP_INT64_INT &bucket_acl_map, const common::UserInfo &user_info);
 

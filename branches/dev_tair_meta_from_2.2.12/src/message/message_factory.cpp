@@ -351,6 +351,18 @@ namespace tfs
           case common::RSP_KV_RT_GET_TABLE_MESSAGE:
             packet = new GetTableFromKvRtsResponseMessage();
             break;
+          case common::REQ_KV_APPLY_AUTHORIZE_MESSAGE:
+            packet = new ReqApplyAuthorizeMessage();
+            break;
+          case common::RSP_KV_APPLY_AUTHORIZE_MESSAGE:
+            packet = new RspApplyAuthorizeMessage();
+            break;
+          case common::REQ_KV_GET_AUTHORIZE_MESSAGE:
+            packet = new ReqGetAuthorizeMessage();
+            break;
+          case common::RSP_KV_GET_AUTHORIZE_MESSAGE:
+            packet = new RspGetAuthorizeMessage();
+            break;
           case common::REQ_KVMETA_INIT_MULTIPART_MESSAGE:
             packet = new ReqKvMetaInitMulitpartMessage();
             break;

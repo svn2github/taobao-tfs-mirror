@@ -57,5 +57,45 @@ namespace tfs
 
       return ret;
     }
+
+    string SessionUtil::gene_access_key_id()
+    {
+      uuid_t uu;
+      uuid_generate(uu);
+      char buf[37];
+      uuid_unparse(uu, buf);
+      char res[21];
+      for(int i = 0; i < 8; ++i)
+      {
+        res[i] = buf[i];
+      }
+      for(int i = 8; i < 20; ++i)
+      {
+        res[i] = buf[i+16];
+      }
+      res[20] = '\0';
+      return string(res);
+    }
+
+    string SessionUtil::gene_access_secret_key()
+    {
+      uuid_t uu;
+      uuid_generate(uu);
+      char buf[37];
+      uuid_unparse(uu, buf);
+      char res[41];
+
+      for(int i = 0; i < 36; ++i)
+      {
+        res[i] = buf[i];
+      }
+      res[36] = buf[2];
+      res[37] = buf[7];
+      res[38] = buf[11];
+      res[39] = buf[17];
+      res[40] = '\0';
+
+      return string(res);
+    }
   }
 }

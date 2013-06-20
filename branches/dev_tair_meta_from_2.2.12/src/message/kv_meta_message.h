@@ -1049,6 +1049,109 @@ namespace tfs
         std::string bucket_name_;
     };
 
+    // ReqApplyAuthorize
+    class ReqApplyAuthorizeMessage : public common::BasePacket
+    {
+      public:
+        ReqApplyAuthorizeMessage();
+        virtual ~ReqApplyAuthorizeMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_user_name() const
+        {
+          return user_name_;
+        }
+
+        void set_user_name(const std::string& user_name)
+        {
+          user_name_ = user_name;
+        }
+
+      private:
+        std::string user_name_;
+    };
+    class RspApplyAuthorizeMessage : public common::BasePacket
+    {
+      public:
+        RspApplyAuthorizeMessage();
+        virtual ~RspApplyAuthorizeMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_access_key_id() const
+        {
+          return access_key_id_;
+        }
+
+        void set_access_key_id(const std::string& access_key_id)
+        {
+          access_key_id_ = access_key_id;
+        }
+
+        const std::string& get_access_secret_key() const
+        {
+          return access_secret_key_;
+        }
+
+        void set_access_secret_key(const std::string& access_secret_key)
+        {
+          access_secret_key_ = access_secret_key;
+        }
+      private:
+        std::string access_key_id_;
+        std::string access_secret_key_;
+    };
+
+    // ReqGETAuthorize
+    class ReqGetAuthorizeMessage : public common::BasePacket
+    {
+      public:
+        ReqGetAuthorizeMessage();
+        virtual ~ReqGetAuthorizeMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_access_key_id() const
+        {
+          return access_key_id_;
+        }
+
+        void set_access_key_id(const std::string& access_key_id)
+        {
+          access_key_id_ = access_key_id;
+        }
+
+      private:
+        std::string access_key_id_;
+    };
+
+    class RspGetAuthorizeMessage : public common::BasePacket
+    {
+      public:
+        RspGetAuthorizeMessage();
+        virtual ~RspGetAuthorizeMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+
+        const common::AuthorizeValueInfo& get_authorize_info() const
+        {
+          return authorize_info_;
+        }
+
+        void set_authorize_info(const common::AuthorizeValueInfo& authorize_info)
+        {
+          authorize_info_ = authorize_info;
+        }
+      private:
+        common::AuthorizeValueInfo authorize_info_;
+    };
+
     //about bucket acl
     class ReqKvMetaPutBucketAclMessage : public common::BasePacket
     {

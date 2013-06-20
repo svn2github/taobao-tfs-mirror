@@ -198,6 +198,7 @@ namespace tfs
     const int32_t EXIT_TAG_KEY_EXIST = -16010; //bucket has the key
     const int32_t EXIT_BUCKET_TAG_NOT_EXIST = -16011; //del bucket tag not exist
 
+
     const int32_t EXIT_MULTIPART_TYPE_KEY = -16012; //deserialize key when get bucket
     const int32_t EXIT_NOT_MULTIPART_TYPE_KEY = -16013; //deserialize key when list_multipart_objects
 
@@ -207,6 +208,9 @@ namespace tfs
     const int32_t EXIT_OVER_OWN_BUCKETS_SIZE = -16022; //one owner has max 100 buckets
     const int32_t EXIT_OWNER_HAS_NO_BUCKETS = -16023;   //owner_id has no buckets
     const int32_t EXIT_FATAL_OWNER_ID = -16024;         //bucket_meta_info's owner_id neq buckets_result's owner_id
+    const int32_t EXIT_AUTHORIZE_NOT_EXIST = -16200;//authorize key not exist
+    const int32_t EXIT_SIGNTURE_NOT_EQUAL = -16201;//
+
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

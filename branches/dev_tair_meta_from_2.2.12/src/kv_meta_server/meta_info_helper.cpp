@@ -31,6 +31,7 @@ namespace tfs
     const int32_t SCAN_LIMIT = 500;
     const int32_t MESS_LIMIT = 10;
     const int64_t INT64_INFI = 0x7FFFFFFFFFFFFFFF;
+    const char DELIMITER_3 = 3;
     const char DELIMITER_1 = 7;
     const char DELIMITER_2 = 2;
     const char SPEC_CHAR = 8;
@@ -70,6 +71,8 @@ namespace tfs
         TBSYS_LOG(ERROR, "owner_id: %"PRI64_PREFIX"d get bucket have no read acl", owner_id);
       }
 
+      //TODO fix trick
+      ret = TFS_SUCCESS;
       return ret;
     }
 
@@ -2265,6 +2268,122 @@ namespace tfs
       return ret;
     }
 
+    int MetaInfoHelper::get_authorize(const std::string& access_key_id, AuthorizeValueInfo* authorize_info)
+    {
+      int ret = (access_key_id.size() == 20) ? TFS_SUCCESS : TFS_ERROR;
+      TBSYS_LOG(INFO, "access_key_id: %s ", access_key_id.c_str());
+      char buff_authorize_key[22];
+      buff_authorize_key[0] = DELIMITER_3;
+      access_key_id.copy(buff_authorize_key + 1, access_key_id.size(), 0);
+      KvKey key;
+      key.key_ = buff_authorize_key;
+      key.key_size_ = 1 + access_key_id.size();
+      key.key_type_ = KvKey::KEY_TYPE_BUCKET;
+
+      KvValue *value = NULL;
+      int64_t version = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = kv_engine_helper_->get_key(key, &value, &version);
+      }
+      if (ret == EXIT_KV_RETURN_DATA_NOT_EXIST)
+      {
+        ret = EXIT_AUTHORIZE_NOT_EXIST;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t pos = 0;
+        ret = authorize_info->deserialize(value->get_data(), value->get_size(), pos);
+      }
+
+      if (NULL != value)
+      {
+        value->free();
+      }
+      return ret;
+    }
+
+    int MetaInfoHelper::put_authorize(const std::string &user_name, std::string& access_key_id, std::string& access_secret_key)
+    {
+      int ret = (user_name.size() > 0 && access_key_id.size() == 20 && 40 == access_secret_key.size()) ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        char buff_authorize_key[22];
+        buff_authorize_key[0] = DELIMITER_3;
+        TBSYS_LOG(INFO, "access_key_id: %s ", access_key_id.c_str());
+        if (TFS_SUCCESS == ret)
+        {
+          access_key_id.copy(buff_authorize_key + 1, access_key_id.size(), 0);
+        }
+        KvKey key;
+        key.key_ = buff_authorize_key;
+        key.key_size_ = 1 + access_key_id.size();
+        key.key_type_ = KvKey::KEY_TYPE_BUCKET;
+
+        AuthorizeValueInfo authorize_info;
+        authorize_info.access_secret_key_ = access_secret_key;
+        authorize_info.user_name_ = user_name;
+        char *kv_value_authorize_info_buff = NULL;
+        int32_t kv_value_buff_size = authorize_info.length();
+        kv_value_authorize_info_buff = (char*) malloc(kv_value_buff_size);
+        if (NULL == kv_value_authorize_info_buff)
+        {
+          ret = TFS_ERROR;
+        }
+        int64_t pos = 0;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = authorize_info.serialize(kv_value_authorize_info_buff, kv_value_buff_size, pos);
+        }
+
+        KvMemValue value;
+        if (TFS_SUCCESS == ret)
+        {
+          value.set_data(kv_value_authorize_info_buff, pos);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          int lock_version = 0;
+          ret = kv_engine_helper_->put_key(key, value, lock_version);
+        }
+
+        if (NULL != kv_value_authorize_info_buff)
+        {
+          free(kv_value_authorize_info_buff);
+          kv_value_authorize_info_buff = NULL;
+        }
+      }
+      return ret;
+    }
+
+    int MetaInfoHelper::apply_authorize(const std::string& user_name,
+                            std::string* access_key_id, std::string* access_secret_key)
+    {
+      int ret = (user_name.size() > 0 && NULL != access_key_id &&
+          NULL != access_secret_key) ? TFS_SUCCESS : TFS_ERROR;
+
+      //  hmac_sha(unsigned char* k, int lk,  unsigned char* d, int ld, unsigned char* out, int t);
+
+      if (TFS_SUCCESS == ret)
+      {
+        *access_key_id = SessionUtil::gene_access_key_id();
+        *access_secret_key = SessionUtil::gene_access_secret_key();
+      }
+      if (access_key_id->size() <= 0 || access_secret_key->size() <= 0)
+      {
+        TBSYS_LOG(ERROR, "apply_authorize FAIL, access_key_id: %s, access_secret_key: %s", access_key_id->c_str(), access_secret_key->c_str());
+        ret = TFS_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+         TBSYS_LOG(DEBUG, "apply_authorize, access_key_id: %s, access_secret_key: %s", access_key_id->c_str(), access_secret_key->c_str());
+        ret = put_authorize(user_name, *access_key_id, *access_secret_key);
+      }
+      return ret;
+    }
     //about bucket acl
     int MetaInfoHelper::put_bucket_acl(const string& bucket_name,
         const MAP_INT64_INT &bucket_acl_map, const UserInfo &user_info)

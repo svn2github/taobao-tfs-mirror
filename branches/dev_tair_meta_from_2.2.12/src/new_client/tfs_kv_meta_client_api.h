@@ -88,6 +88,9 @@ namespace tfs
         TfsRetType head_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info, const common::UserInfo &user_info);
 
+        TfsRetType apply_authorize(const char *user_name, char* access_key_id, char *access_secret_key);
+        TfsRetType get_authorize(const char* access_key_id, char *user_name, char *access_secret_key);
+
         TfsRetType init_multipart(const char *bucket_name,
             const char *object_name, std::string* const upload_id);
         TfsRetType upload_multipart(const char *bucket_name,
@@ -105,6 +108,7 @@ namespace tfs
                         std::vector<int32_t>* const p_v_part_num);
         TfsRetType abort_multipart(const char *bucket_name,
             const char *object_name, const char* upload_id);
+
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClient);
         KvMetaClientImpl* impl_;

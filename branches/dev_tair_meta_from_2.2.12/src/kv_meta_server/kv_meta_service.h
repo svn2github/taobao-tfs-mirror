@@ -67,6 +67,9 @@ namespace tfs
       int get_bucket_tag(message::ReqKvMetaGetBucketTagMessage *get_bucket_tag_msg);
       int del_bucket_tag(message::ReqKvMetaDelBucketTagMessage *del_bucket_tag_msg);
 
+      int apply_authorize(message::ReqApplyAuthorizeMessage* req_apply_authorize_msg);
+      int get_authorize(message::ReqGetAuthorizeMessage* req_get_authorize_msg);
+
       int init_multipart(message::ReqKvMetaInitMulitpartMessage* req_init_multi_msg);
       int upload_multipart(message::ReqKvMetaUploadMulitpartMessage* req_up_multi_msg);
       int complete_multipart(message::ReqKvMetaCompleteMulitpartMessage* req_comp_multi_msg);

@@ -201,6 +201,16 @@ namespace tfs
       bool is_truncated_;
     };
 
+    struct AuthorizeValueInfo
+    {
+      AuthorizeValueInfo();
+      int64_t length() const;
+      int serialize(char *data, const int64_t data_len, int64_t &pos) const;
+      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
+      std::string access_secret_key_;
+      std::string user_name_;
+    };
+
     typedef std::map<std::string, BucketMetaInfo> MAP_BUCKET_INFO;
     typedef std::map<std::string, BucketMetaInfo>::const_iterator MAP_BUCKET_INFO_ITER;
     struct BucketsResult
@@ -209,7 +219,6 @@ namespace tfs
       int64_t length() const;
       int serialize(char *data, const int64_t data_len, int64_t &pos) const;
       int deserialize(const char *data, const int64_t data_len, int64_t &pos);
-
       int64_t owner_id_;
       MAP_BUCKET_INFO bucket_info_map_;
     };

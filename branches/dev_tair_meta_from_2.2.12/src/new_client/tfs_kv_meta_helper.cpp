@@ -912,6 +912,117 @@ int KvMetaHelper::do_head_object(const uint64_t server_id, const char *bucket_na
   return ret;
 }
 
+int KvMetaHelper::do_apply_authorize(const uint64_t server_id, const char *user_name,
+    char* access_key_id, char *access_secret_key)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == user_name || NULL == access_key_id || NULL == access_secret_key)
+  {
+    ret = EXIT_INVALID_ARGU_ERROR;
+  }
+  else
+  {
+    ReqApplyAuthorizeMessage req_apply_authorize_msg;
+    req_apply_authorize_msg.set_user_name(user_name);
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_apply_authorize_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call apply authorize fail,"
+          "server_addr: %s, user_name: %s, ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), user_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KV_APPLY_AUTHORIZE_MESSAGE == rsp->getPCode())
+    {
+      RspApplyAuthorizeMessage* rsp_apply_authorize_msg = dynamic_cast<RspApplyAuthorizeMessage*>(rsp);
+      int32_t access_key_id_len = rsp_apply_authorize_msg->get_access_key_id().size();
+      rsp_apply_authorize_msg->get_access_key_id().copy(access_key_id, access_key_id_len, 0);
+      access_key_id[access_key_id_len] = '\0';
+
+      int32_t access_secret_key_len = rsp_apply_authorize_msg->get_access_secret_key().size();
+      rsp_apply_authorize_msg->get_access_secret_key().copy(access_secret_key, access_secret_key_len, 0);
+      access_secret_key[access_secret_key_len] = '\0';
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "apply authorize return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "apply authorize fail,"
+          "server_addr: %s, user_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(),
+          user_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_get_authorize(const uint64_t server_id, const char* access_key_id, AuthorizeValueInfo* authorizeinfo)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == access_key_id)
+  {
+    ret = EXIT_INVALID_ARGU_ERROR;
+  }
+  else
+  {
+    ReqGetAuthorizeMessage req_get_authorize_msg;
+    req_get_authorize_msg.set_access_key_id(access_key_id);
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_get_authorize_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call get authorize fail,"
+          "server_addr: %s, access_key_id: %s, ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), access_key_id, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KV_GET_AUTHORIZE_MESSAGE == rsp->getPCode())
+    {
+      RspGetAuthorizeMessage* rsp_get_authorize_msg = dynamic_cast<RspGetAuthorizeMessage*>(rsp);
+      *authorizeinfo = rsp_get_authorize_msg->get_authorize_info();
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "apply authorize return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "get authorize fail,"
+          "server_addr: %s, access_key_id: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(),
+          access_key_id, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
 int KvMetaHelper::do_init_multipart(const uint64_t server_id, const char *bucket_name,
     const char *object_name, std::string* const upload_id)
 {
@@ -1190,3 +1301,4 @@ int KvMetaHelper::do_abort_multipart(const uint64_t server_id, const char *bucke
   }
   return ret;
 }
+

@@ -89,6 +89,11 @@ namespace tfs
         TfsRetType head_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info, const common::UserInfo &user_info);
 
+        TfsRetType apply_authorize(const char *user_name,
+            char* access_key_id, char *access_secret_key);
+        TfsRetType get_authorize(const char* access_key_id,
+            char *user_name, char *access_secret_key);
+
         TfsRetType init_multipart(const char *bucket_name,
             const char *object_name, std::string* const upload_id);
         TfsRetType upload_multipart(const char *bucket_name,
@@ -156,6 +161,10 @@ namespace tfs
                 const char* upload_id, std::vector<int32_t>* const p_v_part_num);
         int do_abort_multipart(const char *bucket_name, const char *object_name,
             const char* upload_id, common::ObjectInfo *object_info, bool* still_have);
+        int do_apply_authorize(const char *user_name,
+            char* access_key_id, char *access_secret_key);
+        int do_get_authorize(const char* access_key_id, common::AuthorizeValueInfo* authorizeinfo);
+
         static bool is_valid_string(const std::string &str);
         static bool is_valid_bucket_tag(const common::MAP_STRING &bucket_tag_map);
         static bool is_valid_bucket_name(const char *bucket_name);

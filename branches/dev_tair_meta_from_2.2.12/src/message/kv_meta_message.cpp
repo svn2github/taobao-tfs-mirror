@@ -1496,6 +1496,126 @@ namespace tfs
       return common::Serialization::get_string_length(bucket_name_);
     }
 
+    //ReqApplyAuthorize
+    ReqApplyAuthorizeMessage::ReqApplyAuthorizeMessage()
+    {
+      _packetHeader._pcode = REQ_KV_APPLY_AUTHORIZE_MESSAGE;
+    }
+
+    ReqApplyAuthorizeMessage::~ReqApplyAuthorizeMessage(){}
+
+    int ReqApplyAuthorizeMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(user_name_);
+      return iret;
+    }
+
+    int ReqApplyAuthorizeMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(user_name_);
+      return iret;
+    }
+
+    int64_t ReqApplyAuthorizeMessage::length() const
+    {
+      return Serialization::get_string_length(user_name_);
+    }
+
+    RspApplyAuthorizeMessage::RspApplyAuthorizeMessage()
+    {
+      _packetHeader._pcode = RSP_KV_APPLY_AUTHORIZE_MESSAGE;
+    }
+
+    RspApplyAuthorizeMessage::~RspApplyAuthorizeMessage(){}
+
+    int RspApplyAuthorizeMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(access_key_id_);
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(access_secret_key_);
+      }
+      return iret;
+    }
+
+    int RspApplyAuthorizeMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(access_key_id_);
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(access_secret_key_);
+      }
+      return iret;
+    }
+
+    int64_t RspApplyAuthorizeMessage::length() const
+    {
+      return Serialization::get_string_length(access_key_id_)
+      + Serialization::get_string_length(access_secret_key_);
+    }
+
+    //ReqGETAuthorize
+    ReqGetAuthorizeMessage::ReqGetAuthorizeMessage()
+    {
+      _packetHeader._pcode = REQ_KV_GET_AUTHORIZE_MESSAGE;
+    }
+
+    ReqGetAuthorizeMessage::~ReqGetAuthorizeMessage(){}
+
+    int ReqGetAuthorizeMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(access_key_id_);
+      return iret;
+    }
+
+    int ReqGetAuthorizeMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(access_key_id_);
+      return iret;
+    }
+
+    int64_t ReqGetAuthorizeMessage::length() const
+    {
+      return Serialization::get_string_length(access_key_id_);
+    }
+
+    RspGetAuthorizeMessage::RspGetAuthorizeMessage()
+    {
+      _packetHeader._pcode = RSP_KV_GET_AUTHORIZE_MESSAGE;
+    }
+
+    RspGetAuthorizeMessage::~RspGetAuthorizeMessage(){}
+
+    int RspGetAuthorizeMessage::serialize(Stream& output) const
+    {
+      int32_t iret = TFS_SUCCESS;
+      int64_t pos = 0;
+
+      iret = authorize_info_.serialize(output.get_free(), output.get_free_length(), pos);
+      if (TFS_SUCCESS == iret)
+      {
+        output.pour(authorize_info_.length());
+      }
+      return iret;
+    }
+
+    int RspGetAuthorizeMessage::deserialize(Stream& input)
+    {
+      int32_t iret = TFS_SUCCESS;
+      int64_t pos = 0;
+      iret = authorize_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+      if (TFS_SUCCESS == iret)
+      {
+        input.drain(authorize_info_.length());
+      }
+      return iret;
+    }
+
+    int64_t RspGetAuthorizeMessage::length() const
+    {
+      return authorize_info_.length();
+    }
+
     //about bucket acl
     //put bucket acl
     ReqKvMetaPutBucketAclMessage::ReqKvMetaPutBucketAclMessage()

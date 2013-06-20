@@ -81,6 +81,10 @@ namespace tfs
       static int do_get_bucket_tag(const uint64_t server_id, const char *bucket_name, common::MAP_STRING *bucket_tag_map);
       static int do_del_bucket_tag(const uint64_t server_id, const char *bucket_name);
 
+      static int do_apply_authorize(const uint64_t server_id, const char *user_name,
+                                    char* access_key_id, char *access_secret_key);
+      static int do_get_authorize(const uint64_t server_id, const char* access_key_id, common::AuthorizeValueInfo* authorizeinfo);
+
       static int do_init_multipart(const uint64_t server_id,
                                   const char *bucket_name,
                                   const char *object_name,

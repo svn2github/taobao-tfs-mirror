@@ -171,6 +171,15 @@ namespace tfs
       return impl_->head_object(bucket_name, object_name, object_info, user_info);
     }
 
+    TfsRetType KvMetaClient::apply_authorize(const char *user_name, char* access_key_id, char *access_secret_key)
+    {
+      return impl_->apply_authorize(user_name, access_key_id, access_secret_key);
+    }
+
+    TfsRetType KvMetaClient::get_authorize(const char* access_key_id, char *user_name, char *access_secret_key)
+    {
+      return impl_->get_authorize(access_key_id, user_name, access_secret_key);
+    }
     TfsRetType KvMetaClient::init_multipart(const char *bucket_name,
         const char *object_name, std::string* const upload_id)
     {

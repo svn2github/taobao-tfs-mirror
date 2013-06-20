@@ -1719,6 +1719,26 @@ namespace tfs
         return ret;
       }
 
+      TfsRetType RcClientImpl::apply_authorize(const char *user_name, char* access_key_id, char *access_secret_key)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->apply_authorize(user_name, access_key_id, access_secret_key);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::get_authorize(const char* access_key_id, char *user_name, char *access_secret_key)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->get_authorize(access_key_id, user_name, access_secret_key);
+        }
+        return ret;
+      }
+
       TfsRetType RcClientImpl::init_multipart(const char *bucket_name, const char *object_name,
           std::string* const upload_id)
       {

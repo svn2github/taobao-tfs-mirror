@@ -171,6 +171,8 @@ namespace tfs
             std::vector<int32_t>* const p_v_part_num);
         TfsRetType abort_multipart(const char *bucket_name,
             const char *object_name, const char* upload_id);
+        TfsRetType apply_authorize(const char *user_name, char* access_key_id, char *access_secret_key);
+        TfsRetType get_authorize(const char* access_key_id, char *user_name, char *access_secret_key);
         // for name meta
         TfsRetType create_dir(const int64_t uid, const char* dir_path);
         TfsRetType create_dir_with_parents(const int64_t uid, const char* dir_path);

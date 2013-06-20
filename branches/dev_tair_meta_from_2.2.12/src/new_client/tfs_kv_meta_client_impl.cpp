@@ -637,7 +637,7 @@ namespace tfs
       {
         ObjectInfo object_info_null;
         object_info_null.has_meta_info_ = true;
-        object_info_null.has_customize_info_ = true;
+        object_info_null.has_customize_info_ = false;
         if (NULL != customize_info)
         {
           object_info_null.customize_info_ = *customize_info;
@@ -707,7 +707,7 @@ namespace tfs
               if (0 == iter->offset_)
               {
                 object_info.has_meta_info_ = true;
-                object_info.has_customize_info_ = true;
+                object_info.has_customize_info_ = false;
                 if (NULL != customize_info)
                 {
                   object_info.customize_info_ = *customize_info;
@@ -1091,6 +1091,63 @@ namespace tfs
       return ret;
     }
 
+    TfsRetType KvMetaClientImpl::apply_authorize(const char *user_name, char* access_key_id, char *access_secret_key)
+    {
+      TfsRetType ret = TFS_ERROR;
+      if (!is_valid_bucket_name(user_name))
+      {
+        TBSYS_LOG(ERROR, "user name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = do_apply_authorize(user_name, access_key_id, access_secret_key);
+
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "apply authorize failed. username: %s", user_name);
+        }
+      }
+
+      return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::get_authorize(const char* access_key_id, char *user_name, char *access_secret_key)
+    {
+      TfsRetType ret = TFS_ERROR;
+      if (NULL == user_name || NULL == access_secret_key)
+      {
+        TBSYS_LOG(ERROR, "username or access secret key is null ");
+        ret = EXIT_INVALID_ARGU;
+      }
+      else if (!is_valid_bucket_name(access_key_id))
+      {
+        TBSYS_LOG(ERROR, "access key id is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        common::AuthorizeValueInfo authorizeinfo;
+        ret = do_get_authorize(access_key_id, &authorizeinfo);
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t user_name_len = authorizeinfo.user_name_.size();
+          authorizeinfo.user_name_.copy(user_name, user_name_len, 0);
+          user_name[user_name_len] = '\0';
+
+          int32_t access_secret_key_len = authorizeinfo.access_secret_key_.size();
+          authorizeinfo.access_secret_key_.copy(access_secret_key, access_secret_key_len, 0);
+          access_secret_key[access_secret_key_len] = '\0';
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "get authorize failed. access_key_id: %s", access_key_id);
+        }
+      }
+
+      return ret;
+    }
     int KvMetaClientImpl::do_put_bucket(const char *bucket_name, const BucketMetaInfo& bucket_meta_info, const UserInfo &user_info)
     {
       int ret = TFS_SUCCESS;
@@ -1366,6 +1423,37 @@ namespace tfs
       return ret;
     }
 
+    int KvMetaClientImpl::do_apply_authorize(const char *user_name, char* access_key_id, char *access_secret_key)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_apply_authorize(meta_server_id, user_name, access_key_id, access_secret_key);
+        update_fail_info(ret);
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    int KvMetaClientImpl::do_get_authorize(const char* access_key_id, common::AuthorizeValueInfo* authorizeinfo)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_get_authorize(meta_server_id, access_key_id, authorizeinfo);
+        update_fail_info(ret);
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
     bool KvMetaClientImpl::is_valid_bucket_name(const char *bucket_name)
     {
       bool is_valid = true;

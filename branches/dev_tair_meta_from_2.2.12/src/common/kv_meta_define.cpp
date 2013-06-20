@@ -803,6 +803,41 @@ namespace tfs
       return ret;
     }
 
+    //AuthorizeValueInfo
+    AuthorizeValueInfo::AuthorizeValueInfo()
+    {}
+    int64_t AuthorizeValueInfo::length() const
+    {
+      return Serialization::get_string_length(access_secret_key_) + Serialization::get_string_length(user_name_);
+    }
+
+    int AuthorizeValueInfo::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_string(data, data_len, pos, access_secret_key_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_string(data, data_len, pos, user_name_);
+      }
+      return ret;
+    }
+
+    int AuthorizeValueInfo::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_string(data, data_len, pos, access_secret_key_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_string(data, data_len, pos, user_name_);
+      }
+      return ret;
+    }
 
     //ObjectUploadInfo
     ObjectUploadInfo::ObjectUploadInfo()

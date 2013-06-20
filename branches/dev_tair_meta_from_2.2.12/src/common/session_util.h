@@ -29,6 +29,8 @@ namespace tfs
         static std::string gene_uuid_str();
         static void gene_session_id(const int32_t app_id, const int64_t session_ip, std::string& session_id);
         static int parse_session_id(const std::string& session_id, int32_t& app_id, int64_t& session_ip);
+        static std::string gene_access_secret_key();
+        static std::string gene_access_key_id();
     };
   }
 }
