@@ -20,6 +20,11 @@
 #define UNUSED(v) ((void)(v))
 #endif
 
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS 1
+#undef _STDINT_H
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 
