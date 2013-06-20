@@ -250,15 +250,15 @@ AC_CONFIG_FILES([Makefile
                  src/tools/transfer/Makefile
                  src/tools/cluster/Makefile
                  src/checkserver/Makefile
-                 src/tools/metaserver/Makefile])
-                 #tests/Makefile
-                 #tests/batch/Makefile
-                 #tests/rcserver/Makefile
-                 #tests/kv_meta_server/Makefile
-                 #tests/name_meta_server/Makefile
-                 #tests/common/Makefile
-                 #tests/nameserver/Makefile
-                 #tests/rootserver/Makefile
-                 #tests/dataserver/Makefile
-                 #tests/intergrate/Makefile])
+                 src/tools/metaserver/Makefile
+                 tests/Makefile
+                 tests/batch/Makefile
+                 tests/rcserver/Makefile
+                 tests/kv_meta_server/Makefile
+                 tests/name_meta_server/Makefile
+                 tests/common/Makefile
+                 tests/nameserver/Makefile
+                 tests/rootserver/Makefile
+                 tests/dataserver/Makefile
+                 tests/intergrate/Makefile])
 AC_OUTPUT
