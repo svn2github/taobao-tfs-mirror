@@ -53,9 +53,7 @@ namespace tfs
       int64_t read(const int fd, void* buf, const int64_t count);
       int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info);
       int64_t write(const int fd, const void* buf, const int64_t count);
-      int64_t lseek(const int fd, const int64_t offset, const int whence);
       int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
-      int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
       int fstat(const int fd, common::TfsFileStat* buf);
       int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0,
           const int32_t status = -1);
@@ -66,8 +64,15 @@ namespace tfs
       int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
           const char* local_file, const int32_t mode, const char* suffix = NULL,
           const char* ns_addr = NULL);
-      int64_t save_file_update(const char* local_file, const int32_t flag,
+      int64_t save_file_update(const char* local_file, const int32_t mode,
         const char* tfs_name, const char* suffix, const char* ns_addr = NULL);
+
+      int64_t save_buf(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+          const char* buf, const int64_t buf_len, const int32_t mode, const char* suffix = NULL,
+          const char* ns_addr = NULL);
+      int64_t save_buf_update(const char* buf, const int64_t buf_len, const int32_t mode,
+        const char* tfs_name, const char* suffix, const char* ns_addr = NULL);
+
       int fetch_file(const char* local_file, const char* file_name, const char* suffix = NULL,
           const common::ReadDataOptionFlag read_flag = common::READ_DATA_OPTION_FLAG_NORMAL,
           const char* ns_addr = NULL);
@@ -87,6 +92,9 @@ namespace tfs
       uint64_t ipport_to_addr(const char* addr);
       int64_t save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* local_file,
           const int32_t mode, const char* tfs_name, const char* suffix, const char* ns_addr);
+      int64_t save_buf_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+          const char* buf, const int64_t buf_len, const int32_t mode,
+          const char* tfs_name, const char* suffix, const char* ns_addr);
 
    private:
       TfsClientImplV2();

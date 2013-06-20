@@ -330,6 +330,8 @@ namespace tfs
         }
       }
 
+      // TFS_ERROR shouldn't return to upper layer
+      ret = (ret != TFS_ERROR) ? ret : EXIT_READ_FILE_ERROR;
       return (ret != TFS_SUCCESS) ? ret : done;
     }
 
@@ -368,6 +370,8 @@ namespace tfs
         file_.write_status_ = WRITE_STATUS_FAIL;
       }
 
+      // TFS_ERROR shouldn't return to upper layer
+      ret = (ret != TFS_ERROR) ? ret : EXIT_WRITE_FILE_ERROR;
       return (ret != TFS_SUCCESS) ? ret : done;
     }
 

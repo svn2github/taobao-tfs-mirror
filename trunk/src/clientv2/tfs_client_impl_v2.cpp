@@ -197,8 +197,6 @@ namespace tfs
       return ret_fd;
     }
 
-
-
     int64_t TfsClientImplV2::read(const int fd, void* buf, const int64_t count)
     {
       int64_t ret = TFS_SUCCESS;
@@ -216,6 +214,32 @@ namespace tfs
         else
         {
           ret = tfs_file->read(buf, count);
+        }
+      }
+      return ret;
+    }
+
+    int64_t TfsClientImplV2::pread(const int fd, void* buf, const int64_t count, const int64_t offset)
+    {
+      int64_t ret = TFS_SUCCESS;
+      if ((fd < 0) || (NULL == buf) || (count < 0))
+      {
+        ret = EXIT_PARAMETER_ERROR;
+      }
+      else
+      {
+        TfsFile* tfs_file = get_file(fd);
+        if (NULL == tfs_file)
+        {
+          ret = EXIT_INVALIDFD_ERROR;
+        }
+        else
+        {
+          ret = tfs_file->lseek(offset, T_SEEK_SET);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = tfs_file->read(buf, count);
+          }
         }
       }
       return ret;
@@ -261,28 +285,6 @@ namespace tfs
         else
         {
           ret = tfs_file->write(buf, count);
-        }
-      }
-      return ret;
-    }
-
-    int64_t TfsClientImplV2::lseek(const int fd, const int64_t offset, const int whence)
-    {
-      int64_t ret = TFS_SUCCESS;
-      if ((fd < 0) || (whence < 0))
-      {
-        ret = EXIT_PARAMETER_ERROR;
-      }
-      else
-      {
-        TfsFile* tfs_file = get_file(fd);
-        if (NULL == tfs_file)
-        {
-          ret = EXIT_INVALIDFD_ERROR;
-        }
-        else
-        {
-          ret = tfs_file->lseek(offset, whence);
         }
       }
       return ret;
@@ -416,16 +418,28 @@ namespace tfs
     int64_t TfsClientImplV2::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
         const char* local_file, const int32_t mode, const char* suffix, const char* ns_addr)
     {
-      return save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, mode, NULL, suffix, ns_addr);
+      int64_t ret = TFS_SUCCESS;
+      if (NULL == local_file)
+      {
+        ret = EXIT_PARAMETER_ERROR;
+        TBSYS_LOG(WARN, "invalid parmater");
+      }
+      else
+      {
+        ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, mode, NULL, suffix, ns_addr);
+      }
+      return ret;
     }
 
     int64_t TfsClientImplV2::save_file_update(const char* local_file, const int32_t mode,
         const char* tfs_name, const char* suffix, const char* ns_addr)
     {
       int64_t ret = TFS_SUCCESS;
-      if ((NULL == tfs_name) || (static_cast<int32_t>(strlen(tfs_name)) < FILE_NAME_LEN))
+      if ((NULL == local_file) || (NULL == tfs_name) ||
+          (static_cast<int32_t>(strlen(tfs_name)) < FILE_NAME_LEN))
       {
         ret = EXIT_PARAMETER_ERROR;
+        TBSYS_LOG(WARN, "invalid parmater");
       }
       else
       {
@@ -492,6 +506,76 @@ namespace tfs
 
         ::close(local_fd);
       }
+
+      return ret < 0 ? ret : done;
+    }
+
+    int64_t TfsClientImplV2::save_buf(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+        const char* buf, const int64_t buf_len, const int32_t mode, const char* suffix, const char* ns_addr)
+    {
+      int ret = TFS_SUCCESS;
+      if ((NULL == buf) || (buf_len <= 0))
+      {
+        ret = EXIT_PARAMETER_ERROR;
+        TBSYS_LOG(WARN, "invalid parmater");
+      }
+      else
+      {
+        ret = save_buf_ex(ret_tfs_name, ret_tfs_name_len, buf, buf_len, mode, NULL, suffix, ns_addr);
+      }
+      return ret;
+    }
+
+    int64_t TfsClientImplV2::save_buf_update(const char* buf, const int64_t buf_len, const int32_t mode,
+        const char* tfs_name, const char* suffix, const char* ns_addr)
+    {
+      int64_t ret = TFS_SUCCESS;
+      if ((NULL == buf) || (buf_len <= 0) || (NULL == tfs_name) ||
+          (static_cast<int32_t>(strlen(tfs_name)) < FILE_NAME_LEN))
+      {
+        ret = EXIT_PARAMETER_ERROR;
+        TBSYS_LOG(WARN, "invalid parmater");
+      }
+      else
+      {
+        ret = save_buf_ex(NULL, 0, buf, buf_len, mode, tfs_name, suffix, ns_addr);
+      }
+      return ret;
+    }
+
+    int64_t TfsClientImplV2::save_buf_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+        const char* buf, const int64_t buf_len, const int32_t mode,
+        const char* tfs_name, const char* suffix, const char* ns_addr)
+    {
+      int ret = TFS_SUCCESS;
+      int fd = 0;        // tfs file desp
+      int64_t done = 0;
+
+      fd = open(tfs_name, suffix, ns_addr, T_WRITE | mode);
+      if (fd < 0)
+      {
+        ret = EXIT_INVALIDFD_ERROR;
+        TBSYS_LOG(ERROR, "open new tfs file fail.");
+      }
+      else
+      {
+        while (done < buf_len)
+        {
+          int len = std::min(buf_len - done, static_cast<int64_t>(MAX_READ_SIZE));
+          int wlen = write(fd, buf + done, len);
+          if (wlen < 0)
+          {
+            ret = wlen;
+            break;
+          }
+          else
+          {
+            done += wlen;
+          }
+        }
+      }
+
+      ret = close(fd, ret_tfs_name, ret_tfs_name_len);
 
       return ret < 0 ? ret : done;
     }
