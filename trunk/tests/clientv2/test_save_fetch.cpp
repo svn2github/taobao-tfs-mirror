@@ -58,8 +58,6 @@ bool compare_file(const char* left, const char* right)
   FILE* rfp = fopen(right, "r");
   assert(NULL != rfp);
 
-  uint32_t lcrc = 0;
-  uint32_t rcrc = 0;
   while (1)
   {
     const int32_t unit = 1024 * 1024;
@@ -75,18 +73,19 @@ bool compare_file(const char* left, const char* right)
       break;
     }
 
+    for (int index = 0; index < llen; index++)
+    {
+      if (lbuf[index] != rbuf[index])
+      {
+        same = false;
+        break;
+      }
+    }
+
     if (llen < unit || rlen < unit)
     {
       break;
     }
-
-    lcrc = Func::crc(lcrc, lbuf, llen);
-    rcrc = Func::crc(rcrc, rbuf, rlen);
-  }
-
-  if (same)
-  {
-    same = (lcrc == rcrc);
   }
 
   fclose(lfp);
@@ -160,6 +159,10 @@ TEST_F(TestSaveFetch, fetch)
   const char* test_local_name = "5m_local";
   const int32_t test_file_size = 5 * 1024 * 1024;
 
+  const char* update_file_name = "100k";
+  const char* update_local_name ="100k_local";
+  const int32_t update_file_size = 100 * 1024;
+
   const int32_t tfs_name_len = 32;
   char tfs_name[tfs_name_len];
   int ret = TFS_SUCCESS;
@@ -176,8 +179,20 @@ TEST_F(TestSaveFetch, fetch)
   bool same = compare_file(test_file_name, test_local_name);
   EXPECT_TRUE(same);
 
+  // update file
+  len = tfs_client->save_file_update(update_file_name, T_CREATE,
+      tfs_name, test_suffix);
+  EXPECT_EQ(len, update_file_size);
+
+  // fetch updated file
+  ret = tfs_client->fetch_file(update_local_name, tfs_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+  same = compare_file(update_file_name, update_local_name);
+  EXPECT_TRUE(same);
+
   // remove local temp file
   remove_file(test_local_name);
+  remove_file(update_local_name);
 }
 
 TEST_F(TestSaveFetch, save_buf)
@@ -185,11 +200,16 @@ TEST_F(TestSaveFetch, save_buf)
   const char* test_suffix = ".jpg";
   const char* test_local_name = "20k_local";
   const char* test_local_name_save_buf = "20k_buf";
+  const char* update_local_name = "100k_local";
+  const char* update_local_name_save_buf = "100k_buf";
   const int32_t test_file_size = 20 * 1024;
+  const int32_t update_file_size = 100 * 1024;
 
   // data buffer to save as a tfs file
   char buf[test_file_size];
+  char buf_update[update_file_size];
   create_file(test_local_name_save_buf, buf, test_file_size);
+  create_file(update_local_name_save_buf, buf_update, update_file_size);
 
   const int32_t tfs_name_len = 32;
   char tfs_name[tfs_name_len];
@@ -207,12 +227,23 @@ TEST_F(TestSaveFetch, save_buf)
   bool same = compare_file(test_local_name_save_buf, test_local_name);
   EXPECT_TRUE(same);
 
+  // save buf update
+  len = tfs_client->save_buf_update(buf_update, update_file_size, T_WRITE,
+      tfs_name, test_suffix);
+  EXPECT_EQ(len, update_file_size);
+
+  // fetch updated file
+  ret = tfs_client->fetch_file(update_local_name, tfs_name);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+  same = compare_file(update_local_name_save_buf, update_local_name);
+  EXPECT_TRUE(same);
+
   // remove local temp file
   remove_file(test_local_name);
   remove_file(test_local_name_save_buf);
+  remove_file(update_local_name);
+  remove_file(update_local_name_save_buf);
 }
-
-
 
 TEST_F(TestSaveFetch, unlink)
 {
@@ -298,6 +329,85 @@ TEST_F(TestSaveFetch, unlink)
   // remove temp file
   remove_file(test_local_name);
 }
+
+TEST_F(TestSaveFetch, internal_close)
+{
+  const char* test_suffix = ".jpg";
+  const int32_t test_file_size = 100 * 1024;
+
+  const int32_t tfs_name_len = 32;
+  char tfs_name[tfs_name_len];
+  int ret = TFS_SUCCESS;
+  int64_t len = 0;
+  TfsFileStat file_stat;
+  char buf[test_file_size];
+
+  // save file
+  int fd = tfs_client->open(NULL, test_suffix, NULL, T_CREATE | T_WRITE);
+  EXPECT_TRUE(fd >= 0);
+
+  len = tfs_client->write(fd, buf, test_file_size);
+  EXPECT_EQ(len, test_file_size);
+
+  ret = tfs_client->close(fd, tfs_name, tfs_name_len, 1); // set file to deleted status
+  EXPECT_EQ(ret, TFS_SUCCESS);
+
+  // stat file
+  ret = tfs_client->stat_file(&file_stat, tfs_name, NULL, FORCE_STAT);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(file_stat.size_, test_file_size);
+  EXPECT_EQ(file_stat.flag_, 1);  // it should be deleted
+}
+
+TEST_F(TestSaveFetch, internal_unlink)
+{
+  const char* test_suffix = ".jpg";
+  const int32_t test_file_size = 100 * 1024;
+
+  const int32_t tfs_name_len = 32;
+  char tfs_name[tfs_name_len];
+  int ret = TFS_SUCCESS;
+  int64_t len = 0;
+  TfsFileStat file_stat;
+  char buf[test_file_size];
+
+  // save file
+  int fd = tfs_client->open(NULL, test_suffix, NULL, T_CREATE | T_WRITE);
+  EXPECT_TRUE(fd >= 0);
+
+  len = tfs_client->write(fd, buf, test_file_size);
+  EXPECT_EQ(len, test_file_size);
+
+  ret = tfs_client->close(fd, tfs_name, tfs_name_len);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+
+  // unlink file & set status, new version
+  int status = 5; // deleted and hiden
+  int action = 0;
+  SET_OVERRIDE_FLAG(action, status);
+
+  ret = tfs_client->unlink(len, tfs_name, NULL, static_cast<TfsUnlinkType>(action));
+  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(len, test_file_size);
+
+  ret = tfs_client->stat_file(&file_stat, tfs_name, NULL, FORCE_STAT);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(file_stat.size_, test_file_size);
+  EXPECT_EQ(file_stat.flag_, 5);  // it should be deleted
+
+  // old version
+  action = 1 << 4;  // target status
+  ret = tfs_client->unlink(len, tfs_name, NULL, static_cast<TfsUnlinkType>(action));
+  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(len, test_file_size);
+
+  ret = tfs_client->stat_file(&file_stat, tfs_name, NULL, FORCE_STAT);
+  EXPECT_EQ(ret, TFS_SUCCESS);
+  EXPECT_EQ(file_stat.size_, test_file_size);
+  EXPECT_EQ(file_stat.flag_, 1);  // it should be deleted
+}
+
+
 
 int main(int argc, char** argv)
 {
