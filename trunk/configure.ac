@@ -260,5 +260,6 @@ AC_CONFIG_FILES([Makefile
                  tests/nameserver/Makefile
                  tests/rootserver/Makefile
                  tests/dataserver/Makefile
+                 tests/clientv2/Makefile
                  tests/intergrate/Makefile])
 AC_OUTPUT
