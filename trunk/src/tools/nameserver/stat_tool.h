@@ -9,6 +9,7 @@
 #include "common/client_manager.h"
 #include "message/message_factory.h"
 #include "common/status_message.h"
+#include "common.h"
 
 namespace tfs
 {
@@ -66,6 +67,7 @@ namespace tfs
     typedef std::vector<DelBlockRange> V_DEL_BLOCK_RANGE;
     typedef std::vector<DelBlockRange>::iterator V_DEL_BLOCK_RANGE_ITER;
 
+/*
     // block base construct
     struct ServerInfo
     {
@@ -102,11 +104,11 @@ namespace tfs
         int32_t deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const int8_t type);
         void dump() const;
     };
-
+*/
     class BlockSize
     {
       public:
-        BlockSize(const uint32_t block_id, const int32_t file_size)
+        BlockSize(const uint64_t block_id, const int32_t file_size)
           : block_id_(block_id), file_size_(file_size)
         {
         }
@@ -114,7 +116,7 @@ namespace tfs
         {
         }
 
-        uint32_t block_id_;
+        uint64_t block_id_;
         int32_t file_size_;
         bool operator<(const BlockSize& b) const
         {
@@ -137,13 +139,13 @@ namespace tfs
         void add(const BlockBase& block_base);
         void dump(FILE* fp) const;
       protected:
-        int32_t block_count_;
+        int64_t block_count_;
         int64_t file_count_;
         int64_t file_size_;
         int64_t del_file_count_;
         int64_t del_file_size_;
     };
-
+/*
     static inline uint64_t get_addr(const std::string& ns_ip_port)
     {
       std::string::size_type pos = ns_ip_port.find_first_of(":");
@@ -154,6 +156,7 @@ namespace tfs
       std::string tmp = ns_ip_port.substr(0, pos);
       return tfs::common::Func::str_to_addr(tmp.c_str(), atoi(ns_ip_port.substr(pos + 1).c_str()));
     }
+    */
   } //:tools
 }
 

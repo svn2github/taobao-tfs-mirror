@@ -121,28 +121,32 @@ void init()
   g_cmd_map["help"] = CmdNode("help", "show help info", 0, 0, cmd_show_help);
   g_cmd_map["quit"] = CmdNode("quit", "quit", 0, 0, cmd_quit);
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
-  g_cmd_map["param"] = CmdNode("param name [set value [extravalue]]", "set/get param value", 0, 4, cmd_set_run_param);
-  g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block", 1, 1, cmd_add_block);
-  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [serverip:port|flag]",
-      "remove block. flag: 1--remove block from both ds and ns, 2--just relieve relation from ns, default is 1.",
-      1, 2, cmd_remove_block);
-  g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list", 1, 1, cmd_list_block);
-  g_cmd_map["loadblk"] = CmdNode("loadblk blockid dsip:port", "build relationship between block and dataserver.", 2, 2, cmd_load_block);
-  g_cmd_map["clearsystemtable"] = CmdNode("clearsystemtable", "clear system table 1--task, 2--write block, 4--report block server, 8--delete block queue.", 1, 1, cmd_clear_system_table);
-  g_cmd_map["compactblk"] = CmdNode("compactblk blockid", "compact block", 1, 1, cmd_compact_block);
-  g_cmd_map["replblk"] = CmdNode("replblk blockid type [[action] [src] [dest]]",
-      "replicate block. type: 1--action, 2--src, 3--dest, 4--action src, 5--action dest, 6--src dest, 7--action src dest",
+  g_cmd_map["param"] = CmdNode("param name [set value]", "get/set param value, default get.", 0, 4, cmd_set_run_param);
+  g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block by blockid which not exist or expire in ns.", 1, 1, cmd_add_block);
+  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [flag [dsip:port]]",
+      "remove block. flag: 1--remove block from both ds and ns, 2-remove block from ds and relieve relation from ns but keep block in ns's block table,"
+      " 4-just relieve relation between block and the ds of dsip:port, default is 1.",
+      1, 3, cmd_remove_block);
+  g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list.", 1, 1, cmd_list_block);
+  //g_cmd_map["loadblk"] = CmdNode("loadblk blockid dsip:port", "build relationship between block and dataserver.", 2, 2, cmd_load_block);
+  g_cmd_map["clearsystemtable"] = CmdNode("clearsystemtable", "clear system table 1--task, 2--last_write block, 4--report block server, 8--delete block queue.", 1, 1, cmd_clear_system_table);
+  g_cmd_map["compactblk"] = CmdNode("compactblk blockid", "compact block by blockid", 1, 1, cmd_compact_block);
+  g_cmd_map["replblk"] = CmdNode("replblk blockid typeid [[action] [src] [dest]]",
+      "  replicate/move block. typeid: 1--action, 2--src, 3--dest, 4--action src, 5--action dest, 6--src dest, 7--action src dest."
+      "  action is either yes or no, default action is no, means to replicate block, otherwise means to move block",
       2, 5, cmd_replicate_block);
+  /*
   g_cmd_map["aci"] = CmdNode("aci dsip:port [startrow returnrow]", "get dataserver access information, such as write or read times", 1, 3, cmd_access_stat_info);
   g_cmd_map["setacl"] = CmdNode("setacl dsip:port type [v1 [v2]]",
       "set dataserver access control. it can reject the request of certain ip or network segment"
       "type: 1--ACL_FLAG, 2--ACL_IPMASK, 3--ACL_IPLIST, 4--ACL_CLEAR, 5--ACL_RELOAD",
       2, 4, cmd_access_control_flag);
-  g_cmd_map["rotatelog"] = CmdNode("rotatelog","rotate log file. it will move nameserver.log to nameserver.log.currenttime, and create new nameserver.log",
+   */
+  g_cmd_map["rotatelog"] = CmdNode("rotatelog","rotate nameserver log file. it will move nameserver.log to nameserver.log.currenttime, and create new nameserver.log",
       0, 0, cmd_rotate_log);
-  g_cmd_map["dumpplan"] = CmdNode("dumpplan [nsip:port]", "dump plan server", 0, 1, cmd_dump_plan);
+  g_cmd_map["dumpplan"] = CmdNode("dumpplan [nsip:port]", "dump all run task plan in ns's task table current", 0, 1, cmd_dump_plan);
   g_cmd_map["setbpr"] = CmdNode("setbpr value1 value2",
-      "set balance percent ratio. value1: integer part, 0 or 1, value2 should be 0 if value1 is 1. value2: float part.",
+      "set balance percent ratio. value1: integer part, 0 or 1, value2: float part, should be a integer (0 ~ 999999), if value1 is 1  value2 should be 0.",
       2, 2, cmd_set_bpr);
   g_cmd_map["getbpr"] = CmdNode("getbpr", "get balance percent ratio, float value, ex: 1.000000 or 0.000005", 0, 0, cmd_get_bpr);
   g_cmd_map["batch"] = CmdNode("batch file", "batch run command in file", 1, 1, cmd_batch_file);
@@ -198,7 +202,7 @@ int cmd_batch_file(const VSTRING& param)
       }
       if (++count % 100 == 0)
       {
-        fprintf(stdout, "tatol: %d, %d errors.\r", count, error_count);
+        fprintf(stdout, "total: %d, %d errors.\r", count, error_count);
         fflush(stdout);
       }
       if (TFS_CLIENT_QUIT == ret)
@@ -206,7 +210,7 @@ int cmd_batch_file(const VSTRING& param)
         break;
       }
     }
-    fprintf(stdout, "tatol: %d, %d errors.\n\n", count, error_count);
+    fprintf(stdout, "total: %d, %d errors.\n\n", count, error_count);
     fclose(fp);
   }
   return TFS_SUCCESS;
@@ -256,7 +260,7 @@ int cmd_set_bpr(const VSTRING& param)
     iret = (value3 > 1 || value3 < 0 || param[1].length() > 6 || ((value4 = atoi(param[1].c_str())) != 0 && 1 == value3)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
     if (TFS_SUCCESS != iret)
     {
-      fprintf(stderr, "parameter is invalid, value1: (0|1), value2.length < 6. value1: %d, value2: %s\n", value3, param[1].c_str());
+      fprintf(stderr, "parameter is invalid, value1: (0|1), value2.length should <= 6. but input value1: %d, value2: %s\n", value3, param[1].c_str());
     }
     else
     {
@@ -368,7 +372,7 @@ int cmd_set_run_param(const VSTRING& param)
       fprintf(stderr, "param %s set value\n\n", param_name);
       return TFS_ERROR;
     }
-    index |= 0x10000000;
+    index |= 0x10000000;//index的高16位表示set/get
     is_set = true;
     value = atoi(param[2].c_str());
   }
@@ -419,7 +423,7 @@ int cmd_add_block(const VSTRING& param)
     return TFS_ERROR;
   }
 
-  VUINT64 ds_list;
+  VUINT64 ds_list;//这里定义这个变量只是为了让get_block_ds_list_v2函数与cmd_list_block功能兼容
 
   int ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list, T_WRITE|T_NEWBLK|T_NOLEASE);
 
@@ -430,37 +434,42 @@ int cmd_add_block(const VSTRING& param)
 
 int cmd_remove_block(const VSTRING& param)
 {
-  uint32_t flag = 0;
-  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
-  uint64_t server_id = 0;
+  uint32_t flag = 1;
   if (param.empty())
   {
     fprintf(stderr, "invalid parameter, param.empty\n");
     return TFS_ERROR;
   }
-  if (param.size() == 1)
-  {
-    flag = 1;
-  }
-  else if (param.size() == 2 )
-  {
-    if (param[1].length() == 1)
-      flag = atoi(param[1].c_str());
-    else
-    {
-      server_id = Func::get_host_ip(param[1].c_str());
-      if (0 == server_id)
-      {
-        fprintf(stderr, "invalid addr %s\n", param[1].c_str());
-        return TFS_ERROR;
-      }
-    }
-  }
+  uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   if (0 == block_id)
   {
     fprintf(stderr, "invalid blockid %s\n", param[0].c_str());
     return TFS_ERROR;
   }
+  uint64_t server_id = 0;
+  if(param.size() > 1)
+  {
+    flag = atoi(param[1].c_str());
+    if(4 == flag)
+    {
+      if(3 != param.size())
+      {
+        fprintf(stderr, "invalid parameter, if flag is 4, must have dsip:port behind\n");
+        return TFS_ERROR; 
+      }
+      server_id = Func::get_host_ip(param[2].c_str()); 
+      if (0 == server_id) 
+      { 
+        fprintf(stderr, "invalid addr %s\n", param[2].c_str()); 
+        return TFS_ERROR;
+      } 
+    }
+    else if(1 != flag && 2 != flag)
+    {
+       fprintf(stderr, "removeblock's flag parameter invalid\n");
+       return TFS_ERROR;
+    }
+  }//default flag = 1
 
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
@@ -472,10 +481,10 @@ int cmd_remove_block(const VSTRING& param)
 
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
 
-  if (param.size() == 1)
-    ToolUtil::print_info(status, "removeblock %s", param[0].c_str());
-  else if (param.size() == 2)
-    ToolUtil::print_info(status, "removeblock %s %s", param[0].c_str(), param[1].c_str());
+  if (1 == flag || 2 == flag)
+    ToolUtil::print_info(status, "removeblock: %s", param[0].c_str());
+  else//  flag=4
+    ToolUtil::print_info(status, "removeblock: %s from ds:%s", param[0].c_str(), param[2].c_str());
   return status;
 }
 
@@ -507,7 +516,7 @@ int cmd_list_block(const VSTRING& param)
   return ret;
 }
 
-int cmd_load_block(const VSTRING& param)
+int cmd_load_block(const VSTRING& param)//Discarded function
 {
   uint64_t block_id = strtoull(param[0].c_str(), NULL, 10);
   uint64_t server_id = Func::get_host_ip(param[1].c_str());
@@ -557,7 +566,7 @@ int cmd_replicate_block(const VSTRING& param)
   int32_t op_type = atoi(param[1].c_str());
   if (0 == block_id || op_type > 7 || op_type < 1)
   {
-    fprintf(stderr, "invalid param. blockid > 0, type in [1, 7]. blockid: %"PRI64_PREFIX"u, op_type: %d\n", block_id, op_type);
+    fprintf(stderr, "invalid param. blockid: %"PRI64_PREFIX"u, typeid: %d, blockid > 0, typeid in [1, 7]\n", block_id, op_type);
     return TFS_ERROR;
   }
 
@@ -570,7 +579,7 @@ int cmd_replicate_block(const VSTRING& param)
   switch (op_type)
   {
   case 1:
-    if (size != 3)
+    if (size != 3 || (param[2] != "yes" && param[2] != "no") )
     {
       fprintf(stderr, "replblk blockid 1 action\n");
       fprintf(stderr, "action: yes -- move block\n");
@@ -606,7 +615,7 @@ int cmd_replicate_block(const VSTRING& param)
     }
     break;
   case 4:
-    if (size != 4)
+    if (size != 4 || (param[2] != "yes" && param[2] != "no") )
     {
       fprintf(stderr, "replblk blockid 4 action src\n");
       fprintf(stderr, "action: yes -- move block\n");
@@ -622,7 +631,7 @@ int cmd_replicate_block(const VSTRING& param)
     }
     break;
   case 5:
-    if (size != 4)
+    if (size != 4 || (param[2] != "yes" && param[2] != "no") )
     {
       fprintf(stderr, "replblk blockid 5 action dest\n");
       fprintf(stderr, "action: yes -- move block\n");
@@ -652,9 +661,11 @@ int cmd_replicate_block(const VSTRING& param)
     }
     break;
   case 7:
-    if (size != 5)
+    if (size != 5 || (param[2] != "yes" && param[2] != "no") )
     {
       fprintf(stderr, "replblk blockid 7 action src dest\n");
+      fprintf(stderr, "action: yes -- move block\n");
+      fprintf(stderr, "        no -- replicate block\n");
       return TFS_ERROR;
     }
     action = param[2];
@@ -690,7 +701,7 @@ int cmd_replicate_block(const VSTRING& param)
   return status;
 }
 
-int cmd_repair_group_block(const VSTRING&)
+int cmd_repair_group_block(const VSTRING&)//Discarded function
 {
   // uint32_t block_id = atoi(param[0].c_str());
 
@@ -714,7 +725,7 @@ int cmd_repair_group_block(const VSTRING&)
   return TFS_SUCCESS;
 }
 
-int cmd_access_stat_info(const VSTRING& param)
+int cmd_access_stat_info(const VSTRING& param)//Discarded function
 {
   int32_t size = param.size();
   uint64_t server_id = Func::get_host_ip(param[0].c_str());
@@ -808,7 +819,7 @@ int cmd_access_stat_info(const VSTRING& param)
   return ret;
 }
 
-int cmd_access_control_flag(const VSTRING& param)
+int cmd_access_control_flag(const VSTRING& param)//Discarded function
 {
   int32_t size = param.size();
   uint64_t server_id = Func::get_host_ip(param[0].c_str());
@@ -1078,7 +1089,7 @@ int usage(const char *name)
           "\n****************************************************************************** \n"
           "You can operate nameserver by this tool.\n"
           "Usage: \n"
-          "  %s -s ns_ip_port [-i 'command'] [-v version] [-h help]\n"
+          "  %s -s ns_ip_port [-i 'command'] [-v version] [-n  setLogLevel:ERROR] [-h help]\n"
           "****************************************************************************** \n\n",
           name);
   ToolUtil::show_help(g_cmd_map);
@@ -1186,7 +1197,7 @@ int32_t do_cmd(char* key)
     return TFS_SUCCESS;
   }
 #ifdef _WITH_READ_LINE
-  // not blank line, add to history
+  // not blank line, add to history, can lookup by "up" or "down"
   add_history(key);
 #endif
 
@@ -1271,59 +1282,75 @@ int cmd_dump_plan(const VSTRING& param)
     {
       uint8_t plan_type;
       uint8_t plan_status;
-      uint8_t plan_priority;
-      uint32_t block_id;
-      uint64_t plan_begin_time;
-      uint64_t plan_end_time;
+      uint64_t block_id;
+      uint64_t obj_last_update_time;
       int64_t plan_seqno;
-      uint8_t server_num;
+      std::map<int8_t, string> type_print_map;
+      std::map<int8_t, string>::const_iterator iter = type_print_map.begin();
+      uint32_t server_num;
       std::string runer;
-      uint8_t plan_complete_status_num;
-      std::vector< std::pair <uint64_t, uint8_t> > plan_compact_status_vec;
-      std::pair<uint64_t, uint8_t> plan_compact_status_pair;
 
-      printf("Plan Number(running + pending):%d\n", plan_num);
-      printf("seqno   type       status     priority   block_id   begin        end           runer  \n");
-      printf("------  ---------  -------    ---------  --------   -----------  -----------  -------\n");
-
+//      printf("Plan Number(running + pending):%d\n", plan_num);
+//      printf("seqno   type       status    block_id   last_update_time    runer  \n");
+      printf("---------------------------------------------------------\n");
+ 
+      type_print_map.insert(make_pair(PLAN_TYPE_REPLICATE, "replicate"));
+      type_print_map.insert(make_pair(PLAN_TYPE_MOVE, "move"));
+      type_print_map.insert(make_pair(PLAN_TYPE_COMPACT, "compact"));
+      type_print_map.insert(make_pair(PLAN_TYPE_EC_REINSTATE, "reinstate"));
+      type_print_map.insert(make_pair(PLAN_TYPE_EC_DISSOLVE, "dissolve"));
+      type_print_map.insert(make_pair(PLAN_TYPE_EC_MARSHALLING, "marshalling"));
       for (uint32_t i=0; i<plan_num; i++)
       {
         plan_type = data_buff.readInt8();
         plan_status = data_buff.readInt8();
-        plan_priority = data_buff.readInt8();
-        block_id = data_buff.readInt32();
-        plan_begin_time = data_buff.readInt64();
-        plan_end_time = data_buff.readInt64();
+        obj_last_update_time = data_buff.readInt64();
         plan_seqno = data_buff.readInt64();
-        server_num = data_buff.readInt8();
-        runer = "";
 
-        for (uint32_t j=0; j<server_num; j++)
-        {
-          runer += tbsys::CNetUtil::addrToString(data_buff.readInt64());
-          runer += "/";
-        }
+        printf("seqno: %-7"PRI64_PREFIX"d\n", plan_seqno);
+        printf("type: %-10s\n", (iter=type_print_map.find(plan_type)) != type_print_map.end() ? iter->second.c_str() : "unknown");
+        printf("status: %-10s\n", plan_status == PLAN_STATUS_BEGIN ? "begin" : plan_status == PLAN_STATUS_TIMEOUT ? "timeout" : plan_status == PLAN_STATUS_END ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknown");
+        printf("last_update_time: %-12"PRI64_PREFIX"d\n", obj_last_update_time);
 
-        if (plan_type == PLAN_TYPE_COMPACT)
+        if(plan_type == PLAN_TYPE_REPLICATE || plan_type == PLAN_TYPE_MOVE || plan_type == PLAN_TYPE_COMPACT)
         {
-          plan_complete_status_num = data_buff.readInt8();
-          plan_complete_status_num = 0;
-          plan_compact_status_vec.clear();
-          for (uint32_t k=0; k<plan_complete_status_num; k++)
+          block_id = data_buff.readInt64();//现在所有的block id, family_id都是64bit
+          server_num = data_buff.readInt32();
+          runer = "";
+
+          for (uint32_t j=0; j<server_num; j++)
           {
-            plan_compact_status_pair.first = data_buff.readInt64();
-            plan_compact_status_pair.second = data_buff.readInt8();
-            plan_compact_status_vec.push_back(plan_compact_status_pair);
+            runer += tbsys::CNetUtil::addrToString(data_buff.readInt64());
+            runer += "/";
           }
+          printf("block_id: %"PRI64_PREFIX"u\n", block_id);
+          printf("runer: %-31s\n\n", runer.c_str());
         }
-
-        //display plan info
-        printf("%-7"PRI64_PREFIX"d %-10s %-10s %-10s %-10u %-12"PRI64_PREFIX"d %-12"PRI64_PREFIX"d %-31s\n",
-               plan_seqno,
-               plan_type == PLAN_TYPE_REPLICATE ? "replicate" : plan_type == PLAN_TYPE_MOVE ? "move" : plan_type == PLAN_TYPE_COMPACT ? "compact" : "unknow",
-               plan_status == PLAN_STATUS_BEGIN ? "begin" : plan_status == PLAN_STATUS_TIMEOUT ? "timeout" : plan_status == PLAN_STATUS_END ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknow",
-               plan_priority == PLAN_PRIORITY_NORMAL ? "normal" : plan_priority == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
-               block_id, plan_begin_time, plan_end_time, runer.c_str());
+        else if(plan_type == PLAN_TYPE_EC_REINSTATE || plan_type == PLAN_TYPE_EC_DISSOLVE || plan_type == PLAN_TYPE_EC_MARSHALLING)
+        {
+          int64_t family_id = data_buff.readInt64();
+          int32_t family_aid_info = data_buff.readInt32();
+          const int32_t data_member_num = GET_DATA_MEMBER_NUM(family_aid_info);
+          const int32_t check_member_num = GET_CHECK_MEMBER_NUM(family_aid_info);
+          const int32_t member_num = data_member_num + check_member_num;
+          int64_t server_id;
+          int32_t version, status;
+          printf("family_id: %"PRI64_PREFIX"d\n", family_id);
+          printf("member num: %d, data_member_num: %d, check_data_num: %d\n", member_num, data_member_num, check_member_num);
+          for(int32_t index = 0; index < member_num; index++)
+          {
+            server_id = data_buff.readInt64();
+            block_id = data_buff.readInt64();
+            version = data_buff.readInt32();
+            status = data_buff.readInt32();
+            printf("member %d: server:%s, blockid:%"PRI64_PREFIX"u, version:%d, status:%d\n", index, tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, version, status);
+          }
+          printf("\n");
+        }
+        else
+        {
+          printf("unkown task plan, plan_type is %d\n\n", plan_type);
+        }
       }
     }
   }

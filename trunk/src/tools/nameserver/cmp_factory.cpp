@@ -98,7 +98,7 @@ namespace tfs
         flag_b.set(distance(itb_begin, it_b++));
       }
     }
-    template<class V> void print_container(V& container, bitset<MAX_BITS_SIZE>& flag, bool reverse)
+    template<class V> void print_container(V& container, bitset<MAX_BITS_SIZE>& flag, bool reverse, bool is_servercmp)
     {
       if (reverse)
       {
@@ -106,14 +106,18 @@ namespace tfs
       }
       typename V::iterator it = container.begin();
 
-      if (sizeof(typename V::value_type) == sizeof(uint32_t)) // uint32_t: print different block
+      if (!is_servercmp) // print different block
       {
         int32_t count = static_cast<int32_t> (flag.count());
-        for (int32_t i = 0; (it != container.end()) && (count > 0); i++, it++)
+        for (int32_t i = 0, c=0; (it != container.end()) && (count > 0); i++, it++)
         {
           if (flag.test(i))
           {
-            cout << *it << " ";
+            cout << *it ;
+            if((++c) % 20 == 0)
+              cout<<"\n";
+            else
+              cout<<" ";
             count--;
           }
         }
@@ -129,7 +133,7 @@ namespace tfs
         printf(" [%zd]\n", container.size());
       }
     }
-    inline double get_percent(int i, int t)
+    inline double get_percent(int64_t i, int64_t t)
     {
       return t > 0 ? (double)i / (double)t * 100 : 0;
     }
@@ -145,17 +149,17 @@ namespace tfs
       if (type & SERVER_TYPE_SERVER_INFO)
       {
         if (use_capacity_ != server_b.use_capacity_) { flag_.set(b); server_b.flag_.set(b); }
-        if (total_capacity_ != server_b.total_capacity_) { flag_.set(b + 1); server_b.flag_.set(b + 1); server_b.flag_.set(b + 1);}
-        if (current_load_ != server_b.current_load_) { flag_.set(b + 2); server_b.flag_.set(b + 2); server_b.flag_.set(b + 2);}
+        if (total_capacity_ != server_b.total_capacity_) { flag_.set(b + 1); server_b.flag_.set(b + 1); }
+        if (current_load_ != server_b.current_load_) { flag_.set(b + 2); server_b.flag_.set(b + 2); }
         if (block_count_ != server_b.block_count_) { flag_.set(b + 3); server_b.flag_.set(b + 3);}
         if (total_tp_.write_byte_ != server_b.total_tp_.write_byte_) { flag_.set(b + 4); server_b.flag_.set(b + 4);}
         if (total_tp_.write_file_count_ != server_b.total_tp_.write_file_count_) { flag_.set(b + 5); server_b.flag_.set(b + 5); }
         if (total_tp_.read_byte_ != server_b.total_tp_.read_byte_) { flag_.set(b + 6); server_b.flag_.set(b + 6);}
         if (total_tp_.read_file_count_ != server_b.total_tp_.read_file_count_) { flag_.set(b + 7); server_b.flag_.set(b + 7);}
         if (startup_time_ != server_b.startup_time_) { flag_.set(b + 8); server_b.flag_.set(b + 8);}
-        if (hold_ != server_b.hold_) { flag_.set(b + 9); server_b.flag_.set(b + 9); }
-        if (writable_ != server_b.writable_) { flag_.set(b + 10); server_b.flag_.set(b + 10); }
-        if (master_!= server_b.master_) { flag_.set(b + 11); server_b.flag_.set(b + 11);}
+        if (hold_.size() != server_b.hold_.size()) { flag_.set(b + 9); server_b.flag_.set(b + 9); }
+        if (writable_.size() != server_b.writable_.size()) { flag_.set(b + 10); server_b.flag_.set(b + 10); }
+        if (master_.size()!= server_b.master_.size()) { flag_.set(b + 11); server_b.flag_.set(b + 11);}
       }
 
       if (type & SERVER_TYPE_BLOCK_LIST)
@@ -174,8 +178,8 @@ namespace tfs
     }
     void ServerCmp::dump(ServerCmp& server_b, const int8_t type)
     {
-      dump(type);
-      server_b.dump(type);
+      dump(type, true);
+      server_b.dump(type, false);
       if (type & SERVER_TYPE_BLOCK_LIST)
       {
         printf("!!!!!!Diff BLOCK: (%zd/%zd = %.2lf%%) BLOCK: (%zd/%zd = %.2lf%%)\n\n",
@@ -199,19 +203,19 @@ namespace tfs
             );
       }
     }
-    void ServerCmp::dump(const int8_t type)
+    void ServerCmp::dump(const int8_t type, bool is_master)
     {
       int32_t b = 0;
       if (flag_.count() > 0)
       {
         if (type & SERVER_TYPE_SERVER_INFO)
         {
-          printf("%-21s %6s%c %4s%c %5u%c %3u%c %5s%c %4ld%c %5s%c %4ld%c %14s%c %4zd%c %4zd%c %4zd%c\n",
+          printf("%-21s %6s%c %4s%c %5u%c %5u%c %10s%c %13ld%c %10s%c %13ld%c %15s%c %4zd%c %4zd%c %4zd%c\n",
             tbsys::CNetUtil::addrToString(id_).c_str(),
             Func::format_size(use_capacity_).c_str(), suffix(flag_[b]),
             Func::format_size(total_capacity_).c_str(), suffix(flag_[b+1]),
-            block_count_, suffix(flag_[b+2]),
-            current_load_, suffix(flag_[b+3]),
+            current_load_, suffix(flag_[b+2]),
+            block_count_, suffix(flag_[b+3]),
             Func::format_size(total_tp_.write_byte_).c_str(), suffix(flag_[b + 4]),
             total_tp_.write_file_count_, suffix(flag_[b + 5]),
             Func::format_size(total_tp_.read_byte_).c_str(), suffix(flag_[b + 6]),
@@ -224,19 +228,23 @@ namespace tfs
         }
         if (type & SERVER_TYPE_BLOCK_LIST)
         {
-          printf("%-21s  ", tbsys::CNetUtil::addrToString(id_).c_str());
-          print_container(hold_, flag_);
+          printf("%s_ns's %-21s has more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(id_).c_str());
+          print_container(hold_, flag_, false, false);
         }
         if (type & SERVER_TYPE_BLOCK_WRITABLE)
         {
-          printf("%-21s  ", tbsys::CNetUtil::addrToString(id_).c_str());
-          print_container(writable_, flag_);
+          printf("%s_ns's %-21s's has more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(id_).c_str());
+          print_container(writable_, flag_, false, false);
         }
         if (type & SERVER_TYPE_BLOCK_MASTER)
         {
-          printf("%-21s  ", tbsys::CNetUtil::addrToString(id_).c_str());
-          print_container(master_, flag_);
+          printf("%s_ns's %-21s's has more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(id_).c_str());
+          print_container(master_, flag_, false, false);
         }
+      }
+      else if( (type & SERVER_TYPE_BLOCK_LIST) || (type & SERVER_TYPE_BLOCK_WRITABLE) || (type & SERVER_TYPE_BLOCK_MASTER) )
+      {
+        printf("%s_ns's %-21s's has not more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(id_).c_str());
       }
     }
     BlockCmp::BlockCmp()
@@ -291,8 +299,8 @@ namespace tfs
       if (type & BLOCK_CMP_PART_INFO)
       {
         printf("%-10"PRI64_PREFIX"u %6d%c %10d%c %10d%c %5Zd%c\n",
-          info_.block_id_, info_.version_, suffix(flag_[b]), info_.file_count_, suffix(flag_[b]),
-          info_.size_, suffix(flag_[b]), server_list_.size(), suffix(flag_[b])
+          info_.block_id_, info_.version_, suffix(flag_[b]), info_.file_count_, suffix(flag_[b+1]),
+          info_.size_, suffix(flag_[b+2]), server_list_.size(), suffix(flag_[b+3])
           );
       }
       if (type & BLOCK_CMP_ALL_INFO)
@@ -305,7 +313,7 @@ namespace tfs
       if (type & BLOCK_CMP_SERVER)
       {
         printf("%-10"PRI64_PREFIX"u", info_.block_id_);
-        print_container(server_list_, flag_);
+        print_container(server_list_, flag_, false, true);
       }
     }
 
@@ -326,14 +334,14 @@ namespace tfs
 
       bitset<MAX_BITS_SIZE> flag_more;
       bitset<MAX_BITS_SIZE> flag_less;
-      printf("\nIn More %s: ", title);
-      (type & BLOCK_TYPE) ? print_container(more_block_, flag_more, true) : print_container(more_server_, flag_more, true);
-      printf("\nIn Less %s: ", title);
-      (type & BLOCK_TYPE) ? print_container(less_block_, flag_less, true) : print_container(less_server_, flag_less, true);
+      printf("\nIn More %s:\n", title);
+      (type & BLOCK_TYPE) ? print_container(more_block_, flag_more, true, false) : print_container(more_server_, flag_more, true, true);
+      printf("\nIn Less %s:\n", title);
+      (type & BLOCK_TYPE) ? print_container(less_block_, flag_less, true, false) : print_container(less_server_, flag_less, true, true);
 
       //TBSYS_LOG(DEBUG, "block size: %d", more_block_.size());
       diff_count_ += (type & BLOCK_TYPE)? more_block_.size() : more_server_.size();
-      printf("\n\n!!!!!!(MasterNs VS SlaveNs) %s Diff Count :  %d / %d = %.2lf%%\n\n", title, diff_count_, total_count_,
+      printf("\n\n!!!!!!(MasterNs VS SlaveNs) %s Diff Count :  %"PRI64_PREFIX"d / %"PRI64_PREFIX"d = %.2lf%%\n\n", title, diff_count_, total_count_,
           get_percent(diff_count_, total_count_));
     }
   }

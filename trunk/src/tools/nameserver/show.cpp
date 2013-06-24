@@ -235,10 +235,6 @@ namespace tfs
               {
                 break;
               }
-              if (once && ((tbsys::CNetUtil::addrToString(server.id_)) != server_ip_port))
-              {
-                break;
-              }
               server_map_[server.id_] = server;
               old_server = server;
               if (last_server_size > 0)
@@ -415,7 +411,6 @@ namespace tfs
         {
           param.should_actual_count_ = 0x10000;
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_NO;
-          param.should_actual_count_ = 0x10000;
           param.start_next_position_ = ((block_id % block_chunk_num) << 16);
           param.addition_param1_ = block_id;
           once = true;
@@ -496,6 +491,226 @@ namespace tfs
         {
           stat.dump(BLOCK_TYPE, type, fp);
         }
+        if (--count)
+        {
+          sleep(interval);
+        }
+      }
+      if (fp != stdout) fclose(fp);
+      return TFS_SUCCESS;
+    }
+
+    int ShowInfo::show_block_distribution(const int8_t type,  string& rack_ip_mask, const int32_t num, const uint64_t block_id, const int32_t block_chunk_num, int32_t count, const int32_t interval, const string& filename)
+    {
+      interrupt_ = false;
+      is_loop_ = (count == 0);
+      FILE* fp = NULL;
+      if (TFS_ERROR == get_file_handle(filename, &fp))
+      {
+        return TFS_ERROR;
+      }
+
+      while ((count > 0 || is_loop_) && !interrupt_)
+      {
+        BlockDistributionStruct stat;
+
+        ShowServerInformationMessage msg;
+        SSMScanParameter& param = msg.get_param();
+        param.type_ = SSM_TYPE_BLOCK;//遍历ns上的block，这里设置的才是找ns取数据的类型
+        param.child_type_ = SSM_CHILD_BLOCK_TYPE_SERVER | SSM_CHILD_BLOCK_TYPE_INFO;//TODO:其实只取每个block的server list，但是BlockBase 反序列化接口不一致
+
+        bool once = false;
+        if (block_id > 0)
+        {
+          param.should_actual_count_ = 0x10000;
+          param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_NO;
+          param.start_next_position_ = ((block_id % block_chunk_num) << 16);
+          param.addition_param1_ = block_id;
+          once = true;
+        }
+        else
+        {
+          param.should_actual_count_ = (num << 16);//每次should从ns读取的最大block数
+          param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
+        }
+
+        print_header(BLOCK_DISTRIBUTION_TYPE, type, fp);  
+        while ((!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)) && !interrupt_)//一直把ns上的所有block读取完成（除非终端中断）
+        {
+          param.data_.clear();
+          tbnet::Packet*ret_msg = NULL;
+          NewClient* client = NewClientManager::get_instance().create_client();
+          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
+          if (TFS_SUCCESS != ret || ret_msg == NULL)
+          {
+            TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
+            NewClientManager::get_instance().destroy_client(client);
+            return TFS_ERROR;
+          }
+          
+          if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
+          {
+            if (ret_msg->getPCode() == STATUS_MESSAGE)
+            {
+              StatusMessage* msg = dynamic_cast<StatusMessage*>(ret_msg);
+              TBSYS_LOG(ERROR, "get invalid message type: error: %s", msg->get_error());
+            }
+            TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
+            NewClientManager::get_instance().destroy_client(client);
+            return TFS_ERROR;
+          }
+          ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
+          SSMScanParameter& ret_param = message->get_param();
+
+          int32_t data_len = ret_param.data_.getDataLen();
+          int32_t offset = 0;
+         // if (data_len > 0)
+         // {
+         //   print_header(BLOCK_DISTRIBUTION_TYPE, type, fp);
+         // }
+        //如果指定的blockid都不存在，且block表中>=start_next_position_桶后没有blockid,则拉取block个数为0     
+          if(type & BLOCK_IP_DISTRIBUTION_TYPE)
+          {
+            while ((data_len > offset) && !interrupt_)
+            {
+              BlockDistributionShow block;
+              if (TFS_SUCCESS == block.deserialize(ret_param.data_, data_len, offset, param.child_type_))
+              {
+                if (once && (block.info_.block_id_ != block_id))
+                {
+                  TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", block.info_.block_id_, block_id);
+                  break;
+                }
+                if(block.check_block_ip_distribution())
+                {
+                  block.dump_ip(fp);
+                  stat.add(block);
+                }
+              }
+            }
+          }
+          else
+          {
+            assert( (type & BLOCK_RACK_DISTRIBUTION_TYPE) );
+            while ((data_len > offset) && !interrupt_)
+            {
+              BlockDistributionShow block;
+              if (TFS_SUCCESS == block.deserialize(ret_param.data_, data_len, offset, param.child_type_))
+              {
+                if (once && (block.info_.block_id_ != block_id))
+                {
+                  TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", block.info_.block_id_, block_id);
+                  break;
+                }
+                if(block.check_block_rack_distribution(rack_ip_mask))
+                {
+                  block.dump_rack(fp);
+                  stat.add(block);
+                }
+              }
+            }
+          }
+
+          param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
+          param.end_flag_ = ret_param.end_flag_;
+          if (param.end_flag_ & SSM_SCAN_CUTOVER_FLAG_NO)
+          {
+            param.addition_param1_ = ret_param.addition_param2_;
+          }
+          NewClientManager::get_instance().destroy_client(client);
+          if (once)
+          {
+            break;
+          }
+        }
+        if (!once)
+        {
+          stat.dump(type, fp);
+        }
+        if (--count)
+        {
+          sleep(interval);
+        }
+      }
+      if (fp != stdout) fclose(fp);
+      return TFS_SUCCESS;
+    }
+
+
+    int ShowInfo::show_rack_block(const int8_t type, string& rack_ip_mask, string& rack_ip_group, const int32_t num, int32_t count, const int32_t interval, const string& filename)
+    {
+      interrupt_ = false;
+      is_loop_ = (count == 0);
+      FILE* fp = NULL;
+      if (TFS_ERROR == get_file_handle(filename, &fp))
+      {
+        return TFS_ERROR;
+      }
+
+      while ((count > 0 || is_loop_) && !interrupt_)
+      {
+        RackBlockShow rack_block;
+        ShowServerInformationMessage msg;
+        SSMScanParameter& param = msg.get_param();//参数初始化为0
+        param.type_ = SSM_TYPE_BLOCK;
+        param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;//可以去掉INFO
+
+        param.should_actual_count_ = (num << 16);//每发一次消息读取的block数取最大值
+        param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
+
+        print_header(RACK_BLOCK_TYPE, type, fp);
+        while ((!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)) && !interrupt_)
+        {
+          param.data_.clear();
+          tbnet::Packet*ret_msg = NULL;
+          NewClient* client = NewClientManager::get_instance().create_client();
+          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
+          if (TFS_SUCCESS != ret || ret_msg == NULL)
+          {
+            TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
+            NewClientManager::get_instance().destroy_client(client);
+            return TFS_ERROR;
+          }
+
+          if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
+          {
+            if (ret_msg->getPCode() == STATUS_MESSAGE)
+            {
+              StatusMessage* msg = dynamic_cast<StatusMessage*>(ret_msg);
+              TBSYS_LOG(ERROR, "get invalid message type: error: %s", msg->get_error());
+            }
+            TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
+            NewClientManager::get_instance().destroy_client(client);
+            return TFS_ERROR;
+          }
+          ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
+          SSMScanParameter& ret_param = message->get_param();
+
+          int32_t data_len = ret_param.data_.getDataLen();
+          int32_t offset = 0;
+          if (data_len > 0)
+          {
+          //  print_header(RACK_BLOCK_TYPE, type, fp);
+          }
+          while ((data_len > offset) && !interrupt_)
+          {
+            BlockShow block;
+            if (TFS_SUCCESS == block.deserialize(ret_param.data_, data_len, offset, param.child_type_))
+            {
+              rack_block.add(block, rack_ip_mask);
+            }
+          }
+          param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
+          param.end_flag_ = ret_param.end_flag_;
+          if (param.end_flag_ & SSM_SCAN_CUTOVER_FLAG_NO)
+          {
+            param.addition_param1_ = ret_param.addition_param2_;
+          }
+          NewClientManager::get_instance().destroy_client(client);
+        }
+        //把所有的block都拉取下来才输出
+        rack_block.dump(type, rack_ip_group, fp);
+
         if (--count)
         {
           sleep(interval);

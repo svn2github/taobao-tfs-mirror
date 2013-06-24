@@ -40,55 +40,48 @@ namespace tfs
         void print_head(ComType cmp_type, const int8_t type) const;
         std::map<uint64_t, ServerCmp> master_server_map_;
         std::map<uint64_t, ServerCmp> slave_server_map_;
-        std::map<uint32_t, BlockCmp> master_block_map_;
-        std::map<uint32_t, BlockCmp> slave_block_map_;
+        std::map<uint64_t, BlockCmp> master_block_map_;
+        std::map<uint64_t, BlockCmp> slave_block_map_;
         uint64_t master_ns_ip_;
         uint64_t slave_ns_ip_;
         template<class M> void do_cmp(M& master_map, M& slave_map, StatCmp& stat, int8_t type, bool final_cmp = false)
         {
           typename M::iterator m_iter, s_iter;
-          std::bitset<MAX_BITS_SIZE> flag;
-
-          m_iter = master_map.begin();
-          for (; m_iter != master_map.end();)
+          if(!final_cmp)
           {
-            s_iter = slave_map.find(m_iter->first);
-            if (s_iter != slave_map.end())
+            m_iter = master_map.begin();
+            for (; m_iter != master_map.end(); )
             {
-              flag.set( distance(slave_map.begin(), s_iter) );
-              if (m_iter->second.cmp(s_iter->second, type))
+              s_iter = slave_map.find(m_iter->first);
+              if (s_iter != slave_map.end())
               {
-                flag.set( distance(slave_map.begin(), s_iter) );
-                m_iter->second.dump(s_iter->second, type);
-                stat.diff_count_++;
+                if (m_iter->second.cmp(s_iter->second, type))
+                {
+                  m_iter->second.dump(s_iter->second, type);//dump the diffs in the same blockid or server_id.
+                  stat.diff_count_++;
+                }
+                //remove the same and leave different blockid or server_id themselves
+                master_map.erase(m_iter++);
+                slave_map.erase(s_iter);
               }
-              master_map.erase(m_iter++);
-              slave_map.erase(s_iter);
-            }
-            else
-            {
-              //TBSYS_LOG(DEBUG, "more id: %lu", m_iter->second.get_id());
-              if (final_cmp)
+              else
               {
-                stat.push_back(m_iter->second.get_id(), PUSH_MORE);
+                m_iter++;
               }
-              ++m_iter;
             }
           }
-
-          flag.flip();
-          int32_t diff_count = flag.count();
-          s_iter = slave_map.begin();
-          for (int32_t i = 0; (s_iter != slave_map.end()) && (diff_count > 0); i++, s_iter++)
+          else
           {
-            if (flag.test(i))
+            m_iter = master_map.begin();
+            for (; m_iter != master_map.end(); m_iter++)
             {
-              diff_count--;
-              if (final_cmp)
-              {
-                //TBSYS_LOG(DEBUG, "less id: %lu", s_iter->second.get_id());
-                stat.push_back(s_iter->second.get_id(), PUSH_LESS);
-              }
+              stat.push_back(m_iter->second.get_id(), PUSH_MORE, typeid(m_iter->second)==typeid(ServerCmp));
+            }
+
+            s_iter = slave_map.begin();
+            for (; s_iter != slave_map.end(); s_iter++)
+            {
+              stat.push_back(s_iter->second.get_id(), PUSH_LESS, typeid(m_iter->second)==typeid(ServerCmp));
             }
           }
         }

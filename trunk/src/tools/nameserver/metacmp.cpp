@@ -120,7 +120,7 @@ namespace tfs
 
       if (TFS_SUCCESS != ret || ret_msg == NULL)
       {
-        TBSYS_LOG(ERROR, "get server info error");
+        TBSYS_LOG(ERROR, "get server info:%s error", CNetUtil::addrToString(ns_ip).c_str());
         NewClientManager::get_instance().destroy_client(client);
         return TFS_ERROR;
       }
@@ -221,8 +221,8 @@ namespace tfs
         if (type & BLOCK_CMP_ALL_INFO)
         {
           printf("\n                                   ======DIFF  BLOCK ALL INFO (MasterNS VS SlaveNs)======\n\n");
-          printf("BLOCK_ID   VERSION    FILECOUNT     SIZE   DEL_FILE    DEL_SIZE   SEQ_NO    COPY\n");
-          printf("--------   -------    --------      -----  --------    --------   -----     -----------------\n");
+          printf("BLOCK_ID   VERSION    FILECOUNT     SIZE     DEL_FILE    DEL_SIZE    COPY\n");
+          printf("--------   -------    --------      -----    --------    --------    ---------\n");
         }
         if (type & BLOCK_CMP_SERVER)
         {
@@ -236,9 +236,9 @@ namespace tfs
         if (type & SERVER_TYPE_SERVER_INFO)
         {
           printf("\n                                   ======DIFF DATASERVER ALL INFO (MasterNs VS SlaveNs)======\n\n");
-          printf("SERVER_ADDR           UCAP     TCAP    BLKCNT LOAD  TOTAL_WRITE   TOTAL_READ     STARTUP_TIME      BLOCK  WBLOCK  MASTER\n");
+          printf("SERVER_ADDR           UCAP     TCAP    LOAD  BLKCNT  TOTAL_WRITE  WRITE_FILE_CNT   TOTAL_READ  READ_FILE_CNT   STARTUP_TIME      BLOCK  WBLOCK  MASTER\n");
 
-          printf("--------------------  ---------------  ----- -----  -----------  ------------  ------------------  ----- ------ ------\n");
+          printf("------------------  ------- --------   ----- ------  -----------  --------------   -----------  ------------   -------------    ------- ------ ------\n");
         }
         if (type & SERVER_TYPE_BLOCK_LIST)
         {

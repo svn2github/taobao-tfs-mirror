@@ -28,7 +28,7 @@ namespace tfs
     static const int32_t MAX_BITS_SIZE = 81920;
     template<class V> void cmp_disorder_container(const V& container_a, const V& container_b, std::bitset<MAX_BITS_SIZE>& flag_a, std::bitset<MAX_BITS_SIZE>& flag_b);
     template<class V> void cmp_order_container(const V& container_a, const V& container_b, std::bitset<MAX_BITS_SIZE>& flag_a, std::bitset<MAX_BITS_SIZE>& flag_b);
-    template<class V> void print_container(V& container, std::bitset<MAX_BITS_SIZE>& flag, bool reverse = false);
+    template<class V> void print_container(V& container, std::bitset<MAX_BITS_SIZE>& flag, bool reverse, bool is_servercmp);
     class ServerCmp : public ServerBase
     {
       public:
@@ -41,7 +41,7 @@ namespace tfs
         int cmp(ServerCmp& server_b, const int8_t type);
         void dump(ServerCmp& server_b, const int8_t type);
       protected:
-        void dump(const int8_t type);
+        void dump(const int8_t type, bool is_master);
         std::bitset<MAX_BITS_SIZE> flag_;
     };
     class BlockCmp : public BlockBase
@@ -49,7 +49,7 @@ namespace tfs
       public:
         BlockCmp();
         virtual ~BlockCmp();
-        uint32_t get_id() const
+        uint64_t get_id() const
         {
           return info_.block_id_;
         }
@@ -64,27 +64,28 @@ namespace tfs
       public:
         StatCmp();
         ~StatCmp();
-        template<class T> void push_back(T i, PushType p_type)
+        template<class T> void push_back(T i, PushType p_type, bool is_servercmp)
         {
           switch (p_type) {
             case PUSH_MORE :
-              sizeof(T)==sizeof(uint32_t) ? more_block_.push_back(i) : more_server_.push_back(i);
+              !is_servercmp ? more_block_.push_back(i) : more_server_.push_back(i);
               break;
             case PUSH_LESS :
-              sizeof(T)==sizeof(uint32_t) ? less_block_.push_back(i) : less_server_.push_back(i);
+              !is_servercmp ? less_block_.push_back(i) : less_server_.push_back(i);
               break;
             default:
               break;
           }
         }
+
         void print_stat(const int8_t type);
-        int32_t diff_count_;
-        int32_t total_count_;
+        int64_t diff_count_;
+        int64_t total_count_;
       private:
         std::vector<uint64_t> more_server_;
         std::vector<uint64_t> less_server_;
-        std::vector<uint32_t> more_block_;
-        std::vector<uint32_t> less_block_;
+        std::vector<uint64_t> more_block_;
+        std::vector<uint64_t> less_block_;
     };
   }
 }
