@@ -48,19 +48,19 @@ namespace tfs
       {
         if (type & SERVER_TYPE_SERVER_INFO)
         {
-          fprintf(fp, "    SERVER_ADDR       UCAP  / TCAP =  UR  BLKCNT LOAD  TOTAL_WRITE  TOTAL_READ   LAST_WRITE   LAST_READ   STARTUP_TIME\n");
+          fprintf(fp, "    SERVER_ADDR       UCAP  / TCAP =  UR     BLKCNT LOAD  TOTAL_WRITE  TOTAL_READ   LAST_WRITE   LAST_READ   STARTUP_TIME\n");
         }
         if (type & SERVER_TYPE_BLOCK_LIST)
         {
-          fprintf(fp, "SERVER_ADDR           CNT BLOCK \n");
+          fprintf(fp, "SERVER_ADDR           CNT   BLOCK \n");
         }
         if (type & SERVER_TYPE_BLOCK_WRITABLE)
         {
-          fprintf(fp, "SERVER_ADDR           CNT WRITABLE BLOCK\n");
+          fprintf(fp, "SERVER_ADDR           CNT   WRITABLE BLOCK\n");
         }
         if (type & SERVER_TYPE_BLOCK_MASTER)
         {
-          fprintf(fp, "SERVER_ADDR           CNT MASTER BLOCK\n");
+          fprintf(fp, "SERVER_ADDR           CNT   MASTER BLOCK\n");
         }
       }
       if (print_type & BLOCK_TYPE)
@@ -153,7 +153,6 @@ namespace tfs
       block_count_  = input.readInt32();
       last_update_time_ = input.readInt64();
       startup_time_ = input.readInt64();
-
       total_tp_.write_byte_ = input.readInt64();
       total_tp_.read_byte_ = input.readInt64();
       total_tp_.write_file_count_ = input.readInt64();
@@ -176,7 +175,6 @@ namespace tfs
       int32_t time = current_time_ - old_server.current_time_;
       add_tp(&total_tp_, &old_server.total_tp_, &last_tp_, SUB_OP);
       compute_tp(&last_tp_, time);
-
       time = current_time_ - startup_time_;
       compute_tp(&total_tp_, time);
       return TFS_SUCCESS;
@@ -191,7 +189,7 @@ namespace tfs
       int32_t count = 0;
       for (; iter != blocks.end(); iter++)
       {
-        fprintf(fp, "%12"PRI64_PREFIX"u",(*iter));
+        fprintf(fp, " %12"PRI64_PREFIX"u",(*iter));
         if (count >= MAX_COUNT)
         {
           fprintf(fp, "\n%25s", " ");
@@ -206,7 +204,7 @@ namespace tfs
       if (fp == NULL) { return; }
       if (type & SERVER_TYPE_SERVER_INFO)
       {
-        fprintf(fp, "%17s %7s %7s %2d%% %6d %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %-19s\n",
+        fprintf(fp, "%17s %7s %7s %4d%% %7d %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %-18s\n",
             tbsys::CNetUtil::addrToString(id_).c_str(),
             Func::format_size(use_capacity_).c_str(),
             Func::format_size(total_capacity_).c_str(),
@@ -672,7 +670,7 @@ namespace tfs
       {
         if (sub_type & SERVER_TYPE_SERVER_INFO)
         {
-          fprintf(fp, "TOTAL: %5d %5s %7s %7s %2d%% %6d %7d %8s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %4"PRI64_PREFIX"d\n\n",
+          fprintf(fp, "TOTAL: %5d %5s %7s %7s %4d%% %7d %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d\n\n",
               server_count_,
               "",
               Func::format_size(use_capacity_).c_str(),

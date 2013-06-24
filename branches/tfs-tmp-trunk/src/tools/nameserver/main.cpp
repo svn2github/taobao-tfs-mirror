@@ -456,10 +456,10 @@ void print_help()
         "  -c execute times, optional.\n"
         "  -i interval\n"
         "  > redirect to file, optional.\n");
-    fprintf(stderr, "block_dist [-n num] [-d block_id] [-ip] [-mask ip_mask] [-c] [-i] [> filename]   show dataservers ip/rack where block is stored.\n"
+    fprintf(stderr, "block_dist [-n num] [ [-ip [-d block_id]] | [-mask ip_mask] ] [-c] [-i] [> filename]   show dataservers ip/rack where block is stored.\n"
         "  -n the number of one fetch, default 1024, optional.\n"
-        "  -d block id, optional.\n"
         "  -ip print block's dataserver ip_port list group by machine ip(only for group which has more than one replicate), optional.\n"
+        "  -d block id, optional.\n"
         "  -mask print block's dataserver ip_port list group by ip_mask(only for group which has more than one replicate), optional.\n"
         "  -c execute times, default 1, optional.\n"
         "  -i interval time, default 2, optional.\n"
@@ -475,10 +475,10 @@ void print_help()
   else
   {
     fprintf(stderr, "block [-a] [-p] [-s]  compare block info\n"
-        "  -a compare all block info\n"
-        "  -p compare some block info\n"
+        "  -a compare block all info\n"
+        "  -p compare block all info\n"
         "  -s compare server list.\n"
-        "  default compare part of block info\n");
+        "  default compare block all info\n");
     fprintf(stderr, "server [-b] [-w] [-m]  compare server info\n"
         "  -b compare block list \n"
         "  -w compare writable block list \n"
@@ -649,7 +649,7 @@ int usage(const char *name)
   fprintf(stderr, "\n****************************************************************************** \n");
   fprintf(stderr, "You can both get and compare cluster info by this tool.\n");
   fprintf(stderr, "Usage: \n");
-  fprintf(stderr, "  %s -s ns_ip_port [-i exec command]    show server, block and machine info.\n", name);
+  fprintf(stderr, "  %s -s ns_ip_port [-i exec command]    show server, block, machine and rack machine info.\n", name);
   fprintf(stderr, "  %s -m master_ip_port -s slave_ip_port [-i exec command]   compare server, block info.\n", name);
   fprintf(stderr, "****************************************************************************** \n");
   fprintf(stderr, "\n");
@@ -664,8 +664,8 @@ static void sign_handler(int32_t sig)
       {
         g_show_info.interrupt_ = true;
         g_show_info.is_loop_ = false;
-        break;
       }
+      break;
     case SIGTERM:
       fprintf(stderr, "showssm tool exit.\n");
       g_show_info.clean_last_file();

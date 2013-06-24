@@ -235,10 +235,6 @@ namespace tfs
               {
                 break;
               }
-              if (once && ((tbsys::CNetUtil::addrToString(server.id_)) != server_ip_port))
-              {
-                break;
-              }
               server_map_[server.id_] = server;
               old_server = server;
               if (last_server_size > 0)
@@ -415,7 +411,6 @@ namespace tfs
         {
           param.should_actual_count_ = 0x10000;
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_NO;
-          param.should_actual_count_ = 0x10000;
           param.start_next_position_ = ((block_id % block_chunk_num) << 16);
           param.addition_param1_ = block_id;
           once = true;
@@ -573,7 +568,7 @@ namespace tfs
          // {
          //   print_header(BLOCK_DISTRIBUTION_TYPE, type, fp);
          // }
-
+        //如果指定的blockid都不存在，且block表中>=start_next_position_桶后没有blockid,则拉取block个数为0     
           if(type & BLOCK_IP_DISTRIBUTION_TYPE)
           {
             while ((data_len > offset) && !interrupt_)

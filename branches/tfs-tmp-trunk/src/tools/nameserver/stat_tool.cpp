@@ -5,16 +5,20 @@
 #include "common/client_manager.h"
 #include "message/message_factory.h"
 #include "common/status_message.h"
+#include "common.h"
 
 using namespace std;
 using namespace tfs::common;
 using namespace tfs::message;
+using namespace tfs::tools;
 
 static const int32_t STEP = 10 * 1024 *1024;
 static const int32_t RANGE = 9;
 static tfs::common::BasePacketStreamer gstreamer;
 static tfs::message::MessageFactory gfactory;
 
+/*
+//Discarded 已经过时的旧代码,新的在tools/nameserver/common.h/cpp
 // block base construct
 struct ServerInfo
 {
@@ -34,6 +38,7 @@ struct ServerInfo
     return os << server_id_;
   }
 };
+
 class BlockBase
 {
   public:
@@ -85,18 +90,21 @@ void BlockBase::dump() const
   TBSYS_LOG(INFO, "block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %u, copys: %Zd",
       info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_, info_.seq_no_, server_list_.size());
 }
+*/
 
 // stat info stat
 class StatInfo
 {
   public:
-    int32_t block_count_;
+    int64_t block_count_;
     int64_t file_count_;
     int64_t file_size_;
     int64_t del_file_count_;
     int64_t del_file_size_;
+    int64_t update_file_count_;
+    int64_t update_size_;
     StatInfo()
-      : block_count_(0), file_count_(0), file_size_(0), del_file_count_(0), del_file_size_(0)
+      : block_count_(0), file_count_(0), file_size_(0), del_file_count_(0), del_file_size_(0), update_file_count_(0), update_size_(0)
     {
     }
     ~StatInfo()
@@ -120,15 +128,19 @@ class StatInfo
       file_size_ += block_base.info_.size_;
       del_file_count_ += block_base.info_.del_file_count_;
       del_file_size_ += block_base.info_.del_size_;
+      update_file_count_ += block_base.info_.update_file_count_;
+      update_size_ += block_base.info_.update_size_; 
     }
 
     void dump(FILE* fp) const
     {
-      fprintf(fp, "file_count: %"PRI64_PREFIX"d, file_size: %"PRI64_PREFIX"d, avg_file_size: %.2f, "
-          "del_file_count: %"PRI64_PREFIX"d, del_file_size: %"PRI64_PREFIX"d, del_avg_file_size: %.2f, del_ratio: %.2f%%\n",
+      fprintf(fp, "file_count: %"PRI64_PREFIX"d, file_size: %"PRI64_PREFIX"d, avg_file_size: %.2f,\n"
+          "del_file_count: %"PRI64_PREFIX"d, del_file_size: %"PRI64_PREFIX"d, del_avg_file_size: %.2f, del_ratio: %.2f%%,\n"
+          "update_file_count: %"PRI64_PREFIX"d, update_size: %"PRI64_PREFIX"d, update_avg_file_size: %.2f, update_ratio: %.2f%%\n",
           file_count_, file_size_, div(file_size_, file_count_),
-          del_file_count_, del_file_size_, div(del_file_size_, del_file_count_), div(del_file_size_ * 100, file_size_));
-      fprintf(fp, "block_count: %d, avg_block_size: %.2f\n", block_count_, div(file_size_, block_count_));
+          del_file_count_, del_file_size_, div(del_file_size_, del_file_count_), div(del_file_size_ * 100, file_size_),
+          update_file_count_, update_size_, div(update_size_, update_file_count_), div(update_size_ * 100, file_size_));
+      fprintf(fp, "block_count: %"PRI64_PREFIX"d, avg_block_size: %.2f\n", block_count_, div(file_size_, block_count_));
     }
 
 };
@@ -136,7 +148,7 @@ class StatInfo
 class BlockSize
 {
   public:
-    BlockSize(const uint32_t block_id, const int32_t file_size)
+    BlockSize(const uint64_t block_id, const int32_t file_size)
       : block_id_(block_id), file_size_(file_size)
     {
     }
@@ -144,7 +156,7 @@ class BlockSize
     {
     }
 
-    uint32_t block_id_;
+    uint64_t block_id_;
     int32_t file_size_;
     bool operator<(const BlockSize& b) const
     {
@@ -161,16 +173,6 @@ typedef set<BlockSize>::iterator BLOCK_SIZE_SET_ITER;
 typedef map<int32_t, int64_t> BLOCK_COUNT_MAP;
 typedef map<int32_t, int64_t>::iterator BLOCK_COUNT_MAP_ITER;
 
-static inline uint64_t get_addr(const std::string& ns_ip_port)
-{
-  string::size_type pos = ns_ip_port.find_first_of(":");
-  if (pos == string::npos)
-  {
-    return TFS_ERROR;
-  }
-  string tmp = ns_ip_port.substr(0, pos);
-  return Func::str_to_addr(tmp.c_str(), atoi(ns_ip_port.substr(pos + 1).c_str()));
-}
 
 int show_block(const uint64_t ns_id, StatInfo& file_stat_info,
     BLOCK_COUNT_MAP& m_block_range_count, BLOCK_SIZE_SET& s_big_block, const int32_t top_num, BLOCK_SIZE_SET& s_topn_block)
@@ -215,7 +217,7 @@ int show_block(const uint64_t ns_id, StatInfo& file_stat_info,
     int32_t offset = 0;
     while (data_len > offset)
     {
-      BlockBase block;
+      tfs::tools::BlockBase block;
       if (TFS_SUCCESS == block.deserialize(ret_param.data_, data_len, offset, param.child_type_))
       {
         //block.dump();
@@ -346,24 +348,24 @@ int main(int argc,char** argv)
   {
     if (index < (RANGE - 1))
     {
-      fprintf(fp, "%d ~ %d: %"PRI64_PREFIX"d\n", index * STEP, (index + 1) * STEP, m_block_range_count[index]);
+      fprintf(fp, "%10d ~ %10d: %"PRI64_PREFIX"d\n", index * STEP, (index + 1) * STEP, m_block_range_count[index]);
     }
     else
     {
-      fprintf(fp, "%d ~ : %"PRI64_PREFIX"d\n", index * STEP,  m_block_range_count[index]);
+      fprintf(fp, "%10d ~ %10s: %"PRI64_PREFIX"d\n", index * STEP, "MAX", m_block_range_count[index]);
     }
   }
-  fprintf(fp, "--------------------------block list whose size bigger than 8M. num: %zd -------------------------------\n", s_big_block.size());
+  fprintf(fp, "--------------------------block list whose size bigger than 80M. num: %zd -------------------------------\n", s_big_block.size());
   set<BlockSize>::reverse_iterator rbiter = s_big_block.rbegin();
   for (; rbiter != s_big_block.rend(); rbiter++)
   {
-    fprintf(fp, "block_id: %u, size: %d\n", rbiter->block_id_, rbiter->file_size_);
+    fprintf(fp, "block_id: %"PRI64_PREFIX"u, size: %d\n", rbiter->block_id_, rbiter->file_size_);
   }
-  fprintf(fp, "--------------------------top %d block list-------------------------------\n", top_num);
+  fprintf(fp, "--------------------------top %d bigest block list-------------------------------\n", top_num);
   set<BlockSize>::reverse_iterator rtiter = s_topn_block.rbegin();
   for (; rtiter != s_topn_block.rend(); rtiter++)
   {
-    fprintf(fp, "block_id: %u, size: %d\n", rtiter->block_id_, rtiter->file_size_);
+    fprintf(fp, "block_id: %"PRI64_PREFIX"u, size: %d\n", rtiter->block_id_, rtiter->file_size_);
   }
   fclose(fp);
 }
