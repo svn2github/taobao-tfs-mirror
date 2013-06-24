@@ -142,12 +142,10 @@ namespace tfs
     }
 
     SetBlockInfoMessage::SetBlockInfoMessage() :
-      block_id_(0),
-      version_(0),
-      lease_id_(common::INVALID_LEASE_ID)
+      block_id_(0), version_(0), lease_id_(common::INVALID_LEASE_ID)
     {
-      ds_.clear();
       _packetHeader._pcode = common::SET_BLOCK_INFO_MESSAGE;
+      ds_.clear();
     }
 
     SetBlockInfoMessage::~SetBlockInfoMessage()
@@ -157,26 +155,16 @@ namespace tfs
     //block_id, server_count, server_id1, server_id2, ..., filename_len, filename
     int SetBlockInfoMessage::deserialize(common::Stream& input)
     {
-      int32_t ret = input.get_int32(reinterpret_cast<int32_t*> (&block_id_));
-      if (common::TFS_SUCCESS == ret)
+      int32_t iret = input.get_int32(reinterpret_cast<int32_t*> (&block_id_));
+      if (common::TFS_SUCCESS == iret)
       {
-        ret = input.get_vint64(ds_);
+        iret = input.get_vint64(ds_);
       }
-      if (common::TFS_SUCCESS == ret)
+      if (common::TFS_SUCCESS == iret)
       {
         common::BasePacket::parse_special_ds(ds_, version_, lease_id_);
       }
-      if (common::TFS_SUCCESS == ret && input.get_data_length() > 0)
-      {
-        int64_t pos = 0;
-        ret = family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (common::TFS_SUCCESS == ret)
-        {
-          input.drain(family_info_.length());
-        }
-      }
-
-      return ret;
+      return iret;
     }
 
     int64_t SetBlockInfoMessage::length() const
@@ -186,11 +174,6 @@ namespace tfs
         && !ds_.empty())
       {
         len += common::INT64_SIZE * 3;
-      }
-
-      if (common::INVALID_FAMILY_ID != family_info_.family_id_)
-      {
-        len += family_info_.length();
       }
       return len;
     }
@@ -204,27 +187,17 @@ namespace tfs
         ds_.push_back(static_cast<uint64_t> (version_));
         ds_.push_back(static_cast<uint64_t> (lease_id_));
       }
-      int32_t ret = output.set_int32(block_id_);
-      if (common::TFS_SUCCESS == ret)
+      int32_t iret = output.set_int32(block_id_);
+      if (common::TFS_SUCCESS == iret)
       {
-        ret = output.set_vint64(ds_);
+        iret = output.set_vint64(ds_);
       }
-      if (common::TFS_SUCCESS == ret)
+      if (common::TFS_SUCCESS == iret)
       {
         // reparse, avoid push verion&lease again when clone twice;
         common::BasePacket::parse_special_ds(ds_, version_, lease_id_);
       }
-      if (common::TFS_SUCCESS == ret && common::INVALID_FAMILY_ID != family_info_.family_id_)
-      {
-        int64_t pos = 0;
-        ret =  family_info_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (common::TFS_SUCCESS == ret)
-        {
-          output.pour(family_info_.length());
-        }
-      }
-
-      return ret;
+      return iret;
     }
 
     void SetBlockInfoMessage::set(const uint32_t block_id, const int32_t version, const uint32_t lease_id)
@@ -301,56 +274,29 @@ namespace tfs
     int BatchSetBlockInfoMessage::deserialize(common::Stream& input)
     {
       int32_t count = 0;
-      uint32_t block_id = 0;
-      int32_t ret = input.get_int32(&count);
-      if (common::TFS_SUCCESS == ret)
+      int32_t iret = input.get_int32(&count);
+      if (common::TFS_SUCCESS == iret)
       {
+        uint32_t block_id = 0;
         for (int32_t i = 0; i < count; ++i)
         {
           common::BlockInfoSeg block_info;
-          ret = input.get_int32(reinterpret_cast<int32_t*>(&block_id));
-          if (common::TFS_SUCCESS != ret)
+          iret = input.get_int32(reinterpret_cast<int32_t*>(&block_id));
+          if (common::TFS_SUCCESS != iret)
               break;
-          ret = input.get_vint64(block_info.ds_);
-          if (common::TFS_SUCCESS != ret)
+          iret = input.get_vint64(block_info.ds_);
+          if (common::TFS_SUCCESS != iret)
               break;
           common::BasePacket::parse_special_ds(block_info.ds_, block_info.version_, block_info.lease_id_);
           block_infos_[block_id] = block_info;
         }
       }
-      count = 0;
-      if (common::TFS_SUCCESS == ret)
-      {
-        ret = input.get_int32(&count);
-      }
-      if (common::TFS_SUCCESS == ret)
-      {
-        for (int32_t index = 0; index < count && common::TFS_SUCCESS == ret; ++index)
-        {
-          ret = input.get_int32(reinterpret_cast<int32_t*>(&block_id));
-          if (common::TFS_SUCCESS == ret)
-          {
-            std::map<uint32_t, common::BlockInfoSeg>::iterator iter = block_infos_.find(block_id);
-            ret = block_infos_.end() != iter ? common::TFS_SUCCESS : common::EXIT_DESERIALIZE_ERROR;
-            if (common::TFS_SUCCESS == ret)
-            {
-              int64_t pos = 0;
-              common::BlockInfoSeg& seg = (*iter).second;
-              ret = seg.family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-              if (common::TFS_SUCCESS == ret)
-              {
-                input.drain(seg.family_info_.length());
-              }
-            }
-          }
-        }
-      }
-      return ret;
+      return iret;
     }
 
     int64_t BatchSetBlockInfoMessage::length() const
     {
-      int64_t len = common::INT_SIZE * block_infos_.size() + common::INT_SIZE * 2;
+      int64_t len = common::INT_SIZE * block_infos_.size();
       // just test first has lease, then all has lease, maybe add mode test
       if (!block_infos_.empty())
       {
@@ -358,10 +304,6 @@ namespace tfs
         for (; it != block_infos_.end(); it++)
         {
           len += common::Serialization::get_vint64_length(it->second.ds_);
-          if (common::INVALID_FAMILY_ID != it->second.family_info_.family_id_)
-          {
-            len += common::INT_SIZE + it->second.family_info_.length();
-          }
         }
         if (block_infos_.begin()->second.has_lease())
         {
@@ -374,18 +316,14 @@ namespace tfs
 
     int BatchSetBlockInfoMessage::serialize(common::Stream& output)  const
     {
-      int32_t count = 0;
-      int32_t ret = output.set_int32(block_infos_.size());
-      if (common::TFS_SUCCESS == ret)
+      int32_t iret = output.set_int32(block_infos_.size());
+      if (common::TFS_SUCCESS == iret)
       {
         std::map<uint32_t, common::BlockInfoSeg>::const_iterator it = block_infos_.begin();
         common::BlockInfoSeg* block_info = NULL;
         for (; it != block_infos_.end(); it++)
         {
           block_info = const_cast< common::BlockInfoSeg*>(&it->second);
-          if (common::INVALID_FAMILY_ID != block_info->family_info_.family_id_)
-            ++count;
-
           if (block_info->has_lease()
               && !block_info->ds_.empty())
           {
@@ -394,44 +332,18 @@ namespace tfs
             block_info->ds_.push_back(static_cast<uint64_t> (block_info->lease_id_));
           }
           //block id
-          ret = output.set_int32(it->first);
-          if (common::TFS_SUCCESS != ret)
+          iret = output.set_int32(it->first);
+          if (common::TFS_SUCCESS != iret)
             break;
           // dataserver list
-          ret = output.set_vint64(block_info->ds_);
-          if (common::TFS_SUCCESS != ret)
+          iret = output.set_vint64(block_info->ds_);
+          if (common::TFS_SUCCESS != iret)
             break;
           // reparse, avoid push verion&lease again when clone twice;
           common::BasePacket::parse_special_ds(block_info->ds_, block_info->version_, block_info->lease_id_);
         }
       }
-      if (common::TFS_SUCCESS == ret)
-      {
-        ret = output.set_int32(count);
-      }
-      if (common::TFS_SUCCESS == ret)
-      {
-        std::map<uint32_t, common::BlockInfoSeg>::const_iterator it = block_infos_.begin();
-        common::BlockInfoSeg* block_info = NULL;
-        for (; it != block_infos_.end() && common::TFS_SUCCESS == ret; it++)
-        {
-          block_info = const_cast< common::BlockInfoSeg*>(&it->second);
-          if (common::INVALID_FAMILY_ID != block_info->family_info_.family_id_)
-          {
-            ret = output.set_int32(it->first);
-            if (common::TFS_SUCCESS == ret)
-            {
-              int64_t pos = 0;
-              ret = block_info->family_info_.serialize(output.get_free(), output.get_free_length(), pos);
-              if (common::TFS_SUCCESS == ret)
-              {
-                output.pour(block_info->family_info_.length());
-              }
-            }
-          }
-        }
-      }
-      return ret;
+      return iret;
     }
 
     void BatchSetBlockInfoMessage::set_read_block_ds(const uint32_t block_id, common::VUINT64& ds)

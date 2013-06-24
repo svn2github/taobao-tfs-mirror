@@ -388,9 +388,10 @@ namespace tfs
         uint64_t ipport = msg->get_connection()->getServerId();
         uint64_t servers[MAX_REPLICATION_NUM];
         common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
+        common::FamilyInfoExt family_info;  // unused in old version
 
         ret = layout_manager_.get_client_request_server().open(block_id, lease_id, version, helper,
-              result_msg->get_family_info(), mode, now);
+              family_info, mode, now);
         if (TFS_SUCCESS == ret)
         {
           for (int64_t index = 0; index < helper.get_array_index(); ++index)

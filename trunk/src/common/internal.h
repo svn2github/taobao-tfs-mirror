@@ -930,7 +930,6 @@ namespace tfs
       common::VUINT64 ds_;
       uint32_t lease_id_;
       int32_t version_;
-      FamilyInfoExt family_info_;
       BlockInfoSeg() : lease_id_(INVALID_LEASE_ID), version_(0)
       {
         ds_.clear();
