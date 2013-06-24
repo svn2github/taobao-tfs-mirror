@@ -782,7 +782,7 @@ namespace tfs
       if (ret)
       {
         ret = !manager_.get_task_manager().exist_family(family->get_family_id());
-        if (ret && family->check_need_dissolve(now))
+        if (ret && (ret = family->check_need_dissolve(now)))
           ret = need_reinstate_members.get_array_index() > family->get_check_member_num();
       }
       return ret;

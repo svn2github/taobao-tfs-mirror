@@ -20,7 +20,7 @@ namespace tfs
 {
   namespace message
   {
-    ReadRawdataMessageV2::ReadRawdataMessageV2()
+    ReadRawdataMessageV2::ReadRawdataMessageV2(): degrade_(0)
     {
       _packetHeader._pcode = READ_RAWDATA_MESSAGE_V2;
     }
@@ -37,6 +37,10 @@ namespace tfs
       {
         output.pour(file_seg_.length());
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(degrade_);
+      }
 
       return ret;
     }
@@ -49,13 +53,17 @@ namespace tfs
       {
         input.drain(file_seg_.length());
       }
+      if (TFS_SUCCESS == ret)
+      {
+        // ignore return value for compatible
+        input.get_int8(&degrade_);
+      }
       return ret;
     }
 
-
     int64_t ReadRawdataMessageV2::length() const
     {
-      return file_seg_.length();
+      return file_seg_.length() + INT8_SIZE;
     }
 
     ReadRawdataRespMessageV2::ReadRawdataRespMessageV2() :

@@ -268,7 +268,11 @@ namespace tfs
         while (retry--)
         {
           ret = do_stat(file_stat);
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS != ret)
+          {
+            file_.set_next_read_index();
+          }
+          else
           {
             break;
           }

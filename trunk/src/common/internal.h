@@ -1097,6 +1097,8 @@ namespace tfs
       BlockInfoV2()
       {
         block_id_ = INVALID_BLOCK_ID;
+        family_id_ = INVALID_FAMILY_ID;
+        version_ = INVALID_VERSION;
       }
 
       bool operator < (const BlockInfoV2& rhs) const

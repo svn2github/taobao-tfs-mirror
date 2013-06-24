@@ -1129,7 +1129,6 @@ namespace tfs
           char* packet_data = resp_rd_v2_msg->alloc_data(real_read_len);
           assert(NULL != packet_data);
           ret = data_management_.read_data(block_id, file_id, read_offset, flag, real_read_len, packet_data);
-          TBSYS_LOG(DEBUG, "========================= %d", ret);
         }
       }
 

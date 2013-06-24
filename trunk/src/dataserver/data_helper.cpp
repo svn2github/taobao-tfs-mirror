@@ -991,20 +991,11 @@ namespace tfs
           }
           ret = (target >= member_num) ? EXIT_NO_ENOUGH_DATA : TFS_SUCCESS; // no alive check block
 
-          // query all 4 nodes' ec metas cost no more than 1ms in test environment
           // it can be "optimized" to one network interact, but may lead to disk IO
-          TIMER_START();
-          for (int i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
+          if (TFS_SUCCESS == ret)
           {
-            if (ErasureCode::NODE_ALIVE != erased[i])
-            {
-              continue;
-            }
-            ret = query_ec_meta(family_info.members_[i].second,
-                family_info.members_[i].first, ec_metas[i]);
+            ret = async_query_ec_meta(family_info, erased, ec_metas);
           }
-          TIMER_END();
-          TBSYS_LOG(DEBUG, "query all ec meta cost: %"PRI64_PREFIX"d", TIMER_DURATION());
         }
 
         if (TFS_SUCCESS == ret)
@@ -1083,6 +1074,7 @@ namespace tfs
 
       while ((TFS_SUCCESS == ret) && (real_offset < real_end))
       {
+        std::pair<int32_t, int32_t> read_infos[member_num];
         int32_t len = std::min(real_end - real_offset, max_read_size);
         for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
         {
@@ -1090,23 +1082,28 @@ namespace tfs
           {
             continue; // not alive, just continue
           }
-          int32_t read_len = len;
+          read_infos[i].first = len;
+          read_infos[i].second = real_offset;
           if ((real_offset < ec_metas[i].mars_offset_))
           {
             // truncate to avoid reading invalid data
             if (real_offset + len > ec_metas[i].mars_offset_)
             {
               memset(data[i], 0, len * sizeof(char));
-              read_len = ec_metas[i].mars_offset_ - real_offset;
+              read_infos[i].first = ec_metas[i].mars_offset_ - real_offset;
             }
-
-            ret = read_raw_data(family_info.members_[i].second,
-                family_info.members_[i].first, data[i], read_len, real_offset);
           }
           else
           {
+            read_infos[i].first = 0;
             memset(data[i], 0, len * sizeof(char));
           }
+        }
+
+        // async read raw data
+        if (TFS_SUCCESS == ret)
+        {
+          ret = async_read_raw_data(family_info, erased, read_infos, data);
         }
 
         // decode data to buffer
@@ -1185,6 +1182,167 @@ namespace tfs
       }
 
       return ret;
+    }
+
+    void DataHelper::process_fail_response(NewClient* new_client)
+    {
+      assert(NULL != new_client);
+      NewClient::RESPONSE_MSG_MAP* fail_response = new_client->get_fail_response();
+      assert(NULL != fail_response);
+      NewClient::RESPONSE_MSG_MAP::iterator iter = fail_response->begin();
+      for ( ; iter != fail_response->end(); iter++)
+      {
+        TBSYS_LOG(WARN, "get fail response from server %s",
+            tbsys::CNetUtil::addrToString(iter->second.first).c_str());
+      }
+    }
+
+    int DataHelper::async_read_raw_data(const FamilyInfoExt& family_info, const int* erased,
+        const std::pair<int32_t, int32_t>* read_infos, char** data, const int32_t timeout_ms)
+    {
+      assert(NULL != erased);
+      assert(NULL != read_infos);
+      assert(NULL != data);
+      int ret = TFS_SUCCESS;
+      NewClient* new_client = NewClientManager::get_instance().create_client();
+      if (NULL != new_client)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+        for (int index = 0; (index < data_num + check_num) && (TFS_SUCCESS == ret); index++)
+        {
+          if (erased[index] != NODE_ALIVE)
+          {
+            continue; // read data from alive nodes
+          }
+
+          // read if needed, at least send one request here
+          if (read_infos[index].first > 0)
+          {
+            uint8_t send_id = 0;
+            ReadRawdataMessageV2 req_msg;
+            req_msg.set_block_id(family_info.members_[index].first);
+            req_msg.set_length(read_infos[index].first);
+            req_msg.set_offset(read_infos[index].second);
+            req_msg.set_degrade_flag(true); // to tell the peer, don't control flow
+            ret = new_client->post_request(family_info.members_[index].second, &req_msg, send_id);
+          }
+        }
+      }
+      else
+      {
+        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        new_client->wait(timeout_ms);
+        process_fail_response(new_client);
+        vector<NewClient::SEND_SIGN_PAIR>& send_id_sign = new_client->get_send_id_sign();
+        NewClient::RESPONSE_MSG_MAP* sresponse = new_client->get_success_response();
+        NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
+        assert(NULL != sresponse);
+        ret = (sresponse->size() == send_id_sign.size()) ? TFS_SUCCESS : EXIT_TIMEOUT_ERROR;
+        for ( ; (iter != sresponse->end()) && (TFS_SUCCESS == ret); iter++)
+        {
+          uint64_t server_id = iter->second.first;
+          tbnet::Packet* ret_msg = iter->second.second;
+          int32_t index = family_info.get_index_by_server(server_id);
+          ret = (index >= 0) ? TFS_SUCCESS : EXIT_RECVMSG_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            if (READ_RAWDATA_RESP_MESSAGE_V2 == ret_msg->getPCode())
+            {
+              ReadRawdataRespMessageV2* resp_msg = dynamic_cast<ReadRawdataRespMessageV2* >(ret_msg);
+              int32_t length = resp_msg->get_length();
+              memcpy(data[index], resp_msg->get_data(), length);
+            }
+            else if (STATUS_MESSAGE == ret_msg->getPCode())
+            {
+              StatusMessage* resp_msg = dynamic_cast<StatusMessage* >(ret_msg);
+              ret = resp_msg->get_status();
+            }
+            else
+            {
+              ret = EXIT_UNKNOWN_MSGTYPE;
+            }
+          }
+        }
+      }
+
+      NewClientManager::get_instance().destroy_client(new_client);
+
+      return ret;
+    }
+
+    int DataHelper::async_query_ec_meta(const common::FamilyInfoExt& family_info, const int* erased,
+        ECMeta* ec_metas, const int32_t timeout_ms)
+    {
+      assert(NULL != erased);
+      assert(NULL != ec_metas);
+      int ret = TFS_SUCCESS;
+      NewClient* new_client = NewClientManager::get_instance().create_client();
+      if (NULL != new_client)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+        for (int index = 0; (index < data_num + check_num) && (TFS_SUCCESS == ret); index++)
+        {
+          if (erased[index] != NODE_ALIVE)
+          {
+            continue; // qeury meta from alive nodes
+          }
+
+          uint8_t send_id = 0;
+          QueryEcMetaMessage req_msg;
+          req_msg.set_block_id(family_info.members_[index].first);
+          ret = new_client->post_request(family_info.members_[index].second, &req_msg, send_id);
+        }
+      }
+      else
+      {
+        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        new_client->wait(timeout_ms);
+        process_fail_response(new_client);
+        vector<NewClient::SEND_SIGN_PAIR>& send_id_sign = new_client->get_send_id_sign();
+        NewClient::RESPONSE_MSG_MAP* sresponse = new_client->get_success_response();
+        NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
+        assert(NULL != sresponse);
+        ret = (sresponse->size() == send_id_sign.size()) ? TFS_SUCCESS : EXIT_TIMEOUT_ERROR;
+        for ( ; (iter != sresponse->end()) && (TFS_SUCCESS == ret); iter++)
+        {
+          uint64_t server_id = iter->second.first;
+          tbnet::Packet* ret_msg = iter->second.second;
+          int32_t index = family_info.get_index_by_server(server_id);
+          ret = (index >= 0) ? TFS_SUCCESS : EXIT_RECVMSG_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            if (QUERY_EC_META_RESP_MESSAGE == ret_msg->getPCode())
+            {
+              QueryEcMetaRespMessage* resp_msg = dynamic_cast<QueryEcMetaRespMessage* >(ret_msg);
+              ec_metas[index] = resp_msg->get_ec_meta();
+            }
+            else if (STATUS_MESSAGE == ret_msg->getPCode())
+            {
+              StatusMessage* resp_msg = dynamic_cast<StatusMessage* >(ret_msg);
+              ret = resp_msg->get_status();
+            }
+            else
+            {
+              ret = EXIT_UNKNOWN_MSGTYPE;
+            }
+          }
+        }
+      }
+
+      NewClientManager::get_instance().destroy_client(new_client);
+
+      return ret;
+
     }
 
   }

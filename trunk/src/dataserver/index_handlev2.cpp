@@ -358,7 +358,6 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int32_t max_loop = header->file_info_bucket_size_;
-        TBSYS_LOG(DEBUG, "file info bucket size: %d", header->file_info_bucket_size_);
         if (GET_SLOT_TYPE_GEN == type)
         {
           prev = NULL;

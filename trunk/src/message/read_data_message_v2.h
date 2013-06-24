@@ -64,8 +64,19 @@ namespace tfs
           file_seg_ = file_seg;
         }
 
+        void set_degrade_flag(const bool degrade)
+        {
+          degrade_ = degrade;
+        }
+
+        bool get_degrade_flag() const
+        {
+          return degrade_;
+        }
+
       protected:
         common::FileSegment file_seg_;
+        int8_t degrade_;
     };
 
     class ReadRawdataRespMessageV2: public common::BasePacket

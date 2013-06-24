@@ -958,7 +958,8 @@ namespace tfs
            * commit success, keep ret unchanged
            * commit fail, set ret to error code
            */
-          int tmp_ret = get_data_manager().update_block_info(attach_block_id, file_id, lease_id, UPDATE_BLOCK_INFO_WRITE);
+          int tmp_ret = get_data_manager().update_block_info(attach_block_id,
+              file_id, lease_id, UPDATE_BLOCK_INFO_WRITE);
           if (TFS_SUCCESS != tmp_ret)
           {
             ret = tmp_ret;
@@ -1077,7 +1078,8 @@ namespace tfs
          * commit success, keep ret unchanged
          * commit fail, set ret to error code
          */
-        int tmp_ret = get_data_manager().update_block_info(attach_block_id, file_id, lease_id, UPDATE_BLOCK_INFO_UNLINK);
+        int tmp_ret = get_data_manager().update_block_info(attach_block_id,
+            file_id, lease_id, UPDATE_BLOCK_INFO_UNLINK);
         if (TFS_SUCCESS != tmp_ret)
         {
           ret = tmp_ret;
@@ -1131,11 +1133,13 @@ namespace tfs
       uint64_t block_id = message->get_block_id();
       int32_t length = message->get_length();
       int32_t offset = message->get_offset();
+      bool degrade = message->get_degrade_flag();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (length <= 0) || (offset < 0)) ?
         EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
-      if ((TFS_SUCCESS == ret) && get_traffic_control().mr_traffic_out_of_threshold(false))
+      // if degrade read file, dont't do flow control
+      if ((TFS_SUCCESS == ret) && (!degrade) && get_traffic_control().mr_traffic_out_of_threshold(false))
       {
         ret = EXIT_NETWORK_BUSY_ERROR;
       }

@@ -124,6 +124,14 @@ namespace tfs
         int get_block_replicas_ex(const uint64_t ns_id, const uint64_t block_id,
             common::VUINT64& servers);
 
+        // async request interface
+        void process_fail_response(common::NewClient* new_client);
+        int async_read_raw_data(const common::FamilyInfoExt& family_info, const int* erased,
+            const std::pair<int32_t, int32_t>* read_infos, char** data,
+            const int32_t timeout_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT);
+        int async_query_ec_meta(const common::FamilyInfoExt& family_info, const int* erased,
+            common::ECMeta* ec_metas, const int32_t timeout_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT);
+
       private:
         DataService& service_;
     };
