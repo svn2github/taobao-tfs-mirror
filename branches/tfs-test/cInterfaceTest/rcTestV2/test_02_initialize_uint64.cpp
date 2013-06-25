@@ -1,5 +1,5 @@
 #include"tfs_init_for_test.h"
-#include "common/func.h"
+#include "func.h"
 
 TEST_F(TfsInitTest,01_initialize_uint64_wrong_rc_ip)
 {

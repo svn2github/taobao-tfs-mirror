@@ -80,7 +80,7 @@ TEST_F(TfsInit,04_fetch_buf_wrong_suffix_2)
    int64_t count = 100*(1<<10);
 
    iRet = tfsclient->fetch_buf(ret_count, buf, count, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 TEST_F(TfsInit,05_fetch_buf_empty_suffix)
@@ -114,7 +114,7 @@ TEST_F(TfsInit,06_fetch_buf_wrong_file_name)
    int64_t count = 100*(1<<10);
 
    iRet = tfsclient->fetch_buf(ret_count, buf, count, file_name, suffix);
-   EXPECT_GT(iRet,0);
+   EXPECT_NE(iRet,0);
 }
 
 TEST_F(TfsInit,07_fetch_buf_empty_file_name)
@@ -128,7 +128,7 @@ TEST_F(TfsInit,07_fetch_buf_empty_file_name)
    int64_t count = 100*(1<<10);
 
    iRet = tfsclient->fetch_buf(ret_count, buf, count, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 TEST_F(TfsInit,08_fetch_buf_NULL_file_name)
@@ -142,7 +142,7 @@ TEST_F(TfsInit,08_fetch_buf_NULL_file_name)
    int64_t count = 100*(1<<10);
 
    iRet = tfsclient->fetch_buf(ret_count, buf, count, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 TEST_F(TfsInit,09_fetch_buf_half_count)
@@ -183,7 +183,7 @@ TEST_F(TfsInit,10_fetch_buf_wrong_count)
    int64_t count = -1;
 
    iRet = tfsclient->fetch_buf(ret_count, buf, count, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 TEST_F(TfsInit,11_fetch_buf_NULL_buf)
@@ -203,7 +203,7 @@ TEST_F(TfsInit,11_fetch_buf_NULL_buf)
    int64_t count = 0;
 
    iRet = tfsclient->fetch_buf(ret_count, buf, count, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 TEST_F(TfsInit,12_fetch_buf_empty_buf)
@@ -223,7 +223,7 @@ TEST_F(TfsInit,12_fetch_buf_empty_buf)
    int64_t count = 0;
 
    iRet = tfsclient->fetch_buf(ret_count, buf, count, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 TEST_F(TfsInit,13_fetch_buf_right_large)
@@ -268,7 +268,7 @@ TEST_F(TfsInit,14_fetch_buf_with_DELETE)
    int64_t count = 100*(1<<10);
 
    iRet = tfsclient->fetch_buf(ret_count, buf, count, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 TEST_F(TfsInit,15_fetch_buf_with_UNDELETE)
@@ -321,7 +321,7 @@ TEST_F(TfsInit,16_fetch_buf_with_CONCEAL)
    int64_t count = 100*(1<<10);
 
    iRet = tfsclient->fetch_buf(ret_count, buf, count, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 TEST_F(TfsInit,17_fetch_buf_with_REVEAL)

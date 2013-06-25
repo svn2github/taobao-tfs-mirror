@@ -33,7 +33,7 @@ TEST_F(TfsInit,03_unlink_NULL_file_name)
    const char* suffix = NULL;
    TfsUnlinkType action=DELETE;
    ret=tfsclient->unlink(file_name,suffix,action);
-   EXPECT_GT(ret,0);
+   EXPECT_NE(ret,0);
 }
 
 TEST_F(TfsInit,04_unlink_empty_file_name)
@@ -42,7 +42,7 @@ TEST_F(TfsInit,04_unlink_empty_file_name)
    const char* suffix = NULL;
    TfsUnlinkType action=DELETE;
    ret=tfsclient->unlink(file_name,suffix,action);
-   EXPECT_GT(ret,0);
+   EXPECT_NE(ret,0);
 }
 
 TEST_F(TfsInit,05_unlink_with_wrong_suffix_1)
@@ -59,7 +59,7 @@ TEST_F(TfsInit,05_unlink_with_wrong_suffix_1)
    const char* suffix = ".jpg";
    TfsUnlinkType action=DELETE;
    ret=tfsclient->unlink(file_name,suffix,action);
-   EXPECT_GT(0,ret);
+   EXPECT_NE(0,ret);
 }
 
 TEST_F(TfsInit,06_unlink_with_empty_suffix)
@@ -92,7 +92,7 @@ TEST_F(TfsInit,07_unlink_with_suffix)
    const char* local_key = NULL;
 
    ret=tfsclient->open(file_name, suffix, tfsclient->CREATE, large,local_key);
-   EXPECT_GT(ret,0);
+   EXPECT_NE(ret,0);
 
    char buf[small_len];
    data_in(a100K,buf,0,100*(1<<10));
@@ -125,7 +125,7 @@ TEST_F(TfsInit,08_unlink_with_wrong_suffix_2)
    const char* local_key = NULL;
 
    ret=tfsclient->open(file_name, suffix, tfsclient->CREATE, large,local_key);
-   EXPECT_GT(ret,0);
+   EXPECT_NE(ret,0);
 
    char buf[small_len];
    data_in(a100K,buf,0,100*(1<<10));
@@ -142,7 +142,7 @@ TEST_F(TfsInit,08_unlink_with_wrong_suffix_2)
    const char*suffix_u = ".txt";
    TfsUnlinkType action=DELETE;
    ret=tfsclient->unlink(file_name_u,suffix_u,action);
-   EXPECT_GT(0,ret);
+   EXPECT_NE(0,ret);
 }
 
 TEST_F(TfsInit,09_unlink_with_wrong_suffix_3)
@@ -158,7 +158,7 @@ TEST_F(TfsInit,09_unlink_with_wrong_suffix_3)
    const char* local_key = NULL;
 
    ret=tfsclient->open(file_name, suffix, tfsclient->CREATE, large,local_key);
-   EXPECT_GT(ret,0);
+   EXPECT_NE(ret,0);
 
    char buf[small_len];
    data_in(a100K,buf,0,100*(1<<10));
@@ -194,7 +194,7 @@ TEST_F(TfsInit,10_unlink_two_times)
    ret=tfsclient->unlink(file_name,suffix,action);
    EXPECT_EQ(0,ret);
    ret=tfsclient->unlink(file_name,suffix,action);
-   EXPECT_GT(0,ret);
+   EXPECT_NE(0,ret);
 }
 
 TEST_F(TfsInit,11_unlink_UNDELETE)
@@ -211,7 +211,7 @@ TEST_F(TfsInit,11_unlink_UNDELETE)
    const char* suffix = NULL;
    TfsUnlinkType action=UNDELETE;
    ret=tfsclient->unlink(file_name,suffix,action);
-   EXPECT_GT(0,ret);
+   EXPECT_NE(0,ret);
 }
 
 TEST_F(TfsInit,12_unlink_UNDELETE_two_times)
@@ -234,7 +234,7 @@ TEST_F(TfsInit,12_unlink_UNDELETE_two_times)
    EXPECT_EQ(0,ret);
    action=UNDELETE;
    ret=tfsclient->unlink(file_name,suffix,action);
-   EXPECT_GT(0,ret);
+   EXPECT_NE(0,ret);
 }
 
 TEST_F(TfsInit,13_unlink_CONCEAL_two_times)
@@ -253,7 +253,7 @@ TEST_F(TfsInit,13_unlink_CONCEAL_two_times)
    ret=tfsclient->unlink(file_name,suffix,action);
    EXPECT_EQ(0,ret);
    ret=tfsclient->unlink(file_name,suffix,action);
-   EXPECT_GT(0,ret);
+   EXPECT_NE(0,ret);
 }
 
 TEST_F(TfsInit,14_unlink_REVEAL)
@@ -270,7 +270,7 @@ TEST_F(TfsInit,14_unlink_REVEAL)
    const char* suffix = NULL;
    TfsUnlinkType action=REVEAL;
    ret=tfsclient->unlink(file_name,suffix,action);
-   EXPECT_GT(0,ret);
+   EXPECT_NE(0,ret);
 }
 
 TEST_F(TfsInit,15_unlink_REVEAL_two_times)
@@ -293,7 +293,7 @@ TEST_F(TfsInit,15_unlink_REVEAL_two_times)
    EXPECT_EQ(0,ret);
    action=REVEAL;
    ret=tfsclient->unlink(file_name,suffix,action);
-   EXPECT_GT(0,ret);
+   EXPECT_NE(0,ret);
 }
 
 int main(int argc,char**argv)

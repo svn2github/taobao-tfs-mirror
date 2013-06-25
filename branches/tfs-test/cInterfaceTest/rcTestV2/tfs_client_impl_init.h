@@ -3,8 +3,8 @@
 
 #include<tfs_rc_client_api.h>
 #include<string>
-#include "common/define.h"
-#include "common/func.h"
+#include "define.h"
+#include "func.h"
 
 #include<gtest/gtest.h>
 #include<limits.h>

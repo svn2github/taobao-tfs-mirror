@@ -70,7 +70,7 @@ TEST_F(TfsInit,04_fetch_file_wrong_suffix_2)
    char * suffix = ".jpg";
 
    iRet =tfsclient->fetch_file(local_file, file_name, suffix);
-   EXPECT_GT(iRet,0);
+   EXPECT_NE(iRet,0);
 }
 
 TEST_F(TfsInit,05_fetch_file_empty_suffix)
@@ -113,7 +113,7 @@ TEST_F(TfsInit,07_fetch_file_empty_file_name)
    char * suffix = NULL;
 
    iRet =tfsclient->fetch_file(local_file, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 TEST_F(TfsInit,08_fetch_file_NULL_file_name)
@@ -125,7 +125,7 @@ TEST_F(TfsInit,08_fetch_file_NULL_file_name)
    char * suffix = NULL;
 
    iRet =tfsclient->fetch_file(local_file, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 TEST_F(TfsInit,09_fetch_file_empty_local_file)
@@ -161,7 +161,7 @@ TEST_F(TfsInit,10_fetch_file_wrong_local_file)
    char * suffix = NULL;
 
    iRet =tfsclient->fetch_file(local_file, file_name, suffix);
-   EXPECT_GT(0,iRet);
+   EXPECT_NE(0,iRet);
 }
 
 
