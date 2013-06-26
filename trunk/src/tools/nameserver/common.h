@@ -38,8 +38,7 @@ namespace tfs
       BLOCK_TYPE = 2,
       MACHINE_TYPE = 4,
       BLOCK_DISTRIBUTION_TYPE = 8,
-      RACK_BLOCK_TYPE = 16,
-      FAMILY_TYPE = 32
+      RACK_BLOCK_TYPE = 16
     };
 
     enum ComCmd
@@ -48,7 +47,7 @@ namespace tfs
       CMD_UNKNOWN,
       CMD_NUM = 2,
       CMD_BLOCK_INFO,
-      CMD_BLOCK_ID,// CMD_BLOCK_ID
+      CMD_BLOCK_ID,
       CMD_SERVER_LIST,
       CMD_SERVER_INFO,
       CMD_SERVER_ID,
@@ -130,10 +129,10 @@ namespace tfs
     struct ParamInfo
     {
       ParamInfo() :
-        type_(CMD_NOP), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), id_(0), server_ip_port_(""), rack_ip_mask_("")
+        type_(CMD_NOP), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(0), block_chunk_num_(nameserver::MAX_BLOCK_CHUNK_NUMS), server_ip_port_(""), rack_ip_mask_("")
       {}
       ParamInfo(const int8_t type) :
-        type_(type), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), id_(0), server_ip_port_(""), rack_ip_mask_("")
+        type_(type), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(0), block_chunk_num_(nameserver::MAX_BLOCK_CHUNK_NUMS), server_ip_port_(""), rack_ip_mask_("")
       {}
       ~ParamInfo(){}
       int8_t type_;
@@ -141,12 +140,8 @@ namespace tfs
       uint64_t count_;
       uint64_t interval_;
       std::string filename_;
-      union
-      {
-        uint64_t block_id_;
-        int64_t family_id_;
-        int64_t id_;
-      };
+      uint64_t block_id_;
+      uint64_t block_chunk_num_;
       std::string server_ip_port_;
       std::string rack_ip_mask_;
     };

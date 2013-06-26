@@ -44,10 +44,6 @@ namespace tfs
     }
     void print_header(const int8_t print_type, const int8_t type, FILE* fp)
     {
-      if(print_type & FAMILY_TYPE)
-      {
-         fprintf(fp, "FAMILY_ID  DATA_CNT CHECK_CNT            MEMBERS( BLOCK_ID|SERVER_ID )\n");
-      }
       if (print_type & SERVER_TYPE)
       {
         if (type & SERVER_TYPE_SERVER_INFO)
@@ -178,27 +174,28 @@ namespace tfs
     {
       int32_t time = current_time_ - old_server.current_time_;
       add_tp(&total_tp_, &old_server.total_tp_, &last_tp_, SUB_OP);
-      compute_tp(&last_tp_, time);//计算ssm对该ds两次拉取的时间段的单位流量
+      compute_tp(&last_tp_, time);
       time = current_time_ - startup_time_;
-      compute_tp(&total_tp_, time);//total_tp_是从ds直接获取的累计字节数
+      compute_tp(&total_tp_, time);
       return TFS_SUCCESS;
     }
     void ServerShow::dump(const uint64_t server_id, const std::set<uint64_t>& blocks, FILE* fp) const
     {
       if (fp == NULL) { return; }
 
-      fprintf(fp, "%17s  ", tbsys::CNetUtil::addrToString(server_id).c_str());
-      fprintf(fp, "%-6Zd  ", blocks.size());
+      fprintf(fp, "%17s ", tbsys::CNetUtil::addrToString(server_id).c_str());
+      fprintf(fp, "%6Zd ", blocks.size());
       std::set<uint64_t>::const_iterator iter = blocks.begin();
       int32_t count = 0;
       for (; iter != blocks.end(); iter++)
       {
         fprintf(fp, " %12"PRI64_PREFIX"u",(*iter));
-        if (++count >= MAX_COUNT)
+        if (count >= MAX_COUNT)
         {
           fprintf(fp, "\n%25s", " ");
           count = 0;
         }
+        count++;
       }
       fprintf(fp, "\n");
     }
@@ -307,7 +304,7 @@ namespace tfs
     }
 
     bool BlockDistributionShow::check_block_rack_distribution(string& rack_ip_mask)
-    {
+    {   
       int8_t server_size = server_list_.size();
       std::vector<uint64_t>* ipport_list = NULL;
       for(int8_t index = 0; index < server_size; index++)
@@ -369,7 +366,7 @@ namespace tfs
         {
           for(; iter_ipport != iter->second->end(); iter_ipport++)
           {
-            server_str += ("    " + static_cast<std::string> (tbsys::CNetUtil::addrToString(*iter_ipport).c_str()) + "(" +
+            server_str += ("    " + static_cast<std::string> (tbsys::CNetUtil::addrToString(*iter_ipport).c_str()) + "(" + 
                 static_cast<std::string> (Func::addr_to_str(iter->first, false))+ ")");
           }
           count++;
@@ -415,7 +412,7 @@ namespace tfs
     }
 
     void RackBlockShow::dump(const int8_t type, string& rack_ip_group, FILE* fp) const
-    {
+    {   
       if (fp == NULL) { return; }
       std::map<uint32_t, std::vector<uint64_t>*>::const_iterator iter = rack_blocks_.begin();
       if (type & RACK_BLOCK_TYPE_RACK_LIST)
@@ -621,55 +618,6 @@ namespace tfs
             );
       }
     }
-
-
-    FamilyShow::FamilyShow()
-    {
-      family_id_ = INVALID_FAMILY_ID;
-      family_aid_info_ = 0;
-    }
-
-    FamilyShow::~FamilyShow()
-    {
-    }
-
-    int32_t FamilyShow::deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset)
-    {
-      if (input.getDataLen() <= 0 || offset >= length)
-      {
-        return TFS_ERROR;
-      }
-      int32_t len = input.getDataLen();
-      family_id_ = input.readInt64();
-      family_aid_info_ = input.readInt32();
-      const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) +  GET_CHECK_MEMBER_NUM(family_aid_info_);
-      for (int32_t i = 0; i < MEMBER_NUM ; ++i)
-      {
-       members_[i].first = input.readInt64();//block_id
-       input.readInt32();//version 暂时没用到
-       members_[i].second = input.readInt64();//server_id
-      }
-      offset += (len - input.getDataLen());
-      return TFS_SUCCESS;
-    }
-
-    void FamilyShow::dump(FILE* fp) const
-    {
-      int32_t data_member_num = GET_DATA_MEMBER_NUM(family_aid_info_);
-      const int32_t check_member_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
-      const int32_t member_num = data_member_num + check_member_num;
-      string member_str = "";
-      fprintf(fp, "%-10"PRI64_PREFIX"d %5d %5d", family_id_, data_member_num, check_member_num);
-      char tmp[255];
-      for(int32_t index = 0; index < member_num; index++)
-      {
-        sprintf(tmp, "    %"PRI64_PREFIX"u|%s", members_[index].first, tbsys::CNetUtil::addrToString(members_[index].second).c_str());
-        member_str += tmp;
-      }
-      fprintf(fp, "%s\n", member_str.c_str());
-    }
-
-
     StatStruct::StatStruct() :
       server_count_(0), machine_count_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
       file_count_(0), block_size_(0), delfile_count_(0), block_del_size_(0)
@@ -745,9 +693,8 @@ namespace tfs
       {
         if (sub_type & BLOCK_TYPE_BLOCK_INFO)
         {
-          fprintf(fp, "TOTAL: %-2d  %5s  FILE COUNT/SIZE: %"PRI64_PREFIX"d/%-12s  DEL FILE COUNT/SIZE: %"PRI64_PREFIX"d/%-12s  PER_FILE(%s)\n\n",
+          fprintf(fp, "TOTAL: %-2d %18"PRI64_PREFIX"d %10s %9"PRI64_PREFIX"d %12s PRE_FILE(%s)\n\n",
               block_count_,
-              "",//调整显示格式用
               file_count_,
               Func::format_size(block_size_).c_str(),
               delfile_count_,

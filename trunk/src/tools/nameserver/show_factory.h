@@ -50,7 +50,7 @@ namespace tfs
     };
 
     class BlockDistributionShow : public BlockBase
-    {
+    { 
       public:
         BlockDistributionShow() : has_same_ip_(false), has_same_ip_rack_(false){}
         virtual ~BlockDistributionShow();
@@ -66,7 +66,7 @@ namespace tfs
     };
 
     class RackBlockShow
-    {
+    {       
       public:
         RackBlockShow() : total_block_replicate_count_(0){}
         virtual ~RackBlockShow();
@@ -75,7 +75,7 @@ namespace tfs
       private:
         std::map<uint32_t, std::vector<uint64_t> *> rack_blocks_;
         int64_t total_block_replicate_count_;
-    };
+    }; 
 
     class MachineShow
     {
@@ -100,24 +100,6 @@ namespace tfs
         time_t consume_time_;
         int32_t index_;
 
-    };
-
-    class FamilyShow
-    {
-      typedef std::pair<uint64_t, uint64_t> FamilyMember;//blockid, serverid
-      public:
-        FamilyShow();
-        virtual ~FamilyShow();
-        bool operator < (const FamilyShow& b) const
-        {
-          return family_id_ < b.family_id_;
-        }
-
-        int32_t deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset);
-        void dump(FILE* fp) const;
-        int64_t family_id_;
-        int32_t family_aid_info_;
-        FamilyMember members_[common::MAX_MARSHALLING_NUM];
     };
 
     struct StatStruct
