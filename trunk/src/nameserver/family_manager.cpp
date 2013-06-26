@@ -273,13 +273,13 @@ namespace tfs
       while (next < MAX_FAMILY_CHUNK_NUM && actual < should)
       {
         RWLock::Lock lock(mutexs_[next], READ_LOCKER);
-        FamilyCollect query(param.addition_param1_);
+        FamilyCollect query(param.addition_param1_);//family_id to scan firstly
         iter = cutover ?  families_[next]->begin() : families_[next]->lower_bound(&query);
         if (cutover && iter != families_[next]->end())
           param.addition_param1_ = (*iter)->get_family_id();
         for(;families_[next]->end() != iter; ++iter)
         {
-          if (TFS_SUCCESS == (*iter)->scan(param))
+          if (TFS_SUCCESS == (*iter)->scan(param, manager_))
           {
             if (++actual >= should)
             {

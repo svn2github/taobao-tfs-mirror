@@ -54,7 +54,7 @@ namespace tfs
       bool exist(int32_t& current_version, const uint64_t block, const int32_t version) const;
       bool clear(LayoutManager& manager, const time_t now);
       void get_members(common::ArrayHelper<std::pair<uint64_t, int32_t> >& members) const;
-      int scan(common::SSMScanParameter& param) const;
+      int scan(common::SSMScanParameter& param, LayoutManager& manager) const;
       void dump(int32_t level, const char* file = __FILE__,
           const int32_t line = __LINE__, const char* function = __FUNCTION__, const pthread_t thid = pthread_self()) const;
       inline void set_family_id(const int64_t family_id){ family_id_ = family_id;}

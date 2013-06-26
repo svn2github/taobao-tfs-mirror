@@ -359,6 +359,10 @@ namespace tfs
       {
         actual = get_block_manager().scan(param, next, all_over, cutover, should);
       }
+      else if(param.type_ & SSM_TYPE_FAMILY)
+      {
+        actual = get_family_manager().scan(param, next, all_over, cutover, should);
+      }
       next &= 0x0000FFFF;
       param.start_next_position_ &= 0xFFFF0000;
       param.start_next_position_ |= next;

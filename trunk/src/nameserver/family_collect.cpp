@@ -13,6 +13,7 @@
  *      - initial release
  *
  */
+#include "layout_manager.h"
 #include "family_collect.h"
 
 using namespace tfs::common;
@@ -144,7 +145,7 @@ namespace tfs
       }
     }
 
-    int FamilyCollect::scan(SSMScanParameter& param) const
+    int FamilyCollect::scan(SSMScanParameter& param, LayoutManager& manager) const
     {
       param.data_.writeInt64(family_id_);
       param.data_.writeInt32(family_aid_info_);
@@ -153,8 +154,10 @@ namespace tfs
       {
         if (INVALID_BLOCK_ID != members_[i].first)
         {
-          param.data_.writeInt64(members_[i].first);
-          param.data_.writeInt32(members_[i].second);
+          param.data_.writeInt64(members_[i].first);//block_id
+          param.data_.writeInt32(members_[i].second);//version
+          uint64_t server = manager.get_block_manager().get_server(members_[i].first);
+          param.data_.writeInt64(server);
         }
       }
       return TFS_SUCCESS;
