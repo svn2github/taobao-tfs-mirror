@@ -62,6 +62,7 @@ namespace tfs
           const uint64_t block_id, const uint64_t file_id, const int32_t flag, common::FileInfo& info);
       static int read_file_data(const uint64_t server_id, const uint64_t block_id, const uint64_t file_id,
         const int32_t length, const int32_t offset, const int32_t flag, char* data, int32_t& read_len);
+      static int list_file(const uint64_t server_id, const uint64_t block_id, std::vector<common::FileInfo>& finfos);
       static int list_file_v2(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, std::vector<common::FileInfoV2>& finfos);
       static int show_help(const STR_FUNC_MAP& cmd_map);
