@@ -42,7 +42,7 @@ namespace tfs
     static BaseWorkerPtr* g_workers = NULL;
 
     BaseWorkerManager::BaseWorkerManager():
-      cluster_id_(0), timestamp_(0), interval_ms_(0),
+      timestamp_(0), interval_ms_(0),
       succ_fp_(NULL), fail_fp_(NULL)
     {
     }
@@ -58,7 +58,6 @@ namespace tfs
         "-d           dest server ip:port, optional\n"
         "-f           input file name\n"
         "-m           timestamp eg: 20130610, optional, default 0\n"
-        "-c           cluster id eg: 1, default 0\n"
         "-i           sleep interval (ms), optional, default 0\n"
         "-o           output directory, optional, default ./output\n"
         "-x           extend arg, optional, default empty\n"
@@ -124,7 +123,7 @@ namespace tfs
       output_dir_ = "./output";  // default output directory
       int flag = 0;
 
-      while ((flag = getopt(argc, argv, "s:d:m:f:o:c:x:t:l:i:hv")) != EOF)
+      while ((flag = getopt(argc, argv, "s:d:m:f:o:x:t:l:i:hv")) != EOF)
       {
         switch (flag)
         {
@@ -142,9 +141,6 @@ namespace tfs
             break;
           case 'i':
             interval_ms_ = atoi(optarg);
-            break;
-          case 'c':
-            cluster_id_ = atoi(optarg);
             break;
           case 'o':
             output_dir_ = optarg;
@@ -237,7 +233,6 @@ namespace tfs
           g_workers[index]->set_src_addr(src_addr_);
           g_workers[index]->set_dest_addr(dest_addr_);
           g_workers[index]->set_extra_arg(extra_arg_);
-          g_workers[index]->set_cluster_id(cluster_id_);
           g_workers[index]->set_timestamp(timestamp_);
           g_workers[index]->set_interval_ms(interval_ms_);
           g_workers[index]->set_succ_fp(succ_fp_);

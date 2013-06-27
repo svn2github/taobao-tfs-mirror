@@ -18,6 +18,7 @@
 #include <vector>
 #include <algorithm>
 #include <TbThread.h>
+#include "common/internal.h"
 
 namespace tfs
 {
@@ -27,7 +28,7 @@ namespace tfs
     {
       public:
         BaseWorker():
-          cluster_id_(0), timestamp_(0), interval_ms_(0),
+          timestamp_(0), interval_ms_(0),
           succ_fp_(NULL), fail_fp_(NULL), stop_(false)
         {
         }
@@ -101,17 +102,6 @@ namespace tfs
           timestamp_ = timestamp;
         }
 
-        // argument passed by -c
-        uint32_t get_cluster_id() const
-        {
-          return cluster_id_;
-        }
-
-        void set_cluster_id(const uint32_t cluster_id)
-        {
-          cluster_id_ = cluster_id;
-        }
-
         // argument passed by -i
         int32_t get_interval_ms() const
         {
@@ -177,7 +167,6 @@ namespace tfs
         std::string src_addr_;
         std::string dest_addr_;
         std::string extra_arg_;
-        int32_t cluster_id_;
         uint32_t timestamp_;
         int32_t interval_ms_;
         FILE* succ_fp_;
@@ -220,12 +209,6 @@ namespace tfs
           return extra_arg_;
         }
 
-        // argument passed by -c
-        uint32_t get_cluster_id() const
-        {
-          return cluster_id_;
-        }
-
         // argument passed by -m
         uint32_t get_timestamp() const
         {
@@ -255,7 +238,6 @@ namespace tfs
         std::string output_dir_;
         std::string extra_arg_;
         std::string log_level_;
-        int32_t cluster_id_;
         uint32_t timestamp_;
         int32_t interval_ms_;
         FILE* succ_fp_;

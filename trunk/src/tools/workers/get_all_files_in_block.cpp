@@ -57,7 +57,7 @@ class ListFileWorker : public BaseWorker
         {
           if (!(iter->flag_ & (FI_DELETED | FI_INVALID)))
           {
-            FSName fsname(block_id, iter->id_, cluster_id_); // cluster id 1
+            FSName fsname(block_id, iter->id_);
             fprintf(result_fp, "%s\n", fsname.get_name());
           }
         }
