@@ -173,7 +173,8 @@ namespace tfs
         FILE* fail_fp_;
         bool stop_;
     };
-    typedef BaseWorker* BaseWorkerPtr;
+
+    typedef tbutil::Handle<BaseWorker> BaseWorkerPtr;
 
     class BaseWorkerManager
     {

@@ -250,7 +250,7 @@ namespace tfs
           g_workers[index]->start();
         }
 
-        for (int index = 0; index < g_thread_count; ++index)
+        for (int index = 0; index < g_thread_count; index++)
         {
           g_workers[index]->join();
         }
