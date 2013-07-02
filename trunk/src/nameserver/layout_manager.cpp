@@ -1329,6 +1329,8 @@ namespace tfs
             --need;
           if (!ret)
           {
+            if (!dissolve)
+              dissolve = get_family_manager().check_need_compact(family, now);
             if ((dissolve) && (ret = build_dissolve_task_(need, family, helper, now)))
               --need;
           }
@@ -1561,7 +1563,7 @@ namespace tfs
     bool LayoutManager::build_dissolve_task_(int64_t& need, const FamilyCollect* family,
           const common::ArrayHelper<FamilyMemberInfo>& reinstate_members, const time_t now)
     {
-      int32_t ret = ((NULL != family) && reinstate_members.get_array_index() > 0
+      int32_t ret = ((NULL != family) && reinstate_members.get_array_index() >= 0
                   && (plan_run_flag_ & PLAN_RUN_FALG_DISSOLVE) && need > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
