@@ -801,7 +801,8 @@ namespace tfs
         ret = CHECK_MEMBER_NUM_V2(family->get_data_member_num(),  family->get_check_member_num());
         if (ret)
         {
-          int32_t MEMBER_NUM = family->get_data_member_num() + family->get_check_member_num();
+          int32_t DATA_MEMBER_NUM = family->get_data_member_num();
+          int32_t MEMBER_NUM = DATA_MEMBER_NUM + family->get_check_member_num();
           BlockCollect* blocks[MEMBER_NUM];
           common::ArrayHelper<BlockCollect*> helper(MEMBER_NUM, blocks);
           ret = (TFS_SUCCESS == get_members_(helper, family->get_family_id()));
@@ -811,7 +812,7 @@ namespace tfs
             for (int64_t index = 0; index < helper.get_array_index(); ++index)
             {
               BlockCollect* block = *helper.at(index);
-              if ((NULL != block) && (manager_.get_block_manager().need_compact(block, now, true)))
+              if ((NULL != block) && (manager_.get_block_manager().need_compact(block, now, false)))
               {
                 ++need_compact_count;
               }
