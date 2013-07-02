@@ -817,7 +817,7 @@ namespace tfs
                 ++need_compact_count;
               }
             }
-            int32_t need_compact_ratio = static_cast<int32_t>(((static_cast<float>(need_compact_count) / static_cast<float>(MEMBER_NUM)) * 100));
+            int32_t need_compact_ratio = static_cast<int32_t>(((static_cast<float>(need_compact_count) / static_cast<float>(DATA_MEMBER_NUM)) * 100));
             need_compact = (need_compact_ratio >= SYSPARAM_NAMESERVER.compact_family_member_ratio_);
           }
         }
