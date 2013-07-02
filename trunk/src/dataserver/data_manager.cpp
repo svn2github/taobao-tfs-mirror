@@ -450,6 +450,7 @@ namespace tfs
          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
      Lease* lease = NULL;
+     ResolveBlockVersionConflictMessage req_msg;
      if (TFS_SUCCESS == ret)
      {
        LeaseId lid(block_id, file_id, lease_id);
@@ -461,7 +462,6 @@ namespace tfs
      if (TFS_SUCCESS == ret)
      {
        lease->dump(TBSYS_LOG_LEVEL_INFO, "resolve block version conflict.");
-       ResolveBlockVersionConflictMessage req_msg;
        int32_t member_size = 0;
        req_msg.set_block(block_id);
        ret = lease->get_member_info(req_msg.get_members(), member_size);
@@ -469,19 +469,16 @@ namespace tfs
        {
          req_msg.set_size(member_size);
        }
+     }
 
-
-       NewClient* client = NULL;
-       if (TFS_SUCCESS == ret)
+     if (TFS_SUCCESS == ret)
+     {
+       NewClient* client = NewClientManager::get_instance().create_client();
+       if (NULL == client)
        {
-         NewClient* client = NewClientManager::get_instance().create_client();
-         if (NULL == client)
-         {
-           ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
-         }
+         ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
        }
-
-       if (TFS_SUCCESS == ret)
+       else
        {
          DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
          tbnet::Packet* ret_msg = NULL;
@@ -494,7 +491,8 @@ namespace tfs
            {
              ResolveBlockVersionConflictResponseMessage* msg =
                dynamic_cast<ResolveBlockVersionConflictResponseMessage*>(ret_msg);
-             ret = (TFS_SUCCESS == msg->get_status()) ? TFS_SUCCESS : EXIT_RESOLVE_BLOCK_VERSION_CONFLICT_ERROR;
+             ret = (TFS_SUCCESS == msg->get_status()) ? TFS_SUCCESS :
+               EXIT_RESOLVE_BLOCK_VERSION_CONFLICT_ERROR;
            }
          }
          NewClientManager::get_instance().destroy_client(client);
