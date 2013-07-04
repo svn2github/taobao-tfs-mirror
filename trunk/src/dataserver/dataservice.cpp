@@ -1385,7 +1385,7 @@ namespace tfs
         {
           tbsys::gDelete(resp_bfi_msg);
           ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
-              "GSS_BLOCK_FILE_INFO fail, blockid: %u, ret: %d", block_id, ret);
+              "GSS_BLOCK_FILE_INFO fail, blockid: %"PRI64_PREFIX"u, ret: %d", block_id, ret);
         }
         else
         {

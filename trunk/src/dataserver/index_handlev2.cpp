@@ -947,7 +947,7 @@ namespace tfs
               memcpy(new_data, old_data, INDEX_HEADER_V2_LENGTH);
               IndexHeaderV2* new_header = reinterpret_cast<IndexHeaderV2*>(new_data);
               new_header->used_file_info_bucket_size_ = 0;
-              new_header->file_info_bucket_size_ = ((new_length - old_length ) / FILE_INFO_V2_LENGTH) + header->file_info_bucket_size_;
+              new_header->file_info_bucket_size_ = std::min(((new_length - INDEX_HEADER_V2_LENGTH) / FILE_INFO_V2_LENGTH), max_hash_bucket);
               FileInfoV2* old_buckets = reinterpret_cast<FileInfoV2*>(old_data + INDEX_HEADER_V2_LENGTH);
               TBSYS_LOG(INFO, "index file %s remmap, old_length: %d, bucket_size: %d, used bucket size: %d, new_length: %d, new_bucket size: %d, used bucket size: %u, block id: %"PRI64_PREFIX"u",
                   file_op_.get_path().c_str(), old_length, header->file_info_bucket_size_, header->used_file_info_bucket_size_,

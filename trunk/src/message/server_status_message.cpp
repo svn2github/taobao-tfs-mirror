@@ -34,11 +34,11 @@ namespace tfs
       int32_t iret = input.get_int32(&status_type_);
       if (common::TFS_SUCCESS == iret)
       {
-        iret = input.get_int32(&from_row_);
+        iret = input.get_int32(reinterpret_cast<int32_t*>(&from_row_));
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = input.get_int32(&return_row_);
+        iret = input.get_int32(reinterpret_cast<int32_t*>(&return_row_));
       }
       return iret;
     }

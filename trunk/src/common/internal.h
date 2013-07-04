@@ -1079,7 +1079,7 @@ namespace tfs
       }
     };
 
-    struct BlockInfoV2
+    struct BlockInfoV2//56
     {
       uint64_t block_id_;
     	int64_t family_id_;
@@ -1129,9 +1129,9 @@ namespace tfs
 
     struct IndexHeaderV2
     {
-    	common::BlockInfoV2 info_;//44
-      ThroughputV2 throughput_;//80 + 24
-      int32_t used_offset_;
+    	common::BlockInfoV2 info_;//56
+      ThroughputV2 throughput_;//72
+      int32_t used_offset_;//12 * 4 = 48
       int32_t avail_offset_;
       int32_t marshalling_offset_;
       uint32_t seq_no_;
