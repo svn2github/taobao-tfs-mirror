@@ -50,7 +50,9 @@ namespace tfs
       static int read_file_data(common::DsTask& ds_task);
       static int verify_file_data(common::DsTask& ds_task);
       static int write_file_data(common::DsTask& ds_task);
+      static int write_file_data_v2(common::DsTask& ds_task);
       static int unlink_file(common::DsTask& ds_task);
+      static int unlink_file_v2(common::DsTask& ds_task, uint64_t& lease_id, bool prepare);
       static int rename_file(common::DsTask& ds_task);
       static int read_file_info(common::DsTask& ds_task);
       static int list_bitmap(common::DsTask& ds_task);
@@ -61,10 +63,13 @@ namespace tfs
       static void print_file_info_v2(const char* name, common::FileInfoV2& file_info);
       static int write_data(const uint64_t server_id, const uint32_t block_id, const char* data, const int32_t length,
                             const int32_t offset, const uint64_t file_id, const uint64_t file_num);
+      static int write_data_v2(const uint64_t server_id, const uint64_t block_id, const char* data, const int32_t length,
+                                  const int32_t offset, const uint64_t file_id, uint64_t& lease_id);
       static int create_file_num(const uint64_t server_id, const uint32_t block_id, const uint64_t file_id, uint64_t& new_file_id,
                                  int64_t& file_num);
       static int close_data(const uint64_t server_id, const uint32_t block_id, const uint32_t crc, const uint64_t file_id,
                             const uint64_t file_num);
+      static int close_data_v2(const uint64_t server_id, const uint64_t block_id, const uint32_t crc, const uint64_t file_id, uint64_t lease_id);
     };
   }
 }

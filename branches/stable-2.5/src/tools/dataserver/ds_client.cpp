@@ -468,7 +468,7 @@ int switch_cmd(const int cmd, VSTRING & param)
     {
       if (param.size() != 3)
       {
-        printf("Usage:write_file_data block_id file_id local_file_name\n");
+        printf("Usage:write_file_data block_id file_id local_file_name.\n");
         printf("upload a local file to this dataserver.\n");
         break;
       }
@@ -477,44 +477,42 @@ int switch_cmd(const int cmd, VSTRING & param)
       ds_task.block_id_ = ds_block_id;
       ds_task.new_file_id_ = ds_file_id;
       snprintf(ds_task.local_file_, MAX_PATH_LENGTH, "%s", param[2].c_str());
-      ret = DsLib::write_file_data(ds_task);
+      ret = DsLib::write_file_data_v2(ds_task);
       break;
     }
   case CMD_UNLINK_FILE:
     {
-      if (param.size() < 2 || param.size() > 5)
+      if (param.size() < 2 || param.size() > 3)
       {
-        printf("Usage:unlink_file block_id file_id [unlink_type] [option_flag] [is_master]\n");
+        printf("Usage:unlink_file block_id file_id [unlink_type]\n");
         printf("      unlink_type  0|2|4|6,  0(default) => delete, 2 => undelete, 4 => conceal, 6 => reveal\n");
-        printf("      option_flag  0|1,  0(default) => this unlink action will sync to mirror cluster if is_master is set to 1\n\
-                                         1          => this unlink action will not sync to mirror cluster\n");
-        printf("      is_master    0|1,  0(default) => this ds is not master ds, 1 => this ds is master ds\n");
-        printf("delete a file.\n");
         break;
       }
       uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       int32_t unlink_type = 0;
-      int32_t option_flag = 0;
-      int32_t is_master = 0;
       if (param.size() > 2)
       {
         unlink_type = atoi(const_cast<char*> (param[2].c_str()));
       }
-      if (param.size() > 3)
-      {
-        option_flag = atoi(const_cast<char*> (param[3].c_str()));
-      }
-      if (param.size() > 4)
-      {
-        is_master = atoi(const_cast<char*> (param[4].c_str()));
-      }
+
       ds_task.block_id_ = ds_block_id;
       ds_task.new_file_id_ = ds_file_id;
       ds_task.unlink_type_ = unlink_type;
-      ds_task.option_flag_ = option_flag;
-      ds_task.is_master_ = is_master;
-      ret = DsLib::unlink_file(ds_task);
+      uint64_t lease_id = INVALID_LEASE_ID;
+      ret = DsLib::unlink_file_v2(ds_task, lease_id, true);
+      if(TFS_SUCCESS == ret)
+      {
+        ret = DsLib::unlink_file_v2(ds_task, lease_id, false);
+      }
+      if(TFS_SUCCESS == ret)
+      {
+        printf("unlink file success\n\n");
+      }
+      else
+      {
+        printf("unlink file failed\n\n");
+      }
       break;
     }
   case CMD_RENAME_FILE:
@@ -664,10 +662,10 @@ int show_help(VSTRING &)
     "list_block  type                                                            list all the blocks in a dataserver.\n"
     "get_block_info  block_id                                                    get the information of a block in the dataserver.\n"
     "list_file  block_id                                                         list all the files in a block.\n"
-    "read_file_data  blockid fileid local_file_name                              download a tfs file to local.\n"
+    "read_file_data  blockid attach_blockid fileid local_file_name               download a tfs file to local.\n"
     "verify_file_data  tfs_file_name                                             check tfs file data crc.\n"
     "write_file_data block_id file_id local_file_name                            upload a local file to tfs\n"
-    "unlink_file  block_id file_id [unlink_type] [option_flag] [is_master]       delete a file.\n"
+    "unlink_file  block_id file_id [unlink_type]                                 delete a file.\n"
     "read_file_info  block_id file_id [ds_mode]                                  get the file information.\n"
     "list_bitmap  type                                                           list the bitmap of the server\n"
     "create_file_id block_id file_id                                             create a new file_id\n"

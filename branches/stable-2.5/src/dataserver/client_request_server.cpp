@@ -942,6 +942,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       uint64_t lease_id = message->get_lease_id();
       uint64_t peer_id = message->get_connection()->getPeerId();
+      int32_t option_flag = message->get_flag();
       bool tmp = message->get_tmp_flag();
       int64_t file_size = 0;
       int64_t req_cost_time = 0;
@@ -968,7 +969,7 @@ namespace tfs
                 attach_block_id, file_id, lease_id, ret);
           }
 
-          if (TFS_SUCCESS == ret)
+          if ((TFS_SUCCESS == ret) && (0 == (option_flag & TFS_FILE_NO_SYNC_LOG)))
           {
             std::vector<SyncBase*>& sync_mirror = service_.get_sync_mirror();
             for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)
@@ -1065,6 +1066,7 @@ namespace tfs
       uint64_t lease_id = message->get_lease_id();
       int32_t action = message->get_action();
       uint64_t peer_id = message->get_connection()->getPeerId();
+      int32_t option_flag = message->get_flag();
       int64_t file_size = 0;
       int64_t req_cost_time = 0;
       stringstream err_msg;
@@ -1088,7 +1090,7 @@ namespace tfs
               attach_block_id, file_id, lease_id, ret);
         }
 
-        if (TFS_SUCCESS == ret)
+        if ((TFS_SUCCESS == ret) && (0 == (option_flag & TFS_FILE_NO_SYNC_LOG)))
         {
           std::vector<SyncBase*>& sync_mirror = service_.get_sync_mirror();
           for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)

@@ -41,6 +41,9 @@
 // #include "clientv2/tfs_file.h"
 #include "clientv2/fsname.h"
 
+#include "message/write_file_message_v2.h"
+#include "message/close_file_message_v2.h"
+#include "message/unlink_file_message_v2.h"
 
 #include "ds_lib.h"
 
@@ -631,6 +634,7 @@ namespace tfs
         offset += read_len;
         crc = Func::crc(crc, data, read_len);
       }
+      close(fd);
 
       if (TFS_SUCCESS == ret)
       {
@@ -644,7 +648,60 @@ namespace tfs
       {
         fprintf(stderr, "write local file to tfs failed\n\n");
       }
-      return TFS_SUCCESS;
+      return ret;
+    }
+
+    int DsLib::write_file_data_v2(DsTask& ds_task)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t server_id = ds_task.server_id_;
+      uint64_t block_id = ds_task.block_id_;
+      uint64_t file_id = ds_task.new_file_id_;
+      uint64_t lease_id;
+      uint32_t crc = 0;
+
+      int fd = open(ds_task.local_file_, O_RDONLY);
+      if (fd == -1)
+      {
+        fprintf(stderr, "Open local file : %s failed\n", ds_task.local_file_);
+        ret = EXIT_OPEN_FILE_ERROR;
+      }
+      else
+      {
+        char data[MAX_READ_SIZE];
+        int32_t read_len = 0;
+        int32_t offset = 0;
+        int ret = TFS_SUCCESS;
+        while ((read_len = read(fd, data, MAX_READ_SIZE)) > 0)
+        {
+          if (write_data_v2(server_id, block_id, data, read_len, offset, file_id, lease_id) != read_len)
+          {
+            ret = EXIT_WRITE_FILE_ERROR;
+            break;
+          }
+          offset += read_len;
+          crc = Func::crc(crc, data, read_len);
+        }
+        close(fd);
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = close_data_v2(server_id, block_id, crc, file_id, lease_id);
+          if (TFS_SUCCESS == ret)
+          {
+            printf("Write local file to tfs success\n\n");
+          }
+          else
+          {
+            fprintf(stderr, "ds close file failed\n\n");
+          }
+        }
+        else
+        {
+          fprintf(stderr, "write local file to tfs failed\n\n");
+        }
+      }
+      return ret;
     }
 
     int DsLib::unlink_file(DsTask& ds_task)
@@ -687,6 +744,74 @@ namespace tfs
       }
       return ret_status;
 
+    }
+
+
+    int DsLib::unlink_file_v2(DsTask& ds_task, uint64_t& lease_id, bool prepare)
+    {
+      int ret = TFS_SUCCESS;
+      tbnet::Packet* resp_msg = NULL;
+      NewClient* client = NewClientManager::get_instance().create_client();
+      if (NULL == client)
+      {
+        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        fprintf(stderr, "create new client fail.\n\n");
+      }
+      else
+      {
+        VUINT64 ds_list;
+        ds_list.push_back(ds_task.server_id_);
+
+        UnlinkFileMessageV2 msg;
+        msg.set_block_id(ds_task.block_id_);
+        msg.set_attach_block_id(ds_task.block_id_);
+        msg.set_file_id(ds_task.new_file_id_);
+        msg.set_lease_id(lease_id);
+        msg.set_master_id(ds_task.server_id_);
+        msg.set_ds(ds_list);
+        msg.set_action(ds_task.unlink_type_);
+        msg.set_version(-1);//版本号为负数则不进行版本检查
+        //msg.set_flag(file_.opt_flag_);
+        msg.set_prepare_flag(prepare);
+        ret = send_msg_to_server(ds_task.server_id_, client, &msg, resp_msg);
+        if(TFS_SUCCESS == ret)
+        {
+          if (STATUS_MESSAGE != resp_msg->getPCode())
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+          }
+          else
+          {
+            StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
+            ret = smsg->get_status();
+            if (TFS_SUCCESS != ret)
+            {
+              fprintf(stderr, "unlink file fail. blockid: %"PRI64_PREFIX"u, "
+                  "fileid: %"PRI64_PREFIX"u, server: %s, prepare: %s, error msg: %s, ret: %d\n\n",
+                  ds_task.block_id_, ds_task.new_file_id_,
+                  tbsys::CNetUtil::addrToString(ds_task.server_id_).c_str(), prepare ? "true" : "false",
+                  smsg->get_error(), ret);
+            }
+            else
+            {
+              if (prepare)
+              {
+                lease_id = strtoll(smsg->get_error(), NULL, 10);
+              }
+              printf("unlink file success, prepare:%s\n", prepare ? "true" : "false");
+            }
+          }
+        }
+        else
+        {
+          fprintf(stderr, "unlink file fail. blockid: %"PRI64_PREFIX"u, "
+              "fileid: %"PRI64_PREFIX"u, server: %s, prepare: %s, ret: %d\n\n",
+              ds_task.block_id_, ds_task.new_file_id_,
+              tbsys::CNetUtil::addrToString(ds_task.server_id_).c_str(), prepare ? "true" : "false", ret);
+        }
+        NewClientManager::get_instance().destroy_client(client);
+      }
+      return ret;
     }
 
     int DsLib::read_file_info(DsTask& ds_task)
@@ -785,9 +910,9 @@ namespace tfs
           if (mode != 0)
           {
             printf(
-              "FILE_NAME                  FILE_ID           OFFSET       SIZE     M_TIME               C_TIME      FLAG       CRC\n");
+                "FILE_NAME                  FILE_ID           OFFSET       SIZE     M_TIME               C_TIME      FLAG       CRC\n");
             printf(
-              "---------- ---------- ---------- ---------- ----------  ---------- ---------- ---------- ---------- ---------- ----------\n");
+                "---------- ---------- ---------- ---------- ----------  ---------- ---------- ---------- ---------- ---------- ----------\n");
 
             for (i = 0; i < list_size; i++)
             {
@@ -796,9 +921,9 @@ namespace tfs
               print_file_info_v2(fsname.get_name(), file_info);
             }
             printf(
-              "---------- ---------- ---------- ---------- ----------  ---------- ---------- ---------- ---------- ---------- ---------- ----------\n");
+                "---------- ---------- ---------- ---------- ----------  ---------- ---------- ---------- ---------- ---------- ---------- ----------\n");
             printf(
-              "FILE_NAME                  FILE_ID           OFFSET       SIZE        USIZE    M_TIME               C_TIME      FLAG       CRC\n");
+                "FILE_NAME                  FILE_ID           OFFSET       SIZE        USIZE    M_TIME               C_TIME      FLAG       CRC\n");
 
           }
           else
@@ -1006,8 +1131,78 @@ namespace tfs
       return (ret);
     }
 
+    int DsLib::write_data_v2(const uint64_t server_ip, const uint64_t block_id, const char* data, const int32_t length,
+                              const int32_t offset, const uint64_t file_id, uint64_t& lease_id)
+    {
+      int ret = TFS_SUCCESS;
+      VUINT64 ds_list;
+      ds_list.push_back(server_ip);
+      WriteFileMessageV2 msg;
+      msg.set_block_id(block_id);
+      msg.set_attach_block_id(block_id);
+      msg.set_file_id(file_id);
+      msg.set_offset(offset);
+      msg.set_length(length);
+      msg.set_lease_id(INVALID_LEASE_ID);
+      msg.set_master_id(server_ip);
+      msg.set_version(-1);//版本号为负数则不进行版本检查
+      msg.set_ds(ds_list);
+      msg.set_data(data);
+      //默认family_info都是无效
+      NewClient* client = NewClientManager::get_instance().create_client();
+      if (NULL == client)
+      {
+        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        fprintf(stderr, "create new client fail.\n");
+      }
+      else
+      {
+        tbnet::Packet* resp_msg = NULL;
+        ret = send_msg_to_server(server_ip, client, &msg, resp_msg);
+        if (TFS_SUCCESS == ret)
+        {
+          if (WRITE_FILE_RESP_MESSAGE_V2 != resp_msg->getPCode())
+          {
+            if (STATUS_MESSAGE != resp_msg->getPCode())
+            {
+              ret = EXIT_UNKNOWN_MSGTYPE;
+            }
+            else
+            {
+              StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
+              ret = TFS_ERROR;//回复状态消息算失败
+              fprintf(stderr, "write file data fail. blockid: %"PRI64_PREFIX"u, "
+                  "fileid: %"PRI64_PREFIX"u, server: %s, error msg: %s, status: %d\n",
+                  block_id, file_id, tbsys::CNetUtil::addrToString(server_ip).c_str(), smsg->get_error(), smsg->get_status());
+            }
+          }
+          else
+          {
+            WriteFileRespMessageV2* response = dynamic_cast<WriteFileRespMessageV2*>(resp_msg);
+            lease_id = response->get_lease_id();
+            //printf("write file data. fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u\n", file_id, lease_id);
+          }
+        }
+        else
+        {
+          fprintf(stderr, "write data message send failed. blockid: %"PRI64_PREFIX"u, "
+              "fileid: %"PRI64_PREFIX"u, server: %s, ret: %d\n",
+              block_id, file_id, tbsys::CNetUtil::addrToString(server_ip).c_str(), ret);
+        }
+        NewClientManager::get_instance().destroy_client(client);
+      }
+      if(TFS_SUCCESS == ret)
+      {
+        return length;
+      }
+      else
+      {
+        return ret;
+      }
+    }
+
     int DsLib::close_data(const uint64_t server_ip, const uint32_t block_id, const uint32_t crc, const uint64_t file_id,
-                          const uint64_t file_num)
+        const uint64_t file_num)
     {
       VUINT64 ds_list;
       ds_list.clear();
@@ -1022,6 +1217,7 @@ namespace tfs
       req_cf_msg.set_crc(crc);
 
       NewClient* client = NewClientManager::get_instance().create_client();
+
       tbnet::Packet* ret_msg = NULL;
       ret = send_msg_to_server(server_ip, client, &req_cf_msg, ret_msg);
       if (TFS_SUCCESS == ret)
@@ -1050,6 +1246,64 @@ namespace tfs
       NewClientManager::get_instance().destroy_client(client);
 
       return (ret);
+    }
+
+    int DsLib::close_data_v2(const uint64_t server_ip, const uint64_t block_id, const uint32_t crc, const uint64_t file_id,
+        uint64_t lease_id)
+    {
+      int ret = TFS_SUCCESS;
+      VUINT64 ds_list;
+      ds_list.clear();
+      ds_list.push_back(server_ip);
+
+      CloseFileMessageV2 msg;
+      msg.set_block_id(block_id);
+      msg.set_attach_block_id(block_id);
+      msg.set_file_id(file_id);
+      msg.set_lease_id(lease_id);
+      msg.set_master_id(server_ip);
+      msg.set_ds(ds_list);
+      msg.set_crc(crc);
+      //msg.set_status(status);默认是-1
+      //msg.set_version(version);//close不需要版本号
+
+      NewClient* client = NewClientManager::get_instance().create_client();
+      if (NULL == client)
+      {
+        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        fprintf(stderr, "create new client fail.\n");
+      }
+      else
+      {
+        tbnet::Packet* resp_msg = NULL;
+        ret = send_msg_to_server(server_ip, client, &msg, resp_msg);
+        if(TFS_SUCCESS == ret)
+        {
+          if (STATUS_MESSAGE != resp_msg->getPCode())
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+          }
+          else
+          {
+            StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
+            ret = smsg->get_status();
+            if (TFS_SUCCESS != ret)
+            {
+              fprintf(stderr, "close file data fail. blockid: %"PRI64_PREFIX"u, "
+                  "fileid: %"PRI64_PREFIX"u, server: %s, error msg: %s, ret: %d\n",
+                  block_id, file_id, tbsys::CNetUtil::addrToString(server_ip).c_str(), smsg->get_error(), ret);
+            }
+          }
+        }
+        else
+        {
+          fprintf(stderr, "Close file data fail. blockid: %"PRI64_PREFIX"u, "
+              "fileid: %"PRI64_PREFIX"u, server: %s, ret: %d\n",
+               block_id, file_id, tbsys::CNetUtil::addrToString(server_ip).c_str(), ret);
+        }
+        NewClientManager::get_instance().destroy_client(client);
+      }
+      return ret;
     }
 
     int DsLib::send_crc_error(DsTask& ds_task)
