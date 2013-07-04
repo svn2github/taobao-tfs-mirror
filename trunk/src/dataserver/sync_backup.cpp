@@ -41,6 +41,7 @@ namespace tfs
 
     SyncBackup::SyncBackup() : tfs_client_(NULL)
     {
+      client_init_flag_ = false;
       src_addr_[0] = '\0';
       dest_addr_[0] = '\0';
     }
@@ -115,10 +116,11 @@ namespace tfs
       if (ret)
       {
         tfs_client_ = TfsClientImplV2::Instance();
-        ret =
+        client_init_flag_ =
           tfs_client_->initialize(dest_addr_) == TFS_SUCCESS ?
           true : false;
-        TBSYS_LOG(INFO, "TfsSyncMirror init. source ns addr: %s, destination ns addr: %s", src_addr_, dest_addr_);
+        TBSYS_LOG(INFO, "TfsSyncMirror init %s. source ns addr: %s, destination ns addr: %s",
+            client_init_flag_ ? "success" : "fail", src_addr_, dest_addr_);
         if (do_sync_mirror_thread_ == 0)
           do_sync_mirror_thread_ = new (std::nothrow)DoSyncMirrorThreadHelper(sync_base_);
         if (do_fail_sync_mirror_thread_ == 0)
@@ -144,22 +146,37 @@ namespace tfs
     int TfsMirrorBackup::do_sync(const SyncData *sf)
     {
       int ret = TFS_SUCCESS;
-      if (OPLOG_INSERT == sf->cmd_)
+      if (!client_init_flag_)
       {
-        ret = copy_file(sf->block_id_, sf->file_id_);
+        // TfsClientImpl::initialize already protected by mutex, no need lock here
+        client_init_flag_ = tfs_client_->initialize(dest_addr_) == TFS_SUCCESS ? true : false;
       }
-      else if(OPLOG_REMOVE == sf->cmd_)
+
+      if (client_init_flag_)
       {
-        ret = remove_file(sf->block_id_, sf->file_id_,
-            static_cast<TfsUnlinkType>(sf->old_file_id_));
-        if (file_not_exist(ret)) // if file not exist in dest, copy to dest
+        if (OPLOG_INSERT == sf->cmd_)
         {
           ret = copy_file(sf->block_id_, sf->file_id_);
+        }
+        else if(OPLOG_REMOVE == sf->cmd_)
+        {
+          ret = remove_file(sf->block_id_, sf->file_id_,
+              static_cast<TfsUnlinkType>(sf->old_file_id_));
+          if (file_not_exist(ret)) // if file not exist in dest, copy to dest
+          {
+            ret = copy_file(sf->block_id_, sf->file_id_);
+          }
+        }
+        else
+        {
+          TBSYS_LOG(WARN, "invalid log type, ignore");
         }
       }
       else
       {
-        TBSYS_LOG(WARN, "invalid log type, ignore");
+        ret = EXIT_NOT_INIT_ERROR;
+        TBSYS_LOG(WARN, "TfsSyncMirror init fail. source ns addr: %s, dest ns addr: %s",
+            src_addr_, dest_addr_);
       }
 
       return ret;

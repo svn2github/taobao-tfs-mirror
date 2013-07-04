@@ -63,6 +63,7 @@ namespace tfs
     protected:
       DISALLOW_COPY_AND_ASSIGN(SyncBackup);
       clientv2::TfsClientImplV2* tfs_client_;
+      bool client_init_flag_;
 
       char src_addr_[common::MAX_SYNC_IPADDR_LENGTH];
       char dest_addr_[common::MAX_SYNC_IPADDR_LENGTH];
