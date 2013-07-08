@@ -2381,7 +2381,7 @@ int cmd_pread_object(const VSTRING& param)
         int64_t wlen = ::write(fd, buf, ret);
         if (wlen != ret)
         {
-          TBSYS_LOG(ERROR, "write to local file error, expect len: %d, return len: %d", MAX_READ_SIZE, wlen);
+          TBSYS_LOG(ERROR, "write to local file error, expect len: %d, return len: %"PRI64_PREFIX"d", MAX_READ_SIZE, wlen);
           ret= TFS_ERROR;
         }
         break;
