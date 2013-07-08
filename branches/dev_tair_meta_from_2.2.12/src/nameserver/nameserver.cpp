@@ -322,7 +322,7 @@ namespace tfs
           else
           {
             bpacket->free();
-            GFactory::get_runtime_info().dump(TBSYS_LOG_LEVEL_WARN);
+            GFactory::get_runtime_info().dump(TBSYS_LOG_LEVEL_WARN, pthread_self());
             TBSYS_LOG(WARN, "the msg: %d will be ignored", pcode);
           }
         }

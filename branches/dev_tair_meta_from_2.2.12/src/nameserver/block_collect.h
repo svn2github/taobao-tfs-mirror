@@ -79,8 +79,8 @@ namespace tfs
       int8_t get_servers_size() const;
       int scan(common::SSMScanParameter& param) const;
       void dump(int32_t level, const char* file = __FILE__,
-          const int32_t line = __LINE__, const char* function = __FUNCTION__) const;
-
+                const int32_t line = __LINE__, const char* function = __FUNCTION__,
+                const pthread_t thid = pthread_self()) const;
       void callback(LayoutManager& manager);
       bool clear(LayoutManager& manager, const time_t now);
       static const int8_t BLOCK_CREATE_FLAG_NO;

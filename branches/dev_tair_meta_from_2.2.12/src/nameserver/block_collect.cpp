@@ -418,7 +418,7 @@ namespace tfs
       return has_dump ? TFS_SUCCESS : TFS_ERROR;
     }
 
-    void BlockCollect::dump(int32_t level, const char* file, const int32_t line, const char* function) const
+    void BlockCollect::dump(int32_t level, const char* file, const int32_t line, const char* function, const pthread_t thid) const
     {
       if (level >= TBSYS_LOGGER._level)
       {
@@ -433,7 +433,7 @@ namespace tfs
             str += "/";
           }
         }
-        TBSYS_LOGGER.logMessage(level, file, line, function,
+        TBSYS_LOGGER.logMessage(level, file, line, function, thid,
             "block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %d, servers: %s",
             info_.block_id_, info_.version_, info_.file_count_,
             info_.size_, info_.del_file_count_, info_.del_size_,

@@ -380,7 +380,7 @@ namespace tfs
       int64_t get_data_length() const { return stream_.get_data_length();}
       virtual int reply(BasePacket* packet);
       int reply_error_packet(const int32_t level, const char* file, const int32_t line,
-               const char* function, const int32_t error_code, const char* fmt, ...);
+      const char* function, pthread_t thid, const int32_t error_code, const char* fmt, ...);
       virtual void dump() const {}
 
       inline bool is_enable_dump() const { return dump_flag_;}
