@@ -66,14 +66,14 @@ void sign_handler(int32_t sig)
 }
 int check(NameMetaClientImpl &client ,string path)
 {
-
+  int check_num = 0;
   string new_path;
   string now_name;
 
   std::vector<FileMetaInfo> meta_info;
   std::vector<FileMetaInfo>::const_iterator it;
   client.ls_dir(app_id, uid, path.c_str(), meta_info, false);
-  TBSYS_LOG(DEBUG, "vector num %lu", meta_info.size());
+  TBSYS_LOG(INFO, "vector num %lu", meta_info.size());
   for(it = meta_info.begin(); it != meta_info.end(); ++it)
   {
     now_name = it->name_;
@@ -103,11 +103,13 @@ int check(NameMetaClientImpl &client ,string path)
             *user_info);
         if (ret == EXIT_OBJECT_NOT_EXIST)
         {
+          check_num++;
           TBSYS_LOG(ERROR, "[DIFF_INFO] bucket: %s object: %s ",bucket_name, new_path.c_str() + 1);
           break;
         }
         else if (ret != TFS_SUCCESS)
         {
+          check_num++;
           TBSYS_LOG(ERROR, "[DIFF_INFO] bucket: %s object: %s ",bucket_name, new_path.c_str() + 1);
           break;
         }
@@ -148,7 +150,7 @@ int check(NameMetaClientImpl &client ,string path)
           TBSYS_LOG(INFO, "check [DIFF_INFO] bucket: %s object: %s object_size is diff old:%"PRI64_PREFIX"d new:%"PRI64_PREFIX"d",
               bucket_name, new_path.c_str() + 1, it->size_, base_object_info->meta_info_.big_file_size_);
         }
-
+        check_num++;
         if (frag_info->v_frag_meta_.size() == base_object_info->v_tfs_file_info_.size())
         {
           TBSYS_LOG(DEBUG, " now size equal is %lu",frag_info->v_frag_meta_.size());
@@ -212,6 +214,7 @@ int check(NameMetaClientImpl &client ,string path)
     new_path += "/";
     check(client, new_path);
   }
+  TBSYS_LOG(INFO, "checkr num %d", check_num);
   return 0;
 }
 
