@@ -20,13 +20,13 @@
 #include <string>
 #include <vector>
 
-#include "common/define.h"
-#include "common/internal.h"
-#include "common/kv_meta_define.h"
+#include "define.h"
+#include "internal.h"
+#include "kv_meta_define.h"
 
 namespace tfs
 {
-  namespace kvmetaserver
+  namespace common
   {
     //key of object is like this
     //  bucketname\filename\offset\version_id

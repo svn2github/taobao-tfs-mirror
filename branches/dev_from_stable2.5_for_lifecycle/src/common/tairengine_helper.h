@@ -17,13 +17,13 @@
 #ifndef TFS_KVMETASERVER_TAIR_ENGINE_HELPER_H_
 #define TFS_KVMETASERVER_TAIR_ENGINE_HELPER_H_
 
-#include "common/kv_meta_define.h"
+#include "kv_meta_define.h"
 #include "kvengine_helper.h"
 #include "tair_client_api.hpp"
 
 namespace tfs
 {
-  namespace kvmetaserver
+  namespace common
   {
     class TairValue : public KvValue
     {

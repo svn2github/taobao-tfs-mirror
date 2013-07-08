@@ -17,7 +17,7 @@
 
 #include "meta_info_helper.h"
 #include <malloc.h>
-#include "tairengine_helper.h"
+#include "common/tairengine_helper.h"
 using namespace std;
 namespace tfs
 {

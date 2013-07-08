@@ -17,17 +17,16 @@
 #include "tairengine_helper.h"
 
 #include "Memory.hpp"
-#include "common/parameter.h"
-#include "common/error_msg.h"
-#include "common/serialization.h"
+#include "parameter.h"
+#include "error_msg.h"
+#include "serialization.h"
 using namespace std;
 using namespace tair;
 using namespace common;
 namespace tfs
 {
 
-  using namespace common;
-  namespace kvmetaserver
+  namespace common
   {
     TairValue::TairValue():tair_value_(NULL)
     {
