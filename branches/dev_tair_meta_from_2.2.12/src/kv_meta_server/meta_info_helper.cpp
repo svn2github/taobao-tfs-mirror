@@ -2525,7 +2525,7 @@ namespace tfs
       {
         string str_num(part_num_buff, sizeof(part_num_buff));
         new_objectname = DELIMITER_2 + upload_id + DELIMITER_1 + file_name + DELIMITER_1 + str_num;
-        TBSYS_LOG(DEBUG, "new object size is %d", new_objectname.size());
+        TBSYS_LOG(DEBUG, "new object size is %zu", new_objectname.size());
       }
       else
       {
@@ -2567,7 +2567,7 @@ namespace tfs
       }
       else
       {
-        TBSYS_LOG(ERROR, "SIZE is diff : user:%d , kv:%d",v_part_num.size() , v_part_num_kv.size());
+        TBSYS_LOG(ERROR, "SIZE is diff : user:%zu , kv:%zu",v_part_num.size() , v_part_num_kv.size());
         ret = EXIT_MULITIPART_LIST_DIFF;
       }
       return ret;
@@ -2621,7 +2621,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(ERROR, "error serialize_key", ret);
+          TBSYS_LOG(ERROR, "error serialize_key ret is :%d", ret);
         }
 
         if (TFS_SUCCESS == ret)
@@ -2631,7 +2631,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(ERROR, "error serialize_key", ret);
+          TBSYS_LOG(ERROR, "error serialize_key ret is :%d", ret);
         }
 
         int32_t i;
