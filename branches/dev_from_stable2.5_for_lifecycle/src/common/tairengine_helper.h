@@ -46,13 +46,13 @@ namespace tfs
       TairEngineHelper();
       virtual ~TairEngineHelper();
       virtual int init();
-      virtual int scan_keys(const KvKey& start_key, const KvKey& end_key, const int32_t limit, const int32_t offset,
+      virtual int scan_keys(const int32_t name_area, const KvKey& start_key, const KvKey& end_key, const int32_t limit, const int32_t offset,
                            std::vector<KvValue*> *keys, std::vector<KvValue*> *values, int32_t* result_size, short scan_type);
-      virtual int get_key(const KvKey& key, KvValue **pp_value, int64_t *version);
-      virtual int put_key(const KvKey& key, const KvMemValue &value, const int64_t version);
+      virtual int get_key(const int32_t name_area, const KvKey& key, KvValue **pp_value, int64_t *version);
+      virtual int put_key(const int32_t name_area, const KvKey& key, const KvMemValue &value, const int64_t version);
 
-      virtual int delete_key(const KvKey& key);
-      virtual int delete_keys(const std::vector<KvKey>& vec_keys);
+      virtual int delete_key(const int32_t name_area, const KvKey& key);
+      virtual int delete_keys(const int32_t name_area, const std::vector<KvKey>& vec_keys);
 
     public:
       //we split object key like bucketname\objecetname to prefix_key = bucketname, seconde_key = object_name
@@ -66,24 +66,24 @@ namespace tfs
       int prefix_remove_from_tair(const int area, const tair::data_entry &pkey, const tair::data_entry &skey);
       int prefix_removes_from_tair(const int area, const tair::data_entry &pkey,
                                    const tair::tair_dataentry_set &skey_set, tair::key_code_map_t &key_code_map);
-      int prefix_scan_from_tair(int area, const tair::data_entry &pkey, const tair::data_entry &start_key, const tair::data_entry &end_key,
+      int prefix_scan_from_tair(const int area, const tair::data_entry &pkey, const tair::data_entry &start_key, const tair::data_entry &end_key,
                                 int offset, int limit, std::vector<tair::data_entry *> &values, short type);
 
-      int put_object_key(const KvKey& key, const KvMemValue &value, const int64_t version);
-      int put_bucket_key(const KvKey& key, const KvMemValue &value, const int64_t version);
+      int put_object_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version);
+      int put_bucket_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version);
 
-      int get_object_key(const KvKey& key, KvValue **pp_value, int64_t *version);
-      int get_bucket_key(const KvKey& key, KvValue **pp_value, int64_t *version);
+      int get_object_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version);
+      int get_bucket_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version);
 
-      int scan_object_keys(const KvKey& start_key, const KvKey& end_key,
+      int scan_object_keys(const int area, const KvKey& start_key, const KvKey& end_key,
           const int32_t limit, const int32_t offset,
           std::vector<KvValue*> *keys, std::vector<KvValue*> *values,
           int32_t* result_size, short scan_type);
 
-      int delete_object_key(const KvKey& key);
-      int delete_bucket_key(const KvKey& key);
+      int delete_object_key(const int area, const KvKey& key);
+      int delete_bucket_key(const int area, const KvKey& key);
 
-      int delete_object_keys(const std::vector<KvKey>& vec_keys);
+      int delete_object_keys(const int area, const std::vector<KvKey>& vec_keys);
 
     private:
       DISALLOW_COPY_AND_ASSIGN(TairEngineHelper);

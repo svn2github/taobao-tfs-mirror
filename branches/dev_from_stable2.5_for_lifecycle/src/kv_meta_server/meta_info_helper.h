@@ -121,6 +121,7 @@ namespace tfs
 
       protected:
         common::KvEngineHelper* kv_engine_helper_;
+        int32_t meta_info_name_area_;
       private:
         DISALLOW_COPY_AND_ASSIGN(MetaInfoHelper);
     };

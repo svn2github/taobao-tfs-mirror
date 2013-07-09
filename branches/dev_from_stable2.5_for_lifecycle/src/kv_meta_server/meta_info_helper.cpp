@@ -45,6 +45,7 @@ namespace tfs
     MetaInfoHelper::MetaInfoHelper()
     {
       kv_engine_helper_ = new TairEngineHelper();
+      meta_info_name_area_ = 0;
     }
 
     MetaInfoHelper::~MetaInfoHelper()
@@ -59,6 +60,13 @@ namespace tfs
       if (NULL != kv_engine_helper_)
       {
         ret = kv_engine_helper_->init();
+      }
+      //TODO change later
+      meta_info_name_area_ = SYSPARAM_KVMETA.tair_object_area_;
+      if (meta_info_name_area_ <= 0 )
+      {
+        TBSYS_LOG(ERROR, "area error %d", meta_info_name_area_);
+        ret = TFS_ERROR;
       }
       return ret;
     }
@@ -252,7 +260,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         kv_value.set_data(value_buff, pos);
-        ret = kv_engine_helper_->put_key(key, kv_value, lock_version);
+        ret = kv_engine_helper_->put_key(meta_info_name_area_, key, kv_value, lock_version);
       }
 
       if (NULL != value_buff)
@@ -532,7 +540,7 @@ namespace tfs
       KvValue *kv_value = NULL;
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->get_key(key, &kv_value, lock_version);
+        ret = kv_engine_helper_->get_key(meta_info_name_area_, key, &kv_value, lock_version);
         if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
         {
           ret = EXIT_OBJECT_NOT_EXIST;
@@ -659,7 +667,7 @@ namespace tfs
           {
             int32_t result_size = 0;
             int64_t last_offset = 0;
-            ret = kv_engine_helper_->scan_keys(start_key, end_key, SCAN_LIMIT, scan_offset,
+            ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_key, end_key, SCAN_LIMIT, scan_offset,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
             if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
             {//metainfo exist but data not exist
@@ -781,7 +789,7 @@ namespace tfs
       int32_t result_size = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit + 1, scan_offset,
+        ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_key, end_key, limit + 1, scan_offset,
           &kv_value_keys, &kv_value_values, &result_size, scan_type);
         TBSYS_LOG(DEBUG, "del object, bucekt_name: %s, object_name: %s, "
             "scan ret: %d, limit: %d, result size: %d",
@@ -835,7 +843,7 @@ namespace tfs
         //del from kv
         if(TFS_SUCCESS == ret && result_size > 0)
         {
-           ret = kv_engine_helper_->delete_keys(vec_keys);
+           ret = kv_engine_helper_->delete_keys(meta_info_name_area_, vec_keys);
         }
         for(i = 0; i < result_size; ++i)//free kv
         {
@@ -926,7 +934,7 @@ namespace tfs
       start_obj_key.key_size_ = skey.length();
       start_obj_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
 
-      ret = kv_engine_helper_->scan_keys(start_obj_key, end_obj_key, limit, offset, kv_value_keys, kv_value_values, result_size, scan_type);
+      ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_obj_key, end_obj_key, limit, offset, kv_value_keys, kv_value_values, result_size, scan_type);
 
       return ret;
     }
@@ -1197,7 +1205,7 @@ namespace tfs
       int64_t version = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->get_key(key, &value, &version);
+        ret = kv_engine_helper_->get_key(meta_info_name_area_, key, &value, &version);
       }
       if (ret == EXIT_KV_RETURN_DATA_NOT_EXIST)
       {
@@ -1249,7 +1257,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->put_key(key, value, lock_version);
+        ret = kv_engine_helper_->put_key(meta_info_name_area_, key, value, lock_version);
       }
 
       if (NULL != kv_value_bucket_info_buff)
@@ -1349,7 +1357,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->delete_key(pkey);
+        ret = kv_engine_helper_->delete_key(meta_info_name_area_, pkey);
       }
 
       //delete for kv

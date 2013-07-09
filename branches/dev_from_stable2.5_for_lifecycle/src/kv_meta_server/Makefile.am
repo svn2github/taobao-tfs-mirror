@@ -11,14 +11,14 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 
 noinst_LIBRARIES=libkvmetaserver.a libkvrootserver.a
 
-kvmetaserver_INCLUDE= kv_meta_server_manager.h kv_root_server.h kv_meta_heart_manager.h  kv_meta_service.h meta_info_helper.h
+kvmetaserver_INCLUDE= kv_meta_server_manager.h kv_root_server.h kv_meta_heart_manager.h  kv_meta_service.h meta_info_helper.h life_cycle_helper.h
 
 
-libkvmetaserver_a_SOURCES=kv_meta_service.cpp meta_info_helper.cpp kv_meta_heart_manager.cpp \
+libkvmetaserver_a_SOURCES=kv_meta_service.cpp meta_info_helper.cpp kv_meta_heart_manager.cpp life_cycle_helper.cpp \
 													$(tair_kv_source)  $(kvmetaserver_INCLUDE)
 
-KVROOTSERVER_SOURCE_LIST_HEADER=kv_root_server.h kv_meta_server_manager.h
-KVROOTSERVER_SOURCE_LIST=kv_root_server.cpp kv_meta_server_manager.cpp $(KVROOTSERVER_SOURCE_LIST_HEADER)
+KVROOTSERVER_SOURCE_LIST_HEADER=kv_root_server.h kv_meta_server_manager.h life_cycle_helper.h
+KVROOTSERVER_SOURCE_LIST=kv_root_server.cpp kv_meta_server_manager.cpp life_cycle_helper.cpp $(KVROOTSERVER_SOURCE_LIST_HEADER)
 
 libkvrootserver_a_SOURCES=$(KVROOTSERVER_SOURCE_LIST)
 

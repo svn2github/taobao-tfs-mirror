@@ -86,13 +86,13 @@ namespace tfs
       virtual ~KvEngineHelper(){};
       virtual int init() = 0;
       //qixiao new add
-      virtual int scan_keys(const KvKey& start_key, const KvKey& end_key, const int32_t limit, const int32_t offset,
+      virtual int scan_keys(const int32_t name_area, const KvKey& start_key, const KvKey& end_key, const int32_t limit, const int32_t offset,
                             std::vector<KvValue*> *keys, std::vector<KvValue*> *values, int32_t* result_size, short scan_type) = 0;
-      virtual int get_key(const KvKey& key, KvValue **pp_value, int64_t *version) = 0;
-      virtual int put_key(const KvKey& key, const KvMemValue &value, const int64_t version) = 0;
+      virtual int get_key(const int32_t name_area, const KvKey& key, KvValue **pp_value, int64_t *version) = 0;
+      virtual int put_key(const int32_t name_area, const KvKey& key, const KvMemValue &value, const int64_t version) = 0;
       //qixiao new end
-      virtual int delete_key(const KvKey& key) = 0;
-      virtual int delete_keys(const std::vector<KvKey>& vec_keys) = 0;
+      virtual int delete_key(const int32_t name_area, const KvKey& key) = 0;
+      virtual int delete_keys(const int32_t name_area, const std::vector<KvKey>& vec_keys) = 0;
       //virtual int scan_keys(const KvKey& start_key, const KvKey& end_key,
           //const int32_t offset, const int32_t limit, /*std::vector<KvKey>* vec_keys,*/
           //std::vector<std::string>* vec_realkey,
