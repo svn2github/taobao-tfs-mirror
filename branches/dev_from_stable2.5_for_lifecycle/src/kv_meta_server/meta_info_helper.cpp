@@ -310,7 +310,7 @@ namespace tfs
         const bool is_append)
     {
       int ret = TFS_SUCCESS;
-      int32_t retry = VERSION_ERROR_RETRY_COUNT;
+      int32_t retry = KvDefine::VERSION_ERROR_RETRY_COUNT;
       bool is_old_data = false;
       //-5 means transfer data from mysql
       if (-5 == object_info_zero->meta_info_.max_tfs_file_size_)
@@ -410,7 +410,7 @@ namespace tfs
         offset = object_info.v_tfs_file_info_.front().offset_;
       }
 
-      int64_t version = MAX_VERSION;
+      int64_t version = KvDefine::MAX_VERSION;
       bool is_append = (-1 == offset);
       // assume this is object info zero
       if (is_append)
@@ -889,7 +889,7 @@ namespace tfs
           *prefix_flag = true;
         }
 
-        if (*prefix_flag && DEFAULT_CHAR != delimiter)
+        if (*prefix_flag && KvDefine::DEFAULT_CHAR != delimiter)
         {
           for (size_t j = start_pos; j < strlen(key); j++)
           {
@@ -1037,10 +1037,10 @@ namespace tfs
         ret = TFS_ERROR;
       }
 
-      if (*limit > MAX_LIMIT or *limit < 0)
+      if (*limit > KvDefine::MAX_LIMIT or *limit < 0)
       {
         TBSYS_LOG(WARN, "limit: %d will be cutoff", *limit);
-        *limit = MAX_LIMIT;
+        *limit = KvDefine::MAX_LIMIT;
       }
 
       if (TFS_SUCCESS == ret)
@@ -1285,7 +1285,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         bucket_meta_info.owner_id_ = user_info.owner_id_;
-        int64_t ver = MAX_VERSION;
+        int64_t ver = KvDefine::MAX_VERSION;
         ret = put_bucket_ex(bucket_name, bucket_meta_info, ver);
       }
 
@@ -1331,7 +1331,7 @@ namespace tfs
       pkey.key_size_ = bucket_name.length();
       pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
 
-      int32_t limit = MAX_LIMIT;
+      int32_t limit = KvDefine::MAX_LIMIT;
       int32_t res_size = -1;
       vector<KvValue*> kv_value_keys;
       vector<KvValue*> kv_value_values;

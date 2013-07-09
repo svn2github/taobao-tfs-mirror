@@ -106,6 +106,7 @@ namespace tfs
             void *buffer, int64_t offset, int64_t length, bool still_have);
         int unlink_file(const std::vector<common::TfsFileInfo> &v_tfs_info);
 
+
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClientImpl);
         tbsys::CRWLock meta_table_mutex_;

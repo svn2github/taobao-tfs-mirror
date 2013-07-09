@@ -444,8 +444,8 @@ int cmd_get_bucket(const VSTRING& param)
   const char *bucket_name = NULL;
   const char *prefix = NULL;
   const char *start_key = NULL;
-  char delimiter = DEFAULT_CHAR;
-  int32_t limit = MAX_LIMIT;
+  char delimiter = KvDefine::DEFAULT_CHAR;
+  int32_t limit = KvDefine::MAX_LIMIT;
 
   bucket_name = param[0].c_str();
 
@@ -461,7 +461,7 @@ int cmd_get_bucket(const VSTRING& param)
 
   if (size > 3)
   {
-    delimiter = canonical_param(param[3]) == NULL ? DEFAULT_CHAR : (param[3].size() == 1 ? param[3][0] : DEFAULT_CHAR);
+    delimiter = canonical_param(param[3]) == NULL ? KvDefine::DEFAULT_CHAR : (param[3].size() == 1 ? param[3][0] : KvDefine::DEFAULT_CHAR);
   }
 
   if (size > 4)

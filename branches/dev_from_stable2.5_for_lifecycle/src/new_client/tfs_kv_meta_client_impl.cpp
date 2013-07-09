@@ -1102,12 +1102,12 @@ namespace tfs
           else
           {
             if (!islower(bucket_name[i]) && !isdigit(bucket_name[i])
-                && PERIOD != bucket_name[i] && DASH != bucket_name[i])
+                && KvDefine::PERIOD != bucket_name[i] && KvDefine::DASH != bucket_name[i])
             {
               is_valid = false;
               break;
             }
-            else if (PERIOD == bucket_name[i])
+            else if (KvDefine::PERIOD == bucket_name[i])
             {
               if (conjoin)
               {
@@ -1138,7 +1138,7 @@ namespace tfs
           {
             digit_size++;
           }
-          else if (PERIOD == bucket_name[i])
+          else if (KvDefine::PERIOD == bucket_name[i])
           {
             period_size++;
           }

@@ -33,6 +33,7 @@ namespace tfs
 #define CONF_SN_CHECKSERVER                           "checkserver"
 #define CONF_SN_KVMETA                                "kvmetaserver"
 #define CONF_SN_KVROOTSERVER                          "kvrootserver"
+#define CONF_SN_EXPIRESERVER                          "expireserver"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"
@@ -208,6 +209,10 @@ namespace tfs
 #define CONF_KV_MTS_RTS_HEART_INTERVAL                   "mts_rts_heart_interval" //(s)
 #define CONF_KV_RT_TABLE_FILE_PATH                       "table_file_path"
 #define CONF_KV_UPDATE_TABLE_THREAD_COUNT                "update_table_thread_count"
+
+/* expire server */
+#define CONF_EXPIRE_SERVER_IPPORT                     "es_ip_port"
+#define CONF_EXPIRE_ROOT_SERVER_IPPORT                "ers_ip_port_"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

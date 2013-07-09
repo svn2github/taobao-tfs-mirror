@@ -270,6 +270,24 @@ namespace tfs
       }
     };
 
+    struct ExpireServerParameter
+    {
+      std::string tair_master_;
+      std::string tair_slave_;
+      std::string tair_group_;
+      int tair_object_area_;
+      uint64_t ers_ip_port_;
+      uint64_t es_ip_port_;
+
+      int initialize(const std::string& config_file);
+
+      static ExpireServerParameter expire_server_parameter_;
+      static ExpireServerParameter& instance()
+      {
+        return expire_server_parameter_;
+      }
+    };
+
 #define SYSPARAM_NAMESERVER NameServerParameter::instance()
 #define SYSPARAM_DATASERVER DataServerParameter::instance()
 #define SYSPARAM_FILESYSPARAM FileSystemParameter::instance()
@@ -279,6 +297,7 @@ namespace tfs
 #define SYSPARAM_CHECKSERVER CheckServerParameter::instance()
 #define SYSPARAM_KVMETA KvMetaParameter::instance()
 #define SYSPARAM_KVRTSERVER KvRtServerParameter::instance()
+#define SYSPARAM_EXPIRESERVER ExpireServerParameter::instance()
   }/** common **/
 }/** tfs **/
 #endif //TFS_COMMON_SYSPARAM_H_

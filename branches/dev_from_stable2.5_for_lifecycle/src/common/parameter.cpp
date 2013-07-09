@@ -40,6 +40,7 @@ namespace tfs
     CheckServerParameter CheckServerParameter::cs_parameter_;
     KvMetaParameter KvMetaParameter::kv_meta_parameter_;
     KvRtServerParameter KvRtServerParameter::kv_rt_parameter_;
+    ExpireServerParameter ExpireServerParameter::expire_server_parameter_;
 
     static void set_hour_range(const char *str, int32_t& min, int32_t& max)
     {
@@ -617,6 +618,7 @@ namespace tfs
       }
       return ret;
     }
+
     int KvRtServerParameter::initialize(void)
     {
       int32_t iret = TFS_SUCCESS;
@@ -651,6 +653,68 @@ namespace tfs
       }
       return iret;
     }
+
+    int ExpireServerParameter::initialize(const std::string& config_file)
+    {
+      tbsys::CConfig config;
+      int32_t ret = config.load(config_file.c_str());
+      if (EXIT_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "load config file erro.");
+        return TFS_ERROR;
+      }
+
+      tair_master_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_MASTER, "");
+      tair_slave_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_SLAVE, "");
+      tair_group_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_GROUP, "");
+      tair_object_area_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_TAIR_OBJECT_AREA, -1);
+
+      if (TFS_SUCCESS == ret)
+      {
+        std::string ips1 = TBSYS_CONFIG.getString(CONF_SN_EXPIRESERVER, CONF_EXPIRE_ROOT_SERVER_IPPORT, "");
+        std::vector<std::string> items1;
+        Func::split_string(ips1.c_str(), ':', items1);
+        if (items1.size() != 2U)
+        {
+          TBSYS_LOG(ERROR, "%s is invalid", ips1.c_str());
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          int32_t port1 = atoi(items1[1].c_str());
+          if (port1 <= 1024 || port1 >= 65535)
+          {
+            TBSYS_LOG(ERROR, "%s is invalid", ips1.c_str());
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            ers_ip_port_ = tbsys::CNetUtil::strToAddr(items1[0].c_str(), atoi(items1[1].c_str()));
+          }
+          TBSYS_LOG(INFO, "expire root server ip addr: %s", ips1.c_str());
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        std::string ips2 = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_IP_ADDR, "");
+        std::string ports2 = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_PORT, "");
+
+        int32_t port2 = atoi(ports2.c_str());
+        if (port2 <= 1024 || port2 >= 65535)
+        {
+          TBSYS_LOG(ERROR, "%s is invalid", ports2.c_str());
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          es_ip_port_ = tbsys::CNetUtil::strToAddr(ips2.c_str(), port2);
+        }
+        TBSYS_LOG(INFO, "expire server ip addr: %s:%d", ips2.c_str(), port2);
+      }
+      return ret;
+    }
+
   }/** common **/
 }/** tfs **/
 
