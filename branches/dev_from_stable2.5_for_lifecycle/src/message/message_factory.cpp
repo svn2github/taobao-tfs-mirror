@@ -468,6 +468,12 @@ namespace tfs
           case common::REPORT_CHECK_BLOCK_MESSAGE:
             packet = new ReportCheckBlockMessage();
             break;
+          case common::REQ_EXPIRE_CLEAN_TASK_MESSAGE:
+            packet = new ReqCleanTaskFromRtsMessage();
+            break;
+          case common::REQ_EXPIRE_FINISH_TASK_MESSAGE:
+            packet = new ReqFinishTaskFromEsMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;
