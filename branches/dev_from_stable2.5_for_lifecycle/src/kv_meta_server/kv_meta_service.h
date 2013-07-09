@@ -24,6 +24,7 @@
 #include "message/message_factory.h"
 
 #include "meta_info_helper.h"
+#include "life_cycle_helper.h"
 #include "kv_meta_heart_manager.h"
 namespace tfs
 {
@@ -63,6 +64,8 @@ namespace tfs
       uint64_t local_ipport_id_;
       int64_t server_start_time_;
       MetaInfoHelper meta_info_helper_;
+      LifeCycleHelper life_cycle_helper_;
+      common::KvEngineHelper* kv_engine_helper_;
 
       //global stat
       tbutil::TimerPtr timer_;

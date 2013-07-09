@@ -15,9 +15,8 @@
  */
 
 
-#include "meta_info_helper.h"
 #include <malloc.h>
-#include "common/tairengine_helper.h"
+#include "meta_info_helper.h"
 using namespace std;
 namespace tfs
 {
@@ -44,23 +43,20 @@ namespace tfs
     };
     MetaInfoHelper::MetaInfoHelper()
     {
-      kv_engine_helper_ = new TairEngineHelper();
+      kv_engine_helper_ = NULL;
       meta_info_name_area_ = 0;
     }
 
     MetaInfoHelper::~MetaInfoHelper()
     {
-      delete kv_engine_helper_;
       kv_engine_helper_ = NULL;
     }
 
-    int MetaInfoHelper::init()
+    int MetaInfoHelper::init(common::KvEngineHelper* kv_engine_helper)
     {
-      int ret = TFS_ERROR;
-      if (NULL != kv_engine_helper_)
-      {
-        ret = kv_engine_helper_->init();
-      }
+      int ret = TFS_SUCCESS;
+      kv_engine_helper_ = kv_engine_helper;
+
       //TODO change later
       meta_info_name_area_ = SYSPARAM_KVMETA.tair_object_area_;
       if (meta_info_name_area_ <= 0 )

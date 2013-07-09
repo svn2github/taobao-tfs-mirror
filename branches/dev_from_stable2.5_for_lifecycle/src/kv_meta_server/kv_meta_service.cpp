@@ -21,6 +21,7 @@
 #include "common/config_item.h"
 #include "common/parameter.h"
 #include "common/base_packet.h"
+#include "common/tairengine_helper.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
@@ -97,13 +98,27 @@ namespace tfs
       {
         TBSYS_LOG(ERROR, "call SYSPARAM_METAKVSERVER::initialize fail. ret: %d", ret);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        kv_engine_helper_ = new TairEngineHelper();
+        ret = kv_engine_helper_->init();
+      }
 
       if (TFS_SUCCESS == ret)
       {
-        ret = meta_info_helper_.init();
+        ret = meta_info_helper_.init(kv_engine_helper_);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "MetaKv server initial fail: %d", ret);
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = life_cycle_helper_.init(kv_engine_helper_);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "life cycle initial fail: %d", ret);
         }
       }
 
@@ -160,6 +175,8 @@ namespace tfs
       //global stat destroy
       stat_mgr_.destroy();
       heart_manager_.destroy();
+      delete kv_engine_helper_;
+      kv_engine_helper_ = NULL;
       return TFS_SUCCESS;
     }
 

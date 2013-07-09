@@ -59,6 +59,23 @@ namespace tfs
       UNUSED(file_name);
       UNUSED(invalid_time_s);
       UNUSED(app_key);
+      // ret = new_lifecycle(file_type, file_name, invalid_time_s, app_key);
+      // if (EXIT_LIFE_CYCLE_EXSIT = ret)
+      // {
+      //  ret = get_kv(key = filename);
+      //  if (TFS_SUCCESS == ret)
+      //  {
+      //    ret = delet kv(key = invalidtime + filename)
+      //    if (TFS_SUCCESS = ret)
+      //    {
+      //      ret = delete kv(key = filename);
+      //    }
+      //  }
+      //  if (TFS_SUCCESS == ret)
+      //  {
+      //   ret = new_lifecycle(file_type, file_name, invalid_time_s, app_key);
+      //  }
+      // }
       return 0;
     }
     int LifeCycleHelper::new_lifecycle(const int file_type, const string& file_name,
@@ -68,6 +85,21 @@ namespace tfs
       UNUSED(file_name);
       UNUSED(invalid_time_s);
       UNUSED(app_key);
+      // ret = put_kv(key = filename, version = MAXVERSION)
+      // if (TFS_SUCCESS == ret)
+      // {
+      //    ret = put_kv(key = invalidtime + filename, version = 0)
+      // }
+      // else if (EXIT_KV_RETURN_VERSION_ERROR == ret)
+      // {
+      //  ret = EXIT_LIFE_CYCLE_EXSIT;
+      // }
+      // else
+      // {
+      //  error
+      //  ret = TFS_ERROR;
+      //
+      // }
       return 0;
 
     }
@@ -75,6 +107,25 @@ namespace tfs
     {
       UNUSED(file_type);
       UNUSED(file_name);
+      /*
+      ret = get_kv(key = filename);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = delete kv(key = invalid_time + filename);
+        if (TFS_SUCCESS == ret) //success or not exist
+        {
+          ret =  delete kv(key = filename);
+          if(TFS_SUCCESS == ret) //success or not exist
+          {
+            put_invalid_info()
+          }
+        }
+      }
+      else if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+      {
+        ret = TFS_SUCCESS;
+      }
+      */
       return 0;
     }
   }// end for kvmetaserver

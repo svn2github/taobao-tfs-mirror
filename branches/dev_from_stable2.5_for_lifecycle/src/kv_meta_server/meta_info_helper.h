@@ -33,7 +33,7 @@ namespace tfs
       public:
         MetaInfoHelper();
         virtual ~MetaInfoHelper();
-        int init();
+        int init(common::KvEngineHelper*);
         int put_meta(const std::string& bucket_name, const std::string& file_name,
             /*const int64_t offset,*/ const common::TfsFileInfo& tfs_file_info
             /* const taglist , versioning*/
