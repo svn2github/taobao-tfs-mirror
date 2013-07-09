@@ -27,7 +27,6 @@ namespace tfs
     const char KEY_TYPE_S3 = 12;
     const int32_t HASH_BUCKET_NUM = 10243;
 
-
     //OriInvalidTimeValueInfo
     OriInvalidTimeValueInfo::OriInvalidTimeValueInfo()
     {}
@@ -54,6 +53,47 @@ namespace tfs
         ret = Serialization::get_string(data, data_len, pos, appkey_);
       }
       return ret;
+    }
+
+    int ExpServerBaseInformation::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&id_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, &start_time_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, &last_update_time_);
+      }
+      return iret;
+    }
+
+    int ExpServerBaseInformation::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, id_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, start_time_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, last_update_time_);
+      }
+      return iret;
+    }
+
+    int64_t ExpServerBaseInformation::length() const
+    {
+      return INT64_SIZE * 3 ;
     }
 
   }//common end

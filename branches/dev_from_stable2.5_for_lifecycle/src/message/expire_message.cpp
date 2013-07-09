@@ -116,6 +116,70 @@ namespace tfs
       return INT_SIZE;
     }
 
+    //heart msg
+    RtsEsHeartMessage::RtsEsHeartMessage()
+    {
+      _packetHeader._pcode = common::REQ_RT_ES_KEEPALIVE_MESSAGE;
+    }
+
+    RtsEsHeartMessage::~RtsEsHeartMessage()
+    {
+    }
+
+    int RtsEsHeartMessage::deserialize(common::Stream& input)
+    {
+      int64_t pos = 0;
+      int32_t iret = base_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+      if (TFS_SUCCESS == iret)
+      {
+        input.drain(base_info_.length());
+      }
+      return iret;
+    }
+
+    int RtsEsHeartMessage::serialize(common::Stream& output) const
+    {
+      int64_t pos = 0;
+      int32_t iret = base_info_.serialize(output.get_free(), output.get_free_length(), pos);
+      if (TFS_SUCCESS == iret)
+      {
+        output.pour(base_info_.length());
+      }
+      return iret;
+    }
+
+    int64_t RtsEsHeartMessage::length() const
+    {
+      return base_info_.length();
+    }
+
+    //rsp heart
+    RtsEsHeartResponseMessage::RtsEsHeartResponseMessage()
+    {
+      _packetHeader._pcode = common::RSP_RT_ES_KEEPALIVE_MESSAGE;
+    }
+
+    RtsEsHeartResponseMessage::~RtsEsHeartResponseMessage()
+    {
+
+    }
+
+    int RtsEsHeartResponseMessage::deserialize(common::Stream& input)
+    {
+      int32_t iret = input.get_int32(&heart_interval_);
+      return iret;
+    }
+
+    int RtsEsHeartResponseMessage::serialize(common::Stream& output) const
+    {
+      int32_t iret = output.set_int32(heart_interval_);
+      return iret;
+    }
+
+    int64_t RtsEsHeartResponseMessage::length() const
+    {
+      return INT_SIZE;
+    }
 
   }/** message **/
 }/** tfs **/

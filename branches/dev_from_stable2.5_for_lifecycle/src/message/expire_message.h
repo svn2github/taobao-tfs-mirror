@@ -112,6 +112,40 @@ namespace tfs
         int32_t reserve_;
     };
 
+    class RtsEsHeartMessage: public common::BasePacket
+    {
+      public:
+        RtsEsHeartMessage();
+        virtual ~RtsEsHeartMessage();
+
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        inline common::ExpServerBaseInformation& get_es(void) { return base_info_;}
+        inline void set_es(const common::ExpServerBaseInformation& base_info){ memcpy(&base_info_, &base_info, sizeof(common::ExpServerBaseInformation));}
+
+      private:
+        common::ExpServerBaseInformation base_info_;
+    };
+
+    class RtsEsHeartResponseMessage: public common::BasePacket
+    {
+      public:
+        RtsEsHeartResponseMessage();
+        virtual ~RtsEsHeartResponseMessage();
+
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        inline int32_t get_time(void) { return heart_interval_;}
+        inline void set_time(int32_t& heart_interval){ heart_interval_ = heart_interval;}
+
+      private:
+        int32_t heart_interval_;
+    };
+
+
+
 
   }
 }

@@ -474,6 +474,12 @@ namespace tfs
           case common::REQ_EXPIRE_FINISH_TASK_MESSAGE:
             packet = new ReqFinishTaskFromEsMessage();
             break;
+          case common::REQ_RT_ES_KEEPALIVE_MESSAGE:
+            packet = new RtsEsHeartMessage();
+            break;
+          case common::RSP_RT_ES_KEEPALIVE_MESSAGE:
+            packet = new RtsEsHeartResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;
