@@ -193,7 +193,7 @@ namespace tfs
         mo.per_mmap_size_ = size;
         tbsys::gDelete(file_);
         file_ = new MMapFile(mo, fd_);
-        iret = file_->mmap(true) ? TFS_SUCCESS : EXIT_MMAP_FILE_ERROR;
+        iret = file_->mmap(true);
         if (TFS_SUCCESS == iret)
         {
           if (file_size <= 0)
