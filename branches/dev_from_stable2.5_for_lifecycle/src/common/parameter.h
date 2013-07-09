@@ -241,6 +241,7 @@ namespace tfs
       std::string tair_slave_;
       std::string tair_group_;
       int tair_object_area_;
+      int tair_lifecycle_area_;
       int32_t dump_stat_info_interval_;
       uint64_t rs_ip_port_;
       uint64_t ms_ip_port_;
@@ -275,7 +276,7 @@ namespace tfs
       std::string tair_master_;
       std::string tair_slave_;
       std::string tair_group_;
-      int tair_object_area_;
+      int tair_lifecycle_area_;
       uint64_t ers_ip_port_;
       uint64_t es_ip_port_;
 

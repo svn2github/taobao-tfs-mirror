@@ -572,6 +572,7 @@ namespace tfs
       tair_slave_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_SLAVE, "");
       tair_group_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_GROUP, "");
       tair_object_area_ = config.getInt(CONF_SN_KVMETA, CONF_TAIR_OBJECT_AREA, -1);
+      tair_lifecycle_area_ = config.getInt(CONF_SN_KVMETA, CONF_TAIR_LIFECYCLE_AREA, -1);
       dump_stat_info_interval_ = config.getInt(CONF_SN_KVMETA, CONF_STAT_INFO_INTERVAL, 60000000);
 
       if (TFS_SUCCESS == ret)
@@ -667,7 +668,7 @@ namespace tfs
       tair_master_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_MASTER, "");
       tair_slave_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_SLAVE, "");
       tair_group_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_GROUP, "");
-      tair_object_area_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_TAIR_OBJECT_AREA, -1);
+      tair_lifecycle_area_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_TAIR_LIFECYCLE_AREA, -1);
 
       if (TFS_SUCCESS == ret)
       {

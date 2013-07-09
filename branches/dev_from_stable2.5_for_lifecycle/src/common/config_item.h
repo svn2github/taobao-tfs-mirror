@@ -199,6 +199,7 @@ namespace tfs
 #define CONF_TAIR_SLAVE                              "tair_slave"
 #define CONF_TAIR_GROUP                              "tair_group"
 #define CONF_TAIR_OBJECT_AREA                        "tair_object_area"
+#define CONF_TAIR_LIFECYCLE_AREA                     "tair_lifecycle_area"
 #define CONF_STAT_INFO_INTERVAL                      "stat_info_interval"
 #define CONF_KV_META_IPPORT                          "kv_meta_ip_port"
 #define CONF_KV_ROOT_IPPORT                          "kv_root_ip_port"
