@@ -1563,7 +1563,7 @@ namespace tfs
     bool LayoutManager::build_dissolve_task_(int64_t& need, const FamilyCollect* family,
           const common::ArrayHelper<FamilyMemberInfo>& reinstate_members, const time_t now)
     {
-      int32_t ret = ((NULL != family) && reinstate_members.get_array_index() >= 0
+      int32_t ret = ((NULL != family)
                   && (plan_run_flag_ & PLAN_RUN_FALG_DISSOLVE) && need > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -1602,8 +1602,8 @@ namespace tfs
                       && INVALID_SERVER_ID != members[index].server_
                       && INVALID_BLOCK_ID != members[index].block_)
                   {
-                    bool target = get_task_manager().is_target(members[index], index, PLAN_TYPE_EC_REINSTATE, family->get_family_aid_info());
-                    bool next_target = get_task_manager().is_target(members[next_index], next_index, PLAN_TYPE_EC_REINSTATE, family->get_family_aid_info());
+                    bool target = get_task_manager().is_target(members[index], index, PLAN_TYPE_EC_DISSOLVE, family->get_family_aid_info());
+                    bool next_target = get_task_manager().is_target(members[next_index], next_index, PLAN_TYPE_EC_DISSOLVE, family->get_family_aid_info());
                     ret = ((!get_task_manager().exist_block(members[index].block_))
                           &&(!get_task_manager().exist_server(members[index].server_))
                           &&(!get_task_manager().exist_server(members[next_index].server_))

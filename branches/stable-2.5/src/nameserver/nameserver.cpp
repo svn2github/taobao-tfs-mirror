@@ -351,7 +351,7 @@ namespace tfs
           tbnet::Packet* packet = client->get_source_msg();
           assert(NULL != packet);
           int32_t pcode = packet->getPCode();
-          if (REMOVE_BLOCK_MESSAGE == pcode)
+          if (REMOVE_BLOCK_MESSAGE_V2 == pcode)
           {
             if (!sresponse->empty())
             {
