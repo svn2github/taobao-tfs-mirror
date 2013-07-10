@@ -102,7 +102,6 @@ namespace tfs
         //initialize thread
         build_plan_thread_ = new BuildPlanThreadHelper(*this);
         check_dataserver_thread_ = new CheckDataServerThreadHelper(*this);
-        run_plan_thread_ = new RunPlanThreadHelper(*this);
         add_block_in_all_server_thread_ = new AddBlockInAllServerThreadHelper(*this);
         check_dataserver_report_block_thread_ = new CheckDataServerReportBlockThreadHelper(*this);
         run_plan_thread_ = new RunPlanThreadHelper(*this);

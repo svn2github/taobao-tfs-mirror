@@ -400,6 +400,7 @@ namespace tfs
           ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
           if (TFS_SUCCESS != ret)
           {
+            NewClientManager::get_instance().destroy_client(client);
             TBSYS_LOG(WARN, "write file to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: master ret: %d",
                 attach_block_id, file_id, lease_id, ret);
@@ -540,6 +541,7 @@ namespace tfs
           ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
           if (TFS_SUCCESS != ret)
           {
+            NewClientManager::get_instance().destroy_client(client);
             TBSYS_LOG(WARN, "close file to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: master ret: %d",
                 attach_block_id, file_id, lease_id, ret);
@@ -676,6 +678,7 @@ namespace tfs
           ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
           if (TFS_SUCCESS != ret)
           {
+            NewClientManager::get_instance().destroy_client(client);
             TBSYS_LOG(WARN, "unlink file to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: master ret: %d",
                 attach_block_id, file_id, lease_id, ret);
@@ -899,11 +902,13 @@ namespace tfs
           // req ns resolve version conflict
           if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == ret)
           {
-            if (TFS_SUCCESS != get_data_manager().resolve_block_version_conflict(attach_block_id, file_id, lease_id))
+            int tmp_ret = get_data_manager().resolve_block_version_conflict(attach_block_id,
+                file_id, lease_id);
+            if (TFS_SUCCESS != tmp_ret)
             {
               TBSYS_LOG(WARN, "resolve block version conflict fail. "
                   "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
-                  attach_block_id, file_id, lease_id, ret);
+                  attach_block_id, file_id, lease_id, tmp_ret);
             }
           }
           message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, err_msg.str().c_str());

@@ -127,6 +127,7 @@ namespace tfs
         data_file_mutex_.unlock();
         return EXIT_DATA_FILE_ERROR;
       }
+      datafile->add_ref();
       datafile->set_last_update();
       data_file_mutex_.unlock();
 
@@ -140,10 +141,12 @@ namespace tfs
             "Datafile write error. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, req writelen: %d, actual writelen: %d",
             write_info.block_id_, write_info.file_id_, write_info.file_number_, write_info.length_, write_len);
         // clean dirty data
+        datafile->sub_ref();
         erase_data_file(write_info.file_number_);
         return EXIT_DATA_FILE_ERROR;
       }
 
+      datafile->sub_ref();
       return TFS_SUCCESS;
     }
 

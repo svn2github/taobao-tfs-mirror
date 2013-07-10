@@ -101,7 +101,7 @@ namespace tfs
     const int32_t EXIT_ACCESS_MODE_ERROR = -5012;//access mode error
     const int32_t EXIT_PLAY_LOG_ERROR = -5013;//play log error
     const int32_t EXIT_NAMESERVER_ONLY_READ = -5014;//current nameserver only read
-    const int32_t EXIT_BLOCK_ALREADY_EXIST = -5015;//current block already exist
+    const int32_t EXIT_BLOCK_ALREADY_EXIST = -5015;//block lack of replica
     const int32_t EXIT_CREATE_BLOCK_BY_ID_ERROR = -5016;//create block by block id failed
     const int32_t EIXT_SERVER_OBJECT_NOT_FOUND = -5017;//server object not found in XXX
     const int32_t EXIT_UPDATE_RELATION_ERROR = -5018;//update relation error
@@ -168,8 +168,8 @@ namespace tfs
     const int32_t EXIT_PHYSIC_UNEXPECT_FOUND_ERROR = -8022; // physical block is already exist in file system
     const int32_t EXIT_BLOCK_SETED_ERROR = -8023;
     const int32_t EXIT_INDEX_ALREADY_LOADED_ERROR = -8024; // index is loaded when create or load
-    const int32_t EXIT_META_NOT_FOUND_ERROR = -8025; // meta not found in index
-    const int32_t EXIT_META_UNEXPECT_FOUND_ERROR = -8026; // meta found in index when insert
+    const int32_t EXIT_META_NOT_FOUND_ERROR = -8025; // file meta not found in index
+    const int32_t EXIT_META_UNEXPECT_FOUND_ERROR = -8026; // file meta found in index when insert
     const int32_t EXIT_META_OFFSET_ERROR = -8027; // require offset is out of index size
     const int32_t EXIT_BUCKET_CONFIGURE_ERROR = -8028; // bucket size is conflict with before
     const int32_t EXIT_INDEX_UNEXPECT_EXIST_ERROR = -8029; // index already exist when create index
