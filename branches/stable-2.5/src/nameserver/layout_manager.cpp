@@ -823,7 +823,7 @@ namespace tfs
       time_t now = 0;
       int64_t family_id = 0;
       int32_t ret = TFS_SUCCESS;
-      const int32_t MAX_SLEEP_TIME = 10;//10s
+      const int32_t MAX_SLEEP_TIME = 60;//60s
       std::vector<common::FamilyInfo> infos;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       const int32_t SAFE_MODE_TIME = SYSPARAM_NAMESERVER.safe_mode_time_ * 4;

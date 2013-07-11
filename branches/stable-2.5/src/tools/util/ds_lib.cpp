@@ -1132,7 +1132,7 @@ namespace tfs
     }
 
     int DsLib::write_data_v2(const uint64_t server_ip, const uint64_t block_id, const char* data, const int32_t length,
-                              const int32_t offset, const uint64_t file_id, uint64_t& lease_id)
+                              const int32_t offset, uint64_t& file_id, uint64_t& lease_id)
     {
       int ret = TFS_SUCCESS;
       VUINT64 ds_list;
@@ -1180,6 +1180,7 @@ namespace tfs
           {
             WriteFileRespMessageV2* response = dynamic_cast<WriteFileRespMessageV2*>(resp_msg);
             lease_id = response->get_lease_id();
+            file_id = response->get_file_id();
             //printf("write file data. fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u\n", file_id, lease_id);
           }
         }
