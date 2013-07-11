@@ -123,9 +123,9 @@ void init()
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
   g_cmd_map["param"] = CmdNode("param name [set value]", "get/set param value, default get.", 0, 4, cmd_set_run_param);
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block by blockid which not exist or expire in ns.", 1, 1, cmd_add_block);
-  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [flag [dsip:port]]",
+  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [flag|dsip:port]",
       "remove block. flag: 1--remove block from both ds and ns, 2-remove block from ds and relieve relation from ns but keep block in ns's block table,"
-      " 4-just relieve relation between block and the ds of dsip:port, default is 1.",
+      " 4-just relieve relation between block and all ds, otherwise flag should be a ds address, remove relation between block and specific ds. default is 1.",
       1, 3, cmd_remove_block);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list.", 1, 1, cmd_list_block);
   //g_cmd_map["loadblk"] = CmdNode("loadblk blockid dsip:port", "build relationship between block and dataserver.", 2, 2, cmd_load_block);
@@ -450,10 +450,14 @@ int cmd_remove_block(const VSTRING& param)
   if(param.size() > 1)
   {
     flag = atoi(param[1].c_str());
-    if(1 != flag && 2 != flag && 4 != flag)
+    if(1 != flag && 2 != flag && 4 != flag) // flag should be a ds address
     {
-       fprintf(stderr, "removeblock's flag parameter invalid\n");
-       return TFS_ERROR;
+      server_id = Func::get_host_ip(param[1].c_str());
+      if (0 == server_id)
+      {
+        fprintf(stderr, "invalid server addr %s\n", param[2].c_str());
+        return TFS_ERROR;
+      }
     }
   }//default flag = 1
 
