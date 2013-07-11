@@ -54,7 +54,7 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
-        iret = output.set_int64(task_time_);
+        iret = output.set_int32(task_time_);
       }
       return iret;
     }
@@ -80,7 +80,7 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
-        iret = input.get_int64(&task_time_);
+        iret = input.get_int32(&task_time_);
       }
 
       return iret;
@@ -88,7 +88,7 @@ namespace tfs
 
     int64_t ReqCleanTaskFromRtsMessage::length() const
     {
-      return INT_SIZE * 4 + INT64_SIZE;
+      return INT_SIZE * 5;
     }
 
     /* finish task msg */

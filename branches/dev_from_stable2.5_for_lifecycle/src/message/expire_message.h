@@ -52,7 +52,7 @@ namespace tfs
           return note_interval_;
         }
 
-        int64_t get_task_time() const
+        int32_t get_task_time() const
         {
           return task_time_;
         }
@@ -77,7 +77,7 @@ namespace tfs
           note_interval_ = note_interval;
         }
 
-        void set_task_time(const int64_t task_time)
+        void set_task_time(const int32_t task_time)
         {
           task_time_ = task_time;
         }
@@ -86,7 +86,7 @@ namespace tfs
         int32_t total_es_;
         int32_t num_es_;
         int32_t note_interval_;
-        int64_t task_time_;
+        int32_t task_time_;
     };
 
     class ReqFinishTaskFromEsMessage : public common::BasePacket
