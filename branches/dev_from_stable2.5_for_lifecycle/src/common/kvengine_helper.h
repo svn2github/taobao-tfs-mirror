@@ -48,6 +48,9 @@ namespace tfs
         KEY_TYPE_USER = 1,
         KEY_TYPE_BUCKET = 2,
         KEY_TYPE_OBJECT = 3,
+        KEY_TYPE_NAME_EXPTIME = 4,
+        KEY_TYPE_EXPTIME_APPKEY = 5,
+        KEY_TYPE_ES_STAT = 6,
       };
     };
 

@@ -69,21 +69,21 @@ namespace tfs
       int prefix_scan_from_tair(const int area, const tair::data_entry &pkey, const tair::data_entry &start_key, const tair::data_entry &end_key,
                                 int offset, int limit, std::vector<tair::data_entry *> &values, short type);
 
-      int put_object_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version);
-      int put_bucket_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version);
+      int prefix_put_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version);
+      int none_range_put_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version);
 
-      int get_object_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version);
-      int get_bucket_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version);
+      int prefix_get_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version);
+      int none_range_get_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version);
 
-      int scan_object_keys(const int area, const KvKey& start_key, const KvKey& end_key,
+      int scan_prefix_keys(const int area, const KvKey& start_key, const KvKey& end_key,
           const int32_t limit, const int32_t offset,
           std::vector<KvValue*> *keys, std::vector<KvValue*> *values,
           int32_t* result_size, short scan_type);
 
-      int delete_object_key(const int area, const KvKey& key);
-      int delete_bucket_key(const int area, const KvKey& key);
+      int delete_prefix_key(const int area, const KvKey& key);
+      int delete_none_range_key(const int area, const KvKey& key);
 
-      int delete_object_keys(const int area, const std::vector<KvKey>& vec_keys);
+      int delete_prefix_keys(const int area, const std::vector<KvKey>& vec_keys);
 
     private:
       DISALLOW_COPY_AND_ASSIGN(TairEngineHelper);

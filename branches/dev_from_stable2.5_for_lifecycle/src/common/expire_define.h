@@ -30,28 +30,44 @@ namespace tfs
     {
       public:
       static const char DELIMITER_EXPIRE;
-      static const char KEY_TYPE_ORI_TARGET;
-      static const char KEY_TYPE_ORI_NAME;
-      static const char KEY_TYPE_ORI_NOTE;
-      static const char KEY_TYPE_S3;
       static const int32_t HASH_BUCKET_NUM;
+      static const int32_t FILE_TYPE_RAW_TFS;
+      static const int32_t FILE_TYPE_CUSTOM_TFS;
 
       /* expire time target key */
-      static int dserialize_ori_tfs_target_key(const char *data, const int32_t size,
+      enum {
+        EXPTIME_KEY_BUFF = 512,
+      };
+      static int serialize_name_expiretime_key(const int32_t file_type,
+          const std::string& file_name,
+          common::KvKey *key, char *data, const int32_t size);
+
+      static int deserialize_name_expiretime_key(const char *data, const int32_t size,
+          int8_t* key_type, int32_t* file_type,
+          std::string* file_name);
+
+      static int serialize_name_expiretime_value(const int32_t invalid_time,
+          common::KvMemValue *value, char *data, const int32_t size);
+
+      static int deserialize_name_expiretime_value(const char *data, const int32_t size,
+          int32_t* invalid_time);
+
+      static int serialize_exptime_app_key(const int32_t days_secs, const int32_t hours_secs,
+                                const int32_t hash_mod,  const int32_t file_type,
+                                const std::string &file_name, common::KvKey *key,
+                                char *data, const int32_t size);
+      static int deserialize_exptime_app_key(const char *data, const int32_t size,
                                  int32_t* p_days_secs, int32_t* p_hours_secs,
                                  int32_t* p_hash_mod, int32_t *p_file_type,
                                  std::string *file_name);
 
-      static int serialize_ori_tfs_target_key(const int32_t days_secs, const int32_t hours_secs,
-                                const int32_t hash_mod,  const int32_t file_type,
-                                const std::string &file_name, const int32_t key_type, common::KvKey *key,
-                                char *data, const int32_t size);
-
-      static int serialize_ori_tfs_note_key(const uint64_t local_ipport, const int32_t num_es,
+      static int serialize_es_stat_key(const uint64_t local_ipport, const int32_t num_es,
                                 const int32_t task_time, const int32_t hash_bucket_num,
-                                const int64_t sum_file_num, const int32_t key_type, common::KvKey *key,
+                                const int64_t sum_file_num, common::KvKey *key,
                                 char *data, const int32_t size);
+      static int transfer_time(const int32_t time, int32_t *p_days_secs, int32_t *p_hours_secs);
     };
+
 
     struct OriInvalidTimeValueInfo
     {

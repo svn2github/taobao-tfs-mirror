@@ -279,6 +279,9 @@ namespace tfs
     const int32_t EXIT_INVALID_KV_META_SERVER = -17008;// no kv meta server
     const int32_t EXIT_KV_RETURN_HAS_MORE_DATA = -17009; //tair return over 1M of get range once
 
+    // life cycle manager related
+    const int32_t EXIT_LIFE_CYCLE_INFO_EXIST = -18000;
+
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

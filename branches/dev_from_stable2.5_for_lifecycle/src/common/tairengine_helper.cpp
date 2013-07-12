@@ -120,13 +120,16 @@ namespace tfs
       switch (key.key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
+        case KvKey::KEY_TYPE_EXPTIME_APPKEY:
           {
-            ret = put_object_key(name_area, key, value, version);
+            ret = prefix_put_key(name_area, key, value, version);
           }
           break;
         case KvKey::KEY_TYPE_BUCKET:
+        case KvKey::KEY_TYPE_NAME_EXPTIME:
+        case KvKey::KEY_TYPE_ES_STAT:
           {
-            ret = put_bucket_key(name_area, key, value, version);
+            ret = none_range_put_key(name_area, key, value, version);
           }
           break;
         default:
@@ -135,7 +138,7 @@ namespace tfs
       }
       return ret;
     }
-    int TairEngineHelper::put_object_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version)
+    int TairEngineHelper::prefix_put_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version)
     {
       int ret = TFS_SUCCESS;
       tair::data_entry t_pkey;
@@ -158,7 +161,7 @@ namespace tfs
       return ret;
     }
 
-    int TairEngineHelper::put_bucket_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version)
+    int TairEngineHelper::none_range_put_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version)
     {
       int ret = TFS_SUCCESS;
       int tair_ret;
@@ -192,13 +195,16 @@ namespace tfs
         switch (key.key_type_)
         {
           case KvKey::KEY_TYPE_OBJECT:
+          case KvKey::KEY_TYPE_EXPTIME_APPKEY:
             {
-              ret = get_object_key(name_area, key, pp_value, version);
+              ret = prefix_get_key(name_area, key, pp_value, version);
             }
             break;
           case KvKey::KEY_TYPE_BUCKET:
+          case KvKey::KEY_TYPE_NAME_EXPTIME:
+          case KvKey::KEY_TYPE_ES_STAT:
             {
-              ret = get_bucket_key(name_area, key, pp_value, version);
+              ret = none_range_get_key(name_area, key, pp_value, version);
             }
             break;
           default:
@@ -208,7 +214,7 @@ namespace tfs
       }
       return ret;
     }
-    int TairEngineHelper::get_object_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version)
+    int TairEngineHelper::prefix_get_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version)
     {
       int ret = TFS_SUCCESS;
       tair::data_entry t_pkey;
@@ -246,7 +252,7 @@ namespace tfs
       }
       return ret;
     }
-    int TairEngineHelper::get_bucket_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version)
+    int TairEngineHelper::none_range_get_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version)
     {
       int ret = TFS_SUCCESS;
       data_entry pkey(key.key_, key.key_size_);
@@ -296,8 +302,9 @@ namespace tfs
       switch (start_key.key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
+        case KvKey::KEY_TYPE_EXPTIME_APPKEY:
           {
-            ret = scan_object_keys(name_area, start_key, end_key, limit, offset,
+            ret = scan_prefix_keys(name_area, start_key, end_key, limit, offset,
                 keys, values, result_size, scan_type);
           }
           break;
@@ -308,7 +315,7 @@ namespace tfs
       return ret;
     }
 
-    int TairEngineHelper::scan_object_keys(const int area, const KvKey& start_key, const KvKey& end_key,
+    int TairEngineHelper::scan_prefix_keys(const int area, const KvKey& start_key, const KvKey& end_key,
         const int32_t limit, const int32_t offset, vector<KvValue*> *keys,
         vector<KvValue*> *values, int32_t* result_size, short scan_type)
     {
@@ -409,13 +416,16 @@ namespace tfs
       switch (key.key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
+        case KvKey::KEY_TYPE_EXPTIME_APPKEY:
           {
-            ret = delete_object_key(name_area, key);
+            ret = delete_prefix_key(name_area, key);
           }
           break;
         case KvKey::KEY_TYPE_BUCKET:
+        case KvKey::KEY_TYPE_NAME_EXPTIME:
+        case KvKey::KEY_TYPE_ES_STAT:
           {
-            ret = delete_bucket_key(name_area, key);
+            ret = delete_none_range_key(name_area, key);
           }
           break;
         default:
@@ -425,7 +435,7 @@ namespace tfs
       return ret;
     }
 
-    int TairEngineHelper::delete_object_key(const int area, const KvKey& key)
+    int TairEngineHelper::delete_prefix_key(const int area, const KvKey& key)
     {
       int ret = TFS_SUCCESS;
       tair::data_entry pkey;
@@ -438,7 +448,7 @@ namespace tfs
       return ret;
     }
 
-    int TairEngineHelper::delete_bucket_key(const int area, const KvKey& key)
+    int TairEngineHelper::delete_none_range_key(const int area, const KvKey& key)
     {
       int ret = TFS_SUCCESS;
       int tair_ret = 0;
@@ -464,8 +474,9 @@ namespace tfs
       switch (vec_keys.front().key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
+        case KvKey::KEY_TYPE_EXPTIME_APPKEY:
           {
-            ret = delete_object_keys(name_area, vec_keys);
+            ret = delete_prefix_keys(name_area, vec_keys);
           }
           break;
         default:
@@ -474,7 +485,7 @@ namespace tfs
       }
       return ret;
     }
-    int TairEngineHelper::delete_object_keys(const int area, const std::vector<KvKey>& vec_keys)
+    int TairEngineHelper::delete_prefix_keys(const int area, const std::vector<KvKey>& vec_keys)
     {
       int ret = TFS_SUCCESS;
       tair::data_entry pkey;

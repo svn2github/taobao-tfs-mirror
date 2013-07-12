@@ -84,9 +84,9 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = ExpireDefine::serialize_ori_tfs_note_key(local_ipport_, num_es,
+        ret = ExpireDefine::serialize_es_stat_key(local_ipport_, num_es,
                                 task_time, hash_bucket_num,
-                                sum_file_num, KvKey::KEY_TYPE_OBJECT, &key,
+                                sum_file_num, &key,
                                 key_buff, KEY_BUFF_SIZE);
       }
 
@@ -115,19 +115,6 @@ namespace tfs
       return ret;
     }
 
-    int CleanTaskHelper::split_time(const int32_t task_time, int32_t *p_days_secs, int32_t *p_hours_secs)
-    {
-      if (p_days_secs == NULL || p_hours_secs == NULL)
-      {
-        return TFS_ERROR;
-      }
-
-      int32_t days_int= task_time / 60 / 60 / 24;
-      *p_days_secs = days_int * 60 * 60 * 24;
-      *p_hours_secs = task_time - *p_days_secs;
-
-      return TFS_SUCCESS;
-    }
 
     int CleanTaskHelper::clean_task(const int32_t total_es, const int32_t num_es,
                                     const int32_t note_interval, const int32_t task_time)
@@ -141,7 +128,7 @@ namespace tfs
       int32_t end_bucket_num;
       std::string file_name;
 
-      ret = split_time(task_time, &days_secs, &hours_secs);
+      ret = ExpireDefine::transfer_time(task_time, &days_secs, &hours_secs);
 
       if (TFS_SUCCESS == ret)
       {
@@ -182,15 +169,15 @@ namespace tfs
           {
             if (TFS_SUCCESS == ret)
             {
-              ret = ExpireDefine::serialize_ori_tfs_target_key(days_secs, hours_secs,
+              ret = ExpireDefine::serialize_exptime_app_key(days_secs, hours_secs,
                                                                hash_mod, 0, file_name,
-                    KvKey::KEY_TYPE_OBJECT, &start_key, start_key_buff, KEY_BUFF_SIZE);
+                    &start_key, start_key_buff, KEY_BUFF_SIZE);
             }
             if (TFS_SUCCESS == ret)
             {
-              ret = ExpireDefine::serialize_ori_tfs_target_key(days_secs, hours_secs,
+              ret = ExpireDefine::serialize_exptime_app_key(days_secs, hours_secs,
                                                                hash_mod, 3, file_name,
-                    KvKey::KEY_TYPE_OBJECT, &end_key, end_key_buff, KEY_BUFF_SIZE);
+                    &end_key, end_key_buff, KEY_BUFF_SIZE);
             }
 
             int32_t i;
@@ -221,7 +208,7 @@ namespace tfs
 
               for(i = 0; i < result_size; ++i)
               {
-                ret = ExpireDefine::dserialize_ori_tfs_target_key(kv_value_keys[i]->get_data(),
+                ret = ExpireDefine::deserialize_exptime_app_key(kv_value_keys[i]->get_data(),
                                              kv_value_keys[i]->get_size(),
                                              &t_days_secs, &t_hours_secs, &t_hash_num,
                                              &t_file_type, &t_file_name);
@@ -247,8 +234,8 @@ namespace tfs
               if(result_size == SCAN_LIMIT)
               {
                 first = 1;
-                ret = ExpireDefine::serialize_ori_tfs_target_key(days_secs, hours_secs, hash_mod, t_file_type,
-                      t_file_name, KvKey::KEY_TYPE_OBJECT, &start_key, start_key_buff, KEY_BUFF_SIZE);
+                ret = ExpireDefine::serialize_exptime_app_key(days_secs, hours_secs, hash_mod, t_file_type,
+                      t_file_name, &start_key, start_key_buff, KEY_BUFF_SIZE);
               }
               else
               {

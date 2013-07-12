@@ -36,19 +36,25 @@ namespace tfs
 
         int init(tfs::common::KvEngineHelper*);
 
-        int set_file_lifecycle(const int file_type, const std::string& file_name,
+        int set_file_lifecycle(const int32_t file_type, const std::string& file_name,
             const int32_t invalid_time_s, const std::string& app_key);
 
-        int new_lifecycle(const int file_type, const std::string& file_name,
-            const int32_t invalid_time_s, const std::string& app_key);
+        int get_file_lifecycle(const int32_t file_type, const std::string& file_name,
+            int32_t* invalid_time_s);
 
-        int rm_life_cycle(const int file_type, const std::string& file_name);
+        int rm_life_cycle(const int32_t file_type, const std::string& file_name);
 
       protected:
+
         common::KvEngineHelper* kv_engine_helper_;
         int32_t meta_info_name_area_;
       private:
         DISALLOW_COPY_AND_ASSIGN(LifeCycleHelper);
+        int new_lifecycle(
+            const common::KvKey& name_exptime_key,
+            const common::KvMemValue& name_exptime_value,
+            const common::KvKey& exptime_appkey_key,
+            const common::KvMemValue& exptime_appkey_value);
     };
   }
 }

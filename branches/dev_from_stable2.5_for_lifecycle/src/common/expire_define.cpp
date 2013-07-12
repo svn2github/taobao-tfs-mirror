@@ -17,19 +17,142 @@
 #include "expire_define.h"
 #include "serialization.h"
 #include "stream.h"
+#include "kvengine_helper.h"
 
 namespace tfs
 {
   namespace common
   {
     const char ExpireDefine::DELIMITER_EXPIRE = 10;
-    const char ExpireDefine::KEY_TYPE_ORI_TARGET = 11;
-    const char ExpireDefine::KEY_TYPE_ORI_NAME = 12;
-    const char ExpireDefine::KEY_TYPE_ORI_NOTE = 13;
-    const char ExpireDefine::KEY_TYPE_S3 = 14;
     const int32_t ExpireDefine::HASH_BUCKET_NUM = 10243;
+    const int32_t ExpireDefine::FILE_TYPE_RAW_TFS = 1;
+    const int32_t ExpireDefine::FILE_TYPE_CUSTOM_TFS = 2;
 
-    int ExpireDefine::dserialize_ori_tfs_target_key(const char *data, const int32_t size,
+    int ExpireDefine::serialize_name_expiretime_key(const int32_t file_type,
+        const std::string& file_name,
+        common::KvKey *key, char *data, const int32_t size)
+    {
+      int ret = (NULL == key || NULL == data) ? TFS_ERROR : TFS_SUCCESS;
+      int64_t pos = 0;
+      if(TFS_SUCCESS == ret)
+      {
+        data[pos] = KvKey::KEY_TYPE_NAME_EXPTIME;
+        pos += 1;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::int32_to_char(data + pos, size - pos, file_type);
+        pos += 4;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_string(data, size, pos, file_name);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        key->key_ = data;
+        key->key_size_ = pos;
+        key->key_type_ = KvKey::KEY_TYPE_NAME_EXPTIME;
+      }
+      return ret;
+    }
+
+    int ExpireDefine::deserialize_name_expiretime_key(const char *data, const int32_t size,
+        int8_t* key_type, int32_t* file_type,
+        std::string* file_name)
+    {
+      int ret = (NULL == data || NULL == key_type || NULL == file_type
+          || NULL == file_name) ? TFS_ERROR : TFS_SUCCESS;
+      int64_t pos = 0;
+      if(TFS_SUCCESS == ret)
+      {
+        *key_type = data[pos];
+        pos += 1;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::char_to_int32(data + pos, size - pos, *file_type);
+        pos += 4;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_string(data, size, pos, *file_name);
+      }
+
+      return ret;
+    }
+
+    int ExpireDefine::serialize_exptime_app_key(const int32_t days_secs, const int32_t hours_secs,
+        const int32_t hash_mod, const int32_t file_type, const std::string &file_name,
+        KvKey *key, char *data, const int32_t size)
+    {
+      int ret = (hash_mod >= 0 && hash_mod < ExpireDefine::HASH_BUCKET_NUM && days_secs > 0 && hours_secs > 0
+          && key != NULL &&  data != NULL ) ? TFS_SUCCESS : TFS_ERROR;
+      int64_t pos = 0;
+
+      if(TFS_SUCCESS == ret)
+      {
+        //key type ori tfs key
+        data[pos] = KvKey::KEY_TYPE_EXPTIME_APPKEY;
+        pos += 1;
+      }
+
+      //days_secs
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::int32_to_char(data + pos, size - pos, days_secs);
+        pos = pos + 4;
+      }
+
+      //hash_mod
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::int32_to_char(data + pos, size - pos, hash_mod);
+        pos = pos + 4;
+      }
+
+      //DELIMITER split pk . sk
+      if (TFS_SUCCESS == ret && (pos + 1) < size)
+      {
+        data[pos] = KvKey::DELIMITER;
+        pos ++;
+      }
+      else
+      {
+        ret = TFS_ERROR;
+      }
+
+      //hours_secs
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::int32_to_char(data + pos, size - pos, hours_secs);
+        pos = pos + 4;
+      }
+
+      //custom file is 2; usual file is 1;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::int32_to_char(data + pos, size - pos, file_type);
+        pos = pos + 4;
+      }
+
+      //file name
+      if (file_type == FILE_TYPE_RAW_TFS|| file_type == FILE_TYPE_CUSTOM_TFS)
+      {
+        ret = Serialization::set_string(data, size, pos, file_name);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        key->key_ = data;
+        key->key_size_ = pos;
+        key->key_type_ = KvKey::KEY_TYPE_EXPTIME_APPKEY;
+      }
+      return ret;
+    }
+
+    int ExpireDefine::deserialize_exptime_app_key(const char *data, const int32_t size,
         int32_t* p_days_secs, int32_t* p_hours_secs,
         int32_t* p_hash_mod, int32_t *p_file_type, std::string *file_name)
     {
@@ -50,14 +173,14 @@ namespace tfs
         }
 
         //days_secs
-        if (TFS_SUCCESS == ret && (pos + 4) <= size)
+        if (TFS_SUCCESS)
         {
           ret = Serialization::char_to_int32(data + pos, size - pos, *p_days_secs);
           pos = pos + 4;
         }
 
         //hash_mod
-        if (TFS_SUCCESS == ret && (pos + 4) <= size)
+        if (TFS_SUCCESS == ret)
         {
           ret = Serialization::char_to_int32(data + pos, size - pos, *p_hash_mod);
           pos = pos + 4;
@@ -74,119 +197,72 @@ namespace tfs
         }
 
         //days_secs
-        if (TFS_SUCCESS == ret && (pos + 4) <= size)
+        if (TFS_SUCCESS == ret)
         {
           ret = Serialization::char_to_int32(data + pos, size - pos, *p_hours_secs);
           pos = pos + 4;
         }
 
         //file_type
-        if (TFS_SUCCESS == ret && (pos + 4) <= size)
+        if (TFS_SUCCESS == ret)
         {
           ret = Serialization::char_to_int32(data + pos, size - pos, *p_file_type);
           pos = pos + 4;
         }
 
         //file_name
-        int64_t len = 0;
         if (TFS_SUCCESS == ret)
         {
-          ret = Serialization:: get_string(data + pos, size - pos, len, (*file_name));
+          ret = Serialization::get_string(data, size, pos, *file_name);
         }
-        pos = pos + len;
-
       }
       return ret;
     }
-
-    int ExpireDefine::serialize_ori_tfs_target_key(const int32_t days_secs, const int32_t hours_secs,
-            const int32_t hash_mod, const int32_t file_type, const std::string &file_name,
-            const int32_t key_type, KvKey *key, char *data, const int32_t size)
+    int ExpireDefine::serialize_name_expiretime_value(const int32_t invalid_time,
+          common::KvMemValue *value, char *data, const int32_t size)
     {
-      int ret = (hash_mod >= 0 && hash_mod < 10243 && days_secs > 0 && hours_secs > 0
-                 && key != NULL &&  data != NULL ) ? TFS_SUCCESS : TFS_ERROR;
+      int ret = (value != NULL &&  data != NULL ) ? TFS_SUCCESS : TFS_ERROR;
       int64_t pos = 0;
-      if(TFS_SUCCESS == ret)
+
+      if (TFS_SUCCESS == ret)
       {
-        //key type ori tfs key
-        if (TFS_SUCCESS == ret && (pos + 1) < size)
-        {
-          data[pos++] = ExpireDefine::KEY_TYPE_ORI_TARGET;
-        }
-        else
-        {
-          ret = TFS_ERROR;
-        }
-
-        //days_secs
-        if (TFS_SUCCESS == ret && (pos + 4) < size)
-        {
-          ret = Serialization::int32_to_char(data + pos, size, days_secs);
-          pos = pos + 4;
-        }
-
-        //hash_mod
-        if (TFS_SUCCESS == ret && (pos + 4) < size)
-        {
-          ret = Serialization::int32_to_char(data + pos, size, hash_mod);
-          pos = pos + 4;
-        }
-
-        //DELIMITER split pk . sk
-        if (TFS_SUCCESS == ret && (pos + 1) < size)
-        {
-          data[pos++] = KvKey::DELIMITER;
-        }
-        else
-        {
-          ret = TFS_ERROR;
-        }
-
-        //hours_secs
-        if (TFS_SUCCESS == ret && (pos + 4) < size)
-        {
-          ret = Serialization::int32_to_char(data + pos, size, hours_secs);
-          pos = pos + 4;
-        }
-
-        //custom file is 2; usual file is 1;
-        if (TFS_SUCCESS == ret && (pos + 4) < size)
-        {
-          ret = Serialization::int32_to_char(data + pos, size, file_type);
-          pos = pos + 4;
-        }
-
-        //file name
-        int64_t len = 0;
-        if (file_type == 1 || file_type == 2 )
-        {
-          ret = Serialization::set_string(data + pos, size, len, file_name);
-          pos = pos + len;
-        }
+        ret = Serialization::int32_to_char(data + pos, size - pos, invalid_time);
+        pos = pos + 4;
       }
 
       if (TFS_SUCCESS == ret)
       {
-        key->key_ = data;
-        key->key_size_ = pos;
-        key->key_type_ = key_type;
+        value->set_data(data, pos);
       }
       return ret;
     }
 
-    int ExpireDefine::serialize_ori_tfs_note_key(const uint64_t local_ipport, const int32_t num_es,
-            const int32_t task_time, const int32_t hash_bucket_num, const int64_t sum_file_num,
-            const int32_t key_type, KvKey *key, char *data, const int32_t size)
+    int ExpireDefine::deserialize_name_expiretime_value(const char *data, const int32_t size,
+          int32_t* invalid_time)
     {
-      int ret = (local_ipport > 0 && hash_bucket_num < 10243
-                 && key != NULL &&  data != NULL ) ? TFS_SUCCESS : TFS_ERROR;
-      int64_t pos = 0;
-      if(TFS_SUCCESS == ret)
+      int ret = (data != NULL && size > 0 && invalid_time != NULL) ? TFS_SUCCESS : TFS_ERROR;
+      int pos = 0;
+      if (TFS_SUCCESS)
       {
+        ret = Serialization::char_to_int32(data + pos, size - pos, *invalid_time);
+        pos = pos + 4;
+      }
+
+      return ret;
+    }
+
+
+    int ExpireDefine::serialize_es_stat_key(const uint64_t local_ipport, const int32_t num_es,
+        const int32_t task_time, const int32_t hash_bucket_num, const int64_t sum_file_num,
+        KvKey *key, char *data, const int32_t size)
+    {
+      int ret = (local_ipport > 0 && hash_bucket_num < ExpireDefine::HASH_BUCKET_NUM
+          && key != NULL &&  data != NULL ) ? TFS_SUCCESS : TFS_ERROR;
+      int64_t pos = 0;
         //key type ori tfs note key
         if (TFS_SUCCESS == ret && (pos + 1) < size)
         {
-          data[pos++] = ExpireDefine::KEY_TYPE_ORI_NOTE;
+          data[pos++] = KvKey::KEY_TYPE_ES_STAT;
         }
         else
         {
@@ -194,23 +270,23 @@ namespace tfs
         }
 
         //local_ipport
-        if (TFS_SUCCESS == ret && (pos + 8) < size)
+        if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::int64_to_char(data + pos, size, local_ipport);
+          ret = Serialization::int64_to_char(data + pos, size - pos, local_ipport);
           pos = pos + 8;
         }
 
         //num_es
-        if (TFS_SUCCESS == ret && (pos + 4) < size)
+        if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::int32_to_char(data + pos, size, num_es);
+          ret = Serialization::int32_to_char(data + pos, size - pos, num_es);
           pos = pos + 4;
         }
 
         //task_time
         if (TFS_SUCCESS == ret && (pos + 4) < size)
         {
-          ret = Serialization::int32_to_char(data + pos, size, task_time);
+          ret = Serialization::int32_to_char(data + pos, size - pos, task_time);
           pos = pos + 4;
         }
 
@@ -225,27 +301,26 @@ namespace tfs
         }
 
         //hash_bucket_num
-        if (TFS_SUCCESS == ret && (pos + 4) < size)
+        if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::int32_to_char(data + pos, size, hash_bucket_num);
+          ret = Serialization::int32_to_char(data + pos, size - pos, hash_bucket_num);
           pos = pos + 4;
         }
 
         //sum_file_num
-        if (TFS_SUCCESS == ret && (pos + 8) < size)
+        if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::int64_to_char(data + pos, size, sum_file_num);
+          ret = Serialization::int64_to_char(data + pos, size - pos, sum_file_num);
           pos = pos + 8;
         }
 
 
-      }
 
       if (TFS_SUCCESS == ret)
       {
         key->key_ = data;
         key->key_size_ = pos;
-        key->key_type_ = key_type;
+        key->key_type_ = KvKey::KEY_TYPE_ES_STAT;
       }
       return ret;
     }
@@ -318,6 +393,25 @@ namespace tfs
     {
       return INT64_SIZE * 3 ;
     }
+
+    int ExpireDefine::transfer_time(const int32_t time, int32_t *p_days_secs, int32_t *p_hours_secs)
+    {
+      int ret = TFS_SUCCESS;
+      if (p_days_secs == NULL || p_hours_secs == NULL)
+      {
+        return TFS_ERROR;
+      }
+      else
+      {
+        int32_t days_int= time / 60 / 60 / 24;
+        *p_days_secs = days_int * 60 * 60 * 24;
+        *p_hours_secs = time - *p_days_secs;
+      }
+
+      return ret;
+    }
+
+
 
   }//common end
 }// tfs end

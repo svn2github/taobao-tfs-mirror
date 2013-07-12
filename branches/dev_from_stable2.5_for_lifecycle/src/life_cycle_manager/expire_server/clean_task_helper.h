@@ -43,8 +43,6 @@ namespace tfs
         int take_note(const int32_t num_es, const int32_t task_time,
                       const int32_t hash_bucket_num, const int64_t sum_file_num);
 
-        int split_time(const int32_t task_time, int32_t *p_days_secs, int32_t *p_hours_secs);
-
       protected:
         common::KvEngineHelper* kv_engine_helper_;
         int32_t tair_lifecycle_area_;
