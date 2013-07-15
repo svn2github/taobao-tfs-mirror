@@ -411,6 +411,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         BlockOpLog oplog;
+        memset(&oplog, 0, sizeof(oplog));
         ret = oplog.deserialize(data, data_len, pos);
         if (TFS_SUCCESS != ret)
         {

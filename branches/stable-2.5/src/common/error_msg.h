@@ -61,6 +61,7 @@ namespace tfs
     const int32_t EXIT_ALREADY_MMAPPED_ERROR = -1036;
     const int32_t EXIT_ALREADY_MMAPPED_MAX_SIZE_ERROR = -1037;
     const int32_t EXIT_OP_TAIR_ERROR = -1038;
+    const int32_t EXIT_WORK_QUEURE_FULL = -1039;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;

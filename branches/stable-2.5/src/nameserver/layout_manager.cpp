@@ -521,6 +521,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.max_rw_network_bandwith_ratio_,
           &SYSPARAM_NAMESERVER.compact_family_member_ratio_,
           &SYSPARAM_NAMESERVER.max_single_machine_network_bandwith_,
+          &SYSPARAM_NAMESERVER.write_file_check_copies_complete_,
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
@@ -721,7 +722,9 @@ namespace tfs
           total_capacity = 0, total_use_capacity = 0, alive_server_nums = 0, sleep_nums = 0;
           get_server_manager().move_statistic_all_server_info(total_capacity,
               total_use_capacity, alive_server_nums);
-          if (total_capacity > 0 && total_use_capacity > 0 && alive_server_nums > 0)
+          if (total_capacity > 0 && total_use_capacity > 0 && alive_server_nums > 0
+             && !get_block_manager().has_emergency_replicate_in_queue()
+             && get_family_manager().reinstate_or_dissolve_queue_empty())
           {
             source.clear();
             targets.clear();
@@ -1832,7 +1835,6 @@ namespace tfs
     bool LayoutManager::scan_family_(common::ArrayHelper<FamilyCollect*>& results, int64_t& need, int64_t& start,
           const int32_t max_query_family_num, const time_t now, const bool compact_time)
     {
-      UNUSED(compact_time);
       UNUSED(need);
       results.clear();
       bool ret  = false;
@@ -1855,7 +1857,7 @@ namespace tfs
         {
 
         }
-        ret = ((!ret) && get_family_manager().check_need_compact(family, now));
+        ret = ((!ret) && compact_time && get_family_manager().check_need_compact(family, now));
         if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_DISSOLVE)))
         {
 

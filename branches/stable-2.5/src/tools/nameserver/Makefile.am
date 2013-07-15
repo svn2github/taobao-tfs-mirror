@@ -44,4 +44,4 @@ endif
 
 check_replication_SOURCES=check_replication.cpp
 repair_file_tool_SOURCES=repair_file_tool.cpp
-stat_tool_SOURCES=stat_main.cpp stat_tool.cpp common.cpp common.h
+stat_tool_SOURCES=stat_main.cpp stat_tool.cpp common.cpp common.h stat_tool.h
