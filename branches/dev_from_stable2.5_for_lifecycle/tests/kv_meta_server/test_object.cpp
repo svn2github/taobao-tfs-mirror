@@ -41,7 +41,7 @@ class ObjectTest: public ::testing::Test
     {
       test_meta_info_helper_ = new TestMetaInfoHelper();
       test_meta_info_helper_->set_kv_engine(&test_engine_);
-      test_meta_info_helper_->init();
+      test_meta_info_helper_->init(&test_engine_);
     }
     virtual void TearDown()
     {

@@ -314,7 +314,7 @@ namespace tfs
 
           ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
               hash_mod, file_type, file_name, &exptime_appkey_key,
-              name_exptime_key_buff, ExpireDefine::EXPTIME_KEY_BUFF);
+              exptime_appkey_key_buff, ExpireDefine::EXPTIME_KEY_BUFF);
         }
         //will delete expire_time appkey firtst,
         if (TFS_SUCCESS == ret)

@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef TFS_TESTS_TESTKVMETASERVER_META_INFO_HELPER_H_
-#define TFS_TESTS_TESTKVMETASERVER_META_INFO_HELPER_H_
+#ifndef TFS_TESTS_TESTKVMETASERVER_LIFE_CYCLE_HELPER_H_
+#define TFS_TESTS_TESTKVMETASERVER_LIFE_CYCLE_HELPER_H_
 
 #include "common/parameter.h"
 #include "common/base_service.h"
@@ -23,17 +23,17 @@
 #include "common/kv_meta_define.h"
 #include "common/kvengine_helper.h"
 #include "message/message_factory.h"
-#include "kv_meta_server/meta_info_helper.h"
+#include "kv_meta_server/life_cycle_helper.h"
 
 namespace tfs
 {
   namespace kvmetaserver
   {
     using namespace common;
-    class TestMetaInfoHelper :public MetaInfoHelper
+    class TestLifeCycleHelper :public LifeCycleHelper
     {
     public:
-      TestMetaInfoHelper()
+      TestLifeCycleHelper()
       {
       }
       int init(common::KvEngineHelper*){

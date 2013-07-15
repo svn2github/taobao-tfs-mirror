@@ -157,7 +157,7 @@ namespace tfs
         int32_t* p_hash_mod, int32_t *p_file_type, std::string *file_name)
     {
       int ret = (data != NULL && size > 0 && p_days_secs != NULL && p_hours_secs != NULL &&
-          p_hash_mod != NULL && p_file_type != NULL && file_name->size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+          p_hash_mod != NULL && p_file_type != NULL && NULL != file_name) ? TFS_SUCCESS : TFS_ERROR;
 
       if (TFS_SUCCESS == ret)
       {
@@ -173,7 +173,7 @@ namespace tfs
         }
 
         //days_secs
-        if (TFS_SUCCESS)
+        if (TFS_SUCCESS == ret)
         {
           ret = Serialization::char_to_int32(data + pos, size - pos, *p_days_secs);
           pos = pos + 4;
@@ -242,7 +242,7 @@ namespace tfs
     {
       int ret = (data != NULL && size > 0 && invalid_time != NULL) ? TFS_SUCCESS : TFS_ERROR;
       int pos = 0;
-      if (TFS_SUCCESS)
+      if (TFS_SUCCESS == ret)
       {
         ret = Serialization::char_to_int32(data + pos, size - pos, *invalid_time);
         pos = pos + 4;

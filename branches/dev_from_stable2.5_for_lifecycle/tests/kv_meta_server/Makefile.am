@@ -19,9 +19,9 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_split_key test_bucket test_object
-TESTS+=test_split_key test_bucket
-check_PROGRAMS+=test_split_key test_bucket test_object
+noinst_PROGRAMS=test_split_key test_bucket test_object test_life_cycle
+TESTS+=test_split_key test_bucket test_life_cycle
+check_PROGRAMS+=test_split_key test_bucket test_object test_life_cycle
 
 test_split_key_SOURCES=test_split_key.cpp
 test_split_key_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
@@ -31,3 +31,6 @@ test_bucket_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest
 
 test_object_SOURCES=test_object.cpp test_kvengine.cpp
 test_object_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest
+
+test_life_cycle_SOURCES=test_lifecycle.cpp test_kvengine.cpp
+test_life_cycle_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest

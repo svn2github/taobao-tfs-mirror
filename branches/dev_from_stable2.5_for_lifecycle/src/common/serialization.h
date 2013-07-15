@@ -704,7 +704,6 @@ namespace tfs
         v |= static_cast<unsigned char>(data[2]);
         v = v << 8;
         v |= static_cast<unsigned char>(data[3]);
-        v = v << 8;
         ret = TFS_SUCCESS;
       }
       return ret;
