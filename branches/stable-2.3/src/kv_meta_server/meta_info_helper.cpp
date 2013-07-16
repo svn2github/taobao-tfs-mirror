@@ -577,14 +577,14 @@ namespace tfs
         *still_have = false;
         if (EXIT_OBJECT_NOT_EXIST == ret)
         {
-          TBSYS_LOG(ERROR, "object not exist");
+          TBSYS_LOG(ERROR, "object %s %s not exist",bucket_name.c_str(),file_name.c_str());
         }
       }
       if (TFS_SUCCESS == ret)
       {
         if (offset > object_info_zero.meta_info_.big_file_size_)
         {
-          TBSYS_LOG(ERROR, "req offset is out of big_file_size_");
+          TBSYS_LOG(ERROR, "object %s %s req offset is out of big_file_size_",bucket_name.c_str(),file_name.c_str());
           ret = EXIT_READ_OFFSET_ERROR;
         }
       }
@@ -665,7 +665,7 @@ namespace tfs
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
             if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
             {//metainfo exist but data not exist
-              TBSYS_LOG(ERROR, "metainfo exist but data not exist");
+              TBSYS_LOG(ERROR, "%s %s metainfo exist but data not exist",bucket_name.c_str(),file_name.c_str());
               ret = EXIT_REQ_OFFSET_NOT_FIND;
             }
             for(i = 0; i < result_size; ++i)
@@ -759,7 +759,7 @@ namespace tfs
       ret = get_object_direct(bucket_name, file_name, offset, length, object_info, still_have);
       if(ret != EXIT_REQ_OFFSET_NOT_FIND)
       {
-        TBSYS_LOG(DEBUG, "*******direct scan success");
+        TBSYS_LOG(DEBUG, "%s %s*******direct scan success",bucket_name.c_str(),file_name.c_str());
         return ret;
       }
       TBSYS_LOG(DEBUG, "*******EXIT_REQ_OFFSET_NOT_FIND need -2M scan");
@@ -775,14 +775,14 @@ namespace tfs
         *still_have = false;
         if (EXIT_OBJECT_NOT_EXIST == ret)
         {
-          TBSYS_LOG(ERROR, "object not exist");
+          TBSYS_LOG(ERROR, "object %s %s not exist", bucket_name.c_str(), file_name.c_str());
         }
       }
       if (TFS_SUCCESS == ret)
       {
         if (offset > object_info_zero.meta_info_.big_file_size_)
         {
-          TBSYS_LOG(ERROR, "req offset is out of big_file_size_");
+          TBSYS_LOG(ERROR, "object %s %s req offset is out of big_file_size_", bucket_name.c_str(), file_name.c_str());
           ret = EXIT_READ_OFFSET_ERROR;
         }
       }
