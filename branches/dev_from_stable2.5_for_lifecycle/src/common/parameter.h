@@ -279,6 +279,7 @@ namespace tfs
       int tair_lifecycle_area_;
       uint64_t ers_ip_port_;
       uint64_t es_ip_port_;
+      int re_clean_days_;
 
       int initialize(const std::string& config_file);
 

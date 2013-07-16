@@ -11,8 +11,8 @@
  *   qixiao.zs<qixiao.zs@alibaba-inc.com>
  *      - initial release
  */
-#ifndef TFS_EXPIRE_SERVER_HEART_MANAGER_H_
-#define TFS_EXPIRE_SERVER_HEART_MANAGER_H_
+#ifndef TFS_LIFE_CYCLE_MANAGER_EXPIRE_SERVER_HEART_MANAGER_H_
+#define TFS_LIFE_CYCLE_MANAGER_EXPIRE_SERVER_HEART_MANAGER_H_
 
 #include <tbsys.h>
 #include <Monitor.h>

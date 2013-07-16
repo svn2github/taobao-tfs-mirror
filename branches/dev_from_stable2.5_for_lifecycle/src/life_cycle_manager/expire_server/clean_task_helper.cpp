@@ -29,6 +29,8 @@ namespace tfs
     const int32_t KEY_BUFF_SIZE = 512 + 8 + 8;
     const int32_t VALUE_BUFF_SIZE = 512;
     const int32_t SCAN_LIMIT = 1000;
+    const int32_t SEC_ONE_DAY = 24 * 60 * 60;
+    const int32_t MAX_INT32 = (1<<31) - 1;
 
     enum
     {
@@ -119,10 +121,12 @@ namespace tfs
     int CleanTaskHelper::clean_task(const int32_t total_es, const int32_t num_es,
                                     const int32_t note_interval, const int32_t task_time)
     {
-      UNUSED(note_interval);
       int32_t ret;
       int32_t days_secs;
       int32_t hours_secs;
+      int32_t relative_days_secs;
+      int32_t relative_hours_secs;
+      int32_t zero_secs;
       int32_t hash_mod;
       int32_t start_bucket_num;
       int32_t end_bucket_num;
@@ -161,95 +165,107 @@ namespace tfs
           KvKey start_key;
           KvKey end_key;
           int64_t sum_file_num = 0;
+          int32_t day_num;
           int64_t first, second;
           first = Func::get_monotonic_time();
+          zero_secs = 0;
 
 
           for (hash_mod = start_bucket_num; hash_mod <= end_bucket_num; ++hash_mod)
           {
-            if (TFS_SUCCESS == ret)
+            for (day_num = SYSPARAM_EXPIRESERVER.re_clean_days_; day_num >= 0; --day_num)
             {
-              ret = ExpireDefine::serialize_exptime_app_key(days_secs, hours_secs,
-                                                               hash_mod, 0, file_name,
-                    &start_key, start_key_buff, KEY_BUFF_SIZE);
-            }
-            if (TFS_SUCCESS == ret)
-            {
-              ret = ExpireDefine::serialize_exptime_app_key(days_secs, hours_secs,
-                                                               hash_mod, 3, file_name,
-                    &end_key, end_key_buff, KEY_BUFF_SIZE);
-            }
+              relative_days_secs = days_secs - day_num * SEC_ONE_DAY;
+              if (day_num != 0)
+              {
+                relative_hours_secs = SEC_ONE_DAY;
+              }
+              relative_hours_secs = hours_secs;
 
-            int32_t i;
-            int32_t first = 0;
-            bool go_on = true;
-            short scan_type = CMD_RANGE_ALL;//scan all
-            int32_t t_days_secs;
-            int32_t t_hours_secs;
-            int32_t t_hash_num;
-            int32_t t_file_type;
-            int64_t t_len;
-            std::string t_file_name;
-            OriInvalidTimeValueInfo value_info;
-            vector<KvValue*> kv_value_keys;
-            vector<KvValue*> kv_value_values;
-
-            while (go_on)
-            {
-              int32_t result_size = 0;
-              ret = kv_engine_helper_->scan_keys(tair_lifecycle_area_, start_key, end_key, SCAN_LIMIT, first,
-                                                 &kv_value_keys, &kv_value_values,
-                                                 &result_size, scan_type);
-              if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
-              {//no data
-                TBSYS_LOG(ERROR, "data not exist");
-                ret = TFS_SUCCESS;
+              if (TFS_SUCCESS == ret)
+              {
+                ret = ExpireDefine::serialize_exptime_app_key(relative_days_secs,
+                          zero_secs, hash_mod, 0, file_name,
+                          &start_key, start_key_buff, KEY_BUFF_SIZE);
+              }
+              if (TFS_SUCCESS == ret)
+              {
+                ret = ExpireDefine::serialize_exptime_app_key(relative_days_secs,
+                          relative_hours_secs, hash_mod, MAX_INT32, file_name,
+                          &end_key, end_key_buff, KEY_BUFF_SIZE);
               }
 
-              for(i = 0; i < result_size; ++i)
-              {
-                ret = ExpireDefine::deserialize_exptime_app_key(kv_value_keys[i]->get_data(),
-                                             kv_value_keys[i]->get_size(),
-                                             &t_days_secs, &t_hours_secs, &t_hash_num,
-                                             &t_file_type, &t_file_name);
-                t_len = 0;
-                ret = value_info.deserialize(kv_value_values[i]->get_data(),
-                                             (int64_t) kv_value_values[i]->get_size(),
-                                             t_len);
-                sum_file_num++;
-                second = Func::get_monotonic_time();
+              int32_t i;
+              int32_t first = 0;
+              bool go_on = true;
+              short scan_type = CMD_RANGE_ALL;//scan all
+              int32_t t_days_secs;
+              int32_t t_hours_secs;
+              int32_t t_hash_num;
+              int32_t t_file_type;
+              int64_t t_len;
+              std::string t_file_name;
+              OriInvalidTimeValueInfo value_info;
+              vector<KvValue*> kv_value_keys;
+              vector<KvValue*> kv_value_values;
 
-                if ((int32_t)(second - first) > note_interval)
-                {
-                   first = second;
-                   take_note(num_es, task_time, hash_mod, sum_file_num);
+              while (go_on)
+              {
+                int32_t result_size = 0;
+                ret = kv_engine_helper_->scan_keys(tair_lifecycle_area_, start_key, end_key, SCAN_LIMIT, first,
+                                                   &kv_value_keys, &kv_value_values,
+                                                   &result_size, scan_type);
+                if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+                {//no data
+                  TBSYS_LOG(ERROR, "data not exist");
+                  ret = TFS_SUCCESS;
                 }
 
+                for(i = 0; i < result_size; ++i)
+                {
+                  ret = ExpireDefine::deserialize_exptime_app_key(kv_value_keys[i]->get_data(),
+                                               kv_value_keys[i]->get_size(),
+                                               &t_days_secs, &t_hours_secs, &t_hash_num,
+                                               &t_file_type, &t_file_name);
+                  t_len = 0;
+                  ret = value_info.deserialize(kv_value_values[i]->get_data(),
+                                               (int64_t) kv_value_values[i]->get_size(),
+                                               t_len);
+                  sum_file_num++;
+                  second = Func::get_monotonic_time();
 
-                //TODO send send nginx
-              }
+                  if ((int32_t)(second - first) > note_interval)
+                  {
+                     first = second;
+                     take_note(num_es, task_time, hash_mod, sum_file_num);
+                  }
 
-              TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
 
-              if(result_size == SCAN_LIMIT)
-              {
-                first = 1;
-                ret = ExpireDefine::serialize_exptime_app_key(days_secs, hours_secs, hash_mod, t_file_type,
-                      t_file_name, &start_key, start_key_buff, KEY_BUFF_SIZE);
-              }
-              else
-              {
-                go_on = false;
-              }
+                  //TODO send send nginx
+                }
 
-              for(i = 0; i < result_size; ++i)//free kv
-              {
-                kv_value_keys[i]->free();
-                kv_value_values[i]->free();
-              }
-              kv_value_keys.clear();
-              kv_value_values.clear();
-            }//end while
+                TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
+
+                if(result_size == SCAN_LIMIT)
+                {
+                  first = 1;
+                  ret = ExpireDefine::serialize_exptime_app_key(days_secs, hours_secs, hash_mod, t_file_type,
+                        t_file_name, &start_key, start_key_buff, KEY_BUFF_SIZE);
+                }
+                else
+                {
+                  go_on = false;
+                }
+
+                for(i = 0; i < result_size; ++i)//free kv
+                {
+                  kv_value_keys[i]->free();
+                  kv_value_values[i]->free();
+                }
+                kv_value_keys.clear();
+                kv_value_values.clear();
+              }//end while
+            }//end for day_num
           }//end for hash mod
 
           if (NULL != start_key_buff)

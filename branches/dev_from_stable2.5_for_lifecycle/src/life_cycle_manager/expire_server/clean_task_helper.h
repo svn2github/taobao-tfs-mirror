@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef TFS_EXPIRE_CLEAN_TASK_HELPER_H_
-#define TFS_EXPIRE_CLEAN_TASK_HELPER_H_
+#ifndef TFS_LIFE_CYCLE_MANAGER_EXPIRE_CLEAN_TASK_HELPER_H_
+#define TFS_LIFE_CYCLE_MANAGER_EXPIRE_CLEAN_TASK_HELPER_H_
 
 #include "common/parameter.h"
 #include "common/base_service.h"

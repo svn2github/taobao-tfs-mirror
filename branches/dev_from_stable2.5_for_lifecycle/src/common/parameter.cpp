@@ -669,7 +669,7 @@ namespace tfs
       tair_slave_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_SLAVE, "");
       tair_group_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_GROUP, "");
       tair_lifecycle_area_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_TAIR_LIFECYCLE_AREA, -1);
-
+      re_clean_days_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_EXPIRE_RE_CLEAN_DAYS, 3);
       if (TFS_SUCCESS == ret)
       {
         std::string ips1 = TBSYS_CONFIG.getString(CONF_SN_EXPIRESERVER, CONF_EXPIRE_ROOT_SERVER_IPPORT, "");
