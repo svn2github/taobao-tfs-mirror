@@ -301,7 +301,6 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
     req_po_msg.set_object_info(object_info);
     req_po_msg.set_user_info(user_info);
 
-
     tbnet::Packet* rsp = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
     ret = send_msg_to_server(server_id, client, &req_po_msg, rsp, ClientConfig::wait_timeout_);
