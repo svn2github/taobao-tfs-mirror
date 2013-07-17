@@ -36,6 +36,7 @@ namespace tfs
     static int32_t MAX_TIMEOUT_MS = 500;
 
     ExpireService::ExpireService()
+      :clean_task_helper_(),heart_manager_(clean_task_helper_)
     {
     }
 

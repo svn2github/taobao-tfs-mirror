@@ -23,7 +23,8 @@
 #include "common/kvengine_helper.h"
 #include "common/expire_define.h"
 #include "message/message_factory.h"
-#include "tfs_r_client_api.h"
+//#include "tfs_r_client_api.h"
+
 namespace tfs
 {
   namespace expireserver
@@ -38,6 +39,8 @@ namespace tfs
         int clean_task(const int32_t total_es, const int32_t num_es,
                        const int32_t note_interval, const int32_t task_time);
 
+        int32_t get_task_state();
+
       private:
         int take_note(const int32_t num_es, const int32_t task_time,
                       const int32_t hash_bucket_num, const int64_t sum_file_num);
@@ -47,6 +50,7 @@ namespace tfs
         int32_t tair_lifecycle_area_;
         uint64_t local_ipport_;
       private:
+        int32_t clean_task_state_;
         DISALLOW_COPY_AND_ASSIGN(CleanTaskHelper);
     };
   }

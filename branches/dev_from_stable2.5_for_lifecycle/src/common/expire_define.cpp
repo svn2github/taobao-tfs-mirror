@@ -399,7 +399,7 @@ namespace tfs
 
     int64_t ExpServerBaseInformation::length() const
     {
-      return INT64_SIZE * 3  + INT_SIZE;
+      return INT64_SIZE * 3 + INT_SIZE;
     }
 
     //ExpRootServerLease

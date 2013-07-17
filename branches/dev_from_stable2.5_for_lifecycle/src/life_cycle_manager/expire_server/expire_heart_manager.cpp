@@ -33,10 +33,11 @@ namespace tfs
   {
     const int8_t  ExpireHeartManager::MAX_RETRY_COUNT = 2;
     const int16_t ExpireHeartManager::MAX_TIMEOUT_MS  = 500;//ms
-    ExpireHeartManager::ExpireHeartManager():
+    ExpireHeartManager::ExpireHeartManager(CleanTaskHelper &cleantask):
       heart_thread_(0),
       destroy_(false),
-      heart_inter_(2)
+      heart_inter_(2),
+      ref_clean_helper_(cleantask)
     {
     }
 
@@ -85,6 +86,7 @@ namespace tfs
       common::ExpServerBaseInformation base_info;
       base_info.id_ = es_ipport_id_;
       base_info.start_time_ = start_time_;
+      base_info.task_status_ = ref_clean_helper_.get_task_state();
       ReqRtsEsHeartMessage msg;
       msg.set_es(base_info);
 

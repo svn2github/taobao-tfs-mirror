@@ -22,15 +22,17 @@
 #include <Handle.h>
 #include "common/kv_rts_define.h"
 #include "common/error_msg.h"
+#include "clean_task_helper.h"
 
 namespace tfs
 {
   namespace expireserver
   {
+    class CleanTaskHelper;
     class ExpireHeartManager
     {
       public:
-        ExpireHeartManager();
+        ExpireHeartManager(CleanTaskHelper &cleantask);
         virtual ~ExpireHeartManager();
 
         int initialize(uint64_t rs_ipport_id, uint64_t ms_ipport_id, int64_t start_time);
@@ -62,6 +64,7 @@ namespace tfs
         uint64_t es_ipport_id_;
         int64_t start_time_;
         int64_t heart_inter_;
+        CleanTaskHelper &ref_clean_helper_;
 
     };
   }/** namemetaserver **/
