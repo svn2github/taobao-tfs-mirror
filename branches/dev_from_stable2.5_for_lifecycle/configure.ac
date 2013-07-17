@@ -242,6 +242,7 @@ AC_CONFIG_FILES([Makefile
                  src/kv_meta_server/Makefile
                  src/rootserver/Makefile
                  src/life_cycle_manager/Makefile
+                 src/life_cycle_manager/root_manager/Makefile
                  src/life_cycle_manager/expire_server/Makefile
                  src/tools/Makefile
                  src/tools/rcserver/Makefile

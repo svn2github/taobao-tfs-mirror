@@ -108,44 +108,104 @@ namespace tfs
           reserve_ = reserve;
         }
 
+        uint64_t get_es_id() const
+        {
+          return es_id_;
+        }
+
+        void set_es_id(const uint64_t es_id)
+        {
+          es_id_ = es_id;
+        }
+
       private:
+        uint64_t es_id_;
         int32_t reserve_;
     };
 
-    class RtsEsHeartMessage: public common::BasePacket
+    class ReqRtsEsHeartMessage: public common::BasePacket
     {
       public:
-        RtsEsHeartMessage();
-        virtual ~RtsEsHeartMessage();
+        ReqRtsEsHeartMessage();
+        virtual ~ReqRtsEsHeartMessage();
 
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        inline common::ExpServerBaseInformation& get_es(void) { return base_info_;}
+        inline common::ExpServerBaseInformation& get_mutable_es(void) { return base_info_;}
         inline void set_es(const common::ExpServerBaseInformation& base_info){ memcpy(&base_info_, &base_info, sizeof(common::ExpServerBaseInformation));}
 
       private:
         common::ExpServerBaseInformation base_info_;
     };
 
-    class RtsEsHeartResponseMessage: public common::BasePacket
+    class RspRtsEsHeartMessage: public common::BasePacket
     {
       public:
-        RtsEsHeartResponseMessage();
-        virtual ~RtsEsHeartResponseMessage();
+        RspRtsEsHeartMessage();
+        virtual ~RspRtsEsHeartMessage();
 
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
         inline int32_t get_time(void) { return heart_interval_;}
-        inline void set_time(int32_t& heart_interval){ heart_interval_ = heart_interval;}
+        inline void set_time(const int32_t heart_interval){ heart_interval_ = heart_interval;}
 
       private:
         int32_t heart_interval_;
     };
 
+    class ReqQueryProgressMessage: public common::BasePacket
+    {
+      public:
+        ReqQueryProgressMessage();
+        virtual ~ReqQueryProgressMessage();
+        virtual int serialize(common::Stream &output) const;
+        virtual int deserialize(common::Stream &input);
+        virtual int64_t length() const;
 
+        inline uint64_t get_es_id() const {return es_id_;}
+        inline void set_es_id(const uint64_t es_id) {es_id_ = es_id;}
 
+        inline int32_t get_es_num() const {return es_num_;}
+        inline void set_es_num(const int32_t es_num) {es_num_ = es_num;}
+
+        inline int32_t get_task_time() const {return task_time_;}
+        inline void set_task_time(const int32_t task_time) {task_time_ = task_time;}
+
+        inline int32_t get_hash_bucket_id() const {return hash_bucket_id_;}
+        inline void set_hash_bucket_id(const int32_t hash_bucket_id) {hash_bucket_id_ = hash_bucket_id;}
+
+        inline common::ExpireTaskType get_expire_task_type() const {return type_;}
+        inline void set_expire_task_type(common::ExpireTaskType &type){type_ = type;}
+
+      private:
+        uint64_t es_id_;
+        int32_t es_num_;
+        int32_t task_time_;
+        int32_t hash_bucket_id_;
+        common::ExpireTaskType type_;
+    };
+
+    class RspQueryProgressMessage: public common::BasePacket
+    {
+      public:
+        RspQueryProgressMessage();
+        virtual ~RspQueryProgressMessage();
+        virtual int serialize(common::Stream &output) const;
+        virtual int deserialize(common::Stream &input);
+        virtual int64_t length() const;
+
+        inline int32_t get_sum_file_num() const {return sum_file_num_;}
+        inline void set_sum_file_num(const int32_t sum_file_num) {sum_file_num_ = sum_file_num;}
+
+        inline int32_t get_current_percent() const {return current_percent_;}
+        inline void set_current_percent(const int32_t current_percent) {current_percent_ = current_percent;}
+
+      private:
+        int32_t sum_file_num_;
+        int32_t current_percent_;
+    };
 
   }
 }

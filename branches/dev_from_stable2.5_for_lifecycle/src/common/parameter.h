@@ -283,6 +283,13 @@ namespace tfs
       int re_clean_days_;
       std::string es_appkey_;
 
+      int32_t es_rts_lease_expired_time_;  //4s
+      int32_t es_rts_check_lease_interval_; //1s
+      int32_t es_rts_heart_interval_;      //2s
+
+      int32_t safe_mode_time_;
+
+
       int initialize(const std::string& config_file);
 
       static ExpireServerParameter expire_server_parameter_;

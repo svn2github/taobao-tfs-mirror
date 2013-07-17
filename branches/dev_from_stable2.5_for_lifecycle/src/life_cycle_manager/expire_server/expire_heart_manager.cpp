@@ -85,7 +85,7 @@ namespace tfs
       common::ExpServerBaseInformation base_info;
       base_info.id_ = es_ipport_id_;
       base_info.start_time_ = start_time_;
-      RtsEsHeartMessage msg;
+      ReqRtsEsHeartMessage msg;
       msg.set_es(base_info);
 
       NewClient* client = NULL;
@@ -106,7 +106,7 @@ namespace tfs
           iret = response->getPCode() == RSP_RT_ES_KEEPALIVE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == iret)
           {
-            RtsEsHeartResponseMessage* rmsg = dynamic_cast<RtsEsHeartResponseMessage*>(response);
+            RspRtsEsHeartMessage* rmsg = dynamic_cast<RspRtsEsHeartMessage*>(response);
             heart_inter_ = rmsg->get_time();
           }
         }

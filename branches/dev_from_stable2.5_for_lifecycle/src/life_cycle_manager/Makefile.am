@@ -1,3 +1,3 @@
 AUTOMAKE_OPTIONS=foreign
 
-SUBDIRS = expire_server
+SUBDIRS = root_manager expire_server

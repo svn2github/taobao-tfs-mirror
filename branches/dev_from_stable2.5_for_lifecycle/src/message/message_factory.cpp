@@ -471,14 +471,20 @@ namespace tfs
           case common::REQ_EXPIRE_CLEAN_TASK_MESSAGE:
             packet = new ReqCleanTaskFromRtsMessage();
             break;
-          case common::REQ_EXPIRE_FINISH_TASK_MESSAGE:
+          case common::REQ_RT_FINISH_TASK_MESSAGE:
             packet = new ReqFinishTaskFromEsMessage();
             break;
           case common::REQ_RT_ES_KEEPALIVE_MESSAGE:
-            packet = new RtsEsHeartMessage();
+            packet = new ReqRtsEsHeartMessage();
             break;
           case common::RSP_RT_ES_KEEPALIVE_MESSAGE:
-            packet = new RtsEsHeartResponseMessage();
+            packet = new RspRtsEsHeartMessage();
+            break;
+          case common::REQ_QUERY_PROGRESS_MESSAGE:
+            packet = new ReqQueryProgressMessage();
+            break;
+          case common::RSP_QUERY_PROGRESS_MESSAGE:
+            packet = new RspQueryProgressMessage();
             break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
