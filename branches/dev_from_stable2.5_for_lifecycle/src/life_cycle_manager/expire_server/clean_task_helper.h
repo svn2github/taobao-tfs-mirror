@@ -23,8 +23,7 @@
 #include "common/kvengine_helper.h"
 #include "common/expire_define.h"
 #include "message/message_factory.h"
-
-
+#include "tfs_r_client_api.h"
 namespace tfs
 {
   namespace expireserver

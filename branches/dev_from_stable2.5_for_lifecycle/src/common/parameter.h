@@ -279,7 +279,9 @@ namespace tfs
       int tair_lifecycle_area_;
       uint64_t ers_ip_port_;
       uint64_t es_ip_port_;
+      std::string nginx_root_;
       int re_clean_days_;
+      std::string es_appkey_;
 
       int initialize(const std::string& config_file);
 

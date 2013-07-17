@@ -215,6 +215,8 @@ namespace tfs
 #define CONF_EXPIRE_SERVER_IPPORT                     "es_ip_port"
 #define CONF_EXPIRE_ROOT_SERVER_IPPORT                "ers_ip_port_"
 #define CONF_EXPIRE_RE_CLEAN_DAYS                     "re_clean_days_"
+#define CONF_ES_NGINX_ROOT                            "nginx_root_"
+#define CONF_ES_APPKEY                                "es_appkey_"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_
