@@ -157,6 +157,20 @@ namespace tfs
 
         ret = prefix_put_to_tair(area,
             t_pkey, t_skey, tvalue, version);
+
+        if (TAIR_RETURN_SUCCESS != ret)
+        {
+          TBSYS_LOG(INFO, "tair ret: %d", ret);
+          if (TAIR_RETURN_VERSION_ERROR == ret)
+          {
+            TBSYS_LOG(WARN, "put to tair version error.");
+            ret = EXIT_KV_RETURN_VERSION_ERROR;
+          }
+          else
+          {
+            ret = EXIT_KV_RETURN_ERROR;
+          }
+        }
       }
       return ret;
     }
@@ -165,17 +179,16 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       int tair_ret;
-      UNUSED(version);
       data_entry pkey(key.key_, key.key_size_);
       data_entry pvalue(value.get_data(), value.get_size());
-      tair_ret = tair_client_->put(area, pkey, pvalue, 0, 0);
+      tair_ret = tair_client_->put(area, pkey, pvalue, 0, version);
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
         TBSYS_LOG(INFO, "tair ret: %d", tair_ret);
         ret = EXIT_KV_RETURN_ERROR;
         if (TAIR_RETURN_VERSION_ERROR == tair_ret)
         {
-          TBSYS_LOG(WARN, "put bucket to tair version error.");
+          TBSYS_LOG(WARN, "put to tair version error.");
           ret = EXIT_KV_RETURN_VERSION_ERROR;
         }
       }
