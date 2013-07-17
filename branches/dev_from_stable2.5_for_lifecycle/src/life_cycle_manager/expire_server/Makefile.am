@@ -1,16 +1,15 @@
 AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
             -I$(TBLIB_ROOT)/include/tbnet \
-						  $(TAIR_META_CPPFLAGS)\
-							-I$(TRES_ROOT)
-AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid -ljson -lcurl $(TAIR_META_LDFLAGS)
+						  $(TAIR_META_CPPFLAGS)
+
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid $(TAIR_META_LDFLAGS)
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
 			$(TAIR_META_LDFLAGS) \
       $(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a \
-			$(TRES_ROOT)/libtfs_cpp_restful_client.a
+      $(TBLIB_ROOT)/lib/libtbsys.a
 
 noinst_LIBRARIES=libexpireserver.a
 
