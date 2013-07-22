@@ -66,6 +66,10 @@ namespace tfs
                                 const int32_t task_time, const int32_t hash_bucket_num,
                                 const int64_t sum_file_num, common::KvKey *key,
                                 char *data, const int32_t size);
+      static int deserialize_es_stat_key(const char *data, const int32_t size,
+                                  uint64_t *es_id, int32_t* es_num,
+                                  int32_t* task_time, int32_t *hash_bucket_num, int32_t *sum_file_num);
+
       static int transfer_time(const int32_t time, int32_t *p_days_secs, int32_t *p_hours_secs);
     };
 

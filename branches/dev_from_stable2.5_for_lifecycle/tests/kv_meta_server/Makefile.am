@@ -7,9 +7,10 @@ AM_CPPFLAGS=-I${top_srcdir}/src/kv_meta_server \
 AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest $(TAIR_META_LDFLAGS)
 
 LDADD=$(top_builddir)/src/kv_meta_server/libkvmetaserver.a \
+			$(top_builddir)/src/life_cycle_manager/root_manager/librootserver.a\
 			$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a \
-      $(TAIR_META_LDFLAGS)\
+			$(TAIR_META_LDFLAGS)\
 			$(TBLIB_ROOT)/lib/libtbnet.a \
 			$(TBLIB_ROOT)/lib/libtbsys.a
 
@@ -19,9 +20,9 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_split_key test_bucket test_object test_life_cycle
-TESTS+=test_split_key test_bucket test_life_cycle
-check_PROGRAMS+=test_split_key test_bucket test_object test_life_cycle
+noinst_PROGRAMS=test_split_key test_bucket test_object test_life_cycle test_life_cycle_rootserver
+TESTS+=test_split_key test_bucket test_life_cycle test_life_cycle_rootserver
+check_PROGRAMS+=test_split_key test_bucket test_object test_life_cycle test_life_cycle_rootserver
 
 test_split_key_SOURCES=test_split_key.cpp
 test_split_key_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
@@ -34,3 +35,6 @@ test_object_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest
 
 test_life_cycle_SOURCES=test_lifecycle.cpp test_kvengine.cpp
 test_life_cycle_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest
+
+test_life_cycle_rootserver_SOURCES=test_lifecycle_rootserver.cpp test_kvengine.cpp
+test_life_cycle_rootserver_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest

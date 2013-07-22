@@ -32,11 +32,11 @@ namespace tfs
 {
   namespace exprootserver
   {
-    ExpServerManager::ExpServerManager(ExpRootServer &exp_root_server):
+    ExpServerManager::ExpServerManager(HandleTaskHelper &handle_task_helper):
       check_es_lease_thread_(0),
       initialize_(false),
       destroy_(false),
-      exp_root_server_(exp_root_server)
+      handle_task_helper_(handle_task_helper)
     {
 
     }
@@ -105,7 +105,8 @@ namespace tfs
 
       tbutil::Mutex::Lock lock(mutex_);
 
-      down_servers_.clear();
+      VUINT64 down_servers;
+      down_servers.clear();
 
       EXP_SERVER_MAPS_ITER iter = servers_.begin();
       for (; iter != servers_.end(); )
@@ -116,7 +117,7 @@ namespace tfs
         if (!iter->second.lease_.has_valid_lease(now.toSeconds()))
         {
           TBSYS_LOG(INFO, "%s lease expired, must be delete", tbsys::CNetUtil::addrToString(iter->first).c_str());
-          down_servers_.push_back(iter->first);
+          down_servers.push_back(iter->first);
           servers_.erase(iter++);
           need_move_ = true;
         }
@@ -132,7 +133,7 @@ namespace tfs
       }
       if (need_move_)
       {
-        exp_root_server_.handle_fail_servers(down_servers_);
+        handle_task_helper_.handle_fail_servers(down_servers);
         move_table();
       }
 

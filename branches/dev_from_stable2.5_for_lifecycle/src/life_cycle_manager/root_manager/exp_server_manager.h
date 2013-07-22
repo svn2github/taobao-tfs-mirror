@@ -33,11 +33,11 @@ namespace tfs
 {
   namespace exprootserver
   {
-    class ExpRootServer;
+    class HandleTaskHelper;
     class ExpServerManager
     {
       public:
-        ExpServerManager(ExpRootServer &exp_root_server);
+        ExpServerManager(HandleTaskHelper &handle_task_helper);
         virtual ~ExpServerManager();
         int initialize();
         void destroy();
@@ -67,7 +67,6 @@ namespace tfs
       private:
         common::EXP_SERVER_MAPS servers_;
         common::ExpTable exp_table_;
-        common::VUINT64 down_servers_;
         volatile uint64_t lease_id_factory_;
 
         CheckExpServerLeaseThreadHelperPtr check_es_lease_thread_;
@@ -79,7 +78,7 @@ namespace tfs
         int64_t root_start_time_;
         tbutil::Mutex mutex_; //lock for servers_
         tbutil::Mutex mutex_for_get_; //lock for exp_table_
-        ExpRootServer &exp_root_server_;
+        HandleTaskHelper &handle_task_helper_;
       private:
         DISALLOW_COPY_AND_ASSIGN(ExpServerManager);
     };

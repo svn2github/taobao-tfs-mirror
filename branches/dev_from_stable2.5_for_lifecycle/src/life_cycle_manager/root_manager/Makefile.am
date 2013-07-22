@@ -15,9 +15,9 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 
 noinst_LIBRARIES=librootserver.a
 
-ROOTSERVER_SOURCE_LIST_HEADER=exp_root_server.h exp_server_manager.h query_task_helper.h #global_factory.h exp_server_heart_manager.h 
+ROOTSERVER_SOURCE_LIST_HEADER=exp_root_server.h exp_server_manager.h handle_task_helper.h #global_factory.h exp_server_heart_manager.h 
 
-ROOTSERVER_SOURCE_LIST=exp_root_server.cpp exp_server_manager.cpp query_task_helper.cpp\
+ROOTSERVER_SOURCE_LIST=exp_root_server.cpp exp_server_manager.cpp handle_task_helper.cpp\
 											 $(tair_kv_source) $(ROOTSERVER_SOURCE_LIST_HEADER) #global_factory.cpp exp_server_heart_manager.cpp
 
 

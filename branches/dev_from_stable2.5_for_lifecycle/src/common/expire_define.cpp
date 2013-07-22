@@ -218,6 +218,7 @@ namespace tfs
       }
       return ret;
     }
+
     int ExpireDefine::serialize_name_expiretime_value(const int32_t invalid_time,
           common::KvMemValue *value, char *data, const int32_t size)
     {
@@ -251,7 +252,6 @@ namespace tfs
       return ret;
     }
 
-
     int ExpireDefine::serialize_es_stat_key(const uint64_t local_ipport, const int32_t num_es,
         const int32_t task_time, const int32_t hash_bucket_num, const int64_t sum_file_num,
         KvKey *key, char *data, const int32_t size)
@@ -259,41 +259,114 @@ namespace tfs
       int ret = (local_ipport > 0 && hash_bucket_num < ExpireDefine::HASH_BUCKET_NUM
           && key != NULL &&  data != NULL ) ? TFS_SUCCESS : TFS_ERROR;
       int64_t pos = 0;
-        //key type ori tfs note key
-        if (TFS_SUCCESS == ret && (pos + 1) < size)
+      //key type ori tfs note key
+      if (TFS_SUCCESS == ret && (pos + 1) < size)
+      {
+        data[pos++] = KvKey::KEY_TYPE_ES_STAT;
+      }
+      else
+      {
+        ret = TFS_ERROR;
+      }
+
+      //local_ipport
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::int64_to_char(data + pos, size - pos, local_ipport);
+        pos = pos + 8;
+      }
+
+      //num_es
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::int32_to_char(data + pos, size - pos, num_es);
+        pos = pos + 4;
+      }
+
+      //task_time
+      if (TFS_SUCCESS == ret && (pos + 4) < size)
+      {
+        ret = Serialization::int32_to_char(data + pos, size - pos, task_time);
+        pos = pos + 4;
+      }
+
+      //DELIMITER split pk . sk
+      if (TFS_SUCCESS == ret && (pos + 1) < size)
+      {
+        data[pos++] = KvKey::DELIMITER;
+      }
+      else
+      {
+        ret = TFS_ERROR;
+      }
+
+      //hash_bucket_num
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::int32_to_char(data + pos, size - pos, hash_bucket_num);
+        pos = pos + 4;
+      }
+
+      //sum_file_num
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::int64_to_char(data + pos, size - pos, sum_file_num);
+        pos = pos + 8;
+      }
+
+
+      if (TFS_SUCCESS == ret)
+      {
+        key->key_ = data;
+        key->key_size_ = pos;
+        key->key_type_ = KvKey::KEY_TYPE_ES_STAT;
+      }
+      return ret;
+    }
+
+    int ExpireDefine::deserialize_es_stat_key(const char *data, const int32_t size,
+        uint64_t *es_id, int32_t* es_num, int32_t* task_time, int32_t *hash_bucket_num, int32_t *sum_file_num)
+    {
+      int ret = (data != NULL && size > 0 && es_id != NULL && es_num != NULL &&
+          task_time != NULL && hash_bucket_num != NULL && sum_file_num != NULL) ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t pos = 0;
+        //key type ori tfs key
+        if (pos + 1 <= size)
         {
-          data[pos++] = KvKey::KEY_TYPE_ES_STAT;
+          pos++;
         }
         else
         {
           ret = TFS_ERROR;
         }
 
-        //local_ipport
+        //es_id
         if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::int64_to_char(data + pos, size - pos, local_ipport);
-          pos = pos + 8;
+          ret = Serialization::char_to_int64(data + pos, size - pos, *(reinterpret_cast<int64_t*>(es_id)));
+          pos = pos + 4;
         }
 
-        //num_es
+        //es_num
         if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::int32_to_char(data + pos, size - pos, num_es);
+          ret = Serialization::char_to_int32(data + pos, size - pos, *es_num);
           pos = pos + 4;
         }
 
         //task_time
-        if (TFS_SUCCESS == ret && (pos + 4) < size)
+        if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::int32_to_char(data + pos, size - pos, task_time);
-          pos = pos + 4;
+          ret = Serialization::char_to_int32(data + pos, size - pos, *task_time);
         }
 
-        //DELIMITER split pk . sk
-        if (TFS_SUCCESS == ret && (pos + 1) < size)
+        //KvKey::DELIMITER
+        if (pos + 1 <= size)
         {
-          data[pos++] = KvKey::DELIMITER;
+          pos++;
         }
         else
         {
@@ -303,24 +376,16 @@ namespace tfs
         //hash_bucket_num
         if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::int32_to_char(data + pos, size - pos, hash_bucket_num);
+          ret = Serialization::char_to_int32(data + pos, size - pos, *hash_bucket_num);
           pos = pos + 4;
         }
 
         //sum_file_num
         if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::int64_to_char(data + pos, size - pos, sum_file_num);
-          pos = pos + 8;
+          ret = Serialization::char_to_int32(data + pos, size - pos, *sum_file_num);
+          pos = pos + 4;
         }
-
-
-
-      if (TFS_SUCCESS == ret)
-      {
-        key->key_ = data;
-        key->key_size_ = pos;
-        key->key_type_ = KvKey::KEY_TYPE_ES_STAT;
       }
       return ret;
     }
