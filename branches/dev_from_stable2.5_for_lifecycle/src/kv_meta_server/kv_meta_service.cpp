@@ -511,5 +511,92 @@ namespace tfs
       return ret;
     }
 
+    int KvMetaService::set_file_lifecycle(ReqKvMetaSetLifeCycleMessage *req_set_lifecycle_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_set_lifecycle_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::set life cycle fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = life_cycle_helper_.set_file_lifecycle(req_set_lifecycle_msg->get_file_type(),
+                                            req_set_lifecycle_msg->get_file_name(),
+                                            req_set_lifecycle_msg->get_invalid_time_s(),
+                                            req_set_lifecycle_msg->get_app_key());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = req_set_lifecycle_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "set life cycle fail");
+      }
+      else
+      {
+        ret = req_set_lifecycle_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+      }
+      return ret;
+    }
+
+    int KvMetaService::get_file_lifecycle(ReqKvMetaGetLifeCycleMessage *req_get_lifecycle_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_get_lifecycle_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::get_lifecycle fail, ret: %d", ret);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t invalid_time_s = 0;
+        ret = life_cycle_helper_.get_file_lifecycle(req_get_lifecycle_msg->get_file_type(),
+                                           req_get_lifecycle_msg->get_file_name(),
+                                           &invalid_time_s);
+
+        if (TFS_SUCCESS == ret)
+        {
+          RspKvMetaGetLifeCycleMessage* rsp_get_lifecycle_msg = new(std::nothrow) RspKvMetaGetLifeCycleMessage();
+          assert(NULL != rsp_get_lifecycle_msg);
+          rsp_get_lifecycle_msg->set_invalid_time_s(invalid_time_s);
+
+          ret = req_get_lifecycle_msg->reply(rsp_get_lifecycle_msg);
+        }
+        else
+        {
+          ret = req_get_lifecycle_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),
+              ret, "get_lifecycle fail");
+        }
+      }
+      return ret;
+    }
+
+    int KvMetaService::rm_file_lifecycle(ReqKvMetaRmLifeCycleMessage *req_rm_lifecycle_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == req_rm_lifecycle_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::rm lifecycle fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = life_cycle_helper_.rm_life_cycle(req_rm_lifecycle_msg->get_file_type(),
+                                               req_rm_lifecycle_msg->get_file_name());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = req_rm_lifecycle_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "rm life cycle fail");
+      }
+      else
+      {
+        ret = req_rm_lifecycle_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+      }
+      return ret;
+    }
+
   }/** kvmetaserver **/
 }/** tfs **/
