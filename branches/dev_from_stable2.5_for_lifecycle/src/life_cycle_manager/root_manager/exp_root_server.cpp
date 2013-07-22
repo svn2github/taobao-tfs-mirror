@@ -169,10 +169,10 @@ namespace tfs
           switch (pcode)
           {
             case REQ_RT_FINISH_TASK_MESSAGE:
-              iret = handle_finish_task(msg);
+              iret = handle_finish_task(dynamic_cast<ReqFinishTaskFromEsMessage*>(msg));
               break;
             case REQ_QUERY_PROGRESS_MESSAGE:
-              iret = query_progress(msg);
+              iret = query_progress(dynamic_cast<ReqQueryProgressMessage*>(msg));
               break;
             default:
               iret = EXIT_UNKNOWN_MSGTYPE;
@@ -222,39 +222,34 @@ namespace tfs
       return iret;
     }
 
-    int32_t ExpRootServer::handle_finish_task(common::BasePacket *packet)
+    int32_t ExpRootServer::handle_finish_task(ReqFinishTaskFromEsMessage *msg)
     {
-      int32_t iret = NULL != packet ? TFS_SUCCESS : TFS_ERROR;
+      int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        StatusMessage* rsp = new StatusMessage();
-
-        ReqFinishTaskFromEsMessage *msg = dynamic_cast<ReqFinishTaskFromEsMessage*>(packet);
         uint64_t es_id = msg->get_es_id();
 
         iret = handle_task_helper_.handle_finish_task(es_id);
-
         if (TFS_SUCCESS == iret)
         {
-          iret = packet->reply(rsp);
+          iret = msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
         }
         else
         {
-          tbsys::gDelete(rsp);
+          iret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), iret, "handle finish task fail");
         }
       }
 
       return iret;
     }
 
-    int32_t ExpRootServer::query_progress(common::BasePacket *packet)
+    int32_t ExpRootServer::query_progress(ReqQueryProgressMessage *msg)
     {
-      int32_t iret = NULL != packet ? TFS_SUCCESS : TFS_ERROR;
+      int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
         RspQueryProgressMessage* rsp = new RspQueryProgressMessage();
 
-        ReqQueryProgressMessage *msg = dynamic_cast<ReqQueryProgressMessage*>(packet);
         uint64_t es_id = msg->get_es_id();
         int32_t es_num = msg->get_es_num();
         int32_t task_time = msg->get_task_time();
@@ -270,11 +265,11 @@ namespace tfs
         {
           rsp->set_sum_file_num(sum_file_num);
           rsp->set_current_percent(current_percent);
-          iret = packet->reply(rsp);
+          iret = msg->reply(rsp);
         }
         else
         {
-          tbsys::gDelete(rsp);
+          iret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), iret, "query progress task fail");
         }
       }
       return iret;

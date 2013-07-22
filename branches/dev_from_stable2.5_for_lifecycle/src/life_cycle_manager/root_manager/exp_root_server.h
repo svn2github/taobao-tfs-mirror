@@ -13,8 +13,8 @@
  *      - initial release
  *
  */
-#ifndef TFS_EXPROOTSERVER_H_
-#define TFS_EXPROOTSERVER_H_
+#ifndef TFS_LIFECYCLE_ROOTMANAGER_EXPROOTSERVER_H_
+#define TFS_LIFECYCLE_ROOTMANAGER_EXPROOTSERVER_H_
 
 #include <map>
 #include <deque>
@@ -94,8 +94,8 @@ namespace tfs
 
     private:
       int rt_es_keepalive(common::BasePacket* packet);
-      int32_t handle_finish_task(common::BasePacket *packet);
-      int32_t query_progress(common::BasePacket *packet);
+      int32_t handle_finish_task(message::ReqFinishTaskFromEsMessage *msg);
+      int32_t query_progress(message::ReqQueryProgressMessage *msg);
 
     private:
       tbnet::PacketQueueThread rt_es_heartbeat_workers_;

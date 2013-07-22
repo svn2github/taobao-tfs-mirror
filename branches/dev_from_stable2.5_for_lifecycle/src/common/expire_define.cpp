@@ -270,14 +270,14 @@ namespace tfs
       }
 
       //local_ipport
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && (pos + 8) < size)
       {
         ret = Serialization::int64_to_char(data + pos, size - pos, local_ipport);
         pos = pos + 8;
       }
 
       //num_es
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && (pos + 4) < size)
       {
         ret = Serialization::int32_to_char(data + pos, size - pos, num_es);
         pos = pos + 4;
@@ -301,14 +301,14 @@ namespace tfs
       }
 
       //hash_bucket_num
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && (pos + 4) < size)
       {
         ret = Serialization::int32_to_char(data + pos, size - pos, hash_bucket_num);
         pos = pos + 4;
       }
 
       //sum_file_num
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && (pos + 8) < size)
       {
         ret = Serialization::int64_to_char(data + pos, size - pos, sum_file_num);
         pos = pos + 8;
@@ -325,7 +325,7 @@ namespace tfs
     }
 
     int ExpireDefine::deserialize_es_stat_key(const char *data, const int32_t size,
-        uint64_t *es_id, int32_t* es_num, int32_t* task_time, int32_t *hash_bucket_num, int32_t *sum_file_num)
+        uint64_t *es_id, int32_t* es_num, int32_t* task_time, int32_t *hash_bucket_num, int64_t *sum_file_num)
     {
       int ret = (data != NULL && size > 0 && es_id != NULL && es_num != NULL &&
           task_time != NULL && hash_bucket_num != NULL && sum_file_num != NULL) ? TFS_SUCCESS : TFS_ERROR;
@@ -347,7 +347,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = Serialization::char_to_int64(data + pos, size - pos, *(reinterpret_cast<int64_t*>(es_id)));
-          pos = pos + 4;
+          pos = pos + 8;
         }
 
         //es_num
@@ -361,6 +361,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = Serialization::char_to_int32(data + pos, size - pos, *task_time);
+          pos = pos + 4;
         }
 
         //KvKey::DELIMITER
@@ -383,8 +384,8 @@ namespace tfs
         //sum_file_num
         if (TFS_SUCCESS == ret)
         {
-          ret = Serialization::char_to_int32(data + pos, size - pos, *sum_file_num);
-          pos = pos + 4;
+          ret = Serialization::char_to_int64(data + pos, size - pos, *sum_file_num);
+          pos = pos + 8;
         }
       }
       return ret;

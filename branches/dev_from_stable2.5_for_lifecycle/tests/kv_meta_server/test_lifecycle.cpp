@@ -73,6 +73,33 @@ TEST_F(LifeCycleMetaTest, test_serialize_name_expiretime_key)
   EXPECT_EQ(ExpireDefine::FILE_TYPE_RAW_TFS, file_type);
   EXPECT_EQ("addds", filename);
 }
+
+TEST_F(LifeCycleMetaTest, test_serialize_es_stat_key)
+{
+  common::KvKey key;
+  char data[100];
+  int ret = 0;
+  uint64_t es_id = tbsys::CNetUtil::strToAddr("10.232.35.41", 0);
+  int32_t num_es = 10;
+  int32_t task_time = 111000;
+  int32_t hash_bucket_num = 200;
+  int64_t sum_file_num = 100;
+  ret = ExpireDefine::serialize_es_stat_key(es_id, num_es, task_time, hash_bucket_num, sum_file_num, &key, data, 100);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+  uint64_t des_es_id;
+  int32_t des_num_es;
+  int32_t des_task_time;
+  int32_t des_hash_bucket_num;
+  int64_t des_sum_file_num;
+  ret = ExpireDefine::deserialize_es_stat_key(data, 100, &des_es_id, &des_num_es, &des_task_time, &des_hash_bucket_num, &des_sum_file_num);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+  EXPECT_EQ(des_es_id, es_id);
+  EXPECT_EQ(des_num_es, num_es);
+  EXPECT_EQ(des_task_time, task_time);
+  EXPECT_EQ(des_hash_bucket_num, hash_bucket_num);
+  EXPECT_EQ(des_sum_file_num, sum_file_num);
+}
+
 TEST_F(LifeCycleMetaTest, test_serialize_name_expiretime_value)
 {
   common::KvMemValue value;
@@ -137,6 +164,7 @@ TEST_F(LifeCycleMetaTest, rm_life_cycle)
   ret = test_life_cycle_helper_->get_file_lifecycle(1, "adbs", &invalide_time);
   EXPECT_EQ(EXIT_KV_RETURN_DATA_NOT_EXIST, ret);
 }
+
 int main(int argc, char* argv[])
 {
   testing::InitGoogleTest(&argc, argv);

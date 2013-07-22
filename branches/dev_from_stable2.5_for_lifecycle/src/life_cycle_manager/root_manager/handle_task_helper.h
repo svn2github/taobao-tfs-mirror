@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef TFS_ROOT_HANDLE_TASK_HELPER_H_
-#define TFS_ROOT_HANDLE_TASK_HELPER_H_
+#ifndef TFS_LIFECYCLE_ROOTMANAGER_EXPROOTSERVER_HANDLE_TASK_HELPER_H_
+#define TFS_LIFECYCLE_ROOTMANAGER_EXPROOTSERVER_HANDLE_TASK_HELPER_H_
 
 #include "common/parameter.h"
 #include "common/base_service.h"
@@ -48,6 +48,8 @@ namespace tfs
         int assign_task(void);
 
         void get_task_info(std::map<uint64_t, common::ExpireDeleteTask> &m_task_info);
+        void put_task_info(const std::map<uint64_t, common::ExpireDeleteTask> &m_task_info);
+        void get_task_wait(std::deque<common::ExpireDeleteTask> &task_wait);
 
       protected:
         common::KvEngineHelper* kv_engine_helper_;

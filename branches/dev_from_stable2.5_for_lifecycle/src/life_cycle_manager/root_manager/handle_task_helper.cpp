@@ -37,7 +37,7 @@ namespace tfs
     const int16_t MAX_TIMEOUT_MS = 500;
     const int32_t TASK_PERIOD_SECONDS = 60 * 60;
 
-    const int64_t INT64_INFI = 0x7FFFFFFFFFFFFFFF;
+    const int64_t INT64_INFI = 0x7FFFFFFFFFFFFFFFL;
     const int32_t INT32_INFI = 0x7FFFFFFF;
 
     enum
@@ -114,34 +114,17 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         //has assign hash_bucket_num
-        if (hash_bucket_num > 0)
+        ret = ExpireDefine::serialize_es_stat_key(es_id, num_es,
+            task_time, hash_bucket_num > 0 ? hash_bucket_num : 0,
+            0, &start_key,
+            key_buff, KEY_BUFF_SIZE);
+
+        if (TFS_SUCCESS == ret)
         {
-          ret = ExpireDefine::serialize_es_stat_key(es_id, num_es,
-                                task_time, hash_bucket_num,
-                                0, &start_key,
-                                key_buff, KEY_BUFF_SIZE);
-
-          if (TFS_SUCCESS == ret)
-          {
-            ret = ExpireDefine::serialize_es_stat_key(es_id, num_es, task_time, hash_bucket_num,
-                                INT64_INFI, &end_key,
-                                key_buff, KEY_BUFF_SIZE);
-          }
-        }
-        else
-        {
-          ret = ExpireDefine::serialize_es_stat_key(es_id, num_es,
-                                task_time, 0,
-                                0, &start_key,
-                                key_buff, KEY_BUFF_SIZE);
-
-          if (TFS_SUCCESS == ret)
-          {
-            ret = ExpireDefine::serialize_es_stat_key(es_id, num_es, task_time, INT32_INFI,
-                                INT64_INFI, &end_key,
-                                key_buff, KEY_BUFF_SIZE);
-          }
-
+          ret = ExpireDefine::serialize_es_stat_key(es_id, num_es, task_time,
+              hash_bucket_num > 0 ? hash_bucket_num : INT32_INFI,
+              INT64_INFI, &end_key,
+              key_buff, KEY_BUFF_SIZE);
         }
       }
 
@@ -149,7 +132,7 @@ namespace tfs
       int32_t last_num_es = 0;
       int32_t last_task_time = 0;
       int32_t last_hash_bucket_num = 0;
-      int32_t last_sum_file_num = 0;
+      int64_t last_sum_file_num = 0;
 
       //op value
       vector<KvValue*> kv_value_keys;
@@ -329,6 +312,7 @@ namespace tfs
           }
           else
           {
+            mutex_task_wait_.unlock();
             TBSYS_LOG(INFO, "still have %lu task wait to assign", task_wait_.size());
           }
         }
@@ -369,6 +353,10 @@ namespace tfs
             }
           }
         }
+        else
+        {
+          mutex_task_wait_.unlock();
+        }
 
         sleep(1);
       }
@@ -376,11 +364,26 @@ namespace tfs
       return ret;
     }
 
+    //for unit test
     void HandleTaskHelper::get_task_info(map<uint64_t, ExpireDeleteTask> &m_task_info)
+    {
+      mutex_task_.lock();
+      m_task_info = m_task_info_;
+      mutex_task_.unlock();
+    }
+
+    void HandleTaskHelper::put_task_info(const map<uint64_t, ExpireDeleteTask> &m_task_info)
     {
       mutex_task_.lock();
       m_task_info_ = m_task_info;
       mutex_task_.unlock();
+    }
+
+    void HandleTaskHelper::get_task_wait(deque<ExpireDeleteTask> &task_wait)
+    {
+      mutex_task_wait_.lock();
+      task_wait = task_wait_;
+      mutex_task_wait_.unlock();
     }
 
     void HandleTaskHelper::AssignTaskThreadHelper::run()
@@ -390,20 +393,24 @@ namespace tfs
 
     int HandleTaskHelper::handle_fail_servers(const common::VUINT64 &down_servers)
     {
-      mutex_task_.lock();
       for (uint32_t i = 0; i < down_servers.size(); i++)
       {
         TASK_INFO_ITER iter;
+        mutex_task_.lock();
         if ((iter = m_task_info_.find(down_servers[i])) != m_task_info_.end())
         {
           ExpireDeleteTask del_task = iter->second;
           m_task_info_.erase(iter);
+          mutex_task_.unlock();
           mutex_task_wait_.lock();
           task_wait_.push_back(del_task);
           mutex_task_wait_.unlock();
         }
+        else
+        {
+          mutex_task_.unlock();
+        }
       }
-      mutex_task_.unlock();
       return TFS_SUCCESS;
     }
   }// end for exprootserver

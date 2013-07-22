@@ -14,6 +14,7 @@
  *
  */
 
+#include "exp_server_manager.h"
 #include <Time.h>
 #include "common/define.h"
 #include "common/func.h"
@@ -23,7 +24,6 @@
 #include "common/kv_rts_define.h"
 #include "common/atomic.h"
 #include "common/parameter.h"
-#include "exp_server_manager.h"
 #include "exp_root_server.h"
 
 using namespace tfs::common;
@@ -32,6 +32,7 @@ namespace tfs
 {
   namespace exprootserver
   {
+    static const int32_t max_check_interval = 10;
     ExpServerManager::ExpServerManager(HandleTaskHelper &handle_task_helper):
       check_es_lease_thread_(0),
       initialize_(false),
@@ -53,6 +54,11 @@ namespace tfs
       {
         need_move_ = false;
         wait_time_check_ = SYSPARAM_EXPIRESERVER.es_rts_check_lease_interval_;
+        if (wait_time_check_ < 0 || wait_time_check_ > max_check_interval)
+        {
+          iret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "wait_time_check: %d not invalid", wait_time_check_);
+        }
         check_es_lease_thread_ = new CheckExpServerLeaseThreadHelper(*this);
         initialize_ = true;
         tbutil::Time now = tbutil::Time::now(tbutil::Time::Monotonic);
@@ -103,11 +109,9 @@ namespace tfs
     {
       TBSYS_LOG(INFO, "check_ms_lease_expired_helper start");
 
-      tbutil::Mutex::Lock lock(mutex_);
-
       VUINT64 down_servers;
-      down_servers.clear();
 
+      tbutil::Mutex::Lock lock(mutex_);
       EXP_SERVER_MAPS_ITER iter = servers_.begin();
       for (; iter != servers_.end(); )
       {
@@ -157,7 +161,6 @@ namespace tfs
           pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_EXPIRESERVER.es_rts_lease_expired_time_ ;//6s
           pserver->base_info_ = base_info;
           pserver->base_info_.last_update_time_ = now.toSeconds();
-          pserver->base_info_.task_status_ = base_info.task_status_;
           std::pair<EXP_SERVER_MAPS_ITER, bool> res =
             servers_.insert(EXP_SERVER_MAPS::value_type(base_info.id_, *pserver));
           TBSYS_LOG(INFO, "new join %s now time: %ld, lease_id: %"PRI64_PREFIX"u, lease_expired_time: %"PRI64_PREFIX"d",
@@ -171,6 +174,7 @@ namespace tfs
           pserver = &iter->second;
           pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_EXPIRESERVER.es_rts_lease_expired_time_ ;
           pserver->base_info_.last_update_time_ = now.toSeconds();
+          pserver->base_info_.task_status_ = base_info.task_status_;
         }
       }
 
