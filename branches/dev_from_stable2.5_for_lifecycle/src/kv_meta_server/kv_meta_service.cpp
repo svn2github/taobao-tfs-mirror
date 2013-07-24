@@ -218,6 +218,15 @@ namespace tfs
           case REQ_KVMETA_HEAD_BUCKET_MESSAGE:
             ret = head_bucket(dynamic_cast<ReqKvMetaHeadBucketMessage*>(base_packet));
             break;
+          case REQ_KVMETA_SET_LIFE_CYCLE_MESSAGE:
+            ret = set_file_lifecycle(dynamic_cast<ReqKvMetaSetLifeCycleMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_GET_LIFE_CYCLE_MESSAGE:
+            ret = get_file_lifecycle(dynamic_cast<ReqKvMetaGetLifeCycleMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_RM_LIFE_CYCLE_MESSAGE:
+            ret = rm_file_lifecycle(dynamic_cast<ReqKvMetaRmLifeCycleMessage*>(base_packet));
+            break;
           default:
             ret = EXIT_UNKNOWN_MSGTYPE;
             TBSYS_LOG(ERROR, "unknown msg type: %d", base_packet->getPCode());
@@ -521,12 +530,17 @@ namespace tfs
         TBSYS_LOG(ERROR, "KvMetaService::set life cycle fail, ret: %d", ret);
       }
 
+      TBSYS_LOG(DEBUG, "into set_file_lifecycle: %d, %s, %d, %s", req_set_lifecycle_msg->get_file_type(),
+                                                       req_set_lifecycle_msg->get_file_name().c_str(),
+                                                       req_set_lifecycle_msg->get_invalid_time_s(),
+                                                       req_set_lifecycle_msg->get_app_key().c_str());
       if (TFS_SUCCESS == ret)
       {
         ret = life_cycle_helper_.set_file_lifecycle(req_set_lifecycle_msg->get_file_type(),
                                             req_set_lifecycle_msg->get_file_name(),
                                             req_set_lifecycle_msg->get_invalid_time_s(),
                                             req_set_lifecycle_msg->get_app_key());
+        TBSYS_LOG(DEBUG, "KvMetaService::set life cycle ret: %d", ret);
       }
 
       if (TFS_SUCCESS != ret)
@@ -536,6 +550,7 @@ namespace tfs
       else
       {
         ret = req_set_lifecycle_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+
       }
       return ret;
     }

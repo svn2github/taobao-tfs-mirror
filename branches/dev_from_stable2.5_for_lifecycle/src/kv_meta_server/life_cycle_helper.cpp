@@ -57,15 +57,14 @@ namespace tfs
         const int32_t invalid_time_s, const string& app_key)
     {
       int ret = TFS_SUCCESS;
-
       char *name_exptime_key_buff = NULL;
       char *exptime_appkey_key_buff = NULL;
       KvKey name_exptime_key;
       KvKey exptime_appkey_key;
       KvMemValue name_exptime_value;
-      KvMemValue  exptime_appkey_value;
+      KvMemValue exptime_appkey_value;
       char exptime_buff[4];
-      int hash_mod = 0;
+      uint32_t hash_mod = 0;
 
       name_exptime_key_buff= (char*) malloc(ExpireDefine::EXPTIME_KEY_BUFF);
       if (NULL == name_exptime_key_buff)
@@ -98,7 +97,7 @@ namespace tfs
         hash_mod = hash_mod % ExpireDefine::HASH_BUCKET_NUM;
 
         ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
-            hash_mod, file_type, file_name, &exptime_appkey_key,
+            (int32_t)hash_mod, file_type, file_name, &exptime_appkey_key,
             exptime_appkey_key_buff, ExpireDefine::EXPTIME_KEY_BUFF);
       }
 
@@ -143,12 +142,18 @@ namespace tfs
               ExpireDefine::transfer_time(old_invlaid_time, &days_sec, &days_hour);
 
               ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
-                  hash_mod, file_type, file_name, &exptime_appkey_key_old,
+                  (int32_t)hash_mod, file_type, file_name, &exptime_appkey_key_old,
                   name_exptime_key_old_buff, ExpireDefine::EXPTIME_KEY_BUFF);
             }
             if (TFS_SUCCESS == ret)
             {
               ret = kv_engine_helper_->delete_key(meta_info_name_area_, exptime_appkey_key_old);
+              TBSYS_LOG(DEBUG, "del exptime_appkey_key_old, ret %d", ret);
+              /* no care ret */
+              if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+              {
+                ret = TFS_SUCCESS;
+              }
             }
             if (NULL != name_exptime_key_old_buff)
             {
@@ -160,6 +165,7 @@ namespace tfs
           {
             //delete name:invalidtime
             ret = kv_engine_helper_->delete_key(meta_info_name_area_, name_exptime_key);
+            TBSYS_LOG(DEBUG, "del name_exptime_key ,ret %d", ret);
           }
         }
         if (NULL != kv_value)
@@ -172,7 +178,7 @@ namespace tfs
           ret = new_lifecycle(name_exptime_key, name_exptime_value,
               exptime_appkey_key, exptime_appkey_value);
         }
-      }
+      }//end EXIT_LIFE_CYCLE_INFO_EXIST
       if (NULL != exptime_appkey_key_buff)
       {
         free(exptime_appkey_key_buff);
@@ -240,6 +246,7 @@ namespace tfs
       else if (EXIT_KV_RETURN_VERSION_ERROR == ret)
       {
         ret = EXIT_LIFE_CYCLE_INFO_EXIST;
+        TBSYS_LOG(DEBUG, "EXIT_LIFE_CYCLE_INFO_EXIST %d",ret);
       }
       return ret;
     }
@@ -272,7 +279,7 @@ namespace tfs
       KvKey exptime_appkey_key;
       KvMemValue name_exptime_value;
       KvMemValue  exptime_appkey_value;
-      int hash_mod = 0;
+      uint32_t hash_mod = 0;
 
       name_exptime_key_buff= (char*) malloc(ExpireDefine::EXPTIME_KEY_BUFF);
       if (NULL == name_exptime_key_buff)
@@ -311,19 +318,26 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ExpireDefine::transfer_time(old_invlaid_time, &days_sec, &days_hour);
-
+          hash_mod = tbsys::CStringUtil::murMurHash(file_name.c_str(), file_name.length());
+          hash_mod = hash_mod % ExpireDefine::HASH_BUCKET_NUM;
           ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
-              hash_mod, file_type, file_name, &exptime_appkey_key,
+              (int32_t)hash_mod, file_type, file_name, &exptime_appkey_key,
               exptime_appkey_key_buff, ExpireDefine::EXPTIME_KEY_BUFF);
         }
         //will delete expire_time appkey firtst,
         if (TFS_SUCCESS == ret)
         {
           ret = kv_engine_helper_->delete_key(meta_info_name_area_, exptime_appkey_key);
+          TBSYS_LOG(DEBUG, "del exptime_appkey_key ,ret %d", ret);
+          if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+          {
+            ret = TFS_SUCCESS;
+          }
         }
         if (TFS_SUCCESS == ret)
         {
           ret = kv_engine_helper_->delete_key(meta_info_name_area_, name_exptime_key);
+          TBSYS_LOG(DEBUG, "del name_exptime_key ,ret %d", ret);
         }
 
       }
