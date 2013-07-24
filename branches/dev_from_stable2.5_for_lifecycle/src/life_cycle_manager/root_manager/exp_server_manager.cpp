@@ -53,7 +53,7 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         need_move_ = false;
-        wait_time_check_ = SYSPARAM_EXPIRESERVER.es_rts_check_lease_interval_;
+        wait_time_check_ = SYSPARAM_EXPIREROOTSERVER.es_rts_check_lease_interval_;
         if (wait_time_check_ < 0 || wait_time_check_ > max_check_interval)
         {
           iret = TFS_ERROR;
@@ -91,7 +91,7 @@ namespace tfs
     {
       tbutil::Time now;
       int64_t check_interval_ = wait_time_check_ * 1000000;
-      TBSYS_LOG(INFO, "%"PRI64_PREFIX"d", check_interval_);
+      //TBSYS_LOG(INFO, "%"PRI64_PREFIX"d", check_interval_);
       while (!destroy_)
       {
         now = tbutil::Time::now(tbutil::Time::Monotonic);
@@ -107,11 +107,10 @@ namespace tfs
 
     void ExpServerManager::check_es_lease_expired_helper(const tbutil::Time& now)
     {
-      TBSYS_LOG(INFO, "check_ms_lease_expired_helper start");
-
+      //TBSYS_LOG(INFO, "check_ms_lease_expired_helper start");
       VUINT64 down_servers;
 
-      tbutil::Mutex::Lock lock(mutex_);
+      mutex_.lock();
       EXP_SERVER_MAPS_ITER iter = servers_.begin();
       for (; iter != servers_.end(); )
       {
@@ -135,6 +134,7 @@ namespace tfs
           }
         }
       }
+      mutex_.unlock();
       if (need_move_)
       {
         handle_task_helper_.handle_fail_servers(down_servers);
@@ -158,7 +158,7 @@ namespace tfs
         {
           pserver = new ExpServer();
           pserver->lease_.lease_id_ = new_lease_id();
-          pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_EXPIRESERVER.es_rts_lease_expired_time_ ;//6s
+          pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_EXPIREROOTSERVER.es_rts_lease_expired_time_ ;//6s
           pserver->base_info_ = base_info;
           pserver->base_info_.last_update_time_ = now.toSeconds();
           std::pair<EXP_SERVER_MAPS_ITER, bool> res =
@@ -172,7 +172,7 @@ namespace tfs
         else
         {
           pserver = &iter->second;
-          pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_EXPIRESERVER.es_rts_lease_expired_time_ ;
+          pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_EXPIREROOTSERVER.es_rts_lease_expired_time_ ;
           pserver->base_info_.last_update_time_ = now.toSeconds();
           pserver->base_info_.task_status_ = base_info.task_status_;
         }
@@ -183,7 +183,8 @@ namespace tfs
 
     void ExpServerManager::move_table()
     {
-      tbutil::Mutex::Lock lock(mutex_for_get_);
+      mutex_.lock();
+      mutex_for_get_.lock();
       exp_table_.v_exp_table_.clear();
       exp_table_.v_idle_table_.clear();
       EXP_SERVER_MAPS::iterator iter = servers_.begin();
@@ -195,6 +196,8 @@ namespace tfs
           exp_table_.v_idle_table_.push_back(iter->first);
         }
       }
+      mutex_for_get_.unlock();
+      mutex_.unlock();
       need_move_ = false;
     }
 

@@ -41,6 +41,7 @@ namespace tfs
     KvMetaParameter KvMetaParameter::kv_meta_parameter_;
     KvRtServerParameter KvRtServerParameter::kv_rt_parameter_;
     ExpireServerParameter ExpireServerParameter::expire_server_parameter_;
+    ExpireRootServerParameter ExpireRootServerParameter::expire_root_server_parameter_;
 
     static void set_hour_range(const char *str, int32_t& min, int32_t& max)
     {
@@ -715,6 +716,57 @@ namespace tfs
         }
         TBSYS_LOG(INFO, "expire server ip addr: %s:%d", ips2.c_str(), port2);
       }
+      return ret;
+    }
+
+    int ExpireRootServerParameter::initialize(const std::string& config_file)
+    {
+      tbsys::CConfig config;
+      int32_t ret = config.load(config_file.c_str());
+      if (EXIT_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "load config file erro.");
+        return TFS_ERROR;
+      }
+
+      tair_master_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_TAIR_MASTER, "");
+      tair_slave_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_TAIR_SLAVE, "");
+      tair_group_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_TAIR_GROUP, "");
+      tair_lifecycle_area_ = config.getInt(CONF_SN_EXPIREROOTSERVER, CONF_TAIR_LIFECYCLE_AREA, -1);
+
+      es_rts_check_lease_interval_ =
+        TBSYS_CONFIG.getInt(CONF_SN_EXPIREROOTSERVER, CONF_ES_RTS_LEASE_CHECK_TIME, 1);
+      if (es_rts_check_lease_interval_ <= 0)
+      {
+        TBSYS_LOG(ERROR, "es_rts_check_lease_interval_: %d is invalid", es_rts_check_lease_interval_);
+        ret = TFS_ERROR;
+      }
+
+      es_rts_lease_expired_time_ =
+        TBSYS_CONFIG.getInt(CONF_SN_EXPIREROOTSERVER, CONF_ES_RTS_LEASE_EXPIRED_TIME, 4);
+      if (es_rts_lease_expired_time_ <= 0)
+      {
+        TBSYS_LOG(ERROR, "es_rts_lease_expired_time: %d is invalid", es_rts_lease_expired_time_);
+        ret = TFS_ERROR;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        es_rts_heart_interval_
+        = TBSYS_CONFIG.getInt(CONF_SN_EXPIREROOTSERVER, CONF_ES_RTS_HEART_INTERVAL, 2);
+        if (es_rts_heart_interval_ > es_rts_lease_expired_time_ / 2 )
+        {
+          TBSYS_LOG(ERROR, "es_rts_lease_expired_interval: %d is invalid, less than: %d",
+            es_rts_heart_interval_, es_rts_lease_expired_time_ / 2 + 1);
+          ret = TFS_ERROR;
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          safe_mode_time_ = TBSYS_CONFIG.getInt(CONF_SN_EXPIREROOTSERVER, CONF_SAFE_MODE_TIME, 60);
+        }
+      }
+
       return ret;
     }
 

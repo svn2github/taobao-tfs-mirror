@@ -48,7 +48,7 @@ namespace tfs
 
     int ExpRootServer::initialize(int /*argc*/, char* /*argv*/[])
     {
-      int32_t iret =  SYSPARAM_KVRTSERVER.initialize();
+      int32_t iret =  SYSPARAM_EXPIREROOTSERVER.initialize(config_file_.c_str());
       if (TFS_SUCCESS != iret)
       {
         TBSYS_LOG(ERROR, "%s", "initialize exprootserver parameter error, must be exit");
@@ -68,14 +68,14 @@ namespace tfs
       //initialize expserver ==> exprootserver heartbeat
       if (TFS_SUCCESS == iret)
       {
-        int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_EXPIRESERVER, CONF_HEART_THREAD_COUNT, 1);
+        int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_EXPIREROOTSERVER, CONF_HEART_THREAD_COUNT, 1);
         rt_es_heartbeat_workers_.setThreadParameter(heart_thread_count, &rt_es_heartbeat_handler_, this);
         rt_es_heartbeat_workers_.start();
       }
 
       if (TFS_SUCCESS == iret)
       {
-        kv_engine_helper_ = new TairEngineHelper();
+        kv_engine_helper_ = new TairEngineHelper(SYSPARAM_EXPIREROOTSERVER.tair_master_, SYSPARAM_EXPIREROOTSERVER.tair_slave_, SYSPARAM_EXPIREROOTSERVER.tair_group_);
         iret = kv_engine_helper_->init();
       }
 
@@ -213,9 +213,9 @@ namespace tfs
 
         RspRtsEsHeartMessage* reply_msg = new(std::nothrow) RspRtsEsHeartMessage();
         assert(NULL != reply_msg);
-        int32_t tmp = SYSPARAM_EXPIRESERVER.es_rts_heart_interval_;
+        int32_t tmp = SYSPARAM_EXPIREROOTSERVER.es_rts_heart_interval_;
         //reply_msg->set_time(SYSPARAM_KVRTSERVER.es_rts_heart_interval_);
-        TBSYS_LOG(DEBUG, "es_rts_heart_interval_: %d is ", SYSPARAM_EXPIRESERVER.es_rts_heart_interval_);
+        TBSYS_LOG(DEBUG, "es_rts_heart_interval_: %d is ", SYSPARAM_EXPIREROOTSERVER.es_rts_heart_interval_);
         reply_msg->set_time(tmp);
         iret = packet->reply(reply_msg);
       }

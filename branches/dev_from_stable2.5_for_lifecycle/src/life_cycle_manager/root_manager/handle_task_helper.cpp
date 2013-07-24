@@ -84,7 +84,7 @@ namespace tfs
       {
         ret = manager_.initialize();
         assign_task_thread_ = new AssignTaskThreadHelper(*this);
-        tair_lifecycle_area_ = SYSPARAM_EXPIRESERVER.tair_lifecycle_area_;
+        tair_lifecycle_area_ = SYSPARAM_EXPIREROOTSERVER.tair_lifecycle_area_;
       }
 
       return ret;
@@ -141,8 +141,25 @@ namespace tfs
       int32_t limit = 1000;
       int32_t res_size = 0;
 
-      //cal total_hash_bucket_num
-      int32_t total_hash_bucket_num = 100;
+      //total_hash_bucket_num means every es should have xxx hash_bucket_nums
+      int32_t total_hash_bucket_num = 0;
+
+      if (TFS_SUCCESS == ret)
+      {
+        mutex_task_.lock();
+        map<uint64_t, ExpireDeleteTask>::iterator iter = m_task_info_.find(es_id);
+        if (iter != m_task_info_.end())
+        {
+          total_hash_bucket_num = ExpireDefine::HASH_BUCKET_NUM/(iter->second).alive_total_;
+        }
+        else
+        {
+          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "es_id: %s's task is complete", tbsys::CNetUtil::addrToString(es_id).c_str());
+        }
+        mutex_task_.unlock();
+      }
+
 
       while (TFS_SUCCESS == ret)
       {
@@ -168,10 +185,10 @@ namespace tfs
           if (res_size == limit)
           {
             ret = ExpireDefine::serialize_es_stat_key(es_id, num_es, task_time, last_hash_bucket_num,
-                                INT64_INFI, &start_key,
-                                key_buff, KEY_BUFF_SIZE);
+                                                     INT64_INFI, &start_key,
+                                                     key_buff, KEY_BUFF_SIZE);
           }
-          else if (res_size < limit && res_size > 0)
+          else if (res_size < limit)
           {
             break;
           }
@@ -186,9 +203,9 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        if (hash_bucket_num == 0)
+        if (hash_bucket_num == 0 && total_hash_bucket_num > 0)
         {
-          *current_percent = last_hash_bucket_num * 100 / total_hash_bucket_num;
+          *current_percent = (last_hash_bucket_num - total_hash_bucket_num * num_es) * 100 / total_hash_bucket_num;
         }
         else
         {

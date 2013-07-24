@@ -34,6 +34,7 @@ namespace tfs
 #define CONF_SN_KVMETA                                "kvmetaserver"
 #define CONF_SN_KVROOTSERVER                          "kvrootserver"
 #define CONF_SN_EXPIRESERVER                          "expireserver"
+#define CONF_SN_EXPIREROOTSERVER                      "expirerootserver"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"
@@ -217,6 +218,13 @@ namespace tfs
 #define CONF_EXPIRE_RE_CLEAN_DAYS                     "re_clean_days_"
 #define CONF_ES_NGINX_ROOT                            "nginx_root_"
 #define CONF_ES_APPKEY                                "es_appkey_"
+
+/*expire root server*/
+#define CONF_TAIR_LIFECYCLE_AREA                     "tair_lifecycle_area"
+#define CONF_ES_RTS_LEASE_CHECK_TIME                 "es_rts_lease_check_time" //(s)
+#define CONF_ES_RTS_LEASE_EXPIRED_TIME               "es_rts_lease_expired_time" //(s)
+#define CONF_ES_RTS_HEART_INTERVAL                   "es_rts_heart_interval" //(s)
+
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

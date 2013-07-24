@@ -105,7 +105,8 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        kv_engine_helper_ = new TairEngineHelper();
+        kv_engine_helper_ = new TairEngineHelper(SYSPARAM_EXPIRESERVER.tair_master_, SYSPARAM_EXPIRESERVER.tair_slave_,
+            SYSPARAM_EXPIRESERVER.tair_group_);
         ret = kv_engine_helper_->init();
       }
 

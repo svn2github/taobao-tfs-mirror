@@ -43,7 +43,7 @@ namespace tfs
     class TairEngineHelper : public KvEngineHelper
     {
     public:
-      TairEngineHelper();
+      TairEngineHelper(const std::string &master_addr, const std::string &slave_addr, const std::string &group_name);
       virtual ~TairEngineHelper();
       virtual int init();
       virtual int scan_keys(const int32_t name_area, const KvKey& start_key, const KvKey& end_key, const int32_t limit, const int32_t offset,
@@ -88,6 +88,9 @@ namespace tfs
     private:
       DISALLOW_COPY_AND_ASSIGN(TairEngineHelper);
       tair::tair_client_api* tair_client_;
+      std::string master_addr_;
+      std::string slave_addr_;
+      std::string group_name_;
       int32_t object_area_;
       static const int TAIR_RETRY_COUNT;
     };

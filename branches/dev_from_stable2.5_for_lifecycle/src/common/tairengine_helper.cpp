@@ -76,8 +76,9 @@ namespace tfs
 
     const int TairEngineHelper::TAIR_RETRY_COUNT = 1;
 
-    TairEngineHelper::TairEngineHelper()
-      :tair_client_(NULL), object_area_(-1)
+    TairEngineHelper::TairEngineHelper(const string &master_addr, const string &slave_addr, const string &group_name)
+      :tair_client_(NULL), master_addr_(master_addr),
+      slave_addr_(slave_addr), group_name_(group_name), object_area_(-1)
     {
 
     }
@@ -99,15 +100,12 @@ namespace tfs
       {
         tair_client_ = new tair::tair_client_api();
         assert(NULL != tair_client_);
-        string master_addr = SYSPARAM_KVMETA.tair_master_;
-        string slave_addr = SYSPARAM_KVMETA.tair_slave_;
-        string group_name = SYSPARAM_KVMETA.tair_group_;
 
-        if (!tair_client_->startup(master_addr.c_str(), slave_addr.c_str(), group_name.c_str()))
+        if (!tair_client_->startup(master_addr_.c_str(), slave_addr_.c_str(), group_name_.c_str()))
         {
           TBSYS_LOG(ERROR, "starup tair client fail. "
               "master addr: %s, slave addr: %s, group name:  %s",
-              master_addr.c_str(), slave_addr.c_str(), group_name.c_str());
+              master_addr_.c_str(), slave_addr_.c_str(), group_name_.c_str());
           ret = TFS_ERROR;
         }
       }

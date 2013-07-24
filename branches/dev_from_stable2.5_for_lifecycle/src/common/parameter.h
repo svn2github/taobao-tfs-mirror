@@ -283,19 +283,33 @@ namespace tfs
       int re_clean_days_;
       std::string es_appkey_;
 
-      int32_t es_rts_lease_expired_time_;  //4s
-      int32_t es_rts_check_lease_interval_; //1s
-      int32_t es_rts_heart_interval_;      //2s
-
-      int32_t safe_mode_time_;
-
-
       int initialize(const std::string& config_file);
 
       static ExpireServerParameter expire_server_parameter_;
       static ExpireServerParameter& instance()
       {
         return expire_server_parameter_;
+      }
+    };
+
+    struct ExpireRootServerParameter
+    {
+      std::string tair_master_;
+      std::string tair_slave_;
+      std::string tair_group_;
+      int tair_lifecycle_area_;
+
+      int32_t es_rts_lease_expired_time_;  //4s
+      int32_t es_rts_check_lease_interval_;  //1s
+      int32_t es_rts_heart_interval_;       //2s
+      int32_t safe_mode_time_;
+
+      int initialize(const std::string &config_file);
+
+      static ExpireRootServerParameter expire_root_server_parameter_;
+      static ExpireRootServerParameter& instance()
+      {
+        return expire_root_server_parameter_;
       }
     };
 
@@ -309,6 +323,7 @@ namespace tfs
 #define SYSPARAM_KVMETA KvMetaParameter::instance()
 #define SYSPARAM_KVRTSERVER KvRtServerParameter::instance()
 #define SYSPARAM_EXPIRESERVER ExpireServerParameter::instance()
+#define SYSPARAM_EXPIREROOTSERVER ExpireRootServerParameter::instance()
   }/** common **/
 }/** tfs **/
 #endif //TFS_COMMON_SYSPARAM_H_

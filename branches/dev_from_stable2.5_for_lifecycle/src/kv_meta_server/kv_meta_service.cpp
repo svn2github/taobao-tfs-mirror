@@ -100,7 +100,8 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        kv_engine_helper_ = new TairEngineHelper();
+        kv_engine_helper_ = new TairEngineHelper(SYSPARAM_KVMETA.tair_master_, SYSPARAM_KVMETA.tair_slave_,
+            SYSPARAM_KVMETA.tair_group_);
         ret = kv_engine_helper_->init();
       }
 
