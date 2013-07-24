@@ -463,7 +463,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       int tair_ret = 0;
-      data_entry pkey(key.key_);
+      data_entry pkey(key.key_, key.key_size_);
       tair_ret = tair_client_->remove(area, pkey);
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
@@ -530,7 +530,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       if (NULL == prefix_key || NULL == second_key
-          || NULL == key.key_ || 0 == key.key_size_ || KvKey::KEY_TYPE_OBJECT != key.key_type_)
+          || NULL == key.key_ || 0 == key.key_size_)
       {
         TBSYS_LOG(ERROR, "parameters error");
         ret = TFS_ERROR;
@@ -554,6 +554,7 @@ namespace tfs
 
         prefix_key_size = pos - key.key_ + 1;
         second_key_size = key.key_size_ - prefix_key_size;
+        TBSYS_LOG(DEBUG, "PKEY POS is %"PRI64_PREFIX"d", prefix_key_size);
         if (NULL == pos || prefix_key_size <= 0 || second_key_size < 0)
         {
           TBSYS_LOG(ERROR, "invalid key is %s", key.key_);
