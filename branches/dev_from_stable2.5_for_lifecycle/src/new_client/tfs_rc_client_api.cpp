@@ -248,6 +248,22 @@ namespace tfs
       return impl_->head_object(bucket_name, object_name, object_info, user_info);
     }
 
+    TfsRetType RcClient::set_life_cycle(const int32_t file_type, const char *file_name,
+                                        const int32_t invalid_time_s, const char *app_key)
+    {
+      return impl_->set_life_cycle(file_type, file_name, invalid_time_s, app_key);
+    }
+
+    TfsRetType RcClient::get_life_cycle(const int32_t file_type, const char *file_name,
+                                              int32_t *invalid_time_s)
+    {
+      return impl_->get_life_cycle(file_type, file_name, invalid_time_s);
+    }
+
+    TfsRetType RcClient::rm_life_cycle(const int32_t file_type, const char *file_name)
+    {
+      return impl_->rm_life_cycle(file_type, file_name);
+    }
     // for name meta
     TfsRetType RcClient::create_dir(const int64_t uid, const char* dir_path)
     {

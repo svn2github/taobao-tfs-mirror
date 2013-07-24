@@ -384,6 +384,18 @@ namespace tfs
           case common::RSP_KV_RT_GET_TABLE_MESSAGE:
             packet = new GetTableFromKvRtsResponseMessage();
             break;
+          case common::REQ_KVMETA_SET_LIFE_CYCLE_MESSAGE:
+            packet = new ReqKvMetaSetLifeCycleMessage();
+            break;
+          case common::REQ_KVMETA_GET_LIFE_CYCLE_MESSAGE:
+            packet = new ReqKvMetaGetLifeCycleMessage();
+            break;
+          case common::RSP_KVMETA_GET_LIFE_CYCLE_MESSAGE:
+            packet = new RspKvMetaGetLifeCycleMessage();
+            break;
+          case common::REQ_KVMETA_RM_LIFE_CYCLE_MESSAGE:
+            packet = new ReqKvMetaRmLifeCycleMessage();
+            break;
           case common::GET_BLOCK_INFO_MESSAGE_V2:
             packet = new GetBlockInfoMessageV2();
             break;

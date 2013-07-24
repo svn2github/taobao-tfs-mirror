@@ -97,7 +97,7 @@ namespace tfs
         hash_mod = hash_mod % ExpireDefine::HASH_BUCKET_NUM;
 
         ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
-            (int32_t)hash_mod, file_type, file_name, &exptime_appkey_key,
+            static_cast<int32_t>(hash_mod), file_type, file_name, &exptime_appkey_key,
             exptime_appkey_key_buff, ExpireDefine::EXPTIME_KEY_BUFF);
       }
 
@@ -142,7 +142,7 @@ namespace tfs
               ExpireDefine::transfer_time(old_invlaid_time, &days_sec, &days_hour);
 
               ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
-                  (int32_t)hash_mod, file_type, file_name, &exptime_appkey_key_old,
+                  static_cast<int32_t>(hash_mod), file_type, file_name, &exptime_appkey_key_old,
                   name_exptime_key_old_buff, ExpireDefine::EXPTIME_KEY_BUFF);
             }
             if (TFS_SUCCESS == ret)
@@ -321,7 +321,7 @@ namespace tfs
           hash_mod = tbsys::CStringUtil::murMurHash(file_name.c_str(), file_name.length());
           hash_mod = hash_mod % ExpireDefine::HASH_BUCKET_NUM;
           ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
-              (int32_t)hash_mod, file_type, file_name, &exptime_appkey_key,
+              static_cast<int32_t>(hash_mod), file_type, file_name, &exptime_appkey_key,
               exptime_appkey_key_buff, ExpireDefine::EXPTIME_KEY_BUFF);
         }
         //will delete expire_time appkey firtst,
