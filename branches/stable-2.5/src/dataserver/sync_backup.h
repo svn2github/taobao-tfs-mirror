@@ -21,6 +21,7 @@
 #define TFS_DATASERVER_SYNCBACKUP_H_
 
 #include "common/internal.h"
+#include "new_client/tfs_client_impl.h"
 #include "clientv2/tfs_client_impl_v2.h"
 #include <Memory.hpp>
 #include <TbThread.h>
@@ -32,7 +33,7 @@ namespace tfs
   {
     enum SyncType
     {
-      SYNC_TO_TFS_MIRROR = 1,
+      SYNC_TO_TFS_MIRROR = 1
     };
 
     struct SyncData
@@ -62,12 +63,39 @@ namespace tfs
 
     protected:
       DISALLOW_COPY_AND_ASSIGN(SyncBackup);
-      clientv2::TfsClientImplV2* tfs_client_;
-      bool client_init_flag_;
-
-      char src_addr_[common::MAX_SYNC_IPADDR_LENGTH];
-      char dest_addr_[common::MAX_SYNC_IPADDR_LENGTH];
     };
+
+    class DoSyncMirrorThreadHelper: public tbutil::Thread
+    {
+      public:
+        explicit DoSyncMirrorThreadHelper(SyncBase& sync_base):
+          sync_base_(sync_base)
+      {
+        start();
+      }
+        virtual ~DoSyncMirrorThreadHelper(){}
+        void run();
+      private:
+        DISALLOW_COPY_AND_ASSIGN(DoSyncMirrorThreadHelper);
+        SyncBase& sync_base_;
+    };
+    typedef tbutil::Handle<DoSyncMirrorThreadHelper> DoSyncMirrorThreadHelperPtr;
+
+    class DoFailSyncMirrorThreadHelper: public tbutil::Thread
+    {
+      public:
+        explicit DoFailSyncMirrorThreadHelper(SyncBase& sync_base):
+          sync_base_(sync_base)
+      {
+        start();
+      }
+        virtual ~DoFailSyncMirrorThreadHelper(){}
+        void run();
+      private:
+        DISALLOW_COPY_AND_ASSIGN(DoFailSyncMirrorThreadHelper);
+        SyncBase& sync_base_;
+    };
+    typedef tbutil::Handle<DoFailSyncMirrorThreadHelper> DoFailSyncMirrorThreadHelperPtr;
 
     class TfsMirrorBackup : public SyncBackup
     {
@@ -95,43 +123,53 @@ namespace tfs
         // check return value to see if file exist in dest cluster
         bool file_not_exist(const int ret);
 
-      class DoSyncMirrorThreadHelper: public tbutil::Thread
-      {
-        public:
-          explicit DoSyncMirrorThreadHelper(SyncBase& sync_base):
-              sync_base_(sync_base)
-          {
-            start();
-          }
-          virtual ~DoSyncMirrorThreadHelper(){}
-          void run();
-        private:
-          DISALLOW_COPY_AND_ASSIGN(DoSyncMirrorThreadHelper);
-          SyncBase& sync_base_;
-      };
-      typedef tbutil::Handle<DoSyncMirrorThreadHelper> DoSyncMirrorThreadHelperPtr;
-
-      class DoFailSyncMirrorThreadHelper: public tbutil::Thread
-      {
-        public:
-          explicit DoFailSyncMirrorThreadHelper(SyncBase& sync_base):
-              sync_base_(sync_base)
-          {
-            start();
-          }
-          virtual ~DoFailSyncMirrorThreadHelper(){}
-          void run();
-        private:
-          DISALLOW_COPY_AND_ASSIGN(DoFailSyncMirrorThreadHelper);
-          SyncBase& sync_base_;
-      };
-      typedef tbutil::Handle<DoFailSyncMirrorThreadHelper> DoFailSyncMirrorThreadHelperPtr;
-
     private:
       SyncBase& sync_base_;
       DoSyncMirrorThreadHelperPtr  do_sync_mirror_thread_;
       DoFailSyncMirrorThreadHelperPtr  do_fail_sync_mirror_thread_;
 
+      clientv2::TfsClientImplV2* tfs_client_;
+      bool client_init_flag_;
+      char src_addr_[common::MAX_SYNC_IPADDR_LENGTH];
+      char dest_addr_[common::MAX_SYNC_IPADDR_LENGTH];
+    };
+
+    // this class will be removed after all cluster upgrade
+    class TfsOldMirrorBackup : public SyncBackup
+    {
+      public:
+        TfsOldMirrorBackup(SyncBase& sync_base, const char* src_addr, const char* dest_addr);
+        virtual ~TfsOldMirrorBackup();
+
+        bool init();
+        void destroy();
+        int do_sync(const SyncData* sf);
+
+        BlockManager& get_block_manager();
+
+      private:
+        DISALLOW_COPY_AND_ASSIGN(TfsOldMirrorBackup);
+
+      private:
+        int copy_file(const uint32_t block_id, const uint64_t file_id);
+        int remove_file(const uint32_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
+        int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
+        int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
+        int get_file_info(const char* nsip, const char* file_name, common::TfsFileStat& buf);
+
+        int sync_stat(const uint32_t block_id, const uint64_t file_id);
+
+        bool file_not_exist(int ret);
+
+      private:
+        SyncBase& sync_base_;
+        DoSyncMirrorThreadHelperPtr  do_sync_mirror_thread_;
+        DoFailSyncMirrorThreadHelperPtr  do_fail_sync_mirror_thread_;
+
+        client::TfsClientImpl* tfs_client_;
+        bool client_init_flag_;
+        char src_addr_[common::MAX_SYNC_IPADDR_LENGTH];
+        char dest_addr_[common::MAX_SYNC_IPADDR_LENGTH];
     };
 
   }
