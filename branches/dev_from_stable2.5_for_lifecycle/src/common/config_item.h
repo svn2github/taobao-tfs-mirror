@@ -214,10 +214,11 @@ namespace tfs
 
 /* expire server */
 #define CONF_EXPIRE_SERVER_IPPORT                     "es_ip_port"
-#define CONF_EXPIRE_ROOT_SERVER_IPPORT                "ers_ip_port_"
-#define CONF_EXPIRE_RE_CLEAN_DAYS                     "re_clean_days_"
-#define CONF_ES_NGINX_ROOT                            "nginx_root_"
-#define CONF_ES_APPKEY                                "es_appkey_"
+#define CONF_EXPIRE_ROOT_SERVER_IPPORT                "ers_ip_port"
+#define CONF_EXPIRE_RE_CLEAN_DAYS                     "re_clean_days"
+#define CONF_ES_NGINX_ROOT                            "nginx_root"
+#define CONF_ES_APPKEY                                "es_appkey"
+
 
 /*expire root server*/
 #define CONF_TAIR_LIFECYCLE_AREA                     "tair_lifecycle_area"
