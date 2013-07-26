@@ -87,10 +87,9 @@ namespace tfs
         const int32_t hash_mod, const int32_t file_type, const std::string &file_name,
         KvKey *key, char *data, const int32_t size)
     {
-      int ret = (hash_mod >= 0 && hash_mod < ExpireDefine::HASH_BUCKET_NUM && days_secs > 0 && hours_secs > 0
+      int ret = (hash_mod >= 0 && hash_mod < ExpireDefine::HASH_BUCKET_NUM && days_secs > 0 && hours_secs >= 0
           && key != NULL &&  data != NULL ) ? TFS_SUCCESS : TFS_ERROR;
       int64_t pos = 0;
-
       if(TFS_SUCCESS == ret)
       {
         //key type ori tfs key
@@ -111,7 +110,6 @@ namespace tfs
         ret = Serialization::int32_to_char(data + pos, size - pos, hash_mod);
         pos = pos + 4;
       }
-
       //DELIMITER split pk . sk
       if (TFS_SUCCESS == ret && (pos + 1) < size)
       {

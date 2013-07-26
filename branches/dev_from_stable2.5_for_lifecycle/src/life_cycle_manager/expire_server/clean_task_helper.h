@@ -36,19 +36,19 @@ namespace tfs
         virtual ~CleanTaskHelper();
         int init(tfs::common::KvEngineHelper* kv_engine_helper);
 
-        int clean_task(const int32_t total_es, const int32_t num_es,
+        int clean_task(const uint64_t local_ipport, const int32_t total_es, const int32_t num_es,
                        const int32_t note_interval, const int32_t task_time);
 
         int32_t get_task_state();
 
       private:
-        int take_note(const int32_t num_es, const int32_t task_time,
+        int take_note(const uint64_t local_ipport, const int32_t num_es, const int32_t task_time,
                       const int32_t hash_bucket_num, const int64_t sum_file_num);
 
       protected:
         common::KvEngineHelper* kv_engine_helper_;
         int32_t tair_lifecycle_area_;
-        uint64_t local_ipport_;
+
       private:
         int32_t clean_task_state_;
         DISALLOW_COPY_AND_ASSIGN(CleanTaskHelper);

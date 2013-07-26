@@ -95,7 +95,7 @@ namespace tfs
 
         hash_mod = tbsys::CStringUtil::murMurHash(file_name.c_str(), file_name.length());
         hash_mod = hash_mod % ExpireDefine::HASH_BUCKET_NUM;
-
+        TBSYS_LOG(DEBUG, "hash_mod is : %u", hash_mod);
         ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
             static_cast<int32_t>(hash_mod), file_type, file_name, &exptime_appkey_key,
             exptime_appkey_key_buff, ExpireDefine::EXPTIME_KEY_BUFF);

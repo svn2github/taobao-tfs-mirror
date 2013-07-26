@@ -63,8 +63,6 @@ namespace tfs
         kv_engine_helper_ = kv_engine_helper;
       }
 
-      local_ipport_ = SYSPARAM_EXPIRESERVER.es_ip_port_;
-
       tair_lifecycle_area_ = SYSPARAM_EXPIRESERVER.tair_lifecycle_area_;
 
       clean_task_state_ = 0;
@@ -78,8 +76,9 @@ namespace tfs
     }
 
 
-    int CleanTaskHelper::take_note(const int32_t num_es, const int32_t task_time,
-                                   const int32_t hash_bucket_num, const int64_t sum_file_num)
+    int CleanTaskHelper::take_note(const uint64_t local_ipport, const int32_t num_es,
+                                   const int32_t task_time, const int32_t hash_bucket_num,
+                                   const int64_t sum_file_num)
     {
       //op key
       int ret = TFS_SUCCESS;
@@ -94,12 +93,13 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = ExpireDefine::serialize_es_stat_key(local_ipport_, num_es,
+        ret = ExpireDefine::serialize_es_stat_key(local_ipport, num_es,
                                 task_time, hash_bucket_num,
                                 sum_file_num, &key,
                                 key_buff, KEY_BUFF_SIZE);
       }
 
+      TBSYS_LOG(DEBUG, "serialize_es_stat_key %d", ret);
       //op value
       int64_t pos = 0;
       int64_t lock_version = 0;
@@ -109,7 +109,7 @@ namespace tfs
         kv_value.set_data(value_buff, pos);
         ret = kv_engine_helper_->put_key(tair_lifecycle_area_, key, kv_value, lock_version);
       }
-
+      TBSYS_LOG(DEBUG, "put es_stat_key %d", ret);
       if (NULL != value_buff)
       {
         free(value_buff);
@@ -126,7 +126,7 @@ namespace tfs
     }
 
 
-    int CleanTaskHelper::clean_task(const int32_t total_es, const int32_t num_es,
+    int CleanTaskHelper::clean_task(const uint64_t local_ipport, const int32_t total_es, const int32_t num_es,
                                     const int32_t note_interval, const int32_t task_time)
     {
       int32_t ret;
@@ -154,6 +154,7 @@ namespace tfs
         /* 0 -- 10242 */
         start_bucket_num = num_es * ExpireDefine::HASH_BUCKET_NUM / total_es;
         end_bucket_num = (num_es + 1) * ExpireDefine::HASH_BUCKET_NUM / total_es - 1;
+        TBSYS_LOG(DEBUG, "start_bucket_num is %d and end_bucket_num is %d", start_bucket_num, end_bucket_num);
       }
 
       if (ret == TFS_SUCCESS)
@@ -202,86 +203,89 @@ namespace tfs
                 ret = ExpireDefine::serialize_exptime_app_key(relative_days_secs,
                           zero_secs, hash_mod, 0, file_name,
                           &start_key, start_key_buff, KEY_BUFF_SIZE);
+                TBSYS_LOG(DEBUG, "serialize_exptime_app_key %d", ret);
               }
               if (TFS_SUCCESS == ret)
               {
                 ret = ExpireDefine::serialize_exptime_app_key(relative_days_secs,
                           relative_hours_secs, hash_mod, MAX_INT32, file_name,
                           &end_key, end_key_buff, KEY_BUFF_SIZE);
+                TBSYS_LOG(DEBUG, "serialize_exptime_app_key %d", ret);
               }
-
-              int32_t i;
-              int32_t first = 0;
-              bool go_on = true;
-              short scan_type = CMD_RANGE_ALL;//scan all
-              int32_t t_days_secs;
-              int32_t t_hours_secs;
-              int32_t t_hash_num;
-              int32_t t_file_type;
-              int64_t t_len;
-              std::string t_file_name;
-              OriInvalidTimeValueInfo value_info;
-              vector<KvValue*> kv_value_keys;
-              vector<KvValue*> kv_value_values;
-
-              while (go_on)
+              if (TFS_SUCCESS == ret)
               {
-                int32_t result_size = 0;
-                ret = kv_engine_helper_->scan_keys(tair_lifecycle_area_, start_key, end_key, SCAN_LIMIT, first,
-                                                   &kv_value_keys, &kv_value_values,
-                                                   &result_size, scan_type);
-                if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
-                {//no data
-                  TBSYS_LOG(ERROR, "data not exist");
-                  ret = TFS_SUCCESS;
-                }
+                int32_t i;
+                int32_t first = 0;
+                bool go_on = true;
+                short scan_type = CMD_RANGE_ALL;//scan all
+                int32_t t_days_secs;
+                int32_t t_hours_secs;
+                int32_t t_hash_num;
+                int32_t t_file_type;
+                std::string t_file_name;
+                std::string t_appkey;
+                vector<KvValue*> kv_value_keys;
+                vector<KvValue*> kv_value_values;
 
-                for(i = 0; i < result_size; ++i)
+                while (go_on)
                 {
-                  ret = ExpireDefine::deserialize_exptime_app_key(kv_value_keys[i]->get_data(),
-                                               kv_value_keys[i]->get_size(),
-                                               &t_days_secs, &t_hours_secs, &t_hash_num,
-                                               &t_file_type, &t_file_name);
-                  t_len = 0;
-                  ret = value_info.deserialize(kv_value_values[i]->get_data(),
-                                               (int64_t) kv_value_values[i]->get_size(),
-                                               t_len);
-                  sum_file_num++;
-                  second = Func::get_monotonic_time();
-
-                  if ((int32_t)(second - first) > note_interval)
-                  {
-                     first = second;
-                     take_note(num_es, task_time, hash_mod, sum_file_num);
+                  int32_t result_size = 0;
+                  ret = kv_engine_helper_->scan_keys(tair_lifecycle_area_, start_key, end_key, SCAN_LIMIT, first,
+                                                     &kv_value_keys, &kv_value_values,
+                                                     &result_size, scan_type);
+                  if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+                  {//no data
+                    TBSYS_LOG(ERROR, "data not exist");
+                    ret = TFS_SUCCESS;
                   }
 
+                  for(i = 0; i < result_size; ++i)
+                  {
+                    ret = ExpireDefine::deserialize_exptime_app_key(kv_value_keys[i]->get_data(),
+                                                 kv_value_keys[i]->get_size(),
+                                                 &t_days_secs, &t_hours_secs, &t_hash_num,
+                                                 &t_file_type, &t_file_name);
 
-                  /* send send nginx
-                  restful_client.unlink(t_file_name.c_str(), NULL, value_info.appkey_.c_str());
-                  */
-                }
+                    t_appkey.assign(kv_value_values[i]->get_data(),kv_value_values[i]->get_size());
 
-                TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
+                    TBSYS_LOG(DEBUG, "this appkey is %s", t_appkey.c_str());
+                    sum_file_num++;
+                    second = Func::get_monotonic_time();
 
-                if(result_size == SCAN_LIMIT)
-                {
-                  first = 1;
-                  ret = ExpireDefine::serialize_exptime_app_key(days_secs, hours_secs, hash_mod, t_file_type,
-                        t_file_name, &start_key, start_key_buff, KEY_BUFF_SIZE);
-                }
-                else
-                {
-                  go_on = false;
-                }
+                    if ((int32_t)(second - first) >= note_interval)
+                    {
+                       first = second;
+                       take_note(local_ipport, num_es, task_time, hash_mod, sum_file_num);
+                    }
 
-                for(i = 0; i < result_size; ++i)//free kv
-                {
-                  kv_value_keys[i]->free();
-                  kv_value_values[i]->free();
-                }
-                kv_value_keys.clear();
-                kv_value_values.clear();
-              }//end while
+
+                    /* send send nginx
+                    restful_client.unlink(t_file_name.c_str(), NULL, appkey_.c_str());
+                    */
+                  }
+
+                  TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
+
+                  if(result_size == SCAN_LIMIT)
+                  {
+                    first = 1;
+                    ret = ExpireDefine::serialize_exptime_app_key(days_secs, hours_secs, hash_mod, t_file_type,
+                          t_file_name, &start_key, start_key_buff, KEY_BUFF_SIZE);
+                  }
+                  else
+                  {
+                    go_on = false;
+                  }
+
+                  for(i = 0; i < result_size; ++i)//free kv
+                  {
+                    kv_value_keys[i]->free();
+                    kv_value_values[i]->free();
+                  }
+                  kv_value_keys.clear();
+                  kv_value_values.clear();
+                }//end while
+              }//end success
             }//end for day_num
           }//end for hash mod
 

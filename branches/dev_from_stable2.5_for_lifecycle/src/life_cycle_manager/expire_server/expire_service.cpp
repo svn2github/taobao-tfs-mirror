@@ -235,7 +235,7 @@ namespace tfs
         //tbutil::Time start = tbutil::Time::now();
         if (1 == task_type)
         {
-          ret = clean_task_helper_.clean_task(total_es, num_es, note_interval, task_time);
+          ret = clean_task_helper_.clean_task(local_ipport_id_, total_es, num_es, note_interval, task_time);
         }
         //tbutil::Time end = tbutil::Time::now();
         //TBSYS_LOG(INFO, "put_object cost: %"PRI64_PREFIX"d", (int64_t)(end - start).toMilliSeconds());
