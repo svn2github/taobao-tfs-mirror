@@ -124,12 +124,12 @@ namespace tfs
         CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(message);
         ReportBlocksToNsRequestMessage req_msg;
         req_msg.set_server(info.information_.id_);
-        int32_t block_count = get_block_manager().get_all_logic_block_count();
-        BlockInfoV2* blocks_ext = req_msg.alloc_blocks_ext(block_count);
-        assert(NULL != blocks_ext);
-        ArrayHelper<BlockInfoV2> blocks_helper(block_count, blocks_ext);
-        get_block_manager().get_all_block_info(blocks_helper);
-        TBSYS_LOG(INFO, "report block to ns, blocks size: %d",req_msg.get_block_count());
+        int32_t block_count = 0;
+        BlockInfoV2* blocks_ext = NULL;
+        get_block_manager().get_all_block_info(blocks_ext, block_count);
+        req_msg.set_block_count(block_count);
+        req_msg.set_blocks_ext(blocks_ext);
+        TBSYS_LOG(INFO, "report block to ns, blocks size: %d", block_count);
 
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* message = NULL;
