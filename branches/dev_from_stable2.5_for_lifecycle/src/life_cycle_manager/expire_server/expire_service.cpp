@@ -209,8 +209,8 @@ namespace tfs
         note_interval = req_clean_task_msg->get_note_interval();
         task_time = req_clean_task_msg->get_task_time();
         if ((task_type == 1 || task_type == 2) &&
-            (total_es > 0 && num_es > 0 && note_interval > 0) &&
-            (num_es <= total_es) && task_time > 0)
+            (total_es > 0 && num_es >= 0 && note_interval >= 0) &&
+            (num_es < total_es) && task_time > 0)
         {
           ret = TFS_SUCCESS;
         }
@@ -243,6 +243,7 @@ namespace tfs
         // send finish msg
         ReqFinishTaskFromEsMessage req_finish_task_msg;
         req_finish_task_msg.set_reserve(0);
+        req_finish_task_msg.set_es_id(local_ipport_id_);
 
         NewClient* client = NULL;
         int32_t retry_count = 0;
