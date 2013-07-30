@@ -29,9 +29,9 @@ namespace tfs
     {
     }
 
-    int TfsClientV2::initialize(const char* ns_addr)
+    int TfsClientV2::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
     {
-      return TfsClientImplV2::Instance()->initialize(ns_addr);
+      return TfsClientImplV2::Instance()->initialize(ns_addr, cache_time, cache_items);
     }
 
     int TfsClientV2::destroy()
@@ -70,7 +70,7 @@ namespace tfs
       return TfsClientImplV2::Instance()->unlink(file_size, file_name, suffix, action, ns_addr);
     }
 
-    int64_t TfsClientV2::get_server_id()
+    uint64_t TfsClientV2::get_server_id()
     {
       return TfsClientImplV2::Instance()->get_server_id();
     }

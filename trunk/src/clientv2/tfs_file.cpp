@@ -28,7 +28,8 @@ namespace tfs
   namespace clientv2
   {
     File::File(): lease_id_(0), offset_(0), version_(0),
-    crc_(0), mode_(0), opt_flag_(0), read_index_(0), write_status_(WRITE_STATUS_OK)
+    crc_(0), mode_(0), opt_flag_(0), read_index_(0), write_status_(WRITE_STATUS_OK),
+    cache_hit_(CACHE_HIT_NONE)
     {
     }
 
@@ -135,14 +136,27 @@ namespace tfs
       return server_id;
     }
 
-    TfsFile::TfsFile(const uint64_t ns_addr, const int32_t cluster_id):
-      ns_addr_(ns_addr)
+    TfsFile::TfsFile(): session_(NULL)
     {
-      fsname_.set_cluster_id(cluster_id);
     }
 
     TfsFile::~TfsFile()
     {
+    }
+
+    void TfsFile::set_session(TfsSession* session)
+    {
+      session_ = session;
+    }
+
+    TfsSession* TfsFile::get_session()
+    {
+      return session_;
+    }
+
+    bool TfsFile::is_cache_hit() const
+    {
+      return file_.cache_hit_ != CACHE_HIT_NONE;
     }
 
     int TfsFile::open(const char* file_name, const char* suffix, const int32_t mode)
@@ -159,7 +173,7 @@ namespace tfs
       {
         if (NULL != file_name)
         {
-          fsname_.set_name(file_name, suffix, cluster_id_);
+          fsname_.set_name(file_name, suffix, session_->get_cluster_id());
         }
 
         if (NULL != suffix)
@@ -170,7 +184,7 @@ namespace tfs
         ret = fsname_.is_valid() ? TFS_SUCCESS : EXIT_INVALID_FILE_NAME;
         if (TFS_SUCCESS == ret)
         {
-          ret = do_open();
+          ret = open_ex();
         }
       }
 
@@ -191,7 +205,7 @@ namespace tfs
       {
         fsname_.set_block_id(block_id);
         fsname_.set_file_id(file_id);
-        ret = do_open();
+        ret = open_ex();
       }
 
       return ret;
@@ -251,6 +265,50 @@ namespace tfs
 
     int64_t TfsFile::stat(common::TfsFileStat& file_stat)
     {
+      int64_t ret = TFS_SUCCESS;
+      bool retry = true;
+      while  (retry && TFS_SUCCESS == ret)
+      {
+        ret = stat_once(file_stat);
+        TBSYS_LOG(DEBUG, "stat request, ret: %"PRI64_PREFIX"d", ret);
+        retry = is_cache_hit();
+        if (retry)
+        {
+          // cache hit && block moved to other dataserver
+          retry = (EXIT_NO_LOGICBLOCK_ERROR == ret);
+          if (retry)
+          {
+            ret = open_ex();
+          }
+        }
+      }
+      return ret;
+    }
+
+    int64_t TfsFile::read(void* buf, const int64_t count, common::TfsFileStat* file_stat)
+    {
+      int64_t ret = TFS_SUCCESS;
+      bool retry = true;
+      while (retry)
+      {
+        ret = read_once(buf, count, file_stat);
+        retry = is_cache_hit();
+        if (retry)
+        {
+          // cache hit && block moved to other dataserver
+          retry = (EXIT_NO_LOGICBLOCK_ERROR == ret);
+          if (retry)
+          {
+            open_ex(); // reopen file
+          }
+        }
+        TBSYS_LOG(DEBUG, "read request, ret: %"PRI64_PREFIX"d", ret);
+      }
+      return ret;
+    }
+
+    int64_t TfsFile::stat_once(common::TfsFileStat& file_stat)
+    {
       ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);
       int ret = TFS_SUCCESS;
       if (!file_.check_read())
@@ -267,7 +325,7 @@ namespace tfs
         int32_t retry = file_.get_read_retry_time();
         while (retry--)
         {
-          ret = do_stat(file_stat);
+          ret = stat_ex(file_stat);
           if (TFS_SUCCESS != ret)
           {
             file_.set_next_read_index();
@@ -279,10 +337,13 @@ namespace tfs
         }
       }
 
+      // check cache, if expired, remove it
+      session_->expire_block_cache(fsname_.get_block_id(), file_.cache_hit_, ret);
+
       return ret;
     }
 
-    int64_t TfsFile::read(void* buf, const int64_t count, common::TfsFileStat* file_stat)
+    int64_t TfsFile::read_once(void* buf, const int64_t count, common::TfsFileStat* file_stat)
     {
       int ret = TFS_SUCCESS;
       int64_t done = 0;
@@ -305,7 +366,7 @@ namespace tfs
           read_len = ((count - done) < MAX_READ_SIZE) ? (count - done) : MAX_READ_SIZE;
           while (retry--)
           {
-            ret = do_read((char*)buf + done, read_len, real_read_len, file_stat);
+            ret = read_ex((char*)buf + done, read_len, real_read_len, file_stat);
             if (TFS_SUCCESS != ret)
             {
               file_.set_next_read_index();
@@ -334,6 +395,9 @@ namespace tfs
         }
       }
 
+      // check cache, if expired, remove it
+      session_->expire_block_cache(fsname_.get_block_id(), file_.cache_hit_, ret);
+
       // TFS_ERROR shouldn't return to upper layer
       ret = (ret != TFS_ERROR) ? ret : EXIT_READ_FILE_ERROR;
       return (ret != TFS_SUCCESS) ? ret : done;
@@ -354,7 +418,7 @@ namespace tfs
         while (done < count)
         {
           write_len = ((count - done) < MAX_READ_SIZE) ? (count - done) : MAX_READ_SIZE;
-          ret = do_write((char*)buf + done, write_len);
+          ret = write_ex((char*)buf + done, write_len);
           if (TFS_SUCCESS != ret)
           {
             break;
@@ -392,7 +456,7 @@ namespace tfs
         }
         else
         {
-          ret = do_close(status);
+          ret = close_ex(status);
         }
       }
 
@@ -409,10 +473,10 @@ namespace tfs
       }
       else
       {
-        ret = do_unlink(action, file_size, true); // prepare unlink
+        ret = unlink_ex(action, file_size, true); // prepare unlink
         if (TFS_SUCCESS == ret)
         {
-          ret = do_unlink(action, file_size, false);  // real unlink
+          ret = unlink_ex(action, file_size, false);  // real unlink
         }
       }
 
@@ -449,82 +513,41 @@ namespace tfs
       file_stat.crc_ = file_info.crc_;
     }
 
-    int TfsFile::do_open()
+    int TfsFile::open_ex()
     {
-      int ret = TFS_SUCCESS;
-      tbnet::Packet* resp_msg = NULL;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL == client)
+      file_.ds_.clear();
+      file_.family_info_.family_id_ = INVALID_FAMILY_ID;
+      uint64_t block_id = fsname_.get_block_id();
+      int ret = session_->get_block_info(block_id, file_);
+      if (TFS_SUCCESS == ret)
       {
-        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
-        TBSYS_LOG(WARN, "create new client fail.");
-      }
-      else
-      {
-        GetBlockInfoMessageV2 msg;
-        msg.set_block_id(fsname_.get_block_id());
-        msg.set_mode(file_.mode_);
-        ret = send_msg_to_server(ns_addr_, client, &msg, resp_msg);
-      }
+        // block id may allocated by ns, update it
+        fsname_.set_block_id(block_id);
 
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(WARN, "open file %s fail. blockid: %"PRI64_PREFIX"u, "
-            "fileid: %"PRI64_PREFIX"u, server: %s, ret: %d",
-            fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
-            tbsys::CNetUtil::addrToString(ns_addr_).c_str(), ret);
-      }
-      else
-      {
-        if (GET_BLOCK_INFO_RESP_MESSAGE_V2 != resp_msg->getPCode())
+        TBSYS_LOG(DEBUG, "server replica %zd", file_.ds_.size());
+        for (uint32_t i = 0; i < file_.ds_.size(); i++)
         {
-          if (STATUS_MESSAGE != resp_msg->getPCode())
-          {
-            ret = EXIT_UNKNOWN_MSGTYPE;
-          }
-          else
-          {
-            StatusMessage* smsg = dynamic_cast<StatusMessage*>(resp_msg);
-            ret = smsg->get_status();
-            TBSYS_LOG(WARN, "open file %s fail. blockid: %"PRI64_PREFIX"u, "
-                "fileid: %"PRI64_PREFIX"u, server: %s, error msg: %s, ret: %d",
-                fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(),
-                tbsys::CNetUtil::addrToString(ns_addr_).c_str(), smsg->get_error(), ret);
-          }
+          TBSYS_LOG(DEBUG, "dataserver %d address %s",
+            i, tbsys::CNetUtil::addrToString(file_.ds_[i]).c_str());
         }
-        else
+        TBSYS_LOG(DEBUG, "family id %"PRI64_PREFIX"d", file_.family_info_.family_id_);
+        if (INVALID_FAMILY_ID != file_.family_info_.family_id_)
         {
-          GetBlockInfoRespMessageV2* response = dynamic_cast<GetBlockInfoRespMessageV2*>(resp_msg);
-          BlockMeta& meta = response->get_block_meta();
-          fsname_.set_block_id(meta.block_id_);
-          file_.version_ = meta.version_;
-          TBSYS_LOG(DEBUG, "blockid: %"PRI64_PREFIX"u, replicas: %d, version: %d, family_id: %"PRI64_PREFIX"d",
-              meta.block_id_, meta.size_, meta.version_, meta.family_info_.family_id_);
-          for (int32_t i = 0; i < meta.size_; i++)
+          const int data_num = GET_DATA_MEMBER_NUM(file_.family_info_.family_aid_info_);
+          const int check_num = GET_CHECK_MEMBER_NUM(file_.family_info_.family_aid_info_);
+          for (int32_t i = 0; i < data_num + check_num; i++)
           {
-            file_.ds_.push_back(meta.ds_[i]);
-          }
-
-          if (INVALID_FAMILY_ID != meta.family_info_.family_id_)
-          {
-            const int data_num = GET_DATA_MEMBER_NUM(meta.family_info_.family_aid_info_);
-            const int check_num = GET_CHECK_MEMBER_NUM(meta.family_info_.family_aid_info_);
-            for (int32_t i = 0; i < data_num + check_num; i++)
-            {
-              TBSYS_LOG(DEBUG, "block: %"PRI64_PREFIX"u, server: %s",
-                  meta.family_info_.members_[i].first,
-                  tbsys::CNetUtil::addrToString(meta.family_info_.members_[i].second).c_str());
-            }
-            file_.family_info_ = meta.family_info_;
+            TBSYS_LOG(DEBUG, "block: %"PRI64_PREFIX"u, server: %s",
+                file_.family_info_.members_[i].first,
+                tbsys::CNetUtil::addrToString(file_.family_info_.members_[i].second).c_str());
           }
         }
       }
-      NewClientManager::get_instance().destroy_client(client);
 
       return ret;
     }
 
-    int TfsFile::do_stat(TfsFileStat& file_stat)
+    int TfsFile::stat_ex(TfsFileStat& file_stat)
     {
       int ret = TFS_SUCCESS;
       uint64_t server = 0;
@@ -587,7 +610,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsFile::do_read(char* buf, const int64_t count, int64_t& read_len,
+    int TfsFile::read_ex(char* buf, const int64_t count, int64_t& read_len,
         common::TfsFileStat* file_stat)
     {
       int ret = TFS_SUCCESS;
@@ -671,7 +694,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsFile::do_write(const char* buf, int64_t count)
+    int TfsFile::write_ex(const char* buf, int64_t count)
     {
       int ret = TFS_SUCCESS;
       uint64_t server = 0;
@@ -743,7 +766,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsFile::do_close(const int32_t status)
+    int TfsFile::close_ex(const int32_t status)
     {
       int ret = TFS_SUCCESS;
       uint64_t server = 0;
@@ -804,7 +827,7 @@ namespace tfs
       return ret;
     }
 
-    int TfsFile::do_unlink(const int32_t action, int64_t& file_size, const bool prepare)
+    int TfsFile::unlink_ex(const int32_t action, int64_t& file_size, const bool prepare)
     {
       int ret = TFS_SUCCESS;
       uint64_t server = 0;

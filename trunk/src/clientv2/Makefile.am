@@ -1,20 +1,35 @@
-AM_CPPFLAGS=-fPIC -I${top_srcdir}/src\
+AM_CPPFLAGS=-I${top_srcdir}/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
-	    -I$(TBLIB_ROOT)/include/tbnet
+	    -I$(TBLIB_ROOT)/include/tbnet\
+			$(TAIR_CACHE_CPPFLAGS)
 
-AM_LDFLAGS=-lrt -lpthread -ldl -luuid 
+AM_LDFLAGS=-lrt -lpthread -ldl -luuid $(TAIR_CACHE_LDFLAGS) 
+
+if WITH_TAIR_CACHE
+tair_cache_source=tair_cache_helper.cpp tair_cache_helper.h
+endif
 
 lib_LTLIBRARIES= libtfsclientv2.la 
 
 api_source_list = tfs_client_api_v2.cpp tfs_client_impl_v2.cpp tfs_file.cpp fsname.cpp \
-									tfs_client_api_v2.h tfs_client_impl_v2.h tfs_file.h fsname.h encode.h
+									tfs_session.cpp tfs_session_pool.cpp client_config.cpp \
+									tfs_client_api_v2.h tfs_client_impl_v2.h tfs_file.h fsname.h encode.h \
+									tfs_session.h tfs_session_pool.h lru.h client_config.h \
+                  $(tair_cache_source)
 
 ld_fg = $(AM_LDFLAGS) \
         $(top_srcdir)/src/message/libtfsmessage.a \
         $(top_srcdir)/src/common/libtfscommon.a
 
 libtfsclientv2_la_SOURCES = ${api_source_list}
-libtfsclientv2_la_LIBADD = ${ld_fg}
+libtfsclientv2_la_LIDADD = ${ld_fg}
+
+
+# needed by test_tfs_client
+#LDADD=$(top_builddir)/src/message/libtfsmessage.a\
+#      $(top_builddir)/src/common/libtfscommon.a\
+#      $(TBLIB_ROOT)/lib/libtbnet.a\
+#      $(TBLIB_ROOT)/lib/libtbsys.a
 
 #bin_PROGRAMS = test_tfs_client
 #test_tfs_client_SOURCES  = test_tfs_client.cpp ${api_source_list}

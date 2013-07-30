@@ -17,8 +17,10 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
+#include "common/lock.h"
 #include "common/internal.h"
 #include "fsname.h"
+#include "tfs_session.h"
 
 namespace tfs
 {
@@ -42,6 +44,7 @@ namespace tfs
       int32_t opt_flag_;
       int32_t read_index_;
       WriteStatus write_status_;
+      CacheHitStatus cache_hit_;
 
       File();
       ~File();
@@ -58,14 +61,16 @@ namespace tfs
     class TfsFile
     {
       public:
-        TfsFile(const uint64_t ns_addr, int32_t cluster_id);
+        TfsFile();
         ~TfsFile();
 
         int open(const char* file_name, const char* suffix, const int32_t mode);
         int open(const uint64_t block_id, const uint64_t file_id, const int32_t mode);
         int64_t lseek(const int64_t offset, const int whence);
         int64_t stat(common::TfsFileStat& file_stat);
+        int64_t stat_once(common::TfsFileStat& file_stat);
         int64_t read(void* buf, const int64_t count, common::TfsFileStat* file_stat = NULL);
+        int64_t read_once(void* buf, const int64_t count, common::TfsFileStat* file_stat = NULL);
         int64_t write(const void* buf, const int64_t count);
         int close(const int32_t status);
         int unlink(const common::TfsUnlinkType action, int64_t& file_size);
@@ -73,23 +78,25 @@ namespace tfs
         void set_option_flag(const int32_t flag);
         const char* get_file_name();
         void wrap_file_info(common::TfsFileStat& file_stat, const common::FileInfoV2& file_info);
+        void set_session(TfsSession* session);
+        TfsSession* get_session();
+        bool is_cache_hit() const;
 
       private:
-        int do_open();
-        int do_stat(common::TfsFileStat& file_stat);
-        int do_read(char* buf, const int64_t count, int64_t& read_len,
+        int open_ex();
+        int stat_ex(common::TfsFileStat& file_stat);
+        int read_ex(char* buf, const int64_t count, int64_t& read_len,
             common::TfsFileStat* file_stat = NULL);
-        int do_write(const char* buf, int64_t count);
-        int do_close(const int32_t status);
-        int do_unlink(const int32_t action, int64_t& file_size, const bool prepare = false);
+        int write_ex(const char* buf, int64_t count);
+        int close_ex(const int32_t status);
+        int unlink_ex(const int32_t action, int64_t& file_size, const bool prepare = false);
         void transfer_mode(const int32_t mode);
 
       private:
         File file_;
         FSName fsname_;
-        uint64_t ns_addr_;
-        int32_t cluster_id_;
         common::RWLock rw_lock_;
+        TfsSession* session_;
     };
   }
 }

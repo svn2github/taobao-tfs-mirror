@@ -30,7 +30,8 @@ namespace tfs
   namespace clientv2
   {
     TfsClientImplV2::TfsClientImplV2() : is_init_(false), fd_(0),
-    ns_addr_(0), cluster_id_(0), packet_factory_(NULL), packet_streamer_(NULL)
+    ns_addr_(0), cluster_id_(0), packet_factory_(NULL), packet_streamer_(NULL),
+    default_session_(NULL)
     {
       packet_factory_ = new MessageFactory();
       packet_streamer_ = new BasePacketStreamer(packet_factory_);
@@ -48,31 +49,45 @@ namespace tfs
       tbsys::gDelete(packet_streamer_);
     }
 
-    int TfsClientImplV2::initialize(const char* ns_addr)
+    int TfsClientImplV2::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
     {
       int ret = TFS_SUCCESS;
-
       tbutil::Mutex::Lock lock(mutex_);
       if (is_init_)
       {
         TBSYS_LOG(INFO, "tfsclient already initialized");
       }
-      else if (TFS_SUCCESS != (ret = NewClientManager::get_instance().initialize(packet_factory_, packet_streamer_)))
-      {
-        TBSYS_LOG(ERROR, "initialize NewClientManager fail, must exit, ret: %d", ret);
-      }
       else
       {
-        ns_addr_ = ipport_to_addr(ns_addr);
-        if (0 != ns_addr_)
+        ret = NewClientManager::get_instance().initialize(packet_factory_, packet_streamer_);
+        if (TFS_SUCCESS != ret)
         {
-          ret = initialize_cluster_id();
+          TBSYS_LOG(ERROR, "initialize NewClientManager fail, must exit, ret: %d", ret);
         }
+      }
 
-        if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret)
+      {
+        if (NULL != ns_addr)
         {
-          is_init_ = true;
+          TfsSession* session = session_pool_.get(ns_addr, cache_time, cache_items);
+          if (NULL != session)
+          {
+            default_session_ = session;
+          }
+          else
+          {
+            // invalid ns addr
+            ret = EXIT_PARAMETER_ERROR;
+          }
         }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        is_init_ = true;
+        ClientConfig::cache_time_ = cache_time;
+        ClientConfig::cache_items_ = cache_items;
       }
 
       return ret;
@@ -100,7 +115,35 @@ namespace tfs
       TBSYS_LOGGER.setFileName(file);
     }
 
-    int TfsClientImplV2::open(const char* file_name, const char* suffix, const char* ns_addr, const int mode)
+    int TfsClientImplV2::get_session(const char* ns_addr, TfsSession*& session)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == ns_addr)
+      {
+        if (NULL == default_session_)
+        {
+          ret = EXIT_PARAMETER_ERROR;
+        }
+        else
+        {
+          session = default_session_;
+        }
+      }
+      else
+      {
+        session = session_pool_.get(ns_addr);
+        if (NULL == session)
+        {
+          // invalid ns addr
+          ret = EXIT_PARAMETER_ERROR;
+        }
+      }
+
+      return ret;
+    }
+
+    int TfsClientImplV2::open(const char* file_name,
+        const char* suffix, const char* ns_addr, const int mode)
     {
       int ret_fd = EXIT_INVALIDFD_ERROR;
       int ret = TFS_SUCCESS;
@@ -116,15 +159,12 @@ namespace tfs
       else
       {
         TfsFile* tfs_file = NULL;
-        uint64_t real_nsaddr = ipport_to_addr(ns_addr);
-        real_nsaddr = (0 != real_nsaddr) ? real_nsaddr : ns_addr_;
-        if (0 == real_nsaddr)
+        TfsSession* session = NULL;
+        ret = get_session(ns_addr, session);
+        if (TFS_SUCCESS == ret)
         {
-          ret = EXIT_PARAMETER_ERROR;
-        }
-        else
-        {
-          tfs_file = new TfsFile(real_nsaddr, cluster_id_);
+          tfs_file = new TfsFile();
+          tfs_file->set_session(session);
           ret = tfs_file->open(file_name, suffix, mode);
         }
 
@@ -140,7 +180,7 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
-          ret_fd = (ret < 0) ? ret : EXIT_INVALIDFD_ERROR; // return true error code except TFS_ERROR
+          ret_fd = (ret < 0) ? ret : EXIT_INVALIDFD_ERROR;
           tbsys::gDelete(tfs_file);
         }
       }
@@ -148,7 +188,8 @@ namespace tfs
       return ret_fd;
     }
 
-    int TfsClientImplV2::open(const uint64_t block_id, const uint64_t file_id, const char* ns_addr, const int mode)
+    int TfsClientImplV2::open(const uint64_t block_id,
+        const uint64_t file_id, const char* ns_addr, const int mode)
     {
       int ret_fd = EXIT_INVALIDFD_ERROR;
       int ret = TFS_SUCCESS;
@@ -164,15 +205,12 @@ namespace tfs
       else
       {
         TfsFile* tfs_file = NULL;
-        uint64_t real_nsaddr = ipport_to_addr(ns_addr);
-        real_nsaddr = (0 != real_nsaddr) ? real_nsaddr : ns_addr_;
-        if (0 == real_nsaddr)
+        TfsSession* session = NULL;
+        ret = get_session(ns_addr, session);
+        if (TFS_SUCCESS == ret)
         {
-          ret = EXIT_PARAMETER_ERROR;
-        }
-        else
-        {
-          tfs_file = new TfsFile(real_nsaddr, cluster_id_);
+          tfs_file = new TfsFile();
+          tfs_file->set_session(session);
           ret = tfs_file->open(block_id, file_id, mode);
         }
 
@@ -189,7 +227,7 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
-          ret_fd = (ret < 0) ? ret : EXIT_INVALIDFD_ERROR; // return true error code except TFS_ERROR
+          ret_fd = (ret < 0) ? ret : EXIT_INVALIDFD_ERROR;
           tbsys::gDelete(tfs_file);
         }
       }
@@ -309,6 +347,7 @@ namespace tfs
           ret = tfs_file->stat(*buf);
         }
       }
+
       return ret;
     }
 
@@ -654,15 +693,62 @@ namespace tfs
       return ret;
     }
 
-    int64_t TfsClientImplV2::get_server_id()
+    uint64_t TfsClientImplV2::get_server_id()
     {
-      return ns_addr_;
+      uint64_t server_id = 0;
+      if (NULL != default_session_)
+      {
+        server_id = Func::get_host_ip(default_session_->get_ns_addr().c_str());
+      }
+      return server_id;
     }
 
     int32_t TfsClientImplV2::get_cluster_id()
     {
+      uint32_t cluster_id = 0;
+      if (NULL != default_session_)
+      {
+        cluster_id = default_session_->get_cluster_id();
+      }
       return cluster_id_;
     }
+
+    void TfsClientImplV2::set_use_local_cache(const bool enable)
+    {
+      if (enable)
+      {
+        ClientConfig::use_cache_ |= USE_CACHE_FLAG_LOCAL;
+      }
+      else
+      {
+        ClientConfig::use_cache_ &= ~USE_CACHE_FLAG_LOCAL;
+      }
+    }
+
+    void TfsClientImplV2::set_use_remote_cache(const bool enable)
+    {
+      if (enable)
+      {
+        ClientConfig::use_cache_ |= USE_CACHE_FLAG_REMOTE;
+      }
+      else
+      {
+        ClientConfig::use_cache_ &= ~USE_CACHE_FLAG_REMOTE;
+      }
+    }
+
+#ifdef WITH_TAIR_CACHE
+      void TfsClientImplV2::set_remote_cache_info(const char* remote_cache_master_addr,
+          const char* remote_cache_slave_addr,
+          const char* remote_cache_group_name,
+          const int32_t area)
+      {
+        ClientConfig::remote_cache_master_addr_ = remote_cache_master_addr;
+        ClientConfig::remote_cache_slave_addr_ = remote_cache_slave_addr;
+        ClientConfig::remote_cache_group_name_ = remote_cache_group_name;
+        ClientConfig::remote_cache_area_ = area;
+      }
+#endif
 
     TfsFile* TfsClientImplV2::get_file(const int fd)
     {
@@ -750,66 +836,6 @@ namespace tfs
         tbsys::gDelete(it->second);
         tfs_file_map_.erase(it);
       }
-      return ret;
-    }
-
-    uint64_t TfsClientImplV2::ipport_to_addr(const char* addr)
-    {
-      uint64_t result = 0;
-      if (NULL != addr)
-      {
-        vector<string> fields;
-        Func::split_string(addr, ':', fields);
-        if (2 == fields.size())
-        {
-          result = Func::str_to_addr(fields[0].c_str(), atoi(fields[1].c_str()));
-        }
-      }
-      return result;
-    }
-
-    int TfsClientImplV2::initialize_cluster_id()
-    {
-      ClientCmdMessage cc_message;
-      cc_message.set_cmd(CLIENT_CMD_SET_PARAM);
-      cc_message.set_value3(20);
-
-      tbnet::Packet* rsp = NULL;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      int ret = send_msg_to_server(ns_addr_, client, &cc_message, rsp);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "get cluster id from ns fail, ret: %d", ret);
-      }
-      else if (STATUS_MESSAGE == rsp->getPCode())
-      {
-        StatusMessage* status_msg = dynamic_cast<StatusMessage*>(rsp);
-        //ugly use error msg
-        if (status_msg->get_status() == STATUS_MESSAGE_OK &&
-            strlen(status_msg->get_error()) > 0)
-        {
-          char cluster_id = static_cast<char> (atoi(status_msg->get_error()));
-          if (isdigit(cluster_id) || isalpha(cluster_id))
-          {
-            cluster_id_ = cluster_id - '0';
-            TBSYS_LOG(INFO, "get cluster id from ns %s success. cluster id: %d",
-                tbsys::CNetUtil::addrToString(ns_addr_).c_str(), cluster_id_);
-          }
-          else
-          {
-            TBSYS_LOG(ERROR, "get cluster id from ns %s fail. cluster id: %d",
-                tbsys::CNetUtil::addrToString(ns_addr_).c_str(), cluster_id_);
-            ret = TFS_ERROR;
-          }
-        }
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "get cluster id from ns %s failed, msg type error. type: %d",
-            tbsys::CNetUtil::addrToString(ns_addr_).c_str(), rsp->getPCode());
-        ret = EXIT_UNKNOWN_MSGTYPE;
-      }
-      NewClientManager::get_instance().destroy_client(client);
       return ret;
     }
 
