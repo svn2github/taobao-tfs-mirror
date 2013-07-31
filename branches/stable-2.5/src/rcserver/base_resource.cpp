@@ -28,7 +28,6 @@ namespace
   const int CLUSTER_ACCESS_TYPE_FORBIDEN = 0;
   const int CLUSTER_ACCESS_TYPE_READ_ONLY = 1;
   const int CLUSTER_ACCESS_TYPE_READ_AND_WRITE = 2;
-  const int CLUSTER_ACCESS_TYPE_UPDATE = 4;
 }
 namespace tfs
 {
@@ -225,8 +224,6 @@ namespace tfs
               //found one available cluster;
               ClusterData tmp_cluster;
               tmp_cluster = rack_info_it->cluster_data_;
-              bool update = tmp_cluster.cluster_stat_ & CLUSTER_ACCESS_TYPE_UPDATE;
-              tmp_cluster.cluster_stat_ &= (~CLUSTER_ACCESS_TYPE_UPDATE);
               if (tmp_cluster.cluster_stat_ > rack_group_it->cluster_rack_access_type_)
               {
                 tmp_cluster.access_type_ = rack_group_it->cluster_rack_access_type_;
@@ -235,12 +232,12 @@ namespace tfs
               {
                 tmp_cluster.access_type_ = tmp_cluster.cluster_stat_;
               }
-              if (CLUSTER_ACCESS_TYPE_READ_AND_WRITE & tmp_cluster.access_type_)
+              if (CLUSTER_ACCESS_TYPE_READ_AND_WRITE == tmp_cluster.access_type_)
               {
                 read_only = false;
               }
               tmp_rack.cluster_data_.push_back(tmp_cluster);
-              if ((GROUP_ACCESS_TYPE_READ_AND_WRITE == rack_group_it->cluster_rack_access_type_) && update)
+              if (GROUP_ACCESS_TYPE_READ_AND_WRITE == rack_group_it->cluster_rack_access_type_)
               {
                 cluster_datas_for_update.push_back(tmp_cluster);
               }
