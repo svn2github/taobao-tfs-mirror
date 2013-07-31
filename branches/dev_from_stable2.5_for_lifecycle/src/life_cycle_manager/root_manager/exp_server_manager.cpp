@@ -91,7 +91,6 @@ namespace tfs
     {
       tbutil::Time now;
       int64_t check_interval_ = wait_time_check_ * 1000000;
-      //TBSYS_LOG(INFO, "%"PRI64_PREFIX"d", check_interval_);
       while (!destroy_)
       {
         now = tbutil::Time::now(tbutil::Time::Monotonic);
@@ -127,20 +126,15 @@ namespace tfs
         else
         {
           ++iter;
-          if ((iter->second).base_info_.task_status_ == 0)
-          {
-            tbutil::Mutex::Lock lock(mutex_for_get_);
-            exp_table_.v_idle_table_.push_back(iter->first);
-          }
         }
       }
       mutex_.unlock();
       if (need_move_)
       {
         handle_task_helper_.handle_fail_servers(down_servers);
-        move_table();
       }
 
+      move_table();
       return;
     }
 
@@ -198,12 +192,14 @@ namespace tfs
       }
       mutex_for_get_.unlock();
       mutex_.unlock();
+
       need_move_ = false;
     }
 
     int ExpServerManager::get_table(ExpTable &exp_table)
     {
       int32_t iret = TFS_SUCCESS;
+
       if (TFS_SUCCESS == iret)
       {
         tbutil::Mutex::Lock lock(mutex_for_get_);

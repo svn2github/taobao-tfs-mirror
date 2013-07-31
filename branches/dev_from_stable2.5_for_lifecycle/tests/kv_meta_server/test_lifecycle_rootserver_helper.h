@@ -30,10 +30,12 @@ namespace tfs
   namespace exprootserver
   {
     using namespace common;
+    class ExpServerManager;
     class TestLifeCycleRootserverHelper :public HandleTaskHelper
     {
     public:
       TestLifeCycleRootserverHelper()
+      :HandleTaskHelper(manager_), manager_(*this)
       {
       }
       int init(common::KvEngineHelper*){
@@ -43,7 +45,8 @@ namespace tfs
       {
         kv_engine_helper_ = r;
       }
-
+    private:
+      ExpServerManager manager_;
     };
   }
 }

@@ -36,7 +36,8 @@ namespace tfs
   {
     ExpRootServer::ExpRootServer():
       rt_es_heartbeat_handler_(*this),
-      manager_(handle_task_helper_)
+      manager_(handle_task_helper_),
+      handle_task_helper_(manager_)
     {
 
     }

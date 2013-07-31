@@ -135,9 +135,9 @@ namespace tfs
 
     enum ExpireTaskType
     {
-      RAW = 0,
-      META = 1,
-      BUCKET = 2
+      RAW = 1,
+      META = 2,
+      BUCKET = 3
     };
 
     struct ExpireDeleteTask

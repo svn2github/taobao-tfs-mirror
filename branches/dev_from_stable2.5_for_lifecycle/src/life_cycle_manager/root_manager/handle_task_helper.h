@@ -32,8 +32,7 @@ namespace tfs
     class HandleTaskHelper
     {
       public:
-        HandleTaskHelper();
-        //HandleTaskHelper(ExpServerManager &manager);
+        HandleTaskHelper(ExpServerManager &manager);
         virtual ~HandleTaskHelper();
         int init(tfs::common::KvEngineHelper* kv_engine_helper);
         int destroy();
@@ -82,7 +81,7 @@ namespace tfs
         std::deque<common::ExpireDeleteTask> task_wait_;
 
       private:
-        ExpServerManager manager_;
+        ExpServerManager &manager_;
         DISALLOW_COPY_AND_ASSIGN(HandleTaskHelper);
     };
   }

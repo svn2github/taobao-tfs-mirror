@@ -242,7 +242,7 @@ namespace tfs
 
         // send finish msg
         ReqFinishTaskFromEsMessage req_finish_task_msg;
-        req_finish_task_msg.set_reserve(0);
+        //req_finish_task_msg.set_reserve(0);
         req_finish_task_msg.set_es_id(local_ipport_id_);
 
         NewClient* client = NULL;

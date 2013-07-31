@@ -21,6 +21,7 @@
 #include "test_kvengine.h"
 #include "define.h"
 #include "error_msg.h"
+#include "life_cycle_manager/root_manager/exp_server_manager.h"
 
 using namespace std;
 using namespace tfs;
@@ -60,14 +61,17 @@ TEST_F(LifeCycleRootserverTest, test_query_progress)
   int ret = TFS_SUCCESS;
   uint64_t es_id = tbsys::CNetUtil::strToAddr("10.232.35.41", 0);
 
-  int32_t num_es = 1;
+  int32_t num_es = 0;
   int32_t spec_time = 111000;
   int32_t hash_bucket_num = 1;
   int64_t sum_file_num = 10;
-  int32_t current_percent = 10;
+  //int32_t current_percent = 10;
 
   int64_t query_sum_file_num;
   int32_t query_current_percent;
+
+  int32_t total_alive = 10;
+  int32_t note_interval = 30;
 
   int32_t area = 911;
   int32_t version = 1;
@@ -79,10 +83,18 @@ TEST_F(LifeCycleRootserverTest, test_query_progress)
   ret = test_engine_.put_key(area, key, value, version);
   EXPECT_EQ(TFS_SUCCESS, ret);
 
+  std::map<uint64_t, common::ExpireDeleteTask> m_task_info;
+  ExpireDeleteTask del_task(total_alive, num_es, spec_time, 1, note_interval, common::RAW);
+  m_task_info.insert(std::make_pair(es_id, del_task));
+  test_life_cycle_rootserver_helper_->put_task_info(m_task_info);
+
   ret = test_life_cycle_rootserver_helper_->query_progress(es_id, num_es, spec_time, hash_bucket_num, common::RAW, &query_sum_file_num, &query_current_percent);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  EXPECT_EQ(sum_file_num, query_sum_file_num);
-  EXPECT_EQ(current_percent, query_current_percent);
+
+  if (hash_bucket_num > 0)
+  {
+    EXPECT_EQ(sum_file_num, query_sum_file_num);
+  }
 }
 
 TEST_F(LifeCycleRootserverTest, test_handle_fail_servers)

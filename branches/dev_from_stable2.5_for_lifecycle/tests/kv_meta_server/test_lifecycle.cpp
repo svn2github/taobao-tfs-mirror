@@ -83,7 +83,7 @@ TEST_F(LifeCycleMetaTest, test_serialize_es_stat_key)
   int32_t num_es = 10;
   int32_t task_time = 111000;
   int32_t hash_bucket_num = 200;
-  int64_t sum_file_num = 100;
+  int64_t sum_file_num = 0x7fffffffffffffffL;
   ret = ExpireDefine::serialize_es_stat_key(es_id, num_es, task_time, hash_bucket_num, sum_file_num, &key, data, 100);
   EXPECT_EQ(TFS_SUCCESS, ret);
   uint64_t des_es_id;

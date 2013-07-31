@@ -47,9 +47,9 @@ namespace tfs
       CMD_RANGE_KEY_ONLY,
     };
 
-    HandleTaskHelper::HandleTaskHelper()
+    HandleTaskHelper::HandleTaskHelper(ExpServerManager &manager)
       :kv_engine_helper_(NULL), tair_lifecycle_area_(0),
-      assign_task_thread_(0), manager_(*this)
+      assign_task_thread_(0), manager_(manager)
     {
     }
 
@@ -82,7 +82,6 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = manager_.initialize();
         assign_task_thread_ = new AssignTaskThreadHelper(*this);
         tair_lifecycle_area_ = SYSPARAM_EXPIREROOTSERVER.tair_lifecycle_area_;
       }
@@ -100,10 +99,10 @@ namespace tfs
 
       ret = (NULL == sum_file_num || NULL == current_percent) ? TFS_ERROR : TFS_SUCCESS;
 
-      char *key_buff = (char*)malloc(KEY_BUFF_SIZE);
-      char *value_buff = (char*)malloc(VALUE_BUFF_SIZE);
+      char *start_key_buff = (char*)malloc(KEY_BUFF_SIZE);
+      char *end_key_buff = (char*)malloc(KEY_BUFF_SIZE);
 
-      if (NULL == key_buff || NULL == value_buff)
+      if (NULL == start_key_buff || NULL == end_key_buff)
       {
         ret = TFS_ERROR;
       }
@@ -117,14 +116,14 @@ namespace tfs
         ret = ExpireDefine::serialize_es_stat_key(es_id, num_es,
             task_time, hash_bucket_num > 0 ? hash_bucket_num : 0,
             0, &start_key,
-            key_buff, KEY_BUFF_SIZE);
+            start_key_buff, KEY_BUFF_SIZE);
 
         if (TFS_SUCCESS == ret)
         {
           ret = ExpireDefine::serialize_es_stat_key(es_id, num_es, task_time,
               hash_bucket_num > 0 ? hash_bucket_num : INT32_INFI,
               INT64_INFI, &end_key,
-              key_buff, KEY_BUFF_SIZE);
+              end_key_buff, KEY_BUFF_SIZE);
         }
       }
 
@@ -163,6 +162,7 @@ namespace tfs
 
       while (TFS_SUCCESS == ret)
       {
+        bool loop = true;
         ret = kv_engine_helper_->scan_keys(tair_lifecycle_area_, start_key, end_key, limit, offset, &kv_value_keys, &kv_value_values, &res_size, CMD_RANGE_ALL);
 
         if (TFS_SUCCESS != ret && EXIT_KV_RETURN_HAS_MORE_DATA != ret)
@@ -186,11 +186,12 @@ namespace tfs
           {
             ret = ExpireDefine::serialize_es_stat_key(es_id, num_es, task_time, last_hash_bucket_num,
                                                      INT64_INFI, &start_key,
-                                                     key_buff, KEY_BUFF_SIZE);
+                                                     start_key_buff, KEY_BUFF_SIZE);
           }
           else if (res_size < limit)
           {
-            break;
+            //TBSYS_LOG(INFO, "res_size: %d", res_size);
+            loop = false;
           }
         }
 
@@ -199,6 +200,11 @@ namespace tfs
           kv_value_values[i]->free();
         }
         kv_value_values.clear();
+
+        if (!loop)
+        {
+          break;
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -213,16 +219,16 @@ namespace tfs
         }
       }
 
-      if (NULL != value_buff)
+      if (NULL != start_key_buff)
       {
-        free(value_buff);
-        value_buff = NULL;
+        free(start_key_buff);
+        start_key_buff = NULL;
       }
 
-      if (NULL != key_buff)
+      if (NULL != end_key_buff)
       {
-        free(key_buff);
-        key_buff = NULL;
+        free(end_key_buff);
+        end_key_buff = NULL;
       }
 
       return ret;
@@ -238,7 +244,7 @@ namespace tfs
       }
       else
       {
-        TBSYS_LOG(ERROR, "fatal error, rts has no %"PRI64_PREFIX"u assign task" , es_id);
+        TBSYS_LOG(ERROR, "fatal error, rts has no %s assign task", tbsys::CNetUtil::addrToString(es_id).c_str());
       }
       mutex_task_.unlock();
       return TFS_SUCCESS;
@@ -307,6 +313,7 @@ namespace tfs
         ret = manager_.get_table(exp_table);
 
         tbutil::Time now = tbutil::Time::now(tbutil::Time::Realtime);
+
         //check arrive clock
         if (now.toSeconds() % TASK_PERIOD_SECONDS == 0)
         {
@@ -345,6 +352,7 @@ namespace tfs
             task_wait_.pop_front();
             mutex_task_wait_.unlock();
 
+            //TBSYS_LOG(INFO, "begin to assign msg to %s", tbsys::CNetUtil::addrToString(exp_table.v_idle_table_[i]).c_str());
             ret = assign(exp_table.v_idle_table_[i], del_task);
 
             if (TFS_SUCCESS != ret)
