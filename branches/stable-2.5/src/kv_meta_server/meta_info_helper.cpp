@@ -663,7 +663,7 @@ namespace tfs
             int64_t last_offset = 0;
             ret = kv_engine_helper_->scan_keys(start_key, end_key, SCAN_LIMIT, scan_offset,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
-            if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+            if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret || 0 == result_size)
             {//metainfo exist but data not exist
               TBSYS_LOG(ERROR, "%s %s metainfo exist but data not exist",bucket_name.c_str(),file_name.c_str());
               ret = EXIT_REQ_OFFSET_NOT_FIND;
