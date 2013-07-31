@@ -558,14 +558,13 @@ namespace tfs
       new_finfo.create_time_ = update ? old_finfo.create_time_ : now;
       new_finfo.modify_time_ = now;
       new_finfo.crc_ = datafile.crc();
+      new_finfo.status_ = FILE_STATUS_NOMARL;
       if (update)
       {
-        new_finfo.status_ = old_finfo.status_;
         new_finfo.next_ = old_finfo.next_;
       }
       else
       {
-        new_finfo.status_ = FILE_STATUS_NOMARL;
         new_finfo.next_   = 0;
       }
       new_finfo.size_ = file_size;

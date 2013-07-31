@@ -70,7 +70,7 @@ namespace tfs
             char* data, const int32_t len, const int32_t off, const int8_t flag);
         int write_file(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id,
-            const char*data, const int32_t len, const bool tmp);
+            const char*data, const int32_t len, const int32_t status, const bool tmp);
 
         int stat_file_degrade(const uint64_t block_id, const uint64_t file_id, const int32_t flag,
             const common::FamilyInfoExt& family_info, common::FileInfoV2& finfo);
@@ -114,7 +114,8 @@ namespace tfs
             const uint64_t attach_block_id, const uint64_t file_id,
             const char* data, const int32_t length, const int32_t offset, uint64_t& lease_id);
         int close_file_ex(const uint64_t server_id, const uint64_t block_id,
-            const uint64_t attach_block_id, const uint64_t file_id, const uint64_t lease_id, const bool tmp);
+            const uint64_t attach_block_id, const uint64_t file_id, const uint64_t lease_id,
+            const int32_t status, const bool tmp);
 
         int prepare_read_degrade(const common::FamilyInfoExt& family_info, int* erased);
         int read_file_degrade_ex(const uint64_t block_id, const common::FileInfoV2& finfo,

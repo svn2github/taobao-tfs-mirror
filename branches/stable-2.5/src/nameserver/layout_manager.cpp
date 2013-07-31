@@ -64,7 +64,7 @@ namespace tfs
       gc_manager_(*this),
       family_manager_(*this)
     {
-      srand(time(NULL));
+      srandom(time(NULL));
       tzset();
       zonesec_ = 86400 + timezone;
       last_rotate_log_time_ = 0;
