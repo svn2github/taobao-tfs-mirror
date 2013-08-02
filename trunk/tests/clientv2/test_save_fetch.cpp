@@ -2,10 +2,10 @@
 #include <time.h>
 #include <assert.h>
 #include <string>
-#include "define.h"
-#include "func.h"
-#include "error_msg.h"
-#include "tfs_client_impl_v2.h"
+#include "common/define.h"
+#include "common/func.h"
+#include "common/error_msg.h"
+#include "clientv2/tfs_client_impl_v2.h"
 
 #include "gtest/gtest.h"
 using namespace std;
