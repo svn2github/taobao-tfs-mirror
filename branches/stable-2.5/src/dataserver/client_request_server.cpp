@@ -126,10 +126,13 @@ namespace tfs
         req_msg.set_server(info.information_.id_);
         int32_t block_count = 0;
         BlockInfoV2* blocks_ext = NULL;
+        TIMER_START();
         get_block_manager().get_all_block_info(blocks_ext, block_count);
+        TIMER_END();
+        TBSYS_LOG(INFO, "report block to ns, blocks size: %d, cost: %"PRI64_PREFIX"d",
+            block_count, TIMER_DURATION());
         req_msg.set_block_count(block_count);
         req_msg.set_blocks_ext(blocks_ext);
-        TBSYS_LOG(INFO, "report block to ns, blocks size: %d", block_count);
 
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* message = NULL;
@@ -196,9 +199,9 @@ namespace tfs
       get_traffic_control().rw_stat(RW_STAT_TYPE_STAT, ret, true, 0);
 
       // access log
-      TBSYS_LOG(INFO, "STAT file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(INFO, "STAT file %s, ret: %d. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
-          (TFS_SUCCESS == ret) ? "success" : "fail", block_id, attach_block_id, file_id,
+          (TFS_SUCCESS == ret) ? "success" : "fail", ret, block_id, attach_block_id, file_id,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(), ret);
 
       return ret;
@@ -298,10 +301,10 @@ namespace tfs
       get_traffic_control().rw_stat(RW_STAT_TYPE_READ, ret, offset <= FILEINFO_EXT_SIZE, length);
 
       // access log
-      TBSYS_LOG(INFO, "READ file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(INFO, "READ file %s, ret: %d. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, length: %d, offset: %d, peer ip: %s, "
           "cost: %"PRI64_PREFIX"d, degrade: %s, ret: %d",
-          TFS_SUCCESS == ret ? "success" : "fail", block_id, attach_block_id, file_id, length, offset,
+          TFS_SUCCESS == ret ? "success" : "fail", ret, block_id, attach_block_id, file_id, length, offset,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(),
           INVALID_FAMILY_ID == family_info.family_id_ ? "no" : "yes", ret);
 

@@ -35,8 +35,8 @@ namespace tfs
     {
       RW_STAT_TYPE_READ =  0,
       RW_STAT_TYPE_WRITE = 1,
-      RW_STAT_TYPE_UNLINK =2,
-      RW_STAT_TYPE_STAT = 3,
+      RW_STAT_TYPE_STAT = 2,
+      RW_STAT_TYPE_UNLINK = 3
     }RW_STAT_TYPE;
     class TrafficControl
     {
