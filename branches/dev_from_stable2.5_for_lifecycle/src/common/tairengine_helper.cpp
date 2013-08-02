@@ -119,13 +119,13 @@ namespace tfs
       {
         case KvKey::KEY_TYPE_OBJECT:
         case KvKey::KEY_TYPE_EXPTIME_APPKEY:
+        case KvKey::KEY_TYPE_ES_STAT:
           {
             ret = prefix_put_key(name_area, key, value, version);
           }
           break;
         case KvKey::KEY_TYPE_BUCKET:
         case KvKey::KEY_TYPE_NAME_EXPTIME:
-        case KvKey::KEY_TYPE_ES_STAT:
           {
             ret = none_range_put_key(name_area, key, value, version);
           }
