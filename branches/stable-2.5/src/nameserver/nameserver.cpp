@@ -245,7 +245,7 @@ namespace tfs
               if (!main_workers_.push(bpacket, work_queue_size_, false))
               {
                 hret = tbnet::IPacketHandler::FREE_CHANNEL;
-                bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEURE_FULL, "%s, task message beyond max queue size, discard, peer ip: %s", get_ip_addr(),
+                bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "%s, task message beyond max queue size, discard, peer ip: %s", get_ip_addr(),
                   tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
                 bpacket->free();
               }

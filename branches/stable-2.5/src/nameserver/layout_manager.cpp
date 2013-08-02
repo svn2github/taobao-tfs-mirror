@@ -621,8 +621,8 @@ namespace tfs
 
         if (ngi.is_master())
         {
-          while ((get_server_manager().has_report_block_server()) && (!ngi.is_destroyed()))
-            usleep(1000);
+          //while ((get_server_manager().has_report_block_server()) && (!ngi.is_destroyed()))
+          //  usleep(1000);
 
           while (((need = has_space_in_task_queue_()) <= 0) && (!ngi.is_destroyed()))
             usleep(1000);

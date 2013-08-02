@@ -417,6 +417,9 @@ namespace tfs
           bool writable = false, master = false;
           BlockInfoV2& info = (*blocks.at(i));
 
+          if (INVALID_BLOCK_ID == info.block_id_)
+            continue;
+
           // check block version, rebuilding relation.
           get_mutex_(info.block_id_).wrlock();
           BlockCollect* block = get_(info.block_id_);
