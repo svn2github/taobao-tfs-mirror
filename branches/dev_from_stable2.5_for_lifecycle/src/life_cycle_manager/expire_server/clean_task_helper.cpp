@@ -104,6 +104,8 @@ namespace tfs
       int64_t pos = 0;
       int64_t lock_version = 0;
       KvMemValue kv_value;
+      value_buff[0] = 'v';
+      pos = 1;
       if (TFS_SUCCESS == ret)
       {
         kv_value.set_data(value_buff, pos);
@@ -191,12 +193,16 @@ namespace tfs
           {
             for (day_num = SYSPARAM_EXPIRESERVER.re_clean_days_; day_num >= 0; --day_num)
             {
+              TBSYS_LOG(DEBUG, "now day is %d hashnum is %d", day_num, hash_mod);
               relative_days_secs = days_secs - day_num * SEC_ONE_DAY;
               if (day_num != 0)
               {
                 relative_hours_secs = SEC_ONE_DAY;
               }
-              relative_hours_secs = hours_secs;
+              else
+              {
+                relative_hours_secs = hours_secs;
+              }
 
               if (TFS_SUCCESS == ret)
               {

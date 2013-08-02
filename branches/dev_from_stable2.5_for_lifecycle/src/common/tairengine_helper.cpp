@@ -698,6 +698,7 @@ namespace tfs
         }
         else
         {
+          TBSYS_LOG(ERROR, "tair_ret getrange is %d and area is %d and type is %d", tair_ret, area, type);
           ret = EXIT_KV_RETURN_ERROR;
         }
       }

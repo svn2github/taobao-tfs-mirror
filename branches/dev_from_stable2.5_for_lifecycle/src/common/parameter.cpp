@@ -670,7 +670,7 @@ namespace tfs
       tair_slave_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_SLAVE, "");
       tair_group_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_GROUP, "");
       tair_lifecycle_area_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_TAIR_LIFECYCLE_AREA, -1);
-      re_clean_days_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_EXPIRE_RE_CLEAN_DAYS, 3);
+      re_clean_days_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_EXPIRE_RE_CLEAN_DAYS, 1);
       nginx_root_ = config.getString(CONF_SN_EXPIRESERVER, CONF_ES_NGINX_ROOT, "");
       es_appkey_ = config.getString(CONF_SN_EXPIRESERVER, CONF_ES_APPKEY, "");
       if (TFS_SUCCESS == ret)

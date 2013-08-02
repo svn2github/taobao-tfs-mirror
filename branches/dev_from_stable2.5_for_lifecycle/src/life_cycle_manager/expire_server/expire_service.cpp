@@ -199,7 +199,7 @@ namespace tfs
       int32_t total_es;
       int32_t num_es;
       int32_t note_interval;
-      int64_t task_time;
+      int32_t task_time;
 
       if (TFS_SUCCESS == ret)
       {
@@ -212,6 +212,7 @@ namespace tfs
             (total_es > 0 && num_es >= 0 && note_interval >= 0) &&
             (num_es < total_es) && task_time > 0)
         {
+          TBSYS_LOG(DEBUG, "%d, %d, %d, %d, %d",task_type, total_es, num_es, note_interval, task_time);
           ret = TFS_SUCCESS;
         }
         else
