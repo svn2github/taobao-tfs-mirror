@@ -150,7 +150,7 @@ AC_ARG_WITH([release],
         CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -Wno-deprecated -fPIC -D__STDC_LIMIT_MACROS -D_NO_EXCEPTION"
       fi
     ],
-    [CXXFLAGS="-g -D__STDC_LIMIT_MACROS -Wall -Werror -Wextra -Wunused-parameter -Wformat -Wconversion -Wdeprecated "]
+    [CXXFLAGS="-g -D__STDC_LIMIT_MACROS -Wall -Wextra -Wunused-parameter -Wformat -Wconversion -Wdeprecated "]
     #[CXXFLAGS="-g -Wall -fPIC -D__STDC_LIMIT_MACROS -DTFS_TEST -D_NO_EXCEPTION"]
 )
 
