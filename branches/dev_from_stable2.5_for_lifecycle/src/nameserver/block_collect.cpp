@@ -255,7 +255,8 @@ namespace tfs
       if (!is_creating() && check && !in_replicate_queue()
           && (last_update_time_ + SYSPARAM_NAMESERVER.compact_task_expired_time_ <= now))
       {
-        if ((server_size_ == SYSPARAM_NAMESERVER.max_replication_) && is_full())
+        int32_t least_copies = is_in_family() ? 1 : SYSPARAM_NAMESERVER.max_replication_;
+        if ((server_size_ == least_copies) && is_full())
         {
           if ((info_.file_count_ > 0)
               && (info_.size_ > 0)

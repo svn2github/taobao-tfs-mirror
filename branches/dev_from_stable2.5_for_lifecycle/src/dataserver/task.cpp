@@ -1311,7 +1311,7 @@ namespace tfs
         {
           ret = get_data_helper().write_file(family_members_[dest].server_,
               family_members_[dest].block_, block_id,
-              finfos[i].id_, data, length, true);  // write to a temp block
+              finfos[i].id_, data, length, finfos[i].status_, true);  // write to a temp block
         }
         tbsys::gDeleteA(data);
       }

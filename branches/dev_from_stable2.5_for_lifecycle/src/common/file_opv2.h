@@ -37,6 +37,7 @@ namespace tfs
         int64_t size();
         int fdatasync();
         int fsync();
+        int fsync_file_range(const int64_t offset, const int64_t nbytes, const int32_t flag);
         int ftruncate(const int64_t length);
         int write(const char* buf, const int32_t nbytes);
         int pread(char* buf, const int32_t nbytes, const int64_t offset);

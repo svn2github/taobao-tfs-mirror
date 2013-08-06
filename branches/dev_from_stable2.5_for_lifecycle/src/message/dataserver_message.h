@@ -83,6 +83,8 @@ namespace tfs
         }
         inline common::BlockInfoV2* get_blocks_ext() { return blocks_ext_;}
         inline int32_t get_block_count() const { return block_count_;}
+        inline void set_blocks_ext(common::BlockInfoV2* blocks_ext) { blocks_ext_ = blocks_ext; }
+        inline void set_block_count(const int32_t block_count) { block_count_  = block_count; }
       protected:
         common::BlockInfoV2* blocks_ext_;
         uint64_t server_;

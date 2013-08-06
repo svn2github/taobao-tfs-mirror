@@ -55,6 +55,7 @@ namespace tfs
     DsRuntimeGlobalInformation::DsRuntimeGlobalInformation():ns_vip_port_(0)
     {
       memset(&information_, 0, sizeof(information_));
+      information_.status_ = common::DATASERVER_STATUS_DEAD;
     }
 
     void DsRuntimeGlobalInformation::startup()

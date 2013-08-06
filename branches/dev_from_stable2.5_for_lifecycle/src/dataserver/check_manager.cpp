@@ -208,7 +208,7 @@ namespace tfs
         }
       }
       TIMER_END();
-      TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u %s, file count: %zd, cost: %"PRI64_PREFIX"d",
+      TBSYS_LOG(INFO, "check block %"PRI64_PREFIX"u %s, file count: %zd, cost: %"PRI64_PREFIX"d",
           block_id, (TFS_SUCCESS == ret) ? "success" : "fail", main_finfos.size(), TIMER_DURATION());
 
       return ret;
@@ -279,6 +279,8 @@ namespace tfs
         if (!(iter->status_ & FI_DELETED) && !(iter->status_ & FI_INVALID))
         {
           ret = peer.write_sync_log(OPLOG_INSERT, block_id, iter->id_);
+          TBSYS_LOG(DEBUG, "MORE file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+              peer.get_dest_addr().c_str(), block_id, iter->id_);
         }
       }
       return ret;
@@ -292,6 +294,8 @@ namespace tfs
       for ( ; (TFS_SUCCESS == ret) && (iter != diff.end()); iter++)
       {
         ret = peer.write_sync_log(OPLOG_REMOVE, block_id, iter->id_);
+        TBSYS_LOG(DEBUG, "DIFF file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+            peer.get_dest_addr().c_str(), block_id, iter->id_);
       }
       return ret;
     }
@@ -303,7 +307,7 @@ namespace tfs
       for ( ; iter != less.end(); iter++)
       {
         // TODO: process less file in master cluster
-        TBSYS_LOG(INFO, "less file in %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+        TBSYS_LOG(DEBUG, "LESS file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
             peer.get_dest_addr().c_str(), block_id, iter->id_);
       }
       return TFS_SUCCESS;

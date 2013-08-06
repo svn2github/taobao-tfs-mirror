@@ -193,7 +193,7 @@ namespace tfs
         mo.per_mmap_size_ = size;
         tbsys::gDelete(file_);
         file_ = new MMapFile(mo, fd_);
-        iret = file_->mmap(true) ? TFS_SUCCESS : EXIT_MMAP_FILE_ERROR;
+        iret = file_->mmap(true);
         if (TFS_SUCCESS == iret)
         {
           if (file_size <= 0)
@@ -205,7 +205,7 @@ namespace tfs
             header_->active_table_version_ = TABLE_VERSION_MAGIC;
             header_->magic_number_  = MAGIC_NUMBER;
             header_->server_item_   = max_server_item;
-            iret = file_->msync() ? TFS_SUCCESS : TFS_ERROR;
+            iret = file_->msync();
           }
           else
           {
@@ -491,7 +491,7 @@ namespace tfs
                   inc_build_version();
                   header_->compress_table_length_ = dest_length;
                   memcpy(compress_tables_, dest, dest_length);
-                  iret = file_->msync() ? TFS_SUCCESS : TFS_ERROR;
+                  iret = file_->msync();
                 }
                 tbsys::gDeleteA(dest);
               }
@@ -615,7 +615,7 @@ namespace tfs
         TBSYS_LOG(DEBUG, "old active version: %"PRI64_PREFIX"d", this->get_active_table_version());
         set_active_version();
         TBSYS_LOG(DEBUG, "new active version: %"PRI64_PREFIX"d", this->get_active_table_version());
-        iret = file_->msync() ? TFS_SUCCESS : TFS_ERROR;
+        iret = file_->msync();
       }
       return iret;
     }

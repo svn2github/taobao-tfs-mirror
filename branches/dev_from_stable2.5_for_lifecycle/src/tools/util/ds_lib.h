@@ -64,7 +64,7 @@ namespace tfs
       static int write_data(const uint64_t server_id, const uint32_t block_id, const char* data, const int32_t length,
                             const int32_t offset, const uint64_t file_id, const uint64_t file_num);
       static int write_data_v2(const uint64_t server_id, const uint64_t block_id, const char* data, const int32_t length,
-                                  const int32_t offset, const uint64_t file_id, uint64_t& lease_id);
+                                  const int32_t offset, uint64_t& file_id, uint64_t& lease_id);
       static int create_file_num(const uint64_t server_id, const uint32_t block_id, const uint64_t file_id, uint64_t& new_file_id,
                                  int64_t& file_num);
       static int close_data(const uint64_t server_id, const uint32_t block_id, const uint32_t crc, const uint64_t file_id,

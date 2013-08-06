@@ -228,6 +228,23 @@ namespace tfs
         }
       }
 
+      //start clientmanager
+      if (TFS_SUCCESS == ret)
+      {
+        NewClientManager::get_instance().destroy();
+        assert(NULL != get_packet_streamer());
+        assert(NULL != get_packet_factory());
+        BasePacketStreamer* packet_streamer = dynamic_cast<BasePacketStreamer*>(get_packet_streamer());
+        BasePacketFactory* packet_factory   = dynamic_cast<BasePacketFactory*>(get_packet_factory());
+        ret = NewClientManager::get_instance().initialize(packet_factory, packet_streamer,
+                NULL, &BaseService::golbal_async_callback_func, this);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "start client manager failed, must be exit!!!");
+          ret = EXIT_NETWORK_ERROR;
+        }
+      }
+
       if (TFS_SUCCESS == ret)
       {
         //init file number to management
@@ -264,10 +281,10 @@ namespace tfs
           TBSYS_LOG(ERROR, "dataservice::start, init sync mirror fail!, ret: %d", ret);
       }
 
-      // set seed for rand() when service start
+      // set seed for random() when service start
       if (TFS_SUCCESS == ret)
       {
-        srand(time(NULL));
+        srandom(time(NULL));
       }
 
       // init heartbeat
@@ -665,7 +682,7 @@ namespace tfs
               hret = tbnet::IPacketHandler::KEEP_CHANNEL;
             else
             {
-              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard", get_ip_addr());
+              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "%s, task message beyond max queue size, discard", get_ip_addr());
               bpacket->free();
             }
           }

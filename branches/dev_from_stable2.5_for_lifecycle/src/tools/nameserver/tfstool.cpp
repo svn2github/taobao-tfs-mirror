@@ -968,7 +968,7 @@ int cmd_stat_blk(const VSTRING& param)
     fprintf(stderr, "invalid blockid: %"PRI64_PREFIX"u\n", block_id);
   }
 
-  if (param.size() > 2)
+  if (param.size() >= 2)
   {
     server_id = Func::get_host_ip(param[1].c_str());
   }

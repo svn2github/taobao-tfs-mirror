@@ -1040,7 +1040,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[48];
+    extern const char* dynamic_parameter_str[49];
 
     #pragma pack (1)
     struct FileInfoV2//30
@@ -1217,6 +1217,12 @@ namespace tfs
       {
         return (time >= start_) && (time < end_);
       }
+    };
+
+    enum WriteFileCheckCopiesCompleteFlag
+    {
+      WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_NO = 0,
+      WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_YES = 1,
     };
 
     // defined type typedef

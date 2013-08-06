@@ -161,8 +161,18 @@ namespace tfs
     }
     uint32_t IpReplaceHelper::calculate_distance(const std::string& ip_str, const std::string& addr)
     {
-      uint32_t ip1 = common::Func::get_addr(ip_str.c_str());
-      uint32_t ip2 = common::Func::get_addr(addr.c_str());
+      uint32_t ip1 = inet_addr(ip_str.c_str());
+      if (ip1 == INADDR_NONE)
+      {
+        ip1 = 0;
+      }
+
+      uint32_t ip2 = inet_addr(addr.c_str());
+      if (ip2 == INADDR_NONE)
+      {
+        ip2 = 0;
+      }
+
       uint32_t mask = 0xff;
       uint32_t n1 = 0;
       uint32_t n2 = 0;

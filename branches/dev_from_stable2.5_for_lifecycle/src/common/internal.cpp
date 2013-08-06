@@ -1392,7 +1392,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[48] = {
+    const char* dynamic_parameter_str[49] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1440,7 +1440,8 @@ namespace tfs
         "max_mr_network_bandwith_ratio",
         "max_rw_network_bandwith_ratio",
         "compact_family_member_ratio",
-        "max_single_machine_network_bandwith"
+        "max_single_machine_network_bandwith",
+        "write_file_check_copies_complete"
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
