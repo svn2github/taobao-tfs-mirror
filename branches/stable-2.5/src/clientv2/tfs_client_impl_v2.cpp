@@ -83,6 +83,7 @@ namespace tfs
       tbutil::Mutex::Lock lock(mutex_);
       if (is_init_)
       {
+        NewClientManager::get_instance().destroy();
         is_init_ = false;
       }
       return TFS_SUCCESS;

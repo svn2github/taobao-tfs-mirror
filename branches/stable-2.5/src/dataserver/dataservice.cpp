@@ -940,6 +940,7 @@ namespace tfs
       int32_t lease_id = message->get_lease_id();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int32_t option_flag = message->get_option_flag();
+      int32_t force_status = message->get_status();
 
       TBSYS_LOG(
           DEBUG,
@@ -969,7 +970,7 @@ namespace tfs
       else
       {
         int32_t write_file_size = 0;
-        ret = data_management_.close_write_file(close_file_info, write_file_size);
+        ret = data_management_.close_write_file(close_file_info, force_status, write_file_size);
         if (TFS_SUCCESS != ret)
         {
           if (EXIT_DATAFILE_EXPIRE_ERROR == ret)

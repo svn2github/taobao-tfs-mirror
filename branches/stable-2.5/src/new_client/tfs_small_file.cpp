@@ -95,9 +95,9 @@ int TfsSmallFile::fstat(TfsFileStat* file_info, const TfsStatType mode)
   return ret;
 }
 
-int TfsSmallFile::close()
+int TfsSmallFile::close(const int32_t force_status)
 {
-  return close_ex();
+  return close_ex(force_status);
 }
 
 int64_t TfsSmallFile::get_file_length()

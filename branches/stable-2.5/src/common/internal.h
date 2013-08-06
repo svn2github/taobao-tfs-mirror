@@ -57,9 +57,10 @@
 #define IS_VERFIFY_BLOCK(x) (x >> 63)
 
 // Macros used for overriding file flag in unlink call
-#define SET_OVERRIDE_FLAG(x, f) ((x) = OVERRIDE | f)
-#define GET_OVERRIDE_FLAG(x) ((x) & 0x7)
-#define TEST_OVERRIDE_FLAG(x) ((x) & OVERRIDE)
+// the 5-7bit is used as flag
+#define SET_OVERRIDE_FLAG(x, f) ((x) = (OVERRIDE | (f << 4)))
+#define GET_OVERRIDE_FLAG(x) (((x) >> 4) & 0x7)
+#define TEST_OVERRIDE_FLAG(x) ((x) > REVEAL) // TODO, change to (x) & OVERRIDE
 
 #if __WORDSIZE == 32
 namespace __gnu_cxx

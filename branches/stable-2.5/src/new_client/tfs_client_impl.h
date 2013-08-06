@@ -58,7 +58,7 @@ namespace tfs
       int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
       int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
       int fstat(const int fd, common::TfsFileStat* buf, const common::TfsStatType mode = common::NORMAL_STAT);
-      int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0, const bool simple = false);
+      int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0, const bool simple = false, const int32_t force_status = -1);
       int64_t get_file_length(const int fd);
 
       int set_option_flag(const int fd, const common::OptionFlag option_flag);

@@ -27,7 +27,7 @@ using namespace tfs::message;
 using namespace std;
 
 TfsFile::TfsFile() : flags_(-1), file_status_(TFS_FILE_OPEN_NO), eof_(TFS_FILE_EOF_FLAG_NO),
-                     offset_(0), meta_seg_(NULL), option_flag_(common::TFS_FILE_DEFAULT_OPTION),
+                     offset_(0), force_status_(-1), meta_seg_(NULL), option_flag_(common::TFS_FILE_DEFAULT_OPTION),
                      tfs_session_(NULL)
 {
 }
@@ -428,7 +428,7 @@ int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatType mode)
   return ret;
 }
 
-int TfsFile::close_ex()
+int TfsFile::close_ex(const int32_t force_status)
 {
   int ret = file_status_ == TFS_FILE_OPEN_NO ? EXIT_NOT_OPEN_ERROR : TFS_SUCCESS;
   if (TFS_SUCCESS != ret)//file not open
@@ -444,6 +444,7 @@ int TfsFile::close_ex()
     else// write mode
     {
 #ifndef TFS_TEST
+      force_status_ = force_status;
       if (TFS_FILE_WRITE_ERROR == file_status_ || offset_ <= 0)
       {
         option_flag_ |= TFS_FILE_CLOSE_FLAG_WRITE_DATA_FAILED;
@@ -1011,6 +1012,7 @@ int TfsFile::async_req_close_file(NewClient* client, const uint16_t index)
 
   cf_message.set_ds_list(seg_data->ds_);
   cf_message.set_crc(seg_data->seg_info_.crc_);
+  cf_message.set_status(force_status_);
 
   // no not need to estimate the ds number is zero
   uint8_t send_id;
