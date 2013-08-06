@@ -339,6 +339,7 @@ namespace tfs
           ret = kv_engine_helper_->delete_key(meta_info_name_area_, name_exptime_key);
           TBSYS_LOG(DEBUG, "del name_exptime_key ,ret %d", ret);
         }
+        //TODO put_invalid_info
 
       }
       else if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
