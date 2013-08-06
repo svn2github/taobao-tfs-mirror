@@ -67,6 +67,11 @@ class SyncAction
     action_.push_back(action);
   }
 
+  int32_t size() const
+  {
+    return action_.size();
+  }
+
   std::string dump()
   {
     std::string action_str = "";
