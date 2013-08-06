@@ -67,6 +67,12 @@ fi
 AC_SUBST([READLINE_INCLUDE])
 AC_SUBST([READLINE_LIB])
 
+AC_ARG_WITH([restful-root],
+           AS_HELP_STRING([--with-restful-root],
+           [restful client src path]),
+           TREST_ROOT=${withval})
+AC_SUBST([TREST_ROOT])
+
 AC_ARG_WITH([tair-root],
            AS_HELP_STRING([--with-tair-root],
            [Tair installation path, need when enable uniquestore feature]),

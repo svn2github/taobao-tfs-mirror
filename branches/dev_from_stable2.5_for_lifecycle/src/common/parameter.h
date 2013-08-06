@@ -283,6 +283,7 @@ namespace tfs
       std::string nginx_root_;
       int re_clean_days_;
       std::string es_appkey_;
+      std::string log_level_;
 
       int initialize(const std::string& config_file);
 

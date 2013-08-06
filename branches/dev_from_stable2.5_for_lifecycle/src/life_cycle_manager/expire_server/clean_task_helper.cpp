@@ -67,6 +67,17 @@ namespace tfs
 
       clean_task_state_ = 0;
 
+      if (TFS_SUCCESS ==  ret)
+      {
+        ret = restful_client_.initialize(SYSPARAM_EXPIRESERVER.nginx_root_.c_str(),
+                                         SYSPARAM_EXPIRESERVER.es_appkey_.c_str(),
+                                         SYSPARAM_EXPIRESERVER.log_level_.c_str());
+        if (TFS_SUCCESS ==  ret)
+        {
+          TBSYS_LOG(INFO, "restful_client initialize SUCCESS");
+        }
+      }
+
       return ret;
     }
 
@@ -143,12 +154,8 @@ namespace tfs
       std::string file_name;
 
       clean_task_state_ = 1;
-      /*
-      client::QRestClient restful_client;
-      ret = restful_client.initialize(SYSPARAM_EXPIRESERVER.nginx_root_.c_str(),
-                                                   SYSPARAM_EXPIRESERVER.es_appkey_.c_str());
-      TBSYS_LOG(DEBUG, "restful_client initialize SUCCESS");
-      */
+
+
       ret = ExpireDefine::transfer_time(task_time, &days_secs, &hours_secs);
 
       if (TFS_SUCCESS == ret)
@@ -265,9 +272,9 @@ namespace tfs
                     }
 
 
-                    /* send send nginx
-                    restful_client.unlink(t_file_name.c_str(), NULL, appkey_.c_str());
-                    */
+
+                    restful_client_.unlink(t_file_name.c_str(), NULL, tfs::restful::DELETE ,t_appkey.c_str());
+
                   }
 
                   TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);

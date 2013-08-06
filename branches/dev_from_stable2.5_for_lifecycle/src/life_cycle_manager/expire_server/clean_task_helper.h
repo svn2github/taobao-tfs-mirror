@@ -16,14 +16,14 @@
 
 #ifndef TFS_LIFE_CYCLE_MANAGER_EXPIRE_CLEAN_TASK_HELPER_H_
 #define TFS_LIFE_CYCLE_MANAGER_EXPIRE_CLEAN_TASK_HELPER_H_
-
+#include <tbsys.h>
 #include "common/parameter.h"
 #include "common/base_service.h"
 #include "common/status_message.h"
 #include "common/kvengine_helper.h"
 #include "common/expire_define.h"
 #include "message/message_factory.h"
-//#include "tfs_r_client_api.h"
+#include "tfs_client_api.h"
 
 namespace tfs
 {
@@ -51,6 +51,7 @@ namespace tfs
 
       private:
         int32_t clean_task_state_;
+        client::RestClient restful_client_;
         DISALLOW_COPY_AND_ASSIGN(CleanTaskHelper);
     };
   }
