@@ -1045,6 +1045,9 @@ namespace tfs
             }
           }
           message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, err_msg.str().c_str());
+
+          // if fail, real unlink will never happen, remove lease
+          get_data_manager().remove_lease(attach_block_id, file_id, lease_id);
         }
         else
         {
