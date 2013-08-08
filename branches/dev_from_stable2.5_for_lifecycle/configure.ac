@@ -66,12 +66,24 @@ if test "${enable_readline}" = "yes"; then
 fi
 AC_SUBST([READLINE_INCLUDE])
 AC_SUBST([READLINE_LIB])
-
 AC_ARG_WITH([restful-root],
            AS_HELP_STRING([--with-restful-root],
-           [restful client src path]),
+           [restful client install path]),
            TREST_ROOT=${withval})
 AC_SUBST([TREST_ROOT])
+
+AC_ARG_ENABLE([lifecycle],
+           AS_HELP_STRING([--enable-lifecycle],
+           [enable life cycle module use ----with-restful-root to specify path]),
+           [enable_lifecycle=${enableval}],
+           [enable_lifecycle="no"])
+if test "${enable_lifecycle}" = "yes"; then
+        if ! test -d "${TREST_ROOT}/include" -a -d "${TREST_ROOT}/lib"; then
+                AC_MSG_ERROR([TREST_ROOT is not work! expect TREST_ROOT/include and TREST_ROOT/lib directory])
+                exit 1;
+        fi
+fi
+AM_CONDITIONAL([WITH_LIFECYCLE],[test x$enable_lifecycle= xyes])
 
 AC_ARG_WITH([tair-root],
            AS_HELP_STRING([--with-tair-root],
@@ -260,16 +272,16 @@ AC_CONFIG_FILES([Makefile
                  src/tools/cluster/Makefile
                  src/tools/workers/Makefile
                  src/checkserver/Makefile
-                 src/tools/metaserver/Makefile
-                 tests/Makefile
-                 tests/batch/Makefile
-                 tests/rcserver/Makefile
-                 tests/kv_meta_server/Makefile
-                 tests/name_meta_server/Makefile
-                 tests/common/Makefile
-                 tests/nameserver/Makefile
-                 tests/rootserver/Makefile
-                 tests/dataserver/Makefile
-                 tests/clientv2/Makefile
-                 tests/intergrate/Makefile])
+                 src/tools/metaserver/Makefile])
+                 #tests/Makefile
+                 #tests/batch/Makefile
+                 #tests/rcserver/Makefile
+                 #tests/kv_meta_server/Makefile
+                 #tests/name_meta_server/Makefile
+                 #tests/common/Makefile
+                 #tests/nameserver/Makefile
+                 #tests/rootserver/Makefile
+                 #tests/dataserver/Makefile
+                 #tests/clientv2/Makefile
+                 #tests/intergrate/Makefile])
 AC_OUTPUT
