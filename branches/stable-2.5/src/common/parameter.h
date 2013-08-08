@@ -226,6 +226,8 @@ namespace tfs
       int32_t thread_count_;
       int32_t check_retry_turns_;
       int32_t turn_interval_;
+      int32_t block_check_interval_;            // mill seconds
+      int32_t block_check_cost_;                // mill seoncds
 
       int initialize(const std::string& config_file);
 

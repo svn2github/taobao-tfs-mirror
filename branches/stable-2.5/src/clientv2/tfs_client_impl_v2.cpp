@@ -401,13 +401,9 @@ namespace tfs
     int TfsClientImplV2::stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix,
         const common::TfsStatType stat_type, const char* ns_addr)
     {
-      int ret = TFS_SUCCESS;
       int fd = open(file_name, suffix, ns_addr, T_READ);
-      if (fd < 0)
-      {
-        ret = EXIT_INVALIDFD_ERROR;
-      }
-      else
+      int ret = fd < 0 ? fd : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
         set_option_flag(fd, stat_type);
         ret = fstat(fd, file_stat);
@@ -641,13 +637,9 @@ namespace tfs
     int TfsClientImplV2::unlink(int64_t& file_size, const char* file_name, const char* suffix,
         const common::TfsUnlinkType action, const char* ns_addr)
     {
-      int ret = TFS_SUCCESS;
       int fd = open(file_name, suffix, ns_addr, T_UNLINK);
-      if (fd < 0)
-      {
-        ret = EXIT_INVALIDFD_ERROR;
-      }
-      else
+      int ret = fd < 0 ? fd : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
         ret = unlink(file_size, fd, action);
         close(fd);
