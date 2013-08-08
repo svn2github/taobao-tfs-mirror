@@ -44,11 +44,12 @@ namespace tfs
 
     struct LeaseId
     {
-      uint64_t lease_id_;
-      uint64_t file_id_;
       uint64_t block_;
-      LeaseId(const uint64_t lease_id, const uint64_t file_id, const uint64_t block) :
-        lease_id_(lease_id), file_id_(file_id), block_(block) {}
+      uint64_t file_id_;
+      uint64_t lease_id_;
+
+      LeaseId(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id) :
+        block_(block_id), file_id_(file_id), lease_id_(lease_id) {}
       bool operator < (const LeaseId& lease) const
       {
         if (lease_id_ < lease.lease_id_)
