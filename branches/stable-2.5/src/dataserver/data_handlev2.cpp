@@ -41,11 +41,12 @@ namespace tfs
       int32_t ret = (NULL != buf && nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        PhysicalBlock* physical_block = NULL;
+        PhysicalBlock* physical_block = NULL, *last_physical_block = NULL;
         int32_t inner_offset = 0, length = nbytes, current_offset = offset;
         int32_t inner_length = 0, mem_offset = 0,  total_write_length = 0;
         while ((TFS_SUCCESS == ret) && (current_offset < (offset + nbytes)))
         {
+          physical_block = NULL;
           inner_length = length;
           ret = logic_block_.choose_physic_block(physical_block, inner_length, inner_offset, current_offset);
           if (TFS_SUCCESS == ret)
@@ -55,12 +56,25 @@ namespace tfs
             ret = ret >= 0 ? TFS_SUCCESS : ret;
             if (TFS_SUCCESS == ret)
             {
+              if (NULL != last_physical_block && last_physical_block != physical_block)
+              {
+                ret = last_physical_block->fdatasync();
+              }
+              last_physical_block = physical_block;
+            }
+            if (TFS_SUCCESS == ret)
+            {
               current_offset += length;
               mem_offset     += length;
               total_write_length += length;
               length         =  nbytes - total_write_length;
             }
           }
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          assert(NULL != last_physical_block);
+          ret = last_physical_block->fdatasync();
         }
       }
       return TFS_SUCCESS == ret ? nbytes : ret;
