@@ -2514,6 +2514,162 @@ namespace tfs
       return INT64_SIZE * 2;
     }
 
+    int BlockLease::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&block_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int index = 0; index < size_ && TFS_SUCCESS == ret; index++)
+        {
+          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&servers_[index]));
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &result_);
+      }
+
+      return ret;
+    }
+
+    int BlockLease::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, block_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int index = 0; index < size_ && TFS_SUCCESS == ret; index++)
+        {
+          ret = Serialization::set_int64(data, data_len, pos, servers_[index]);
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, result_);
+      }
+
+      return ret;
+    }
+
+    int64_t BlockLease::length() const
+    {
+      return INT64_SIZE + 2 * INT_SIZE + size_ * INT64_SIZE;
+    }
+
+    int LeaseMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(lease_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &lease_expire_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &lease_renew_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &renew_retry_times_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &max_mr_network_bandwith_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &max_rw_network_bandwith_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int index = 0; index < 4 && TFS_SUCCESS == ret; index++)
+        {
+          ret = Serialization::get_int32(data, data_len, pos, &reserve_[index]);
+        }
+      }
+
+      return ret;
+    }
+
+    int LeaseMeta::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, lease_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, lease_expire_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, lease_renew_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, renew_retry_times_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, max_mr_network_bandwith_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, max_rw_network_bandwith_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int index = 0; index < 4 && TFS_SUCCESS == ret; index++)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, reserve_[index]);
+        }
+      }
+
+      return ret;
+    }
+
+    int64_t LeaseMeta::length() const
+    {
+      return INT64_SIZE + 9 * INT_SIZE;
+    }
+
 
   } /** nameserver **/
 }/** tfs **/

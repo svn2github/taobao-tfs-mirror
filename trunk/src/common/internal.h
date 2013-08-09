@@ -125,6 +125,7 @@ namespace tfs
     static const int64_t MAX_CMD_SIZE = 1024;
     static const int32_t MAX_BATCH_SIZE = 8;
 
+    static const uint32_t INVALID_OP_ID = 0;
     static const uint32_t INVALID_LEASE_ID = 0;
     static const uint32_t INVALID_BLOCK_ID = 0;
     static const int64_t  INVALID_FAMILY_ID = 0;
@@ -204,6 +205,8 @@ namespace tfs
     static const int32_t MAX_MAIN_AND_EXT_BLOCK_SIZE = 320 * 1024 * 1024;
 
     static const int32_t MAX_SINGLE_FILE_SIZE = 16 * 1024 * 1024;//16MB
+
+    static const int32_t MAX_WRITABLE_BLOCK_COUNT = 128;
 
     enum VersionStep
     {
@@ -1219,6 +1222,44 @@ namespace tfs
       }
     };
 
+    struct BlockLease
+    {
+      uint64_t block_id_;
+      uint64_t servers_[MAX_REPLICATION_NUM];
+      int32_t size_;
+      int32_t  result_;
+
+      BlockLease():
+        block_id_(INVALID_BLOCK_ID),
+        size_(0),
+        result_(0)
+      {
+      }
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+    };
+
+    struct LeaseMeta
+    {
+      uint64_t lease_id_;
+      int32_t lease_expire_time_;
+      int32_t lease_renew_time_;
+      int32_t renew_retry_times_;
+      int32_t max_mr_network_bandwith_;
+      int32_t max_rw_network_bandwith_;
+      int32_t reserve_[4];
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+
+      LeaseMeta(): lease_id_(INVALID_LEASE_ID)
+      {
+      }
+    };
+
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;
@@ -1284,6 +1325,12 @@ namespace tfs
 
       //UserInfo
       USER_INFO_OWNER_ID_TAG = 801,
+
+      // RemoteCache
+      REMOTE_CACHE_KEY_NS_ADDR_TAG = 701,
+      REMOTE_CACHE_KEY_BLOCK_ID_TAG = 702,
+      REMOTE_CACHE_VALUE_DS_LIST_TAG = 703,
+      REMOTE_CACHE_VALUE_FAMILY_INFO_TAG = 704,
 
       //End TAG
       END_TAG = 999

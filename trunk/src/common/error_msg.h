@@ -220,6 +220,9 @@ namespace tfs
     const int32_t EXIT_NOT_ALL_SUCCESS = -8074;
     const int32_t EXIT_BLOCK_SIZE_OUT_OF_RANGE = -8075;
     const int32_t EXIT_BLOCK_VERSION_CONFLICT_ERROR = -8076;
+    const int32_t EXIT_OP_META_ERROR = -8077;
+    const int32_t EXIT_NO_WRITABLE_BLOCK = -8078;
+    const int32_t EXIT_BLOCK_HAS_WRITE = -8079;
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;
