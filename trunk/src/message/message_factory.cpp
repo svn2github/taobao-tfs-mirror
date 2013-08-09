@@ -468,6 +468,39 @@ namespace tfs
           case common::REPORT_CHECK_BLOCK_MESSAGE:
             packet = new ReportCheckBlockMessage();
             break;
+          case common::DS_APPLY_LEASE_MESSAGE:
+            packet = new DsApplyLeaseMessage();
+            break;
+          case common::DS_APPLY_LEASE_RESPONSE_MESSAGE:
+            packet = new DsApplyLeaseResponseMessage();
+            break;
+          case common::DS_RENEW_LEASE_MESSAGE:
+            packet = new DsRenewLeaseMessage();
+            break;
+          case common::DS_RENEW_LEASE_RESPONSE_MESSAGE:
+            packet = new DsRenewLeaseResponseMessage();
+            break;
+          case common::DS_GIVEUP_LEASE_MESSAGE:
+            packet = new DsGiveupLeaseMessage();
+            break;
+          case common::DS_APPLY_BLOCK_MESSAGE:
+            packet = new DsApplyBlockMessage();
+            break;
+          case common::DS_APPLY_BLOCK_RESPONSE_MESSAGE:
+            packet = new DsApplyBlockResponseMessage();
+            break;
+          case common::DS_APPLY_BLOCK_FOR_UPDATE_MESSAGE:
+            packet = new DsApplyBlockForUpdateMessage();
+            break;
+          case common::DS_APPLY_BLOCK_FOR_UPDATE_RESPONSE_MESSAGE:
+            packet = new DsApplyBlockForUpdateResponseMessage();
+            break;
+          case common::DS_GIVEUP_BLOCK_MESSAGE:
+            packet = new DsGiveupBlockMessage();
+            break;
+          case common::DS_GIVEUP_BLOCK_RESPONSE_MESSAGE:
+            packet = new DsGiveupBlockResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;

@@ -62,6 +62,7 @@
 #include "read_index_message_v2.h"
 #include "write_index_message_v2.h"
 #include "ec_meta_message.h"
+#include "ds_lease_message.h"
 
 namespace tfs
 {

@@ -21,7 +21,8 @@ HEADER=dump_plan_message.h client_cmd_message.h heart_message.h\
 			 family_info_message.h  kv_meta_message.h kv_rts_message.h\
 			 block_info_message_v2.h write_file_message_v2.h close_file_message_v2.h\
 			 read_file_message_v2.h unlink_file_message_v2.h read_data_message_v2.h read_data_message_v2.h\
-			 write_data_message_v2.h read_index_message_v2.h write_index_message_v2.h ec_meta_message.h
+			 write_data_message_v2.h read_index_message_v2.h write_index_message_v2.h ec_meta_message.h\
+			 ds_lease_message.h
 libtfsmessage_a_SOURCES = dump_plan_message.cpp client_cmd_message.cpp heart_message.cpp\
 													oplog_sync_message.cpp crc_error_message.cpp reload_message.cpp\
 													unlink_file_message.cpp file_info_message.cpp rollback_message.cpp\
@@ -38,7 +39,7 @@ libtfsmessage_a_SOURCES = dump_plan_message.cpp client_cmd_message.cpp heart_mes
 													family_info_message.cpp block_info_message_v2.cpp write_file_message_v2.cpp \
 													close_file_message_v2.cpp read_file_message_v2.cpp unlink_file_message_v2.cpp \
 												  read_data_message_v2.cpp write_data_message_v2.cpp read_index_message_v2.cpp \
-													write_index_message_v2.cpp ec_meta_message.cpp $(HEADER)
+													write_index_message_v2.cpp ec_meta_message.cpp ds_lease_message.cpp $(HEADER)
 
 libtfsmessage_a_CPPFLAGS = $(AM_CPPFLAGS)
 
