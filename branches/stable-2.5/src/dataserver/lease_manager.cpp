@@ -40,7 +40,7 @@ namespace tfs
       {
         members_[index].server_ = (*iter);
         members_[index].info_.version_= INVALID_VERSION;
-        members_[index].status_ = EXIT_NOT_ALL_SUCCESS;
+        members_[index].status_ = EXIT_TIMEOUT_ERROR;
       }
     }
 
@@ -61,7 +61,8 @@ namespace tfs
       return ret;
     }
 
-    bool Lease::get_highest_version_block(common::BlockInfoV2& info)
+    // commit to ns, only verion has been updated by ds
+    bool Lease::need_commit(const int32_t last_version, common::BlockInfoV2& info)
     {
       tbutil::Mutex::Lock lock(mutex_);
       int32_t max_version = -1;
@@ -74,7 +75,7 @@ namespace tfs
           info = members_[index].info_;
         }
       }
-      return max_version >= 0;
+      return max_version > last_version;
     }
 
     int Lease::update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status)
@@ -113,7 +114,7 @@ namespace tfs
       for (int32_t index = 0; index < MAX_REPLICATION_NUM; ++index)
       {
         members_[index].info_.version_= INVALID_VERSION;
-        members_[index].status_ = EXIT_NOT_ALL_SUCCESS;
+        members_[index].status_ = EXIT_TIMEOUT_ERROR;
       }
     }
 

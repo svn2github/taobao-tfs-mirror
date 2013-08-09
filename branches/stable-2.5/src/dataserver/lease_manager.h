@@ -95,7 +95,7 @@ namespace tfs
       int update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status);
       int update_member_info();   // when received a error packet, use this interface
       void reset_member_info(const time_t now_us);
-      bool get_highest_version_block(common::BlockInfoV2& info);
+      bool need_commit(const int32_t last_version, common::BlockInfoV2& info);
       void dump(const int32_t level, const char* const format = NULL);
       void dump(std::stringstream& desp);
 

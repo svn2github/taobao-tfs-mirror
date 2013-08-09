@@ -362,6 +362,9 @@ namespace tfs
       PLAN_TYPE_EC_MARSHALLING
     };
 
+    // order shoule be consistent with PlanType
+    extern const char* planstr[PLAN_TYPE_EC_MARSHALLING + 1];
+
     enum PlanStatus
     {
       PLAN_STATUS_NONE = 0x00,

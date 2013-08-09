@@ -1444,6 +1444,16 @@ namespace tfs
         "write_file_check_copies_complete"
     };
 
+    const char* planstr[PLAN_TYPE_EC_MARSHALLING+1] =
+    {
+      "replicate",
+      "reinstate",
+      "move",
+      "compact",
+      "dissolve",
+      "marshalling"
+    };
+
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;

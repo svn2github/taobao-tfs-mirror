@@ -951,6 +951,7 @@ namespace tfs
       uint64_t lease_id = message->get_lease_id();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int32_t option_flag = message->get_flag();
+      int32_t version = message->get_version();
       bool tmp = message->get_tmp_flag();
       int64_t file_size = 0;
       int64_t req_cost_time = 0;
@@ -963,12 +964,9 @@ namespace tfs
       {
         if (!tmp) // close tmp block no need to commit & write log
         {
-          /*
-           * commit success, keep ret unchanged
-           * commit fail, set ret to error code
-           */
+          // commit success, keep ret unchanged; commit fail, set ret to error code
           int tmp_ret = get_data_manager().update_block_info(attach_block_id,
-              file_id, lease_id, UPDATE_BLOCK_INFO_WRITE);
+              file_id, lease_id, version, UPDATE_BLOCK_INFO_WRITE);
           if (TFS_SUCCESS != tmp_ret)
           {
             ret = tmp_ret;
@@ -1079,6 +1077,7 @@ namespace tfs
       int32_t action = message->get_action();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int32_t option_flag = message->get_flag();
+      int32_t version = message->get_version();
       int64_t file_size = 0;
       int64_t req_cost_time = 0;
       stringstream err_msg;
@@ -1088,12 +1087,9 @@ namespace tfs
           file_id, lease_id, ret, req_cost_time, file_size, err_msg);
       if (all_finish)
       {
-        /*
-         * commit success, keep ret unchanged
-         * commit fail, set ret to error code
-         */
+        // commit success, keep ret unchanged; commit fail, set ret to error code
         int tmp_ret = get_data_manager().update_block_info(attach_block_id,
-            file_id, lease_id, UPDATE_BLOCK_INFO_UNLINK);
+            file_id, lease_id, version, UPDATE_BLOCK_INFO_UNLINK);
         if (TFS_SUCCESS != tmp_ret)
         {
           ret = tmp_ret;
