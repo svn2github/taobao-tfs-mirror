@@ -225,16 +225,16 @@ namespace tfs
         tbsys::gDelete(lease);
     }
 
-    Lease* LeaseManager::get(const LeaseId& lease_id, const int64_t now_us) const
+    int LeaseManager::get(const LeaseId& lease_id, const int64_t now_us, Lease*& lease) const
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
       LEASE_MAP_CONST_ITER iter = leases_.find(lease_id);
-      Lease* lease = (leases_.end() != iter && !iter->second->timeout(now_us)) ? iter->second : NULL;
+      lease = (leases_.end() != iter && !iter->second->timeout(now_us)) ? iter->second : NULL;
       if (NULL != lease)
       {
         lease->inc_ref();
       }
-      return lease;
+      return (NULL != lease) ? TFS_SUCCESS : EXIT_BLOCK_LEASE_INVALID_ERROR;
     }
 
     void LeaseManager::put(Lease* lease)

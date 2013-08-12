@@ -68,18 +68,18 @@ namespace tfs
         }
 
         LeaseId lid(block_id, file_id, lease_id);
-        Lease* lease = lease_manager_.get(lid, now_us);
-        if ((NULL == lease) && alloc)
+        Lease* lease = NULL;
+        ret = lease_manager_.get(lid, now_us, lease);
+        if ((TFS_SUCCESS != ret) && alloc)
         {
           ret = lease_manager_.has_out_of_limit() ? EXIT_BLOCK_LEASE_OVERLOAD_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
             lease_manager_.generation(lid, now_us, type, servers);
-            lease = lease_manager_.get(lid, now_us);
+            ret = lease_manager_.get(lid, now_us, lease);
           }
         }
 
-        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INVALID_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           lease->reset_member_info(now_us); // reset on every reqeust
@@ -100,8 +100,8 @@ namespace tfs
       {
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        Lease* lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease)? EXIT_BLOCK_LEASE_INVALID_ERROR : TFS_SUCCESS;
+        Lease* lease = NULL;
+        ret = lease_manager_.get(lid, now_us, lease);
         if (TFS_SUCCESS == ret)
         {
           if (SLAVE_DS_RESP_MESSAGE != packet->getPCode())
@@ -134,8 +134,8 @@ namespace tfs
       {
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        Lease* lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INVALID_ERROR : TFS_SUCCESS;
+        Lease* lease = NULL;
+        ret = lease_manager_.get(lid, now_us, lease);
         if (TFS_SUCCESS == ret)
         {
           DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
@@ -158,8 +158,8 @@ namespace tfs
       {
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        Lease* lease = lease_manager_.get(lid, now_us);
-        status = (NULL == lease) ? EXIT_BLOCK_LEASE_INVALID_ERROR : TFS_SUCCESS;
+        Lease* lease = NULL;
+        status = lease_manager_.get(lid, now_us, lease);
         if (TFS_SUCCESS == status)
         {
           all_finish = lease->check_all_finish();
@@ -241,8 +241,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           LeaseId lid(attach_block_id, file_id, lease_id);
-          lease = lease_manager_.get(lid, now_us);
-          ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INVALID_ERROR : TFS_SUCCESS;
+          ret = lease_manager_.get(lid, now_us, lease);
         }
 
         if (TFS_SUCCESS == ret)
@@ -277,8 +276,7 @@ namespace tfs
       {
         int64_t now_us = Func::get_monotonic_time_us();
         LeaseId lid(attach_block_id, file_id, lease_id);
-        lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INVALID_ERROR : TFS_SUCCESS;
+        ret = lease_manager_.get(lid, now_us, lease);
       }
 
       if ((TFS_SUCCESS == ret) && !tmp) // write tmp block won't check crc
@@ -366,8 +364,8 @@ namespace tfs
       {
         LeaseId lid(attach_block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        Lease* lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INVALID_ERROR : TFS_SUCCESS;
+        Lease* lease = NULL;
+        ret = lease_manager_.get(lid, now_us, lease);
         if (TFS_SUCCESS == ret)
         {
           lease->set_file_size(file_size);
@@ -384,14 +382,13 @@ namespace tfs
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
-      Lease* lease = NULL;
       BlockInfoV2 block_info;
       if (TFS_SUCCESS == ret)
       {
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INVALID_ERROR : TFS_SUCCESS;
+        Lease* lease = NULL;
+        ret = lease_manager_.get(lid, now_us, lease);
         if (TFS_SUCCESS == ret && lease->need_commit(last_version, block_info))
         {
           ret = update_block_info(block_info, type);
@@ -450,8 +447,7 @@ namespace tfs
      {
        LeaseId lid(block_id, file_id, lease_id);
        int64_t now_us = Func::get_monotonic_time_us();
-       lease = lease_manager_.get(lid, now_us);
-       ret = (NULL == lease)? EXIT_BLOCK_LEASE_INVALID_ERROR: TFS_SUCCESS;
+       ret = lease_manager_.get(lid, now_us, lease);
      }
 
      if (TFS_SUCCESS == ret)

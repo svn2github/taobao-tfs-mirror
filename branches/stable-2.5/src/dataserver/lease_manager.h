@@ -133,7 +133,7 @@ namespace tfs
       virtual ~LeaseManager();
 
       void generation(LeaseId& lease_id, const int64_t now_us, const int8_t type, const common::VUINT64& servers);
-      Lease* get(const LeaseId& lease_id, const int64_t now_us) const;
+      int get(const LeaseId& lease_id, const int64_t now_us, Lease*& lease) const;
       void put(Lease* lease);
       int remove(const LeaseId& lease_id);
       int timeout(const int64_t now_us);

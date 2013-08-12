@@ -29,6 +29,8 @@ namespace tfs
 {
   namespace clientv2
   {
+    const int32_t DEFAULT_RETRY_TIMES = 2;
+
     TfsClientImplV2::TfsClientImplV2() : is_init_(false), fd_(0),
     ns_addr_(0), cluster_id_(0), packet_factory_(NULL), packet_streamer_(NULL)
     {
@@ -423,7 +425,14 @@ namespace tfs
       }
       else
       {
-        ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, mode, NULL, suffix, ns_addr);
+        for (int i = 0; i < DEFAULT_RETRY_TIMES; i++)
+        {
+          ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, mode, NULL, suffix, ns_addr);
+          if (ret >= 0)
+          {
+            break;
+          }
+        }
       }
       return ret;
     }
@@ -518,7 +527,14 @@ namespace tfs
       }
       else
       {
-        ret = save_buf_ex(ret_tfs_name, ret_tfs_name_len, buf, buf_len, mode, NULL, suffix, ns_addr);
+        for (int i = 0; i < DEFAULT_RETRY_TIMES; i++)
+        {
+          ret = save_buf_ex(ret_tfs_name, ret_tfs_name_len, buf, buf_len, mode, NULL, suffix, ns_addr);
+          if (ret >= 0)
+          {
+            break;
+          }
+        }
       }
       return ret;
     }

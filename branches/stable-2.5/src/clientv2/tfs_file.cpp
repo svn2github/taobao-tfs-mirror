@@ -409,11 +409,7 @@ namespace tfs
       }
       else
       {
-        ret = do_unlink(action, file_size, true); // prepare unlink
-        if (TFS_SUCCESS == ret)
-        {
-          ret = do_unlink(action, file_size, false);  // real unlink
-        }
+        ret = do_unlink(action, file_size, false);  // real unlink
       }
 
       // tell close should do nothing because unlink fail
@@ -503,6 +499,7 @@ namespace tfs
           for (int32_t i = 0; i < meta.size_; i++)
           {
             file_.ds_.push_back(meta.ds_[i]);
+            TBSYS_LOG(DEBUG, "%dth dataserver: %s", i, tbsys::CNetUtil::addrToString(meta.ds_[i]).c_str());
           }
 
           if (INVALID_FAMILY_ID != meta.family_info_.family_id_)
