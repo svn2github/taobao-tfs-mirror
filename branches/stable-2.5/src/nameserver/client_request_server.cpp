@@ -889,9 +889,12 @@ namespace tfs
                 block_id, tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
             }
           }
-          if (update_last_time)
+          if (block->version() < info->version_)
           {
             block->update(info);
+          }
+          if (update_last_time)
+          {
             block->update_last_time(now - SYSPARAM_NAMESERVER.replicate_wait_time_);
           }
         }
