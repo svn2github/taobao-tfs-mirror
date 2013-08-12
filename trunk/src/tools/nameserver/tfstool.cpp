@@ -251,11 +251,7 @@ int main(int argc, char* argv[])
   {
     g_tfs_client = TfsClientImplV2::Instance();
     // ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
-    ret = g_tfs_client->initialize(nsip, 1800, 0);
-    g_tfs_client->set_use_remote_cache(true);
-    g_tfs_client->set_remote_cache_info("10.232.12.141:5198",
-        "10.232.12.142:5198", "group_1", 2);
-
+    ret = g_tfs_client->initialize(nsip);
     if (ret != TFS_SUCCESS)
     {
       fprintf(stderr, "init tfs client fail, ret: %d\n", ret);
