@@ -707,7 +707,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
           ret = msg->reply(new StatusMessage(STATUS_MESSAGE_OK, buf));
         else
-          ret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), STATUS_MESSAGE_ERROR, buf);
+          ret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, buf);
       }
       return ret;
     }

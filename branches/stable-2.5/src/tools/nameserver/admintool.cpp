@@ -53,6 +53,7 @@ int cmd_quit(const VSTRING&);
 int cmd_set_run_param(const VSTRING& param);
 int cmd_add_block(const VSTRING& param);
 int cmd_remove_block(const VSTRING& param);
+int cmd_remove_family(const VSTRING& param);
 int cmd_list_block(const VSTRING& param);
 int cmd_load_block(const VSTRING& param);
 int cmd_compact_block(const VSTRING& param);
@@ -127,6 +128,8 @@ void init()
       "remove block. flag: 1--remove block from both ds and ns, 2-remove block from ds and relieve relation from ns but keep block in ns's block table,"
       " 4-just relieve relation between block and all ds, otherwise flag should be a ds address, remove relation between block and specific ds. default is 1.",
       1, 3, cmd_remove_block);
+
+  g_cmd_map["removefamily"] = CmdNode("removefamily family_id", "remove family", 1, 1, cmd_remove_family);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list.", 1, 1, cmd_list_block);
   //g_cmd_map["loadblk"] = CmdNode("loadblk blockid dsip:port", "build relationship between block and dataserver.", 2, 2, cmd_load_block);
   g_cmd_map["clearsystemtable"] = CmdNode("clearsystemtable", "clear system table 1--task, 2--last_write block, 4--report block server, 8--delete block queue.", 1, 1, cmd_clear_system_table);
@@ -472,6 +475,31 @@ int cmd_remove_block(const VSTRING& param)
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
 
   ToolUtil::print_info(status, "removeblock %s", param[0].c_str());
+  return status;
+}
+
+int cmd_remove_family(const VSTRING& param)
+{
+  if (param.empty())
+  {
+    fprintf(stderr, "invalid parameter, param.empty\n");
+    return TFS_ERROR;
+  }
+  int64_t family_id = strtoull(param[0].c_str(), NULL, 10);
+  if (family_id <= 0)
+  {
+    fprintf(stderr, "invalid familyid %s\n", param[0].c_str());
+    return TFS_ERROR;
+  }
+
+  ClientCmdMessage req_cc_msg;
+  req_cc_msg.set_cmd(CLIENT_CMD_DELETE_FAMILY);
+  req_cc_msg.set_value3(family_id);
+
+  int32_t status = TFS_ERROR;
+  send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
+
+  ToolUtil::print_info(status, "remove family %s, ret: %d", param[0].c_str(), status);
   return status;
 }
 
