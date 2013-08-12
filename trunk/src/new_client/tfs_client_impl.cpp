@@ -1282,6 +1282,8 @@ int64_t TfsClientImpl::save_buf_ex(char* ret_tfs_name, const int32_t ret_tfs_nam
 {
   int ret = TFS_ERROR;
 
+  assert(0 == 1);
+
   if (NULL == buf || count <= 0)
   {
     TBSYS_LOG(ERROR, "invalid buffer and count. buffer: %p, count: %"PRI64_PREFIX"d", buf, count);

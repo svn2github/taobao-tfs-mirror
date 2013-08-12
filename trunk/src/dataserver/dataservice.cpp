@@ -38,16 +38,20 @@ namespace tfs
     using namespace tfs::client;
     using namespace tfs::message;
     DataService::DataService():
-        data_manager_(*this),
+        op_manager_(*this),
+        lease_manager_(*this),
         data_helper_(*this),
         task_manager_(*this),
         block_manager_(NULL),
         data_management_(*this),
         heart_manager_(NULL),
         client_request_server_(*this),
+        writable_block_manager_(*this),
         check_manager_(*this),
         timeout_thread_(0),
-        task_thread_(0)
+        task_thread_(0),
+        check_thread_(0),
+        lease_thread_(0)
     {
 
     }
@@ -286,6 +290,8 @@ namespace tfs
         assert(0 != timeout_thread_);
         check_thread_ = new (std::nothrow)RunCheckThreadHelper(*this);
         assert(0 != check_thread_);
+        lease_thread_ = new (std::nothrow)RunLeaseThreadHelper(*this);
+        assert(0 != lease_thread_);
       }
       return ret;
     }
@@ -387,10 +393,19 @@ namespace tfs
       }
 
       if (0 != timeout_thread_)
+      {
         timeout_thread_->join();
+      }
 
       if (0 != check_thread_)
-          check_thread_->join();
+      {
+        check_thread_->join();
+      }
+
+      if (0 != lease_thread_)
+      {
+        lease_thread_->join();
+      }
 
       return TFS_SUCCESS;
     }
@@ -419,10 +434,14 @@ namespace tfs
 
         //check datafile
         data_management_.gc_data_file();
-        data_manager_.timeout(Func::get_monotonic_time_us());
+        op_manager_.timeout(Func::get_monotonic_time());
+
         if (NULL != block_manager_)
           block_manager_->timeout(Func::get_monotonic_time());
+
         task_manager_.expire_task();
+        lease_manager_.timeout(Func::get_monotonic_time());
+
         usleep(MAX_SLEEP_TIME_US);
       }
     }
@@ -435,6 +454,16 @@ namespace tfs
     void DataService::run_check_()
     {
       check_manager_.run_check();
+    }
+
+    void DataService::run_lease_()
+    {
+      lease_manager_.run_lease();
+    }
+
+    void DataService::run_apply_block_()
+    {
+      writable_block_manager_.run_apply_and_giveup();
     }
 
     bool DataService::check_response(common::NewClient* client)
@@ -625,6 +654,11 @@ namespace tfs
                    UNLINK_FILE_MESSAGE_V2 == pcode)
           {
             ret = client_request_server_.callback(client);
+          }
+          else if (DS_APPLY_BLOCK_MESSAGE == pcode ||
+              DS_GIVEUP_BLOCK_MESSAGE == pcode)
+          {
+            ret = writable_block_manager_.callback(client);
           }
           else
           {
@@ -1449,6 +1483,16 @@ namespace tfs
     void DataService::RunCheckThreadHelper::run()
     {
       service_.run_check_();
+    }
+
+    void DataService::RunLeaseThreadHelper::run()
+    {
+      service_.run_lease_();
+    }
+
+    void DataService::RunApplyBlockThreadHelper::run()
+    {
+      service_.run_apply_block_();
     }
 
     int ds_async_callback(common::NewClient* client)

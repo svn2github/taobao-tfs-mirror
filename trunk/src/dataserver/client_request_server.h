@@ -26,8 +26,7 @@
 #include "message/message_factory.h"
 #include "common/client_manager.h"
 #include "sync_base.h"
-#include "lease_manager.h"
-#include "data_manager.h"
+#include "op_manager.h"
 #include "data_helper.h"
 
 namespace tfs
@@ -41,7 +40,7 @@ namespace tfs
         explicit ClientRequestServer(DataService& service);
         virtual ~ClientRequestServer();
         inline BlockManager& get_block_manager();
-        inline DataManager& get_data_manager();
+        inline OpManager& get_op_manager();
         inline DataHelper& get_data_helper();
         inline TrafficControl& get_traffic_control();
 

@@ -471,110 +471,106 @@ namespace tfs
       int ret = keys.size() > 0 ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        int64_t pos = 0;
         vector<data_entry *> key_entries;
         BLK_CACHE_KEY_VEC::const_iterator key_iter = keys.begin();
-        int64_t key_len = (*key_iter)->length();
-        ret = key_len > 0 ? TFS_SUCCESS : TFS_ERROR;
-        if (TFS_SUCCESS == ret)
+        for (; keys.end() != key_iter; key_iter++)
         {
+          int64_t key_len = (*key_iter)->length();
           char* key_buf = new char[key_len];
-          int64_t pos = 0;
-          for (; keys.end() != key_iter; key_iter++)
-          {
-            pos = 0;
-            ret = (*key_iter)->serialize(key_buf, key_len, pos);
-            if (TFS_SUCCESS == ret)
-            {
-              data_entry* key_entry = new data_entry(key_buf, key_len, true); // tair will alloc mem
-              key_entries.push_back(key_entry);
-            }
-            else
-            {
-              break;
-            }
-          }
-
+          pos = 0;
+          ret = (*key_iter)->serialize(key_buf, key_len, pos);
           if (TFS_SUCCESS == ret)
           {
-            // mget
-            tair_keyvalue_map kv_entries;
-            int32_t retry_count = TAIR_CLIENT_TRY_COUNT;
-            do
-            {
-              ret = tair_client_->mget(area_, key_entries, kv_entries);
-            } while (TAIR_RETURN_TIMEOUT == ret && --retry_count > 0);
+            data_entry* key_entry = new data_entry(key_buf, key_len, true); // tair will alloc mem
+            key_entries.push_back(key_entry);
+          }
+          else
+          {
+            break;
+          }
+          delete [] key_buf;
+        }
 
-            if (TAIR_RETURN_SUCCESS == ret || TAIR_RETURN_PARTIAL_SUCCESS == ret)
+        if (TFS_SUCCESS == ret)
+        {
+          // mget
+          tair_keyvalue_map kv_entries;
+          int32_t retry_count = TAIR_CLIENT_TRY_COUNT;
+          do
+          {
+            ret = tair_client_->mget(area_, key_entries, kv_entries);
+          } while (TAIR_RETURN_TIMEOUT == ret && --retry_count > 0);
+
+          if (TAIR_RETURN_SUCCESS == ret || TAIR_RETURN_PARTIAL_SUCCESS == ret)
+          {
+            tair_keyvalue_map::iterator kv_entries_iter = kv_entries.begin();
+            int64_t get_key_len = 0;
+            int64_t get_value_len = 0;
+            char* get_key_buf = NULL;
+            char* get_value_buf = NULL;
+            for (; kv_entries.end() != kv_entries_iter;)
             {
-              tair_keyvalue_map::iterator kv_entries_iter = kv_entries.begin();
-              int64_t get_key_len = 0;
-              int64_t get_value_len = 0;
-              char* get_key_buf = NULL;
-              char* get_value_buf = NULL;
-              for (; kv_entries.end() != kv_entries_iter;)
+              data_entry* key = kv_entries_iter->first;
+              data_entry* value = kv_entries_iter->second;
+
+              BlockCacheKey blk_cache_key;
+              BlockCacheValue blk_cache_value;
+
+              // deserialize key
+              get_key_len = key->get_size();
+              get_key_buf = key->get_data();
+
+              TBSYS_LOG(DEBUG, "deserialize key. key len: %"PRI64_PREFIX"d", get_key_len);
+              pos = 0;
+              ret = blk_cache_key.deserialize(get_key_buf, get_key_len, pos);
+              if (TFS_SUCCESS == ret)
               {
-                data_entry* key = kv_entries_iter->first;
-                data_entry* value = kv_entries_iter->second;
+                // deserialize value
+                get_value_len = value->get_size();
+                get_value_buf = value->get_data();
 
-                BlockCacheKey blk_cache_key;
-                BlockCacheValue blk_cache_value;
+                // get value version
+                blk_cache_value.version_ = value->get_version();
+                TBSYS_LOG(DEBUG, "deserialize value. value len: %"PRI64_PREFIX"d, version: %d", get_value_len, blk_cache_value.version_);
 
-                // deserialize key
-                get_key_len = key->get_size();
-                get_key_buf = key->get_data();
-
-                TBSYS_LOG(DEBUG, "deserialize key. key len: %"PRI64_PREFIX"d", get_key_len);
                 pos = 0;
-                ret = blk_cache_key.deserialize(get_key_buf, get_key_len, pos);
+                ret = blk_cache_value.deserialize(get_value_buf, get_value_len, pos);
                 if (TFS_SUCCESS == ret)
                 {
-                  // deserialize value
-                  get_value_len = value->get_size();
-                  get_value_buf = value->get_data();
-
-                  // get value version
-                  blk_cache_value.version_ = value->get_version();
-                  TBSYS_LOG(DEBUG, "deserialize value. value len: %"PRI64_PREFIX"d, version: %d", get_value_len, blk_cache_value.version_);
-
-                  pos = 0;
-                  ret = blk_cache_value.deserialize(get_value_buf, get_value_len, pos);
-                  if (TFS_SUCCESS == ret)
-                  {
-                    kv_data.insert(BLK_CACHE_KV_MAP::value_type(blk_cache_key, blk_cache_value));
-                  }
-                  else
-                  {
-                    TBSYS_LOG(WARN, "deserialize value fail. ret: %d", ret);
-                  }
+                  kv_data.insert(BLK_CACHE_KV_MAP::value_type(blk_cache_key, blk_cache_value));
                 }
                 else
                 {
-                  TBSYS_LOG(WARN, "deserialize key fail. ret: %d", ret);
+                  TBSYS_LOG(WARN, "deserialize value fail. ret: %d", ret);
                 }
-                //kv_entries.erase(kv_entries_iter++);
-                kv_entries_iter++;
-                tbsys::gDelete(key);
-                tbsys::gDelete(value);
               }
-            }
-            else
-            {
-              TBSYS_LOG(DEBUG, "get value from tair fail, ret: %d", ret);
-              ret = TFS_ERROR;
+              else
+              {
+                TBSYS_LOG(WARN, "deserialize key fail. ret: %d", ret);
+              }
+              //kv_entries.erase(kv_entries_iter++);
+              kv_entries_iter++;
+              tbsys::gDelete(key);
+              tbsys::gDelete(value);
             }
           }
           else
           {
-            TBSYS_LOG(WARN, "serialize key fail. ret: %d", ret);
+            TBSYS_LOG(DEBUG, "get value from tair fail, ret: %d", ret);
+            ret = TFS_ERROR;
           }
+        }
+        else
+        {
+          TBSYS_LOG(WARN, "serialize key fail. ret: %d", ret);
+        }
 
-          // release key data_entry
-          vector<data_entry *>::iterator key_entry_iter = key_entries.begin();
-          for (; key_entry_iter != key_entries.end(); key_entry_iter++)
-          {
-            tbsys::gDelete(*key_entry_iter);
-          }
-          delete [] key_buf;
+        // release key data_entry
+        vector<data_entry *>::iterator key_entry_iter = key_entries.begin();
+        for (; key_entry_iter != key_entries.end(); key_entry_iter++)
+        {
+          tbsys::gDelete(*key_entry_iter);
         }
       }
 

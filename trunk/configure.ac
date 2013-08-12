@@ -81,7 +81,7 @@ if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
   exit 1;
 fi
 TAIR_STORE_CPPFLAGS="-DWITH_UNIQUE_STORE -I${TAIR_ROOT}/include"
-TAIR_STORE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz"
+TAIR_STORE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz -lsnappy"
 AC_SUBST([TAIR_STORE_CPPFLAGS])
 AC_SUBST([TAIR_STORE_LDFLAGS])
 
@@ -96,7 +96,7 @@ if test "${enable_uniquestore}" = "yes"; then
                 exit 1;
         fi
         UNIQUE_STORE_CPPFLAGS="-DWITH_UNIQUE_STORE -I${TAIR_ROOT}/include"
-        UNIQUE_STORE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz"
+        UNIQUE_STORE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz -lsnaapy"
 fi
 AM_CONDITIONAL([WITH_UNIQUE_STORE],[test x$enable_uniquestore = xyes])
 AC_SUBST([UNIQUE_STORE_CPPFLAGS])
@@ -115,7 +115,7 @@ if test "${enable_taircache}" = "yes"; then
                 exit 1;
         fi
         TAIR_CACHE_CPPFLAGS="-DWITH_TAIR_CACHE -I${TAIR_ROOT}/include"
-        TAIR_CACHE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz"
+        TAIR_CACHE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz -lsnappy"
 fi
 AM_CONDITIONAL([WITH_TAIR_CACHE],[test x$enable_taircache = xyes])
 AC_SUBST([TAIR_CACHE_CPPFLAGS])

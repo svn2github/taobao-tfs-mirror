@@ -1,0 +1,68 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Authors:
+ *   linqing <linqing.zyd@taobao.com>
+ *      - initial release
+ *
+ */
+#ifndef TFS_DATASERVER_WRITABLE_BLOCK_H_
+#define TFS_DATASERVER_WRITABLE_BLOCK_H_
+
+#include <Timer.h>
+#include <Mutex.h>
+#include "common/func.h"
+#include "common/atomic.h"
+#include "common/internal.h"
+#include "common/lock.h"
+#include "common/array_helper.h"
+#include "ds_define.h"
+
+namespace tfs
+{
+  namespace dataserver
+  {
+    class WritableBlock : public GCObject
+    {
+      public:
+        explicit WritableBlock(const uint64_t block_id);
+        virtual ~WritableBlock();
+
+        void set_block_id(const uint64_t block_id)
+        {
+          block_id_ = block_id;
+        }
+
+        uint64_t get_block_id() const
+        {
+          return block_id_;
+        }
+
+        void set_use_flag(bool use = true)
+        {
+          use_ = use;
+        }
+
+        bool get_use_flag() const
+        {
+          return use_;
+        }
+
+        int set_servers(const common::ArrayHelper<uint64_t> servers);
+        int get_servers(common::ArrayHelper<uint64_t>& servers);
+
+      private:
+        uint64_t block_id_;
+        uint64_t servers_[common::MAX_REPLICATION_NUM];
+        int32_t server_size_;
+        bool use_; // if block using by write, update or unlink ops
+    };
+  }
+}
+
+#endif
