@@ -31,6 +31,8 @@ namespace tfs
   {
     class DataService;
     class BlockManager;
+    class WritableBlockManager;
+    class LeaseManager;
 
     // write, update, unlink operation manager
     class OpManager
@@ -44,6 +46,8 @@ namespace tfs
       virtual ~OpManager();
 
       BlockManager& get_block_manager();
+      WritableBlockManager& get_writable_block_manager();
+      LeaseManager& get_lease_manager();
 
       // remove expired op meta
       void timeout(const time_t now);
@@ -59,14 +63,14 @@ namespace tfs
        *    3. alloc a operation id if needed
        */
       int prepare_op(uint64_t& block_id, uint64_t& file_id, uint64_t& op_id,
-        const OpType type, const common::VUINT64& servers, bool alloc);
+        const OpType type, common::VUINT64& servers, const bool direct);
 
       /*
        * when receive a close/unlink reqeust
        * ds should reset opertion meta
        */
       int reset_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
-        const OpType type, const common::VUINT64& servers);
+        const OpType type, const common::VUINT64& servers, const bool direct);
 
       /*
        * when receive a response from peer server
@@ -92,7 +96,7 @@ namespace tfs
       /*
        * release operation metadata when operation finished
        */
-      void release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id);
+      void release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id, const bool direct);
 
     public:
       int write_file(const uint64_t block_id, const uint64_t attach_block_id,

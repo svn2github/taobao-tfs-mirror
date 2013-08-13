@@ -22,7 +22,7 @@ namespace tfs
   {
     UnlinkFileMessageV2::UnlinkFileMessageV2():
       block_id_(INVALID_BLOCK_ID), file_id_(0),
-      action_(0), flag_(INVALID_FLAG), prepare_(0)
+      action_(0), flag_(INVALID_FLAG), prepare_(0), direct_(0)
     {
       _packetHeader._pcode = UNLINK_FILE_MESSAGE_V2;
     }
@@ -89,6 +89,13 @@ namespace tfs
         }
       }
 
+      // below is extra members in write_to_ds version
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(direct_);
+      }
+
+
       return ret;
     }
 
@@ -150,13 +157,19 @@ namespace tfs
         }
       }
 
+      // below is write to ds version in write_to_ds version
+      if (TFS_SUCCESS == ret)
+      {
+        input.get_int8(&direct_); // ignore return value
+      }
+
       return ret;
     }
 
     int64_t UnlinkFileMessageV2::length() const
     {
       return 5 * INT64_SIZE + 3 * INT_SIZE + INT8_SIZE +
-        Serialization::get_vint64_length(ds_) + family_info_.length();
+        Serialization::get_vint64_length(ds_) + family_info_.length() + INT8_SIZE;
     }
 
   }

@@ -215,7 +215,7 @@ namespace tfs
     const int32_t EXIT_ALLOC_PHYSICAL_BLOCK_USE_ERROR = -8069;//当前物理BLOCK正在使用
     const int32_t EXIT_NOT_SUPPORT_ERROR = -8070; // a clue to old clients
     const int32_t EXIT_BLOCK_LEASE_OVERLOAD_ERROR = -8071;
-    const int32_t EXIT_BLOCK_LEASE_INTERNAL_ERROR = -8072;
+    const int32_t EXIT_BLOCK_LEASE_INVALID_ERROR = -8072;
     const int32_t EXIT_NETWORK_BUSY_ERROR = -8073;
     const int32_t EXIT_NOT_ALL_SUCCESS = -8074;
     const int32_t EXIT_BLOCK_SIZE_OUT_OF_RANGE = -8075;

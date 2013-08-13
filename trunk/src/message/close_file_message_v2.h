@@ -141,6 +141,16 @@ namespace tfs
           return tmp_;
         }
 
+        void set_direct_flag(const bool direct)
+        {
+          direct_ = direct;
+        }
+
+        bool get_direct_flag()
+        {
+          return direct_;
+        }
+
       private:
         uint64_t block_id_;
         uint64_t attach_block_id_;
@@ -153,6 +163,7 @@ namespace tfs
         int32_t flag_;
         int32_t status_;  // meanless to normal client
         int8_t tmp_; // meanless to client
+        int8_t direct_; // direct write to ds
     };
 
   }

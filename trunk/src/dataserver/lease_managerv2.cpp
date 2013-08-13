@@ -62,8 +62,7 @@ namespace tfs
           if (DS_APPLY_LEASE_RESPONSE_MESSAGE == ret_msg->getPCode())
           {
             DsApplyLeaseResponseMessage* resp_msg = dynamic_cast<DsApplyLeaseResponseMessage* >(ret_msg);
-            lease_meta_ = resp_msg->get_lease_meta();  // update lease info
-            last_renew_time_ = Func::get_monotonic_time();
+            process_apply_response(resp_msg);
           }
           else if (STATUS_MESSAGE == ret_msg->getPCode())
           {
@@ -85,11 +84,19 @@ namespace tfs
       return ret;
     }
 
+    void LeaseManager::process_apply_response(DsApplyLeaseResponseMessage* response)
+    {
+      assert(NULL != response);
+      lease_meta_ = response->get_lease_meta();  // update lease info
+      last_renew_time_ = Func::get_monotonic_time();
+    }
+
     int LeaseManager::renew()
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       DsRenewLeaseMessage req_msg;
+      req_msg.set_ds_stat(ds_info.information_);
       BlockInfoV2* block_infos = req_msg.get_block_infos();
       ArrayHelper<BlockInfoV2> blocks(MAX_WRITABLE_BLOCK_COUNT, block_infos);
 
@@ -106,12 +113,7 @@ namespace tfs
           if (DS_RENEW_LEASE_RESPONSE_MESSAGE == ret_msg->getPCode())
           {
             DsRenewLeaseResponseMessage* resp_msg = dynamic_cast<DsRenewLeaseResponseMessage* >(ret_msg);
-            lease_meta_ = resp_msg->get_lease_meta();  // update lease info
-            last_renew_time_ = Func::get_monotonic_time();
-            ArrayHelper<BlockLease> leases(resp_msg->get_size(),
-                resp_msg->get_block_lease(), resp_msg->get_size());
-            UNUSED(leases);
-            // TODO, update writable block info
+            process_renew_response(resp_msg);
           }
           else if (STATUS_MESSAGE == ret_msg->getPCode())
           {
@@ -131,6 +133,33 @@ namespace tfs
       }
 
       return ret;
+    }
+
+    void LeaseManager::process_renew_response(DsRenewLeaseResponseMessage* response)
+    {
+      assert(NULL != response);
+      lease_meta_ = response->get_lease_meta();  // update lease info
+      last_renew_time_ = Func::get_monotonic_time();
+      ArrayHelper<BlockLease> leases(response->get_size(),
+          response->get_block_lease(), response->get_size());
+      for (int index = 0; index < response->get_size(); index++)
+      {
+        BlockLease& lease = *leases.at(index);
+        if (TFS_SUCCESS == lease.result_)
+        {
+          WritableBlock* block = get_writable_block_manager().get(lease.block_id_, BLOCK_WRITABLE);
+          if (NULL != block)
+          {
+            // update replica information
+            ArrayHelper<uint64_t> helper(lease.size_, lease.servers_, lease.size_);
+            block->set_servers(helper);
+          }
+        }
+        else  // move to expired list
+        {
+          get_writable_block_manager().remove(lease.block_id_, BLOCK_WRITABLE);
+        }
+      }
     }
 
     int LeaseManager::giveup()

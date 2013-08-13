@@ -21,6 +21,8 @@
 #include "message/message_factory.h"
 #include "common/client_manager.h"
 #include "block_manager.h"
+#include "writable_block_manager.h"
+#include "lease_managerv2.h"
 #include "dataservice.h"
 #include "op_manager.h"
 
@@ -48,11 +50,54 @@ namespace tfs
       return service_.get_block_manager();
     }
 
+    WritableBlockManager& OpManager::get_writable_block_manager()
+    {
+      return service_.get_writable_block_manager();
+    }
+
+    LeaseManager& OpManager::get_lease_manager()
+    {
+      return service_.get_lease_manager();
+    }
+
+    // prepare_op is called in write/prepare unlink stage
+    // a client request directly send to ds when direct flag is set
     int OpManager::prepare_op(uint64_t& block_id, uint64_t& file_id, uint64_t& op_id,
-        const OpType type, const VUINT64& servers, bool alloc)
+        const OpType type, VUINT64& servers, bool direct)
     {
       int ret = TFS_SUCCESS;
-      if (0 == (file_id & 0xFFFFFFFF))
+
+      if (direct)
+      {
+        ret = get_lease_manager().is_expired(Func::get_monotonic_time()) ?
+          EXIT_BLOCK_LEASE_INVALID_ERROR: TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          WritableBlock* block = NULL;
+          if (INVALID_BLOCK_ID == block_id)
+          {
+            ret = get_writable_block_manager().alloc_writable_block(block);
+          }
+          else
+          {
+            ret = get_writable_block_manager().alloc_update_block(block_id, block);
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            block_id = block->get_block_id();
+            block->get_servers(servers);
+          }
+        }
+      }
+
+      // run till here, blockid shouldn't be invalid
+      if (TFS_SUCCESS == ret)
+      {
+        ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      }
+
+      if ((TFS_SUCCESS == ret) && (0 == (file_id & 0xFFFFFFFF)))
       {
         // should keep the high-32 bit of file_id unchanged
         uint64_t alloc_file_id = 0;
@@ -75,7 +120,7 @@ namespace tfs
         ret = get(oid, op_meta);
 
         // op meta doesn't exist, create
-        if (TFS_SUCCESS != ret && alloc)
+        if (TFS_SUCCESS != ret)
         {
           if (!out_of_limit())
           {
@@ -96,11 +141,17 @@ namespace tfs
     }
 
     int OpManager::reset_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
-        const OpType type, const common::VUINT64& servers)
+        const OpType type, const common::VUINT64& servers, const bool direct)
     {
       UNUSED(type);
       int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
           (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+
+      if (TFS_SUCCESS == ret && direct)
+      {
+        ret = get_lease_manager().is_expired(Func::get_monotonic_time()) ?
+          EXIT_BLOCK_LEASE_INVALID_ERROR: TFS_SUCCESS;
+      }
 
       if (TFS_SUCCESS == ret)
       {
@@ -193,12 +244,16 @@ namespace tfs
       return all_finish;
     }
 
-    void OpManager::release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id)
+    void OpManager::release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id, const bool direct)
     {
       int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
           (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        if (direct)
+        {
+          get_writable_block_manager().free_writable_block(block_id);
+        }
         OpId oid(block_id, file_id, op_id);
         remove(oid);
       }

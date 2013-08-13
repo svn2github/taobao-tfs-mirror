@@ -20,6 +20,7 @@
 #include "common/lock.h"
 #include "common/array_helper.h"
 #include "common/tfs_vector.h"
+#include "message/ds_lease_message.h"
 #include "data_file.h"
 #include "ds_define.h"
 #include "writable_block.h"
@@ -50,6 +51,12 @@ namespace tfs
     class BlockManager;
     class WritableBlockManager
     {
+      #ifdef TFS_GTEST
+      friend class TestWritableBlockManager;
+      FRIEND_TEST(TestWritableBlockManager, apply_callback);
+      FRIEND_TEST(TestWritableBlockManager, giveup_callback);
+      #endif
+
       typedef common::TfsSortedVector<WritableBlock*, BlockIdCompare> BLOCK_TABLE;
       typedef BLOCK_TABLE::iterator BLOCK_TABLE_ITER;
 
@@ -78,13 +85,12 @@ namespace tfs
         WritableBlock* get(const uint64_t block_id, const BlockType type);
 
         // alloc a writable block
-        int alloc_writable_block(uint64_t& block_id);
+        int alloc_writable_block(WritableBlock*& block);
         void free_writable_block(const uint64_t block_id);
 
         // alloc a block for update
         // if ds doesn't have lease, apply for this block
-        int alloc_update_block(const uint64_t block_id);
-        void free_update_block(const uint64_t block_id);
+        int alloc_update_block(const uint64_t block_id, WritableBlock*& block);
 
       private:
         BLOCK_TABLE* select(const BlockType type);
@@ -96,8 +102,8 @@ namespace tfs
         int apply_writable_block(const int32_t count);
         int apply_update_block(const int64_t block_id);
         int giveup_writable_block();
-        void apply_block_callback(DsApplyBlockResponseMessage* response);
-        void giveup_block_callback(DsGiveupBlockResponseMessage* response);
+        void apply_block_callback(message::DsApplyBlockResponseMessage* response);
+        void giveup_block_callback(message::DsGiveupBlockResponseMessage* response);
 
       private:
         DataService& service_;

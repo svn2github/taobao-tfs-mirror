@@ -124,6 +124,12 @@ namespace tfs
 
     class LeaseManager
     {
+      #ifdef TFS_GTEST
+      friend class TestLeaseManager;
+      FRIEND_TEST(TestLeaseManager, process_apply_response);
+      RIEND_TEST(TestLeaseManager, process_renew_response);
+      #endif
+
       typedef std::map<LeaseId, Lease*> LEASE_MAP;
       typedef LEASE_MAP::iterator LEASE_MAP_ITER;
       typedef LEASE_MAP::const_iterator LEASE_MAP_CONST_ITER;

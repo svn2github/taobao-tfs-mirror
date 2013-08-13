@@ -141,6 +141,16 @@ namespace tfs
           return prepare_;
         }
 
+        void set_direct_flag(const bool direct)
+        {
+          direct_ = direct;
+        }
+
+        bool get_direct_flag() const
+        {
+          return direct_;
+        }
+
       private:
         uint64_t block_id_;
         uint64_t attach_block_id_;
@@ -153,6 +163,7 @@ namespace tfs
         int32_t flag_;
         int8_t prepare_;
         common::FamilyInfoExt family_info_;
+        int8_t direct_;
     };
 
   }

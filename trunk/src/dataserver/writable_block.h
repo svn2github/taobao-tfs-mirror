@@ -55,6 +55,7 @@ namespace tfs
 
         int set_servers(const common::ArrayHelper<uint64_t> servers);
         int get_servers(common::ArrayHelper<uint64_t>& servers);
+        void get_servers(common::VUINT64& servers);
 
       private:
         uint64_t block_id_;

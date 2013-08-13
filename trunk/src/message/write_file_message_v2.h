@@ -161,6 +161,16 @@ namespace tfs
           return family_info_;
         }
 
+        void set_direct_flag(const bool direct)
+        {
+          direct_ = direct;
+        }
+
+        bool get_direct_flag()
+        {
+          return direct_;
+        }
+
       private:
         common::FileSegment file_seg_;
         common::VUINT64 ds_;
@@ -171,6 +181,7 @@ namespace tfs
         int32_t version_;
         int32_t flag_;
         const char* data_;
+        int8_t direct_;
     };
 
     class WriteFileRespMessageV2: public common::BasePacket

@@ -85,6 +85,13 @@ namespace tfs
         ret = output.set_bytes(data_, file_seg_.length_);
       }
 
+      // below is extra member in write_to_ds version
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(direct_);
+      }
+
       return ret;
     }
 
@@ -143,6 +150,12 @@ namespace tfs
         input.drain(file_seg_.length_);
       }
 
+      // below is extra member in write_to_ds version
+      if (TFS_SUCCESS == ret)
+      {
+        input.get_int8(&direct_);
+      }
+
       return ret;
     }
 
@@ -155,6 +168,7 @@ namespace tfs
       {
         len += file_seg_.length_;
       }
+      len += INT8_SIZE;
 
       return len;
     }

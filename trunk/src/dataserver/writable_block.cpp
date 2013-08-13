@@ -70,6 +70,15 @@ namespace tfs
       return ret;
     }
 
+    void WritableBlock::get_servers(common::VUINT64& servers)
+    {
+      servers.clear();
+      for (int index = 0; index < server_size_; index++)
+      {
+        servers.push_back(servers_[index]);
+      }
+    }
+
   }
 }
 

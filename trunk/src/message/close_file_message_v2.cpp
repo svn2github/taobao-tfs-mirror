@@ -22,7 +22,7 @@ namespace tfs
   {
     CloseFileMessageV2::CloseFileMessageV2():
       attach_block_id_(INVALID_BLOCK_ID),
-      lease_id_(0), master_id_(0), crc_(0), flag_(0), status_(-1), tmp_(0)
+      lease_id_(0), master_id_(0), crc_(0), flag_(0), status_(-1), tmp_(0), direct_(0)
     {
       _packetHeader._pcode = CLOSE_FILE_MESSAGE_V2;
     }
@@ -89,6 +89,12 @@ namespace tfs
         }
       }
 
+      // below is extra members in write_to_ds version
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(direct_);
+      }
+
       return ret;
     }
 
@@ -150,6 +156,13 @@ namespace tfs
         }
       }
 
+      // below is extra members in write_to_ds version
+
+      if (TFS_SUCCESS == ret)
+      {
+        input.get_int8(&direct_);  // ignore return value
+      }
+
       return ret;
 
     }
@@ -158,7 +171,7 @@ namespace tfs
     {
       return 5 * INT64_SIZE + 3 * INT_SIZE + INT8_SIZE +
              Serialization::get_vint64_length(ds_)
-             + family_info_.length();
+             + family_info_.length() + INT8_SIZE;
     }
 
   }

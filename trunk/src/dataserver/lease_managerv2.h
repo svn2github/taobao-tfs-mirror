@@ -20,6 +20,7 @@
 #include "common/atomic.h"
 #include "common/internal.h"
 #include "common/lock.h"
+#include "message/ds_lease_message.h"
 #include "data_file.h"
 #include "ds_define.h"
 
@@ -80,6 +81,10 @@ namespace tfs
         {
           return lease_meta_;
         }
+
+      private:
+        void process_apply_response(message::DsApplyLeaseResponseMessage* response);
+        void process_renew_response(message::DsRenewLeaseResponseMessage* response);
 
       private:
         DataService& service_;
