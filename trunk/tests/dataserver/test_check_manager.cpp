@@ -58,6 +58,7 @@ namespace tfs
       std::vector<FileInfoV2> right;
       std::vector<FileInfoV2> more;
       std::vector<FileInfoV2> less;
+      std::vector<FileInfoV2> diff;
 
       for (int index = 0; index < left_size; index++)
       {
@@ -73,7 +74,7 @@ namespace tfs
         temp.status_ = 0;
         right.push_back(temp);
       }
-      check_manager.compare_block_fileinfos(left, right, more, less);
+      check_manager.compare_block_fileinfos(left, right, more, diff, less);
       EXPECT_EQ(static_cast<int>(more.size()), 10);
       EXPECT_EQ(static_cast<int>(less.size()), 5);
     }

@@ -22,7 +22,8 @@ TESTS=
 check_PROGRAMS=
 
 noinst_PROGRAMS=test_super_block_manager test_data_file test_physical_block test_physical_block_manager\
-	test_index_handlev2 test_logic_blockv2 test_block_manager test_erasure_code test_check_manager
+	test_index_handlev2 test_logic_blockv2 test_block_manager test_erasure_code test_check_manager \
+	test_writable_block test_writable_block_manager test_lease_manager
 
 test_super_block_manager_SOURCES=test_super_block_manager.cpp
 test_super_block_manager_LDFLAGS=${AM_LDFLAGS}
@@ -50,4 +51,13 @@ test_erasure_code_LDFLAGS=${AM_LDFLAGS}
 
 test_check_manager_SOURCES=test_check_manager.cpp
 test_check_manager_LDFLAGS=${AM_LDFLAGS}
+
+test_writable_block_SOURCES=test_writable_block.cpp
+test_writable_block_LDFLAGS=${AM_LDFLAGS}
+
+test_writable_block_manager_SOURCES=test_writable_block_manager.cpp
+test_writable_block_manager_LDFLAGS=${AM_LDFLAGS}
+
+test_lease_manager_SOURCES=test_lease_manager.cpp
+test_lease_manager_LDFLAGS=${AM_LDFLAGS}
 
