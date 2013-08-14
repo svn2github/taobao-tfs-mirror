@@ -354,7 +354,8 @@ retry:
 
       if (key.key_size_ > MAX_KEY_VAR_SIZE || NULL == pp_value || NULL == version)
       {
-        TBSYS_LOG(ERROR, "input error");
+        TBSYS_LOG(ERROR, "input error %d %p %p", key.key_size_, pp_value, version);
+
         ret = TFS_ERROR;
       }
       int retry_time = 0;

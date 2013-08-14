@@ -982,6 +982,10 @@ namespace tfs
       start_obj_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
 
       ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_obj_key, end_obj_key, limit, offset, kv_value_keys, kv_value_values, result_size, scan_type);
+      if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+      {
+        ret = TFS_SUCCESS;
+      }
 
       return ret;
     }
