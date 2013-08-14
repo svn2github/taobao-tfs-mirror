@@ -42,8 +42,8 @@ namespace tfs
       //mysql_thread_end();
     }
     bool DataBasePool::init_pool(const int32_t pool_size,
-        char* conn_str,  char* user_name,
-        char* passwd)
+        const char* conn_str,  const char* user_name,
+        const char* passwd)
     {
       bool ret = true;
       for (int i = 0; i < pool_size_; i++)

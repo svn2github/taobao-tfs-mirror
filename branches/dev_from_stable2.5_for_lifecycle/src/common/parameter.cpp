@@ -570,11 +570,11 @@ namespace tfs
         return TFS_ERROR;
       }
 
-      tair_master_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_MASTER, "");
-      tair_slave_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_SLAVE, "");
-      tair_group_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_GROUP, "");
-      tair_object_area_ = config.getInt(CONF_SN_KVMETA, CONF_TAIR_OBJECT_AREA, -1);
-      tair_lifecycle_area_ = config.getInt(CONF_SN_KVMETA, CONF_TAIR_LIFECYCLE_AREA, -1);
+      conn_str_ = config.getString(CONF_SN_KVMETA, CONF_KV_DB_CONN, "");
+      user_name_ = config.getString(CONF_SN_KVMETA, CONF_KV_DB_USER, "");
+      pass_wd_ = config.getString(CONF_SN_KVMETA, CONF_KV_DB_PASS, "");
+      object_area_ = config.getInt(CONF_SN_KVMETA, CONF_OBJECT_AREA, -1);
+      lifecycle_area_ = config.getInt(CONF_SN_KVMETA, CONF_LIFECYCLE_AREA, -1);
       dump_stat_info_interval_ = config.getInt(CONF_SN_KVMETA, CONF_STAT_INFO_INTERVAL, 60000000);
 
       if (TFS_SUCCESS == ret)

@@ -196,14 +196,19 @@ namespace tfs
 #define CONF_TURN_INTERVAL                            "turn_interval"
 
 //kv meta server
-#define CONF_TAIR_MASTER                             "tair_master"
-#define CONF_TAIR_SLAVE                              "tair_slave"
-#define CONF_TAIR_GROUP                              "tair_group"
-#define CONF_TAIR_OBJECT_AREA                        "tair_object_area"
-#define CONF_TAIR_LIFECYCLE_AREA                     "tair_lifecycle_area"
+#define CONF_KV_DB_CONN                             "kv_db_conn"
+#define CONF_KV_DB_USER                              "kv_db_user"
+#define CONF_KV_DB_PASS                              "kv_db_pass"
+#define CONF_OBJECT_AREA                            "object_area"
+#define CONF_LIFECYCLE_AREA                       "lifecycle_area"
 #define CONF_STAT_INFO_INTERVAL                      "stat_info_interval"
 #define CONF_KV_META_IPPORT                          "kv_meta_ip_port"
 #define CONF_KV_ROOT_IPPORT                          "kv_root_ip_port"
+
+#define CONF_TAIR_MASTER                             "tair_master"
+#define CONF_TAIR_SLAVE                              "tair_slave"
+#define CONF_TAIR_GROUP                              "tair_group"
+#define CONF_TAIR_LIFECYCLE_AREA                     "tair_lifecycle_area"
 
 //kv root server
 #define CONF_KV_MTS_RTS_LEASE_CHECK_TIME                 "mts_rts_lease_check_time" //(s)

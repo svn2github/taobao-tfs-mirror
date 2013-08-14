@@ -77,12 +77,6 @@ AC_ARG_ENABLE([lifecycle],
            [enable life cycle module use ----with-restful-root to specify path]),
            [enable_lifecycle=${enableval}],
            [enable_lifecycle="no"])
-if test "${enable_lifecycle}" = "yes"; then
-        if ! test -d "${TREST_ROOT}/include" -a -d "${TREST_ROOT}/lib"; then
-                AC_MSG_ERROR([TREST_ROOT is not work! expect TREST_ROOT/include and TREST_ROOT/lib directory])
-                exit 1;
-        fi
-fi
 AM_CONDITIONAL([WITH_LIFECYCLE],[test x$enable_lifecycle= xyes])
 
 AC_ARG_WITH([tair-root],

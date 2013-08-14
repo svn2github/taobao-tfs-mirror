@@ -33,8 +33,8 @@ namespace tfs
         DataBasePool();
         ~DataBasePool();
         bool init_pool(const int32_t pool_size,
-            char* conn_str, char* user_name,
-            char* passwd);
+            const char* conn_str, const char* user_name,
+            const char* passwd);
         bool destroy_pool(void);
         MysqlDatabaseHelper* get();
         void release(MysqlDatabaseHelper* database_helper);

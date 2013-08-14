@@ -506,7 +506,7 @@ retry:
     }
     int MysqlDatabaseHelper::scan_v(const int area,
         const KvKey& start_key, const KvKey& end_key,
-        const int32_t limit,
+        const int32_t limit, const bool skip_first,
         vector<KvValue*> *keys, vector<KvValue*> *values, int32_t* result_size)
     {
       int ret = TFS_SUCCESS;
@@ -530,13 +530,29 @@ retry:
         if (limit < 0)
         {
           limit_ = -limit;
-          snprintf(str, 1024, "select meta_key, meta_value, version from tfsmeta_%d where "
-              "meta_key<? and meta_key<? order by meta_key desc limit %d", area, limit_);
+          if (skip_first)
+          {
+            snprintf(str, 1024, "select meta_key, meta_value, version from tfsmeta_%d where "
+                "meta_key<? and meta_key<? order by meta_key desc limit %d", area, limit_);
+          }
+          else
+          {
+            snprintf(str, 1024, "select meta_key, meta_value, version from tfsmeta_%d where "
+                "meta_key<=? and meta_key<=? order by meta_key desc limit %d", area, limit_);
+          }
         }
         else
         {
-          snprintf(str, 1024, "select meta_key, meta_value, version from tfsmeta_%d where "
-              "meta_key>=? and meta_key<=? order by meta_key asc limit %d ", area, limit_);
+          if (skip_first)
+          {
+            snprintf(str, 1024, "select meta_key, meta_value, version from tfsmeta_%d where "
+                "meta_key>? and meta_key<=? order by meta_key asc limit %d ", area, limit_);
+          }
+          else
+          {
+            snprintf(str, 1024, "select meta_key, meta_value, version from tfsmeta_%d where "
+                "meta_key>=? and meta_key<=? order by meta_key asc limit %d ", area, limit_);
+          }
         }
 
         tbutil::Mutex::Lock lock(mutex_);
@@ -699,9 +715,9 @@ retry:
           {
             ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
           }
-          *result_size=get_count;
         }
       }
+      *result_size=get_count;
       return ret;
     }
 

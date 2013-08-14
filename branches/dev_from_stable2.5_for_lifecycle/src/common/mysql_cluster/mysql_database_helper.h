@@ -40,7 +40,7 @@ namespace tfs
         // minus limit means pre scan
         int scan_v(const int area,
             const KvKey& start_key, const KvKey& end_key,
-            const int32_t limit,
+            const int32_t limit, const bool skip_first,
             std::vector<KvValue*> *keys, std::vector<KvValue*> *values, int32_t* result_size);
       public:
         bool is_connected() const;

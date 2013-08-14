@@ -27,7 +27,7 @@ namespace tfs
     const char KvDefine::DEFAULT_CHAR = 7;
     const int32_t KvDefine::MAX_LIMIT = 1000;
     const int32_t KvDefine::VERSION_ERROR_RETRY_COUNT = 3;
-    const int64_t KvDefine::MAX_VERSION = (1L<<16) - 1;
+    const int64_t KvDefine::MAX_VERSION = (1L<<30) - 1;
 
     TfsFileInfo::TfsFileInfo()
       :cluster_id_(0), block_id_(0), file_id_(0), offset_(0), file_size_(0)

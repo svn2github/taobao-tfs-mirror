@@ -238,11 +238,11 @@ namespace tfs
 
     struct KvMetaParameter
     {
-      std::string tair_master_;
-      std::string tair_slave_;
-      std::string tair_group_;
-      int tair_object_area_;
-      int tair_lifecycle_area_;
+      std::string conn_str_;
+      std::string user_name_;
+      std::string pass_wd_;
+      int object_area_;
+      int lifecycle_area_;
       int32_t dump_stat_info_interval_;
       uint64_t rs_ip_port_;
       uint64_t ms_ip_port_;

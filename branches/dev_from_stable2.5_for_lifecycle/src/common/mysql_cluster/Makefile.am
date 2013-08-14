@@ -14,7 +14,7 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 
 noinst_LIBRARIES=libkvengine_mysql.a
 
-kvengine_mysql_INCLUDE= database_pool.h  mysql_database_helper.h  mysqlengine_helper.h
+kvengine_mysql_INCLUDE= database_pool.h  mysql_database_helper.h  mysqlengine_helper.h mysql_engine_helper.h
 
-libkvengine_mysql_a_SOURCES=database_pool.cpp  mysql_database_helper.cpp $(kvengine_mysql)
+libkvengine_mysql_a_SOURCES=database_pool.cpp  mysql_database_helper.cpp mysql_engine_helper.cpp $(kvengine_mysql)
 

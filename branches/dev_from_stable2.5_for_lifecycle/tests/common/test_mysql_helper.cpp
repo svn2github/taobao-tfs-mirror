@@ -200,7 +200,7 @@ namespace tfs
       e_key.key_ = end_key_str;
       e_key.key_size_=1;
 
-      ret = database_->scan_v(area, s_key, e_key, 5, &keys, &values, &count);
+      ret = database_->scan_v(area, s_key, e_key, 5, false, &keys, &values, &count);
       ASSERT_EQ(TFS_SUCCESS, ret);
       ASSERT_EQ(5, count);
       for (int i = 0; i < 5; i++)
@@ -215,7 +215,7 @@ namespace tfs
 
       sprintf(start_key_str, "key3");
       s_key.key_size_=4;
-      ret = database_->scan_v(area, s_key, e_key, 5,  &keys, &values, &count);
+      ret = database_->scan_v(area, s_key, e_key, 5, false, &keys, &values, &count);
       ASSERT_EQ(TFS_SUCCESS, ret);
       ASSERT_EQ(5, count);
       for (int i = 0; i < 5; i++)
@@ -230,7 +230,7 @@ namespace tfs
       keys.clear();
       values.clear();
 
-      ret = database_->scan_v(area, s_key, e_key, -2, &keys, &values, &count);
+      ret = database_->scan_v(area, s_key, e_key, -2, true, &keys, &values, &count);
       ASSERT_EQ(TFS_SUCCESS, ret);
       ASSERT_EQ(2, count);
       for (int i = 0; i < 2; i++)
