@@ -25,3 +25,4 @@ libtfscommon_a_SOURCES = internal.cpp parameter.cpp func.cpp file_queue.cpp \
 			 array_helper.h meta_define.h kv_rts_define.h mmap_file_op.h expire_define.h
 include_HEADERS = define.h cdefine.h lock.h  func.h internal.h meta_define.h meta_server_define.h rts_define.h error_msg.h kv_meta_define.h kv_rts_define.h
 			 array_helper.h mmap_file_op.h kvengine_helper.h tairengine_helper.h expire_define.h
+SUBDIRS = mysql_cluster

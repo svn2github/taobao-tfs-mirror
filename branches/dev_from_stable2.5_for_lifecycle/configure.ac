@@ -251,6 +251,7 @@ AC_CONFIG_FILES([Makefile
                  src/new_client/Makefile
                  src/clientv2/Makefile
                  src/common/Makefile
+                 src/common/mysql_cluster/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
                  src/monitor/Makefile
@@ -272,16 +273,16 @@ AC_CONFIG_FILES([Makefile
                  src/tools/cluster/Makefile
                  src/tools/workers/Makefile
                  src/checkserver/Makefile
-                 src/tools/metaserver/Makefile])
-                 #tests/Makefile
-                 #tests/batch/Makefile
-                 #tests/rcserver/Makefile
-                 #tests/kv_meta_server/Makefile
-                 #tests/name_meta_server/Makefile
-                 #tests/common/Makefile
-                 #tests/nameserver/Makefile
-                 #tests/rootserver/Makefile
-                 #tests/dataserver/Makefile
-                 #tests/clientv2/Makefile
-                 #tests/intergrate/Makefile])
+                 src/tools/metaserver/Makefile
+                 tests/Makefile
+                 tests/batch/Makefile
+                 tests/rcserver/Makefile
+                 tests/kv_meta_server/Makefile
+                 tests/name_meta_server/Makefile
+                 tests/common/Makefile
+                 tests/nameserver/Makefile
+                 tests/rootserver/Makefile
+                 tests/dataserver/Makefile
+                 tests/clientv2/Makefile
+                 tests/intergrate/Makefile])
 AC_OUTPUT
