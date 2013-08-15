@@ -63,7 +63,7 @@ namespace tfs
         kv_engine_helper_ = kv_engine_helper;
       }
 
-      tair_lifecycle_area_ = SYSPARAM_EXPIRESERVER.tair_lifecycle_area_;
+      tair_lifecycle_area_ = SYSPARAM_EXPIRESERVER.lifecycle_area_;
 
       clean_task_state_ = 0;
 

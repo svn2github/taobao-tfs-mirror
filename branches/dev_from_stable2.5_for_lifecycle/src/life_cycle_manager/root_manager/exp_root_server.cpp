@@ -24,7 +24,7 @@
 #include "common/status_message.h"
 #include "common/client_manager.h"
 #include "message/kv_rts_message.h"
-#include "common/tairengine_helper.h"
+#include "common/mysql_cluster/mysql_engine_helper.h"
 #include "exp_root_server.h"
 
 using namespace tfs::common;
@@ -76,7 +76,8 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
-        kv_engine_helper_ = new TairEngineHelper(SYSPARAM_EXPIREROOTSERVER.tair_master_, SYSPARAM_EXPIREROOTSERVER.tair_slave_, SYSPARAM_EXPIREROOTSERVER.tair_group_);
+        kv_engine_helper_ = new MysqlEngineHelper(SYSPARAM_EXPIREROOTSERVER.conn_str_,
+            SYSPARAM_EXPIREROOTSERVER.user_name_, SYSPARAM_EXPIREROOTSERVER.pass_wd_);
         iret = kv_engine_helper_->init();
       }
 

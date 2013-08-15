@@ -32,6 +32,7 @@ namespace tfs
         MysqlDatabaseHelper();
         virtual ~MysqlDatabaseHelper();
         int insert_kv(const int32_t area, const KvKey& key, const KvMemValue &value);
+        int replace_kv(const int32_t area, const KvKey& key, const KvMemValue &value);
         int update_kv(const int area, const KvKey& key, const KvMemValue &value,
             const int32_t version);
         int rm_kv(const int32_t area, const KvKey& key);

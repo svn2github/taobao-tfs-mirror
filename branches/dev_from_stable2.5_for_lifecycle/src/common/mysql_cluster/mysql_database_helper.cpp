@@ -179,6 +179,94 @@ retry:
       }
       return ret;
     }
+    int MysqlDatabaseHelper::replace_kv(const int32_t area, const KvKey& key, const KvMemValue &value)
+    {
+      int ret = TFS_SUCCESS;
+      int status;
+      int64_t mysql_proc_ret = 0;
+      int retry_time = 0;
+      if (key.key_size_ > MAX_KEY_VAR_SIZE || value.get_size() > MAX_VALUE_VAR_SIZE)
+      {
+        TBSYS_LOG(ERROR, "size error");
+        ret = TFS_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        MYSQL_STMT *stmt;
+        MYSQL_BIND ps_params[3];  /* input parameter buffers */
+        char str[1024];
+        snprintf(str, 1024, "insert into tfsmeta_%d (meta_key, meta_value, version) "
+            "values (?, ?, 1) on duplicate key "
+            "update meta_value=?, version=mod(version,1024)+1", area);
+
+
+        tbutil::Mutex::Lock lock(mutex_);
+retry:
+        if (!is_connected_)
+        {
+          connect();
+        }
+        if (is_connected_)
+        {
+          stmt = mysql_stmt_init(&mysql_.mysql);
+          ret = TFS_SUCCESS;
+          status = mysql_stmt_prepare(stmt, str, strlen(str));
+          if (status)
+          {
+            if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
+            {
+              close();
+              goto retry;
+            }
+            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            ret = TFS_ERROR;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            memset(ps_params, 0, sizeof (ps_params));
+            ps_params[0].buffer_type = MYSQL_TYPE_VAR_STRING;
+            ps_params[0].buffer = (char *) key.key_;
+            unsigned long key_size_ =key.key_size_;
+            ps_params[0].length = &key_size_;
+            ps_params[0].is_null = 0;
+
+            ps_params[1].buffer_type = MYSQL_TYPE_BLOB;
+            ps_params[1].buffer = (char *) value.get_data();
+            unsigned long value_size_ = value.get_size();
+            ps_params[1].length = &value_size_;
+            ps_params[1].is_null = 0;
+
+            ps_params[2].buffer_type = MYSQL_TYPE_BLOB;
+            ps_params[2].buffer = (char *) value.get_data();
+            ps_params[2].length = &value_size_;
+            ps_params[2].is_null = 0;
+
+
+            status = mysql_stmt_bind_param(stmt, ps_params);
+            if (status)
+            {
+              TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                  mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+              ret = TFS_ERROR;
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              if (!excute_stmt(stmt, mysql_proc_ret))
+              {
+                ret = TFS_ERROR;
+              }
+            }
+
+          }
+        }
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        close();
+      }
+      return ret;
+    }
     int MysqlDatabaseHelper::update_kv(const int area, const KvKey& key, const KvMemValue
         &value, const int32_t version)
     {
@@ -196,7 +284,7 @@ retry:
         MYSQL_STMT *stmt;
         MYSQL_BIND ps_params[3];  /* input parameter buffers */
         char str[1024];
-        snprintf(str, 1024, "update tfsmeta_%d set meta_value=?, version=version+1 where meta_key=? and version=%d", area, version);
+        snprintf(str, 1024, "update tfsmeta_%d set meta_value=?, version=mod(version,1024)+1 where meta_key=? and version=%d", area, version);
 
 
         tbutil::Mutex::Lock lock(mutex_);

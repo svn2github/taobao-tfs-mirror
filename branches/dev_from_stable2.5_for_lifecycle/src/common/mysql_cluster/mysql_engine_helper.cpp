@@ -74,6 +74,10 @@ namespace tfs
         {
           ret = database_->insert_kv(name_area, key, value);
         }
+        else if (0 == version)
+        {
+          ret = database_->replace_kv(name_area, key, value);
+        }
         else
         {
           ret = database_->update_kv(name_area, key, value, version);

@@ -274,10 +274,10 @@ namespace tfs
 
     struct ExpireServerParameter
     {
-      std::string tair_master_;
-      std::string tair_slave_;
-      std::string tair_group_;
-      int tair_lifecycle_area_;
+      std::string conn_str_;
+      std::string user_name_;
+      std::string pass_wd_;
+      int lifecycle_area_;
       uint64_t ers_ip_port_;
       uint64_t es_ip_port_;
       std::string nginx_root_;
@@ -296,10 +296,10 @@ namespace tfs
 
     struct ExpireRootServerParameter
     {
-      std::string tair_master_;
-      std::string tair_slave_;
-      std::string tair_group_;
-      int tair_lifecycle_area_;
+      std::string conn_str_;
+      std::string user_name_;
+      std::string pass_wd_;
+      int lifecycle_area_;
 
       int32_t es_rts_lease_expired_time_;  //4s
       int32_t es_rts_check_lease_interval_;  //1s

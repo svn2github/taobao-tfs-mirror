@@ -68,6 +68,45 @@ namespace tfs
 
       database_pool_.release(database_);
     }
+    TEST_F(MysqlClusterTest, replace)
+    {
+      MysqlDatabaseHelper* database_ = database_pool_.get();
+      ASSERT_TRUE(NULL != database_);
+
+      int area = 1;
+      char* key_str ="key1";
+      char value_str[50];
+      sprintf(value_str,"%s","value1");;
+
+      KvKey key;
+      key.key_ = key_str;
+      key.key_size_ = 4;
+
+      KvMemValue value;
+      KvValue* p_value = NULL;
+      value.set_data(value_str, 6);
+      int ret = 0;
+      int64_t version = 0;
+      ret = database_->replace_kv(area, key, value);
+      ASSERT_EQ(TFS_SUCCESS, ret);
+      ret = database_->get_v(area, key, &p_value, &version);
+      ASSERT_EQ(TFS_SUCCESS, ret);
+      ASSERT_TRUE(0 == memcmp(value_str, p_value->get_data(), p_value->get_size()));
+      p_value->free();
+
+      value_str[1]=3;
+
+      ret = database_->replace_kv(area, key, value);
+      ASSERT_EQ(TFS_SUCCESS, ret);
+      ret = database_->get_v(area, key, &p_value, &version);
+      ASSERT_EQ(TFS_SUCCESS, ret);
+      ASSERT_TRUE(0 == memcmp(value_str, p_value->get_data(), p_value->get_size()));
+      p_value->free();
+
+      database_->rm_kv(area, key);
+
+      database_pool_.release(database_);
+    }
     TEST_F(MysqlClusterTest, update)
     {
       MysqlDatabaseHelper* database_ = database_pool_.get();

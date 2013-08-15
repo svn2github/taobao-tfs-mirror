@@ -48,7 +48,7 @@ namespace tfs
     };
 
     HandleTaskHelper::HandleTaskHelper(ExpServerManager &manager)
-      :kv_engine_helper_(NULL), tair_lifecycle_area_(0),
+      :kv_engine_helper_(NULL), lifecycle_area_(0),
       assign_task_thread_(0), manager_(manager)
     {
     }
@@ -83,7 +83,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         assign_task_thread_ = new AssignTaskThreadHelper(*this);
-        tair_lifecycle_area_ = SYSPARAM_EXPIREROOTSERVER.tair_lifecycle_area_;
+        lifecycle_area_ = SYSPARAM_EXPIREROOTSERVER.lifecycle_area_;
       }
 
       return ret;
@@ -163,7 +163,7 @@ namespace tfs
       while (TFS_SUCCESS == ret)
       {
         bool loop = true;
-        ret = kv_engine_helper_->scan_keys(tair_lifecycle_area_, start_key, end_key, limit, offset, &kv_value_keys, &kv_value_values, &res_size, CMD_RANGE_ALL);
+        ret = kv_engine_helper_->scan_keys(lifecycle_area_, start_key, end_key, limit, offset, &kv_value_keys, &kv_value_values, &res_size, CMD_RANGE_ALL);
 
         if (TFS_SUCCESS != ret && EXIT_KV_RETURN_HAS_MORE_DATA != ret)
         {

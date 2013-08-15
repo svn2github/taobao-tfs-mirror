@@ -21,7 +21,7 @@
 #include "common/config_item.h"
 #include "common/parameter.h"
 #include "common/base_packet.h"
-#include "common/tairengine_helper.h"
+#include "common/mysql_cluster/mysql_engine_helper.h"
 #include "common/client_manager.h"
 
 using namespace tfs::common;
@@ -105,8 +105,9 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        kv_engine_helper_ = new TairEngineHelper(SYSPARAM_EXPIRESERVER.tair_master_, SYSPARAM_EXPIRESERVER.tair_slave_,
-            SYSPARAM_EXPIRESERVER.tair_group_);
+        kv_engine_helper_ = new MysqlEngineHelper(SYSPARAM_EXPIRESERVER.conn_str_,
+            SYSPARAM_EXPIRESERVER.user_name_,
+            SYSPARAM_EXPIRESERVER.pass_wd_);
         ret = kv_engine_helper_->init();
       }
 

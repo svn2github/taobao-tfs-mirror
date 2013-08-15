@@ -52,7 +52,7 @@ namespace tfs
 
       protected:
         common::KvEngineHelper* kv_engine_helper_;
-        int32_t tair_lifecycle_area_;
+        int32_t lifecycle_area_;
 
       private:
         class AssignTaskThreadHelper : public tbutil::Thread

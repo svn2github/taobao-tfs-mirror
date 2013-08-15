@@ -666,11 +666,11 @@ namespace tfs
         TBSYS_LOG(ERROR, "load config file erro.");
         return TFS_ERROR;
       }
+      conn_str_ = config.getString(CONF_SN_EXPIRESERVER, CONF_KV_DB_CONN, "");
+      user_name_ = config.getString(CONF_SN_EXPIRESERVER, CONF_KV_DB_USER, "");
+      pass_wd_ = config.getString(CONF_SN_EXPIRESERVER, CONF_KV_DB_PASS, "");
+      lifecycle_area_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_LIFECYCLE_AREA, -1);
 
-      tair_master_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_MASTER, "");
-      tair_slave_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_SLAVE, "");
-      tair_group_ = config.getString(CONF_SN_EXPIRESERVER, CONF_TAIR_GROUP, "");
-      tair_lifecycle_area_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_TAIR_LIFECYCLE_AREA, -1);
       re_clean_days_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_EXPIRE_RE_CLEAN_DAYS, 1);
       nginx_root_ = config.getString(CONF_SN_EXPIRESERVER, CONF_ES_NGINX_ROOT, "");
       es_appkey_ = config.getString(CONF_SN_EXPIRESERVER, CONF_ES_APPKEY, "");
@@ -731,10 +731,11 @@ namespace tfs
         return TFS_ERROR;
       }
 
-      tair_master_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_TAIR_MASTER, "");
-      tair_slave_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_TAIR_SLAVE, "");
-      tair_group_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_TAIR_GROUP, "");
-      tair_lifecycle_area_ = config.getInt(CONF_SN_EXPIREROOTSERVER, CONF_TAIR_LIFECYCLE_AREA, -1);
+      conn_str_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_CONN, "");
+      user_name_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_USER, "");
+      pass_wd_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_PASS, "");
+      lifecycle_area_ = config.getInt(CONF_SN_EXPIREROOTSERVER, CONF_LIFECYCLE_AREA, -1);
+
 
       es_rts_check_lease_interval_ =
         TBSYS_CONFIG.getInt(CONF_SN_EXPIREROOTSERVER, CONF_ES_RTS_LEASE_CHECK_TIME, 1);

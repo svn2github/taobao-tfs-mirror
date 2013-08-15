@@ -74,10 +74,11 @@ AC_SUBST([TREST_ROOT])
 
 AC_ARG_ENABLE([lifecycle],
            AS_HELP_STRING([--enable-lifecycle],
-           [enable life cycle module use ----with-restful-root to specify path]),
+           [enable life cycle module use --with-restful-root to specify path]),
            [enable_lifecycle=${enableval}],
            [enable_lifecycle="no"])
-AM_CONDITIONAL([WITH_LIFECYCLE],[test x$enable_lifecycle= xyes])
+
+AM_CONDITIONAL([WITH_LIFECYCLE],[test x$enable_lifecycle = xyes])
 
 AC_ARG_WITH([tair-root],
            AS_HELP_STRING([--with-tair-root],
