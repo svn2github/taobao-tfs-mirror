@@ -40,7 +40,10 @@ namespace tfs
 #define CONF_LOG_NUM                                  "log_num"
 #define CONF_LOG_LEVEL                                "log_level"
 #define CONF_WORK_DIR                                 "work_dir"
+#define CONF_OBJECT_WAIT_FREE_TIME_MS                 "object_wait_free_time_ms"
+#define CONF_OBJECT_WAIT_CLEAR_TIME_MS                "object_wait_clear_time_ms"
 #define CONF_OBJECT_DEAD_MAX_TIME                     "object_dead_max_time"
+#define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
 
 #define CONF_PORT                                     "port"
 #define CONF_THREAD_COUNT                             "thread_count"

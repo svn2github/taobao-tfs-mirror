@@ -274,80 +274,6 @@ namespace tfs
       return INT_SIZE * 7;
     }
 
-    /*int BlockInfoExt::serialize(char* data, const int64_t data_len, int64_t& pos) const
-    {
-      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = block_info_.serialize(data, data_len, pos);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int64(data, data_len, pos, family_id_);
-      }
-      return ret;
-    }
-
-    int BlockInfoExt::deserialize(const char* data, const int64_t data_len, int64_t& pos)
-    {
-      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = block_info_.deserialize(data, data_len, pos);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int64(data, data_len, pos, &family_id_);
-      }
-      return ret;
-    }
-
-    int64_t BlockInfoExt::length() const
-    {
-      BlockInfo info;
-      return info.length() + INT64_SIZE;
-    }*/
-
-    /*int RawMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
-    {
-
-      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fileid_));
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &location_.inner_offset_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_int32(data, data_len, pos, &location_.size_);
-      }
-      return ret;
-    }
-    int RawMeta::serialize(char* data, const int64_t data_len, int64_t& pos) const
-    {
-      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int64(data, data_len, pos, fileid_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int32(data, data_len, pos, location_.inner_offset_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int32(data, data_len, pos, location_.size_);
-      }
-      return ret;
-    }
-    int64_t RawMeta::length() const
-    {
-      return INT64_SIZE + INT_SIZE * 2;
-    }*/
-
     int ReplBlock::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
@@ -1129,7 +1055,7 @@ namespace tfs
     bool MMapOption::check() const
     {
       return (max_mmap_size_ > 0 && first_mmap_size_ >= 0 && per_mmap_size_ > 0
-             && first_mmap_size_ <= max_mmap_size_ && per_mmap_size_ <= max_mmap_size_);
+          && first_mmap_size_ <= max_mmap_size_ && per_mmap_size_ <= max_mmap_size_);
     }
 
     int MMapOption::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -1393,54 +1319,54 @@ namespace tfs
     }
 
     const char* dynamic_parameter_str[48] = {
-        "log_level",
-        "plan_run_flag",
-        "task_expired_time",
-        "safe_mode_time",
-        "max_write_timeout",
-        "max_write_file_count",
-        "add_primary_block_count",
-        "cleanup_write_timeout_threshold",
-        "max_use_capacity_ratio",
-        "heart_interval",
-        "replicate_ratio",
-        "replicate_wait_time",
-        "compact_delete_ratio",
-        "compact_max_load",
-        "compact_time_lower",
-        "compact_time_upper",
-        "max_task_in_machine_nums",
-        "discard_newblk_safe_mode_time",
-        "discard_max_count",
-        "cluster_index",
-        "object_dead_max_time",
-        "group_count",
-        "group_seq",
-        "object_clear_max_time",
-        "report_block_queue_size",
-        "report_block_time_lower",
-        "report_block_time_upper",
-        "report_block_time_interval",
-        "report_block_expired_time",
-        "choose_target_server_random_max_nums",
-        "max_keepalive_queue_size",
-        "marshalling_delete_ratio",
-        "marshalling_time_lower",
-        "marshalling_time_upper",
-        "marshalling_type",
-        "max_data_member_num",
-        "max_check_member_num",
-        "max_marshalling_queue_timeout",
-        "move_task_expired_time",
-        "compact_task_expired_time",
-        "marshalling_task_expired_time",
-        "reinstate_task_expired_time",
-        "dissolve_task_expired_time",
-        "compact_update_ratio",
-        "max_mr_network_bandwith_ratio",
-        "max_rw_network_bandwith_ratio",
-        "compact_family_member_ratio",
-        "max_single_machine_network_bandwith"
+      "log_level",
+      "plan_run_flag",
+      "task_expired_time",
+      "safe_mode_time",
+      "max_write_timeout",
+      "max_write_file_count",
+      "add_primary_block_count",
+      "cleanup_write_timeout_threshold",
+      "max_use_capacity_ratio",
+      "heart_interval",
+      "replicate_ratio",
+      "replicate_wait_time",
+      "compact_delete_ratio",
+      "compact_max_load",
+      "compact_time_lower",
+      "compact_time_upper",
+      "max_task_in_machine_nums",
+      "discard_newblk_safe_mode_time",
+      "discard_max_count",
+      "cluster_index",
+      "object_dead_max_time",
+      "group_count",
+      "group_seq",
+      "object_clear_max_time",
+      "report_block_queue_size",
+      "report_block_time_lower",
+      "report_block_time_upper",
+      "report_block_time_interval",
+      "report_block_expired_time",
+      "choose_target_server_random_max_nums",
+      "max_keepalive_queue_size",
+      "marshalling_delete_ratio",
+      "marshalling_time_lower",
+      "marshalling_time_upper",
+      "marshalling_type",
+      "max_data_member_num",
+      "max_check_member_num",
+      "max_marshalling_queue_timeout",
+      "move_task_expired_time",
+      "compact_task_expired_time",
+      "marshalling_task_expired_time",
+      "reinstate_task_expired_time",
+      "dissolve_task_expired_time",
+      "compact_update_ratio",
+      "max_mr_network_bandwith_ratio",
+      "max_rw_network_bandwith_ratio",
+      "compact_family_member_ratio",
+      "max_single_machine_network_bandwith"
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
@@ -1744,7 +1670,7 @@ namespace tfs
         len += (INT_SIZE + MEMBER_NUM * (INT64_SIZE + INT64_SIZE));
       }
       return len;
-   }
+    }
 
     int BlockMeta::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {

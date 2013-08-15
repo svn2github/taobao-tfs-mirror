@@ -21,10 +21,10 @@
 #include <Shared.h>
 #include <Handle.h>
 #include <Timer.h>
-#include "gc.h"
 #include "ns_define.h"
 #include "common/lock.h"
 #include "common/internal.h"
+#include "common/base_object.h"
 
 #ifdef TFS_GTEST
 #include <gtest/gtest.h>
@@ -35,7 +35,8 @@ namespace tfs
   namespace nameserver
   {
     class TaskManager;
-    class Task : public GCObject
+    class LayoutManager;
+    class Task: public common::BaseObject<LayoutManager>
     {
         friend class TaskManager;
       public:
@@ -49,7 +50,6 @@ namespace tfs
                           const char* function, pthread_t thid, const char* format, ...) = 0;
         virtual void runTimerTask();
         bool operator < (const Task& task) const;
-        bool timeout(const time_t now) const;
         int send_msg_to_server(const uint64_t server, common::BasePacket* msg);
         const char* transform_type_to_str() const;
         const char* transform_status_to_str(const int8_t status) const;
@@ -120,6 +120,18 @@ namespace tfs
         virtual int handle_complete(common::BasePacket* msg);
       private:
         DISALLOW_COPY_AND_ASSIGN(CompactTask);
+    };
+
+    class ResolveBlockVersionConflictTask : public ReplicateTask
+    {
+        friend class TaskManager;
+      public:
+        ResolveBlockVersionConflictTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers);
+        virtual ~ResolveBlockVersionConflictTask();
+        virtual int handle();
+        virtual int handle_complete(common::BasePacket* msg);
+      private:
+        DISALLOW_COPY_AND_ASSIGN(ResolveBlockVersionConflictTask);
     };
 
     class ECMarshallingTask : public Task

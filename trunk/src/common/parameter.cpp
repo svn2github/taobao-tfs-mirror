@@ -68,9 +68,14 @@ namespace tfs
       max_mr_network_bandwith_ratio_ = 50;
       max_rw_network_bandwith_ratio_ = 50;
       compact_family_member_ratio_   = 30;
+      resolve_version_conflic_task_expired_time_ = 30;
       max_single_machine_network_bandwith_ = 120;//120MB
       adjust_copies_location_time_lower_   = 6;
       adjust_copies_location_time_upper_   = 12;
+      between_ns_and_ds_lease_expire_time_ = 60;//60s
+      between_ns_and_ds_lease_safe_time_   = 2;//2s
+      between_ns_and_ds_lease_retry_times_ = 3;
+      between_ns_and_ds_lease_retry_expire_time_  = 2;//2s
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
       report_block_time_interval_min_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL_MIN, 0);
       max_write_timeout_= TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_TIMEOUT, 3);
@@ -128,8 +133,8 @@ namespace tfs
         heart_interval_ = 2;
 
       replicate_wait_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPL_WAIT_TIME, 240);
-      if (replicate_wait_time_ <= 0)
-        replicate_wait_time_ = 240;
+      if (replicate_wait_time_ <= between_ns_and_ds_lease_expire_time_)
+        replicate_wait_time_ = between_ns_and_ds_lease_expire_time_ * 2;
 
       compact_delete_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_DELETE_RATIO, 15);
       if (compact_delete_ratio_ <= 0)
@@ -144,16 +149,13 @@ namespace tfs
       set_hour_range(compact_time_str, compact_time_lower_, compact_time_upper_);
       compact_max_load_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_MAX_LOAD, 100);
 
-      object_dead_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_DEAD_MAX_TIME, 300);
-      if (object_dead_max_time_ <=  300)
-        object_dead_max_time_ = 300;
+      object_wait_free_time_ms_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_WAIT_FREE_TIME_MS, 300);
+      if (object_wait_free_time_ms_ <=  300)
+        object_wait_free_time_ms_ = 300;
 
-      object_clear_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_CLEAR_MAX_TIME, 180);
-      if (object_clear_max_time_ <=  180)
-        object_clear_max_time_ = 180;
-
-      if (object_clear_max_time_ > object_dead_max_time_)
-        object_clear_max_time_ = object_dead_max_time_ / 2;
+      object_wait_clear_time_ms_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_WAIT_CLEAR_TIME_MS, 180);
+      if (object_wait_clear_time_ms_ <=  180)
+        object_wait_clear_time_ms_ = 180;
 
       add_primary_block_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_ADD_PRIMARY_BLOCK_COUNT, 3);
       if (add_primary_block_count_ <= 0)
@@ -167,8 +169,8 @@ namespace tfs
       task_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_EXPIRED_TIME, 120);
       if (task_expired_time_ <= 0)
         task_expired_time_ = 120;
-      if (task_expired_time_ > object_clear_max_time_)
-        task_expired_time_ = object_clear_max_time_ - 5;
+      if (task_expired_time_ > object_wait_clear_time_ms_)
+        task_expired_time_ = object_wait_clear_time_ms_ - 5;
 
       dump_stat_info_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_DUMP_STAT_INFO_INTERVAL, 10000000);
       if (dump_stat_info_interval_ <= 60000000)

@@ -43,7 +43,7 @@ namespace tfs
   namespace nameserver
   {
     Task::Task(TaskManager& manager, const common::PlanType type):
-      GCObject(0xFFFFFFFF),
+      BaseObject<LayoutManager>(0xFFFFFFFF),
       manager_(manager),
       seqno_(0),
       type_(type),
@@ -61,10 +61,10 @@ namespace tfs
       return seqno_ < task.seqno_;
     }
 
-    bool Task::timeout(const time_t now) const
+    /*bool Task::timeout(const time_t now) const
     {
       return now > last_update_time_;
-    }
+    }*/
 
     int Task::send_msg_to_server(const uint64_t server, common::BasePacket* msg)
     {
@@ -105,7 +105,7 @@ namespace tfs
     {
       stream.writeInt8(type_);
       stream.writeInt8(status_);
-      stream.writeInt64(last_update_time_);
+      stream.writeInt64(get());
       stream.writeInt64(seqno_);
     }
 
@@ -158,7 +158,7 @@ namespace tfs
         ret = send_msg_to_server(block.source_id_[0], &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
-      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.move_task_expired_time_;
+      set(Func::get_monotonic_time(), SYSPARAM_NAMESERVER.move_task_expired_time_);
       return ret;
     }
 
@@ -202,7 +202,7 @@ namespace tfs
         }
         TBSYS_LOGGER.logMessage(level, file, line, function, thid,"%s seqno: %"PRI64_PREFIX"d, type: %s, status: %s, block: %"PRI64_PREFIX"u, expired_time: %"PRI64_PREFIX"d, servers: %s",
             msgstr, seqno_, transform_type_to_str(),
-            transform_status_to_str(status_), block_, last_update_time_, str.str().c_str());
+            transform_status_to_str(status_), block_, get(), str.str().c_str());
       }
     }
 
@@ -275,7 +275,8 @@ namespace tfs
         BlockCollect* block = manager_.get_manager().get_block_manager().get(block_);
         if (NULL != block)
         {
-          block->update_last_time(common::Func::get_monotonic_time() + SYSPARAM_NAMESERVER.move_task_expired_time_);
+          assert(!block->has_valid_lease(Func::get_monotonic_time()));
+          block->set(common::Func::get_monotonic_time(),SYSPARAM_NAMESERVER.move_task_expired_time_);
         }
       }
       return ret;
@@ -307,7 +308,7 @@ namespace tfs
         ret = send_msg_to_server(servers_[0], &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
-      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.compact_task_expired_time_;
+      set(Func::get_monotonic_time(), SYSPARAM_NAMESERVER.compact_task_expired_time_);
       return ret;
     }
 
@@ -388,8 +389,57 @@ namespace tfs
         BlockCollect* block = manager_.get_manager().get_block_manager().get(block_);
         if (NULL != block)
         {
-          block->update_last_time(common::Func::get_monotonic_time() + SYSPARAM_NAMESERVER.compact_task_expired_time_);
+          assert(!block->has_valid_lease(Func::get_monotonic_time()));
+          block->set(common::Func::get_monotonic_time(), SYSPARAM_NAMESERVER.compact_task_expired_time_);
         }
+      }
+      return ret;
+    }
+
+    ResolveBlockVersionConflictTask::ResolveBlockVersionConflictTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers):
+      ReplicateTask(manager, block, server_num, servers, PLAN_TYPE_RESOLVE_VERSION_CONFLICT)
+    {
+
+    }
+
+    ResolveBlockVersionConflictTask::~ResolveBlockVersionConflictTask()
+    {
+
+    }
+
+    int ResolveBlockVersionConflictTask::handle()
+    {
+      int32_t ret = (INVALID_BLOCK_ID != block_ && NULL != servers_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        NsReqResolveBlockVersionConflictMessage msg;
+        msg.set_seqno(seqno_);
+        msg.set_block(block_);
+        msg.set_size(server_num_);
+        msg.set_expire_time(SYSPARAM_NAMESERVER.resolve_version_conflic_task_expired_time_ - MAX_TASK_RESERVE_TIME);
+        for (int8_t index = 0; index < server_num_; ++index)
+          msg.get_members()[index] = servers_[0];
+        ret = send_msg_to_server(servers_[0], &msg);
+        status_ = PLAN_STATUS_BEGIN;
+      }
+      set(Func::get_monotonic_time(), SYSPARAM_NAMESERVER.resolve_version_conflic_task_expired_time_);
+      return ret;
+    }
+
+    int ResolveBlockVersionConflictTask::handle_complete(common::BasePacket* msg)
+    {
+      status_ = PLAN_STATUS_FAILURE;
+      int32_t ret = (NULL != msg) && (msg->getPCode() == REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ResolveBlockVersionConflictMessage* message = dynamic_cast<ResolveBlockVersionConflictMessage*>(msg);
+        ArrayHelper<std::pair<uint64_t, BlockInfoV2> > members(message->get_size(), message->get_members(),message->get_size());
+        ret = manager_.get_manager().get_client_request_server().resolve_block_version_conflict(message->get_block(), members);
+        ResolveBlockVersionConflictResponseMessage* reply_msg = new ResolveBlockVersionConflictResponseMessage();
+        reply_msg->set_status(ret);
+        if (TFS_SUCCESS == ret)
+         status_ = PLAN_STATUS_END;
+        ret = message->reply(reply_msg);
       }
       return ret;
     }
@@ -428,7 +478,7 @@ namespace tfs
         ret = send_msg_to_server(server, &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
-      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.marshalling_task_expired_time_;
+      set(Func::get_monotonic_time(), SYSPARAM_NAMESERVER.marshalling_task_expired_time_);
       return ret;
     }
 
@@ -494,7 +544,7 @@ namespace tfs
                   ret = (NULL != (pserver = manager_.get_manager().get_server_manager().get(base_info[index].server_))) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
                 if (TFS_SUCCESS == ret)
                 {
-                  ret = manager_.get_manager().get_block_manager().update_family_id(base_info[index].block_, family_info.family_id_);
+                  ret = manager_.get_manager().get_block_manager().set_family_id(base_info[index].block_, family_info.family_id_);
                   if (TFS_SUCCESS == ret)
                   {
                     base_info[index].status_ = FAMILY_MEMBER_STATUS_OTHER;
@@ -516,7 +566,7 @@ namespace tfs
               {
                 pblock = manager_.get_manager().get_block_manager().insert(base_info[index].block_, now);
                 assert(NULL != pblock);
-                ret = manager_.get_manager().get_block_manager().update_family_id(base_info[index].block_, family_info.family_id_);
+                ret = manager_.get_manager().get_block_manager().set_family_id(base_info[index].block_, family_info.family_id_);
                 if (TFS_SUCCESS == ret)
                   ret = (NULL != (pserver = manager_.get_manager().get_server_manager().get(base_info[index].server_))) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
                 if (TFS_SUCCESS == ret)
@@ -532,7 +582,7 @@ namespace tfs
                 for (index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
                 {
                   if (FAMILY_MEMBER_STATUS_OTHER == base_info[index].status_)
-                    ret = manager_.get_manager().get_block_manager().update_family_id(base_info[index].block_, INVALID_FAMILY_ID);
+                    ret = manager_.get_manager().get_block_manager().set_family_id(base_info[index].block_, INVALID_FAMILY_ID);
                 }
                 for (index = DATA_MEMBER_NUM; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
                 {
@@ -553,10 +603,9 @@ namespace tfs
 
             if (TFS_SUCCESS != ret)
             {
-              GCObject* object = NULL;
-              manager_.get_manager().get_family_manager().remove(object, family_info.family_id_);
-              if (NULL != object)
-                manager_.get_manager().get_gc_manager().add(object);
+              family = NULL;
+              manager_.get_manager().get_family_manager().remove(family, family_info.family_id_);
+              manager_.get_manager().get_gc_manager().insert(family, now);
             }
           }
         }
@@ -610,7 +659,7 @@ namespace tfs
         std::stringstream str;
         dump(str);
         TBSYS_LOGGER.logMessage(level, file, line, function, thid, "%s type: %s, status: %s, expired_time: %"PRI64_PREFIX"d, infomations: %s",
-          msgstr, transform_type_to_str(), transform_status_to_str(status_), last_update_time_, str.str().c_str());
+          msgstr, transform_type_to_str(), transform_status_to_str(status_), get(), str.str().c_str());
       }
     }
 
@@ -643,7 +692,7 @@ namespace tfs
         ret = send_msg_to_server(server, &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
-      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.reinstate_task_expired_time_;
+      set(Func::get_monotonic_time(),  SYSPARAM_NAMESERVER.reinstate_task_expired_time_);
       return ret;
     }
 
@@ -684,7 +733,7 @@ namespace tfs
                   block = manager_.get_manager().get_block_manager().insert(member_info[index].block_, now);
                   ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
                   if (TFS_SUCCESS == ret)
-                    ret = manager_.get_manager().get_block_manager().update_family_id(member_info[index].block_, family_info.family_id_);
+                    ret = manager_.get_manager().get_block_manager().set_family_id(member_info[index].block_, family_info.family_id_);
                 }
                 if (TFS_SUCCESS == ret)
                 {
@@ -724,7 +773,7 @@ namespace tfs
         FamilyCollect* family = manager_.get_manager().get_family_manager().get(family_id_);
         if (NULL != family)
         {
-          family->update_last_time(common::Func::get_monotonic_time() + SYSPARAM_NAMESERVER.reinstate_task_expired_time_);
+          family->set(common::Func::get_monotonic_time(),SYSPARAM_NAMESERVER.reinstate_task_expired_time_);
         }
       }
       return ret;
@@ -758,7 +807,7 @@ namespace tfs
         ret = send_msg_to_server(family_members_[index].server_, &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
-      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.dissolve_task_expired_time_;
+      set(Func::get_monotonic_time(), SYSPARAM_NAMESERVER.dissolve_task_expired_time_);
       return ret;
     }
 
@@ -807,7 +856,7 @@ namespace tfs
                   }
                   if (TFS_SUCCESS == ret)
                   {
-                    ret = manager_.get_manager().get_block_manager().update_family_id(member_info[index].block_, INVALID_FAMILY_ID);
+                    ret = manager_.get_manager().get_block_manager().set_family_id(member_info[index].block_, INVALID_FAMILY_ID);
                   }
                   if (TFS_SUCCESS == ret)
                   {
@@ -822,20 +871,17 @@ namespace tfs
                   }
                 }
               }
-              GCObject* object = NULL;
-              for (index = DATA_MEMBER_NUM / 2; index <  MEMBER_NUM / 2; ++index, object = NULL)
+              for (block = NULL, index = DATA_MEMBER_NUM / 2; index <  MEMBER_NUM / 2; ++index, block = NULL)
               {
                 if (INVALID_BLOCK_ID != member_info[index].block_)
                 {
-                  manager_.get_manager().get_block_manager().remove(object, member_info[index].block_);
-                  if (NULL != object)
-                    manager_.get_manager().get_gc_manager().add(object, now);
+                  manager_.get_manager().get_block_manager().remove(block, member_info[index].block_);
+                  manager_.get_manager().get_gc_manager().insert(block, now);
                 }
               }
-              object = NULL;
-              manager_.get_manager().get_family_manager().remove(object, family_info.family_id_);
-              if (NULL != object)
-                manager_.get_manager().get_gc_manager().add(object, now);
+              FamilyCollect* family = NULL;
+              manager_.get_manager().get_family_manager().remove(family, family_info.family_id_);
+              manager_.get_manager().get_gc_manager().insert(family, now);
             }
           }
         }
@@ -850,7 +896,7 @@ namespace tfs
         FamilyCollect* family = manager_.get_manager().get_family_manager().get(family_id_);
         if (NULL != family)
         {
-          family->update_last_time(common::Func::get_monotonic_time() + SYSPARAM_NAMESERVER.dissolve_task_expired_time_);
+          family->set(common::Func::get_monotonic_time(),SYSPARAM_NAMESERVER.dissolve_task_expired_time_);
         }
       }
       return ret;

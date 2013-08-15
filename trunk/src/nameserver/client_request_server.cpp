@@ -17,6 +17,7 @@
  */
 #include <tbsys.h>
 #include <tbnetutil.h>
+#include "global_factory.h"
 #include "common/status_message.h"
 #include "common/base_service.h"
 #include "message/client_cmd_message.h"
@@ -37,43 +38,73 @@ namespace tfs
 
     }
 
-    int ClientRequestServer::keepalive(const common::DataServerStatInfo& ds_info, const time_t now)
+    int ClientRequestServer::apply(common::DataServerStatInfo& info, int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times)
     {
-      int32_t ret = TFS_ERROR;
-      int32_t status = ds_info.status_;
-      //check dataserver status
-      if (DATASERVER_STATUS_DEAD== status)//dataserver dead
+      const time_t now = Func::get_monotonic_time();
+      int32_t ret = manager_.get_server_manager().apply(info, now,SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_);
+      if (TFS_SUCCESS == ret)
       {
-        ret = manager_.get_server_manager().remove(ds_info.id_, now);
+        calc_lease_expire_time_(expire_time, next_renew_time, renew_retry_times);
       }
-      else
-      {
-        bool isnew = false;
-        ret = manager_.get_server_manager().add(ds_info, now, isnew);
-        if (ret == TFS_SUCCESS)
-        {
-          ServerCollect* server = manager_.get_server_manager().get(ds_info.id_);
-          ret = (NULL == server) ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
-          if (TFS_SUCCESS == ret)
-          {
-            if (isnew) //new dataserver
-            {
-              TBSYS_LOG(INFO, "dataserver: %s join: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u",
-                  CNetUtil::addrToString(ds_info.id_).c_str(), ds_info.use_capacity_,
-                  ds_info.total_capacity_);
-            }
-            bool rb_expire = false;
-            if (server->is_report_block(rb_expire, now, isnew))
-            {
-              server->set_report_block_status(REPORT_BLOCK_STATUS_IN_REPORT_QUEUE);
-              TBSYS_LOG(DEBUG, "%s add report block server, now: %ld, isnew: %d, rb_expire: %d",
-                tbsys::CNetUtil::addrToString(server->id()).c_str(), now, isnew, rb_expire);
-              manager_.get_server_manager().add_report_block_server(server, now, rb_expire);
-            }
-          }
-        }
-      }
+      TBSYS_LOG(INFO, "dataserver: %s apply lease %s, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u,lease_expired_time: %d, next_renew_time: %d, retry_times: %d",
+        CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", ret, info.use_capacity_, info.total_capacity_,
+        expire_time, next_renew_time, renew_retry_times);
       return ret;
+    }
+
+    int ClientRequestServer::renew(const common::ArrayHelper<BlockInfoV2>& input,
+          common::DataServerStatInfo& info, common::ArrayHelper<common::BlockLease>& output,
+          int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times)
+    {
+      const time_t now = Func::get_monotonic_time();
+      ServerManager& server_manager = manager_.get_server_manager();
+      int32_t ret = server_manager.renew(info, now, SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_);
+      if (TFS_SUCCESS == ret)
+      {
+        calc_lease_expire_time_(expire_time, next_renew_time, renew_retry_times);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = server_manager.renew_block(info.id_,input, output);
+      }
+      TBSYS_LOG(INFO, "dataserver: %s renew lease %s, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u,lease_expired_time: %d, next_renew_time: %d, retry_times: %d",
+        CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", ret, info.use_capacity_, info.total_capacity_,
+        expire_time, next_renew_time, renew_retry_times);
+      return ret;
+    }
+
+    int ClientRequestServer::giveup(const common::ArrayHelper<common::BlockInfoV2>& input,common::DataServerStatInfo& info)
+    {
+      BlockLease lease_array[1024];
+      ArrayHelper<BlockLease> output(1024, lease_array);
+      const time_t now = Func::get_monotonic_time();
+      ServerManager& server_manager = manager_.get_server_manager();
+      int32_t ret = server_manager.giveup_block(info.id_, input, output);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = server_manager.giveup(now, info.id_);
+      }
+      TBSYS_LOG(INFO, "dataserver: %s giveup lease %s, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u",
+        CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", ret, info.use_capacity_, info.total_capacity_);
+      return ret;
+    }
+
+    int ClientRequestServer::apply_block(const uint64_t server, common::ArrayHelper<common::BlockLease>& output)
+    {
+      ServerManager& server_manager = manager_.get_server_manager();
+      return server_manager.apply_block(server, output);
+    }
+
+    int ClientRequestServer::apply_block_for_update(const uint64_t server, common::ArrayHelper<common::BlockLease>& output)
+    {
+      ServerManager& server_manager = manager_.get_server_manager();
+      return server_manager.apply_block_for_update(server, output);
+    }
+
+    int ClientRequestServer::giveup_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input, common::ArrayHelper<common::BlockLease>& output)
+    {
+      ServerManager& server_manager = manager_.get_server_manager();
+      return server_manager.giveup_block(server, input, output);
     }
 
     int ClientRequestServer::report_block(std::vector<uint64_t>& expires, const uint64_t server, const time_t now,
@@ -94,7 +125,6 @@ namespace tfs
           {
             pserver->set_report_block_status(REPORT_BLOCK_STATUS_COMPLETE);
             pserver->set_next_report_block_time(now, random() % 0xFFFFFFF, false);
-            manager_.get_server_manager().del_report_block_server(pserver);
           }
         }
       }
@@ -272,6 +302,7 @@ namespace tfs
     int ClientRequestServer::open_write_mode_(uint64_t& block_id, uint64_t& lease_id, int32_t& version,
           common::ArrayHelper<uint64_t>& servers, FamilyInfoExt& family_info, const int32_t mode, const time_t now)
     {
+      UNUSED(now);
       int32_t ret = (mode & T_WRITE) ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
       if (TFS_SUCCESS != ret)
       {
@@ -313,12 +344,10 @@ namespace tfs
               {
                 if ((block->get_servers_size() <= 0)
                       && (!block->is_creating())
-                      && (block->get_last_update_time() + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now))
+                      && (block->expire(now)))
                 {
-                  GCObject* pobject = NULL;
-                  manager_.get_block_manager().remove(pobject,block_id);
-                  if (NULL != pobject)
-                    manager_.get_gc_manager().add(pobject, now);
+                  manager_.get_block_manager().remove(block,block_id);
+                  manager_.get_gc_manager().insert(block, now);
                   ret = EXIT_BLOCK_NOT_FOUND;
                 }
                 else
@@ -380,13 +409,10 @@ namespace tfs
             }
           }
         }
-
         if (TFS_SUCCESS == ret)
         {
-          if (!(mode & T_NOLEASE))
-          {
-            manager_.get_block_manager().update_block_last_wirte_time(lease_id, block_id, now);
-          }
+          static uint64_t id_factory = 0;
+          lease_id = atomic_inc(&id_factory);
         }
       }
       return ret;
@@ -475,11 +501,9 @@ namespace tfs
               ret = manager_.build_relation(block, server, now, true);
             }
           }
-          GCObject* pobject = NULL;
           if (block->get_servers_size() <= 0 && new_create_block_collect)
-            manager_.get_block_manager().remove(pobject, info.value3_);
-          if (NULL != pobject)
-            manager_.get_gc_manager().add(pobject, now);
+            manager_.get_block_manager().remove(block, info.value3_);
+          manager_.get_gc_manager().insert(block, now);
         }
       }
       return ret;
@@ -492,7 +516,7 @@ namespace tfs
       int32_t ret = ((NULL != buf) && (buf_length > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        GCObject* pobject = NULL;
+        BlockCollect* pobject = NULL;
         if (info.value4_ & HANDLE_DELETE_BLOCK_FLAG_BOTH)
         {
           uint64_t servers[MAX_REPLICATION_NUM];
@@ -573,8 +597,7 @@ namespace tfs
               manager_.get_block_manager().remove(pobject, info.value3_);
           }
         }
-        if (NULL != pobject)
-          manager_.get_gc_manager().add(pobject, now);
+        manager_.get_gc_manager().insert(pobject, now);
       }
       return ret;
     }
@@ -666,11 +689,10 @@ namespace tfs
                   info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", info.value3_);
             }
           }
-          GCObject* pobject = NULL;
+          BlockCollect* pobject = NULL;
           if (block->get_servers_size() <= 0 && new_create_block_collect)
             manager_.get_block_manager().remove(pobject, info.value3_);
-          if (NULL != pobject)
-            manager_.get_gc_manager().add(pobject, now);
+          manager_.get_gc_manager().insert(pobject, now);
         }
       }
       return ret;
@@ -717,10 +739,6 @@ namespace tfs
       {
         if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_TASK)
             manager_.get_task_manager().clear();
-        if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_WRITE_BLOCK)
-            manager_.get_block_manager().clear_write_block();
-        if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_REPORT_SERVER)
-            manager_.get_server_manager().clear_report_block_server_table();
         if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE)
             manager_.get_block_manager().clear_delete_queue();
       }
@@ -848,7 +866,7 @@ namespace tfs
           if (update_last_time)
           {
             block->update(info);
-            block->update_last_time(now - SYSPARAM_NAMESERVER.replicate_wait_time_);
+            block->set(now, 0);
           }
         }
       }
@@ -879,6 +897,13 @@ namespace tfs
         }
       }
       return ret;
+    }
+
+    void ClientRequestServer::calc_lease_expire_time_(int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times) const
+    {
+      renew_retry_times = SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_;
+      expire_time = SYSPARAM_NAMESERVER.between_ns_and_ds_lease_expire_time_ - SYSPARAM_NAMESERVER.between_ns_and_ds_lease_safe_time_;
+      next_renew_time = expire_time - SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_times_ * SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_;
     }
   }/** nameserver **/
 }/** tfs **/

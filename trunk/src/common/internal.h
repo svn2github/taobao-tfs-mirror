@@ -205,7 +205,7 @@ namespace tfs
     static const int32_t MAX_MAIN_AND_EXT_BLOCK_SIZE = 320 * 1024 * 1024;
 
     static const int32_t MAX_SINGLE_FILE_SIZE = 16 * 1024 * 1024;//16MB
-
+    static const int32_t MAX_SINGLE_DISK_BLOCK_COUNT = UINT16_MAX;
     static const int32_t MAX_WRITABLE_BLOCK_COUNT = 128;
 
     enum VersionStep
@@ -266,10 +266,10 @@ namespace tfs
     };
 
     /*enum HasBlockFlag
-    {
+      {
       HAS_BLOCK_FLAG_NO = 0x0,
       HAS_BLOCK_FLAG_YES
-    };*/
+      };*/
 
     enum GetServerStatusType
     {
@@ -313,11 +313,11 @@ namespace tfs
     };
 
     /*enum SsmType
-    {
+      {
       SSM_BLOCK = 1,
       SSM_SERVER = 2,
       SSM_WBLIST = 4
-    };*/
+      };*/
 
     enum ServerStatus
     {
@@ -361,7 +361,8 @@ namespace tfs
       PLAN_TYPE_MOVE,
       PLAN_TYPE_COMPACT,
       PLAN_TYPE_EC_DISSOLVE,
-      PLAN_TYPE_EC_MARSHALLING
+      PLAN_TYPE_EC_MARSHALLING,
+      PLAN_TYPE_RESOLVE_VERSION_CONFLICT
     };
 
     enum PlanStatus
@@ -387,10 +388,11 @@ namespace tfs
       PLAN_RUN_FLAG_REPLICATE = 1,
       PLAN_RUN_FLAG_MOVE = 1 << 1,
       PLAN_RUN_FLAG_COMPACT = 1 << 2,
-      PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION = 1 << 3,
-      PLAN_RUN_FALG_MARSHALLING = 1 << 4,
-      PLAN_RUN_FALG_REINSTATE = 1 << 5,
-      PLAN_RUN_FALG_DISSOLVE  = 1 << 6
+      PLAN_RUN_FLAG_RESLOVE_VERSION_CONFLICT = 1 << 3,
+      PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION = 1 << 4,
+      PLAN_RUN_FALG_MARSHALLING = 1 << 5,
+      PLAN_RUN_FALG_REINSTATE = 1 << 6,
+      PLAN_RUN_FALG_DISSOLVE  = 1 << 7
     };
 
     enum DeleteExcessBackupStrategy
@@ -408,7 +410,8 @@ namespace tfs
     {
       SSM_CHILD_BLOCK_TYPE_INFO   = 0x01,
       SSM_CHILD_BLOCK_TYPE_SERVER = 0x02,
-      SSM_CHILD_BLOCK_TYPE_FULL = 0x04
+      SSM_CHILD_BLOCK_TYPE_FULL   = 0x04,
+      SSM_CHILD_BLOCK_TYPE_STATUS = 0x08
     };
 
     enum SSMChildServerType
@@ -452,10 +455,10 @@ namespace tfs
     };
 
     /*enum BlkType
-    {
+      {
       BLOCK_TYPE_DATA_BLOCK = 0,
       BLOCK_TYPE_CHECK_BLOCK
-    };*/
+      };*/
 
     struct SSMScanParameter
     {
@@ -555,7 +558,7 @@ namespace tfs
       int32_t source_num_;
 
       ReplBlock(): block_id_(INVALID_BLOCK_ID), destination_id_(INVALID_SERVER_ID),
-        start_time_(0), is_move_(0), source_num_(0)
+      start_time_(0), is_move_(0), source_num_(0)
       {
       }
     };
@@ -949,7 +952,7 @@ namespace tfs
     };
 
     /*struct RawIndex
-    {
+      {
       uint32_t block_id_;
       char* data_;
       uint32_t size_;
@@ -960,33 +963,33 @@ namespace tfs
 
       RawIndex(const uint32_t block_id, char* data, const uint32_t size)
       {
-        block_id_ = block_id;
-        data_ = data;
-        size_ = size;
+      block_id_ = block_id;
+      data_ = data;
+      size_ = size;
       }
-    };
+      };
 
-    enum RawIndexOp
-    {
+      enum RawIndexOp
+      {
       OP_NOT_INIT,
       WRITE_DATA_INDEX,
       WRITE_PARITY_INDEX,
       READ_DATA_INDEX,
       READ_PARITY_INDEX
-    };
+      };
 
-    enum RawDataType
-    {
+      enum RawDataType
+      {
       NORMAL_DATA = 1,
       PARITY_DATA
-    };
+      };
 
-    typedef enum _ReportBlockType
-    {
+      typedef enum _ReportBlockType
+      {
       REPORT_BLOCK_TYPE_ALL = 0,
       REPORT_BLOCK_TYPE_PART,
       REPORT_BLOCK_TYPE_RELIEVE
-    }ReportBlockType;*/
+      }ReportBlockType;*/
 
     typedef enum NodeStatus
     {
@@ -1045,17 +1048,17 @@ namespace tfs
 
     extern const char* dynamic_parameter_str[48];
 
-    #pragma pack (1)
+#pragma pack (1)
     struct FileInfoV2//30
     {
-    	uint64_t id_;//file id
-    	int32_t  offset_; //offset in block file
-    	int32_t  size_:28;// file size
-    	int8_t   status_:4;//delete flag
-    	uint32_t crc_; // checksum
-    	int32_t  modify_time_;//modify time
-    	int32_t create_time_; // create time
-    	uint16_t next_;      //next index
+      uint64_t id_;//file id
+      int32_t  offset_; //offset in block file
+      int32_t  size_:28;// file size
+      int8_t   status_:4;//delete flag
+      uint32_t crc_; // checksum
+      int32_t  modify_time_;//modify time
+      int32_t create_time_; // create time
+      uint16_t next_;      //next index
 
       FileInfoV2()
       {
@@ -1066,16 +1069,16 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
     };
-    #pragma pack()
+#pragma pack()
 
     struct FileInfoInDiskReserve
     {
-    	uint64_t reserve_[4];
+      uint64_t reserve_[4];
     };
 
     struct FileInfoInDiskExt//4
     {
-    	int32_t  version_;//
+      int32_t  version_;//
 
       FileInfoInDiskExt(): version_(0)
       {
@@ -1085,7 +1088,7 @@ namespace tfs
     struct BlockInfoV2//56
     {
       uint64_t block_id_;
-    	int64_t family_id_;
+      int64_t family_id_;
       int32_t version_;
       int32_t size_;
       int32_t file_count_;
@@ -1115,13 +1118,13 @@ namespace tfs
 
     struct ThroughputV2
     {
-    	int64_t write_bytes_;
-    	int64_t read_bytes_;
-    	int64_t update_bytes_;
+      int64_t write_bytes_;
+      int64_t read_bytes_;
+      int64_t update_bytes_;
       int64_t unlink_bytes_;
-    	int64_t write_visit_count_;
-    	int64_t read_visit_count_;
-    	int64_t update_visit_count_;
+      int64_t write_visit_count_;
+      int64_t read_visit_count_;
+      int64_t update_visit_count_;
       int64_t unlink_visit_count_;
       int64_t last_statistics_time_;
 
@@ -1138,14 +1141,14 @@ namespace tfs
       int32_t avail_offset_;
       int32_t marshalling_offset_;
       uint32_t seq_no_;
-    	union
-    	{
-    		uint16_t file_info_bucket_size_;
-    		uint16_t index_num_;
-    	};
-    	uint16_t used_file_info_bucket_size_;
+      union
+      {
+        uint16_t file_info_bucket_size_;
+        uint16_t index_num_;
+      };
+      uint16_t used_file_info_bucket_size_;
       int8_t  max_index_num_;
-    	int8_t  reserve_[27];
+      int8_t  reserve_[27];
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
@@ -1172,7 +1175,7 @@ namespace tfs
       int32_t version_step_;
 
       ECMeta(): family_id_(-1),
-        used_offset_(0), mars_offset_(0), version_step_(0)
+      used_offset_(0), mars_offset_(0), version_step_(0)
       {
 
       }
@@ -1266,14 +1269,6 @@ namespace tfs
     typedef std::vector<FileInfoV2> FILE_INFO_LIST_V2;
     typedef std::map<uint64_t, FileInfo*> FILE_INFO_MAP;
     typedef FILE_INFO_MAP::iterator FILE_INFO_MAP_ITER;
-
-    //typedef std::vector<RawMeta> RawMetaVec;
-    //typedef std::vector<RawMeta>::iterator RawMetaVecIter;
-    //typedef std::vector<RawMeta>::const_iterator RawMetaVecConstIter;
-
-    //typedef std::vector<RawIndex> RawIndexVec;
-    //typedef std::vector<RawIndex>::iterator RawIndexVecIter;
-    //typedef std::vector<RawIndex>::const_iterator RawIndexVecConstIter;
 
     typedef std::vector<CheckBlockInfo> CheckBlockInfoVec;
     typedef std::vector<CheckBlockInfo>::iterator CheckBlockInfoVecIter;

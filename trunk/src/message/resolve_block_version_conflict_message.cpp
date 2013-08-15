@@ -23,10 +23,117 @@ namespace tfs
   namespace message
   {
     using namespace common;
+    NsReqResolveBlockVersionConflictMessage::NsReqResolveBlockVersionConflictMessage():
+      block_(INVALID_BLOCK_ID),
+      size_(0)
+    {
+      seqno_ = 0;
+      expire_time_ = 0;
+      _packetHeader._pcode = NS_REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE;
+    }
+
+    NsReqResolveBlockVersionConflictMessage::~NsReqResolveBlockVersionConflictMessage()
+    {
+
+    }
+
+    int NsReqResolveBlockVersionConflictMessage::deserialize(Stream& input)
+    {
+      int32_t ret = input.get_int64(reinterpret_cast<int64_t*>(&seqno_));
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&expire_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t*>(&block_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&size_);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = ((size_ >= 0) && (size_ <= MAX_REPLICATION_NUM)) ? TFS_SUCCESS: TFS_ERROR;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t index = 0; (index < size_) && (TFS_SUCCESS == ret); index++)
+        {
+          ret = input.get_int64(reinterpret_cast<int64_t*>(&members_[index]));
+        }
+      }
+
+      return ret;
+    }
+
+    int NsReqResolveBlockVersionConflictMessage::serialize(Stream& output) const
+    {
+      int32_t ret = ((size_ >= 0) && (size_ <= MAX_REPLICATION_NUM)) ? TFS_SUCCESS: TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(seqno_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(expire_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(block_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(size_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t index = 0; (index < size_) && (TFS_SUCCESS == ret); index++)
+        {
+          ret = output.set_int64(members_[index]);
+        }
+      }
+      return ret;
+    }
+
+    int64_t NsReqResolveBlockVersionConflictMessage::length() const
+    {
+      return (2 + size_) * INT64_SIZE + 2 * INT_SIZE;
+    }
+
+    NsReqResolveBlockVersionConflictResponseMessage::NsReqResolveBlockVersionConflictResponseMessage():
+      status_(TFS_ERROR)
+    {
+      _packetHeader._pcode = NS_RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE;
+    }
+
+    NsReqResolveBlockVersionConflictResponseMessage::~NsReqResolveBlockVersionConflictResponseMessage()
+    {
+
+    }
+
+    int NsReqResolveBlockVersionConflictResponseMessage::deserialize(Stream& input)
+    {
+      return input.get_int32(&status_);
+    }
+
+    int NsReqResolveBlockVersionConflictResponseMessage::serialize(Stream& output) const
+    {
+      return output.set_int32(status_);
+    }
+
+    int64_t NsReqResolveBlockVersionConflictResponseMessage::length() const
+    {
+      return INT_SIZE;
+    }
 
     ResolveBlockVersionConflictMessage::ResolveBlockVersionConflictMessage():
-      block_(INVALID_BLOCK_ID)
+      block_(INVALID_BLOCK_ID),
+      size_(0)
     {
+      seqno_ = 0;
+      expire_time_ = 0;
       _packetHeader._pcode = REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE;
     }
 
@@ -37,7 +144,15 @@ namespace tfs
 
     int ResolveBlockVersionConflictMessage::deserialize(Stream& input)
     {
-      int32_t ret = input.get_int64(reinterpret_cast<int64_t*>(&block_));
+      int32_t ret = input.get_int64(reinterpret_cast<int64_t*>(&seqno_));
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&expire_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t*>(&block_));
+      }
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int32(&size_);
@@ -69,17 +184,23 @@ namespace tfs
 
     int ResolveBlockVersionConflictMessage::serialize(Stream& output) const
     {
-      int ret = ((size_ >= 0) && (size_ <= MAX_REPLICATION_NUM)) ? TFS_SUCCESS: TFS_ERROR;
+      int32_t ret = ((size_ >= 0) && (size_ <= MAX_REPLICATION_NUM)) ? TFS_SUCCESS: TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(seqno_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(expire_time_);
+      }
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int64(block_);
       }
-
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int32(size_);
       }
-
       if (TFS_SUCCESS == ret)
       {
         for (int32_t i = 0; (i < size_) && (TFS_SUCCESS == ret); i++)
@@ -101,7 +222,7 @@ namespace tfs
 
     int64_t ResolveBlockVersionConflictMessage::length() const
     {
-      int64_t length = INT_SIZE + INT64_SIZE;
+      int64_t length = (INT_SIZE + INT64_SIZE) * 2;
       BlockInfoV2 info;
       length += size_ * (info.length() + INT64_SIZE);
       return length;

@@ -44,10 +44,17 @@ namespace tfs
       public:
         explicit ClientRequestServer(LayoutManager& manager);
         virtual ~ClientRequestServer(){}
-
-        int keepalive(const common::DataServerStatInfo& info, const time_t now);
+        int apply(common::DataServerStatInfo& info, int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times);
+        int renew(const common::ArrayHelper<common::BlockInfoV2>& input,
+              common::DataServerStatInfo& info, common::ArrayHelper<common::BlockLease>& output,
+              int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times);
+        int giveup(const common::ArrayHelper<common::BlockInfoV2>& input,common::DataServerStatInfo& info);
+        int apply_block(const uint64_t server, common::ArrayHelper<common::BlockLease>& output);
+        int apply_block_for_update(const uint64_t server, common::ArrayHelper<common::BlockLease>& output);
+        int giveup_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input,common::ArrayHelper<common::BlockLease>& output);
         int report_block(std::vector<uint64_t>& expires, const uint64_t server, const time_t now,
             const common::ArrayHelper<common::BlockInfoV2>& blocks);
+
         int open(uint64_t& block_id, uint64_t& lease_id, int32_t& version, common::ArrayHelper<uint64_t>& servers,
               common::FamilyInfoExt& family_info,const int32_t mode, const time_t now);
         int batch_open(const common::ArrayHelper<uint64_t>& blocks, const int32_t mode,
@@ -84,6 +91,7 @@ namespace tfs
 
         bool is_discard(void);
 
+        void calc_lease_expire_time_(int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times) const;
       private:
         volatile uint32_t ref_count_;
         LayoutManager& manager_;

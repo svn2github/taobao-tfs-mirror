@@ -55,9 +55,7 @@ namespace tfs
 
     enum ReportBlockStatus
     {
-      REPORT_BLOCK_STATUS_NONE = 0x0,
-      REPORT_BLOCK_STATUS_IN_REPORT_QUEUE,
-      REPORT_BLOCK_STATUS_REPORTING,
+      REPORT_BLOCK_STATUS_REPORTING = 0x00,
       REPORT_BLOCK_STATUS_COMPLETE
     };
 
@@ -81,60 +79,45 @@ namespace tfs
       BLOCK_IN_REPLICATE_QUEUE_YES = 1
     };
 
+    enum BlockCreateFlag
+    {
+      BLOCK_CREATE_FLAG_NO = 0,
+      BLOCK_CREATE_FLAG_YES = 1
+    };
+
+    enum BlockHasLeaseFlag
+    {
+      BLOCK_HAS_LEASE_FLAG_NO  = 0,
+      BLOCK_HAS_LEASE_FLAG_YES = 1
+    };
+
+    enum BlockHasVersionConflictFlag
+    {
+      BLOCK_HAS_VERSION_CONFLICT_FLAG_NO  = 0,
+      BLOCK_HAS_VERSION_CONFLICT_FLAG_YES = 1
+    };
+
     enum FamilyInReinstateOrDissolveQueueFlag
     {
       FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_NO = 0,
       FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES = 1
     };
 
-    enum BlockCompareServerFlag
+    enum CallbackFlag
     {
-      BLOCK_COMPARE_SERVER_BY_ID = 0,
-      BLOCK_COMPARE_SERVER_BY_POINTER = 1,
-      BLOCK_COMPARE_SERVER_BY_ID_POINTER = 2
+      CALL_BACK_FLAG_NONE  = 0,
+      CALL_BACK_FLAG_PUSH  = 1,
+      CALL_BACK_FLAG_CLEAR = 2
     };
 
-    class LayoutManager;
-    class GCObject
+    struct NsGlobalStatisticsInfo
     {
-    public:
-      explicit GCObject(const time_t now):
-        last_update_time_(now) {}
-      virtual ~GCObject() {}
-      virtual void callback(LayoutManager& ) {}
-      inline void free(){ delete this;}
-      inline time_t get_last_update_time() const { return last_update_time_;}
-      inline void update_last_time(const time_t now = common::Func::get_monotonic_time()) { last_update_time_ = now;}
-      inline bool can_be_clear(const time_t now) const
-      {
-        return now >= (last_update_time_ + common::SYSPARAM_NAMESERVER.object_clear_max_time_);
-      }
-      inline bool can_be_free(const time_t now) const
-      {
-        return now >= (last_update_time_ + common::SYSPARAM_NAMESERVER.object_dead_max_time_);
-      }
-    protected:
-      time_t last_update_time_;
-    };
-
-    struct NsGlobalStatisticsInfo : public common::RWLock
-    {
-      NsGlobalStatisticsInfo();
-      NsGlobalStatisticsInfo(uint64_t use_capacity, uint64_t totoal_capacity, uint64_t total_block_count, int32_t total_load,
-          int32_t max_load, int32_t max_block_count, int32_t alive_server_count);
-			void update(const common::DataServerStatInfo& info, const bool is_new = true);
-      void update(const NsGlobalStatisticsInfo& info);
-      static NsGlobalStatisticsInfo& instance();
       void dump(int32_t level, const char* file = __FILE__, const int32_t line = __LINE__, const char* function =
           __FUNCTION__, const pthread_t thid = pthread_self()) const;
       volatile int64_t use_capacity_;
       volatile int64_t total_capacity_;
       volatile int64_t total_block_count_;
-      int32_t total_load_;
-      int32_t max_load_;
-      int32_t max_block_count_;
-      volatile int32_t alive_server_count_;
-      static NsGlobalStatisticsInfo instance_;
+      volatile int64_t total_load_;
     };
 
     struct NsRuntimeGlobalInformation
@@ -190,18 +173,17 @@ namespace tfs
     static const double PERCENTAGE_MAGIC = 1000000.0;
     double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capacity);
 
-    static const int32_t MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT = 5;
-
     static const int32_t MAX_RACK_NUM = 512;
     static const int32_t MAX_SINGLE_RACK_SERVER_NUM = 64;
     static const int32_t MAX_MARSHLLING_QUEUE_ELEMENT_SIZE = 128;//编组队列大小
-    static const int32_t MAX_FAMILY_CHUNK_NUM = 1024;//
+    static const int32_t MAX_FAMILY_CHUNK_NUM = 10240 * 4;
 
     static const int32_t MAX_TASK_RESERVE_TIME = 5;
 
     extern int ns_async_callback(common::NewClient* client);
     extern void print_int64(const common::ArrayHelper<uint64_t>&servers, std::string& result);
     extern void print_int64(const std::vector<uint64_t>& servers, std::string& result);
+    extern bool is_equal_group(const uint64_t id);
  }/** nameserver **/
 }/** tfs **/
 

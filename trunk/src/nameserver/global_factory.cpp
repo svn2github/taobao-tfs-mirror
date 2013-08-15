@@ -24,7 +24,6 @@ namespace tfs
 {
   namespace nameserver
   {
-    NsGlobalStatisticsInfo NsGlobalStatisticsInfo::instance_;
     NsRuntimeGlobalInformation NsRuntimeGlobalInformation::instance_;
     StatManager<std::string, std::string, StatEntry >GFactory::stat_mgr_;
     std::string GFactory::tfs_ns_stat_ = "tfs-ns-stat";

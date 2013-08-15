@@ -472,9 +472,9 @@ namespace tfs
           }
           else if (OPLOG_REMOVE== oplog.cmd_)
           {
-            GCObject* pgcobject = NULL;
-            manager_.get_block_manager().remove(pgcobject, oplog.info_.block_id_);
-            manager_.get_gc_manager().add(pgcobject);
+            BlockCollect* block = NULL;
+            manager_.get_block_manager().remove(block, oplog.info_.block_id_);
+            manager_.get_gc_manager().insert(block, Func::get_monotonic_time());
           }
           else if (OPLOG_RELIEVE_RELATION == oplog.cmd_)
           {

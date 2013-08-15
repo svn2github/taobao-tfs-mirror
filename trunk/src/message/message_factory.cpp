@@ -28,478 +28,484 @@ namespace tfs
         switch (real_pcode)
         {
           case common::GET_BLOCK_INFO_MESSAGE:
-            packet = new GetBlockInfoMessage();
+            packet = new (std::nothrow)GetBlockInfoMessage();
             break;
           case common::SET_BLOCK_INFO_MESSAGE:
-            packet = new  SetBlockInfoMessage();
+            packet = new (std::nothrow) SetBlockInfoMessage();
             break;
           case common::BATCH_GET_BLOCK_INFO_MESSAGE:
-            packet = new  BatchGetBlockInfoMessage();
+            packet = new (std::nothrow) BatchGetBlockInfoMessage();
             break;
           case common::BATCH_SET_BLOCK_INFO_MESSAGE:
-            packet = new  BatchSetBlockInfoMessage();
+            packet = new (std::nothrow) BatchSetBlockInfoMessage();
             break;
           case common::CARRY_BLOCK_MESSAGE:
-            packet = new  CarryBlockMessage();
+            packet = new (std::nothrow) CarryBlockMessage();
             break;
           case common::SET_DATASERVER_MESSAGE:
-            packet = new  SetDataserverMessage();
+            packet = new (std::nothrow) SetDataserverMessage();
             break;
           case common::UPDATE_BLOCK_INFO_MESSAGE:
-            packet = new  UpdateBlockInfoMessage();
+            packet = new (std::nothrow) UpdateBlockInfoMessage();
             break;
           case common::BLOCK_WRITE_COMPLETE_MESSAGE:
-            packet = new  BlockWriteCompleteMessage();
+            packet = new (std::nothrow) BlockWriteCompleteMessage();
             break;
           case common::READ_DATA_MESSAGE:
-            packet = new  ReadDataMessage();
+            packet = new (std::nothrow) ReadDataMessage();
             break;
           case common::RESP_READ_DATA_MESSAGE:
-            packet = new  RespReadDataMessage();
+            packet = new (std::nothrow) RespReadDataMessage();
             break;
           case common::FILE_INFO_MESSAGE:
-            packet = new  FileInfoMessage();
+            packet = new (std::nothrow) FileInfoMessage();
             break;
           case common::RESP_FILE_INFO_MESSAGE:
-            packet = new  RespFileInfoMessage();
+            packet = new (std::nothrow) RespFileInfoMessage();
             break;
           case common::WRITE_DATA_MESSAGE:
-            packet = new  WriteDataMessage();
+            packet = new (std::nothrow) WriteDataMessage();
             break;
           case common::CLOSE_FILE_MESSAGE:
-            packet = new  CloseFileMessage();
+            packet = new (std::nothrow) CloseFileMessage();
             break;
           case common::UNLINK_FILE_MESSAGE:
-            packet = new  UnlinkFileMessage();
+            packet = new (std::nothrow) UnlinkFileMessage();
             break;
           case common::REPLICATE_BLOCK_MESSAGE:
-            packet = new  ReplicateBlockMessage();
+            packet = new (std::nothrow) ReplicateBlockMessage();
             break;
           case common::COMPACT_BLOCK_MESSAGE:
-            packet = new  NsRequestCompactBlockMessage();
+            packet = new (std::nothrow) NsRequestCompactBlockMessage();
             break;
           case common::GET_SERVER_STATUS_MESSAGE:
-            packet = new  GetServerStatusMessage();
+            packet = new (std::nothrow) GetServerStatusMessage();
             break;
           /*case common::SUSPECT_DATASERVER_MESSAGE:
-            packet = new  SuspectDataserverMessage();
+            packet = new (std::nothrow) SuspectDataserverMessage();
             break;*/
           case common::RENAME_FILE_MESSAGE:
-            //packet = new  RenameFileMessage();
+            //packet = new (std::nothrow) RenameFileMessage();
             break;
           case common::CLIENT_CMD_MESSAGE:
-            packet = new  ClientCmdMessage();
+            packet = new (std::nothrow) ClientCmdMessage();
             break;
           case common::CREATE_FILENAME_MESSAGE:
-            packet = new  CreateFilenameMessage();
+            packet = new (std::nothrow) CreateFilenameMessage();
             break;
           case common::RESP_CREATE_FILENAME_MESSAGE:
-            packet = new  RespCreateFilenameMessage();
+            packet = new (std::nothrow) RespCreateFilenameMessage();
             break;
           case common::ROLLBACK_MESSAGE:
-            packet = new  RollbackMessage();
+            packet = new (std::nothrow) RollbackMessage();
             break;
           case common::RESP_HEART_MESSAGE:
-            packet = new  RespHeartMessage();
+            packet = new (std::nothrow) RespHeartMessage();
             break;
           case common::RESET_BLOCK_VERSION_MESSAGE:
-            packet = new  ResetBlockVersionMessage();
+            packet = new (std::nothrow) ResetBlockVersionMessage();
             break;
           case common::BLOCK_FILE_INFO_MESSAGE:
-            packet = new  BlockFileInfoMessage();
+            packet = new (std::nothrow) BlockFileInfoMessage();
             break;
           case common::NEW_BLOCK_MESSAGE:
-            packet = new  NewBlockMessage();
+            packet = new (std::nothrow) NewBlockMessage();
             break;
           case common::REMOVE_BLOCK_MESSAGE:
-            packet = new  RemoveBlockMessage();
+            packet = new (std::nothrow) RemoveBlockMessage();
             break;
           case common::LIST_BLOCK_MESSAGE:
-            packet = new  ListBlockMessage();
+            packet = new (std::nothrow) ListBlockMessage();
             break;
           case common::RESP_LIST_BLOCK_MESSAGE:
-            packet = new  RespListBlockMessage();
+            packet = new (std::nothrow) RespListBlockMessage();
             break;
           case common::BLOCK_RAW_META_MESSAGE:
-            //packet = new  BlockRawMetaMessage();
+            //packet = new (std::nothrow) BlockRawMetaMessage();
             break;
           case common::WRITE_RAW_DATA_MESSAGE:
-            //packet = new  WriteRawDataMessage();
+            //packet = new (std::nothrow) WriteRawDataMessage();
             break;
           case common::WRITE_INFO_BATCH_MESSAGE:
-            //packet = new  WriteInfoBatchMessage();
+            //packet = new (std::nothrow) WriteInfoBatchMessage();
             break;
           case common::BLOCK_COMPACT_COMPLETE_MESSAGE:
-            packet = new  DsCommitCompactBlockCompleteToNsMessage();
+            packet = new (std::nothrow) DsCommitCompactBlockCompleteToNsMessage();
             break;
           case common::READ_DATA_MESSAGE_V2:
-            packet = new  ReadDataMessageV2();
+            packet = new (std::nothrow) ReadDataMessageV2();
             break;
           case common::RESP_READ_DATA_MESSAGE_V2:
-            packet = new  RespReadDataMessageV2();
+            packet = new (std::nothrow) RespReadDataMessageV2();
             break;
           case common::LIST_BITMAP_MESSAGE:
-            packet = new  ListBitMapMessage();
+            packet = new (std::nothrow) ListBitMapMessage();
             break;
           case common::RESP_LIST_BITMAP_MESSAGE:
-            packet = new  RespListBitMapMessage();
+            packet = new (std::nothrow) RespListBitMapMessage();
             break;
           case common::RELOAD_CONFIG_MESSAGE:
-            packet = new  ReloadConfigMessage();
+            packet = new (std::nothrow) ReloadConfigMessage();
             break;
           case common::READ_RAW_DATA_MESSAGE:
-            packet = new  ReadRawDataMessage();
+            packet = new (std::nothrow) ReadRawDataMessage();
             break;
           case common::RESP_READ_RAW_DATA_MESSAGE:
-            packet = new  RespReadRawDataMessage();
+            packet = new (std::nothrow) RespReadRawDataMessage();
             break;
           case common::ACCESS_STAT_INFO_MESSAGE:
-            packet = new  AccessStatInfoMessage();
+            packet = new (std::nothrow) AccessStatInfoMessage();
             break;
           case common::READ_SCALE_IMAGE_MESSAGE:
-            packet = new  ReadScaleImageMessage();
+            packet = new (std::nothrow) ReadScaleImageMessage();
             break;
           case common::CRC_ERROR_MESSAGE:
-            packet = new  CrcErrorMessage();
+            packet = new (std::nothrow) CrcErrorMessage();
             break;
           case common::OPLOG_SYNC_MESSAGE:
-            packet = new  OpLogSyncMessage();
+            packet = new (std::nothrow) OpLogSyncMessage();
             break;
           case common::OPLOG_SYNC_RESPONSE_MESSAGE:
-            packet = new  OpLogSyncResponeMessage();
+            packet = new (std::nothrow) OpLogSyncResponeMessage();
             break;
           case common::MASTER_AND_SLAVE_HEART_MESSAGE:
-            packet = new  MasterAndSlaveHeartMessage();
+            packet = new (std::nothrow) MasterAndSlaveHeartMessage();
             break;
           case common::MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE:
-            packet = new  MasterAndSlaveHeartResponseMessage();
+            packet = new (std::nothrow) MasterAndSlaveHeartResponseMessage();
             break;
           case common::HEARTBEAT_AND_NS_HEART_MESSAGE:
-            packet = new  HeartBeatAndNSHeartMessage();
+            packet = new (std::nothrow) HeartBeatAndNSHeartMessage();
             break;
           case common::ADMIN_CMD_MESSAGE:
-            packet = new  AdminCmdMessage();
+            packet = new (std::nothrow) AdminCmdMessage();
             break;
           case common::REMOVE_BLOCK_RESPONSE_MESSAGE:
-            packet = new  RemoveBlockResponseMessage();
+            packet = new (std::nothrow) RemoveBlockResponseMessage();
             break;
           case common::DUMP_PLAN_MESSAGE:
-            packet = new  DumpPlanMessage();
+            packet = new (std::nothrow) DumpPlanMessage();
             break;
           case common::DUMP_PLAN_RESPONSE_MESSAGE:
-            packet = new  DumpPlanResponseMessage();
+            packet = new (std::nothrow) DumpPlanResponseMessage();
             break;
           case common::SHOW_SERVER_INFORMATION_MESSAGE:
-            packet = new  ShowServerInformationMessage();
+            packet = new (std::nothrow) ShowServerInformationMessage();
             break;
           case common::REQ_RC_LOGIN_MESSAGE:
-            packet = new ReqRcLoginMessage();
+            packet = new (std::nothrow)ReqRcLoginMessage();
             break;
           case common::RSP_RC_LOGIN_MESSAGE:
-            packet = new RspRcLoginMessage();
+            packet = new (std::nothrow)RspRcLoginMessage();
             break;
           case common::REQ_RC_KEEPALIVE_MESSAGE:
-            packet = new ReqRcKeepAliveMessage();
+            packet = new (std::nothrow)ReqRcKeepAliveMessage();
             break;
           case common::RSP_RC_KEEPALIVE_MESSAGE:
-            packet = new RspRcKeepAliveMessage();
+            packet = new (std::nothrow)RspRcKeepAliveMessage();
             break;
           case common::REQ_RC_LOGOUT_MESSAGE:
-            packet = new ReqRcLogoutMessage();
+            packet = new (std::nothrow)ReqRcLogoutMessage();
             break;
           case common::REQ_RC_RELOAD_MESSAGE:
-            packet = new ReqRcReloadMessage();
+            packet = new (std::nothrow)ReqRcReloadMessage();
             break;
           case common::GET_DATASERVER_INFORMATION_MESSAGE:
-            packet = new GetDataServerInformationMessage();
+            packet = new (std::nothrow)GetDataServerInformationMessage();
             break;
           case common::GET_DATASERVER_INFORMATION_RESPONSE_MESSAGE:
-            packet = new GetDataServerInformationResponseMessage();
+            packet = new (std::nothrow)GetDataServerInformationResponseMessage();
             break;
           case common::FILEPATH_ACTION_MESSAGE:
-            packet = new FilepathActionMessage();
+            packet = new (std::nothrow)FilepathActionMessage();
             break;
           case common::WRITE_FILEPATH_MESSAGE:
-            packet = new WriteFilepathMessage();
+            packet = new (std::nothrow)WriteFilepathMessage();
             break;
           case common::READ_FILEPATH_MESSAGE:
-            packet = new ReadFilepathMessage();
+            packet = new (std::nothrow)ReadFilepathMessage();
             break;
           case common::RESP_READ_FILEPATH_MESSAGE:
-            packet = new RespReadFilepathMessage();
+            packet = new (std::nothrow)RespReadFilepathMessage();
             break;
           case common::LS_FILEPATH_MESSAGE:
-            packet = new LsFilepathMessage();
+            packet = new (std::nothrow)LsFilepathMessage();
             break;
           case common::RESP_LS_FILEPATH_MESSAGE:
-            packet = new RespLsFilepathMessage();
+            packet = new (std::nothrow)RespLsFilepathMessage();
             break;
           case common::REQ_RT_MS_KEEPALIVE_MESSAGE:
-            packet =  new RtsMsHeartMessage();
+            packet =  new (std::nothrow)RtsMsHeartMessage();
             break;
           case common::RSP_RT_MS_KEEPALIVE_MESSAGE:
-            packet = new RtsMsHeartResponseMessage();
+            packet = new (std::nothrow)RtsMsHeartResponseMessage();
             break;
           case common::REQ_RT_RS_KEEPALIVE_MESSAGE:
-            packet =  new RtsRsHeartMessage();
+            packet =  new (std::nothrow)RtsRsHeartMessage();
             break;
           case common::RSP_RT_RS_KEEPALIVE_MESSAGE:
-            packet = new RtsRsHeartResponseMessage();
+            packet = new (std::nothrow)RtsRsHeartResponseMessage();
             break;
           case common::REQ_RT_GET_TABLE_MESSAGE:
-            packet = new GetTableFromRtsMessage();
+            packet = new (std::nothrow)GetTableFromRtsMessage();
             break;
           case common::RSP_RT_GET_TABLE_MESSAGE:
-            packet = new GetTableFromRtsResponseMessage();
+            packet = new (std::nothrow)GetTableFromRtsResponseMessage();
             break;
           case common::REQ_RT_UPDATE_TABLE_MESSAGE:
-            packet = new UpdateTableMessage();
+            packet = new (std::nothrow)UpdateTableMessage();
             break;
           case common::RSP_RT_UPDATE_TABLE_MESSAGE:
-            packet = new UpdateTableResponseMessage();
+            packet = new (std::nothrow)UpdateTableResponseMessage();
             break;
           case common::REQ_CALL_DS_REPORT_BLOCK_MESSAGE:
-            packet = new CallDsReportBlockRequestMessage();
+            packet = new (std::nothrow)CallDsReportBlockRequestMessage();
             break;
           case common::REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
-            packet = new ReportBlocksToNsRequestMessage();
+            packet = new (std::nothrow)ReportBlocksToNsRequestMessage();
             break;
           case common::RSP_REPORT_BLOCKS_TO_NS_MESSAGE:
-            packet = new ReportBlocksToNsResponseMessage();
+            packet = new (std::nothrow)ReportBlocksToNsResponseMessage();
             break;
           case common::REQ_EC_MARSHALLING_MESSAGE:
-            packet = new ECMarshallingMessage();
+            packet = new (std::nothrow)ECMarshallingMessage();
             break;
           case common::REQ_EC_MARSHALLING_COMMIT_MESSAGE:
-            packet = new ECMarshallingCommitMessage();
+            packet = new (std::nothrow)ECMarshallingCommitMessage();
             break;
           case common::REQ_EC_REINSTATE_MESSAGE:
-            packet = new ECReinstateMessage();
+            packet = new (std::nothrow)ECReinstateMessage();
             break;
           case common::REQ_EC_REINSTATE_COMMIT_MESSAGE:
-            packet = new ECReinstateCommitMessage();
+            packet = new (std::nothrow)ECReinstateCommitMessage();
             break;
           case common::REQ_EC_DISSOLVE_MESSAGE:
-            packet = new ECDissolveMessage();
+            packet = new (std::nothrow)ECDissolveMessage();
             break;
           case common::REQ_EC_DISSOLVE_COMMIT_MESSAGE:
-            packet = new ECDissolveCommitMessage();
+            packet = new (std::nothrow)ECDissolveCommitMessage();
             break;
           case common::READ_RAW_INDEX_MESSAGE:
-            //packet = new ReadRawIndexMessage();
+            //packet = new (std::nothrow)ReadRawIndexMessage();
             break;
           case common::RSP_READ_RAW_INDEX_MESSAGE:
-            //packet = new RespReadRawIndexMessage();
+            //packet = new (std::nothrow)RespReadRawIndexMessage();
             break;
           case common::WRITE_RAW_INDEX_MESSAGE:
-            //packet = new WriteRawIndexMessage();
+            //packet = new (std::nothrow)WriteRawIndexMessage();
             break;
           case common::DS_COMPACT_BLOCK_MESSAGE:
-            packet = new DsCompactBlockMessage();
+            packet = new (std::nothrow)DsCompactBlockMessage();
             break;
           case common::DS_REPLICATE_BLOCK_MESSAGE:
-            packet = new DsReplicateBlockMessage();
+            packet = new (std::nothrow)DsReplicateBlockMessage();
             break;
           case common::RESP_DS_REPLICATE_BLOCK_MESSAGE:
-            packet = new RespDsReplicateBlockMessage();
+            packet = new (std::nothrow)RespDsReplicateBlockMessage();
             break;
           case common::RESP_DS_COMPACT_BLOCK_MESSAGE:
-            packet = new RespDsCompactBlockMessage();
+            packet = new (std::nothrow)RespDsCompactBlockMessage();
             break;
           case common::REQ_CHECK_BLOCK_MESSAGE:
-            packet = new CheckBlockRequestMessage();
+            packet = new (std::nothrow)CheckBlockRequestMessage();
             break;
           case common::RSP_CHECK_BLOCK_MESSAGE:
-            packet = new CheckBlockResponseMessage();
+            packet = new (std::nothrow)CheckBlockResponseMessage();
             break;
           case common::RSP_WRITE_DATA_MESSAGE:
-            packet = new WriteDataResponseMessage();
+            packet = new (std::nothrow)WriteDataResponseMessage();
             break;
           case common::RSP_UNLINK_FILE_MESSAGE:
-            packet = new UnlinkFileResponseMessage();
+            packet = new (std::nothrow)UnlinkFileResponseMessage();
             break;
           case common::REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
-            packet = new ResolveBlockVersionConflictMessage();
+            packet = new (std::nothrow)ResolveBlockVersionConflictMessage();
             break;
           case common::RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
-            packet = new ResolveBlockVersionConflictResponseMessage();
+            packet = new (std::nothrow)ResolveBlockVersionConflictResponseMessage();
             break;
           case common::REQ_GET_FAMILY_INFO_MESSAGE:
-            packet = new GetFamilyInfoMessage();
+            packet = new (std::nothrow)GetFamilyInfoMessage();
             break;
           case common::RSP_GET_FAMILY_INFO_MESSAGE:
-            packet = new GetFamilyInfoResponseMessage();
+            packet = new (std::nothrow)GetFamilyInfoResponseMessage();
             break;
           case common::DEGRADE_READ_DATA_MESSAGE:
-            packet = new DegradeReadDataMessage();
+            packet = new (std::nothrow)DegradeReadDataMessage();
             break;
           case common::REQ_KVMETA_GET_OBJECT_MESSAGE:
-            packet = new ReqKvMetaGetObjectMessage();
+            packet = new (std::nothrow)ReqKvMetaGetObjectMessage();
             break;
           case common::RSP_KVMETA_GET_OBJECT_MESSAGE:
-            packet = new RspKvMetaGetObjectMessage();
+            packet = new (std::nothrow)RspKvMetaGetObjectMessage();
             break;
           case common::REQ_KVMETA_PUT_OBJECT_MESSAGE:
-            packet = new ReqKvMetaPutObjectMessage();
+            packet = new (std::nothrow)ReqKvMetaPutObjectMessage();
             break;
           case common::REQ_KVMETA_DEL_OBJECT_MESSAGE:
-            packet = new ReqKvMetaDelObjectMessage();
+            packet = new (std::nothrow)ReqKvMetaDelObjectMessage();
             break;
           case common::RSP_KVMETA_DEL_OBJECT_MESSAGE:
-            packet = new RspKvMetaDelObjectMessage();
+            packet = new (std::nothrow)RspKvMetaDelObjectMessage();
             break;
           case common::REQ_KVMETA_HEAD_OBJECT_MESSAGE:
-            packet = new ReqKvMetaHeadObjectMessage();
+            packet = new (std::nothrow)ReqKvMetaHeadObjectMessage();
             break;
           case common::RSP_KVMETA_HEAD_OBJECT_MESSAGE:
-            packet = new RspKvMetaHeadObjectMessage();
+            packet = new (std::nothrow)RspKvMetaHeadObjectMessage();
             break;
           case common::REQ_KVMETA_GET_BUCKET_MESSAGE:
-            packet = new ReqKvMetaGetBucketMessage();
+            packet = new (std::nothrow)ReqKvMetaGetBucketMessage();
             break;
           case common::RSP_KVMETA_GET_BUCKET_MESSAGE:
-            packet = new RspKvMetaGetBucketMessage();
+            packet = new (std::nothrow)RspKvMetaGetBucketMessage();
             break;
           case common::REQ_KVMETA_PUT_BUCKET_MESSAGE:
-            packet = new ReqKvMetaPutBucketMessage();
+            packet = new (std::nothrow)ReqKvMetaPutBucketMessage();
             break;
           case common::REQ_KVMETA_DEL_BUCKET_MESSAGE:
-            packet = new ReqKvMetaDelBucketMessage();
+            packet = new (std::nothrow)ReqKvMetaDelBucketMessage();
             break;
           case common::REQ_KVMETA_HEAD_BUCKET_MESSAGE:
-            packet = new ReqKvMetaHeadBucketMessage();
+            packet = new (std::nothrow)ReqKvMetaHeadBucketMessage();
             break;
           case common::RSP_KVMETA_HEAD_BUCKET_MESSAGE:
-            packet = new RspKvMetaHeadBucketMessage();
+            packet = new (std::nothrow)RspKvMetaHeadBucketMessage();
             break;
           case common::REQ_KV_RT_MS_KEEPALIVE_MESSAGE:
-            packet = new KvRtsMsHeartMessage();
+            packet = new (std::nothrow)KvRtsMsHeartMessage();
             break;
           case common::RSP_KV_RT_MS_KEEPALIVE_MESSAGE:
-            packet = new KvRtsMsHeartResponseMessage();
+            packet = new (std::nothrow)KvRtsMsHeartResponseMessage();
             break;
           case common::REQ_KV_RT_GET_TABLE_MESSAGE:
-            packet = new GetTableFromKvRtsMessage();
+            packet = new (std::nothrow)GetTableFromKvRtsMessage();
             break;
           case common::RSP_KV_RT_GET_TABLE_MESSAGE:
-            packet = new GetTableFromKvRtsResponseMessage();
+            packet = new (std::nothrow)GetTableFromKvRtsResponseMessage();
             break;
           case common::GET_BLOCK_INFO_MESSAGE_V2:
-            packet = new GetBlockInfoMessageV2();
+            packet = new (std::nothrow)GetBlockInfoMessageV2();
             break;
           case common::GET_BLOCK_INFO_RESP_MESSAGE_V2:
-            packet = new GetBlockInfoRespMessageV2();
+            packet = new (std::nothrow)GetBlockInfoRespMessageV2();
             break;
           case common::BATCH_GET_BLOCK_INFO_MESSAGE_V2:
-            packet = new BatchGetBlockInfoMessageV2();
+            packet = new (std::nothrow)BatchGetBlockInfoMessageV2();
             break;
           case common::BATCH_GET_BLOCK_INFO_RESP_MESSAGE_V2:
-            packet = new BatchGetBlockInfoRespMessageV2();
+            packet = new (std::nothrow)BatchGetBlockInfoRespMessageV2();
             break;
           case common::WRITE_FILE_MESSAGE_V2:
-            packet = new WriteFileMessageV2();
+            packet = new (std::nothrow)WriteFileMessageV2();
             break;
           case common::WRITE_FILE_RESP_MESSAGE_V2:
-            packet = new WriteFileRespMessageV2();
+            packet = new (std::nothrow)WriteFileRespMessageV2();
             break;
           case common::SLAVE_DS_RESP_MESSAGE:
-            packet = new SlaveDsRespMessage();
+            packet = new (std::nothrow)SlaveDsRespMessage();
             break;
           case common::CLOSE_FILE_MESSAGE_V2:
-            packet = new CloseFileMessageV2();
+            packet = new (std::nothrow)CloseFileMessageV2();
             break;
           case common::UPDATE_BLOCK_INFO_MESSAGE_V2:
-            packet = new UpdateBlockInfoMessageV2();
+            packet = new (std::nothrow)UpdateBlockInfoMessageV2();
             break;
           case common::REPAIR_BLOCK_MESSAGE_V2:
-            packet = new RepairBlockMessageV2();
+            packet = new (std::nothrow)RepairBlockMessageV2();
             break;
           case common::STAT_FILE_MESSAGE_V2:
-            packet = new StatFileMessageV2();
+            packet = new (std::nothrow)StatFileMessageV2();
             break;
           case common::STAT_FILE_RESP_MESSAGE_V2:
-            packet = new StatFileRespMessageV2();
+            packet = new (std::nothrow)StatFileRespMessageV2();
             break;
           case common::READ_FILE_MESSAGE_V2:
-            packet = new ReadFileMessageV2();
+            packet = new (std::nothrow)ReadFileMessageV2();
             break;
           case common::READ_FILE_RESP_MESSAGE_V2:
-            packet = new ReadFileRespMessageV2();
+            packet = new (std::nothrow)ReadFileRespMessageV2();
             break;
           case common::UNLINK_FILE_MESSAGE_V2:
-            packet = new UnlinkFileMessageV2();
+            packet = new (std::nothrow)UnlinkFileMessageV2();
             break;
           case common::NEW_BLOCK_MESSAGE_V2:
-            packet = new NewBlockMessageV2();
+            packet = new (std::nothrow)NewBlockMessageV2();
             break;
           case common::REMOVE_BLOCK_MESSAGE_V2:
-            packet = new RemoveBlockMessageV2();
+            packet = new (std::nothrow)RemoveBlockMessageV2();
             break;
           case common::READ_RAWDATA_MESSAGE_V2:
-            packet = new ReadRawdataMessageV2();
+            packet = new (std::nothrow)ReadRawdataMessageV2();
             break;
           case common::READ_RAWDATA_RESP_MESSAGE_V2:
-            packet = new ReadRawdataRespMessageV2();
+            packet = new (std::nothrow)ReadRawdataRespMessageV2();
             break;
           case common::WRITE_RAWDATA_MESSAGE_V2:
-            packet = new WriteRawdataMessageV2();
+            packet = new (std::nothrow)WriteRawdataMessageV2();
             break;
           case common::READ_INDEX_MESSAGE_V2:
-            packet = new ReadIndexMessageV2();
+            packet = new (std::nothrow)ReadIndexMessageV2();
             break;
           case common::READ_INDEX_RESP_MESSAGE_V2:
-            packet = new ReadIndexRespMessageV2();
+            packet = new (std::nothrow)ReadIndexRespMessageV2();
             break;
           case common::WRITE_INDEX_MESSAGE_V2:
-            packet = new WriteIndexMessageV2();
+            packet = new (std::nothrow)WriteIndexMessageV2();
             break;
           case common::QUERY_EC_META_MESSAGE:
-            packet = new QueryEcMetaMessage();
+            packet = new (std::nothrow)QueryEcMetaMessage();
             break;
           case common::QUERY_EC_META_RESP_MESSAGE:
-            packet = new QueryEcMetaRespMessage();
+            packet = new (std::nothrow)QueryEcMetaRespMessage();
             break;
           case common::COMMIT_EC_META_MESSAGE:
-            packet = new CommitEcMetaMessage();
+            packet = new (std::nothrow)CommitEcMetaMessage();
             break;
           case common::BLOCK_FILE_INFO_MESSAGE_V2:
-            packet = new BlockFileInfoMessageV2();
+            packet = new (std::nothrow)BlockFileInfoMessageV2();
             break;
           case common::REPORT_CHECK_BLOCK_MESSAGE:
-            packet = new ReportCheckBlockMessage();
+            packet = new (std::nothrow)ReportCheckBlockMessage();
             break;
           case common::DS_APPLY_LEASE_MESSAGE:
-            packet = new DsApplyLeaseMessage();
+            packet = new (std::nothrow)DsApplyLeaseMessage();
             break;
           case common::DS_APPLY_LEASE_RESPONSE_MESSAGE:
-            packet = new DsApplyLeaseResponseMessage();
+            packet = new (std::nothrow)DsApplyLeaseResponseMessage();
             break;
           case common::DS_RENEW_LEASE_MESSAGE:
-            packet = new DsRenewLeaseMessage();
+            packet = new (std::nothrow)DsRenewLeaseMessage();
             break;
           case common::DS_RENEW_LEASE_RESPONSE_MESSAGE:
-            packet = new DsRenewLeaseResponseMessage();
+            packet = new (std::nothrow)DsRenewLeaseResponseMessage();
             break;
           case common::DS_GIVEUP_LEASE_MESSAGE:
-            packet = new DsGiveupLeaseMessage();
+            packet = new (std::nothrow)DsGiveupLeaseMessage();
             break;
           case common::DS_APPLY_BLOCK_MESSAGE:
-            packet = new DsApplyBlockMessage();
+            packet = new (std::nothrow)DsApplyBlockMessage();
             break;
           case common::DS_APPLY_BLOCK_RESPONSE_MESSAGE:
-            packet = new DsApplyBlockResponseMessage();
+            packet = new (std::nothrow)DsApplyBlockResponseMessage();
             break;
           case common::DS_APPLY_BLOCK_FOR_UPDATE_MESSAGE:
-            packet = new DsApplyBlockForUpdateMessage();
+            packet = new (std::nothrow)DsApplyBlockForUpdateMessage();
             break;
           case common::DS_APPLY_BLOCK_FOR_UPDATE_RESPONSE_MESSAGE:
-            packet = new DsApplyBlockForUpdateResponseMessage();
+            packet = new (std::nothrow)DsApplyBlockForUpdateResponseMessage();
             break;
           case common::DS_GIVEUP_BLOCK_MESSAGE:
-            packet = new DsGiveupBlockMessage();
+            packet = new (std::nothrow)DsGiveupBlockMessage();
             break;
           case common::DS_GIVEUP_BLOCK_RESPONSE_MESSAGE:
-            packet = new DsGiveupBlockResponseMessage();
+            packet = new (std::nothrow)DsGiveupBlockResponseMessage();
+            break;
+          case common::NS_REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
+            packet = new (std::nothrow)NsReqResolveBlockVersionConflictMessage();
+            break;
+          case common::NS_RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
+            packet = new (std::nothrow)NsReqResolveBlockVersionConflictResponseMessage();
             break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);

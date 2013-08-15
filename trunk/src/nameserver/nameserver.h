@@ -105,6 +105,9 @@ namespace tfs
       int do_slave_msg_helper(common::BasePacket* packet);
       int get_family_info(common::BasePacket* msg);
       int repair(common::BasePacket* msg);
+      int apply_block(common::BasePacket* msg);
+      int apply_block_for_update(common::BasePacket* msg);
+      int giveup_block(common::BasePacket* msg);
 
       int initialize_ns_global_info();
     };

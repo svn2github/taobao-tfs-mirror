@@ -18,6 +18,7 @@
  *
  */
 #include "common/define.h"
+#include "common/atomic.h"
 #include "ns_define.h"
 #include "common/error_msg.h"
 #include "common/parameter.h"
@@ -27,64 +28,11 @@ namespace tfs
 {
   namespace nameserver
   {
-    NsGlobalStatisticsInfo::NsGlobalStatisticsInfo() :
-      use_capacity_(0),
-      total_capacity_(0),
-      total_block_count_(0),
-      total_load_(0),
-      max_load_(1),
-      max_block_count_(1),
-      alive_server_count_(0)
-    {
-
-    }
-
-    NsGlobalStatisticsInfo::NsGlobalStatisticsInfo(uint64_t use_capacity, uint64_t totoal_capacity, uint64_t total_block_count, int32_t total_load,
-        int32_t max_load, int32_t max_block_count, int32_t alive_server_count) :
-      use_capacity_(use_capacity), total_capacity_(totoal_capacity), total_block_count_(total_block_count),
-      total_load_(total_load), max_load_(max_load), max_block_count_(max_block_count), alive_server_count_(
-          alive_server_count)
-    {
-
-    }
-
-    void NsGlobalStatisticsInfo::update(const common::DataServerStatInfo& info, const bool is_new)
-    {
-      common::RWLock::Lock lock(*this, common::WRITE_LOCKER);
-      if (is_new)
-      {
-        use_capacity_ += info.use_capacity_;
-        total_capacity_ += info.total_capacity_;
-        total_load_ += info.current_load_;
-        total_block_count_ += info.block_count_;
-        alive_server_count_ += 1;
-      }
-      max_load_ = std::max(info.current_load_, max_load_);
-      max_block_count_ = std::max(info.block_count_, max_block_count_);
-    }
-
-    void NsGlobalStatisticsInfo::update(const NsGlobalStatisticsInfo& info)
-    {
-      common::RWLock::Lock lock(*this, common::WRITE_LOCKER);
-      use_capacity_ = info.use_capacity_;
-      total_capacity_ = info.total_capacity_;
-      total_block_count_ = info.total_block_count_;
-      total_load_ = info.total_load_;
-      max_load_ = info.max_load_;
-      max_block_count_ = info.max_block_count_;
-      alive_server_count_ = info.alive_server_count_;
-    }
-
-    NsGlobalStatisticsInfo& NsGlobalStatisticsInfo::instance()
-    {
-      return instance_;
-    }
-
     void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function , const pthread_t thid) const
     {
       TBSYS_LOGGER.logMessage(level, file, line, function, thid,
-          "use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, total_block_count: %"PRI64_PREFIX"d, total_load: %d, max_load: %d, max_block_count: %d, alive_server_count: %d",
-          use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_);
+          "use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, total_block_count: %"PRI64_PREFIX"d, total_load: %"PRI64_PREFIX"d",
+          use_capacity_, total_capacity_, total_block_count_, total_load_);
     }
 
     NsRuntimeGlobalInformation::NsRuntimeGlobalInformation()
@@ -302,6 +250,12 @@ namespace tfs
         ret = (double)tmp_capacity / (double)tmp_total_capacity;
       }
       return ret;
+    }
+
+    bool is_equal_group(const uint64_t id)
+    {
+      return (static_cast<int64_t>(id % common::SYSPARAM_NAMESERVER.group_count_)
+          == common::SYSPARAM_NAMESERVER.group_seq_);
     }
   }/** nameserver **/
 }/** tfs **/

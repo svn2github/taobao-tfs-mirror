@@ -16,6 +16,7 @@
 
 #include "task_manager.h"
 #include "server_collect.h"
+#include "global_factory.h"
 #include "layout_manager.h"
 #include "common/client_manager.h"
 #include "message/block_info_message.h"
@@ -102,10 +103,7 @@ namespace tfs
     int TaskManager::add(const uint64_t id, const ArrayHelper<uint64_t>& servers,
             const PlanType type, const time_t now)
     {
-      //这里只判断Block是否正在写一次的原因: 因为add task到几个列表是不能被打断的，如果打断了处理的逻辑会很复杂
-      //这里我们只能尽可能的保证同一个Block不同时做写操作，复制/均衡，因为目前这种做是没有办法完全保证同一个
-      //Block不同时发生写，复制等，这个功能点可以放到DataServer去做，这个后期再改进
-      int32_t ret = manager_.get_block_manager().has_write(id,now) ? EXIT_BLOCK_WRITING_ERROR : TFS_SUCCESS;
+      int32_t ret = manager_.get_block_manager().has_valid_lease(id,now) ? EXIT_BLOCK_WRITING_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
@@ -277,7 +275,7 @@ namespace tfs
         for (int64_t index = 0; index < helper.get_array_index(); ++index)
         {
           Task* task = *helper.at(index);
-          manager_.get_gc_manager().add(task);
+          manager_.get_gc_manager().insert(task, Func::get_monotonic_time());
         }
       }
       RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
@@ -562,7 +560,7 @@ namespace tfs
       {
         ++index;
         task = iter->second;
-        if (task->timeout(now))
+        if (task->expire(now))
         {
           helper.push_back(task);
           task->runTimerTask();
@@ -616,7 +614,7 @@ namespace tfs
               block_to_tasks_.erase(ptask->family_members_[index].block_);
           }
         }
-        manager_.get_gc_manager().add(task);
+        manager_.get_gc_manager().insert(task, Func::get_monotonic_time());
       }
       return ret;
     }
@@ -708,6 +706,8 @@ namespace tfs
         result = new (std::nothrow)MoveTask(*this, id, servers.get_array_index(), servers.get_base_address());
       else if (type == PLAN_TYPE_COMPACT)
         result = new (std::nothrow)CompactTask(*this, id, servers.get_array_index(), servers.get_base_address());
+      else if (type == PLAN_TYPE_RESOLVE_VERSION_CONFLICT)
+        result = new (std::nothrow)ResolveBlockVersionConflictTask(*this, id, servers.get_array_index(), servers.get_base_address());
       assert(NULL != result);
       result->seqno_ = ++seqno_;
       return result;

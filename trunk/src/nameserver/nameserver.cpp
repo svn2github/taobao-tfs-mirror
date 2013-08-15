@@ -230,10 +230,6 @@ namespace tfs
             hret = tbnet::IPacketHandler::KEEP_CHANNEL;
             switch (pcode)
             {
-            /*case SET_DATASERVER_MESSAGE:
-            case REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
-              heart_manager_.push(bpacket);
-              break;*/
             case MASTER_AND_SLAVE_HEART_MESSAGE:
             case HEARTBEAT_AND_NS_HEART_MESSAGE:
               master_slave_heart_manager_.push(bpacket, 0, false);
@@ -316,13 +312,28 @@ namespace tfs
               ret = client_control_cmd(msg);
               break;
             case REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
-              ret = resolve_block_version_conflict(msg);
+              {
+              BaseTaskMessage* packet = dynamic_cast<BaseTaskMessage*>(msg);
+              if (0 == packet->get_seqno())
+                ret = resolve_block_version_conflict(msg);
+              else
+                ret = layout_manager_.get_client_request_server().handle(msg);
+              }
               break;
             case REQ_GET_FAMILY_INFO_MESSAGE:
               ret = get_family_info(msg);
               break;
             case REPAIR_BLOCK_MESSAGE_V2:
               ret = repair(msg);
+              break;
+            case DS_APPLY_BLOCK_MESSAGE:
+              ret = apply_block(msg);
+              break;
+            case DS_APPLY_BLOCK_FOR_UPDATE_MESSAGE:
+              ret = apply_block_for_update(msg);
+              break;
+            case DS_GIVEUP_BLOCK_MESSAGE:
+              ret = giveup_block(msg);
               break;
             default:
               ret = EXIT_UNKNOWN_MSGTYPE;
@@ -893,6 +904,86 @@ namespace tfs
         const int32_t  type     = message->get_repair_type();
         ret = layout_manager_.repair(error_msg, 512, block_id, server, family_id, type, Func::get_monotonic_time());
         ret = message->reply(new StatusMessage(ret, error_msg));
+      }
+      return ret;
+    }
+
+    int NameServer::apply_block(common::BasePacket* msg)
+    {
+      int32_t ret = ((NULL != msg) && (msg->getPCode() == DS_APPLY_BLOCK_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        DsApplyBlockMessage* ab_msg = dynamic_cast<DsApplyBlockMessage*>(msg);
+        uint64_t server   = ab_msg->get_server_id();
+        int32_t MAX_COUNT = ab_msg->get_count();
+        MAX_COUNT = std::min(MAX_COUNT, MAX_WRITABLE_BLOCK_COUNT);
+        DsApplyBlockResponseMessage* reply_msg = new (std::nothrow)DsApplyBlockResponseMessage();
+        assert(NULL != reply_msg);
+        ArrayHelper<BlockLease> output(MAX_COUNT, reply_msg->get_block_lease());
+        ret = layout_manager_.get_client_request_server().apply_block(server, output);
+        if (TFS_SUCCESS == ret)
+        {
+          reply_msg->set_size(output.get_array_index());
+          ret = ab_msg->reply(reply_msg);
+        }
+        else
+        {
+          reply_msg->free();
+        }
+      }
+      return ret;
+    }
+
+    int NameServer::apply_block_for_update(common::BasePacket* msg)
+    {
+      int32_t ret = ((NULL != msg) && (msg->getPCode() == DS_APPLY_BLOCK_FOR_UPDATE_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        DsApplyBlockForUpdateMessage* ab_msg = dynamic_cast<DsApplyBlockForUpdateMessage*>(msg);
+        uint64_t server   = ab_msg->get_server_id();
+        DsApplyBlockForUpdateResponseMessage* reply_msg = new (std::nothrow)DsApplyBlockForUpdateResponseMessage();
+        assert(NULL != reply_msg);
+        const int32_t MAX_COUNT = 1;
+        BlockLease lease[MAX_COUNT];
+        lease[0].block_id_ = ab_msg->get_block_id();
+        ArrayHelper<BlockLease> output(MAX_COUNT, lease);
+        ret = layout_manager_.get_client_request_server().apply_block_for_update(server,output);
+        if (TFS_SUCCESS == ret)
+        {
+          reply_msg->set_block_lease(lease[0]);
+          ret = ab_msg->reply(reply_msg);
+        }
+        else
+        {
+          reply_msg->free();
+        }
+      }
+      return ret;
+    }
+
+    int NameServer::giveup_block(common::BasePacket* msg)
+    {
+      int32_t ret = ((NULL != msg) && (msg->getPCode() == DS_GIVEUP_BLOCK_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        DsGiveupBlockMessage* ab_msg = dynamic_cast<DsGiveupBlockMessage*>(msg);
+        uint64_t server   = ab_msg->get_server_id();
+        int32_t MAX_COUNT = ab_msg->get_size();
+        assert(MAX_COUNT <= MAX_WRITABLE_BLOCK_COUNT);
+        DsGiveupBlockResponseMessage* reply_msg = new (std::nothrow)DsGiveupBlockResponseMessage();
+        assert(NULL != reply_msg);
+        ArrayHelper<BlockInfoV2> input(MAX_COUNT, ab_msg->get_block_infos(), MAX_COUNT);
+        ArrayHelper<BlockLease> output(MAX_COUNT, reply_msg->get_block_lease());
+        ret = layout_manager_.get_client_request_server().giveup_block(server, input, output);
+        if (TFS_SUCCESS == ret)
+        {
+          reply_msg->set_size(output.get_array_index());
+          ret = ab_msg->reply(reply_msg);
+        }
+        else
+        {
+          reply_msg->free();
+        }
       }
       return ret;
     }

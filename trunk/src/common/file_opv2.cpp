@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <Memory.hpp>
 
 #include "error_msg.h"
@@ -208,6 +209,27 @@ namespace tfs
         if (ret >= 0)
         {
           ret = ::fsync(ret);
+        }
+      }
+      return ret;
+    }
+
+    int FileOperation::fsync_file_range(const int64_t offset, const int64_t nbytes, const int32_t flag)
+    {
+      int32_t ret = flag_ & O_SYNC ? 0 : -1;
+      if (ret < 0)
+      {
+        ret = check_();
+        if (ret >= 0)
+        {
+        #ifdef __NR_sync_file_range
+          ret = syscall(__NR_sync_file_range, ret, offset, nbytes, flag);
+        #else
+          UNUSED(offset);
+          UNUSED(nbytes);
+          UNUSED(flag);
+          ret = ::fdatasync(ret);
+        #endif
         }
       }
       return ret;

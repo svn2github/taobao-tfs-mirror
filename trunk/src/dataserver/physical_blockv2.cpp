@@ -95,7 +95,7 @@ namespace tfs
             ret = file_op_.pwrite(reinterpret_cast<char*>(&alloc_bit_map_), STORE_ALLOC_BIT_MAP_SIZE, 0);
             ret = ret >= STORE_ALLOC_BIT_MAP_SIZE ? TFS_SUCCESS : EXIT_WRITE_ALLOC_BIT_MAP_ERROR;
             if (TFS_SUCCESS == ret)
-              ret = file_op_.fsync();
+              ret = file_op_.fsync_file_range(0, STORE_ALLOC_BIT_MAP_SIZE,SYNC_FILE_RANGE_WRITE);
           }
         }
         while (TFS_SUCCESS != ret && ++retry_times < max_alloc_ext_block_count);
@@ -116,7 +116,7 @@ namespace tfs
           ret = ret >= STORE_ALLOC_BIT_MAP_SIZE ? TFS_SUCCESS : EXIT_WRITE_ALLOC_BIT_MAP_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            ret = file_op_.fsync();
+            ret = file_op_.fsync_file_range(0, STORE_ALLOC_BIT_MAP_SIZE,SYNC_FILE_RANGE_WRITE);
           }
         }
       }

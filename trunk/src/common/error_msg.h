@@ -61,6 +61,14 @@ namespace tfs
     const int32_t EXIT_ALREADY_MMAPPED_ERROR = -1036;
     const int32_t EXIT_ALREADY_MMAPPED_MAX_SIZE_ERROR = -1037;
     const int32_t EXIT_OP_TAIR_ERROR = -1038;
+    const int32_t EXIT_APPLY_LEASE_ALREADY_ISSUED = -1039;
+    const int32_t EXIT_LEASE_NOT_EXIST = -1040;
+    const int32_t EXIT_LEASE_EXPIRED = -1041;
+    const int32_t EXIT_CANNOT_APPLY_LEASE = -1042;
+    const int32_t EXIT_CANNOT_RENEW_LEASE = -1043;
+    const int32_t EXIT_CANNOT_GIVEUP_LEASE = -1044;
+    const int32_t EXIT_LEASE_EXISTED = -1045;
+    const int32_t EXIT_QUEUE_FULL_ERROR = -1046;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;
@@ -93,7 +101,7 @@ namespace tfs
     const int32_t EXIT_DATASERVER_NOT_FOUND = -5004;
     const int32_t EXIT_CANNOT_GET_LEASE = -5005;// lease not found
     const int32_t EXIT_COMMIT_ERROR = -5006;
-    const int32_t EXIT_LEASE_EXPIRED = -5007;
+    //const int32_t EXIT_LEASE_EXPIRED = -5007;
     const int32_t EXIT_BINLOG_ERROR = -5008;
     const int32_t EXIT_NO_REPLICATE = -5009;
     const int32_t EXIT_BLOCK_BUSY = -5010;
@@ -143,6 +151,8 @@ namespace tfs
     const int32_t EXIT_BLOCK_CANNOT_REINSTATE = -5054;
     const int32_t EXIT_COMMIT_BLOCK_UPDATE_ERROR = -5055;
     const int32_t EXIT_INITIALIZE_TAIR_ERROR = -5056;
+    const int32_t EXIT_BLOCK_NOT_IN_CURRENT_GROUP = -5057;
+    const int32_t EXIT_BLOCK_COPIES_INCOMPLETE = -5058;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

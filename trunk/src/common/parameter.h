@@ -42,8 +42,8 @@ namespace tfs
       int32_t add_primary_block_count_;
       int32_t safe_mode_time_;
       int32_t task_expired_time_;
-      int32_t object_dead_max_time_;
-      int32_t object_clear_max_time_;
+      int32_t object_wait_free_time_ms_;
+      int32_t object_wait_clear_time_ms_;
       int32_t dump_stat_info_interval_;
       int32_t group_seq_;
       int32_t group_count_;
@@ -78,8 +78,12 @@ namespace tfs
       int32_t max_single_machine_network_bandwith_;
       int32_t adjust_copies_location_time_lower_;
       int32_t adjust_copies_location_time_upper_;
+      int32_t between_ns_and_ds_lease_expire_time_;
+      int32_t between_ns_and_ds_lease_safe_time_;
+      int32_t between_ns_and_ds_lease_retry_times_;
+      int32_t between_ns_and_ds_lease_retry_expire_time_;
+      int32_t resolve_version_conflic_task_expired_time_;
       double  balance_percent_;
-
       static NameServerParameter ns_parameter_;
       static NameServerParameter& instance()
       {

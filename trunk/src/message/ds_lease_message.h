@@ -248,6 +248,10 @@ namespace tfs
         {
           return block_lease_;
         }
+        void set_block_lease(const common::BlockLease& lease)
+        {
+          block_lease_ = lease;
+        }
 
       protected:
         common::BlockLease block_lease_;

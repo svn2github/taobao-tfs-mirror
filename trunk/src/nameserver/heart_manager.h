@@ -43,7 +43,6 @@ namespace tfs
       /** handle single packet */
       virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
 
-      int push(common::BasePacket* msg);
     private:
       class KeepAliveIPacketQueueHeaderHelper : public tbnet::IPacketQueueHandler
       {
@@ -52,6 +51,7 @@ namespace tfs
         virtual ~KeepAliveIPacketQueueHeaderHelper() {}
         virtual bool handlePacketQueue(tbnet::Packet* packet, void *args);
       private:
+        const char* transform_type_to_str_(const int32_t type);
         DISALLOW_COPY_AND_ASSIGN(KeepAliveIPacketQueueHeaderHelper);
         HeartManagement& manager_;
       };
@@ -67,8 +67,10 @@ namespace tfs
       };
     private:
       DISALLOW_COPY_AND_ASSIGN(HeartManagement);
-      int keepalive(tbnet::Packet* packet);
-      int report_block(tbnet::Packet* packet);
+      int apply_(tbnet::Packet* packet);
+      int renew_(tbnet::Packet* packet);
+      int giveup_(tbnet::Packet* packet);
+      int report_block_(tbnet::Packet* packet);
       NameServer& manager_;
       common::BasePacketFactory* packet_factory_;
       common::BasePacketStreamer* streamer_;
