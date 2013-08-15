@@ -23,6 +23,7 @@
 #include "ns_define.h"
 #include "common/internal.h"
 #include "common/array_helper.h"
+#include "common/base_object.h"
 
 #ifdef TFS_GTEST
 #include <gtest/gtest.h>
@@ -33,7 +34,7 @@ namespace tfs
   namespace nameserver
   {
     class LayoutManager;
-    class FamilyCollect : public GCObject
+    class FamilyCollect : public common::BaseObject<LayoutManager>
     {
       #ifdef TFS_GTEST
       friend class FamilyCollectTest;
@@ -52,7 +53,6 @@ namespace tfs
       int update(const uint64_t block, const int32_t version);
       bool exist(const uint64_t block) const;
       bool exist(int32_t& current_version, const uint64_t block, const int32_t version) const;
-      bool clear(LayoutManager& manager, const time_t now);
       void get_members(common::ArrayHelper<std::pair<uint64_t, int32_t> >& members) const;
       int scan(common::SSMScanParameter& param) const;
       void dump(int32_t level, const char* file = __FILE__,

@@ -19,7 +19,6 @@
 
 #include <map>
 #include <stdint.h>
-#include "gc.h"
 #include "ns_define.h"
 #include "common/lock.h"
 #include "common/internal.h"
@@ -59,37 +58,38 @@ namespace tfs
       friend class LayoutManagerTest;
       void clear_();
       FRIEND_TEST(ServerManagerTest, add_remove_get);
-      FRIEND_TEST(ServerManagerTest, get_range_servers_);
       FRIEND_TEST(ServerManagerTest, pop_from_dead_queue);
       FRIEND_TEST(LayoutManagerTest, build_balance_task_);
       #endif
       public:
       explicit ServerManager(LayoutManager& manager);
       virtual ~ServerManager();
-      int add(const common::DataServerStatInfo& info, const time_t now, bool& isnew);
-      int remove(const uint64_t server, const time_t now);
-      void update_last_time(const uint64_t server, const time_t now);
+
+      int apply(const common::DataServerStatInfo& info, const int64_t now, const int32_t times);
+      int giveup(const int64_t now, const uint64_t server);
+      int renew(const common::DataServerStatInfo& info, const int64_t now, const int32_t times);
+      bool has_valid_lease(const int64_t now, const uint64_t server) const;
 
       ServerCollect* get(const uint64_t server) const;
-      int pop_from_dead_queue(common::ArrayHelper<ServerCollect*>& results, const time_t now);
       int64_t size() const;
+      int64_t wait_free_size() const;
 
-      int add_report_block_server(ServerCollect* server, const time_t now, const bool rb_expire = false);
-      int del_report_block_server(ServerCollect* server);
-      int get_and_move_report_block_server(common::ArrayHelper<ServerCollect*>& servers, const int64_t max_slot_num);
-      bool report_block_server_queue_empty() const;
-      bool has_report_block_server() const;
-      void clear_report_block_server_table();
+      int timeout(const int64_t now, NsGlobalStatisticsInfo& stat_info,
+        common::ArrayHelper<ServerCollect*>& report_block_servers, uint64_t& last_traverse_server, bool& all_over);
+      int gc(const int64_t now);
+      bool traverse(const uint64_t start, const SERVER_TABLE& table, common::ArrayHelper<ServerCollect*>& servers) const;
 
-      int get_dead_servers(common::ArrayHelper<uint64_t>& servers, NsGlobalStatisticsInfo& info, const time_t now) const;
-      bool get_range_servers(common::ArrayHelper<ServerCollect*>& result, const uint64_t begin, const int32_t count) const;
+      ServerCollect* malloc(const common::DataServerStatInfo& info, const int64_t now);
+      void free(ServerCollect* pserver);
 
-      int move_statistic_all_server_info(int64_t& total_capacity, int64_t& total_use_capacity,
-          int64_t& alive_server_nums) const;
-      int move_split_servers(std::multimap<int64_t, ServerCollect*>& source,
-          SERVER_TABLE& targets, const double percent) const;
+      int apply_block(const uint64_t server, common::ArrayHelper<common::BlockLease>& output);
+      int apply_block_for_update(const uint64_t server, common::ArrayHelper<common::BlockLease>& output);
+      int renew_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input, common::ArrayHelper<common::BlockLease>& output);
+      int giveup_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input, common::ArrayHelper<common::BlockLease>& output);
 
       int scan(common::SSMScanParameter& param, int32_t& should, int32_t& start, int32_t& next, bool& all_over) const;
+
+      bool get_range_servers(const uint64_t begin, common::ArrayHelper<ServerCollect*>& result) const;
 
       void set_all_server_next_report_time(const time_t now = common::Func::get_monotonic_time());
 
@@ -99,7 +99,10 @@ namespace tfs
       int relieve_relation(ServerCollect* server, const uint64_t block);
       int relieve_relation(const uint64_t server, const uint64_t block);
 
-      int choose_writable_block(BlockCollect*& result);
+      int move_statistic_all_server_info(int64_t& total_capacity, int64_t& total_use_capacity,
+          int64_t& alive_server_nums) const;
+      int move_split_servers(std::multimap<int64_t, ServerCollect*>& source,
+          SERVER_TABLE& targets, const double percent) const;
 
       //choose one or more servers to create new block
       int choose_create_block_target_server(common::ArrayHelper<uint64_t>& result,
@@ -122,17 +125,16 @@ namespace tfs
       int calc_single_process_max_network_bandwidth(int32_t& max_mr_network_bandwith,
             int32_t& max_rw_network_bandwith, const common::DataServerStatInfo& info) const;
 
-      int timeout(const int64_t now);
+      int regular_create_block_for_servers(uint64_t& begin, bool& all_over);
+
+      int choose_writable_block(BlockCollect*& result);
 
       private:
       DISALLOW_COPY_AND_ASSIGN(ServerManager);
       ServerCollect* get_(const uint64_t server) const;
+      bool traverse_(const uint64_t start, SERVER_TABLE& table, common::ArrayHelper<ServerCollect*>& leases) const;
 
       void get_lans_(std::set<uint32_t>& lans, const common::ArrayHelper<uint64_t>& source) const;
-
-      bool relieve_relation_(ServerCollect* server, const time_t now);
-
-      bool get_range_servers_(common::ArrayHelper<ServerCollect*>& result, const uint64_t begin, const int32_t count) const;
 
       void move_split_servers_(std::multimap<int64_t, ServerCollect*>& source,
           std::multimap<int64_t, ServerCollect*>& outside,
@@ -146,18 +148,21 @@ namespace tfs
       int choose_replciate_random_choose_server_extend_lock_(ServerCollect*& result,
           const common::ArrayHelper<uint64_t>& except, const std::set<uint32_t>& lans) const;
 
-      int del_report_block_server_(ServerCollect* server);
+      bool for_each_(const uint64_t start, const SERVER_TABLE& table, common::ArrayHelper<ServerCollect*>& servers) const;
+
       private:
-      LayoutManager& manager_;
       SERVER_TABLE servers_;
-      SERVER_TABLE dead_servers_;
-      SERVER_TABLE wait_report_block_servers_;
-      SERVER_TABLE current_reporting_block_servers_;
-      tbutil::Mutex wait_report_block_server_mutex_;
+      SERVER_TABLE wait_free_servers_;
+      LayoutManager& manager_;
       mutable common::RWLock rwmutex_;
+      uint64_t last_traverse_server_;
+      NsGlobalStatisticsInfo global_stat_info_;
+      int32_t wait_free_wait_time_;
+      int32_t wait_clear_wait_time_;
       int32_t write_index_;
     };
   }/** nameserver **/
 }/** tfs **/
+
 
 #endif /* SERVER_MANAGER_H_*/

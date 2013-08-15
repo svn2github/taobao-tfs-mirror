@@ -197,8 +197,9 @@ namespace tfs
       return ret;
     }
 
-    int FamilyManager::remove(GCObject*& object, const int64_t family_id)
+    int FamilyManager::remove(FamilyCollect*& object, const int64_t family_id)
     {
+      object = NULL;
       int32_t ret = (INVALID_FAMILY_ID != family_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {

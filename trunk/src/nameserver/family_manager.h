@@ -85,7 +85,7 @@ namespace tfs
       int update(const int64_t family_id, const uint64_t block, const int32_t version);
       bool exist(const int64_t family_id, const uint64_t block) const;
       bool exist(int32_t& version, const int64_t family_id, const uint64_t block, const int32_t new_version);
-      int remove(GCObject*& object, const int64_t family_id);
+      int remove(FamilyCollect*& object, const int64_t family_id);
       FamilyCollect* get(const int64_t family_id) const;
       bool scan(common::ArrayHelper<FamilyCollect*>& result, int64_t& begin, const int32_t count) const;
       int scan(common::SSMScanParameter& param, int32_t& next, bool& all_over,

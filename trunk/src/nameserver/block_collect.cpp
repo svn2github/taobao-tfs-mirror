@@ -15,6 +15,7 @@
  */
 #include <tbsys.h>
 #include "common/parameter.h"
+#include "global_factory.h"
 #include "block_collect.h"
 #include "server_collect.h"
 #include "layout_manager.h"
@@ -26,27 +27,29 @@ namespace tfs
 {
   namespace nameserver
   {
-    const int8_t BlockCollect::BLOCK_CREATE_FLAG_NO = 0;
-    const int8_t BlockCollect::BLOCK_CREATE_FLAG_YES = 1;
     BlockCollect::BlockCollect(const uint64_t block_id, const time_t now):
-      GCObject(now),
+      BaseObject<LayoutManager>(now),
       server_size_(0),
       create_flag_(BLOCK_CREATE_FLAG_NO),
-      in_replicate_queue_(BLOCK_IN_REPLICATE_QUEUE_NO)
+      in_replicate_queue_(BLOCK_IN_REPLICATE_QUEUE_NO),
+      has_lease_(BLOCK_HAS_LEASE_FLAG_NO),
+      has_version_conflict_(BLOCK_HAS_VERSION_CONFLICT_FLAG_NO)
     {
       servers_ = new (std::nothrow)uint64_t[SYSPARAM_NAMESERVER.max_replication_];
-      assert(servers_);
+      assert(NULL != servers_);
       memset(servers_, 0, sizeof(uint64_t) * SYSPARAM_NAMESERVER.max_replication_);
       memset(&info_, 0, sizeof(info_));
       info_.block_id_ = block_id;
     }
 
     BlockCollect::BlockCollect(const uint64_t block_id):
-      GCObject(0),
+      BaseObject<LayoutManager>(0),
       servers_(NULL),
       server_size_(0),
       create_flag_(BLOCK_CREATE_FLAG_NO),
-      in_replicate_queue_(BLOCK_IN_REPLICATE_QUEUE_NO)
+      in_replicate_queue_(BLOCK_IN_REPLICATE_QUEUE_NO),
+      has_lease_(BLOCK_HAS_LEASE_FLAG_NO),
+      has_version_conflict_(BLOCK_HAS_VERSION_CONFLICT_FLAG_NO)
     {
       info_.family_id_ = INVALID_FAMILY_ID;
       info_.block_id_ = block_id;
@@ -65,9 +68,10 @@ namespace tfs
       int32_t ret = (INVALID_SERVER_ID != server && NULL != servers_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        update_last_time(now);
+        if (!has_lease())
+          set(now, 0);
         dump(TBSYS_LOG_LEVEL(DEBUG));
-        writable = !is_full();
+        writable = !is_full() && !has_version_conflict();
         ret = exist(server) ? EXIT_SERVER_EXISTED : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
@@ -97,7 +101,6 @@ namespace tfs
 
     int BlockCollect::remove(const uint64_t server, const time_t now)
     {
-      update_last_time(now);
       int32_t ret = ((NULL != servers_) && (INVALID_SERVER_ID != server) && (server_size_ > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -108,6 +111,8 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             --server_size_;
+            if (!has_lease())
+              set(now, 0);
             servers_[index] = INVALID_SERVER_ID;
           }
         }
@@ -173,7 +178,7 @@ namespace tfs
         {
           if (info.version_ == info_.version_)//version argeed
           {
-            if (server_size_ >= SYSPARAM_NAMESERVER.max_replication_)
+            if (check_copies_complete())
             {
               uint64_t servers[SYSPARAM_NAMESERVER.max_replication_ + 1];
               ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_ + 1, servers);
@@ -196,12 +201,12 @@ namespace tfs
             if (!isnew)//release dataserver
             {
               TBSYS_LOG(INFO, "block: %"PRI64_PREFIX"u in dataserver: %s version error %d:%d,replace ns version, current dataserver size: %u",
-                  info.block_id_, tbsys::CNetUtil::addrToString(server).c_str(),
-                  info_.version_, info.version_, server_size_);
+                  info.block_id_, tbsys::CNetUtil::addrToString(server).c_str(),info_.version_, info.version_, server_size_);
               if (GFactory::get_runtime_info().is_master())
               {
-                update_last_time(now);
+                set(now, 0);
                 cleanup(expires);
+                assert(!has_lease());
               }
             }
           }
@@ -217,6 +222,36 @@ namespace tfs
       return ret;
     }
 
+    int BlockCollect::check_version(common::ArrayHelper<uint64_t>& expires, const common::BlockInfoV2& info, const uint64_t server)
+    {
+      int32_t ret = (INVALID_SERVER_ID != server && info.block_id_ == id() && (NULL != servers_)
+                     && expires.get_array_size() > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        if (info.version_ == info_.version_)
+        {
+          ret = (get_servers_size() > 0 && !exist(server)) ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;
+        }
+        if (info.version_ > info_.version_)
+        {
+          update(info);
+          if (!exist(server))
+          {
+            cleanup(expires);
+          }
+        }
+        if (info.version_ < info_.version_)
+        {
+          ret = (get_servers_size() > 0 && !exist(server)) ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
+          {
+            update(info);
+          }
+        }
+      }
+      return ret;
+    }
+
     /**
      * to check a block if replicate
      * @return: -1: none, 0: normal, 1: emergency
@@ -224,7 +259,7 @@ namespace tfs
     PlanPriority BlockCollect::check_replicate(const time_t now) const
     {
       PlanPriority priority = PLAN_PRIORITY_NONE;
-      if (!is_creating() && !is_in_family() && !in_replicate_queue())
+      if (!is_creating() && !is_in_family() && !in_replicate_queue() && expire(now) && !has_valid_lease(now))
       {
         if (server_size_ <= 0)
         {
@@ -232,13 +267,10 @@ namespace tfs
         }
         else
         {
-          if (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)
-          {
-            if (server_size_ < SYSPARAM_NAMESERVER.max_replication_)
-              priority = PLAN_PRIORITY_NORMAL;
-            if (1 == server_size_ && SYSPARAM_NAMESERVER.max_replication_ > 1)
-              priority = PLAN_PRIORITY_EMERGENCY;
-          }
+          if (server_size_ < SYSPARAM_NAMESERVER.max_replication_)
+            priority = PLAN_PRIORITY_NORMAL;
+          if (1 == server_size_ && SYSPARAM_NAMESERVER.max_replication_ > 1)
+            priority = PLAN_PRIORITY_EMERGENCY;
         }
       }
       return priority;
@@ -252,64 +284,59 @@ namespace tfs
     {
       bool ret = false;
       bool check = check_in_family ? !is_in_family() : true;
-      if (!is_creating() && check && !in_replicate_queue()
-          && (last_update_time_ + SYSPARAM_NAMESERVER.compact_task_expired_time_ <= now))
+      if (!is_creating() && check && !in_replicate_queue() && expire(now) && is_full()
+          && !has_valid_lease(now) && (check_copies_complete()))
       {
-        if ((server_size_ == SYSPARAM_NAMESERVER.max_replication_) && is_full())
+        if ((info_.file_count_ > 0)
+            && (info_.size_ > 0)
+            && (info_.del_file_count_ > 0)
+            && (info_.del_size_ > 0))
         {
-          if ((info_.file_count_ > 0)
-              && (info_.size_ > 0)
-              && (info_.del_file_count_ > 0)
-              && (info_.del_size_ > 0))
+          int32_t delete_file_num_ratio = get_delete_file_num_ratio();
+          int32_t delete_size_ratio = get_delete_file_size_ratio();
+          int32_t update_file_num_ratio = get_update_file_num_ratio();
+          int32_t update_size_ratio = get_update_file_size_ratio();
+          if ((delete_file_num_ratio >  SYSPARAM_NAMESERVER.compact_delete_ratio_)
+              || (delete_size_ratio > SYSPARAM_NAMESERVER.compact_delete_ratio_)
+              || (update_file_num_ratio >  SYSPARAM_NAMESERVER.compact_update_ratio_)
+              || (update_size_ratio > SYSPARAM_NAMESERVER.compact_update_ratio_))
           {
-            int32_t delete_file_num_ratio = get_delete_file_num_ratio();
-            int32_t delete_size_ratio = get_delete_file_size_ratio();
-            int32_t update_file_num_ratio = get_update_file_num_ratio();
-            int32_t update_size_ratio = get_update_file_size_ratio();
-            if ((delete_file_num_ratio >  SYSPARAM_NAMESERVER.compact_delete_ratio_)
-                || (delete_size_ratio > SYSPARAM_NAMESERVER.compact_delete_ratio_)
-                || (update_file_num_ratio >  SYSPARAM_NAMESERVER.compact_update_ratio_)
-                || (update_size_ratio > SYSPARAM_NAMESERVER.compact_update_ratio_))
-            {
-              TBSYS_LOG(DEBUG, "block: %"PRI64_PREFIX"u need compact", info_.block_id_);
-              ret = true;
-            }
+            TBSYS_LOG(DEBUG, "block: %"PRI64_PREFIX"u need compact", info_.block_id_);
+            ret = true;
           }
         }
       }
       return ret;
     }
 
-    bool BlockCollect::check_balance() const
+    bool BlockCollect::check_balance(const time_t now) const
     {
-      return (!is_creating() && !in_replicate_queue()) ? server_size_ >= SYSPARAM_NAMESERVER.max_replication_ : false;
+      return (!is_creating() && !in_replicate_queue() && !has_valid_lease(now)
+              && expire(now) && check_copies_complete());
     }
 
-    bool BlockCollect::check_marshalling() const
+    bool BlockCollect::check_marshalling(const time_t now) const
     {
-      bool ret = (!is_creating() && !is_in_family() && !in_replicate_queue());
+      bool ret = (!is_creating() && !is_in_family() && !in_replicate_queue() && !has_valid_lease(now) && is_full()
+              && expire(now) && check_copies_complete() && size() <= MAX_MARSHALLING_BLOCK_SIZE_LIMIT);
       if (ret)
       {
-        ret = (server_size_ >= SYSPARAM_NAMESERVER.max_replication_  && is_full() && size() <= MAX_MARSHALLING_BLOCK_SIZE_LIMIT);
-        if (ret)
-        {
-          int32_t delete_file_num_ratio = get_delete_file_num_ratio();
-          int32_t delete_size_ratio = get_delete_file_size_ratio();
-          ret = (delete_file_num_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_
-                && delete_size_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_);
-        }
+        int32_t delete_file_num_ratio = get_delete_file_num_ratio();
+        int32_t delete_size_ratio = get_delete_file_size_ratio();
+        ret = (delete_file_num_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_
+          && delete_size_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_);
       }
       return ret;
+    }
+
+    bool BlockCollect::check_version_conflict(const time_t now) const
+    {
+      return (has_version_conflict() && !has_valid_lease(now));
     }
 
     bool BlockCollect::check_reinstate(const time_t now) const
     {
-      bool ret = (!is_creating() && is_in_family());
-      if (ret)
-      {
-        ret = ((server_size_ <= 0) && (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now));
-      }
-      return ret;
+      return (!is_creating() && is_in_family() && (server_size_ <= 0) && expire(now));
     }
 
     bool BlockCollect::check_need_adjust_copies_location(common::ArrayHelper<uint64_t>& adjust_copies, const time_t now) const
@@ -373,6 +400,14 @@ namespace tfs
               param.data_.writeInt64(server);
           }
         }
+        if (child_type & SSM_CHILD_BLOCK_TYPE_STATUS)
+        {
+          param.data_.writeInt64(get());
+          param.data_.writeInt8(create_flag_);
+          param.data_.writeInt8(in_replicate_queue_);
+          param.data_.writeInt8(has_lease_);
+          param.data_.writeInt8(has_version_conflict_);
+        }
       }
       return has_dump ? TFS_SUCCESS : TFS_ERROR;
     }
@@ -392,16 +427,20 @@ namespace tfs
             str += "/";
           }
         }
+        int64_t now = Func::get_monotonic_time();
         TBSYS_LOGGER.logMessage(level, file, line, function,thid,
-            "family id: %"PRI64_PREFIX"d,block_id: %"PRI64_PREFIX"u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, update_file_count: %d, update_file_size: %d, servers: %s",
+            "family id: %"PRI64_PREFIX"d,block_id: %"PRI64_PREFIX"u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, update_file_count: %d, update_file_size: %d, is_creating: %s, in_replicate_queue: %s, has_lease: %s, expire time: %"PRI64_PREFIX"d, has_valild_lease: %s, servers: %s",
             info_.family_id_, info_.block_id_, info_.version_, info_.file_count_,
             info_.size_, info_.del_file_count_, info_.del_size_,
-            info_.update_file_count_, info_.update_size_, str.c_str());
+            info_.update_file_count_, info_.update_size_,
+            is_creating() ? "yes" : "no", in_replicate_queue() ? "yes" : "no",
+            has_lease() ? "yes" : "no", get(), has_valid_lease(now) ? "yes" : "now", str.c_str());
       }
     }
 
-    void BlockCollect::callback(LayoutManager& manager)
+    void BlockCollect::callback(void* args, LayoutManager& manager)
     {
+      UNUSED(args);
       if (NULL != servers_)
       {
         uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
@@ -412,8 +451,7 @@ namespace tfs
         for (int64_t index = 0; index < helper.get_array_index(); ++index)
         {
           uint64_t server = *helper.at(index);
-          if (INVALID_SERVER_ID != server)
-            manager.get_server_manager().relieve_relation(server, id());
+          manager.get_server_manager().relieve_relation(server, id());
         }
       }
     }

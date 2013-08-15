@@ -21,7 +21,7 @@ namespace tfs
   namespace nameserver
   {
     FamilyCollect::FamilyCollect(const int64_t family_id):
-      GCObject(0),
+      BaseObject<LayoutManager>(0),
       family_id_(family_id),
       family_aid_info_(0),
       members_(NULL)
@@ -30,7 +30,7 @@ namespace tfs
     }
 
     FamilyCollect::FamilyCollect(const int64_t family_id, const int32_t family_aid_info, const time_t now):
-      GCObject(now),
+      BaseObject<LayoutManager>(now),
       family_id_(family_id),
       family_aid_info_(family_aid_info),
       members_(NULL)
@@ -128,13 +128,6 @@ namespace tfs
       return ret;
     }
 
-    bool FamilyCollect::clear(LayoutManager& manager, const time_t now)
-    {
-      UNUSED(manager);
-      UNUSED(now);
-      return true;
-    }
-
     void FamilyCollect::get_members(ArrayHelper<std::pair<uint64_t, int32_t> >& members) const
     {
       const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
@@ -205,17 +198,17 @@ namespace tfs
 
     bool FamilyCollect::check_need_reinstate(const time_t now) const
     {
-      return (last_update_time_ + SYSPARAM_NAMESERVER.reinstate_task_expired_time_) <= now;
+      return (get() + SYSPARAM_NAMESERVER.reinstate_task_expired_time_) <= now;
     }
 
     bool FamilyCollect::check_need_dissolve(const time_t now) const
     {
-      return (last_update_time_ + SYSPARAM_NAMESERVER.dissolve_task_expired_time_) <= now;
+      return (get() + SYSPARAM_NAMESERVER.dissolve_task_expired_time_) <= now;
     }
 
     bool FamilyCollect::check_need_compact(const time_t now) const
     {
-      return (last_update_time_ + SYSPARAM_NAMESERVER.compact_task_expired_time_) <= now;
+      return (get() + SYSPARAM_NAMESERVER.compact_task_expired_time_) <= now;
     }
   }/** end namespace nameserver **/
 }/** end namespace tfs **/
