@@ -884,9 +884,11 @@ namespace tfs
             info.mmap_option_.max_mmap_size_ = max_count * pagesize;
           info.max_hash_bucket_count_ = MAX_INDEX_ELEMENT_NUM;
           //info.mmap_option_.max_mmap_size_ = std::max(MAX_MMAP_SIZE, info.mmap_option_.max_mmap_size_);
+          const int32_t INDEXFILE_SAFE_MULT = 4;
+          const int32_t avg_index_file_size = (avg_file_count + 1) * INDEXFILE_SAFE_MULT * FILE_INFO_V2_LENGTH + INDEX_HEADER_V2_LENGTH;
 
           info.used_main_block_count_  = 0;
-          info.total_main_block_count_ = (info.mount_point_use_space_ / (info.max_main_block_size_ + info.mmap_option_.max_mmap_size_)) - 2;
+          info.total_main_block_count_ = (info.mount_point_use_space_ / (info.max_main_block_size_ + avg_index_file_size)) - 2;
           info.max_block_index_element_count_ = static_cast<int32_t>(info.total_main_block_count_ / parameter.block_type_ratio_) +
             info.total_main_block_count_ + 1;
           ret = info.max_block_index_element_count_ > SuperBlockManager::MAX_BLOCK_INDEX_SIZE ? EXIT_MAX_BLOCK_INDEX_COUNT_INVALID : TFS_SUCCESS;

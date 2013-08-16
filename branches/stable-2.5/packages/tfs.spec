@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-root
 
 BuildRequires: t-csrd-tbnet-devel >= 1.0.8
 BuildRequires: MySQL-devel-community = 5.1.48 
-BuildRequires: tair-devel >= 2.3
+BuildRequires: tair-devel >= 2.3.2.3
 BuildRequires: boost-devel >= 1.3 
 BuildRequires: readline-devel
 BuildRequires: ncurses-devel

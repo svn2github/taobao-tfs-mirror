@@ -889,7 +889,7 @@ namespace tfs
                 block_id, tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
             }
           }
-          if (block->version() < info->version_)
+          if (block->version() < info.version_)
           {
             block->update(info);
           }
