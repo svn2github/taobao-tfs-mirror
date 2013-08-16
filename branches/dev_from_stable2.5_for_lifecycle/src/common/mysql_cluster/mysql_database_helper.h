@@ -81,8 +81,12 @@ namespace tfs
         tbutil::Mutex mutex_;
         char* key_buff_;
         char* value_buff_;
+        char* sql_str_;
+        int32_t max_sql_size_;
         int32_t key_buff_size_;
         int32_t value_buff_size_;
+        int32_t retry_count_;
+
       private:
         enum
         {

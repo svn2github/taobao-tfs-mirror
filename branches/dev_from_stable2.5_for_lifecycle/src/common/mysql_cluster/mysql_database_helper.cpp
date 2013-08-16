@@ -17,6 +17,9 @@
 
 #include <errmsg.h>
 #include <vector>
+#include <errmsg.h>
+#include <mysqld_error.h>
+
 #include "common/define.h"
 #include "common/func.h"
 #include "common/error_msg.h"
@@ -30,18 +33,22 @@ namespace tfs
     MysqlDatabaseHelper::MysqlDatabaseHelper()
     {
       stmt_ = NULL;
-      key_buff_size_ = 750;
+      key_buff_size_ = MAX_KEY_VAR_SIZE + 10;
       key_buff_ = (char*)malloc(key_buff_size_);
 
-      value_buff_size_ = 1024*1024;
+      value_buff_size_ = MAX_VALUE_VAR_SIZE + 10;
       value_buff_ = (char*)malloc(value_buff_size_);
+      max_sql_size_ = (value_buff_size_ * 2 + 1) * 2 + (key_buff_size_ * 2 + 1) + 1024;
+      sql_str_ = (char*)malloc(max_sql_size_);
       conn_str_[0] = '\0';
       user_name_[0] = '\0';
       passwd_[0] = '\0';
+      retry_count_ = 3;
       is_connected_ = false;
     }
     MysqlDatabaseHelper::~MysqlDatabaseHelper()
     {
+      free(sql_str_);
       free(value_buff_);
       free(key_buff_);
       close();
@@ -92,7 +99,6 @@ namespace tfs
     int MysqlDatabaseHelper::insert_kv(const int32_t area, const KvKey& key, const KvMemValue &value)
     {
       int ret = TFS_SUCCESS;
-      int status;
       int64_t mysql_proc_ret = 0;
       int retry_time = 0;
       if (key.key_size_ > MAX_KEY_VAR_SIZE || value.get_size() > MAX_VALUE_VAR_SIZE)
@@ -102,11 +108,11 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        MYSQL_STMT *stmt;
-        MYSQL_BIND ps_params[2];  /* input parameter buffers */
-        char str[1024];
-        snprintf(str, 1024, "insert into tfsmeta_%d (meta_key, meta_value, version) values (?, ?, 1)",
-            area);
+        int64_t pos = 0;
+        pos = snprintf(sql_str_, max_sql_size_, "insert into tfsmeta_%d "
+            "(meta_key, meta_value, version) values "
+            "('", area);
+
 
 
         tbutil::Mutex::Lock lock(mutex_);
@@ -117,54 +123,24 @@ retry:
         }
         if (is_connected_)
         {
-          stmt = mysql_stmt_init(&mysql_.mysql);
-          ret = TFS_SUCCESS;
-          status = mysql_stmt_prepare(stmt, str, strlen(str));
-          if (status)
+          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+              key.key_, key.key_size_);
+          pos += sprintf(sql_str_ + pos, "%s", "','");
+          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+              value.get_data(), value.get_size());
+          pos += sprintf(sql_str_ + pos, "%s", "', 1)");
+
+          ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
+          if (0 != ret)
           {
-            if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
+            TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
+            ret = mysql_errno(&mysql_.mysql);
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
+            if (ER_DUP_ENTRY == ret)
             {
-              close();
-              goto retry;
+              mysql_proc_ret = EXIT_KV_RETURN_VERSION_ERROR;
+              ret = TFS_SUCCESS;
             }
-            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-            ret = TFS_ERROR;
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            memset(ps_params, 0, sizeof (ps_params));
-            ps_params[0].buffer_type = MYSQL_TYPE_VAR_STRING;
-            ps_params[0].buffer = (char *) key.key_;
-            unsigned long key_size_ =key.key_size_;
-            ps_params[0].length = &key_size_;
-            ps_params[0].is_null = 0;
-
-            ps_params[1].buffer_type = MYSQL_TYPE_BLOB;
-            ps_params[1].buffer = (char *) value.get_data();
-            unsigned long value_size_ = value.get_size();
-            ps_params[1].length = &value_size_;
-            ps_params[1].is_null = 0;
-
-
-            status = mysql_stmt_bind_param(stmt, ps_params);
-            if (status)
-            {
-              TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                  mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-              ret = TFS_ERROR;
-            }
-            if (TFS_SUCCESS == ret)
-            {
-              if (!excute_stmt(stmt, mysql_proc_ret))
-              {
-                if (EXIT_KV_RETURN_VERSION_ERROR != mysql_proc_ret)
-                {
-                  ret = TFS_ERROR;
-                }
-              }
-            }
-
           }
         }
       }
@@ -182,8 +158,6 @@ retry:
     int MysqlDatabaseHelper::replace_kv(const int32_t area, const KvKey& key, const KvMemValue &value)
     {
       int ret = TFS_SUCCESS;
-      int status;
-      int64_t mysql_proc_ret = 0;
       int retry_time = 0;
       if (key.key_size_ > MAX_KEY_VAR_SIZE || value.get_size() > MAX_VALUE_VAR_SIZE)
       {
@@ -192,12 +166,10 @@ retry:
       }
       if (TFS_SUCCESS == ret)
       {
-        MYSQL_STMT *stmt;
-        MYSQL_BIND ps_params[3];  /* input parameter buffers */
-        char str[1024];
-        snprintf(str, 1024, "insert into tfsmeta_%d (meta_key, meta_value, version) "
-            "values (?, ?, 1) on duplicate key "
-            "update meta_value=?, version=mod(version,1024)+1", area);
+        int64_t pos = 0;
+        pos = snprintf(sql_str_, max_sql_size_, "insert into tfsmeta_%d "
+            "(meta_key, meta_value, version) "
+            "values ('", area);
 
 
         tbutil::Mutex::Lock lock(mutex_);
@@ -208,56 +180,28 @@ retry:
         }
         if (is_connected_)
         {
-          stmt = mysql_stmt_init(&mysql_.mysql);
-          ret = TFS_SUCCESS;
-          status = mysql_stmt_prepare(stmt, str, strlen(str));
-          if (status)
+          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+              key.key_, key.key_size_);
+          pos += sprintf(sql_str_ + pos, "%s", "','");
+          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+              value.get_data(), value.get_size());
+          pos += sprintf(sql_str_ + pos, "%s", "', 1)  on duplicate key "
+              "update meta_value='");
+          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+              value.get_data(), value.get_size());
+          pos += sprintf(sql_str_ + pos, "%s", "',  version=mod(version,1024)+1");
+
+          ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
+          if (0 != ret)
           {
-            if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
-            {
-              close();
-              goto retry;
-            }
-            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-            ret = TFS_ERROR;
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            memset(ps_params, 0, sizeof (ps_params));
-            ps_params[0].buffer_type = MYSQL_TYPE_VAR_STRING;
-            ps_params[0].buffer = (char *) key.key_;
-            unsigned long key_size_ =key.key_size_;
-            ps_params[0].length = &key_size_;
-            ps_params[0].is_null = 0;
-
-            ps_params[1].buffer_type = MYSQL_TYPE_BLOB;
-            ps_params[1].buffer = (char *) value.get_data();
-            unsigned long value_size_ = value.get_size();
-            ps_params[1].length = &value_size_;
-            ps_params[1].is_null = 0;
-
-            ps_params[2].buffer_type = MYSQL_TYPE_BLOB;
-            ps_params[2].buffer = (char *) value.get_data();
-            ps_params[2].length = &value_size_;
-            ps_params[2].is_null = 0;
-
-
-            status = mysql_stmt_bind_param(stmt, ps_params);
-            if (status)
-            {
-              TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                  mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-              ret = TFS_ERROR;
-            }
-            if (TFS_SUCCESS == ret)
-            {
-              if (!excute_stmt(stmt, mysql_proc_ret))
-              {
-                ret = TFS_ERROR;
-              }
-            }
-
+            TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
+            ret = mysql_errno(&mysql_.mysql);
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
+            //if (ER_DUP_ENTRY == ret)
+            //{
+            //  mysql_proc_ret = EXIT_KV_RETURN_VERSION_ERROR;
+            //  ret = TFS_SUCCESS;
+            //}
           }
         }
       }
@@ -271,7 +215,6 @@ retry:
         &value, const int32_t version)
     {
       int ret = TFS_SUCCESS;
-      int status;
       int64_t mysql_proc_ret = 0;
       int retry_time = 0;
       if (key.key_size_ > MAX_KEY_VAR_SIZE || value.get_size() > MAX_VALUE_VAR_SIZE)
@@ -281,11 +224,8 @@ retry:
       }
       if (TFS_SUCCESS == ret)
       {
-        MYSQL_STMT *stmt;
-        MYSQL_BIND ps_params[3];  /* input parameter buffers */
-        char str[1024];
-        snprintf(str, 1024, "update tfsmeta_%d set meta_value=?, version=mod(version,1024)+1 where meta_key=? and version=%d", area, version);
-
+        int64_t pos = 0;
+        pos = snprintf(sql_str_, max_sql_size_, "update tfsmeta_%d set meta_value='", area);
 
         tbutil::Mutex::Lock lock(mutex_);
 retry:
@@ -295,57 +235,23 @@ retry:
         }
         if (is_connected_)
         {
-          stmt = mysql_stmt_init(&mysql_.mysql);
-          ret = TFS_SUCCESS;
-          status = mysql_stmt_prepare(stmt, str, strlen(str));
-          if (status)
+          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+              value.get_data(), value.get_size());
+
+          pos += sprintf(sql_str_ + pos, "%s", "', version=mod(version,1024)+1 where meta_key='");
+          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+              key.key_, key.key_size_);
+          pos += sprintf(sql_str_ + pos, "' and version = %d", version);
+          ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
+          if (0 != ret)
           {
-            if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
-            {
-              close();
-              goto retry;
-            }
-            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-            ret = TFS_ERROR;
+            TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
+            ret = mysql_errno(&mysql_.mysql);
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
           }
-          if (TFS_SUCCESS == ret)
+          else
           {
-            memset(ps_params, 0, sizeof (ps_params));
-            ps_params[0].buffer_type = MYSQL_TYPE_BLOB;
-            ps_params[0].buffer = (char *) value.get_data();
-            unsigned long value_size_ = value.get_size();
-            ps_params[0].length = &value_size_;
-            ps_params[0].is_null = 0;
-
-            ps_params[1].buffer_type = MYSQL_TYPE_VAR_STRING;
-            ps_params[1].buffer = (char *) key.key_;
-            unsigned long key_size_ = key.key_size_;
-            ps_params[1].length = &key_size_;
-            ps_params[1].is_null = 0;
-
-            ps_params[2].buffer_type = MYSQL_TYPE_LONG;
-            ps_params[2].buffer = (char *)version;
-            ps_params[2].length = 0;
-            ps_params[2].is_null = 0;
-
-
-
-            status = mysql_stmt_bind_param(stmt, ps_params);
-            if (status)
-            {
-              TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                  mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-              ret = TFS_ERROR;
-            }
-            if (TFS_SUCCESS == ret)
-            {
-              if (!excute_stmt(stmt, mysql_proc_ret))
-              {
-                ret = TFS_ERROR;
-              }
-            }
-
+            mysql_proc_ret = mysql_affected_rows(&mysql_.mysql);
           }
         }
         if (TFS_SUCCESS != ret)
@@ -363,9 +269,6 @@ retry:
     int MysqlDatabaseHelper::rm_kv(const int32_t area, const KvKey& key)
     {
       int ret = TFS_SUCCESS;
-      int status;
-      int64_t mysql_proc_ret=0;
-
       if (key.key_size_ > MAX_KEY_VAR_SIZE)
       {
         TBSYS_LOG(ERROR, "input error");
@@ -374,10 +277,8 @@ retry:
       int retry_time = 0;
       if (TFS_SUCCESS == ret)
       {
-        MYSQL_STMT *stmt;
-        MYSQL_BIND ps_params[1];  /* input parameter buffers */
-        char str[1024];
-        snprintf(str, 1024, "delete from tfsmeta_%d where meta_key=?", area);
+        int64_t pos = 0;
+        pos = snprintf(sql_str_, max_sql_size_, "delete from tfsmeta_%d where meta_key='", area);
 
         tbutil::Mutex::Lock lock(mutex_);
 retry:
@@ -387,43 +288,16 @@ retry:
         }
         if (is_connected_)
         {
-          stmt = mysql_stmt_init(&mysql_.mysql);
-          ret = TFS_SUCCESS;
-          status = mysql_stmt_prepare(stmt, str, strlen(str));
-          if (status)
-          {
-            if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
-            {
-              close();
-              goto retry;
-            }
-            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-            ret = TFS_ERROR;
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            memset(ps_params, 0, sizeof (ps_params));
-            ps_params[0].buffer_type =MYSQL_TYPE_VAR_STRING;
-            ps_params[0].buffer = (char *)key.key_;
-            unsigned long key_size_ = key.key_size_;
-            ps_params[0].length = &key_size_;
-            ps_params[0].is_null = 0;
+          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+              key.key_, key.key_size_);
+          pos += sprintf(sql_str_ + pos, "%s", "'");
 
-            status = mysql_stmt_bind_param(stmt, ps_params);
-            if (status)
-            {
-              TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                  mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-              ret = TFS_ERROR;
-            }
-            if (TFS_SUCCESS == ret)
-            {
-              if (!excute_stmt(stmt, mysql_proc_ret))
-              {
-                ret = TFS_ERROR;
-              }
-            }
+          ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
+          if (0 != ret)
+          {
+            TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
+            ret = mysql_errno(&mysql_.mysql);
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
           }
         }
         if (TFS_SUCCESS != ret)
@@ -437,7 +311,6 @@ retry:
     int MysqlDatabaseHelper::get_v(const int area, const KvKey& key, KvValue **pp_value, int64_t *version)
     {
       int ret = TFS_SUCCESS;
-      int status;
       int get_count = 0;
 
       if (key.key_size_ > MAX_KEY_VAR_SIZE || NULL == pp_value || NULL == version)
@@ -449,11 +322,9 @@ retry:
       int retry_time = 0;
       if (TFS_SUCCESS == ret)
       {
-        MYSQL_STMT *stmt;
-        MYSQL_BIND ps_params[1];  /* input parameter buffers */
-        char str[1024];
-        snprintf(str, 1024, "select meta_value, version from tfsmeta_%d where meta_key=?", area);
-
+        int64_t pos = 0;
+        pos = snprintf(sql_str_, max_sql_size_, "select meta_value, "
+            "version from tfsmeta_%d where meta_key='", area);
         tbutil::Mutex::Lock lock(mutex_);
 retry:
         if (!is_connected_)
@@ -462,122 +333,52 @@ retry:
         }
         if (is_connected_)
         {
-          stmt = mysql_stmt_init(&mysql_.mysql);
-          ret = TFS_SUCCESS;
-          status = mysql_stmt_prepare(stmt, str, strlen(str));
-          if (status)
+          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+              key.key_, key.key_size_);
+          pos += sprintf(sql_str_ + pos, "%s", "'");
+          ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
+          if (0 != ret)
           {
-            if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
-            {
-              close();
-              goto retry;
-            }
-            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-            ret = TFS_ERROR;
+            TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
+            ret = mysql_errno(&mysql_.mysql);
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
           }
-          if (TFS_SUCCESS == ret)
+          else
           {
-            memset(ps_params, 0, sizeof (ps_params));
-            ps_params[0].buffer_type =MYSQL_TYPE_VAR_STRING;
-            ps_params[0].buffer = (char *)key.key_;
-            unsigned long key_size_ = key.key_size_;
-            ps_params[0].length = &key_size_;
-            ps_params[0].is_null = 0;
-
-            status = mysql_stmt_bind_param(stmt, ps_params);
-            if (status)
+            MYSQL_ROW row;
+            MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+            if (mysql_ret == NULL)
             {
-              TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                  mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+              TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
               ret = TFS_ERROR;
             }
-            if (TFS_SUCCESS == ret)
+            else
             {
-              status = mysql_stmt_execute(stmt);
-              if (status)
+              while(NULL != (row = mysql_fetch_row(mysql_ret)))
               {
-                if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
+                unsigned long *lengths;
+                lengths = mysql_fetch_lengths(mysql_ret);
+                int value_size = lengths[0];
+                if (value_size > value_buff_size_)
                 {
-                  close();
-                  goto retry;
+                  TBSYS_LOG(ERROR, "value size error %d truncated it", value_size);
+                  value_size = value_buff_size_;
                 }
-                TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                    mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-                ret = TFS_ERROR;
+                *version = atoi(row[1]);
+
+                KvMemValue* p_value = new KvMemValue();
+                char* data_ = p_value->malloc_data(value_size);
+                memcpy(data_, row[0], value_size);
+                *pp_value = p_value;
+
+                get_count++;
+                break;
               }
-              if (TFS_SUCCESS == ret)
-              {
-                MYSQL_BIND rs_bind[2];  /* for output buffers */
-                my_bool    is_null[2];
-
-                memset(rs_bind, 0, sizeof (rs_bind) );
-                unsigned long value_len_ = 0;
-                int32_t version_ = 0;
-
-                /* set up and bind result set output buffers */
-                rs_bind[0].buffer_type = MYSQL_TYPE_BLOB;
-                rs_bind[0].is_null = &is_null[0];
-                rs_bind[0].buffer_length = value_buff_size_;
-                rs_bind[0].buffer = (char *) value_buff_;
-                rs_bind[0].length= &value_len_;
-
-                rs_bind[1].buffer_type = MYSQL_TYPE_LONG;
-                rs_bind[1].is_null = &is_null[1];
-                rs_bind[1].buffer = (char *) &version_;
-
-                status = mysql_stmt_bind_result(stmt, rs_bind);
-                if (status)
-                {
-                  TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                      mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-                  ret = TFS_ERROR;
-                }
-                if (TFS_SUCCESS == ret)
-                {
-                  status = mysql_stmt_store_result(stmt);
-                  if (status)
-                  {
-                    TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                        mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-                    ret = TFS_ERROR;
-                  }
-                }
-                while (TFS_SUCCESS == ret )
-                {
-                  status = mysql_stmt_fetch(stmt);
-                  if (1 == status)
-                  {
-                    TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                        mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-                    ret = TFS_ERROR;
-                    break;
-                  }
-                  else if (MYSQL_NO_DATA == status)
-                  {
-                    break;
-                  }
-                  else if (MYSQL_DATA_TRUNCATED == status)
-                  {
-                    TBSYS_LOG(ERROR, "MYSQL_DATA_TRUNCATED");
-                    break;
-                  }
-                  if (0 == get_count)
-                  {
-                    KvMemValue* p_value = new KvMemValue();
-                    char* data_ = p_value->malloc_data(value_len_);
-                    memcpy(data_, value_buff_, value_len_);
-                    *pp_value = p_value;
-                    *version = version_;
-                  }
-                  get_count++;
-
-                }
-                mysql_next_result(&mysql_.mysql); //mysql bugs, we must have this
-              }
+              mysql_free_result(mysql_ret);
             }
-
           }
+
+
         }
         if (TFS_SUCCESS != ret)
         {
@@ -599,7 +400,6 @@ retry:
         vector<KvValue*> *keys, vector<KvValue*> *values, int32_t* result_size)
     {
       int ret = TFS_SUCCESS;
-      int status;
       int get_count = 0;
 
       if (start_key.key_size_ > MAX_KEY_VAR_SIZE ||
@@ -612,37 +412,10 @@ retry:
       int retry_time = 0;
       if (TFS_SUCCESS == ret)
       {
-        MYSQL_STMT *stmt;
-        MYSQL_BIND ps_params[2];  /* input parameter buffers */
-        char str[1024];
         int limit_=limit;
-        if (limit < 0)
-        {
-          limit_ = -limit;
-          if (skip_first)
-          {
-            snprintf(str, 1024, "select meta_key, meta_value, version from tfsmeta_%d where "
-                "meta_key<? and meta_key<? order by meta_key desc limit %d", area, limit_);
-          }
-          else
-          {
-            snprintf(str, 1024, "select meta_key, meta_value, version from tfsmeta_%d where "
-                "meta_key<=? and meta_key<=? order by meta_key desc limit %d", area, limit_);
-          }
-        }
-        else
-        {
-          if (skip_first)
-          {
-            snprintf(str, 1024, "select meta_key, meta_value, version from tfsmeta_%d where "
-                "meta_key>? and meta_key<=? order by meta_key asc limit %d ", area, limit_);
-          }
-          else
-          {
-            snprintf(str, 1024, "select meta_key, meta_value, version from tfsmeta_%d where "
-                "meta_key>=? and meta_key<=? order by meta_key asc limit %d ", area, limit_);
-          }
-        }
+        int64_t pos = 0;
+        pos = snprintf(sql_str_, max_sql_size_,
+            "select meta_key, meta_value, version from tfsmeta_%d where ", area);
 
         tbutil::Mutex::Lock lock(mutex_);
 retry:
@@ -652,147 +425,90 @@ retry:
         }
         if (is_connected_)
         {
-          stmt = mysql_stmt_init(&mysql_.mysql);
-          ret = TFS_SUCCESS;
-          status = mysql_stmt_prepare(stmt, str, strlen(str));
-          if (status)
+          if (limit < 0)
           {
-            if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
+            limit_ = -limit;
+            if (skip_first)
             {
-              close();
-              goto retry;
-            }
-            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-            ret = TFS_ERROR;
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            memset(ps_params, 0, sizeof (ps_params));
-            ps_params[0].buffer_type =MYSQL_TYPE_VAR_STRING;
-            ps_params[0].buffer = (char *)start_key.key_;
-            unsigned long key_size_ = start_key.key_size_;
-            ps_params[0].length = &key_size_;
-            ps_params[0].is_null = 0;
-
-            ps_params[1].buffer_type =MYSQL_TYPE_VAR_STRING;
-            unsigned long value_size_ = 0;
-            if (limit < 0 )
-            {
-              ps_params[1].buffer = (char *)start_key.key_;
-              value_size_ = start_key.key_size_;
-              ps_params[1].length = &value_size_;
-              ps_params[1].is_null = 0;
+              pos += sprintf(sql_str_ + pos, "%s", "meta_key<'");
             }
             else
             {
-              ps_params[1].buffer = (char *)end_key.key_;
-              value_size_ = end_key.key_size_;
-              ps_params[1].length = &value_size_;
-              ps_params[1].is_null = 0;
+              pos += sprintf(sql_str_ + pos, "%s", "meta_key<='");
             }
-
-            status = mysql_stmt_bind_param(stmt, ps_params);
-            if (status)
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                start_key.key_, start_key.key_size_);
+            pos += sprintf(sql_str_ + pos, "' order by meta_key desc limit %d ", limit_);
+          }
+          else
+          {
+            if (skip_first)
             {
-              TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                  mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+              pos += sprintf(sql_str_ + pos, "%s", "meta_key>'");
+            }
+            else
+            {
+              pos += sprintf(sql_str_ + pos, "%s", "meta_key>='");
+            }
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                start_key.key_, start_key.key_size_);
+            pos += sprintf(sql_str_ + pos, "' and meta_key <= '");
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                end_key.key_, end_key.key_size_);
+            pos += sprintf(sql_str_ + pos, "' order by meta_key asc limit %d ", limit_);
+          }
+          ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
+          if (0 != ret)
+          {
+            TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
+            ret = mysql_errno(&mysql_.mysql);
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
+          }
+          else
+          {
+            MYSQL_ROW row;
+            MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+            if (mysql_ret == NULL)
+            {
+              TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
               ret = TFS_ERROR;
             }
-            if (TFS_SUCCESS == ret)
+            else
             {
-              status = mysql_stmt_execute(stmt);
-              if (status)
+              while(NULL != (row = mysql_fetch_row(mysql_ret)))
               {
-                if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
+                unsigned long *lengths;
+                lengths = mysql_fetch_lengths(mysql_ret);
+                int key_size = lengths[0];
+                int value_size = lengths[1];
+                if (key_size > key_buff_size_)
                 {
-                  close();
-                  goto retry;
+                  TBSYS_LOG(ERROR, "key size error %d truncated it", key_size);
+                  key_size = key_buff_size_;
                 }
-                TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                    mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-                ret = TFS_ERROR;
+                if (value_size > value_buff_size_ )
+                {
+                  TBSYS_LOG(ERROR, "value size error %d truncated it", value_size);
+                  value_size = value_buff_size_;
+                }
+                KvMemValue* p_key = new KvMemValue();
+                char* data_ =(p_key)->malloc_data(key_size);
+                memcpy(data_, row[0], key_size);
+                keys->push_back(p_key);
+
+                KvMemValue* p_value = new KvMemValue();
+                data_ =(p_value)->malloc_data(value_size);
+                memcpy(data_, row[1], value_size);
+                values->push_back(p_value);
+
+                get_count++;
+
               }
-              if (TFS_SUCCESS == ret)
-              {
-                MYSQL_BIND rs_bind[3];  /* for output buffers */
-                my_bool    is_null[3];
-
-                memset(rs_bind, 0, sizeof (rs_bind) );
-                unsigned long key_len_ = 0;
-                unsigned long value_len_ = 0;
-                int32_t version_ = 0;
-
-                /* set up and bind result set output buffers */
-                rs_bind[0].buffer_type = MYSQL_TYPE_BLOB;
-                rs_bind[0].is_null = &is_null[0];
-                rs_bind[0].buffer_length = key_buff_size_;
-                rs_bind[0].buffer = (char *) key_buff_;
-                rs_bind[0].length= &key_len_;
-
-                rs_bind[1].buffer_type = MYSQL_TYPE_BLOB;
-                rs_bind[1].is_null = &is_null[1];
-                rs_bind[1].buffer_length = value_buff_size_;
-                rs_bind[1].buffer = (char *) value_buff_;
-                rs_bind[1].length= &value_len_;
-
-                rs_bind[2].buffer_type = MYSQL_TYPE_LONG;
-                rs_bind[2].is_null = &is_null[2];
-                rs_bind[2].buffer = (char *) &version_;
-
-                status = mysql_stmt_bind_result(stmt, rs_bind);
-                if (status)
-                {
-                  TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                      mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-                  ret = TFS_ERROR;
-                }
-                if (TFS_SUCCESS == ret)
-                {
-                  status = mysql_stmt_store_result(stmt);
-                  if (status)
-                  {
-                    TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                        mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-                    ret = TFS_ERROR;
-                  }
-                }
-                while (TFS_SUCCESS == ret )
-                {
-                  status = mysql_stmt_fetch(stmt);
-                  if (1 == status)
-                  {
-                    TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-                        mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
-                    ret = TFS_ERROR;
-                    break;
-                  }
-                  else if (MYSQL_NO_DATA == status)
-                  {
-                    break;
-                  }
-                  else if (MYSQL_DATA_TRUNCATED == status)
-                  {
-                    TBSYS_LOG(ERROR, "MYSQL_DATA_TRUNCATED");
-                    break;
-                  }
-                  KvMemValue* p_key = new KvMemValue();
-                  char* data_ =(p_key)->malloc_data(key_len_);
-                  memcpy(data_, key_buff_, key_len_);
-                  keys->push_back(p_key);
-
-                  KvMemValue* p_value = new KvMemValue();
-                  data_ =(p_value)->malloc_data(value_len_);
-                  memcpy(data_, value_buff_, value_len_);
-                  values->push_back(p_value);
-
-                  get_count++;
-                }
-                mysql_next_result(&mysql_.mysql); //mysql bugs, we must have this
-              }
+              mysql_free_result(mysql_ret);
             }
-
           }
+
+
         }
         if (TFS_SUCCESS != ret)
         {
@@ -872,14 +588,14 @@ retry:
       status = mysql_stmt_execute(stmt);
       if (status)
       {
-        if (1062 == mysql_stmt_errno(stmt))
+        if (ER_DUP_ENTRY == mysql_stmt_errno(stmt))
         {
           mysql_proc_ret = EXIT_KV_RETURN_VERSION_ERROR;
         }
         else
         {
-        TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
-            mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
         }
         ret = false;
       }
