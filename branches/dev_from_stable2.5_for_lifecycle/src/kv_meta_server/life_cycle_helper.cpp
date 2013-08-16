@@ -90,13 +90,13 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int days_sec = 0;
-        int days_hour = 0;
-        ExpireDefine::transfer_time(invalid_time_s, &days_sec, &days_hour);
+        int hours_sec = 0;
+        ExpireDefine::transfer_time(invalid_time_s, &days_sec, &hours_sec);
 
         hash_mod = tbsys::CStringUtil::murMurHash(file_name.c_str(), file_name.length());
         hash_mod = hash_mod % ExpireDefine::HASH_BUCKET_NUM;
         TBSYS_LOG(DEBUG, "hash_mod is : %u", hash_mod);
-        ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
+        ret = ExpireDefine::serialize_exptime_app_key(days_sec, hours_sec,
             static_cast<int32_t>(hash_mod), file_type, file_name, &exptime_appkey_key,
             exptime_appkey_key_buff, ExpireDefine::EXPTIME_KEY_BUFF);
       }
@@ -131,7 +131,7 @@ namespace tfs
             //delet kv(key = invalidtime + filename)
             KvKey exptime_appkey_key_old;
             int days_sec = 0;
-            int days_hour = 0;
+            int hours_sec = 0;
             char* name_exptime_key_old_buff= (char*) malloc(ExpireDefine::EXPTIME_KEY_BUFF);
             if (NULL == name_exptime_key_buff)
             {
@@ -139,9 +139,9 @@ namespace tfs
             }
             if (TFS_SUCCESS == ret)
             {
-              ExpireDefine::transfer_time(old_invlaid_time, &days_sec, &days_hour);
+              ExpireDefine::transfer_time(old_invlaid_time, &days_sec, &hours_sec);
 
-              ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
+              ret = ExpireDefine::serialize_exptime_app_key(days_sec, hours_sec,
                   static_cast<int32_t>(hash_mod), file_type, file_name, &exptime_appkey_key_old,
                   name_exptime_key_old_buff, ExpireDefine::EXPTIME_KEY_BUFF);
             }
@@ -311,16 +311,16 @@ namespace tfs
       {
         int32_t old_invlaid_time = 0;
         int32_t days_sec = 0;
-        int32_t days_hour = 0;
+        int32_t hours_sec = 0;
         ret = ExpireDefine::deserialize_name_expiretime_value(
             kv_value->get_data(), kv_value->get_size(), &old_invlaid_time);
         //we got invalid time, we can make next kvkey
         if (TFS_SUCCESS == ret)
         {
-          ExpireDefine::transfer_time(old_invlaid_time, &days_sec, &days_hour);
+          ExpireDefine::transfer_time(old_invlaid_time, &days_sec, &hours_sec);
           hash_mod = tbsys::CStringUtil::murMurHash(file_name.c_str(), file_name.length());
           hash_mod = hash_mod % ExpireDefine::HASH_BUCKET_NUM;
-          ret = ExpireDefine::serialize_exptime_app_key(days_sec, days_hour,
+          ret = ExpireDefine::serialize_exptime_app_key(days_sec, hours_sec,
               static_cast<int32_t>(hash_mod), file_type, file_name, &exptime_appkey_key,
               exptime_appkey_key_buff, ExpireDefine::EXPTIME_KEY_BUFF);
         }

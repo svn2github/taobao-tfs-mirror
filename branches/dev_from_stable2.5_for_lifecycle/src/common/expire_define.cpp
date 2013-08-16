@@ -87,7 +87,7 @@ namespace tfs
         const int32_t hash_mod, const int32_t file_type, const std::string &file_name,
         KvKey *key, char *data, const int32_t size)
     {
-      int ret = (hash_mod >= 0 && hash_mod < ExpireDefine::HASH_BUCKET_NUM && days_secs > 0 && hours_secs >= 0
+      int ret = (hash_mod >= 0 && hash_mod < ExpireDefine::HASH_BUCKET_NUM && days_secs >= 0 && hours_secs >= 0
           && key != NULL &&  data != NULL ) ? TFS_SUCCESS : TFS_ERROR;
       int64_t pos = 0;
       if(TFS_SUCCESS == ret)
@@ -136,9 +136,12 @@ namespace tfs
       }
 
       //file name
-      if (file_type == FILE_TYPE_RAW_TFS|| file_type == FILE_TYPE_CUSTOM_TFS)
+      if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_string(data, size, pos, file_name);
+        if (file_type == FILE_TYPE_RAW_TFS|| file_type == FILE_TYPE_CUSTOM_TFS)
+        {
+          ret = Serialization::set_string(data, size, pos, file_name);
+        }
       }
 
       if (TFS_SUCCESS == ret)
