@@ -262,7 +262,7 @@ namespace tfs
           }
           else
           {
-            dump(TBSYS_LOG_LEVEL(INFO), "%s block: %u complete, but status: %s error",
+            dump(TBSYS_LOG_LEVEL(INFO), "%s block: %"PRI64_PREFIX"u complete, but status: %s error",
               transform_type_to_str(), blocks.block_id_, transform_status_to_str(status_));
           }
         }

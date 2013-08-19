@@ -144,11 +144,8 @@ namespace tfs
       const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
       for (int32_t i = 0; i < MEMBER_NUM ; ++i)
       {
-        if (INVALID_BLOCK_ID != members_[i].first)
-        {
-          param.data_.writeInt64(members_[i].first);
-          param.data_.writeInt32(members_[i].second);
-        }
+        param.data_.writeInt64(members_[i].first);//block_id
+        param.data_.writeInt32(members_[i].second);//version
       }
       return TFS_SUCCESS;
     }

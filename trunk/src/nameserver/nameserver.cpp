@@ -362,7 +362,7 @@ namespace tfs
           tbnet::Packet* packet = client->get_source_msg();
           assert(NULL != packet);
           int32_t pcode = packet->getPCode();
-          if (REMOVE_BLOCK_MESSAGE == pcode)
+          if (REMOVE_BLOCK_MESSAGE_V2 == pcode)
           {
             if (!sresponse->empty())
             {
@@ -421,7 +421,7 @@ namespace tfs
           else
           {
             ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret,
-                  "got error, when get block: %u mode: %d, result: %d information, %s",
+                  "got error, when get block: %"PRI64_PREFIX"u mode: %d, result: %d information, %s",
                   block_id, mode, ret,tbsys::CNetUtil::addrToString(ipport).c_str());
           }
         }
@@ -465,7 +465,7 @@ namespace tfs
           else
           {
             ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret,
-                  "got error, when get block: %u mode: %d, result: %d information, %s",
+                  "got error, when get block: %"PRI64_PREFIX"u mode: %d, result: %d information, %s",
                   block_id, mode, ret,tbsys::CNetUtil::addrToString(ipport).c_str());
           }
         }
