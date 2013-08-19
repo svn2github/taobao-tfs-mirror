@@ -404,8 +404,10 @@ namespace tfs
     enum SSMType
     {
       SSM_TYPE_BLOCK = 0x01,
-      SSM_TYPE_SERVER = 0x02
+      SSM_TYPE_SERVER = 0x02,
+      SSM_TYPE_FAMILY = 0x04
     };
+
     enum SSMChildBlockType
     {
       SSM_CHILD_BLOCK_TYPE_INFO   = 0x01,

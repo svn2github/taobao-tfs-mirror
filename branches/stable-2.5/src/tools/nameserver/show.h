@@ -37,12 +37,11 @@ namespace tfs
             int32_t count, const int32_t interval, const std::string& filename);
         int show_machine(const int8_t flag, const int32_t num,
             int32_t count, const int32_t interval, const std::string& filename);
-        int show_block(const int8_t flag, const int32_t num, const uint64_t block_id, const int32_t block_chunk_num,
-            int32_t count, const int32_t interval, const std::string& filename);
-        int show_block_distribution(const int8_t flag, std::string& rack_ip_mask, const int32_t num, const uint64_t block_id, const int32_t block_chunk_num,
-            int32_t count, const int32_t interval, const std::string& filename);
-        int show_rack_block(const int8_t type, std::string& rack_ip_mask, std::string& rack_ip_group, const int32_t num, int32_t count, const int32_t interval, 
+        int show_block(const int8_t flag, const int32_t num, const uint64_t block_id, int32_t count, const int32_t interval, const std::string& filename);
+        int show_block_distribution(const int8_t flag, std::string& rack_ip_mask, const int32_t num, const uint64_t block_id, int32_t count, const int32_t interval, const std::string& filename);
+        int show_rack_block(const int8_t type, std::string& rack_ip_mask, std::string& rack_ip_group, const int32_t num, int32_t count, const int32_t interval,
           const std::string& filename);
+        int show_family(const int32_t num, const int64_t family_id, int32_t count, const int32_t interval, const std::string& filename);
         bool is_loop_;
         bool interrupt_;
 
@@ -55,6 +54,7 @@ namespace tfs
         std::map<uint64_t, ServerShow> server_map_;
         std::map<uint64_t, MachineShow> machine_map_;
         std::set<BlockShow> block_set_;
+        std::set<FamilyShow> family_set_;
         uint64_t ns_ip_;
     };
   }
