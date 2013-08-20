@@ -36,7 +36,6 @@
 #include "client_request_server.h"
 #include "op_manager.h"
 #include "lease_managerv2.h"
-#include "heart_manager.h"
 #include "data_helper.h"
 #include "task_manager.h"
 #include "traffic_control.h"
@@ -108,7 +107,7 @@ namespace tfs
       // common interfaces
       inline BlockManager& get_block_manager() { return *block_manager_;}
       inline OpManager& get_op_manager() { return op_manager_; }
-      inline LeaseManager& get_lease_manager() { return lease_manager_; }
+      inline LeaseManager& get_lease_manager() { return *lease_manager_; }
       inline DataHelper&  get_data_helper() { return data_helper_;}
       inline TaskManager&  get_task_manager() { return task_manager_;}
       inline TrafficControl& get_traffic_control() { return traffic_control_;}
@@ -157,7 +156,6 @@ namespace tfs
       void timeout_();
       void run_task_();
       void run_check_();
-      void run_lease_();
       void run_apply_block_();
       void rotate_(time_t& last_rotate_log_time, time_t now, time_t zonesec);
 
@@ -210,23 +208,6 @@ namespace tfs
       };
       typedef tbutil::Handle<RunCheckThreadHelper> RunCheckThreadHelperPtr;
 
-      class RunLeaseThreadHelper: public tbutil::Thread
-      {
-        public:
-          explicit RunLeaseThreadHelper(DataService& service):
-            service_(service)
-          {
-            start();
-          }
-          virtual ~RunLeaseThreadHelper(){}
-          void run();
-        private:
-          DataService& service_;
-        private:
-          DISALLOW_COPY_AND_ASSIGN(RunLeaseThreadHelper);
-      };
-      typedef tbutil::Handle<RunLeaseThreadHelper> RunLeaseThreadHelperPtr;
-
       class RunApplyBlockThreadHelper: public tbutil::Thread
       {
         public:
@@ -250,13 +231,12 @@ namespace tfs
       std::string server_index_;
       Requester ds_requester_;
       OpManager op_manager_;
-      LeaseManager lease_manager_;
+      LeaseManager *lease_manager_;
       DataHelper data_helper_;
       TaskManager task_manager_;
       BlockManager *block_manager_;
       DataManagement data_management_;
       TrafficControl traffic_control_;
-      DataServerHeartManager* heart_manager_;
       ClientRequestServer client_request_server_;
       WritableBlockManager writable_block_manager_;
       CheckManager check_manager_;
@@ -264,7 +244,6 @@ namespace tfs
       TimeoutThreadHelperPtr  timeout_thread_;
       RunTaskThreadHelperPtr  task_thread_;
       RunCheckThreadHelperPtr check_thread_;
-      RunLeaseThreadHelperPtr lease_thread_;
     };
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

@@ -50,11 +50,6 @@ namespace tfs
       return service_.get_block_manager();
     }
 
-    WritableBlockManager& OpManager::get_writable_block_manager()
-    {
-      return service_.get_writable_block_manager();
-    }
-
     LeaseManager& OpManager::get_lease_manager()
     {
       return service_.get_lease_manager();
@@ -69,25 +64,20 @@ namespace tfs
 
       if (direct)
       {
-        ret = get_lease_manager().is_expired(Func::get_monotonic_time()) ?
-          EXIT_BLOCK_LEASE_INVALID_ERROR: TFS_SUCCESS;
+        WritableBlock* block = NULL;
+        if (INVALID_BLOCK_ID == block_id)
+        {
+          ret = get_lease_manager().alloc_writable_block(block);
+        }
+        else
+        {
+          ret = get_lease_manager().alloc_update_block(block_id, block);
+        }
+
         if (TFS_SUCCESS == ret)
         {
-          WritableBlock* block = NULL;
-          if (INVALID_BLOCK_ID == block_id)
-          {
-            ret = get_writable_block_manager().alloc_writable_block(block);
-          }
-          else
-          {
-            ret = get_writable_block_manager().alloc_update_block(block_id, block);
-          }
-
-          if (TFS_SUCCESS == ret)
-          {
-            block_id = block->get_block_id();
-            block->get_servers(servers);
-          }
+          block_id = block->get_block_id();
+          block->get_servers(servers);
         }
       }
 
@@ -149,7 +139,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret && direct)
       {
-        ret = get_lease_manager().is_expired(Func::get_monotonic_time()) ?
+        ret = get_lease_manager().has_valid_lease(Func::get_monotonic_time()) ?
           EXIT_BLOCK_LEASE_INVALID_ERROR: TFS_SUCCESS;
       }
 
@@ -252,7 +242,7 @@ namespace tfs
       {
         if (direct)
         {
-          get_writable_block_manager().free_writable_block(block_id);
+          get_lease_manager().free_writable_block(block_id);
         }
         OpId oid(block_id, file_id, op_id);
         remove(oid);

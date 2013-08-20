@@ -46,7 +46,6 @@ namespace tfs
       virtual ~OpManager();
 
       BlockManager& get_block_manager();
-      WritableBlockManager& get_writable_block_manager();
       LeaseManager& get_lease_manager();
 
       // remove expired op meta

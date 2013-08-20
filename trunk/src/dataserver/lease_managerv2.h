@@ -35,62 +35,102 @@ namespace tfs
     };
 
     class DataService;
+    class WritableBlock;
     class WritableBlockManager;
     class LeaseManager
     {
+      #ifdef TFS_GTEST
+      friend class TestLeaseManager;
+      FRIEND_TEST(TestLeaseManager, process_apply_response);
+      FRIEND_TEST(TestLeaseManager, process_renew_response);
+      #endif
+
+
       public:
-        LeaseManager(DataService& service);
+        LeaseManager(DataService& service, const std::vector<uint64_t>& ns_ip_port);
         ~LeaseManager();
+
+        int initialize();
+        void destroy();
 
         WritableBlockManager& get_writable_block_manager();
 
+        // interface for upper layer
+        bool has_valid_lease(const time_t now) const;
+        int alloc_writable_block(WritableBlock*& block);
+        int alloc_update_block(const uint64_t block_id, WritableBlock*& block);
+        void free_writable_block(const uint64_t block_id);
+        void expire_block(const uint64_t block_id);
+
+        // cleanup expired leases
+        int timeout(const time_t now);
+
+        // lease thread
+        void run_lease(const int32_t who);
+
+      private:
         /*
          * ds apply lease after startup
          * if apply fail, ds will keep retry
          */
-        int apply();
+        int apply(const int32_t who);
 
         /*
          * ds renew lease every few seconds
          * if renew fail, ds will retry lease_retry_times
          */
-        int renew();
+        int renew(const int32_t who);
 
         /*
          * ds giveup lease when exit
          */
-        int giveup();
+        int giveup(const int32_t who);
 
-        // cleanup expired leases
-        int timeout(const time_t now);
-
-        // renew thread work
-        void run_lease();
-
-        bool need_renew(const time_t now) const
+        bool need_renew(const time_t now, const int32_t who) const
         {
-          return now >= last_renew_time_ + lease_meta_.lease_renew_time_;
+          return now >= last_renew_time_[who] + lease_meta_[who].lease_renew_time_;
         }
 
-        bool is_expired(const time_t now) const
+        bool is_expired(const time_t now, const int32_t who) const
         {
-          return now >= last_renew_time_ + lease_meta_.lease_expire_time_;
+          return now >= last_renew_time_[who] + lease_meta_[who].lease_expire_time_;
         }
 
-        const common::LeaseMeta& get_lease_meta() const
+        bool is_master(const int32_t who) const
         {
-          return lease_meta_;
+          return lease_meta_[who].ns_role_ != 0; // TODO
         }
 
       private:
-        void process_apply_response(message::DsApplyLeaseResponseMessage* response);
-        void process_renew_response(message::DsRenewLeaseResponseMessage* response);
+        void process_apply_response(message::DsApplyLeaseResponseMessage* response, const int32_t who);
+        void process_renew_response(message::DsRenewLeaseResponseMessage* response, const int32_t who);
+
+      private:
+      class RunLeaseThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit RunLeaseThreadHelper(LeaseManager& manager, const int32_t who):
+            manager_(manager), who_(who)
+          {
+            start();
+          }
+          virtual ~RunLeaseThreadHelper(){}
+          void run();
+        private:
+          LeaseManager& manager_;
+          int32_t who_;
+        private:
+          DISALLOW_COPY_AND_ASSIGN(RunLeaseThreadHelper);
+      };
+      typedef tbutil::Handle<RunLeaseThreadHelper> RunLeaseThreadHelperPtr;
 
       private:
         DataService& service_;
-        common::LeaseMeta lease_meta_;
-        LeaseStatus lease_status_;
-        time_t last_renew_time_;
+        uint64_t ns_ip_port_[common::MAX_SINGLE_CLUSTER_NS_NUM];
+        common::LeaseMeta lease_meta_[common::MAX_SINGLE_CLUSTER_NS_NUM];
+        LeaseStatus lease_status_[common::MAX_SINGLE_CLUSTER_NS_NUM];
+        time_t last_renew_time_[common::MAX_SINGLE_CLUSTER_NS_NUM];
+        RunLeaseThreadHelperPtr lease_thread_[common::MAX_SINGLE_CLUSTER_NS_NUM];
 
       private:
         DISALLOW_COPY_AND_ASSIGN(LeaseManager);

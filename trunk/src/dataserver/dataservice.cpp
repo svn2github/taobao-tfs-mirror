@@ -27,7 +27,6 @@
 #include "common/config_item.h"
 #include "common/directory_op.h"
 #include "new_client/fsname.h"
-#include "heart_manager.h"
 
 namespace tfs
 {
@@ -39,19 +38,17 @@ namespace tfs
     using namespace tfs::message;
     DataService::DataService():
         op_manager_(*this),
-        lease_manager_(*this),
+        lease_manager_(NULL),
         data_helper_(*this),
         task_manager_(*this),
         block_manager_(NULL),
         data_management_(*this),
-        heart_manager_(NULL),
         client_request_server_(*this),
         writable_block_manager_(*this),
         check_manager_(*this),
         timeout_thread_(0),
         task_thread_(0),
-        check_thread_(0),
-        lease_thread_(0)
+        check_thread_(0)
     {
 
     }
@@ -61,8 +58,8 @@ namespace tfs
       vector<SyncBase*>::iterator iter = sync_mirror_.begin();
       for (; iter != sync_mirror_.end(); ++iter)
         tbsys::gDelete((*iter));
+      tbsys::gDelete(lease_manager_);
       tbsys::gDelete(block_manager_);
-      tbsys::gDelete(heart_manager_);
       timeout_thread_ = 0;
       task_thread_ = 0;
     }
@@ -271,15 +268,15 @@ namespace tfs
       // set seed for rand() when service start
       if (TFS_SUCCESS == ret)
       {
-        srand(time(NULL));
+        srandom(time(NULL));
       }
 
-      // init heartbeat
+      // init lease manager
       if (TFS_SUCCESS == ret)
       {
-        heart_manager_    = new (std::nothrow)DataServerHeartManager(*this, ns_ip_port);
-        assert(NULL != heart_manager_);
-        ret = heart_manager_->initialize();
+        lease_manager_ = new (std::nothrow) LeaseManager(*this, ns_ip_port);
+        assert(NULL != lease_manager_);
+        ret = lease_manager_->initialize();
       }
 
       if (TFS_SUCCESS == ret)
@@ -290,8 +287,6 @@ namespace tfs
         assert(0 != timeout_thread_);
         check_thread_ = new (std::nothrow)RunCheckThreadHelper(*this);
         assert(0 != check_thread_);
-        lease_thread_ = new (std::nothrow)RunLeaseThreadHelper(*this);
-        assert(0 != lease_thread_);
       }
       return ret;
     }
@@ -383,8 +378,8 @@ namespace tfs
       for (; iter != sync_mirror_.end(); iter++)
         (*iter)->stop();
 
-      if (NULL != heart_manager_)
-         heart_manager_->wait_for_shut_down();
+      if (NULL != lease_manager_)
+         lease_manager_->destroy();
 
       if (0 != task_thread_)
       {
@@ -400,11 +395,6 @@ namespace tfs
       if (0 != check_thread_)
       {
         check_thread_->join();
-      }
-
-      if (0 != lease_thread_)
-      {
-        lease_thread_->join();
       }
 
       return TFS_SUCCESS;
@@ -440,7 +430,7 @@ namespace tfs
           block_manager_->timeout(Func::get_monotonic_time());
 
         task_manager_.expire_task();
-        lease_manager_.timeout(Func::get_monotonic_time());
+        lease_manager_->timeout(Func::get_monotonic_time());
 
         usleep(MAX_SLEEP_TIME_US);
       }
@@ -454,11 +444,6 @@ namespace tfs
     void DataService::run_check_()
     {
       check_manager_.run_check();
-    }
-
-    void DataService::run_lease_()
-    {
-      lease_manager_.run_lease();
     }
 
     void DataService::run_apply_block_()
@@ -1483,11 +1468,6 @@ namespace tfs
     void DataService::RunCheckThreadHelper::run()
     {
       service_.run_check_();
-    }
-
-    void DataService::RunLeaseThreadHelper::run()
-    {
-      service_.run_lease_();
     }
 
     void DataService::RunApplyBlockThreadHelper::run()

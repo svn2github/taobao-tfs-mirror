@@ -39,13 +39,6 @@ namespace tfs
       }
     };
 
-    enum BlockType
-    {
-      BLOCK_WRITABLE,
-      BLOCK_UPDATE,
-      BLOCK_EXPIRED
-    };
-
     class DataService;
     class LeaseManager;
     class BlockManager;
@@ -53,6 +46,7 @@ namespace tfs
     {
       #ifdef TFS_GTEST
       friend class TestWritableBlockManager;
+      FRIEND_TEST(TestWritableBlockManager, general);
       FRIEND_TEST(TestWritableBlockManager, apply_callback);
       FRIEND_TEST(TestWritableBlockManager, giveup_callback);
       #endif
@@ -65,24 +59,24 @@ namespace tfs
         ~WritableBlockManager();
 
         BlockManager& get_block_manager();
-        LeaseManager& get_lease_manager();
 
-        bool empty(const BlockType type);
-        int size(const BlockType type);
+        int32_t size(const BlockType type);
 
         // apply write block
         void run_apply_and_giveup();
 
         // expire all blocks, move to expired list
-        int expire_all_blocks();
+        void expire_one_block(const uint64_t block_id);
+        void expire_update_blocks();
+        void expire_all_blocks();
 
         // apply and giveup callback
         int callback(common::NewClient* client);
 
         WritableBlock* insert(const uint64_t block_id,
             const common::ArrayHelper<uint64_t>& servers, const BlockType type);
-        WritableBlock* remove(const uint64_t block_id, const BlockType type);
-        WritableBlock* get(const uint64_t block_id, const BlockType type);
+        WritableBlock* remove(const uint64_t block_id);
+        WritableBlock* get(const uint64_t block_id);
 
         // alloc a writable block
         int alloc_writable_block(WritableBlock*& block);
@@ -92,24 +86,28 @@ namespace tfs
         // if ds doesn't have lease, apply for this block
         int alloc_update_block(const uint64_t block_id, WritableBlock*& block);
 
+        // used when renew lease & expire block
+        void get_blocks(common::ArrayHelper<common::BlockInfoV2> blocks, const BlockType type);
+
       private:
-        BLOCK_TABLE* select(const BlockType type);
-        int get_blocks(common::ArrayHelper<common::BlockInfoV2> blocks, const BlockType type);
+        int32_t* select_size(const BlockType type);
         WritableBlock* insert_(const uint64_t block_id,
             const common::ArrayHelper<uint64_t>& servers, const BlockType type);
-        WritableBlock* remove_(const uint64_t block_id, const BlockType type);
-        WritableBlock* get_(const uint64_t block_id, const BlockType type);
+        WritableBlock* remove_(const uint64_t block_id);
+        WritableBlock* get_(const uint64_t block_id);
         int apply_writable_block(const int32_t count);
         int apply_update_block(const int64_t block_id);
         int giveup_writable_block();
         void apply_block_callback(message::DsApplyBlockResponseMessage* response);
         void giveup_block_callback(message::DsGiveupBlockResponseMessage* response);
+        void process_apply_update_block(message::DsApplyBlockForUpdateResponseMessage* response);
 
       private:
         DataService& service_;
         BLOCK_TABLE writable_;
-        BLOCK_TABLE update_;
-        BLOCK_TABLE expired_;
+        int32_t writable_size_;
+        int32_t update_size_;
+        int32_t expired_size_;
         int32_t write_index_;
         mutable common::RWLock rwmutex_;
 

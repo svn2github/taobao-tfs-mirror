@@ -26,6 +26,8 @@ namespace tfs
       GCObject(Func::get_monotonic_time()),
       block_id_(block_id),
       server_size_(0),
+      status_(TFS_SUCCESS),
+      type_(BLOCK_WRITABLE),
       use_(false)
     {
     }
@@ -34,40 +36,24 @@ namespace tfs
     {
     }
 
-    int WritableBlock::set_servers(const common::ArrayHelper<uint64_t> servers)
+    void WritableBlock::set_servers(const common::ArrayHelper<uint64_t> servers)
     {
-      int ret = TFS_SUCCESS;
-      if (servers.get_array_index() <= MAX_REPLICATION_NUM)
+      assert(servers.get_array_index() <= MAX_REPLICATION_NUM);
+      server_size_ = servers.get_array_index();
+      for (int index = 0; index < server_size_; index++)
       {
-        server_size_ = servers.get_array_index();
-        for (int index = 0; index < server_size_; index++)
-        {
-          servers_[index] = *(servers.at(index));
-        }
+        servers_[index] = *(servers.at(index));
       }
-      else
-      {
-        ret = EXIT_PARAMETER_ERROR;
-      }
-      return ret;
     }
 
-    int WritableBlock::get_servers(common::ArrayHelper<uint64_t>& servers)
+    void WritableBlock::get_servers(common::ArrayHelper<uint64_t>& servers)
     {
-      int ret = TFS_SUCCESS;
-      if (servers.get_array_size() >= server_size_)
+      assert(servers.get_array_size() >= server_size_);
+      servers.clear();
+      for (int index = 0; index < server_size_; index++)
       {
-        servers.clear();
-        for (int index = 0; index < server_size_; index++)
-        {
-          servers.push_back(servers_[index]);
-        }
+        servers.push_back(servers_[index]);
       }
-      else
-      {
-        ret = EXIT_PARAMETER_ERROR;
-      }
-      return ret;
     }
 
     void WritableBlock::get_servers(common::VUINT64& servers)

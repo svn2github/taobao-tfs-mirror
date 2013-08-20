@@ -25,8 +25,9 @@ namespace tfs
     WritableBlockManager::WritableBlockManager(DataService& service):
       service_(service),
       writable_(MAX_WRITABLE_BLOCK_COUNT, 1024, 0.1),
-      update_(MAX_WRITABLE_BLOCK_COUNT, 1024, 0.1),
-      expired_(MAX_WRITABLE_BLOCK_COUNT, 1024, 0.1),
+      writable_size_(0),
+      update_size_(0),
+      expired_size_(0),
       write_index_(0)
     {
     }
@@ -39,68 +40,72 @@ namespace tfs
         tbsys::gDelete(*iter);
       }
       writable_.clear();
-
-      iter = update_.begin();
-      for ( ; iter != update_.end(); iter++)
-      {
-        tbsys::gDelete(*iter);
-      }
-      update_.clear();
-
-      iter = expired_.begin();
-      for ( ; iter != expired_.end(); iter++)
-      {
-        tbsys::gDelete(*iter);
-      }
-      expired_.clear();
     }
 
     BlockManager& WritableBlockManager::get_block_manager()
     {
+      RWLock::Lock lock(rwmutex_, READ_LOCKER);
       return service_.get_block_manager();
     }
 
-    LeaseManager& WritableBlockManager::get_lease_manager()
+    void WritableBlockManager::expire_one_block(const uint64_t block_id)
     {
-      return service_.get_lease_manager();
+      RWLock::Lock lock(rwmutex_, READ_LOCKER);
+      WritableBlock* block = get_(block_id);
+      if (NULL != block)
+      {
+        (*select_size(block->get_type()))--;
+        block->set_type(BLOCK_EXPIRED);
+        (*select_size(BLOCK_EXPIRED))++;
+      }
     }
 
-    int WritableBlockManager::expire_all_blocks()
+    void WritableBlockManager::expire_update_blocks()
     {
       RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
       BLOCK_TABLE::iterator iter = writable_.begin();
       for ( ; iter != writable_.end(); iter++)
       {
-        WritableBlock* result = NULL;
-        expired_.insert_unique(result, *iter);
+        if ((*iter)->get_type() == BLOCK_UPDATE)
+        {
+          (*iter)->set_type(BLOCK_EXPIRED);
+        }
       }
-      writable_.clear();
+      expired_size_ += update_size_;
+      update_size_ = 0;
+    }
 
-      iter = update_.begin();
-      for ( ; iter != update_.end(); iter++)
+    void WritableBlockManager::expire_all_blocks()
+    {
+      RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
+      BLOCK_TABLE::iterator iter = writable_.begin();
+      for ( ; iter != writable_.end(); iter++)
       {
-        WritableBlock* result = NULL;
-        expired_.insert_unique(result, *iter);
+        (*iter)->set_type(BLOCK_EXPIRED);
       }
-      update_.clear();
-
-      return TFS_SUCCESS;
+      expired_size_ += writable_size_ + update_size_;
+      writable_size_ = 0;
+      update_size_ = 0;
     }
 
     void WritableBlockManager::run_apply_and_giveup()
     {
       int ret = TFS_SUCCESS;
-      const int32_t SLEEP_TIME_US = 1 * 1000 * 1000;//1s
+      const int32_t SLEEP_TIME_US = 1 * 1000 * 1000;
+      int64_t last_giveup_time = 0;
+      int32_t async_timeout = DEFAULT_NETWORK_CALL_TIMEOUT * 1000 + 100000;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       while (!ds_info.is_destroyed())
       {
+        int64_t now = Func::get_monotonic_time();
+
         // giveup expired block first
         int32_t expired = size(BLOCK_EXPIRED);
-        if (expired > 0)
+        if (expired > 0 && last_giveup_time + async_timeout < now) // wait giveup callback end
         {
           ret = giveup_writable_block();
+          last_giveup_time = now;
           TBSYS_LOG(DEBUG, "giveup writable block, ret: %d", ret);
-          usleep(DEFAULT_NETWORK_CALL_TIMEOUT * 1000); // wait giveup block callback TODO
         }
 
         // apply writable block
@@ -115,18 +120,28 @@ namespace tfs
       }
     }
 
-    bool WritableBlockManager::empty(const BlockType type)
+    int32_t WritableBlockManager::size(const BlockType type)
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      BLOCK_TABLE* target = select(type);
-      return target->empty();
+      return *select_size(type);
     }
 
-    int WritableBlockManager::size(const BlockType type)
+    int32_t* WritableBlockManager::select_size(const BlockType type)
     {
-      RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      BLOCK_TABLE* target = select(type);
-      return target->size();
+      int32_t* size = NULL;
+      if (type == BLOCK_WRITABLE)
+      {
+        size = &writable_size_;
+      }
+      else if (type == BLOCK_UPDATE)
+      {
+        size = &update_size_;
+      }
+      else
+      {
+        size = &expired_size_;
+      }
+      return size;
     }
 
     WritableBlock* WritableBlockManager::insert(const uint64_t block_id,
@@ -136,16 +151,16 @@ namespace tfs
       return insert_(block_id, servers, type);
     }
 
-    WritableBlock* WritableBlockManager::remove(const uint64_t block_id, const BlockType type)
+    WritableBlock* WritableBlockManager::remove(const uint64_t block_id)
     {
       RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
-      return remove_(block_id, type);
+      return remove_(block_id);
     }
 
-    WritableBlock* WritableBlockManager::get(const uint64_t block_id, const BlockType type)
+    WritableBlock* WritableBlockManager::get(const uint64_t block_id)
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      return get_(block_id, type);
+      return get_(block_id);
     }
 
     WritableBlock* WritableBlockManager::insert_(const uint64_t block_id,
@@ -155,10 +170,9 @@ namespace tfs
       int ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        BLOCK_TABLE* target = select(type);
         WritableBlock* block = new (std::nothrow) WritableBlock(block_id);
         assert(NULL != block);
-        ret = target->insert_unique(result, block);
+        ret = writable_.insert_unique(result, block);
         if (TFS_SUCCESS != ret)
         {
           tbsys::gDelete(block);
@@ -172,44 +186,39 @@ namespace tfs
         if (NULL != result)
         {
           result->set_servers(servers);
+          result->set_type(type);
+          (*select_size(type))++;
         }
       }
       return result;
     }
 
-    WritableBlock* WritableBlockManager::remove_(const uint64_t block_id, const BlockType type)
+    WritableBlock* WritableBlockManager::remove_(const uint64_t block_id)
     {
       WritableBlock* result = NULL;
       int ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        BLOCK_TABLE* target = select(type);
         WritableBlock query(block_id);
-        result = target->erase(&query);
+        result = writable_.erase(&query);
         if (NULL != result)
         {
-          if (BLOCK_EXPIRED != type)  // add to expired list
-          {
-            WritableBlock* expire = NULL;
-            expired_.insert_unique(expire, result);
-          }
+          (*select_size(result->get_type()))--;
         }
       }
       return result;
     }
 
-    WritableBlock* WritableBlockManager::get_(const uint64_t block_id, const BlockType type)
+    WritableBlock* WritableBlockManager::get_(const uint64_t block_id)
     {
       WritableBlock* result = NULL;
       int ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         WritableBlock query(block_id);
-        BLOCK_TABLE* target = select(type);
-        BLOCK_TABLE_ITER iter = target->find(&query);
-        if (iter != target->end())
+        BLOCK_TABLE_ITER iter = writable_.find(&query);
+        if (iter != writable_.end())
         {
-          // TODO, check if lease expired
           result = *iter;
           assert(NULL != result);
         }
@@ -233,7 +242,7 @@ namespace tfs
         int32_t index = write_index_++;
         WritableBlock* target = writable_.at(index);
         assert(NULL != target);
-        if (!target->get_use_flag())
+        if (target->get_type() != BLOCK_EXPIRED && !target->get_use_flag())
         {
           target->set_use_flag(true);
           block_id = target->get_block_id();
@@ -251,36 +260,22 @@ namespace tfs
       int ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       block = NULL;
       WritableBlock* target = NULL;
-      rwmutex_.rdlock();
 
-      // find in writable block list
       if (TFS_SUCCESS == ret)
       {
-        target = get_(block_id, BLOCK_WRITABLE);
-        if (NULL != target)
+        rwmutex_.rdlock();
+        target = get_(block_id);
+        ret = NULL == target ? EXIT_NO_WRITABLE_BLOCK : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
         {
           ret = target->get_use_flag() ? EXIT_BLOCK_HAS_WRITE : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
+          {
+            ret = target->get_type() == BLOCK_EXPIRED ? EXIT_NO_WRITABLE_BLOCK: TFS_SUCCESS;
+          }
         }
-        else
-        {
-          ret = EXIT_NO_WRITABLE_BLOCK;
-        }
+        rwmutex_.unlock();
       }
-
-      // find in update block list
-      if (EXIT_NO_WRITABLE_BLOCK == ret)
-      {
-        target = get_(block_id, BLOCK_UPDATE);
-        if (NULL != target)
-        {
-          ret = target->get_use_flag() ? EXIT_BLOCK_HAS_WRITE : TFS_SUCCESS;
-        }
-        else
-        {
-          ret = EXIT_NO_WRITABLE_BLOCK;
-        }
-      }
-      rwmutex_.unlock();
 
       // apply from ns
       if (EXIT_NO_WRITABLE_BLOCK == ret)
@@ -288,7 +283,7 @@ namespace tfs
         ret = apply_update_block(block_id);
         if (TFS_SUCCESS == ret)
         {
-          target = get(block_id, BLOCK_UPDATE);
+          target = get(block_id);
           assert(NULL != target);
         }
       }
@@ -307,13 +302,7 @@ namespace tfs
       if (INVALID_BLOCK_ID != block_id)
       {
         RWLock::Lock lock(rwmutex_, READ_LOCKER);
-        WritableBlock* block = get_(block_id, BLOCK_WRITABLE);
-        // cannot find in writable block list
-        if (NULL == block)
-        {
-          block = get_(block_id, BLOCK_UPDATE);
-        }
-
+        WritableBlock* block = get_(block_id);
         if (NULL != block)
         {
           block->set_use_flag(false);
@@ -333,6 +322,7 @@ namespace tfs
       req_msg.set_server_id(ds_info.information_.id_);
 
       NewClient* new_client = NewClientManager::get_instance().create_client();
+      ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = post_msg_to_server(ds_info.ns_vip_port_, new_client, &req_msg, ds_async_callback);
@@ -341,11 +331,6 @@ namespace tfs
           NewClientManager::get_instance().destroy_client(new_client);
         }
       }
-      else
-      {
-        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
-      }
-
       return ret;
     }
 
@@ -360,6 +345,7 @@ namespace tfs
 
       tbnet::Packet* ret_msg = NULL;
       NewClient* new_client = NewClientManager::get_instance().create_client();
+      ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = send_msg_to_server(ds_info.ns_vip_port_, new_client, &req_msg, ret_msg);
@@ -369,13 +355,7 @@ namespace tfs
           {
             DsApplyBlockForUpdateResponseMessage* resp_msg =
               dynamic_cast<DsApplyBlockForUpdateResponseMessage* >(ret_msg);
-            BlockLease& block_lease = resp_msg->get_block_lease();
-            if (TFS_SUCCESS == (ret = block_lease.result_)) // save apply result
-            {
-              ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM,
-                  block_lease.servers_, block_lease.size_);
-              insert(block_lease.block_id_, servers, BLOCK_UPDATE);
-            }
+            process_apply_update_block(resp_msg);
           }
         }
         else if (STATUS_MESSAGE == ret_msg->getPCode())
@@ -412,6 +392,7 @@ namespace tfs
       req_msg.set_size(blocks.get_array_index());
 
       NewClient* new_client = NewClientManager::get_instance().create_client();
+      ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = post_msg_to_server(ds_info.ns_vip_port_, new_client, &req_msg, ds_async_callback);
@@ -420,56 +401,33 @@ namespace tfs
           NewClientManager::get_instance().destroy_client(new_client);
         }
       }
-      else
-      {
-        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
-      }
-
       return ret;
     }
 
-    int WritableBlockManager::get_blocks(common::ArrayHelper<BlockInfoV2> blocks,
+    void WritableBlockManager::get_blocks(common::ArrayHelper<BlockInfoV2> blocks,
         const BlockType type)
     {
       int ret = TFS_SUCCESS;
-      BLOCK_TABLE* target = select(type);
-      BLOCK_TABLE_ITER iter = target->begin();
-      for ( ; iter != target->end() &&
+      BLOCK_TABLE_ITER iter = writable_.begin();
+      for ( ; iter != writable_.end() &&
           blocks.get_array_index() < blocks.get_array_size(); iter++)
       {
-        uint64_t block_id = (*iter)->get_block_id();
-        BlockInfoV2 block_info;
-        ret = get_block_manager().get_block_info(block_info, block_id);
-        if (TFS_SUCCESS == ret)
+        if (type == (*iter)->get_type())
         {
-          blocks.push_back(block_info);
+          uint64_t block_id = (*iter)->get_block_id();
+          BlockInfoV2 block_info;
+          ret = get_block_manager().get_block_info(block_info, block_id);
+          if (TFS_SUCCESS == ret)
+          {
+            blocks.push_back(block_info);
+          }
         }
-        else
-        {
-          remove_(block_id, type); // can't use anymore
-        }
       }
-      return TFS_SUCCESS;
-    }
-
-    WritableBlockManager::BLOCK_TABLE* WritableBlockManager::select(const BlockType type)
-    {
-      // defualt select writable table
-      BLOCK_TABLE* target = &writable_;
-      if (BLOCK_UPDATE == type)
-      {
-        target = &update_;
-      }
-      else if (BLOCK_EXPIRED == type)
-      {
-        target = &expired_;
-      }
-      return target;
     }
 
     int WritableBlockManager::callback(NewClient* client)
     {
-      int ret = (NULL == client) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
       NewClient::RESPONSE_MSG_MAP* sresponse = NULL;
       NewClient::RESPONSE_MSG_MAP* fresponse = NULL;
       tbnet::Packet* source = NULL;
@@ -518,6 +476,17 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    void WritableBlockManager::process_apply_update_block(message::DsApplyBlockForUpdateResponseMessage* response)
+    {
+      BlockLease& block_lease = response->get_block_lease();
+      if (TFS_SUCCESS == block_lease.result_)
+      {
+        ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM,
+            block_lease.servers_, block_lease.size_);
+        insert(block_lease.block_id_, servers, BLOCK_UPDATE);
+      }
+    }
+
     void WritableBlockManager::apply_block_callback(DsApplyBlockResponseMessage* response)
     {
       assert(NULL != response);
@@ -547,7 +516,7 @@ namespace tfs
         if (TFS_SUCCESS == block_lease[index].result_)
         {
           uint64_t block_id = block_lease[index].block_id_;
-          WritableBlock* block = remove(block_id, BLOCK_EXPIRED);
+          WritableBlock* block = remove(block_id);
           if (NULL != block)
           {
 #ifndef TFS_GTEST

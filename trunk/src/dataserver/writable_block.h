@@ -27,6 +27,13 @@ namespace tfs
 {
   namespace dataserver
   {
+    enum BlockType
+    {
+      BLOCK_WRITABLE,
+      BLOCK_UPDATE,
+      BLOCK_EXPIRED
+    };
+
     class WritableBlock : public GCObject
     {
       public:
@@ -53,14 +60,36 @@ namespace tfs
           return use_;
         }
 
-        int set_servers(const common::ArrayHelper<uint64_t> servers);
-        int get_servers(common::ArrayHelper<uint64_t>& servers);
+        void set_type(const BlockType type)
+        {
+          type_ = type;
+        }
+
+        BlockType get_type() const
+        {
+          return type_;
+        }
+
+        void set_status(const int32_t status)
+        {
+          status_ = status;
+        }
+
+        int32_t get_status() const
+        {
+          return status_;
+        }
+
+        void set_servers(const common::ArrayHelper<uint64_t> servers);
+        void get_servers(common::ArrayHelper<uint64_t>& servers);
         void get_servers(common::VUINT64& servers);
 
       private:
         uint64_t block_id_;
         uint64_t servers_[common::MAX_REPLICATION_NUM];
         int32_t server_size_;
+        int32_t status_;
+        BlockType type_;
         bool use_; // if block using by write, update or unlink ops
     };
   }
