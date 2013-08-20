@@ -68,6 +68,9 @@ namespace tfs
         // lease thread
         void run_lease(const int32_t who);
 
+        // apply & giveup block thread
+        void run_apply_and_giveup();
+
       private:
         /*
          * ds apply lease after startup
@@ -124,6 +127,23 @@ namespace tfs
       };
       typedef tbutil::Handle<RunLeaseThreadHelper> RunLeaseThreadHelperPtr;
 
+      class RunApplyBlockThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit RunApplyBlockThreadHelper(LeaseManager& manager):
+            manager_(manager)
+          {
+            start();
+          }
+          virtual ~RunApplyBlockThreadHelper(){}
+          void run();
+        private:
+          LeaseManager& manager_;
+        private:
+          DISALLOW_COPY_AND_ASSIGN(RunApplyBlockThreadHelper);
+      };
+      typedef tbutil::Handle<RunApplyBlockThreadHelper> RunApplyBlockThreadHelperPtr;
+
       private:
         DataService& service_;
         uint64_t ns_ip_port_[common::MAX_SINGLE_CLUSTER_NS_NUM];
@@ -131,6 +151,7 @@ namespace tfs
         LeaseStatus lease_status_[common::MAX_SINGLE_CLUSTER_NS_NUM];
         time_t last_renew_time_[common::MAX_SINGLE_CLUSTER_NS_NUM];
         RunLeaseThreadHelperPtr lease_thread_[common::MAX_SINGLE_CLUSTER_NS_NUM];
+        RunApplyBlockThreadHelperPtr apply_block_thread_;
 
       private:
         DISALLOW_COPY_AND_ASSIGN(LeaseManager);

@@ -446,11 +446,6 @@ namespace tfs
       check_manager_.run_check();
     }
 
-    void DataService::run_apply_block_()
-    {
-      writable_block_manager_.run_apply_and_giveup();
-    }
-
     bool DataService::check_response(common::NewClient* client)
     {
       bool all_success = (NULL != client);
@@ -1470,10 +1465,7 @@ namespace tfs
       service_.run_check_();
     }
 
-    void DataService::RunApplyBlockThreadHelper::run()
-    {
-      service_.run_apply_block_();
-    }
+
 
     int ds_async_callback(common::NewClient* client)
     {

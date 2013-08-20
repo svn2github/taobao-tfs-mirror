@@ -45,6 +45,8 @@ namespace tfs
       {
         lease_thread_[i] = 0;
       }
+
+      apply_block_thread_ = 0;
     }
 
     LeaseManager::~LeaseManager()
@@ -66,6 +68,8 @@ namespace tfs
           assert(0 != lease_thread_[i]);
         }
       }
+      apply_block_thread_ = new (std::nothrow)RunApplyBlockThreadHelper(*this);
+      assert(0 != apply_block_thread_);
       info.status_ = DATASERVER_STATUS_ALIVE;
       return TFS_SUCCESS;
     }
@@ -78,6 +82,11 @@ namespace tfs
         {
           lease_thread_[i]->join();
         }
+      }
+
+      if (0 != apply_block_thread_)
+      {
+        apply_block_thread_->join();
       }
     }
 
@@ -273,6 +282,11 @@ namespace tfs
       manager_.run_lease(who_);
     }
 
+    void LeaseManager::RunApplyBlockThreadHelper::run()
+    {
+      manager_.run_apply_and_giveup();
+    }
+
     void LeaseManager::run_lease(const int32_t who)
     {
       int ret = TFS_SUCCESS;
@@ -286,7 +300,8 @@ namespace tfs
           {
             lease_status_[who] = LEASE_RENEW;
           }
-          TBSYS_LOG(INFO, "apply lease who: %d, result: %d", who, ret);
+          TBSYS_LOG(INFO, "apply lease from %s, who: %d, result: %d",
+              tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str(), who, ret);
         }
 
         if ((lease_status_[who] == LEASE_RENEW)
@@ -298,14 +313,51 @@ namespace tfs
             lease_status_[who] = LEASE_APPLY;
             get_writable_block_manager().expire_all_blocks();  // lease expired
           }
-          TBSYS_LOG(INFO, "renew lease who: %d, result: %d", who, ret);
+          TBSYS_LOG(INFO, "renew lease from %s, who: %d, result: %d",
+              tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str(), who, ret);
         }
 
-        usleep(50000);  // check every 50ms
+        usleep(500000);  // check every 500ms
       }
 
       ret = giveup(who);
-      TBSYS_LOG(INFO, "giveup lease who: %d, result: %d", who, ret);
+      TBSYS_LOG(INFO, "giveup lease from %s, who: %d, result: %d",
+          tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str(), who, ret);
+    }
+
+    void LeaseManager::run_apply_and_giveup()
+    {
+      int ret = TFS_SUCCESS;
+      const int32_t SLEEP_TIME_US = 1 * 1000 * 1000;
+      int64_t last_giveup_time = 0;
+      int32_t async_timeout = DEFAULT_NETWORK_CALL_TIMEOUT * 1000 + 100000;
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      while (!ds_info.is_destroyed())
+      {
+        int64_t now = Func::get_monotonic_time();
+        if (has_valid_lease(now))
+        {
+          // giveup expired block first
+          int32_t expired = get_writable_block_manager().size(BLOCK_EXPIRED);
+          if (expired > 0 && last_giveup_time + async_timeout < now) // wait giveup callback end
+          {
+            ret = get_writable_block_manager().giveup_writable_block();
+            last_giveup_time = now;
+            TBSYS_LOG(DEBUG, "giveup writable block, ret: %d", ret);
+          }
+
+          // apply writable block
+          int32_t need = MAX_WRITABLE_BLOCK_COUNT -
+            get_writable_block_manager().size(BLOCK_WRITABLE);
+          if (need > 0)
+          {
+            ret = get_writable_block_manager().apply_writable_block(need);
+            TBSYS_LOG(DEBUG, "apply writabl block, count: %d, ret: %d", need, ret);
+          }
+        }
+
+        usleep(SLEEP_TIME_US);
+      }
     }
 
     int LeaseManager::timeout(const time_t now)

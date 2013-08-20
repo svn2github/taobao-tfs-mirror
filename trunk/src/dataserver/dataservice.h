@@ -156,7 +156,6 @@ namespace tfs
       void timeout_();
       void run_task_();
       void run_check_();
-      void run_apply_block_();
       void rotate_(time_t& last_rotate_log_time, time_t now, time_t zonesec);
 
       private:
@@ -208,24 +207,7 @@ namespace tfs
       };
       typedef tbutil::Handle<RunCheckThreadHelper> RunCheckThreadHelperPtr;
 
-      class RunApplyBlockThreadHelper: public tbutil::Thread
-      {
-        public:
-          explicit RunApplyBlockThreadHelper(DataService& service):
-            service_(service)
-          {
-            start();
-          }
-          virtual ~RunApplyBlockThreadHelper(){}
-          void run();
-        private:
-          DataService& service_;
-        private:
-          DISALLOW_COPY_AND_ASSIGN(RunApplyBlockThreadHelper);
-      };
-      typedef tbutil::Handle<RunApplyBlockThreadHelper> RunApplyBlockThreadHelperPtr;
-
-      private:
+     private:
       DISALLOW_COPY_AND_ASSIGN(DataService);
 
       std::string server_index_;

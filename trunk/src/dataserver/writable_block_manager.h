@@ -62,9 +62,6 @@ namespace tfs
 
         int32_t size(const BlockType type);
 
-        // apply write block
-        void run_apply_and_giveup();
-
         // expire all blocks, move to expired list
         void expire_one_block(const uint64_t block_id);
         void expire_update_blocks();
@@ -89,15 +86,17 @@ namespace tfs
         // used when renew lease & expire block
         void get_blocks(common::ArrayHelper<common::BlockInfoV2> blocks, const BlockType type);
 
+        // apply block helper function
+        int apply_writable_block(const int32_t count);
+        int apply_update_block(const int64_t block_id);
+        int giveup_writable_block();
+
       private:
         int32_t* select_size(const BlockType type);
         WritableBlock* insert_(const uint64_t block_id,
             const common::ArrayHelper<uint64_t>& servers, const BlockType type);
         WritableBlock* remove_(const uint64_t block_id);
         WritableBlock* get_(const uint64_t block_id);
-        int apply_writable_block(const int32_t count);
-        int apply_update_block(const int64_t block_id);
-        int giveup_writable_block();
         void apply_block_callback(message::DsApplyBlockResponseMessage* response);
         void giveup_block_callback(message::DsGiveupBlockResponseMessage* response);
         void process_apply_update_block(message::DsApplyBlockForUpdateResponseMessage* response);

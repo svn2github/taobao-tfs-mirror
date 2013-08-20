@@ -88,38 +88,6 @@ namespace tfs
       update_size_ = 0;
     }
 
-    void WritableBlockManager::run_apply_and_giveup()
-    {
-      int ret = TFS_SUCCESS;
-      const int32_t SLEEP_TIME_US = 1 * 1000 * 1000;
-      int64_t last_giveup_time = 0;
-      int32_t async_timeout = DEFAULT_NETWORK_CALL_TIMEOUT * 1000 + 100000;
-      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      while (!ds_info.is_destroyed())
-      {
-        int64_t now = Func::get_monotonic_time();
-
-        // giveup expired block first
-        int32_t expired = size(BLOCK_EXPIRED);
-        if (expired > 0 && last_giveup_time + async_timeout < now) // wait giveup callback end
-        {
-          ret = giveup_writable_block();
-          last_giveup_time = now;
-          TBSYS_LOG(DEBUG, "giveup writable block, ret: %d", ret);
-        }
-
-        // apply writable block
-        int32_t need = MAX_WRITABLE_BLOCK_COUNT - size(BLOCK_WRITABLE);
-        if (need > 0)
-        {
-          ret = apply_writable_block(need);
-          TBSYS_LOG(DEBUG, "apply writabl block, count: %d, ret: %d", need, ret);
-        }
-
-        usleep(SLEEP_TIME_US);
-      }
-    }
-
     int32_t WritableBlockManager::size(const BlockType type)
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
