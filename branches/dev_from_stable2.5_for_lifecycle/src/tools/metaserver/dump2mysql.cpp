@@ -20,7 +20,7 @@
 #include <signal.h>
 #include <Memory.hpp>
 #include <pthread.h>
-#include <set>
+#include <sys/time.h>
 
 #include "common/parameter.h"
 #include "common/config_item.h"
@@ -90,9 +90,11 @@ void* transfer(void* param)
   uint32_t tnum = param_t->tnum;
   uint32_t total = param_t->ttotal;
   int64_t count = 0;
+  int64_t count_thread = 0;
   int area =10;
   KvKey key;
   KvMemValue value;
+
 
 
   while(TFS_SUCCESS == ret && 1 != stop)
@@ -131,17 +133,29 @@ void* transfer(void* param)
     if (read_len <= 0) break;
     if (count%total == tnum)
     {
-
-
-
       key.key_= key_buff;
       key.key_size_ = key_size1 + key_size2;
       value.set_data(value_buff, value_size);
       ret = data_base->insert_kv(area, key, value);
+      if(TFS_SUCCESS!=ret)
+      {
+
+        TBSYS_LOG(ERROR, "insert error %d count %ld",ret, count);
+        if (key_size1 > 0) TBSYS_LOG(ERROR, "pkey_size =%d", key_size1);
+        for (int i=0; i<key_size1; i++)
+          TBSYS_LOG(ERROR, "%x %c", (unsigned char)key.key_[i], (unsigned char)key.key_[i]);
+        if (key_size2 > 0) TBSYS_LOG(ERROR, "skey_size =%d", key_size2);
+        for (int i=0; i<key_size1; i++)
+          TBSYS_LOG(ERROR, "%x %c", (unsigned char)key.key_[key_size1+i],(unsigned char)key.key_[key_size1+i]);
+
+      }
+      count_thread++;
+      if (0 == count_thread%1000)
+        TBSYS_LOG(INFO, "have dealed %ld record", count_thread);
     }
     count++;
   }
-  TBSYS_LOG(INFO, "deal %ld record", count);
+  TBSYS_LOG(INFO, "deal %ld of %ld record", count_thread, count);
   fclose(s_fd);
   s_fd = NULL;
   data_base_pool_.release(data_base);
