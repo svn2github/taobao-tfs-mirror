@@ -55,11 +55,15 @@ namespace tfs
       meta.lease_expire_time_ = 60;
       response.set_lease_meta(meta);
 
+      int32_t who = 0;
       DataService service;
-      LeaseManager manager(service);
-      manager.process_apply_response(&response);
-      LeaseMeta& new_meta = manager.lease_meta_;
-      int32_t last_renew_time = manager.last_renew_time_;
+      std::vector<uint64_t> ns_ip_port;
+      ns_ip_port.push_back(1001);
+      ns_ip_port.push_back(2001);
+      LeaseManager manager(service, ns_ip_port);
+      manager.process_apply_response(&response, who);
+      LeaseMeta& new_meta = manager.lease_meta_[who];
+      int32_t last_renew_time = manager.last_renew_time_[who];
       ASSERT_EQ(new_meta.lease_id_, meta.lease_id_);
       ASSERT_EQ(new_meta.lease_expire_time_ , meta.lease_expire_time_);
       ASSERT_LT(Func::get_monotonic_time() - last_renew_time, 1);
@@ -88,18 +92,22 @@ namespace tfs
       uint64_t servers[] = {3001, 3002};
       ArrayHelper<uint64_t> helper(2, servers, 2);
 
+      int32_t who = 0;
       WritableBlock* block = NULL;
       DataService service;
-      LeaseManager manager(service);
+      std::vector<uint64_t> ns_ip_port;
+      ns_ip_port.push_back(1001);
+      ns_ip_port.push_back(2001);
+      LeaseManager manager(service, ns_ip_port);
       block = manager.get_writable_block_manager().insert(100, helper, BLOCK_WRITABLE);
       ASSERT_TRUE(NULL != block);
       block = manager.get_writable_block_manager().insert(200, helper, BLOCK_WRITABLE);
       ASSERT_TRUE(NULL != block);
 
-      manager.process_renew_response(&response);
-      block = manager.get_writable_block_manager().get(100, BLOCK_WRITABLE);
+      manager.process_renew_response(&response, who);
+      block = manager.get_writable_block_manager().get(100);
       ASSERT_TRUE(NULL == block);
-      block = manager.get_writable_block_manager().get(200, BLOCK_WRITABLE);
+      block = manager.get_writable_block_manager().get(200);
       ASSERT_TRUE(NULL != block);
       VUINT64 servers2;
       block->get_servers(servers2);

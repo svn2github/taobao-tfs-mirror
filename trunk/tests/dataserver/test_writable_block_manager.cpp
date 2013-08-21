@@ -60,46 +60,51 @@ namespace tfs
       block = manager.insert(block_id, helper, BLOCK_WRITABLE);
       ASSERT_TRUE(NULL != block);
       ASSERT_EQ(block_id, block->get_block_id());
-      ASSERT_EQ(block, manager.get(block_id, BLOCK_WRITABLE));
+      ASSERT_EQ(block, manager.get(block_id));
+      ASSERT_EQ(BLOCK_WRITABLE, block->get_type());
+      ASSERT_FALSE(block->get_use_flag());
+      ASSERT_EQ(1, manager.writable_size_);
 
       // insert & get
       block_id = 200;
       block = manager.insert(block_id, helper, BLOCK_UPDATE);
       ASSERT_TRUE(NULL != block);
       ASSERT_EQ(block_id, block->get_block_id());
-      ASSERT_EQ(block, manager.get(block_id, BLOCK_UPDATE));
+      ASSERT_EQ(block, manager.get(block_id));
+      ASSERT_EQ(BLOCK_UPDATE, block->get_type());
+      ASSERT_FALSE(block->get_use_flag());
+      ASSERT_EQ(1, manager.update_size_);
 
       // insert & get
       block_id = 300;
       block = manager.insert(block_id, helper, BLOCK_EXPIRED);
       ASSERT_TRUE(NULL != block);
       ASSERT_EQ(block_id, block->get_block_id());
-      ASSERT_EQ(block, manager.get(block_id, BLOCK_EXPIRED));
+      ASSERT_EQ(block, manager.get(block_id));
+      ASSERT_EQ(BLOCK_EXPIRED, block->get_type());
+      ASSERT_FALSE(block->get_use_flag());
+      ASSERT_EQ(1, manager.expired_size_);
 
       // remove from expired list & get
       block_id = 300;
-      block = manager.remove(block_id, BLOCK_EXPIRED);
+      block = manager.remove(block_id);
       ASSERT_TRUE(NULL != block);
-      ASSERT_TRUE(manager.empty(BLOCK_EXPIRED));
-      ASSERT_TRUE(NULL == manager.get(block_id, BLOCK_EXPIRED));
+      ASSERT_TRUE(NULL == manager.get(block_id));
+      ASSERT_EQ(0, manager.size(BLOCK_EXPIRED));
 
       // remove from writable list
       block_id = 100;
-      block = manager.remove(block_id, BLOCK_WRITABLE);
+      block = manager.remove(block_id);
       ASSERT_TRUE(NULL != block);
-      ASSERT_TRUE(manager.empty(BLOCK_WRITABLE));
-      block = manager.get(block_id, BLOCK_EXPIRED); // shoule moved to expired list
-      ASSERT_TRUE(NULL != block);
+      ASSERT_TRUE(NULL == manager.get(block_id));
+      ASSERT_EQ(0, manager.size(BLOCK_WRITABLE));
 
       // remove from updatable list
       block_id = 200;
-      block = manager.remove(block_id, BLOCK_UPDATE);
+      block = manager.remove(block_id);
       ASSERT_TRUE(NULL != block);
-      ASSERT_TRUE(manager.empty(BLOCK_UPDATE));
-      block = manager.get(block_id, BLOCK_EXPIRED); // should moved to expired list
-      ASSERT_TRUE(NULL != block);
-
-      ASSERT_EQ(2, manager.size(BLOCK_EXPIRED));
+      ASSERT_TRUE(NULL == manager.get(block_id));
+      ASSERT_EQ(0, manager.size(BLOCK_UPDATE));
     }
 
     TEST_F(TestWritableBlockManager, alloc)
@@ -125,9 +130,13 @@ namespace tfs
       ASSERT_EQ(TFS_SUCCESS, ret);
       ASSERT_TRUE(block->get_use_flag());
 
+      // alloc agin
+      ret = manager.alloc_writable_block(block);
+      ASSERT_NE(TFS_SUCCESS, ret);
+
       // free it
       manager.free_writable_block(block_id);
-      block = manager.get(block_id, BLOCK_WRITABLE);
+      block = manager.get(block_id);
       ASSERT_TRUE(!block->get_use_flag());
     }
 
@@ -149,9 +158,9 @@ namespace tfs
       manager.apply_block_callback(&response);
 
       ASSERT_EQ(2, (int)manager.size(BLOCK_WRITABLE));
-      block = manager.get(100, BLOCK_WRITABLE);
+      block = manager.get(100);
       ASSERT_TRUE(NULL != block);
-      block = manager.get(200, BLOCK_WRITABLE);
+      block = manager.get(200);
       ASSERT_TRUE(NULL != block);
     }
 
