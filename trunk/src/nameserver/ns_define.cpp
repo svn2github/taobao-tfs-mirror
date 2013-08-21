@@ -24,6 +24,8 @@
 #include "common/parameter.h"
 #include "server_collect.h"
 
+using namespace tfs::common;
+
 namespace tfs
 {
   namespace nameserver
@@ -63,6 +65,11 @@ namespace tfs
     bool NsRuntimeGlobalInformation::is_destroyed() const
     {
       return destroy_flag_;
+    }
+
+    int8_t NsRuntimeGlobalInformation::get_role() const
+    {
+      return owner_role_;
     }
 
     bool NsRuntimeGlobalInformation::is_master() const

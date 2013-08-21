@@ -161,6 +161,8 @@ namespace tfs
     static const int32_t DEFAULT_META_RETRY_COUNT = 3;
     static const uint32_t DEFAULT_UPDATE_KMT_INTERVAL_COUNT = 100;
     static const uint32_t DEFAULT_UPDATE_KMT_FAIL_COUNT = 10;
+    static const uint32_t DEFAULT_UPDATE_DST_INTERVAL_COUNT = 1000;
+    static const uint32_t DEFAULT_UPDATE_DST_FAIL_COUNT = 10;
     // unit ms
     static const int64_t DEFAULT_STAT_INTERNAL = 60000; // 1min
     static const int64_t DEFAULT_GC_INTERNAL = 43200000; // 12h
@@ -207,6 +209,13 @@ namespace tfs
     static const int32_t MAX_SINGLE_FILE_SIZE = 16 * 1024 * 1024;//16MB
     static const int32_t MAX_SINGLE_DISK_BLOCK_COUNT = UINT16_MAX;
     static const int32_t MAX_WRITABLE_BLOCK_COUNT = 128;
+
+    enum NsRole
+    {
+      NS_ROLE_NONE = 0x00,
+      NS_ROLE_MASTER,
+      NS_ROLE_SLAVE
+    };
 
     enum VersionStep
     {
@@ -1252,8 +1261,10 @@ namespace tfs
       int32_t lease_expire_time_;
       int32_t lease_renew_time_;
       int32_t renew_retry_times_;
+      int32_t renew_retry_timeout_;
       int32_t max_mr_network_bandwith_;
       int32_t max_rw_network_bandwith_;
+      int32_t ns_role_;
       int32_t reserve_[4];
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);

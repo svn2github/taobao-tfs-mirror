@@ -2508,7 +2508,7 @@ namespace tfs
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(lease_id_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&lease_id_));
       }
 
       if (TFS_SUCCESS == ret)
@@ -2528,12 +2528,22 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::get_int32(data, data_len, pos, &renew_retry_timeout_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::get_int32(data, data_len, pos, &max_mr_network_bandwith_);
       }
 
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::get_int32(data, data_len, pos, &max_rw_network_bandwith_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &ns_role_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -2572,12 +2582,22 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::set_int32(data, data_len, pos, renew_retry_timeout_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::set_int32(data, data_len, pos, max_mr_network_bandwith_);
       }
 
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int32(data, data_len, pos, max_rw_network_bandwith_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, ns_role_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -2593,7 +2613,7 @@ namespace tfs
 
     int64_t LeaseMeta::length() const
     {
-      return INT64_SIZE + 9 * INT_SIZE;
+      return INT64_SIZE + 11 * INT_SIZE;
     }
 
 

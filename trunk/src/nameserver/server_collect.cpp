@@ -434,7 +434,7 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             result.push_back(BlockLease());
-            BlockLease* entry = result.at(result.get_array_index());
+            BlockLease* entry = result.at(result.get_array_index() - 1);
             assert(NULL != entry);
             entry->block_id_ = start;
             entry->result_   = TFS_SUCCESS;
@@ -443,7 +443,7 @@ namespace tfs
           }
         }
       }
-      return result.get_array_index();
+      return TFS_SUCCESS;
     }
 
     int ServerCollect::renew_block(const ArrayHelper<BlockInfoV2>& input,LayoutManager& manager, ArrayHelper<BlockLease>& output)

@@ -38,13 +38,13 @@ namespace tfs
 
     }
 
-    int ClientRequestServer::apply(common::DataServerStatInfo& info, int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times)
+    int ClientRequestServer::apply(common::DataServerStatInfo& info, int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout)
     {
       const time_t now = Func::get_monotonic_time();
-      int32_t ret = manager_.get_server_manager().apply(info, now,SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_);
+      int32_t ret = manager_.get_server_manager().apply(info, now,SYSPARAM_NAMESERVER.between_ns_and_ds_lease_expire_time_);
       if (TFS_SUCCESS == ret)
       {
-        calc_lease_expire_time_(expire_time, next_renew_time, renew_retry_times);
+        calc_lease_expire_time_(expire_time, next_renew_time, renew_retry_times, renew_retry_timeout);
       }
       TBSYS_LOG(INFO, "dataserver: %s apply lease %s, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u,lease_expired_time: %d, next_renew_time: %d, retry_times: %d",
         CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", ret, info.use_capacity_, info.total_capacity_,
@@ -54,14 +54,14 @@ namespace tfs
 
     int ClientRequestServer::renew(const common::ArrayHelper<BlockInfoV2>& input,
           common::DataServerStatInfo& info, common::ArrayHelper<common::BlockLease>& output,
-          int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times)
+          int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout)
     {
       const time_t now = Func::get_monotonic_time();
       ServerManager& server_manager = manager_.get_server_manager();
-      int32_t ret = server_manager.renew(info, now, SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_);
+      int32_t ret = server_manager.renew(info, now, SYSPARAM_NAMESERVER.between_ns_and_ds_lease_expire_time_);
       if (TFS_SUCCESS == ret)
       {
-        calc_lease_expire_time_(expire_time, next_renew_time, renew_retry_times);
+        calc_lease_expire_time_(expire_time, next_renew_time, renew_retry_times, renew_retry_timeout);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -899,8 +899,9 @@ namespace tfs
       return ret;
     }
 
-    void ClientRequestServer::calc_lease_expire_time_(int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times) const
+    void ClientRequestServer::calc_lease_expire_time_(int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout) const
     {
+      renew_retry_timeout = SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_;
       renew_retry_times = SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_;
       expire_time = SYSPARAM_NAMESERVER.between_ns_and_ds_lease_expire_time_ - SYSPARAM_NAMESERVER.between_ns_and_ds_lease_safe_time_;
       next_renew_time = expire_time - SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_times_ * SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_;

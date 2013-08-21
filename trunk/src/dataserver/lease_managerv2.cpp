@@ -186,7 +186,7 @@ namespace tfs
       last_renew_time_[who] = Func::get_monotonic_time();
     }
 
-    int LeaseManager::renew(const int32_t who)
+    int LeaseManager::renew(const int32_t timeout_ms, const int32_t who)
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
@@ -206,7 +206,7 @@ namespace tfs
       ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = send_msg_to_server(ns_ip_port_[who], new_client, &req_msg, ret_msg);
+        ret = send_msg_to_server(ns_ip_port_[who], new_client, &req_msg, ret_msg, timeout_ms);
         if (TFS_SUCCESS == ret)
         {
           if (DS_RENEW_LEASE_RESPONSE_MESSAGE == ret_msg->getPCode())
@@ -287,6 +287,18 @@ namespace tfs
       manager_.run_apply_and_giveup();
     }
 
+    void LeaseManager::update_stat(const int32_t who)
+    {
+      DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
+      if (0 == who % MAX_SINGLE_CLUSTER_NS_NUM)
+      {
+        service_.get_block_manager().get_space(info.total_capacity_, info.use_capacity_);
+        info.block_count_ = service_.get_block_manager().get_all_logic_block_count();
+        info.current_load_ = Func::get_load_avg();
+        info.current_time_ = time(NULL);
+      }
+    }
+
     void LeaseManager::run_lease(const int32_t who)
     {
       int ret = TFS_SUCCESS;
@@ -295,6 +307,7 @@ namespace tfs
       {
         if (lease_status_[who] == LEASE_APPLY)
         {
+          update_stat(who);
           ret = apply(who);
           if (TFS_SUCCESS == ret)
           {
@@ -307,7 +320,16 @@ namespace tfs
         if ((lease_status_[who] == LEASE_RENEW)
             && need_renew(Func::get_monotonic_time(), who))
         {
-          ret = renew(who);
+          update_stat(who);
+          // retry renew lease, if renew fail, switch to APPLY state
+          for (int i = 0; i < lease_meta_[who].renew_retry_times_; i++)
+          {
+            ret = renew(lease_meta_[who].renew_retry_timeout_ * 1000, who);
+            if (TFS_SUCCESS == ret)
+            {
+              break;
+            }
+          }
           if (TFS_SUCCESS != ret)
           {
             lease_status_[who] = LEASE_APPLY;
@@ -337,6 +359,11 @@ namespace tfs
         int64_t now = Func::get_monotonic_time();
         if (has_valid_lease(now))
         {
+          TBSYS_LOG(INFO, "writable block info, writable: %d, update: %d, expired: %d",
+              get_writable_block_manager().size(BLOCK_WRITABLE),
+              get_writable_block_manager().size(BLOCK_UPDATE),
+              get_writable_block_manager().size(BLOCK_EXPIRED));
+
           // giveup expired block first
           int32_t expired = get_writable_block_manager().size(BLOCK_EXPIRED);
           if (expired > 0 && last_giveup_time + async_timeout < now) // wait giveup callback end
@@ -352,7 +379,7 @@ namespace tfs
           if (need > 0)
           {
             ret = get_writable_block_manager().apply_writable_block(need);
-            TBSYS_LOG(DEBUG, "apply writabl block, count: %d, ret: %d", need, ret);
+            TBSYS_LOG(DEBUG, "apply writable block, count: %d, ret: %d", need, ret);
           }
         }
 

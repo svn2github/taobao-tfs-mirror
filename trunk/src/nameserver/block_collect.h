@@ -60,7 +60,7 @@ namespace tfs
       inline bool is_creating() const { return BLOCK_CREATE_FLAG_YES == create_flag_;}
       inline bool in_replicate_queue() const { return BLOCK_IN_REPLICATE_QUEUE_YES == in_replicate_queue_;}
       inline bool has_lease() const   { return BLOCK_HAS_LEASE_FLAG_YES == has_lease_;}
-      inline bool has_valid_lease(const time_t now) const { return (has_lease() && expire(now));}
+      inline bool has_valid_lease(const time_t now) const { return (has_lease() && !expire(now));}
       inline bool has_version_conflict() const { return BLOCK_HAS_VERSION_CONFLICT_FLAG_YES == has_version_conflict_;}
       int check_version(LayoutManager& manager, common::ArrayHelper<uint64_t>& expires,
             const uint64_t server, const bool isnew, const common::BlockInfoV2& info, const time_t now);

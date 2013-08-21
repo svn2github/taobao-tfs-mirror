@@ -874,6 +874,7 @@ namespace tfs
         now = Func::get_monotonic_time();
 
         //check dataserver is alive
+        helper.clear();  // avoid report block dead loop
         get_server_manager().timeout(now, stat_info, helper,last_traverse_server, all_over);
 
         get_server_manager().gc(now);

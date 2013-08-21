@@ -33,12 +33,14 @@ namespace tfs
 {
   namespace nameserver
   {
+    /*
     enum NsRole
     {
       NS_ROLE_NONE = 0x00,
       NS_ROLE_MASTER,
       NS_ROLE_SLAVE
     };
+    */
 
     enum NsStatus
     {
@@ -140,6 +142,7 @@ namespace tfs
       bool is_destroyed() const;
       bool in_safe_mode_time(const int64_t now) const;
       bool in_discard_newblk_safe_mode_time(const int64_t now) const;
+      int8_t get_role() const;
       bool is_master() const;
       bool peer_is_master() const;
       int keepalive(int64_t& lease_id, const uint64_t server,

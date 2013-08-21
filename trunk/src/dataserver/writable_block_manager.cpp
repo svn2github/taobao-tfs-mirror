@@ -421,7 +421,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        if (DS_APPLY_BLOCK_MESSAGE == pcode)
+        if (DS_APPLY_BLOCK_MESSAGE == pcode && sresponse->size() > 0)
         {
           NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
           tbnet::Packet* packet = iter->second.second;
@@ -430,7 +430,7 @@ namespace tfs
             apply_block_callback(dynamic_cast<DsApplyBlockResponseMessage* >(packet));
           }
         }
-        else if (DS_GIVEUP_BLOCK_MESSAGE == pcode)
+        else if (DS_GIVEUP_BLOCK_MESSAGE == pcode && sresponse->size() > 0)
         {
           NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
           tbnet::Packet* packet = iter->second.second;

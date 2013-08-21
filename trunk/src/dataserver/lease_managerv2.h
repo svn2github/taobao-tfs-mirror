@@ -82,7 +82,7 @@ namespace tfs
          * ds renew lease every few seconds
          * if renew fail, ds will retry lease_retry_times
          */
-        int renew(const int32_t who);
+        int renew(const int32_t timeout_ms, const int32_t who);
 
         /*
          * ds giveup lease when exit
@@ -105,6 +105,7 @@ namespace tfs
         }
 
       private:
+        void update_stat(const int32_t who);
         void process_apply_response(message::DsApplyLeaseResponseMessage* response, const int32_t who);
         void process_renew_response(message::DsRenewLeaseResponseMessage* response, const int32_t who);
 

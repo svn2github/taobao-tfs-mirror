@@ -143,8 +143,8 @@ namespace tfs
           }
           if (TFS_SUCCESS != ret)
           {
-            bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, unknown msg type: %d, discard, peer ip: %s", manager_.get_ip_addr(), pcode,
-                tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
+            bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%d, unknown msg type: %d, discard, peer ip: %s", pcode, manager_.get_ip_addr(),
+               tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
             bpacket->free();
           }
         }
@@ -239,8 +239,6 @@ namespace tfs
           msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
         }
         TIMER_END();
-        TBSYS_LOG(INFO, "dataserver: %s report block %s, size: %d, consume times: %"PRI64_PREFIX"d(us), ret: %d",
-            CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed", block_count, TIMER_DURATION(), ret);
       }
       return bret;
     }
@@ -260,7 +258,7 @@ namespace tfs
         meta.lease_id_ = info.id_;
         server_manager.calc_single_process_max_network_bandwidth(
               meta.max_mr_network_bandwith_, meta.max_rw_network_bandwith_, info);
-        ret = rs.apply(info, meta.lease_expire_time_,meta.lease_renew_time_, meta.renew_retry_times_);
+        ret = rs.apply(info, meta.lease_expire_time_,meta.lease_renew_time_, meta.renew_retry_times_, meta.renew_retry_timeout_);
         if (TFS_SUCCESS == ret)
         {
           ret = msg->reply(reply_msg);
@@ -286,11 +284,12 @@ namespace tfs
         DsRenewLeaseResponseMessage* reply_msg = new (std::nothrow)DsRenewLeaseResponseMessage();
         LeaseMeta& meta = reply_msg->get_lease_meta();
         meta.lease_id_ = info.id_;
+        meta.ns_role_ = GFactory::get_runtime_info().get_role();
         ArrayHelper<BlockInfoV2> input(MAX_WRITABLE_BLOCK_COUNT, msg->get_block_infos(), msg->get_size());
         ArrayHelper<BlockLease>  output(MAX_WRITABLE_BLOCK_COUNT, reply_msg->get_block_lease());
         server_manager.calc_single_process_max_network_bandwidth(
               meta.max_mr_network_bandwith_, meta.max_rw_network_bandwith_, info);
-        ret = rs.renew(input, info, output, meta.lease_expire_time_,meta.lease_renew_time_, meta.renew_retry_times_);
+        ret = rs.renew(input, info, output, meta.lease_expire_time_,meta.lease_renew_time_, meta.renew_retry_times_, meta.renew_retry_timeout_);
         if (TFS_SUCCESS == ret)
         {
           reply_msg->set_size(output.get_array_index());

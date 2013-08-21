@@ -44,10 +44,10 @@ namespace tfs
       public:
         explicit ClientRequestServer(LayoutManager& manager);
         virtual ~ClientRequestServer(){}
-        int apply(common::DataServerStatInfo& info, int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times);
+        int apply(common::DataServerStatInfo& info, int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout);
         int renew(const common::ArrayHelper<common::BlockInfoV2>& input,
               common::DataServerStatInfo& info, common::ArrayHelper<common::BlockLease>& output,
-              int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times);
+              int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_rety_timeout);
         int giveup(const common::ArrayHelper<common::BlockInfoV2>& input,common::DataServerStatInfo& info);
         int apply_block(const uint64_t server, common::ArrayHelper<common::BlockLease>& output);
         int apply_block_for_update(const uint64_t server, common::ArrayHelper<common::BlockLease>& output);
@@ -91,7 +91,7 @@ namespace tfs
 
         bool is_discard(void);
 
-        void calc_lease_expire_time_(int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times) const;
+        void calc_lease_expire_time_(int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout) const;
       private:
         volatile uint32_t ref_count_;
         LayoutManager& manager_;
