@@ -268,6 +268,7 @@ namespace tfs
       }
       keys.clear();
       values.clear();
+      *end_key_str = 0;
 
       ret = database_->scan_v(area, s_key, e_key, -2, true, &keys, &values, &count);
       ASSERT_EQ(TFS_SUCCESS, ret);

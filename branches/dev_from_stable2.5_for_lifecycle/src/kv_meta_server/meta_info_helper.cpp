@@ -689,9 +689,20 @@ namespace tfs
                     vector<KvValue*> kv_value_keys;
                     vector<KvValue*> kv_value_values;
                     int32_t result_size = 0;
-                    ret = kv_engine_helper_->scan_keys(meta_info_name_area_,
-                        start_key, end_key, -1, true,
-                        &kv_value_keys, &kv_value_values, &result_size, scan_type);
+                    KvKey rend_key;
+                    char *rend_key_buff = NULL;
+                    rend_key_buff = (char*) malloc(KEY_BUFF_SIZE);
+                    assert(NULL != rend_key_buff);
+
+                    ret = serialize_key(bucket_name, file_name, 0,
+                        &rend_key, rend_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+                    if (TFS_SUCCESS == ret)
+                    {
+                      ret = kv_engine_helper_->scan_keys(meta_info_name_area_,
+                          start_key, rend_key, -1, true,
+                          &kv_value_keys, &kv_value_values, &result_size, scan_type);
+                    }
+                    free(rend_key_buff);
                     if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret ||TFS_SUCCESS == ret )
                     {
                       if (TFS_SUCCESS == ret)
@@ -712,7 +723,7 @@ namespace tfs
                           kv_value_keys[i]->free();
                         }
                       }
-                        ret = TFS_SUCCESS;
+                      ret = TFS_SUCCESS;
 
                     }
                     else

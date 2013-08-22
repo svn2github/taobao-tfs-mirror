@@ -135,7 +135,11 @@ retry:
           {
             TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
             ret = mysql_errno(&mysql_.mysql);
-            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_)
+            {
+              TBSYS_LOG(ERROR, "CR_SERVER_GONE_ERROR error");
+              goto retry;
+            }
             if (ER_DUP_ENTRY == ret)
             {
               mysql_proc_ret = EXIT_KV_RETURN_VERSION_ERROR;
@@ -438,6 +442,9 @@ retry:
             }
             pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
                 start_key.key_, start_key.key_size_);
+            pos += sprintf(sql_str_ + pos, "' and meta_key >= '");
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                end_key.key_, end_key.key_size_);
             pos += sprintf(sql_str_ + pos, "' order by meta_key desc limit %d ", limit_);
           }
           else
