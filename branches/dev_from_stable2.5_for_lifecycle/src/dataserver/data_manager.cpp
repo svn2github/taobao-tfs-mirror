@@ -68,18 +68,18 @@ namespace tfs
         }
 
         LeaseId lid(block_id, file_id, lease_id);
-        Lease* lease = lease_manager_.get(lid, now_us);
-        if ((NULL == lease) && alloc)
+        Lease* lease = NULL;
+        ret = lease_manager_.get(lid, now_us, lease);
+        if ((TFS_SUCCESS != ret) && alloc)
         {
           ret = lease_manager_.has_out_of_limit() ? EXIT_BLOCK_LEASE_OVERLOAD_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
             lease_manager_.generation(lid, now_us, type, servers);
-            lease = lease_manager_.get(lid, now_us);
+            ret = lease_manager_.get(lid, now_us, lease);
           }
         }
 
-        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           lease->reset_member_info(now_us); // reset on every reqeust
@@ -100,8 +100,8 @@ namespace tfs
       {
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        Lease* lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+        Lease* lease = NULL;
+        ret = lease_manager_.get(lid, now_us, lease);
         if (TFS_SUCCESS == ret)
         {
           if (SLAVE_DS_RESP_MESSAGE != packet->getPCode())
@@ -134,8 +134,8 @@ namespace tfs
       {
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        Lease* lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
+        Lease* lease = NULL;
+        ret = lease_manager_.get(lid, now_us, lease);
         if (TFS_SUCCESS == ret)
         {
           DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
@@ -158,8 +158,8 @@ namespace tfs
       {
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        Lease* lease = lease_manager_.get(lid, now_us);
-        status = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
+        Lease* lease = NULL;
+        status = lease_manager_.get(lid, now_us, lease);
         if (TFS_SUCCESS == status)
         {
           all_finish = lease->check_all_finish();
@@ -241,8 +241,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           LeaseId lid(attach_block_id, file_id, lease_id);
-          lease = lease_manager_.get(lid, now_us);
-          ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
+          ret = lease_manager_.get(lid, now_us, lease);
         }
 
         if (TFS_SUCCESS == ret)
@@ -277,8 +276,7 @@ namespace tfs
       {
         int64_t now_us = Func::get_monotonic_time_us();
         LeaseId lid(attach_block_id, file_id, lease_id);
-        lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
+        ret = lease_manager_.get(lid, now_us, lease);
       }
 
       if ((TFS_SUCCESS == ret) && !tmp) // write tmp block won't check crc
@@ -366,8 +364,8 @@ namespace tfs
       {
         LeaseId lid(attach_block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        Lease* lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
+        Lease* lease = NULL;
+        ret = lease_manager_.get(lid, now_us, lease);
         if (TFS_SUCCESS == ret)
         {
           lease->set_file_size(file_size);
@@ -379,28 +377,21 @@ namespace tfs
     }
 
     int DataManager::update_block_info(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
-        const common::UpdateBlockInfoType type)
+        const int32_t last_version, const common::UpdateBlockInfoType type)
     {
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
-      Lease* lease = NULL;
       BlockInfoV2 block_info;
       if (TFS_SUCCESS == ret)
       {
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now_us = Func::get_monotonic_time_us();
-        lease = lease_manager_.get(lid, now_us);
-        ret = (NULL == lease) ? EXIT_BLOCK_LEASE_INTERNAL_ERROR : TFS_SUCCESS;
-        if (TFS_SUCCESS == ret)
+        Lease* lease = NULL;
+        ret = lease_manager_.get(lid, now_us, lease);
+        if (TFS_SUCCESS == ret && lease->need_commit(last_version, block_info))
         {
-          // get the blockinfo with highest version
-          // commit blockinfo to ns only if at least one ds success
-
-          if (lease->get_highest_version_block(block_info))
-          {
-            ret = update_block_info(block_info, type);
-          }
+          ret = update_block_info(block_info, type);
         }
         lease_manager_.put(lease);
       }
@@ -432,7 +423,8 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             StatusMessage* smsg = dynamic_cast<StatusMessage*>(ret_msg);
-            ret = (STATUS_MESSAGE_OK == smsg->get_status()) ? TFS_SUCCESS : EXIT_COMMIT_BLOCK_UPDATE_ERROR;
+            ret = (TFS_SUCCESS == smsg->get_status() || EXIT_COMMIT_ERROR == smsg->get_status()) ?
+              TFS_SUCCESS : EXIT_COMMIT_BLOCK_UPDATE_ERROR;
             TBSYS_LOG(DEBUG, "update block info. blockid: %"PRI64_PREFIX"u, status: %d %s",
                 block_info.block_id_, smsg->get_status(), smsg->get_error());
           }
@@ -455,13 +447,12 @@ namespace tfs
      {
        LeaseId lid(block_id, file_id, lease_id);
        int64_t now_us = Func::get_monotonic_time_us();
-       lease = lease_manager_.get(lid, now_us);
-       ret = (NULL == lease)? EXIT_DATA_FILE_ERROR: TFS_SUCCESS;
+       ret = lease_manager_.get(lid, now_us, lease);
      }
 
      if (TFS_SUCCESS == ret)
      {
-       lease->dump(TBSYS_LOG_LEVEL_INFO, "resolve block version conflict.");
+       lease->dump(TBSYS_LOG_LEVEL_DEBUG, "resolve block version conflict.");
        int32_t member_size = 0;
        req_msg.set_block(block_id);
        ret = lease->get_member_info(req_msg.get_members(), member_size);

@@ -147,23 +147,26 @@ namespace tfs
       int64_t seqno = message->get_seqno();
       uint64_t check_server_id = message->get_server_id();
       const VUINT64& blocks = message->get_blocks();
+      const int32_t interval = message->get_interval();
       int ret = ((seqno > 0) && (INVALID_SERVER_ID != check_server_id)) ?
         TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        add_check_blocks(seqno, check_server_id, blocks);
+        add_check_blocks(seqno, check_server_id, interval, blocks);
         ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
       return ret;
     }
 
-    void CheckManager::add_check_blocks(const int64_t seqno, const uint64_t check_server_id, const common::VUINT64& blocks)
+    void CheckManager::add_check_blocks(const int64_t seqno,
+        const uint64_t check_server_id, const int32_t interval, const common::VUINT64& blocks)
     {
       Mutex::Lock lock(mutex_);
       pending_blocks_.clear();
       success_blocks_.clear();
       seqno_ = seqno;
       check_server_id_ = check_server_id;
+      interval_ = interval;
       VUINT64::const_iterator iter = blocks.begin();
       for ( ; iter != blocks.end(); iter++)
       {
@@ -205,6 +208,10 @@ namespace tfs
         for ( ; (TFS_SUCCESS == ret) && (iter != sync_mirror.end()); iter++)
         {
           ret = check_single_block(block_id, main_finfos, **iter);
+          if (interval_ > 0)
+          {
+            usleep(interval_ * 1000);
+          }
         }
       }
       TIMER_END();
@@ -249,7 +256,7 @@ namespace tfs
         vector<FileInfoV2> more;
         vector<FileInfoV2> diff;
         vector<FileInfoV2> less;
-        compare_block_fileinfos(finfos, peer_index.finfos_, more, diff, less);
+        compare_block_fileinfos(block_id, finfos, peer_index.finfos_, more, diff, less);
         TBSYS_LOG(INFO, "compare block %"PRI64_PREFIX"u with %s more %zd diff %zd less %zd",
             block_id, tbsys::CNetUtil::addrToString(peer_ns).c_str(),
             more.size(), diff.size(), less.size());
@@ -275,13 +282,9 @@ namespace tfs
       vector<FileInfoV2>::const_iterator iter = more.begin();
       for ( ; (TFS_SUCCESS == ret) && (iter != more.end()); iter++)
       {
-        // ignore deleted and invalid files
-        if (!(iter->status_ & FI_DELETED) && !(iter->status_ & FI_INVALID))
-        {
-          ret = peer.write_sync_log(OPLOG_INSERT, block_id, iter->id_);
-          TBSYS_LOG(DEBUG, "MORE file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
-              peer.get_dest_addr().c_str(), block_id, iter->id_);
-        }
+        ret = peer.write_sync_log(OPLOG_INSERT, block_id, iter->id_);
+        TBSYS_LOG(DEBUG, "MORE file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+            peer.get_dest_addr().c_str(), block_id, iter->id_);
       }
       return ret;
     }
@@ -321,7 +324,8 @@ namespace tfs
       }
     };
 
-    void CheckManager::compare_block_fileinfos(const vector<FileInfoV2>& left,
+    void CheckManager::compare_block_fileinfos(const uint64_t block_id,
+        const vector<FileInfoV2>& left,
         const vector<FileInfoV2>& right, vector<FileInfoV2>& more,
         vector<FileInfoV2>& diff, vector<FileInfoV2>& less)
     {
@@ -336,6 +340,15 @@ namespace tfs
       iter = left.begin();
       for ( ; iter != left.end(); iter++)
       {
+        // deleted or invalid, ignore
+        if (iter->status_ & (FI_DELETED | FI_INVALID))
+        {
+          TBSYS_LOG(DEBUG, "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u has been deleted.",
+              block_id, iter->id_);
+          files.erase(*iter);
+          continue;
+        }
+
         set<FileInfoV2, FileInfoCompare>::iterator sit = files.find(*iter);
         if (sit == files.end()) // not found
         {

@@ -76,7 +76,7 @@ namespace tfs
         break;
         case RW_STAT_TYPE_STAT:
           if (first)
-            atomic_add(reinterpret_cast<uint64_t*>(&info.unlink_file_count_[index]), 1);
+            atomic_add(reinterpret_cast<uint64_t*>(&info.stat_file_count_[index]), 1);
         break;
         case RW_STAT_TYPE_UNLINK:
           if (first)

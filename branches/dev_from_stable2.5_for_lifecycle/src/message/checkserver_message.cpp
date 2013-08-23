@@ -89,6 +89,10 @@ namespace tfs
       {
         ret = output.set_vint64(blocks_);
       }
+      if(TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(interval_);
+      }
       return ret;
 
     }
@@ -105,12 +109,18 @@ namespace tfs
       {
         ret = input.get_vint64(blocks_);
       }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&interval_);
+      }
+
       return ret;
     }
 
     int64_t ReportCheckBlockMessage::length() const
     {
-      return 2 * INT64_SIZE + Serialization::get_vint64_length(blocks_);
+      return 2 * INT64_SIZE + Serialization::get_vint64_length(blocks_) + INT_SIZE;
     }
 
  }/** end namespace message **/

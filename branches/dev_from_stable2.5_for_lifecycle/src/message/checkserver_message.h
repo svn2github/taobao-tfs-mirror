@@ -133,6 +133,16 @@ namespace tfs
           return seqno_;
         }
 
+        int32_t get_interval() const
+        {
+          return interval_;
+        }
+
+        void set_interval(const int32_t interval)
+        {
+          interval_ = interval;
+        }
+
         void set_blocks(const common::VUINT64& blocks)
         {
           blocks_ = blocks;
@@ -151,6 +161,7 @@ namespace tfs
         int64_t seqno_;
         uint64_t server_id_;
         common::VUINT64 blocks_;
+        int32_t interval_;
     };
 
  }/** end namespace message **/

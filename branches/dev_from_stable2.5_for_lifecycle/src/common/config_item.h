@@ -194,6 +194,8 @@ namespace tfs
 #define CONF_NS_IP                                    "ns_ip"
 #define CONF_CHECK_RETRY_TURN                         "check_retry_turn"
 #define CONF_TURN_INTERVAL                            "turn_interval"
+#define CONF_BLOCK_CHECK_INTERVAL                     "block_check_interval"
+#define CONF_BLOCK_CHECK_COST                         "block_check_cost"
 
 //kv meta server
 #define CONF_KV_DB_CONN                             "kv_db_conn"

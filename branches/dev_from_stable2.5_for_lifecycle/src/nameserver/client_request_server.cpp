@@ -730,6 +730,44 @@ namespace tfs
       return ret;
     }
 
+    // parameter value3 ==> family id
+    // remove family from db, clear family id
+    int ClientRequestServer::handle_control_delete_family(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
+    {
+      int32_t ret = (info.value3_ <= 0) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS != ret)
+        snprintf(buf, buf_length, "parameter is invalid, value3: %"PRI64_PREFIX"u", info.value3_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = manager_.get_oplog_sync_mgr().del_family(info.value3_);
+        if (TFS_SUCCESS == ret)
+        {
+          std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
+          common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
+          ret = manager_.get_family_manager().get_members(helper, info.value3_);
+          if (TFS_SUCCESS == ret)
+          {
+            for (int i = 0; i < helper.get_array_index(); i++)
+            {
+              manager_.get_block_manager().update_family_id(helper.at(i)->first, INVALID_FAMILY_ID);
+            }
+
+            GCObject* object = NULL;
+            manager_.get_family_manager().remove(object, info.value3_);
+            if (NULL != object)
+              manager_.get_gc_manager().add(object, Func::get_monotonic_time());
+          }
+        }
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        snprintf(buf, buf_length, "del family %"PRI64_PREFIX"d fail, ret: %d", info.value3_, ret);
+      }
+
+      return ret;
+    }
+
     int ClientRequestServer::handle_control_cmd(const ClientCmdInformation& info, common::BasePacket* msg, const int64_t buf_length, char* buf)
     {
       time_t now = Func::get_monotonic_time();
@@ -765,6 +803,9 @@ namespace tfs
           break;
         case CLIENT_CMD_CLEAR_SYSTEM_TABLE:
           ret = handle_control_clear_system_table(info, buf_length, buf);
+          break;
+        case CLIENT_CMD_DELETE_FAMILY:
+          ret = handle_control_delete_family(info, buf_length, buf);
           break;
         default:
           snprintf(buf, buf_length, "unknow client cmd: %d", info.cmd_);
@@ -848,9 +889,12 @@ namespace tfs
                 block_id, tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
             }
           }
-          if (update_last_time)
+          if (block->version() < info.version_)
           {
             block->update(info);
+          }
+          if (update_last_time)
+          {
             block->update_last_time(now - SYSPARAM_NAMESERVER.replicate_wait_time_);
           }
         }

@@ -87,7 +87,7 @@ namespace tfs
       virtual int64_t pread(void* buf, const int64_t count, const int64_t offset) = 0;
       virtual int64_t pwrite(const void* buf, const int64_t count, const int64_t offset) = 0;
       virtual int fstat(common::TfsFileStat* file_info, const common::TfsStatType mode = common::NORMAL_STAT) = 0;
-      virtual int close() = 0;
+      virtual int close(const int32_t force_status = -1) = 0;
       virtual int64_t get_file_length() = 0;
       virtual int unlink(const char* file_name, const char* suffix, int64_t& file_size, const common::TfsUnlinkType action) = 0;
 
@@ -126,7 +126,7 @@ namespace tfs
       int64_t pread_ex(void* buf, const int64_t count, const int64_t offset);
       int64_t pwrite_ex(const void* buf, const int64_t count, const int64_t offset);
       int fstat_ex(common::FileInfo* file_info, const common::TfsStatType mode);
-      int close_ex();
+      int close_ex(const int32_t force_status = -1);
 
     private:
       int process_fail_response(common::NewClient* client);
@@ -170,6 +170,7 @@ namespace tfs
       int32_t file_status_;
       int32_t eof_;
       int64_t offset_;
+      int32_t force_status_;
       SegmentData* meta_seg_;
       int32_t option_flag_;
       TfsSession* tfs_session_;

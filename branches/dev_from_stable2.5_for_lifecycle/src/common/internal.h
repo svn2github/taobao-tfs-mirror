@@ -57,9 +57,10 @@
 #define IS_VERFIFY_BLOCK(x) (x >> 63)
 
 // Macros used for overriding file flag in unlink call
-#define SET_OVERRIDE_FLAG(x, f) ((x) = OVERRIDE | f)
-#define GET_OVERRIDE_FLAG(x) ((x) & 0x7)
-#define TEST_OVERRIDE_FLAG(x) ((x) & OVERRIDE)
+// the 5-7bit is used as flag
+#define SET_OVERRIDE_FLAG(x, f) ((x) = (OVERRIDE | (f << 4)))
+#define GET_OVERRIDE_FLAG(x) (((x) >> 4) & 0x7)
+#define TEST_OVERRIDE_FLAG(x) ((x) > REVEAL) // TODO, change to (x) & OVERRIDE
 
 #if __WORDSIZE == 32
 namespace __gnu_cxx
@@ -348,7 +349,8 @@ namespace tfs
       CLIENT_CMD_ROTATE_LOG,
       CLIENT_CMD_GET_BALANCE_PERCENT,
       CLIENT_CMD_SET_BALANCE_PERCENT,
-      CLIENT_CMD_CLEAR_SYSTEM_TABLE
+      CLIENT_CMD_CLEAR_SYSTEM_TABLE,
+      CLIENT_CMD_DELETE_FAMILY
     };
 
     enum PlanType
@@ -360,6 +362,9 @@ namespace tfs
       PLAN_TYPE_EC_DISSOLVE,
       PLAN_TYPE_EC_MARSHALLING
     };
+
+    // order shoule be consistent with PlanType
+    extern const char* planstr[PLAN_TYPE_EC_MARSHALLING + 1];
 
     enum PlanStatus
     {
@@ -399,8 +404,10 @@ namespace tfs
     enum SSMType
     {
       SSM_TYPE_BLOCK = 0x01,
-      SSM_TYPE_SERVER = 0x02
+      SSM_TYPE_SERVER = 0x02,
+      SSM_TYPE_FAMILY = 0x04
     };
+
     enum SSMChildBlockType
     {
       SSM_CHILD_BLOCK_TYPE_INFO   = 0x01,

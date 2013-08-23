@@ -38,7 +38,7 @@ namespace tfs
       virtual int64_t pread(void* buf, const int64_t count, const int64_t offset);
       virtual int64_t pwrite(const void* buf, const int64_t count, const int64_t offset);
       virtual int fstat(common::TfsFileStat* file_info, const common::TfsStatType mode = common::NORMAL_STAT);
-      virtual int close();
+      virtual int close(const int32_t force_status = -1);
       virtual int64_t get_file_length();
       virtual int unlink(const char* file_name, const char* suffix, int64_t& file_size, const common::TfsUnlinkType action);
 

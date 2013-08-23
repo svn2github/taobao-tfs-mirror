@@ -517,6 +517,8 @@ namespace tfs
         cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
         check_retry_turns_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RETRY_TURN, 3);
         turn_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_TURN_INTERVAL, 180);
+        block_check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_CHECK_INTERVAL, 0);
+        block_check_cost_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_CHECK_COST, 50);
       }
 
       if (TFS_SUCCESS == ret)

@@ -44,11 +44,12 @@ namespace tfs
 
     struct LeaseId
     {
-      uint64_t lease_id_;
-      uint64_t file_id_;
       uint64_t block_;
-      LeaseId(const uint64_t lease_id, const uint64_t file_id, const uint64_t block) :
-        lease_id_(lease_id), file_id_(file_id), block_(block) {}
+      uint64_t file_id_;
+      uint64_t lease_id_;
+
+      LeaseId(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id) :
+        block_(block_id), file_id_(file_id), lease_id_(lease_id) {}
       bool operator < (const LeaseId& lease) const
       {
         if (lease_id_ < lease.lease_id_)
@@ -94,7 +95,7 @@ namespace tfs
       int update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status);
       int update_member_info();   // when received a error packet, use this interface
       void reset_member_info(const time_t now_us);
-      bool get_highest_version_block(common::BlockInfoV2& info);
+      bool need_commit(const int32_t last_version, common::BlockInfoV2& info);
       void dump(const int32_t level, const char* const format = NULL);
       void dump(std::stringstream& desp);
 
@@ -132,7 +133,7 @@ namespace tfs
       virtual ~LeaseManager();
 
       void generation(LeaseId& lease_id, const int64_t now_us, const int8_t type, const common::VUINT64& servers);
-      Lease* get(const LeaseId& lease_id, const int64_t now_us) const;
+      int get(const LeaseId& lease_id, const int64_t now_us, Lease*& lease) const;
       void put(Lease* lease);
       int remove(const LeaseId& lease_id);
       int timeout(const int64_t now_us);

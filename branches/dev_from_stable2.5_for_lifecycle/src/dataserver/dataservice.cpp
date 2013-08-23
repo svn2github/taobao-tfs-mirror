@@ -423,6 +423,77 @@ namespace tfs
       }
     }
 
+    void DataService::dump_stat_(time_t now)
+    {
+      // dump every minute
+      if (now % 60 == 0)
+      {
+        static int64_t last_write_bytes[2] = {0};
+        static int64_t last_write_file_count[2] = {0};
+        static int64_t last_read_bytes[2] = {0};
+        static int64_t last_read_file_count[2] = {0};
+        static int64_t last_stat_file_count[2] = {0};
+        static int64_t last_unlink_file_count[2] = {0};
+
+        DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
+        char buf[1024];
+        const char header_fmt[] = "\t%-12s%12s%18s%12s%18s\n";
+        const char fmt[] = "\t%-12s%12"PRI64_PREFIX"d%18"PRI64_PREFIX"d%12"PRI64_PREFIX"d%18"PRI64_PREFIX"d\n";
+        int pos = 0;
+        pos += sprintf(buf + pos, header_fmt,
+            "Oper-Type", "Succ-Count", "Succ-Bytes(KB)", "Fail-Count", "Fail-Bytes(KB)");
+
+        // dump total access info
+        pos += sprintf(buf + pos, fmt, "total-read",
+            info.read_file_count_[0], info.read_bytes_[0] / 1024,
+            info.read_file_count_[1], info.read_bytes_[1] / 1024);
+        pos += sprintf(buf + pos, fmt, "total-write",
+            info.write_file_count_[0], info.write_bytes_[0] / 1024,
+            info.write_file_count_[1], info.write_bytes_[1] / 1024);
+        pos += sprintf(buf + pos, fmt, "total-stat",
+            info.stat_file_count_[0], 0L,
+            info.stat_file_count_[1], 0L);
+        pos += sprintf(buf + pos, fmt, "total-unlink",
+            info.unlink_file_count_[0], 0L,
+            info.unlink_file_count_[1], 0L);
+
+        // dump last minute access info
+        pos += sprintf(buf + pos, fmt, "last-read",
+            info.read_file_count_[0] - last_read_file_count[0],
+            (info.read_bytes_[0] - last_read_bytes[0]) / 1024,
+            info.read_file_count_[1] - last_read_file_count[1],
+            (info.read_bytes_[1] - last_read_bytes[1]) / 1024);
+        pos += sprintf(buf + pos, fmt, "last-write",
+            info.write_file_count_[0] - last_write_file_count[0],
+            (info.write_bytes_[0] - last_write_bytes[0]) / 1024,
+            info.write_file_count_[1] - last_write_file_count[1],
+            (info.write_bytes_[1] - last_write_bytes[1]) / 1024);
+        pos += sprintf(buf + pos, fmt, "last-stat",
+            info.stat_file_count_[0] - last_stat_file_count[0], 0L,
+            info.stat_file_count_[1] - last_stat_file_count[1], 0L);
+        pos += sprintf(buf + pos, fmt, "last_unlink",
+            info.unlink_file_count_[0] - last_unlink_file_count[0], 0L,
+            info.unlink_file_count_[1] - last_unlink_file_count[1], 0L);
+
+        TBSYS_LOG(INFO, "DUMP ACCESS STAT BEGIN\n%s", buf);
+        TBSYS_LOG(INFO, "DUMP ACCESS STAT END");
+
+        // update last info for next dump
+        last_write_file_count[0] = info.write_file_count_[0];
+        last_write_file_count[1] = info.write_file_count_[1];
+        last_write_bytes[0] = info.write_bytes_[0];
+        last_write_bytes[1] = info.write_bytes_[1];
+        last_read_file_count[0] = info.read_file_count_[0];
+        last_read_file_count[1] = info.read_file_count_[1];
+        last_read_bytes[0] = info.read_bytes_[0];
+        last_read_bytes[1] = info.read_bytes_[1];
+        last_stat_file_count[0] = info.stat_file_count_[0];
+        last_stat_file_count[1] = info.stat_file_count_[1];
+        last_unlink_file_count[0] = info.unlink_file_count_[0];
+        last_unlink_file_count[1] = info.unlink_file_count_[1];
+      }
+    }
+
     void DataService::timeout_()
     {
       tzset();
@@ -433,6 +504,9 @@ namespace tfs
         now = time(NULL);
         //rotate log
         rotate_(last_rotate_log_time, now, zonesec);
+
+        // dump access stat
+        dump_stat_(now);
 
         //check datafile
         data_management_.gc_data_file();
@@ -940,6 +1014,7 @@ namespace tfs
       int32_t lease_id = message->get_lease_id();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int32_t option_flag = message->get_option_flag();
+      int32_t force_status = message->get_status();
 
       TBSYS_LOG(
           DEBUG,
@@ -969,7 +1044,7 @@ namespace tfs
       else
       {
         int32_t write_file_size = 0;
-        ret = data_management_.close_write_file(close_file_info, write_file_size);
+        ret = data_management_.close_write_file(close_file_info, force_status, write_file_size);
         if (TFS_SUCCESS != ret)
         {
           if (EXIT_DATAFILE_EXPIRE_ERROR == ret)

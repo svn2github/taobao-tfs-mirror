@@ -155,9 +155,9 @@ namespace tfs
         int remove_file(const uint32_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
         int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
         int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
-        int get_file_info(const char* nsip, const char* file_name, common::TfsFileStat& buf);
-
-        int sync_stat(const uint32_t block_id, const uint64_t file_id);
+        int remote_stat_file(const char* ns_addr,
+            const uint32_t block_id, const uint64_t file_id, common::FileInfoV2& finfo);
+        int stat_file(const uint32_t block_id, const uint64_t file_id, common::FileInfoV2& finfo);
 
         bool file_not_exist(int ret);
 

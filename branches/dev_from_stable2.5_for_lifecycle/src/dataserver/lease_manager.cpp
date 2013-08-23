@@ -40,7 +40,7 @@ namespace tfs
       {
         members_[index].server_ = (*iter);
         members_[index].info_.version_= INVALID_VERSION;
-        members_[index].status_ = EXIT_NOT_ALL_SUCCESS;
+        members_[index].status_ = EXIT_TIMEOUT_ERROR;
       }
     }
 
@@ -61,7 +61,8 @@ namespace tfs
       return ret;
     }
 
-    bool Lease::get_highest_version_block(common::BlockInfoV2& info)
+    // commit to ns, only verion has been updated by ds
+    bool Lease::need_commit(const int32_t last_version, common::BlockInfoV2& info)
     {
       tbutil::Mutex::Lock lock(mutex_);
       int32_t max_version = -1;
@@ -74,7 +75,7 @@ namespace tfs
           info = members_[index].info_;
         }
       }
-      return max_version >= 0;
+      return max_version > last_version;
     }
 
     int Lease::update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status)
@@ -113,7 +114,7 @@ namespace tfs
       for (int32_t index = 0; index < MAX_REPLICATION_NUM; ++index)
       {
         members_[index].info_.version_= INVALID_VERSION;
-        members_[index].status_ = EXIT_NOT_ALL_SUCCESS;
+        members_[index].status_ = EXIT_TIMEOUT_ERROR;
       }
     }
 
@@ -224,16 +225,16 @@ namespace tfs
         tbsys::gDelete(lease);
     }
 
-    Lease* LeaseManager::get(const LeaseId& lease_id, const int64_t now_us) const
+    int LeaseManager::get(const LeaseId& lease_id, const int64_t now_us, Lease*& lease) const
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
       LEASE_MAP_CONST_ITER iter = leases_.find(lease_id);
-      Lease* lease = (leases_.end() != iter && !iter->second->timeout(now_us)) ? iter->second : NULL;
+      lease = (leases_.end() != iter && !iter->second->timeout(now_us)) ? iter->second : NULL;
       if (NULL != lease)
       {
         lease->inc_ref();
       }
-      return lease;
+      return (NULL != lease) ? TFS_SUCCESS : EXIT_BLOCK_LEASE_INVALID_ERROR;
     }
 
     void LeaseManager::put(Lease* lease)
