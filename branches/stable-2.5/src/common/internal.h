@@ -1295,6 +1295,9 @@ namespace tfs
       //KvMetaTable
       KV_META_TABLE_V_META_TABLE_TAG = 601,
 
+      //ExpTable
+      EXP_TABLE_V_EXP_TABLE_TAG = 701,
+
       //UserInfo
       USER_INFO_OWNER_ID_TAG = 801,
 

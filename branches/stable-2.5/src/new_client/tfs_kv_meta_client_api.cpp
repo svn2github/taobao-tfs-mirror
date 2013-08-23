@@ -125,6 +125,23 @@ namespace tfs
       return impl_->head_object(bucket_name, object_name, object_info, user_info);
     }
 
+    TfsRetType KvMetaClient::set_life_cycle(const int32_t file_type, const char *file_name,
+                                            const int32_t invalid_time_s, const char *app_key)
+    {
+      return impl_->set_life_cycle(file_type, file_name, invalid_time_s, app_key);
+    }
+
+    TfsRetType KvMetaClient::get_life_cycle(const int32_t file_type, const char *file_name,
+                                            int32_t *invalid_time_s)
+    {
+      return impl_->get_life_cycle(file_type, file_name, invalid_time_s);
+    }
+
+    TfsRetType KvMetaClient::rm_life_cycle(const int32_t file_type, const char *file_name)
+    {
+      return impl_->rm_life_cycle(file_type, file_name);
+    }
+
   }
 }
 

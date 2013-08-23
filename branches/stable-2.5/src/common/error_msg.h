@@ -281,6 +281,9 @@ namespace tfs
     const int32_t EXIT_KV_RETURN_HAS_MORE_DATA = -17009; //tair return over 1M of get range once
     const int32_t EXIT_REQ_OFFSET_NOT_FIND = -17100;//do direct scan offset but reqoffset not in scan
 
+    // life cycle manager related
+    const int32_t EXIT_LIFE_CYCLE_INFO_EXIST = -18000;
+
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

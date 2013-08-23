@@ -677,6 +677,38 @@ namespace tfs
         //TODO
         return TFS_SUCCESS;
       }
+
+    static int int32_to_char(char* buff, const int32_t buff_size, const int32_t v)
+    {
+      int ret = TFS_ERROR;
+      if (NULL != buff && buff_size >= 4)
+      {
+        buff[3] = v & 0xFF;
+        buff[2] = (v>>8) & 0xFF;
+        buff[1] = (v>>16) & 0xFF;
+        buff[0] = (v>>24) & 0xFF;
+        ret = TFS_SUCCESS;
+      }
+      return ret;
+    }
+
+    static int char_to_int32(const char* data, const int32_t data_size, int32_t& v)
+    {
+      int ret = TFS_ERROR;
+      if (data_size >= 4)
+      {
+        v = static_cast<unsigned char>(data[0]);
+        v = v << 8;
+        v |= static_cast<unsigned char>(data[1]);
+        v = v << 8;
+        v |= static_cast<unsigned char>(data[2]);
+        v = v << 8;
+        v |= static_cast<unsigned char>(data[3]);
+        ret = TFS_SUCCESS;
+      }
+      return ret;
+    }
+
     static int int64_to_char(char* buff, const int32_t buff_size, const int64_t v)
     {
       int ret = TFS_ERROR;
@@ -695,7 +727,7 @@ namespace tfs
       return ret;
     }
 
-    static int char_to_int64(char* data, const int32_t data_size, int64_t& v)
+    static int char_to_int64(const char* data, const int32_t data_size, int64_t& v)
     {
       int ret = TFS_ERROR;
       if (data_size >= 8)

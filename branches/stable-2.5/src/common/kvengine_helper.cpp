@@ -19,8 +19,7 @@
 
 namespace tfs
 {
-  using namespace common;
-  namespace kvmetaserver
+  namespace common
   {
     KvKey::KvKey()
       :key_(NULL), key_size_(0), key_type_(0)

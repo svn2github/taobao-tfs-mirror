@@ -66,6 +66,19 @@ if test "${enable_readline}" = "yes"; then
 fi
 AC_SUBST([READLINE_INCLUDE])
 AC_SUBST([READLINE_LIB])
+AC_ARG_WITH([restful-root],
+           AS_HELP_STRING([--with-restful-root],
+           [restful client install path]),
+           TREST_ROOT=${withval})
+AC_SUBST([TREST_ROOT])
+
+AC_ARG_ENABLE([lifecycle],
+           AS_HELP_STRING([--enable-lifecycle],
+           [enable life cycle module use --with-restful-root to specify path]),
+           [enable_lifecycle=${enableval}],
+           [enable_lifecycle="no"])
+
+AM_CONDITIONAL([WITH_LIFECYCLE],[test x$enable_lifecycle = xyes])
 
 AC_ARG_WITH([tair-root],
            AS_HELP_STRING([--with-tair-root],
@@ -233,6 +246,7 @@ AC_CONFIG_FILES([Makefile
                  src/new_client/Makefile
                  src/clientv2/Makefile
                  src/common/Makefile
+                 src/common/mysql_cluster/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
                  src/monitor/Makefile
@@ -241,6 +255,9 @@ AC_CONFIG_FILES([Makefile
                  src/name_meta_server/Makefile
                  src/kv_meta_server/Makefile
                  src/rootserver/Makefile
+                 src/life_cycle_manager/Makefile
+                 src/life_cycle_manager/root_manager/Makefile
+                 src/life_cycle_manager/expire_server/Makefile
                  src/tools/Makefile
                  src/tools/rcserver/Makefile
                  src/tools/util/Makefile

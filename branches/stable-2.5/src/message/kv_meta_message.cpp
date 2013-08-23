@@ -891,5 +891,163 @@ namespace tfs
       return Serialization::get_string_length(bucket_name_) + bucket_meta_info_.length();
     }
 
+    // req_set_lifecycle_msg
+    ReqKvMetaSetLifeCycleMessage::ReqKvMetaSetLifeCycleMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_SET_LIFE_CYCLE_MESSAGE;
+    }
+
+    ReqKvMetaSetLifeCycleMessage::~ReqKvMetaSetLifeCycleMessage(){}
+
+    int ReqKvMetaSetLifeCycleMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_int32(file_type_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(file_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret =  output.set_int32(invalid_time_s_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(app_key_);
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaSetLifeCycleMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_int32(&file_type_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(file_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&invalid_time_s_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(app_key_);
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaSetLifeCycleMessage::length() const
+    {
+      return Serialization::get_string_length(app_key_) +
+        Serialization::get_string_length(file_name_) + INT_SIZE * 2;
+    }
+
+    // req_get_lifecycle_msg
+    ReqKvMetaGetLifeCycleMessage::ReqKvMetaGetLifeCycleMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_GET_LIFE_CYCLE_MESSAGE;
+    }
+
+    ReqKvMetaGetLifeCycleMessage::~ReqKvMetaGetLifeCycleMessage(){}
+
+    int ReqKvMetaGetLifeCycleMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_int32(file_type_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(file_name_);
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaGetLifeCycleMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_int32(&file_type_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(file_name_);
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaGetLifeCycleMessage::length() const
+    {
+      return Serialization::get_string_length(file_name_) + INT_SIZE;
+    }
+
+    // rsp_get_lifecycle_msg
+    RspKvMetaGetLifeCycleMessage::RspKvMetaGetLifeCycleMessage()
+    {
+      _packetHeader._pcode = RSP_KVMETA_GET_LIFE_CYCLE_MESSAGE;
+    }
+
+    RspKvMetaGetLifeCycleMessage::~RspKvMetaGetLifeCycleMessage(){}
+
+    int RspKvMetaGetLifeCycleMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_int32(invalid_time_s_);
+      return iret;
+    }
+
+    int RspKvMetaGetLifeCycleMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_int32(&invalid_time_s_);
+      return iret;
+    }
+
+    int64_t RspKvMetaGetLifeCycleMessage::length() const
+    {
+      return INT_SIZE;
+    }
+
+    // req_rm_lifecycle_msg
+    ReqKvMetaRmLifeCycleMessage::ReqKvMetaRmLifeCycleMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_RM_LIFE_CYCLE_MESSAGE;
+    }
+
+    ReqKvMetaRmLifeCycleMessage::~ReqKvMetaRmLifeCycleMessage(){}
+
+    int ReqKvMetaRmLifeCycleMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_int32(file_type_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(file_name_);
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaRmLifeCycleMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_int32(&file_type_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(file_name_);
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaRmLifeCycleMessage::length() const
+    {
+      return Serialization::get_string_length(file_name_) + INT_SIZE;
+    }
+
+
   }
 }

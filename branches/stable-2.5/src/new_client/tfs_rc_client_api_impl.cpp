@@ -1629,6 +1629,38 @@ namespace tfs
         return ret;
       }
 
+      TfsRetType RcClientImpl::set_life_cycle(const int32_t file_type, const char *file_name,
+                                              const int32_t invalid_time_s, const char *app_key)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->set_life_cycle(file_type, file_name, invalid_time_s, app_key);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::get_life_cycle(const int32_t file_type, const char *file_name,
+                                              int32_t* invalid_time_s)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->get_life_cycle(file_type, file_name, invalid_time_s);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::rm_life_cycle(const int32_t file_type, const char *file_name)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->rm_life_cycle(file_type, file_name);
+        }
+        return ret;
+      }
+      /* ==================kv end==================== */
       int64_t RcClientImpl::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
       {
         int64_t write_count = -1;

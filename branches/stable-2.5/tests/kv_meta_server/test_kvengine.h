@@ -17,17 +17,17 @@
 #ifndef TFS_METAWITHKV_Test_ENGINE_HELPER_H_
 #define TFS_METAWITHKV_Test_ENGINE_HELPER_H_
 
-#include "tairengine_helper.h"
+#include "kvengine_helper.h"
 #include <string>
 #include <map>
 using namespace std;
 namespace tfs
 {
-  namespace kvmetaserver
+  namespace common
   {
     //different key type will use different namespace in tair
 
-    class TestEngineHelper : public TairEngineHelper
+    class TestEngineHelper : public KvEngineHelper
     {
     public:
       struct InnerValue {
@@ -38,18 +38,18 @@ namespace tfs
       TestEngineHelper();
       virtual ~TestEngineHelper();
       virtual int init();
-      virtual int put_key(const KvKey& key, const KvMemValue& value, const int64_t version);
-      virtual int get_key(const KvKey& key, KvValue** value, int64_t* version);
-      virtual int delete_key(const KvKey& key);
+      virtual int put_key(const int32_t name_area, const KvKey& key, const KvMemValue& value, const int64_t version);
+      virtual int get_key(const int32_t name_area, const KvKey& key, KvValue** value, int64_t* version);
+      virtual int delete_key(const int32_t name_area, const KvKey& key);
       int split_key(const KvKey& key, KvKey *prefix_key, KvKey *second_key);
-      virtual int scan_keys(const KvKey& start_key, const KvKey& end_key,
+      virtual int scan_keys(const int32_t name_area, const KvKey& start_key, const KvKey& end_key,
           const int32_t limit, const int32_t offset, std::vector<KvValue*> *vec_realkey,
           std::vector<KvValue*> *vec_values, int32_t* result_size, short scan_type);
 
       int scan_from_map(const KvKey &start_key, const KvKey &end_key,
           const int32_t offset, const int32_t limit, std::vector<KvValue*> *vec_realkey, std::vector<KvValue*> *vec_values, int *result_size);
 
-      virtual int delete_keys(const std::vector<KvKey>& vec_keys);
+      virtual int delete_keys(const int32_t name_area, const std::vector<KvKey>& vec_keys);
     private:
       DISALLOW_COPY_AND_ASSIGN(TestEngineHelper);
       typedef std::map<std::string, InnerValue> CONTAINER;

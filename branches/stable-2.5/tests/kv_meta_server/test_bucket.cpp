@@ -41,7 +41,7 @@ class BucketTest: public ::testing::Test
     {
       test_meta_info_helper_ = new TestMetaInfoHelper();
       test_meta_info_helper_->set_kv_engine(&test_engine_);
-      test_meta_info_helper_->init();
+      test_meta_info_helper_->init(&test_engine_);
     }
     virtual void TearDown()
     {
@@ -241,7 +241,7 @@ TEST_F(BucketTest, test_get)
   int32_t limit = 10;
   int8_t is_truncated = -1;
 
-  ret = test_meta_info_helper_->get_bucket(bucket_name, prefix, start_key, delimiter, limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated);
+  ret = test_meta_info_helper_->get_bucket(bucket_name, prefix, start_key, delimiter, &limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated);
   EXPECT_EQ(TFS_SUCCESS, ret);
   EXPECT_EQ(0, is_truncated);
   EXPECT_EQ(1, static_cast<int32_t>(s_common_prefix.size()));

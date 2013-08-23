@@ -17,17 +17,16 @@
 #include "tairengine_helper.h"
 
 #include "Memory.hpp"
-#include "common/parameter.h"
-#include "common/error_msg.h"
-#include "common/serialization.h"
+#include "parameter.h"
+#include "error_msg.h"
+#include "serialization.h"
 using namespace std;
 using namespace tair;
 using namespace common;
 namespace tfs
 {
 
-  using namespace common;
-  namespace kvmetaserver
+  namespace common
   {
     TairValue::TairValue():tair_value_(NULL)
     {
@@ -77,8 +76,9 @@ namespace tfs
 
     const int TairEngineHelper::TAIR_RETRY_COUNT = 1;
 
-    TairEngineHelper::TairEngineHelper()
-      :tair_client_(NULL), object_area_(-1)
+    TairEngineHelper::TairEngineHelper(const string &master_addr, const string &slave_addr, const string &group_name)
+      :tair_client_(NULL), master_addr_(master_addr),
+      slave_addr_(slave_addr), group_name_(group_name), object_area_(-1)
     {
 
     }
@@ -100,35 +100,34 @@ namespace tfs
       {
         tair_client_ = new tair::tair_client_api();
         assert(NULL != tair_client_);
-        string master_addr = SYSPARAM_KVMETA.tair_master_;
-        string slave_addr = SYSPARAM_KVMETA.tair_slave_;
-        string group_name = SYSPARAM_KVMETA.tair_group_;
-        object_area_ = SYSPARAM_KVMETA.tair_object_area_;
 
-        if (!tair_client_->startup(master_addr.c_str(), slave_addr.c_str(), group_name.c_str()))
+        if (!tair_client_->startup(master_addr_.c_str(), slave_addr_.c_str(), group_name_.c_str()))
         {
           TBSYS_LOG(ERROR, "starup tair client fail. "
-              "master addr: %s, slave addr: %s, group name:  %s, area: %d",
-              master_addr.c_str(), slave_addr.c_str(), group_name.c_str(), object_area_);
+              "master addr: %s, slave addr: %s, group name:  %s",
+              master_addr_.c_str(), slave_addr_.c_str(), group_name_.c_str());
           ret = TFS_ERROR;
         }
       }
       return ret;
     }
 
-    int TairEngineHelper::put_key(const KvKey& key, const KvMemValue &value, const int64_t version)
+    int TairEngineHelper::put_key(const int32_t name_area, const KvKey& key, const KvMemValue &value, const int64_t version)
     {
       int ret = TFS_SUCCESS;
       switch (key.key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
+        case KvKey::KEY_TYPE_EXPTIME_APPKEY:
+        case KvKey::KEY_TYPE_ES_STAT:
           {
-            ret = put_object_key(key, value, version);
+            ret = prefix_put_key(name_area, key, value, version);
           }
           break;
         case KvKey::KEY_TYPE_BUCKET:
+        case KvKey::KEY_TYPE_NAME_EXPTIME:
           {
-            ret = put_bucket_key(key, value, version);
+            ret = none_range_put_key(name_area, key, value, version);
           }
           break;
         default:
@@ -137,7 +136,7 @@ namespace tfs
       }
       return ret;
     }
-    int TairEngineHelper::put_object_key(const KvKey& key, const KvMemValue &value, const int64_t version)
+    int TairEngineHelper::prefix_put_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version)
     {
       int ret = TFS_SUCCESS;
       tair::data_entry t_pkey;
@@ -154,34 +153,47 @@ namespace tfs
       {
         tvalue.set_data(value.get_data(), value.get_size());
 
-        ret = prefix_put_to_tair(object_area_,
+        ret = prefix_put_to_tair(area,
             t_pkey, t_skey, tvalue, version);
+
+        if (TAIR_RETURN_SUCCESS != ret)
+        {
+          TBSYS_LOG(INFO, "tair ret: %d", ret);
+          if (TAIR_RETURN_VERSION_ERROR == ret)
+          {
+            TBSYS_LOG(WARN, "put to tair version error.");
+            ret = EXIT_KV_RETURN_VERSION_ERROR;
+          }
+          else
+          {
+            ret = EXIT_KV_RETURN_ERROR;
+          }
+        }
       }
       return ret;
     }
 
-    int TairEngineHelper::put_bucket_key(const KvKey& key, const KvMemValue &value, const int64_t version)
+    int TairEngineHelper::none_range_put_key(const int area, const KvKey& key, const KvMemValue &value, const int64_t version)
     {
       int ret = TFS_SUCCESS;
       int tair_ret;
-      UNUSED(version);
       data_entry pkey(key.key_, key.key_size_);
       data_entry pvalue(value.get_data(), value.get_size());
-      tair_ret = tair_client_->put(object_area_, pkey, pvalue, 0, 0);
+      tair_ret = tair_client_->put(area, pkey, pvalue, 0, version);
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
         TBSYS_LOG(INFO, "tair ret: %d", tair_ret);
         ret = EXIT_KV_RETURN_ERROR;
         if (TAIR_RETURN_VERSION_ERROR == tair_ret)
         {
-          TBSYS_LOG(WARN, "put bucket to tair version error.");
+          TBSYS_LOG(WARN, "put to tair version error.");
           ret = EXIT_KV_RETURN_VERSION_ERROR;
         }
       }
       return ret;
     }
 
-    int TairEngineHelper::get_key(const KvKey& key, KvValue **pp_value, int64_t *version)
+    int TairEngineHelper::get_key(const int32_t name_area, const KvKey& key, KvValue **pp_value, int64_t *version)
     {
       int ret = TFS_SUCCESS;
       if (NULL == pp_value || NULL != *pp_value)
@@ -194,13 +206,16 @@ namespace tfs
         switch (key.key_type_)
         {
           case KvKey::KEY_TYPE_OBJECT:
+          case KvKey::KEY_TYPE_EXPTIME_APPKEY:
             {
-              ret = get_object_key(key, pp_value, version);
+              ret = prefix_get_key(name_area, key, pp_value, version);
             }
             break;
           case KvKey::KEY_TYPE_BUCKET:
+          case KvKey::KEY_TYPE_NAME_EXPTIME:
+          case KvKey::KEY_TYPE_ES_STAT:
             {
-              ret = get_bucket_key(key, pp_value, version);
+              ret = none_range_get_key(name_area, key, pp_value, version);
             }
             break;
           default:
@@ -210,7 +225,7 @@ namespace tfs
       }
       return ret;
     }
-    int TairEngineHelper::get_object_key(const KvKey& key, KvValue **pp_value, int64_t *version)
+    int TairEngineHelper::prefix_get_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version)
     {
       int ret = TFS_SUCCESS;
       tair::data_entry t_pkey;
@@ -226,7 +241,7 @@ namespace tfs
       }
       if(TFS_SUCCESS == ret)
       {
-        ret = prefix_get_from_tair(object_area_, t_pkey, t_skey, tvalue/*p_tair_value->get_tair_value()*/);
+        ret = prefix_get_from_tair(area, t_pkey, t_skey, tvalue/*p_tair_value->get_tair_value()*/);
       }
 
       if (TFS_SUCCESS == ret && NULL != version)
@@ -248,13 +263,13 @@ namespace tfs
       }
       return ret;
     }
-    int TairEngineHelper::get_bucket_key(const KvKey& key, KvValue **pp_value, int64_t *version)
+    int TairEngineHelper::none_range_get_key(const int area, const KvKey& key, KvValue **pp_value, int64_t *version)
     {
       int ret = TFS_SUCCESS;
       data_entry pkey(key.key_, key.key_size_);
       data_entry* pvalue = NULL;
       int tair_ret = 0;
-      tair_ret = tair_client_->get(object_area_, pkey, pvalue);
+      tair_ret = tair_client_->get(area, pkey, pvalue);
 
       if(TAIR_RETURN_DATA_NOT_EXIST == tair_ret || TAIR_RETURN_DATA_EXPIRED == tair_ret)
       {
@@ -290,7 +305,7 @@ namespace tfs
       return ret;
     }
 
-    int TairEngineHelper::scan_keys(const KvKey& start_key, const KvKey& end_key, const int32_t limit,
+    int TairEngineHelper::scan_keys(const int32_t name_area, const KvKey& start_key, const KvKey& end_key, const int32_t limit,
         const int32_t offset, vector<KvValue*> *keys, vector<KvValue*> *values, int32_t* result_size, short scan_type)
     {
       int ret = TFS_SUCCESS;
@@ -298,8 +313,9 @@ namespace tfs
       switch (start_key.key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
+        case KvKey::KEY_TYPE_EXPTIME_APPKEY:
           {
-            ret = scan_object_keys(start_key, end_key, limit, offset,
+            ret = scan_prefix_keys(name_area, start_key, end_key, limit, offset,
                 keys, values, result_size, scan_type);
           }
           break;
@@ -310,7 +326,7 @@ namespace tfs
       return ret;
     }
 
-    int TairEngineHelper::scan_object_keys(const KvKey& start_key, const KvKey& end_key,
+    int TairEngineHelper::scan_prefix_keys(const int area, const KvKey& start_key, const KvKey& end_key,
         const int32_t limit, const int32_t offset, vector<KvValue*> *keys,
         vector<KvValue*> *values, int32_t* result_size, short scan_type)
     {
@@ -343,7 +359,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         tvalues.clear();
-        ret = prefix_scan_from_tair(object_area_, t_start_pkey,
+        ret = prefix_scan_from_tair(area, t_start_pkey,
             NULL == start_key.key_ ? "" : t_start_skey, NULL == end_key.key_ ? "" : t_end_skey,
             offset, limit, tvalues, scan_type);
       }
@@ -405,19 +421,22 @@ namespace tfs
       return ret;
     }
 
-    int TairEngineHelper::delete_key(const KvKey& key)
+    int TairEngineHelper::delete_key(const int32_t name_area, const KvKey& key)
     {
       int ret = TFS_SUCCESS;
       switch (key.key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
+        case KvKey::KEY_TYPE_EXPTIME_APPKEY:
           {
-            ret = delete_object_key(key);
+            ret = delete_prefix_key(name_area, key);
           }
           break;
         case KvKey::KEY_TYPE_BUCKET:
+        case KvKey::KEY_TYPE_NAME_EXPTIME:
+        case KvKey::KEY_TYPE_ES_STAT:
           {
-            ret = delete_bucket_key(key);
+            ret = delete_none_range_key(name_area, key);
           }
           break;
         default:
@@ -427,7 +446,7 @@ namespace tfs
       return ret;
     }
 
-    int TairEngineHelper::delete_object_key(const KvKey& key)
+    int TairEngineHelper::delete_prefix_key(const int area, const KvKey& key)
     {
       int ret = TFS_SUCCESS;
       tair::data_entry pkey;
@@ -435,17 +454,17 @@ namespace tfs
       ret = split_key_for_tair(key, &pkey, &skey);
       if (TFS_SUCCESS == ret)
       {
-        ret = prefix_remove_from_tair(object_area_, pkey, skey);
+        ret = prefix_remove_from_tair(area, pkey, skey);
       }
       return ret;
     }
 
-    int TairEngineHelper::delete_bucket_key(const KvKey& key)
+    int TairEngineHelper::delete_none_range_key(const int area, const KvKey& key)
     {
       int ret = TFS_SUCCESS;
       int tair_ret = 0;
-      data_entry pkey(key.key_);
-      tair_ret = tair_client_->remove(object_area_, pkey);
+      data_entry pkey(key.key_, key.key_size_);
+      tair_ret = tair_client_->remove(area, pkey);
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
         ret = EXIT_KV_RETURN_ERROR;
@@ -460,15 +479,15 @@ namespace tfs
     }
 
 
-    int TairEngineHelper::delete_keys(const std::vector<KvKey>& vec_keys)
+    int TairEngineHelper::delete_keys(const int32_t name_area, const std::vector<KvKey>& vec_keys)
     {
       int ret = TFS_SUCCESS;
-
       switch (vec_keys.front().key_type_)
       {
         case KvKey::KEY_TYPE_OBJECT:
+        case KvKey::KEY_TYPE_EXPTIME_APPKEY:
           {
-            ret = delete_object_keys(vec_keys);
+            ret = delete_prefix_keys(name_area, vec_keys);
           }
           break;
         default:
@@ -477,7 +496,7 @@ namespace tfs
       }
       return ret;
     }
-    int TairEngineHelper::delete_object_keys(const std::vector<KvKey>& vec_keys)
+    int TairEngineHelper::delete_prefix_keys(const int area, const std::vector<KvKey>& vec_keys)
     {
       int ret = TFS_SUCCESS;
       tair::data_entry pkey;
@@ -495,7 +514,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = prefix_removes_from_tair(object_area_, pkey, skey_set, key_code_map);
+        ret = prefix_removes_from_tair(area, pkey, skey_set, key_code_map);
         TBSYS_LOG(DEBUG, "removes %lu keys, ret: %d", skey_set.size(), ret);
       }
       std::vector<tair::data_entry* >::const_iterator iter_skey = v_skey.begin();
@@ -511,7 +530,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       if (NULL == prefix_key || NULL == second_key
-          || NULL == key.key_ || 0 == key.key_size_ || KvKey::KEY_TYPE_OBJECT != key.key_type_)
+          || NULL == key.key_ || 0 == key.key_size_)
       {
         TBSYS_LOG(ERROR, "parameters error");
         ret = TFS_ERROR;
@@ -535,6 +554,7 @@ namespace tfs
 
         prefix_key_size = pos - key.key_ + 1;
         second_key_size = key.key_size_ - prefix_key_size;
+        TBSYS_LOG(DEBUG, "PKEY POS is %"PRI64_PREFIX"d", prefix_key_size);
         if (NULL == pos || prefix_key_size <= 0 || second_key_size < 0)
         {
           TBSYS_LOG(ERROR, "invalid key is %s", key.key_);
@@ -678,6 +698,7 @@ namespace tfs
         }
         else
         {
+          TBSYS_LOG(ERROR, "tair_ret getrange is %d and area is %d and type is %d", tair_ret, area, type);
           ret = EXIT_KV_RETURN_ERROR;
         }
       }
