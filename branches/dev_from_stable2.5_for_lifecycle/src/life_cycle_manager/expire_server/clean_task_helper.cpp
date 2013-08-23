@@ -31,6 +31,7 @@ namespace tfs
     const int32_t SCAN_LIMIT = 1000;
     const int32_t SEC_ONE_DAY = 24 * 60 * 60;
     const int32_t MAX_INT32 = (1<<31) - 1;
+    const char del = '^';
 
     enum
     {
@@ -61,6 +62,13 @@ namespace tfs
       else
       {
         kv_engine_helper_ = kv_engine_helper;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = restful_client_.initialize(SYSPARAM_EXPIRESERVER.nginx_root_.c_str(),
+                                                   SYSPARAM_EXPIRESERVER.es_appkey_.c_str());
+        TBSYS_LOG(INFO, "ret: %d, restful_client initialize SUCCESS", ret);
       }
 
       tair_lifecycle_area_ = SYSPARAM_EXPIRESERVER.lifecycle_area_;
@@ -153,8 +161,18 @@ namespace tfs
       int32_t end_bucket_num;
       std::string file_name;
 
-      clean_task_state_ = 1;
+      struct timeval start;
+      struct timeval end;
 
+      struct timeval scan_start;
+      struct timeval scan_end;
+      int32_t g_scan_time = 0;
+
+      gettimeofday(&start, NULL);
+
+      int32_t expire_file_count = 0;
+
+      clean_task_state_ = 1;
 
       ret = ExpireDefine::transfer_time(task_time, &days_secs, &hours_secs);
 
@@ -194,7 +212,6 @@ namespace tfs
           int64_t first, second;
           first = Func::get_monotonic_time();
           zero_secs = 0;
-
 
           for (hash_mod = start_bucket_num; hash_mod <= end_bucket_num; ++hash_mod)
           {
@@ -243,16 +260,24 @@ namespace tfs
                 while (go_on)
                 {
                   int32_t result_size = 0;
+                  gettimeofday(&scan_start, NULL);
                   ret = kv_engine_helper_->scan_keys(tair_lifecycle_area_, start_key, end_key, SCAN_LIMIT, first,
                                                      &kv_value_keys, &kv_value_values,
                                                      &result_size, scan_type);
+
+                  gettimeofday(&scan_end, NULL);
+
+                  g_scan_time += 1000000 * (scan_end.tv_sec - scan_start.tv_sec) + scan_end.tv_usec - scan_start.tv_usec;
+
                   if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
                   {//no data
-                    TBSYS_LOG(ERROR, "data not exist");
+                    TBSYS_LOG(DEBUG, "data not exist, result_size: %d", result_size);
                     ret = TFS_SUCCESS;
                   }
 
-                  for(i = 0; i < result_size; ++i)
+                  expire_file_count += result_size;
+
+                  for (i = 0; i < result_size; ++i)
                   {
                     ret = ExpireDefine::deserialize_exptime_app_key(kv_value_keys[i]->get_data(),
                                                  kv_value_keys[i]->get_size(),
@@ -271,19 +296,60 @@ namespace tfs
                        take_note(local_ipport, num_es, task_time, hash_mod, sum_file_num);
                     }
 
+                    uint32_t file_len = t_file_name.length();
+                    if (file_len > 0 && (t_file_name[0] == 'T' || t_file_name[0] == 'L'))
+                    {
+                      ret = restful_client_.unlink(t_file_name.c_str(), NULL, tfs::restful::DELETE, t_appkey.c_str());
+                    }
+                    else if (file_len > 0)
+                    {
+                      //file_name like appid/uid/aa/bb
+                      string::size_type pos = 0;
+                      string::size_type begin = string::npos;
+                      string::size_type end = string::npos;
+                      int i = 0;
+                      TBSYS_LOG(INFO, "file_name: %s", t_file_name.c_str());
+                      while(1)
+                      {
+                        pos = t_file_name.find_first_of(del, pos);
+                        if (pos != string::npos)
+                        {
+                          if (i == 0)
+                          {
+                            begin = pos;
+                            i++;
+                          }
+                          else if (i == 1)
+                          {
+                            end = pos;
+                            break;
+                          }
+                          pos++;
+                        }
+                        else
+                        {
+                          TBSYS_LOG(ERROR, "file_name: %s is illegal", t_file_name.c_str());
+                          break;
+                        }
+                      }
 
-
-                    restful_client_.unlink(t_file_name.c_str(), NULL, tfs::restful::DELETE ,t_appkey.c_str());
-
+                      if (begin != string::npos && end != string::npos)
+                      {
+                        int64_t uid = atol(t_file_name.substr(begin + 1, end - begin - 1).c_str());
+                        string meta_name = t_file_name.substr(end, file_len - end);
+                        TBSYS_LOG(INFO, "uid: %"PRI64_PREFIX"d, meta_name: %s", uid, meta_name.c_str());
+                        //ret = restful_client_.rm_file(uid, meta_name.c_str(), t_appkey.c_str());
+                      }
+                    }
                   }
 
                   TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
 
-                  if(result_size == SCAN_LIMIT)
+                  if (result_size == SCAN_LIMIT)
                   {
                     first = 1;
                     ret = ExpireDefine::serialize_exptime_app_key(days_secs, hours_secs, hash_mod, t_file_type,
-                          t_file_name, &start_key, start_key_buff, KEY_BUFF_SIZE);
+                        t_file_name, &start_key, start_key_buff, KEY_BUFF_SIZE);
                   }
                   else
                   {
@@ -313,9 +379,12 @@ namespace tfs
             end_key_buff = NULL;
           }
       }
-      /*
-      restful_client.logout();
-      */
+
+      gettimeofday(&end, NULL);
+      int32_t timeuse = 1000000 * (end.tv_sec - start.tv_sec) + end.tv_usec - start.tv_usec;
+
+      TBSYS_LOG(INFO, "time: %d task use %d us, scan use %d us, unlink %d file", task_time, timeuse,
+          g_scan_time, expire_file_count);
       clean_task_state_ = 0;
       return ret;
     }//end for clean task

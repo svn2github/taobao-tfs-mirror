@@ -28,7 +28,7 @@ using namespace tfs::common;
 using namespace tfs::expireserver;
 using namespace tfs::kvmetaserver;
 
-int TestCleanTaskHelper::get_note(const uint64_t locak_ip, const int32_t num_es, const int32_t task_time,
+int TestCleanTaskHelper::get_note(const uint64_t local_ip, const int32_t num_es, const int32_t task_time,
                                   const int32_t hash_bucket_num, const int64_t sum_file_num)
 {
     int ret = TFS_SUCCESS;
@@ -43,7 +43,7 @@ int TestCleanTaskHelper::get_note(const uint64_t locak_ip, const int32_t num_es,
     }
     if (TFS_SUCCESS == ret)
     {
-      ret = ExpireDefine::serialize_es_stat_key(locak_ip, num_es,
+      ret = ExpireDefine::serialize_es_stat_key(local_ip, num_es,
                                 task_time, hash_bucket_num,
                                 sum_file_num, &key,
                                 key_buff, 512);

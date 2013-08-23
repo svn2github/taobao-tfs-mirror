@@ -27,5 +27,6 @@ check_old_new_SOURCES = check_old_new.cpp
 check_old_new_V2_SOURCES = check_old_new_V2.cpp
 sync_nginx2kv_SOURCES = sync_nginx2kv.cpp
 go_tair_for_kv_SOURCES = go_tair_for_kv.cpp
+query_progress_SOURCES = query_progress.cpp
 #del_from_tair_SOURCES = del_from_tair.cpp
 #put_bucket_to_tair_SOURCES = put_bucket_to_tair.cpp

@@ -53,6 +53,7 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         need_move_ = false;
+        need_change_ = false;
         wait_time_check_ = SYSPARAM_EXPIREROOTSERVER.es_rts_check_lease_interval_;
         if (wait_time_check_ < 0 || wait_time_check_ > max_check_interval)
         {
@@ -132,9 +133,14 @@ namespace tfs
       if (need_move_)
       {
         handle_task_helper_.handle_fail_servers(down_servers);
+        move_table();
       }
 
-      move_table();
+      if (need_change_)
+      {
+        change_idle_table();
+      }
+
       return;
     }
 
@@ -162,13 +168,19 @@ namespace tfs
               iter->second.lease_.lease_id_, iter->second.lease_.lease_expired_time_);
           delete pserver;
           need_move_ = true;
+          need_change_ = true;
         }
         else
         {
           pserver = &iter->second;
           pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_EXPIREROOTSERVER.es_rts_lease_expired_time_ ;
           pserver->base_info_.last_update_time_ = now.toSeconds();
-          pserver->base_info_.task_status_ = base_info.task_status_;
+          if (pserver->base_info_.task_status_ ^ base_info.task_status_)
+          {
+            pserver->base_info_.task_status_ = base_info.task_status_;
+            need_change_ = true;
+          }
+          TBSYS_LOG(INFO, "now time: %ld, status: %d", (int64_t)now.toSeconds(), pserver->base_info_.task_status_);
         }
       }
 
@@ -180,11 +192,25 @@ namespace tfs
       mutex_.lock();
       mutex_for_get_.lock();
       exp_table_.v_exp_table_.clear();
-      exp_table_.v_idle_table_.clear();
       EXP_SERVER_MAPS::iterator iter = servers_.begin();
       for(; iter != servers_.end(); ++iter)
       {
         exp_table_.v_exp_table_.push_back(iter->first);
+      }
+      mutex_for_get_.unlock();
+      mutex_.unlock();
+
+      need_move_ = false;
+    }
+
+    void ExpServerManager::change_idle_table()
+    {
+      mutex_.lock();
+      mutex_for_get_.lock();
+      exp_table_.v_idle_table_.clear();
+      EXP_SERVER_MAPS::iterator iter = servers_.begin();
+      for(; iter != servers_.end(); ++iter)
+      {
         if ((iter->second).base_info_.task_status_ == 0)
         {
           exp_table_.v_idle_table_.push_back(iter->first);
@@ -193,7 +219,7 @@ namespace tfs
       mutex_for_get_.unlock();
       mutex_.unlock();
 
-      need_move_ = false;
+      need_change_ = false;
     }
 
     int ExpServerManager::get_table(ExpTable &exp_table)

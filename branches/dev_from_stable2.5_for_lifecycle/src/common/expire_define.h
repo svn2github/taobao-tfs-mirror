@@ -137,7 +137,8 @@ namespace tfs
     {
       RAW = 1,
       META = 2,
-      BUCKET = 3
+      BUCKET = 3,
+      MAX_TYPE = 4
     };
 
     struct ExpireDeleteTask

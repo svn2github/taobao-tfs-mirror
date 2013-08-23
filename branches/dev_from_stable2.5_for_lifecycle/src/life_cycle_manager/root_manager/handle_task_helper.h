@@ -80,6 +80,10 @@ namespace tfs
 
         std::deque<common::ExpireDeleteTask> task_wait_;
 
+        int32_t task_period_;
+
+        int32_t note_interval_;
+
       private:
         ExpServerManager &manager_;
         DISALLOW_COPY_AND_ASSIGN(HandleTaskHelper);

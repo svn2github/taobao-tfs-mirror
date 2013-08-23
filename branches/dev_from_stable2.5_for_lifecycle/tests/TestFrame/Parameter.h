@@ -19,6 +19,8 @@ class Parameter
 {
   public:
    const char *rs_addr;
+   const char *rc_addr;
+   const char *kms_addr;
    const char *app_key;
 
    const char *local_file;

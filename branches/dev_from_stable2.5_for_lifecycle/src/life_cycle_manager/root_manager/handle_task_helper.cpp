@@ -35,7 +35,6 @@ namespace tfs
 
     const int8_t MAX_RETRY_COUNT = 2;
     const int16_t MAX_TIMEOUT_MS = 500;
-    const int32_t TASK_PERIOD_SECONDS = 60 * 60;
 
     const int64_t INT64_INFI = 0x7FFFFFFFFFFFFFFFL;
     const int32_t INT32_INFI = 0x7FFFFFFF;
@@ -49,7 +48,8 @@ namespace tfs
 
     HandleTaskHelper::HandleTaskHelper(ExpServerManager &manager)
       :kv_engine_helper_(NULL), lifecycle_area_(0),
-      assign_task_thread_(0), manager_(manager)
+      assign_task_thread_(0), task_period_(0),
+      note_interval_(0), manager_(manager)
     {
     }
 
@@ -84,6 +84,8 @@ namespace tfs
       {
         assign_task_thread_ = new AssignTaskThreadHelper(*this);
         lifecycle_area_ = SYSPARAM_EXPIREROOTSERVER.lifecycle_area_;
+        task_period_ = SYSPARAM_EXPIREROOTSERVER.task_period_;
+        note_interval_ = SYSPARAM_EXPIREROOTSERVER.note_interval_;
       }
 
       return ret;
@@ -93,11 +95,34 @@ namespace tfs
         const int32_t hash_bucket_num, const ExpireTaskType type,
         int64_t *sum_file_num, int32_t *current_percent)
     {
-      UNUSED(type);
-
       int ret = TFS_SUCCESS;
 
-      ret = (NULL == sum_file_num || NULL == current_percent) ? TFS_ERROR : TFS_SUCCESS;
+      ret = (NULL == sum_file_num || NULL == current_percent
+          || num_es < 0 || type < 0 || type > MAX_TYPE ) ? TFS_ERROR : TFS_SUCCESS;
+
+      //if assign num_es = 0, we should find num_es for query
+      int32_t actual_num_es = num_es;
+      //total_hash_bucket_num means every es should have xxx hash_bucket_nums
+      int32_t total_hash_bucket_num = 0;
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (num_es == 0)
+        {
+          mutex_task_.lock();
+          TASK_INFO_ITER iter = m_task_info_.find(es_id);
+          if (iter != m_task_info_.end())
+          {
+            actual_num_es = (iter->second).assign_no_;
+            total_hash_bucket_num = ExpireDefine::HASH_BUCKET_NUM/(iter->second).alive_total_;
+          }
+          else
+          {
+            TBSYS_LOG(WARN, "%s maybe have finish the task", tbsys::CNetUtil::addrToString(es_id).c_str());
+          }
+          mutex_task_.unlock();
+        }
+      }
 
       char *start_key_buff = (char*)malloc(KEY_BUFF_SIZE);
       char *end_key_buff = (char*)malloc(KEY_BUFF_SIZE);
@@ -113,15 +138,15 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         //has assign hash_bucket_num
-        ret = ExpireDefine::serialize_es_stat_key(es_id, num_es,
+        ret = ExpireDefine::serialize_es_stat_key(es_id, actual_num_es,
             task_time, hash_bucket_num > 0 ? hash_bucket_num : 0,
             0, &start_key,
             start_key_buff, KEY_BUFF_SIZE);
 
         if (TFS_SUCCESS == ret)
         {
-          ret = ExpireDefine::serialize_es_stat_key(es_id, num_es, task_time,
-              hash_bucket_num > 0 ? hash_bucket_num : INT32_INFI,
+          ret = ExpireDefine::serialize_es_stat_key(es_id, actual_num_es, task_time,
+              hash_bucket_num > 0 ? hash_bucket_num : ExpireDefine::HASH_BUCKET_NUM - 1,
               INT64_INFI, &end_key,
               end_key_buff, KEY_BUFF_SIZE);
         }
@@ -139,26 +164,6 @@ namespace tfs
       int32_t offset = 0;
       int32_t limit = 1000;
       int32_t res_size = 0;
-
-      //total_hash_bucket_num means every es should have xxx hash_bucket_nums
-      int32_t total_hash_bucket_num = 0;
-
-      if (TFS_SUCCESS == ret)
-      {
-        mutex_task_.lock();
-        map<uint64_t, ExpireDeleteTask>::iterator iter = m_task_info_.find(es_id);
-        if (iter != m_task_info_.end())
-        {
-          total_hash_bucket_num = ExpireDefine::HASH_BUCKET_NUM/(iter->second).alive_total_;
-        }
-        else
-        {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "es_id: %s's task is complete", tbsys::CNetUtil::addrToString(es_id).c_str());
-        }
-        mutex_task_.unlock();
-      }
-
 
       while (TFS_SUCCESS == ret)
       {
@@ -184,7 +189,7 @@ namespace tfs
           }
           if (res_size == limit)
           {
-            ret = ExpireDefine::serialize_es_stat_key(es_id, num_es, task_time, last_hash_bucket_num,
+            ret = ExpireDefine::serialize_es_stat_key(es_id, actual_num_es, task_time, last_hash_bucket_num,
                                                      INT64_INFI, &start_key,
                                                      start_key_buff, KEY_BUFF_SIZE);
           }
@@ -211,7 +216,7 @@ namespace tfs
       {
         if (hash_bucket_num == 0 && total_hash_bucket_num > 0)
         {
-          *current_percent = (last_hash_bucket_num - total_hash_bucket_num * num_es) * 100 / total_hash_bucket_num;
+          *current_percent = (last_hash_bucket_num - total_hash_bucket_num * actual_num_es) * 100 / total_hash_bucket_num;
         }
         else
         {
@@ -315,7 +320,7 @@ namespace tfs
         tbutil::Time now = tbutil::Time::now(tbutil::Time::Realtime);
 
         //check arrive clock
-        if (now.toSeconds() % TASK_PERIOD_SECONDS == 0)
+        if (now.toSeconds() % task_period_ == 0)
         {
           mutex_task_wait_.lock();
           if (task_wait_.empty())
@@ -327,7 +332,7 @@ namespace tfs
             {
               // if es has handled in note_interval second, should record in tair
               ExpireTaskType type = RAW;
-              int32_t note_interval = 200;
+              int32_t note_interval = note_interval_;
               ExpireDeleteTask del_task(num, i, now.toSeconds(), 0, note_interval, type);
               mutex_task_wait_.lock();
               task_wait_.push_back(del_task);
@@ -352,8 +357,18 @@ namespace tfs
             task_wait_.pop_front();
             mutex_task_wait_.unlock();
 
-            //TBSYS_LOG(INFO, "begin to assign msg to %s", tbsys::CNetUtil::addrToString(exp_table.v_idle_table_[i]).c_str());
-            ret = assign(exp_table.v_idle_table_[i], del_task);
+            mutex_task_.lock();
+            TASK_INFO_ITER iter = m_task_info_.find(exp_table.v_idle_table_[i]);
+            if (iter == m_task_info_.end())
+            {
+              TBSYS_LOG(INFO, "begin to assign msg to %s", tbsys::CNetUtil::addrToString(exp_table.v_idle_table_[i]).c_str());
+              ret = assign(exp_table.v_idle_table_[i], del_task);
+            }
+            else
+            {
+              ret = TFS_ERROR;
+            }
+            mutex_task_.unlock();
 
             if (TFS_SUCCESS != ret)
             {
