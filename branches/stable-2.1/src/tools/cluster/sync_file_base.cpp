@@ -59,6 +59,7 @@ int SyncFileBase::cmp_file_info(const string& file_name, SyncAction& sync_action
   {
     if (EXIT_META_NOT_FOUND_ERROR == ret)
     {
+      ret = TFS_SUCCESS;//src not exist is normal
       TBSYS_LOG(INFO, "source file %s doesn't exist, will not sync", file_name.c_str());
     }
     else
@@ -153,8 +154,9 @@ int SyncFileBase::cmp_file_info_ex(const string& file_name, const TfsFileStat& s
     TBSYS_LOG(DEBUG, "get dest file info failed. filename: %s, ret: %d", file_name.c_str(), ret);
   }
 
-  TBSYS_LOG(DEBUG, "file(%s): flag--(%d -> %d), crc--(%u -> %u), size--(%"PRI64_PREFIX"d -> %"PRI64_PREFIX"d)",
-      file_name.c_str(), source_buf.flag_, ((ret == TFS_SUCCESS)? dest_buf.flag_:-1), source_buf.crc_, dest_buf.crc_, source_buf.size_, dest_buf.size_);
+  TBSYS_LOG(DEBUG, "file(%s): flag--(%d -> %d), crc--(%u -> %u), size--(%"PRI64_PREFIX"d -> %"PRI64_PREFIX"d), source modify time: %s -> dest modify time: %s",
+      file_name.c_str(), source_buf.flag_, ((ret == TFS_SUCCESS)? dest_buf.flag_:-1), source_buf.crc_, dest_buf.crc_, source_buf.size_, dest_buf.size_,
+      Func::time_to_str(source_buf.modify_time_).c_str(), Func::time_to_str(dest_buf.modify_time_).c_str());
 
   // 1. dest file exists and is new file, just skip.
   if (ret == TFS_SUCCESS && dest_buf.modify_time_ > modify_time)
@@ -181,15 +183,11 @@ int SyncFileBase::cmp_file_info_ex(const string& file_name, const TfsFileStat& s
         sync_action.push_back(WRITE_ACTION);
         sync_action.push_back(HIDE_DEST);
       }
-      //else if (source_buf.flag_ == 1 && force)
-      //{
-      //  sync_action.push_back(UNDELE_SOURCE);
-      //  sync_action.push_back(WRITE_ACTION);
-      //  sync_action.push_back(DELETE_SOURCE);
-      //  sync_action.push_back(DELETE_DEST);
-      //  sync_action.trigger_index_ = 0;
-      //  sync_action.force_index_ = 2;
-      //}
+      else if (source_buf.flag_ == 1 && force)
+      {
+        sync_action.push_back(WRITE_ACTION);
+        sync_action.push_back(DELETE_DEST);
+      }
     }
   }
   // 3. source file is the same to dest file, but in diff stat
@@ -271,6 +269,10 @@ int SyncFileBase::do_action_ex(const string& file_name, const ActionInfo& action
       break;
     case DELETE_DEST:
       ret = TfsClientImpl::Instance()->unlink(file_size, file_name.c_str(), NULL, dest_ns_addr_.c_str(), DELETE, TFS_FILE_NO_SYNC_LOG);
+      if (EXIT_FILE_STATUS_ERROR == ret || EXIT_META_NOT_FOUND_ERROR == ret)
+      {
+        ret = TFS_SUCCESS;
+      }
       usleep(20000);
       break;
     case UNHIDE_DEST:
@@ -279,6 +281,10 @@ int SyncFileBase::do_action_ex(const string& file_name, const ActionInfo& action
       break;
     case UNDELE_DEST:
       ret = TfsClientImpl::Instance()->unlink(file_size, file_name.c_str(), NULL, dest_ns_addr_.c_str(), UNDELETE, TFS_FILE_NO_SYNC_LOG);
+      if (EXIT_FILE_STATUS_ERROR == ret)
+      {
+        ret = TFS_SUCCESS;
+      }
       usleep(20000);
       break;
     default:

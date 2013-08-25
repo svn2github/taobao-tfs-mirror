@@ -29,6 +29,7 @@ struct SyncStat
   int64_t actual_count_;
   int64_t success_count_;
   int64_t fail_count_;
+  int64_t unsync_count_;
 };
 struct LogFile
 {
@@ -48,12 +49,10 @@ class WorkThread : public tbutil::Thread
   public:
     WorkThread(const string& src_ns_addr, const string& dest_ns_addr, const bool force, const int32_t modify_time):
       src_ns_addr_(src_ns_addr), dest_ns_addr_(dest_ns_addr), force_(force), modify_time_(modify_time), destroy_(false)
-  {
-    TfsClientImpl::Instance()->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, true);
-  }
+    {
+    }
     virtual ~WorkThread()
     {
-
     }
 
     void wait_for_shut_down()
@@ -94,41 +93,61 @@ static WorkThreadPtr* gworks = NULL;
 static int32_t thread_count = 1;
 static const int32_t MAX_READ_LEN = 256;
 string src_ns_addr_ = "", dest_ns_addr_ = "";
-FILE *g_sync_succ = NULL, *g_sync_fail = NULL;
+FILE *g_sync_succ = NULL, *g_sync_fail = NULL, *g_file_unsync = NULL;
 
 struct LogFile g_log_fp[] =
 {
   {&g_sync_succ, "sync_succ_file"},
   {&g_sync_fail, "sync_fail_file"},
+  {&g_file_unsync, "sync_unsync_file"},
   {NULL, NULL}
 };
 
-int init_log_file(char* dir_path)
+int rename_file(const char* file_path)
+{
+  int ret = TFS_SUCCESS;
+  if (access(file_path, F_OK) == 0)
+  {
+    char old_file_path[256];
+    snprintf(old_file_path, 256, "%s.%s", file_path, Func::time_to_str(time(NULL), 1).c_str());
+    ret = rename(file_path, old_file_path);
+  }
+  return ret;
+}
+
+int init_log_file(const char* dir_path)
 {
   for (int i = 0; g_log_fp[i].file_; i++)
   {
     char file_path[256];
-    snprintf(file_path, 256, "%s%s", dir_path, g_log_fp[i].file_);
-    *g_log_fp[i].fp_ = fopen(file_path, "w");
+    snprintf(file_path, 256, "%s/%s", dir_path, g_log_fp[i].file_);
+    rename_file(file_path);
+    *g_log_fp[i].fp_ = fopen(file_path, "wb");
     if (!*g_log_fp[i].fp_)
     {
       printf("open file fail %s : %s\n:", g_log_fp[i].file_, strerror(errno));
       return TFS_ERROR;
     }
   }
+
   return TFS_SUCCESS;
 }
 
 static void usage(const char* name)
 {
-  fprintf(stderr, "Usage: %s -s -d -f [-g] [-l] [-h]\n", name);
+  fprintf(stderr, "Usage: %s -s src_addr -d dest_addr -f input_log [-m modify_time] [-g out_log] [-e] [-t thread_count] [-l level] [-h]\n", name);
   fprintf(stderr, "       -s source ns ip port\n");
   fprintf(stderr, "       -d dest ns ip port\n");
-  fprintf(stderr, "       -f tfs log path, assign a path to sync\n");
+  fprintf(stderr, "       -f tfs log path, sync by the input log\n");
   fprintf(stderr, "       -m modify time, the file modified after it will be ignored\n");
-  fprintf(stderr, "       -g log file name, redirect log info to log file, optional\n");
-  fprintf(stderr, "       -l log file level, set log file level, optional\n");
+  fprintf(stderr, "       -e force flag, need strong consistency, optional\n");
+  fprintf(stderr, "       -p result dir, optional\n");
+  fprintf(stderr, "       -g log out file name, redirect log info to log file, in log dir, optional\n");
+  fprintf(stderr, "       -t thread count, optional, defaul 1\n");
+  fprintf(stderr, "       -l log file level, set log file level to (debug|info|warn|error), default is info, optional\n");
   fprintf(stderr, "       -h help\n");
+  fprintf(stderr, "ex: %s -s 168.192.1.1:3000 -d 168.192.1.2:3000 -f total_log -m 20121220\n", name);
+  fprintf(stderr, "    %s -s 168.192.1.1:3000 -d 168.192.1.2:3000 -f total_log -m 20121220 -p t1m -t 5\n",name);
   exit(TFS_ERROR);
 }
 
@@ -153,18 +172,38 @@ static void interrupt_callback(int signal)
       break;
   }
 }
+
+string get_day(const int32_t days, const bool is_after)
+{
+  time_t now = time((time_t*)NULL);
+  time_t end_time;
+  if (is_after)
+  {
+    end_time = now + 86400 * days;
+  }
+  else
+  {
+    end_time = now - 86400 * days;
+  }
+  char tmp[64];
+  struct tm *ttime;
+  ttime = localtime(&end_time);
+  strftime(tmp,64,"%Y%m%d",ttime);
+  return string(tmp);
+}
 int main(int argc, char* argv[])
 {
   int32_t i;
   string src_ns_addr = "", dest_ns_addr = "";
   string oper_log_path = "";
-  string log_file = "sync_report.log";
-  string level = "info";
-  string modify_time = "";
+  string path_dir = "log";
+  string log_file = "sync_by_log.log";
   bool force = false;
+  string modify_time = get_day(1, true);
+  string level("info");
 
   // analyze arguments
-  while ((i = getopt(argc, argv, "s:d:f:m:t:g:l:eh")) != EOF)
+  while ((i = getopt(argc, argv, "s:d:f:m:t:p:g:l:eh")) != EOF)
   {
     switch (i)
     {
@@ -186,6 +225,9 @@ int main(int argc, char* argv[])
       case 't':
         thread_count = atoi(optarg);
         break;
+      case 'p':
+        path_dir = optarg;
+        break;
       case 'g':
         log_file = optarg;
         break;
@@ -199,13 +241,12 @@ int main(int argc, char* argv[])
   }
 
   if ((src_ns_addr.empty()) || (src_ns_addr.compare(" ") == 0)
+      || path_dir.empty() || (path_dir.compare(" ") == 0)
       || dest_ns_addr.empty() || (dest_ns_addr.compare(" ") == 0)
-      || oper_log_path.empty() || modify_time.empty())
+      || oper_log_path.empty() || log_file.empty() || modify_time.empty())
   {
     usage(argv[0]);
   }
-
-  modify_time += "000000";
 
   if ((level != "info") && (level != "debug") && (level != "error") && (level != "warn"))
   {
@@ -214,17 +255,22 @@ int main(int argc, char* argv[])
   }
 
   char base_path[256];
+  if (path_dir.at(0) == '/')
+  {
+    snprintf(base_path, 256, "%s", path_dir.c_str());
+  }
+  else
+  {
+    snprintf(base_path, 256, "%s/%s", dirname(argv[0]), path_dir.c_str());
+  }
   char log_path[256];
-  snprintf(base_path, 256, "%s%s", dirname(argv[0]), "/log/");
   DirectoryOp::create_directory(base_path);
   init_log_file(base_path);
 
-  snprintf(log_path, 256, "%s%s", base_path, log_file.c_str());
+  snprintf(log_path, 256, "%s/%s", base_path, log_file.c_str());
   if (strlen(log_path) != 0 && access(log_path, R_OK) == 0)
   {
-    char old_log_file[256];
-    sprintf(old_log_file, "%s.%s", log_path, Func::time_to_str(time(NULL), 1).c_str());
-    rename(log_path, old_log_file);
+    rename_file(log_path);
   }
   else if (!DirectoryOp::create_full_path(log_path, true))
   {
@@ -232,10 +278,17 @@ int main(int argc, char* argv[])
     return TFS_ERROR;
   }
 
+  modify_time += "000000";
   TBSYS_LOGGER.setFileName(log_path, true);
   TBSYS_LOGGER.setMaxFileSize(1024 * 1024 * 1024);
   TBSYS_LOGGER.setLogLevel(level.c_str());
 
+  int ret = TfsClientImpl::Instance()->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, true);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "initialize TfsClientImpl failed, ret:%d", ret);
+    return ret;
+  }
   memset(&g_sync_stat_, 0, sizeof(g_sync_stat_));
   SYNC_FILE_MAP sync_file_map;
 
@@ -265,7 +318,6 @@ int main(int argc, char* argv[])
     {
       gworks[i]->start();
     }
-
     signal(SIGHUP, interrupt_callback);
     signal(SIGINT, interrupt_callback);
     signal(SIGTERM, interrupt_callback);
@@ -279,14 +331,16 @@ int main(int argc, char* argv[])
     tbsys::gDeleteA(gworks);
   }
 
+  TfsClientImpl::Instance()->destroy();
   for (i = 0; g_log_fp[i].fp_; i++)
   {
     fclose(*g_log_fp[i].fp_);
+    *g_log_fp[i].fp_ = NULL;
   }
 
-  fprintf(stdout, "TOTAL COUNT: %"PRI64_PREFIX"d, ACTUAL_COUNT: %"PRI64_PREFIX"d, SUCCESS COUNT: %"PRI64_PREFIX"d, FAIL COUNT: %"PRI64_PREFIX"d\n",
-      g_sync_stat_.total_count_, g_sync_stat_.actual_count_, g_sync_stat_.success_count_, g_sync_stat_.fail_count_);
-  fprintf(stdout, "LOG FILE: %s\n", log_path);
+  fprintf(stdout, "TOTAL COUNT: %"PRI64_PREFIX"d, ACTUAL_COUNT: %"PRI64_PREFIX"d, SUCCESS COUNT: %"PRI64_PREFIX"d, FAIL COUNT: %"PRI64_PREFIX"d, unsync_count: %"PRI64_PREFIX"d\n",
+      g_sync_stat_.total_count_, g_sync_stat_.actual_count_, g_sync_stat_.success_count_, g_sync_stat_.fail_count_, g_sync_stat_.unsync_count_);
+  fprintf(stdout, "LOG FILE: %s\n", base_path);
 
   return TFS_SUCCESS;
 }
@@ -335,7 +389,6 @@ int get_file_list(const string& log_file, SYNC_FILE_MAP& sync_file_map)
           name_set.insert(file_name);
           sync_file_map.insert(make_pair(block_id, name_set));
         }
-
         TBSYS_LOG(INFO, "block_id: %u, file_id: %"PRI64_PREFIX"u, name: %s\n", block_id, file_id, fs.get_name());
       }
     }
@@ -359,18 +412,30 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, FILE_SET& n
     ret = sync_op.cmp_file_info(file_name, sync_action, force, modify_time);
 
     // do sync file
-    if (ret != TFS_ERROR)
+    if (ret == TFS_SUCCESS)
     {
       ret = sync_op.do_action(file_name, sync_action);
     }
     if (ret == TFS_SUCCESS)
     {
-      TBSYS_LOG(INFO, "sync file(%s) succeed.", file_name.c_str());
+      if (sync_action.size() == 0)
       {
-        tbutil::Mutex::Lock lock(g_mutex_);
-        g_sync_stat_.success_count_++;
+        TBSYS_LOG(DEBUG, "sync file(%s) succeed without action.", file_name.c_str());
+        {
+          tbutil::Mutex::Lock lock(g_mutex_);
+          g_sync_stat_.unsync_count_++;
+        }
+        fprintf(g_file_unsync, "%s\n", file_name.c_str());
       }
-      fprintf(g_sync_succ, "%s\n", file_name.c_str());
+      else
+      {
+        TBSYS_LOG(INFO, "sync file(%s) succeed.", file_name.c_str());
+        {
+          tbutil::Mutex::Lock lock(g_mutex_);
+          g_sync_stat_.success_count_++;
+        }
+        fprintf(g_sync_succ, "%s\n", file_name.c_str());
+      }
     }
     else
     {
