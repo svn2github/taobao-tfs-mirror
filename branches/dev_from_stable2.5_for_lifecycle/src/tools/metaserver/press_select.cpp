@@ -147,7 +147,7 @@ void* transfer(void* param)
       e_key.key_size_ = 5;
 
       int32_t rest_count;
-      ret = data_base->scan_v(area, key, e_key, duplicate_count, false, &keys, &values, &rest_count);
+      ret = data_base->scan_v(area, e_key, key, -duplicate_count, false, &keys, &values, &rest_count);
       if (TFS_SUCCESS != ret )
       {
         TBSYS_LOG(ERROR, "ret =%d ", ret);
