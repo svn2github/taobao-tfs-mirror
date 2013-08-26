@@ -50,6 +50,7 @@ namespace tfs
         uint64_t new_lease_id(void);
         void check_es_lease_expired_helper(const tbutil::Time& now);
         void move_table(void);
+        void change_idle_table(void);
 
       private:
         class CheckExpServerLeaseThreadHelper: public tbutil::Thread
@@ -74,6 +75,7 @@ namespace tfs
         bool initialize_;
         bool destroy_;
         bool need_move_;
+        bool need_change_;
         int32_t wait_time_check_;
         int64_t root_start_time_;
         tbutil::Mutex mutex_; //lock for servers_
