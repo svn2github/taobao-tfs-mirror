@@ -133,7 +133,6 @@ retry:
           ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
           if (0 != ret)
           {
-            TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
             ret = mysql_errno(&mysql_.mysql);
             if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_)
             {
@@ -144,6 +143,10 @@ retry:
             {
               mysql_proc_ret = EXIT_KV_RETURN_VERSION_ERROR;
               ret = TFS_SUCCESS;
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
             }
           }
         }
