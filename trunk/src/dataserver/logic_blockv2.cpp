@@ -319,6 +319,10 @@ namespace tfs
           {
             ret = data_handle_.pread(buf, nbytes, finfo.offset_ + offset);
           }
+          if (TFS_SUCCESS == ret)
+          {
+            index_handle_->inc_read_visit_count(1, nbytes);
+          }
         }
       }
       return ret;
@@ -398,6 +402,10 @@ namespace tfs
               ret = (0 != (info.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID | FILE_STATUS_CONCEAL))) ?
                 EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
             }
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            index_handle_->inc_read_visit_count(1, 0);
           }
         }
       }

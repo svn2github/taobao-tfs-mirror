@@ -507,6 +507,12 @@ namespace tfs
           case common::NS_RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
             packet = new (std::nothrow)NsReqResolveBlockVersionConflictResponseMessage();
             break;
+          case common::GET_ALL_BLOCKS_HEADER_MESSAGE:
+            packet = new (std::nothrow)GetAllBlocksHeaderMessage();
+            break;
+          case common::GET_ALL_BLOCKS_HEADER_RESP_MESSAGE:
+            packet = new (std::nothrow)GetAllBlocksHeaderRespMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;

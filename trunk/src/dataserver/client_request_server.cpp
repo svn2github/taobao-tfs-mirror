@@ -105,6 +105,9 @@ namespace tfs
           case COMMIT_EC_META_MESSAGE:
             ret = commit_ec_meta(dynamic_cast<CommitEcMetaMessage*>(packet));
             break;
+          case GET_ALL_BLOCKS_HEADER_MESSAGE:
+            ret = get_all_blocks_header(dynamic_cast<GetAllBlocksHeaderMessage*>(packet));
+            break;
           default:
             TBSYS_LOG(WARN, "process packet pcode: %d\n", pcode);
             ret = EXIT_UNKNOWN_MSGTYPE;
@@ -1298,6 +1301,20 @@ namespace tfs
           "attach_block_id: %"PRI64_PREFIX"u, tmp: %d, cost: %"PRI64_PREFIX"d, ret: %d",
           block_id, attach_block_id, tmp, TIMER_DURATION(), ret);
 
+      return ret;
+    }
+
+    int ClientRequestServer::get_all_blocks_header(message::GetAllBlocksHeaderMessage* message)
+    {
+      int32_t ret = TFS_SUCCESS;
+      GetAllBlocksHeaderRespMessage* resp_msg = new (std::nothrow) GetAllBlocksHeaderRespMessage();
+      assert(NULL != resp_msg);
+      vector<IndexHeaderV2>& blocks_index_header = resp_msg->get_all_blocks_header();
+      ret = get_block_manager().get_all_block_header(blocks_index_header);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = message->reply(resp_msg);
+      }
       return ret;
     }
 

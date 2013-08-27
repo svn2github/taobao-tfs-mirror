@@ -207,6 +207,13 @@ namespace tfs
       return logic_block_manager_.get_all_block_info(blocks);
     }
 
+    int BlockManager::get_all_block_header(std::vector<common::IndexHeaderV2>& headers) const
+    {
+      headers.clear();
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return logic_block_manager_.get_all_block_header(headers);
+    }
+
     int BlockManager::get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const
     {
       blocks.clear();

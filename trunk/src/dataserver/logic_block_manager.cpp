@@ -316,6 +316,23 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int LogicBlockManager::get_all_block_header(std::vector<common::IndexHeaderV2>& headers) const
+    {
+      headers.clear();
+      int32_t ret = TFS_SUCCESS;
+      common::IndexHeaderV2 header;
+      LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
+      for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter)
+      {
+        ret = (*iter)->get_index_header(header);
+        if (TFS_SUCCESS == ret)
+        {
+          headers.push_back(header);
+        }
+      }
+      return ret;
+    }
+
     int LogicBlockManager::get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const
     {
       blocks.clear();

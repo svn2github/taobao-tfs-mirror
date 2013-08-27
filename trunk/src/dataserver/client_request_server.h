@@ -29,6 +29,7 @@
 #include "op_manager.h"
 #include "data_helper.h"
 
+
 namespace tfs
 {
   namespace dataserver
@@ -77,6 +78,7 @@ namespace tfs
         int write_index(message::WriteIndexMessageV2* message);
         int query_ec_meta(message::QueryEcMetaMessage* message);
         int commit_ec_meta(message::CommitEcMetaMessage* message);
+        int get_all_blocks_header(message::GetAllBlocksHeaderMessage* message);
 
         /** tool support interface */
       private:

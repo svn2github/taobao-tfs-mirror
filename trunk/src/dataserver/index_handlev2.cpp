@@ -297,6 +297,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           header->info_.last_update_time_  = time(NULL);
+          header->throughput_.last_statistics_time_ = time(NULL);
           int32_t file_count = rollback ? -1 : 1;
           int32_t real_new_size = rollback ? 0 - new_size : new_size;
           int32_t real_old_size = rollback ? 0 - old_size : old_size;
@@ -851,7 +852,7 @@ namespace tfs
       return iter;
     }
 
-    int IndexHandle::inc_write_visit_count(const int32_t step, const int32_t nbytes)
+    int BaseIndexHandle::inc_write_visit_count(const int32_t step, const int32_t nbytes)
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
@@ -864,7 +865,7 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::inc_read_visit_count(const int32_t step, const int32_t nbytes)
+    int BaseIndexHandle::inc_read_visit_count(const int32_t step, const int32_t nbytes)
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
@@ -873,12 +874,12 @@ namespace tfs
         assert(NULL != header);
         header->throughput_.read_visit_count_+= step;
         header->throughput_.read_bytes_ += nbytes;
+        header->throughput_.last_statistics_time_ = time(NULL);
       }
       return ret;
-
     }
 
-    int IndexHandle::inc_update_visit_count(const int32_t step, const int32_t nbytes)
+    int BaseIndexHandle::inc_update_visit_count(const int32_t step, const int32_t nbytes)
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
@@ -891,7 +892,7 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::inc_unlink_visit_count(const int32_t step, const int32_t nbytes)
+    int BaseIndexHandle::inc_unlink_visit_count(const int32_t step, const int32_t nbytes)
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
@@ -904,7 +905,7 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::statistic_visit(ThroughputV2& throughput, const bool reset)
+    int BaseIndexHandle::statistic_visit(ThroughputV2& throughput, const bool reset)
     {
       memset(&throughput, 0, sizeof(throughput));
       int32_t ret = check_load();

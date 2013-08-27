@@ -771,6 +771,7 @@ namespace tfs
             case WRITE_INDEX_MESSAGE_V2:
             case QUERY_EC_META_MESSAGE:
             case COMMIT_EC_META_MESSAGE:
+            case GET_ALL_BLOCKS_HEADER_MESSAGE:
               ret = client_request_server_.handle(packet);
               break;
             case REQ_CHECK_BLOCK_MESSAGE:

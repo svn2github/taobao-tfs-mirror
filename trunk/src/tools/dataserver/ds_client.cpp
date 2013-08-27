@@ -27,6 +27,7 @@
 
 #include "common/internal.h"
 #include "common/func.h"
+#include "common/version.h"
 #include "common/client_manager.h"
 #include "message/message_factory.h"
 #include "tools/util/ds_lib.h"
@@ -57,6 +58,7 @@ enum CmdSet
   CMD_READ_FILE_INFO,
   CMD_SEND_CRC_ERROR,
   CMD_LIST_BITMAP,
+  CMD_LIST_BLOCKS_THROUGHPUT,
   CMD_HELP,
   CMD_UNKNOWN,
   CMD_NOP,
@@ -65,6 +67,7 @@ enum CmdSet
 
 void init();
 void usage(const char* name);
+void version(const char* app_name);
 void signal_handler(const int sig);
 int parse_cmd(char* buffer, VSTRING & param);
 int switch_cmd(const int cmd, VSTRING & param);
@@ -124,7 +127,7 @@ int main(int argc, char* argv[])
     usage(argv[0]);
     return TFS_ERROR;
   }
-  while ((i = getopt(argc, argv, "d:i::")) != -1)
+  while ((i = getopt(argc, argv, "d:i::v")) != -1)
   {
     switch (i)
     {
@@ -138,6 +141,9 @@ int main(int argc, char* argv[])
         printf("ip or port is invalid, please try again.\n");
         return TFS_ERROR;
       }
+      break;
+    case 'v':
+      version(argv[0]);
       break;
     case ':':
       printf("missing -d");
@@ -211,14 +217,21 @@ void init()
   cmd_map["quit"] = CMD_QUIT;
   cmd_map["send_crc_error"] = CMD_SEND_CRC_ERROR;
   cmd_map["list_bitmap"] = CMD_LIST_BITMAP;
+  cmd_map["list_blocks_throughput"] = CMD_LIST_BLOCKS_THROUGHPUT;
 }
 
 // no return.
 // show the prompt of command.
 void usage(const char* name)
 {
-  printf("Usage: %s -d ip:port \n", name);
+  printf("Usage: %s -d ip:port [-v]\n", name);
   exit( TFS_ERROR);
+}
+
+void version(const char* app_name)
+{
+  fprintf(stderr, "%s %s\n", app_name, Version::get_build_description());
+  exit(0);
 }
 
 //no return.
@@ -602,6 +615,43 @@ int switch_cmd(const int cmd, VSTRING & param)
       ret = DsLib::send_crc_error(ds_task);
       break;
     }
+  case CMD_LIST_BLOCKS_THROUGHPUT:
+    {
+      vector<IndexHeaderV2> blocks_header;
+      ret = DsLib::get_blocks_index_header(ds_task, blocks_header);
+      if (TFS_SUCCESS == ret)
+      {
+        multiset<BlockVisit> blocks_visit;
+        int64_t total_visit_count = 0;
+        vector<IndexHeaderV2>::iterator header_it = blocks_header.begin();
+        for ( ; header_it != blocks_header.end(); ++header_it)
+        {
+          total_visit_count = header_it->throughput_.read_visit_count_;
+          total_visit_count += header_it->throughput_.write_visit_count_;
+          total_visit_count += header_it->throughput_.update_visit_count_;
+          total_visit_count += header_it->throughput_.unlink_visit_count_;
+          blocks_visit.insert(BlockVisit(header_it->info_.block_id_, total_visit_count, header_it->throughput_.last_statistics_time_));
+        }
+
+        printf("block List Size = %zd\n", blocks_visit.size());
+        printf("TYPE      BLOCKID       VISIT_COUNT     LAST_VISIT_TIME\n");
+        printf("----------------------------------------------------------\n");
+        multiset<BlockVisit>::iterator it = blocks_visit.begin();
+        for (; it != blocks_visit.end(); ++it)
+        {
+          printf("%c     %10"PRI64_PREFIX"u    %10"PRI64_PREFIX"d    %s\n", IS_VERFIFY_BLOCK(it->block_id_) ? 'C' : 'D',
+              it->block_id_, it->total_visit_count_, Func::time_to_str(it->last_statistics_time_).c_str());
+        }
+        printf("----------------------------------------------------------\n");
+        printf("TYPE BLOCKID     VISIT_COUNT     LAST_VISIT_TIME\n");
+        printf("Total: %zd\n", blocks_visit.size());
+      }
+      else
+      {
+        fprintf(stderr, "list block throughput fail\n");
+      }
+    }
+    break;
   case CMD_UNKNOWN:
     fprintf(stderr, "unknown command.\n");
     ret = show_help(param);
@@ -661,6 +711,7 @@ int show_help(VSTRING &)
     "get_ping_status                                                             get the ping status of dataServer.\n"
     "list_block  type                                                            list all the blocks in a dataserver.\n"
     "get_block_info  block_id                                                    get the information of a block in the dataserver.\n"
+    "list_blocks_throughput                                                      list all blocks' visit count in ds order by count desc\n"
     "list_file  block_id                                                         list all the files in a block.\n"
     "read_file_data  blockid attach_blockid fileid local_file_name               download a tfs file to local.\n"
     "verify_file_data  tfs_file_name                                             check tfs file data crc.\n"

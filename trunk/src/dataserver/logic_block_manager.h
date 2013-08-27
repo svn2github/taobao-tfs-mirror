@@ -52,6 +52,7 @@ namespace tfs
       int get_all_block_info(std::set<common::BlockInfo>& blocks) const;
       int get_all_block_info(std::vector<common::BlockInfoV2>& blocks) const;
       int get_all_block_info(common::ArrayHelper<common::BlockInfoV2>& blocks) const;
+      int get_all_block_header(std::vector<common::IndexHeaderV2>& headers) const;
       int get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const;
       int32_t size() const;
       int timeout(std::vector<uint64_t>& expired_blocks, const time_t now);
