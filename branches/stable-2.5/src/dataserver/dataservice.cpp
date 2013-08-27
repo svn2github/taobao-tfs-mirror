@@ -1466,6 +1466,26 @@ namespace tfs
       else if (GSS_BLOCK_FILE_INFO == type)
       {
         uint64_t block_id = message->get_return_row();
+        uint64_t attach_block_id = block_id;
+        //get block file list
+        BlockFileInfoMessage* resp_bfi_msg = new (std::nothrow) BlockFileInfoMessage();
+        assert(NULL != resp_bfi_msg);
+        FILE_INFO_LIST& fileinfos = resp_bfi_msg->get_fileinfo_list();
+        int ret = get_block_manager().traverse(fileinfos, block_id, attach_block_id);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(resp_bfi_msg);
+          ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+              "GSS_BLOCK_FILE_INFO fail, blockid: %"PRI64_PREFIX"u, ret: %d", block_id, ret);
+        }
+        else
+        {
+          ret = message->reply(resp_bfi_msg);
+        }
+      }
+      else if (GSS_BLOCK_FILE_INFO_V2 == type)
+      {
+        uint64_t block_id = message->get_return_row();
         uint64_t attach_block_id = message->get_from_row();
         //get block file list
         IndexHeaderV2 header;

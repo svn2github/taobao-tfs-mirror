@@ -274,7 +274,8 @@ namespace tfs
       GSS_MAX_VISIT_COUNT,
       GSS_BLOCK_FILE_INFO,
       GSS_BLOCK_RAW_META_INFO,
-      GSS_CLIENT_ACCESS_INFO
+      GSS_CLIENT_ACCESS_INFO,
+      GSS_BLOCK_FILE_INFO_V2
     };
 
     enum CheckDsBlockType
