@@ -85,13 +85,6 @@ namespace tfs
         ret = output.set_bytes(data_, file_seg_.length_);
       }
 
-      // below is extra member in write_to_ds version
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_int8(direct_);
-      }
-
       return ret;
     }
 
@@ -150,12 +143,6 @@ namespace tfs
         input.drain(file_seg_.length_);
       }
 
-      // below is extra member in write_to_ds version
-      if (TFS_SUCCESS == ret)
-      {
-        input.get_int8(&direct_);
-      }
-
       return ret;
     }
 
@@ -168,7 +155,6 @@ namespace tfs
       {
         len += file_seg_.length_;
       }
-      len += INT8_SIZE;
 
       return len;
     }
@@ -185,7 +171,11 @@ namespace tfs
 
     int WriteFileRespMessageV2::serialize(Stream& output) const
     {
-      int ret = output.set_int64(file_id_);
+      int ret = output.set_int64(block_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(file_id_);
+      }
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int64(lease_id_);
@@ -195,7 +185,11 @@ namespace tfs
 
     int WriteFileRespMessageV2::deserialize(Stream& input)
     {
-      int ret = input.get_int64(reinterpret_cast<int64_t *>(&file_id_));
+      int ret = input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&file_id_));
+      }
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int64(reinterpret_cast<int64_t *>(&lease_id_));
@@ -205,7 +199,7 @@ namespace tfs
 
     int64_t WriteFileRespMessageV2::length() const
     {
-      return 2 * INT64_SIZE;
+      return 3 * INT64_SIZE;
     }
 
     SlaveDsRespMessage::SlaveDsRespMessage():

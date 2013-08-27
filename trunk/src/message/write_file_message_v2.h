@@ -161,16 +161,6 @@ namespace tfs
           return family_info_;
         }
 
-        void set_direct_flag(const bool direct)
-        {
-          direct_ = direct;
-        }
-
-        bool get_direct_flag()
-        {
-          return direct_;
-        }
-
       private:
         common::FileSegment file_seg_;
         common::VUINT64 ds_;
@@ -181,7 +171,6 @@ namespace tfs
         int32_t version_;
         int32_t flag_;
         const char* data_;
-        int8_t direct_;
     };
 
     class WriteFileRespMessageV2: public common::BasePacket
@@ -192,6 +181,16 @@ namespace tfs
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
+
+        void set_block_id(const uint64_t block_id)
+        {
+          block_id_ = block_id;
+        }
+
+        uint64_t get_block_id() const
+        {
+          return block_id_;
+        }
 
         void set_file_id(const uint64_t file_id)
         {
@@ -214,6 +213,7 @@ namespace tfs
         }
 
       private:
+        uint64_t block_id_;
         uint64_t file_id_;
         uint64_t lease_id_;
     };
