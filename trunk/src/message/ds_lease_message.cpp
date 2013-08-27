@@ -353,10 +353,10 @@ namespace tfs
 
     int DsApplyBlockForUpdateMessage::deserialize(common::Stream& input)
     {
-      int ret = input.get_int64(reinterpret_cast<int64_t*>(&server_id_));
+      int ret = input.get_int64(reinterpret_cast<int64_t*>(&block_id_));
       if (TFS_SUCCESS == ret)
       {
-        ret = input.get_int64(reinterpret_cast<int64_t*>(&block_id_));
+        ret = input.get_int64(reinterpret_cast<int64_t*>(&server_id_));
       }
       return ret;
     }
