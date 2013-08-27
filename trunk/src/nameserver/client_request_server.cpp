@@ -131,41 +131,89 @@ namespace tfs
       return ret;
     }
 
-    int ClientRequestServer::open(uint64_t& block_id, uint64_t& lease_id, int32_t& version,
-        common::ArrayHelper<uint64_t>& servers, FamilyInfoExt&  family_info,
-        const int32_t mode, const time_t now)
+    int ClientRequestServer::open(const uint64_t block_id, const int32_t mode, const int32_t flag, const time_t now, uint64_t& lease_id,
+          common::ArrayHelper<uint64_t>& servers, FamilyInfoExt& family_info)
     {
       servers.clear();
+      BlockCollect* block = NULL;
       family_info.family_id_ = INVALID_FAMILY_ID;
-      int32_t ret = TFS_SUCCESS;
-      if (mode & T_READ)//read mode
+      int32_t ret = (INVALID_BLOCK_ID == block_id) ? EXIT_BLOCK_ID_INVALID_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
-        ret = open_read_mode_(servers, family_info, block_id);
+        ret = (mode & T_NEWBLK || mode & T_READ) ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
       }
-      else//write mode
+      if (TFS_SUCCESS == ret)
       {
-        ret = GFactory::get_runtime_info().is_master() ? TFS_SUCCESS : EXIT_ACCESS_PERMISSION_ERROR;
-        if (TFS_SUCCESS == ret)//master
-        {
-          //check this block if doing any operations like replicating, moving, compacting...
-          if ((block_id > 0)
-              && (!(mode & T_NOLEASE)))
-          {
-            if (manager_.get_task_manager().exist_block(block_id))
-            {
-              TBSYS_LOG(INFO, "it's error when we'll get block information in open this block: %"PRI64_PREFIX"u with write mode because block: %"PRI64_PREFIX"u is busy.",
-                  block_id,  block_id);
-              ret = EXIT_BLOCK_BUSY;
-            }
-          }
+        block = manager_.get_block_manager().get(block_id);
+        ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+      }
 
-          if (TFS_SUCCESS == ret)
-          {
-            ret = open_write_mode_(block_id, lease_id, version, servers, family_info,mode, now);
-          }
+      if (TFS_SUCCESS != ret)
+      {
+        if (mode & T_NEWBLK)
+        {
+          NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+          ret = ngi.in_discard_newblk_safe_mode_time(now) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
         }
       }
 
+      if (EXIT_BLOCK_NOT_FOUND == ret)
+      {
+        if (mode & T_NEWBLK)
+        {
+          ret = manager_.open_helper_create_new_block_by_id(block_id);
+          if (TFS_SUCCESS != ret)
+            TBSYS_LOG(INFO, "create new block by block id: %"PRI64_PREFIX"u failed, ret: %d", block_id, ret);
+          else
+            block =  manager_.get_block_manager().get(block_id);
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = manager_.get_block_manager().get_servers(servers, block);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (block->has_lease())
+        {
+          lease_id = *servers.at(0);
+        }
+      }
+      bool read_family_info = (mode & T_READ) ? ((NULL != block) && (TFS_SUCCESS != ret || flag & F_FAMILY_INFO))
+                                    : (mode & T_NEWBLK) ? (NULL != block) : false;
+      if (read_family_info)
+      {
+        int64_t family_id = block->get_family_id();
+        if (INVALID_FAMILY_ID != family_id)
+        {
+          common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MAX_MARSHALLING_NUM, family_info.members_);
+          ret = open(family_id, T_READ, family_info.family_aid_info_, helper);
+          if (TFS_SUCCESS == ret)
+          {
+            int32_t index = 0;
+            for (int64_t i = 0; i < helper.get_array_index(); ++i)
+            {
+              std::pair<uint64_t, uint64_t>* item = helper.at(i);
+              if (item->second != INVALID_SERVER_ID)
+                ++index;
+            }
+
+            const int32_t DATA_MEMBER = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+            ret = index >= DATA_MEMBER ? TFS_SUCCESS: EXIT_BLOCK_CANNOT_REINSTATE;
+            if (TFS_SUCCESS == ret)
+            {
+              family_info.family_id_ = family_id;
+            }
+          }
+        }
+      }
       std::vector<stat_int_t> stat(4,0);
       mode & T_READ ? ret == TFS_SUCCESS ? stat[0] = 1 : stat[1] = 1
         : ret == TFS_SUCCESS ? stat[2] = 1 : stat[3] = 1;
@@ -173,292 +221,23 @@ namespace tfs
       return ret;
     }
 
-    int ClientRequestServer::open_read_mode_(common::ArrayHelper<uint64_t>& servers, FamilyInfoExt& family_info, const uint64_t block) const
+    int ClientRequestServer::batch_open(const int32_t mode, const int32_t flag, common::ArrayHelper<BlockMeta>& out)
     {
-      int32_t ret = (INVALID_BLOCK_ID == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
-      if (TFS_SUCCESS == ret)
+      time_t now = Func::get_monotonic_time();
+      for (int64_t index = 0; index < out.get_array_index(); ++index)
       {
-        servers.clear();
-        family_info.family_id_ = INVALID_FAMILY_ID;
-        BlockCollect* pblock = manager_.get_block_manager().get(block);
-        ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-        if (TFS_SUCCESS == ret)
-        {
-          ret = manager_.get_block_manager().get_servers(servers, pblock);
-          int64_t family_id = pblock->get_family_id();
-          if (TFS_SUCCESS != ret && INVALID_FAMILY_ID != family_id)
-          {
-            common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MAX_MARSHALLING_NUM, family_info.members_);
-            ret = open(family_info.family_aid_info_, helper, T_READ, family_id);
-            if (TFS_SUCCESS == ret)
-            {
-              int32_t index = 0;
-              for (int64_t i = 0; i < helper.get_array_index(); ++i)
-              {
-                std::pair<uint64_t, uint64_t>* item = helper.at(i);
-                if (item->second != INVALID_SERVER_ID)
-                  ++index;
-              }
-
-              const int32_t DATA_MEMBER = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
-              ret = index >= DATA_MEMBER ? TFS_SUCCESS: EXIT_BLOCK_CANNOT_REINSTATE;
-              if (TFS_SUCCESS == ret)
-              {
-                family_info.family_id_ = family_id;
-              }
-            }
-          }
-        }
-      }
-      return ret;
-    }
-
-    int ClientRequestServer::batch_open(const ArrayHelper<uint64_t>& blocks, const int32_t mode,
-          const int32_t block_count, common::ArrayHelper<BlockMeta>& out)
-    {
-      int32_t ret =  mode & T_READ ? batch_open_read_mode_(out, blocks) : batch_open_write_mode_(out,mode, block_count);
-      std::vector<stat_int_t> stat(4, 0);
-      if (mode & T_READ)
-      {
-        if (TFS_SUCCESS == ret)
-          stat[0] = out.get_array_index();
-        else
-          stat[1] = __gnu_cxx::abs(out.get_array_index() - blocks.get_array_index());
-      }
-      else
-      {
-        if (TFS_SUCCESS == ret)
-          stat[2] = out.get_array_index();
-        else
-          stat[3] = __gnu_cxx::abs(out.get_array_index() - block_count);
-      }
-      GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
-      return ret;
-    }
-
-    /**
-     * Write commit operation, nameserver confirm this write op and update meta info.
-     * @param [inout] parameter: information.
-     * @return: success or failure
-     */
-    int ClientRequestServer::close(CloseParameter& parameter)
-    {
-      int32_t ret = TFS_SUCCESS;
-      uint64_t block_id = parameter.block_info_.block_id_;
-      if (WRITE_COMPLETE_STATUS_YES !=  parameter.status_)
-      {
-        TBSYS_LOG(INFO, "close block: %"PRI64_PREFIX"u successful, but client write operation error,lease: %"PRI64_PREFIX"u",
-            block_id, parameter.lease_id_);
-      }
-      else
-      {
-        BlockCollect* block = manager_.get_block_manager().get(block_id);
-        if (UPDATE_BLOCK_INFO_REPL != parameter.type_)
-        {
-          ret = (NULL == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
-          if (TFS_SUCCESS == ret)//check version
-          {
-            if (parameter.type_ == UPDATE_BLOCK_INFO_UNLINK)//unlink file
-            {
-              std::vector<stat_int_t> stat(6,0);
-              stat[4] = 0x01;
-              GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
-            }
-            ret = block->version() >= parameter.block_info_.version_ ? EXIT_COMMIT_ERROR : TFS_SUCCESS;
-            if (TFS_SUCCESS != ret)
-            {
-              snprintf(parameter.error_msg_, 256, "close block: %"PRI64_PREFIX"u failed, version error: %d:%d",
-                  block_id, block->version(),parameter.block_info_.version_);
-            }
-          }
-          else
-          {
-            snprintf(parameter.error_msg_, 256, "close block: %"PRI64_PREFIX"u failed, block not exist, ret: %d", block_id, ret);
-          }
-        }
-        if (TFS_SUCCESS == ret)
-        {
-          //update block information
-          ret = manager_.update_block_info(parameter.block_info_, parameter.id_, Func::get_monotonic_time(), parameter.type_ == UPDATE_BLOCK_INFO_REPL);
-          if (TFS_SUCCESS != ret)
-          {
-            snprintf(parameter.error_msg_,256,"close block: %"PRI64_PREFIX"u successful, but update block information failed, ret: %d, type: %d", block_id, ret, parameter.type_);
-          }
-        }
-      }
-      return ret;
-    }
-
-    /**
-     * client read: get block 's location of DataServerStatInfo
-     * client write: get new block and location of DataServerStatInfo
-     * @param [in] block_id: query block id, in write mode
-     * can be set to zero for assign a new write block id.
-     * @param [in] mode: read | write
-     * @param [out] lease_id: write transaction id only for write mode.
-     * @param [out] ds_list: block location of DataServerStatInfos.
-     * @return: success or failure
-     */
-    int ClientRequestServer::open_write_mode_(uint64_t& block_id, uint64_t& lease_id, int32_t& version,
-          common::ArrayHelper<uint64_t>& servers, FamilyInfoExt& family_info, const int32_t mode, const time_t now)
-    {
-      UNUSED(now);
-      int32_t ret = (mode & T_WRITE) ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(WARN, "access mode: %d error", mode);
-      }
-      else
-      {
-        //nameserver assign a new write block
-        family_info.family_id_ = INVALID_FAMILY_ID;
-        BlockCollect* block = NULL;
-        if (mode & T_CREATE)
-        {
-          if (INVALID_BLOCK_ID == block_id)
-          {
-            //choolse a writable block
-            manager_.get_server_manager().choose_writable_block(block);
-            ret = (NULL == block) ? EXIT_NO_BLOCK : TFS_SUCCESS;
-            if (TFS_SUCCESS == ret)
-              block_id = block->id();
-            else
-              TBSYS_LOG(INFO, "it's failed when choose a write block, ret: %d", ret);
-          }
-        }
-
-        if ((mode & T_NEWBLK)
-            && (NULL == block))
-        {
-          ret = INVALID_BLOCK_ID == block_id ? EXIT_BLOCK_ID_INVALID_ERROR: TFS_SUCCESS;
-          if (TFS_SUCCESS == ret)
-          {
-            time_t now = Func::get_monotonic_time();
-            NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-            ret = ngi.in_discard_newblk_safe_mode_time(now) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
-            if (TFS_SUCCESS == ret)
-            {
-              block =  manager_.get_block_manager().get(block_id);
-              ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-              if (TFS_SUCCESS == ret)
-              {
-                if ((block->get_servers_size() <= 0)
-                      && (!block->is_creating())
-                      && (block->expire(now)))
-                {
-                  manager_.get_block_manager().remove(block,block_id);
-                  manager_.get_gc_manager().insert(block, now);
-                  ret = EXIT_BLOCK_NOT_FOUND;
-                }
-                else
-                {
-                  int32_t least_copies = (INVALID_FAMILY_ID == block->get_family_id()) ? SYSPARAM_NAMESERVER.max_replication_ : 1;
-                  ret = block->get_servers_size() >= least_copies ? TFS_SUCCESS : EXIT_BLOCK_ALREADY_EXIST;
-                }
-              }
-              if (EXIT_BLOCK_NOT_FOUND == ret)
-              {
-                //create new block by block_id
-                ret = manager_.open_helper_create_new_block_by_id(block_id);
-                if (TFS_SUCCESS != ret)
-                  TBSYS_LOG(INFO, "create new block by block id: %"PRI64_PREFIX"u failed, ret: %d", block_id, ret);
-              }
-            }
-          }
-        }
-
-        if (TFS_SUCCESS == ret
-            || EXIT_DISCARD_NEWBLK_ERROR == ret)
-        {
-          ret = block_id == 0 ? EXIT_NO_BLOCK : TFS_SUCCESS;
-          if (TFS_SUCCESS == ret)
-          {
-            block =  manager_.get_block_manager().get(block_id);
-            // now check blockcollect object if has any dataserver.
-            ret = NULL == block ? EXIT_NO_BLOCK : TFS_SUCCESS;
-            if (TFS_SUCCESS == ret)
-            {
-              version = block->version();
-              manager_.get_block_manager().get_servers(servers, block);
-              ret = !servers.empty() ? TFS_SUCCESS : EXIT_NO_DATASERVER;
-            }
-          }
-        }
-        if ((TFS_SUCCESS == ret) && (NULL != block))
-        {
-          int64_t family_id = block->get_family_id();
-          if (INVALID_FAMILY_ID != family_id)
-          {
-            common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MAX_MARSHALLING_NUM, family_info.members_);
-            ret = open(family_info.family_aid_info_, helper, T_READ, family_id);
-            if (TFS_SUCCESS == ret)
-            {
-              int32_t index = 0;
-              const int32_t DATA_MEMBER = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
-              for (int32_t i = 0; i < helper.get_array_index(); ++i)
-              {
-                std::pair<uint64_t, uint64_t>* item = helper.at(i);
-                if (item->second != INVALID_SERVER_ID)
-                  ++index;
-              }
-              ret = index >= DATA_MEMBER ? TFS_SUCCESS: EXIT_BLOCK_CANNOT_REINSTATE;
-              if (TFS_SUCCESS == ret)
-              {
-                family_info.family_id_ = family_id;
-              }
-            }
-          }
-        }
-        if (TFS_SUCCESS == ret)
-        {
-          static uint64_t id_factory = 0;
-          lease_id = atomic_inc(&id_factory);
-        }
-      }
-      return ret;
-    }
-    /**
-     * client read: get block 's location of dataserver
-     * only choose dataserver with normal load
-     * @param [in] block_id: query block id, must be a valid blockid
-     * @param [out] ds_list: block location of dataserver.
-     * @return: success or failure
-     */
-
-    int ClientRequestServer::batch_open_read_mode_(common::ArrayHelper<BlockMeta>& out, const common::ArrayHelper<uint64_t>& blocks) const
-    {
-      for (int64_t index = 0; index < blocks.get_array_index(); ++index)
-      {
-        uint64_t block = (*blocks.at(index));
-        out.push_back(BlockMeta());
+        uint64_t lease_id = INVALID_LEASE_ID;
         BlockMeta* meta = out.at(index);
-        meta->block_id_ = block;
+        assert(NULL != meta);
         common::ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, meta->ds_);
-        int32_t ret = open_read_mode_(servers, meta->family_info_, block);
-        if (TFS_SUCCESS == ret)
-          meta->size_ = servers.get_array_index();
+        meta->result_ = open(meta->block_id_,mode, flag, now, lease_id, servers, meta->family_info_);
+        if (TFS_SUCCESS == meta->result_)
+        {
+          meta->lease_id_ = lease_id;
+          meta->size_     = servers.get_array_index();
+        }
       }
       return TFS_SUCCESS;
-    }
-
-    int ClientRequestServer::batch_open_write_mode_(common::ArrayHelper<BlockMeta>& out, const int32_t mode, const int32_t block_count)
-    {
-      int32_t ret =  (mode & T_WRITE) ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        time_t now = Func::get_monotonic_time();
-        for (int32_t index = 0; index < block_count; ++index)
-        {
-          out.push_back(BlockMeta());
-          BlockMeta* meta = out.at(index);
-          meta->block_id_ = 0;
-          common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, meta->ds_);
-          ret = open_write_mode_(meta->block_id_, meta->lease_id_, meta->version_, helper, meta->family_info_,mode, now);
-          if (TFS_SUCCESS == ret)
-            meta->size_ = helper.get_array_index();
-        }
-      }
-      return ret;
     }
 
     int ClientRequestServer::handle_control_load_block(const time_t now, const common::ClientCmdInformation& info, common::BasePacket* message, const int64_t buf_length, char* buf)
@@ -874,7 +653,7 @@ namespace tfs
     }
 
 
-    int ClientRequestServer::open(int32_t& family_aid_info, common::ArrayHelper<std::pair<uint64_t, uint64_t> >& members, const int32_t mode, const int64_t family_id) const
+    int ClientRequestServer::open(const int64_t family_id, const int32_t mode, int32_t& family_aid_info, common::ArrayHelper<std::pair<uint64_t, uint64_t> >& members) const
     {
       UNUSED(mode);
       return manager_.get_family_manager().get_members(members, family_aid_info, family_id);

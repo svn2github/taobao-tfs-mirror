@@ -127,7 +127,7 @@ namespace tfs
 
       int regular_create_block_for_servers(uint64_t& begin, bool& all_over);
 
-      int choose_writable_block(BlockCollect*& result);
+      //int choose_writable_block(BlockCollect*& result);
 
       private:
       DISALLOW_COPY_AND_ASSIGN(ServerManager);
@@ -140,8 +140,8 @@ namespace tfs
           std::multimap<int64_t, ServerCollect*>& outside,
           SERVER_TABLE& targets, const ServerCollect* server, const double percent) const;
 
-      int choose_writable_server_lock_(ServerCollect*& result);
-      int choose_writable_server_random_lock_(ServerCollect*& result);
+      //int choose_writable_server_lock_(ServerCollect*& result);
+      //int choose_writable_server_random_lock_(ServerCollect*& result);
 
       int choose_replciate_random_choose_server_base_lock_(ServerCollect*& result,
           const common::ArrayHelper<uint64_t>& except, const std::set<uint32_t>& lans) const;

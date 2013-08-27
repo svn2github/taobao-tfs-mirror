@@ -37,6 +37,10 @@ namespace tfs
       {
         ret = output.set_int32(mode_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(flag_);
+      }
       return ret;
     }
 
@@ -47,12 +51,16 @@ namespace tfs
       {
         ret = input.get_int32(&mode_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&flag_);
+      }
       return ret;
     }
 
     int64_t GetBlockInfoMessageV2::length() const
     {
-      return INT_SIZE + INT64_SIZE;
+      return INT_SIZE * 2 + INT64_SIZE;
     }
 
     GetBlockInfoRespMessageV2::GetBlockInfoRespMessageV2()
@@ -112,6 +120,10 @@ namespace tfs
       {
         ret = output.set_int32(mode_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(flag_);
+      }
       return ret;
     }
 
@@ -127,12 +139,16 @@ namespace tfs
       {
         ret = input.get_int32(&mode_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&flag_);
+      }
       return ret;
     }
 
     int64_t BatchGetBlockInfoMessageV2::length() const
     {
-      return INT_SIZE * 2 + size_ * INT64_SIZE;
+      return INT_SIZE * 3 + size_ * INT64_SIZE;
     }
 
     BatchGetBlockInfoRespMessageV2::BatchGetBlockInfoRespMessageV2():

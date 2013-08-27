@@ -16,8 +16,6 @@
 #ifndef TFS_DATASERVER_DEFINE_H_
 #define TFS_DATASERVER_DEFINE_H_
 
-#define TFS_GTEST
-
 #include <string>
 #include <assert.h>
 #include "common/internal.h"

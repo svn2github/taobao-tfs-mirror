@@ -736,7 +736,7 @@ namespace tfs
       }
     }
 
-    int ServerManager::choose_writable_block(BlockCollect*& result)
+    /*int ServerManager::choose_writable_block(BlockCollect*& result)
     {
       result = NULL;
       rwmutex_.rdlock();
@@ -797,7 +797,7 @@ namespace tfs
         assert(NULL != result);
       }
       return NULL != result ? TFS_SUCCESS : EXIT_NO_DATASERVER;
-    }
+    }*/
 
     int ServerManager::choose_replciate_random_choose_server_base_lock_(ServerCollect*& result,
         const common::ArrayHelper<uint64_t>& except, const std::set<uint32_t>& lans) const

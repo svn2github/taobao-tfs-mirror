@@ -55,12 +55,10 @@ namespace tfs
         int report_block(std::vector<uint64_t>& expires, const uint64_t server, const time_t now,
             const common::ArrayHelper<common::BlockInfoV2>& blocks);
 
-        int open(uint64_t& block_id, uint64_t& lease_id, int32_t& version, common::ArrayHelper<uint64_t>& servers,
-              common::FamilyInfoExt& family_info,const int32_t mode, const time_t now);
-        int batch_open(const common::ArrayHelper<uint64_t>& blocks, const int32_t mode,
-              const int32_t block_count, common::ArrayHelper<common::BlockMeta>& out);
-
-        int close(CloseParameter& param);
+        int open(const uint64_t block_id, const int32_t mode, const int32_t flag, const time_t now,uint64_t& lease_id,
+            common::ArrayHelper<uint64_t>& servers, common::FamilyInfoExt& family_info);
+        int open(const int64_t family_id, const int32_t mode, int32_t& family_aid_info, common::ArrayHelper<std::pair<uint64_t, uint64_t> >& members) const;
+        int batch_open(const int32_t mode, const int32_t flag, common::ArrayHelper<common::BlockMeta>& out);
 
         void dump_plan(tbnet::DataBuffer& output);
 
@@ -70,15 +68,7 @@ namespace tfs
 
         int resolve_block_version_conflict(const uint64_t block, const common::ArrayHelper<std::pair<uint64_t, common::BlockInfoV2> >& info);
 
-        int open(int32_t& family_aid_info, common::ArrayHelper<std::pair<uint64_t, uint64_t> >& members, const int32_t mode, const int64_t family_id) const;
-
       private:
-        int open_read_mode_(common::ArrayHelper<uint64_t>& servers, common::FamilyInfoExt& family_info, const uint64_t block) const;
-        int open_write_mode_(uint64_t& block_id, uint64_t& lease_id, int32_t& version, common::ArrayHelper<uint64_t>& servers,
-              common::FamilyInfoExt& family_info, const int32_t mode, const time_t now);
-        int batch_open_read_mode_(common::ArrayHelper<common::BlockMeta>& out, const common::ArrayHelper<uint64_t>& blocks) const;
-        int batch_open_write_mode_(common::ArrayHelper<common::BlockMeta>& out,const int32_t mode, const int32_t block_count);
-
         int  handle_control_load_block(const time_t now, const common::ClientCmdInformation& info, common::BasePacket* message, const int64_t buf_length, char* error_buf);
         int  handle_control_delete_block(const time_t now, const common::ClientCmdInformation& info,const int64_t buf_length, char* error_buf);
         int  handle_control_compact_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);

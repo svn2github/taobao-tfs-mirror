@@ -1028,6 +1028,7 @@ namespace tfs
       uint64_t ds_[MAX_REPLICATION_NUM];
       int32_t size_;
       int32_t version_;
+      int32_t result_;
       FamilyInfoExt family_info_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);

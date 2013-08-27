@@ -73,6 +73,7 @@ namespace tfs
       block_count_(info.block_count_),
       total_network_bandwith_(128),//MB
       write_index_(0),
+      status_(SERVICE_STATUS_ONLINE),
       rb_status_(REPORT_BLOCK_STATUS_REPORTING)
     {
         float   expand_ratio = 0.0;
@@ -165,52 +166,6 @@ namespace tfs
         }
       }
       return ret;
-    }
-
-    int ServerCollect::choose_writable_block(LayoutManager& manager, BlockCollect*& result)
-    {
-      result = NULL;
-      int32_t ret = TFS_SUCCESS;
-      int64_t count = issued_leases_->size();
-      uint64_t block = INVALID_BLOCK_ID;
-      BlockCollect* blocks[MAX_WRITE_FILE_COUNT];
-      ArrayHelper<BlockCollect*> helper(MAX_WRITE_FILE_COUNT, blocks);
-      for (int64_t index = 0; index < count && NULL == result; ++index)
-      {
-        ret = choose_writable_block_(block);
-        if (TFS_SUCCESS == ret)
-        {
-          result = manager.get_block_manager().get(block);
-          ret = (NULL != result) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-          if (TFS_SUCCESS == ret)
-          {
-            ret = cleanup_invalid_block_(result) ? EXIT_BLOCK_NO_WRITABLE : TFS_SUCCESS;
-          }
-          if (TFS_SUCCESS != ret)
-          {
-            result = NULL;
-          }
-        }
-      }
-      return NULL == result ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
-    }
-
-    int ServerCollect::choose_writable_block_(uint64_t& result) const
-    {
-      result = INVALID_BLOCK_ID;
-      RWLock::Lock lock(mutex_, READ_LOCKER);
-      int32_t ret = !issued_leases_->empty() ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-      if (TFS_SUCCESS == ret)
-      {
-        int32_t index = write_index_;
-        if (write_index_ >= issued_leases_->size())
-          write_index_ = 0;
-        if (index >= issued_leases_->size())
-          index = 0;
-        ++write_index_;
-        result = issued_leases_->at(index);
-      }
-      return (INVALID_BLOCK_ID != result) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
     }
 
     bool ServerCollect::calc_regular_create_block_count(const double average_used_capacity,LayoutManager& manager, bool& promote, int32_t& count)

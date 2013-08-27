@@ -68,7 +68,6 @@ namespace tfs
       int remove(const common::ArrayHelper<uint64_t>& blocks);
       void statistics(NsGlobalStatisticsInfo& stat) const;
       int add_writable(const uint64_t block, const bool isfull);
-      int choose_writable_block(LayoutManager& manager, BlockCollect*& result);
       bool calc_regular_create_block_count(const double average_used_capacity,LayoutManager& manager, bool& promote, int32_t& count);
       bool get_range_blocks(const uint64_t begin, BLOCK_TABLE& table, common::ArrayHelper<uint64_t>& blocks) const;
       int scan(common::SSMScanParameter& param, const int8_t scan_flag) const;
@@ -123,7 +122,6 @@ namespace tfs
       int remove_(const uint64_t block, BLOCK_TABLE& table);
       int for_each_(const uint64_t begin, const BLOCK_TABLE& table, common::ArrayHelper<uint64_t>& blocks) const;
       bool exist_(const uint64_t block, const BLOCK_TABLE& table) const;
-      int choose_writable_block_(uint64_t& result) const;
       bool cleanup_invalid_block_(BlockCollect* block);
 
       private:

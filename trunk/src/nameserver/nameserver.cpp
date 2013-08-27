@@ -274,23 +274,11 @@ namespace tfs
           common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
           switch (pcode)
           {
-            case GET_BLOCK_INFO_MESSAGE:
+            case GET_BLOCK_INFO_MESSAGE_V2:
               ret = open(msg);
               break;
-            case GET_BLOCK_INFO_MESSAGE_V2:
-              ret = openv2(msg);
-              break;
-            case BATCH_GET_BLOCK_INFO_MESSAGE:
-              ret = batch_open(msg);
-              break;
             case BATCH_GET_BLOCK_INFO_MESSAGE_V2:
-              ret = batch_openv2(msg);
-              break;
-            case BLOCK_WRITE_COMPLETE_MESSAGE:
-              ret = close(msg);
-              break;
-            case UPDATE_BLOCK_INFO_MESSAGE_V2:
-              ret = closev2(msg);
+              ret = batch_open(msg);
               break;
             case REPLICATE_BLOCK_MESSAGE:
             case BLOCK_COMPACT_COMPLETE_MESSAGE:
@@ -386,72 +374,27 @@ namespace tfs
 
     int NameServer::open(common::BasePacket* msg)
     {
-      int32_t ret = ((NULL != msg) && (msg->getPCode() == GET_BLOCK_INFO_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (common::TFS_SUCCESS == ret)
-      {
-        GetBlockInfoMessage* message = dynamic_cast<GetBlockInfoMessage*> (msg);
-        SetBlockInfoMessage* result_msg = new SetBlockInfoMessage();
-        uint64_t block_id = message->get_block_id();
-        uint64_t lease_id = common::INVALID_LEASE_ID;
-        int32_t  mode     = message->get_mode();
-        int32_t  version  = 0;
-        time_t now = Func::get_monotonic_time();
-        uint64_t ipport = msg->get_connection()->getServerId();
-        uint64_t servers[MAX_REPLICATION_NUM];
-        common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
-        common::FamilyInfoExt family_info;  // unused in old version
-
-        ret = layout_manager_.get_client_request_server().open(block_id, lease_id, version, helper,
-              family_info, mode, now);
-        if (TFS_SUCCESS == ret)
-        {
-          for (int64_t index = 0; index < helper.get_array_index(); ++index)
-            result_msg->get_block_ds().push_back(*helper.at(index));
-          result_msg->set(block_id, version, lease_id);
-          ret = message->reply(result_msg);
-        }
-        else
-        {
-          result_msg->free();
-          if (EXIT_ACCESS_PERMISSION_ERROR == ret)
-          {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NAMESERVER_ONLY_READ,
-                  "current nameserver only read, %s", tbsys::CNetUtil::addrToString(ipport).c_str());
-          }
-          else
-          {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret,
-                  "got error, when get block: %"PRI64_PREFIX"u mode: %d, result: %d information, %s",
-                  block_id, mode, ret,tbsys::CNetUtil::addrToString(ipport).c_str());
-          }
-        }
-      }
-      return ret;
-    }
-
-    int NameServer::openv2(common::BasePacket* msg)
-    {
       int32_t ret = ((NULL != msg) && (msg->getPCode() == GET_BLOCK_INFO_MESSAGE_V2)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
         GetBlockInfoMessageV2* message = dynamic_cast<GetBlockInfoMessageV2*> (msg);
         GetBlockInfoRespMessageV2* result_msg = new (std::nothrow)GetBlockInfoRespMessageV2();
-        uint64_t block_id = message->get_block_id();
+        const uint64_t block_id = message->get_block_id();
         uint64_t lease_id = common::INVALID_LEASE_ID;
-        int32_t  mode     = message->get_mode();
-        int32_t  version  = 0;
-        time_t now = Func::get_monotonic_time();
-        uint64_t ipport = msg->get_connection()->getServerId();
+        const int32_t  mode     = message->get_mode();
+        const int32_t  flag     = message->get_flag();
+        const time_t now = Func::get_monotonic_time();
+        const uint64_t ipport = msg->get_connection()->getServerId();
         BlockMeta& meta = result_msg->get_block_meta();
         common::ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, meta.ds_);
 
-        ret = layout_manager_.get_client_request_server().open(block_id, lease_id, version, servers,
-                meta.family_info_, mode, now);
+        ret = layout_manager_.get_client_request_server().open(block_id, mode, flag, now, lease_id, servers,
+                meta.family_info_);
         if (TFS_SUCCESS == ret)
         {
+          meta.lease_id_ = lease_id;
           meta.block_id_ = block_id;
           meta.size_ = servers.get_array_index();
-          meta.version_ = version;
           ret = message->reply(result_msg);
         }
         else
@@ -473,128 +416,7 @@ namespace tfs
       return ret;
     }
 
-    /**
-     * a write operation completed, commit to nameserver and update block's verion
-     */
-    int NameServer::close(common::BasePacket* msg)
-    {
-      int32_t ret = ((NULL != msg) && (msg->getPCode() == BLOCK_WRITE_COMPLETE_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (common::TFS_SUCCESS == ret)
-      {
-        BlockWriteCompleteMessage* message = dynamic_cast<BlockWriteCompleteMessage*> (msg);
-        CloseParameter param;
-        memset(&param, 0, sizeof(param));
-        param.need_new_ = false;
-        const BlockInfo* info = message->get_block();
-        param.block_info_.block_id_ = info->block_id_;
-        param.block_info_.version_ = info->version_;
-        param.block_info_.file_count_ = info->file_count_;
-        param.block_info_.size_ = info->size_;
-        param.block_info_.del_size_ =info->del_size_;
-        param.block_info_.del_file_count_ =info->del_file_count_;
-        param.id_ = message->get_server_id();
-        param.lease_id_ = message->get_lease_id();
-        param.status_ = message->get_success();
-        param.type_   = message->get_unlink_flag();
-        ret = layout_manager_.get_client_request_server().close(param);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(INFO, "%s, ret: %d", param.error_msg_, ret);
-        }
-        TBSYS_LOG(DEBUG, "close, block: %"PRI64_PREFIX"u, server: %s, status: %d, lease_id: %"PRI64_PREFIX"u, ret: %d",
-          param.block_info_.block_id_, tbsys::CNetUtil::addrToString(param.id_).c_str(), param.status_, param.lease_id_, ret);
-        ret = message->reply(new StatusMessage(ret, param.error_msg_));
-      }
-      return ret;
-    }
-
-    int NameServer::closev2(common::BasePacket* msg)
-    {
-      int32_t ret = ((NULL != msg) && (msg->getPCode() == UPDATE_BLOCK_INFO_MESSAGE_V2)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (common::TFS_SUCCESS == ret)
-      {
-        UpdateBlockInfoMessageV2* message = dynamic_cast<UpdateBlockInfoMessageV2*> (msg);
-        CloseParameter param;
-        param.status_   = WRITE_COMPLETE_STATUS_YES;
-        param.id_       = message->get_server_id();
-        param.block_info_= message->get_block_info();
-        param.lease_id_ = param.block_info_.block_id_;
-        param.need_new_ = false;
-        param.error_msg_[0] = '\0';
-        param.type_ = message->get_type();
-        ret = layout_manager_.get_client_request_server().close(param);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(INFO, "%s, ret: %d", param.error_msg_, ret);
-        }
-        TBSYS_LOG(DEBUG, "close, block: %"PRI64_PREFIX"u, server: %s, status: %d, ret: %d",
-          param.block_info_.block_id_, tbsys::CNetUtil::addrToString(param.id_).c_str(), param.status_, ret);
-        ret = message->reply(new StatusMessage(ret, param.error_msg_));
-      }
-      return ret;
-    }
-
     int NameServer::batch_open(common::BasePacket* msg)
-    {
-      int32_t ret = ((NULL != msg) && (msg->getPCode() == BATCH_GET_BLOCK_INFO_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        BatchGetBlockInfoMessage* message = dynamic_cast<BatchGetBlockInfoMessage*>(msg);
-        int32_t block_count = message->get_block_count();
-        int32_t  mode     = message->get_mode();
-        uint64_t blocks[message->get_block_id().size()];
-        for (uint32_t index = 0; index < message->get_block_id().size(); index++)
-        {
-          blocks[index] = message->get_block_id()[index];
-        }
-        common::ArrayHelper<uint64_t> helper(message->get_block_id().size(), blocks, message->get_block_id().size());
-        BlockMeta metas[MAX_BATCH_SIZE];
-        common::ArrayHelper<BlockMeta> meta_helper(MAX_BATCH_SIZE, metas);
-        BatchSetBlockInfoMessage* reply = new (std::nothrow)BatchSetBlockInfoMessage();
-        assert(NULL != reply);
-        ret = layout_manager_.get_client_request_server().batch_open(helper, mode, block_count, meta_helper);
-        TBSYS_LOG(DEBUG, "batch open return %"PRI64_PREFIX"d blocks meta.", meta_helper.get_array_index());
-        if (TFS_SUCCESS == ret)
-        {
-          for (int64_t index = 0; index < meta_helper.get_array_index(); ++index)
-          {
-            BlockMeta* meta = meta_helper.at(index);
-            BlockInfoSeg seg;
-            if (mode & (T_WRITE | T_CREATE | T_UNLINK))
-            {
-              seg.lease_id_ = meta->lease_id_;
-              seg.version_  = meta->version_;
-            }
-            for (int32_t i = 0; i < meta->size_; ++i)
-              seg.ds_.push_back(meta->ds_[i]);
-            reply->get_infos().insert(std::make_pair(meta->block_id_, seg));
-          }
-          ret = message->reply(reply);
-        }
-        else
-        {
-          reply->free();
-          if(EXIT_NO_DATASERVER == ret)
-          {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NO_DATASERVER,
-                "not found dataserver, dataserver size equal 0");
-          }
-          else if (EXIT_ACCESS_PERMISSION_ERROR == ret)
-          {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NAMESERVER_ONLY_READ,
-                "current nameserver only read");
-          }
-          else
-          {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret,
-                "batch get get block information error, mode: %d, ret: %d", mode, ret);
-          }
-        }
-      }
-      return ret;
-    }
-
-    int NameServer::batch_openv2(common::BasePacket* msg)
     {
       int32_t ret = ((NULL != msg) && (msg->getPCode() == BATCH_GET_BLOCK_INFO_MESSAGE_V2)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -603,13 +425,19 @@ namespace tfs
         BatchGetBlockInfoRespMessageV2* reply = new (std::nothrow)BatchGetBlockInfoRespMessageV2();
         ArrayHelper<uint64_t> blocks(message->get_size(), message->get_block_ids(), message->get_size());
         ArrayHelper<BlockMeta> meta(MAX_BATCH_SIZE, reply->get_block_metas());
-        int32_t  mode     = message->get_mode();
-        int32_t  block_count = message->get_size();
-        ret = layout_manager_.get_client_request_server().batch_open(blocks, mode, block_count, meta);
+        const int32_t  mode     = message->get_mode();
+        const int32_t  flag     = message->get_flag();
+        for (int64_t index = 0; index < blocks.get_array_index(); ++index)
+        {
+          meta.push_back(BlockMeta());
+          BlockMeta* bm = meta.at(index);
+          bm->block_id_ = *blocks.at(index);
+        }
+        ret = layout_manager_.get_client_request_server().batch_open(mode, flag, meta);
         if (TFS_SUCCESS == ret)
         {
           reply->set_size(meta.get_array_index());
-          TBSYS_LOG(DEBUG, "batch openv2 return %"PRI64_PREFIX"d blocks meta.", meta.get_array_index());
+          TBSYS_LOG(DEBUG, "batch open return %"PRI64_PREFIX"d blocks meta.", meta.get_array_index());
           ret = message->reply(reply);
         }
         else
@@ -873,7 +701,7 @@ namespace tfs
         uint64_t ipport = msg->get_connection()->getServerId();
         GetFamilyInfoResponseMessage* reply_msg = new GetFamilyInfoResponseMessage();
         ArrayHelper<std::pair<uint64_t, uint64_t> > members(MAX_MARSHALLING_NUM, reply_msg->get_members());
-        ret = layout_manager_.get_client_request_server().open(family_aid_info, members, mode, family_id);
+        ret = layout_manager_.get_client_request_server().open(family_id, mode, family_aid_info, members);
         if (TFS_SUCCESS == ret)
         {
           reply_msg->set_family_id(family_id);
