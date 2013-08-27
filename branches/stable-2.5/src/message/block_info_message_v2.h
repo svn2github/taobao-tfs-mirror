@@ -50,10 +50,18 @@ namespace tfs
         {
           return mode_;
         }
-
+        void set_flag(const int32_t flag)
+        {
+          flag_ = flag;
+        }
+        int32_t get_flag() const
+        {
+          return flag_;
+        }
       private:
         uint64_t block_id_;
         int32_t mode_;
+        int32_t flag_;
     };
 
     class GetBlockInfoRespMessageV2: public common::BasePacket
@@ -112,10 +120,18 @@ namespace tfs
         {
           return size_;
         }
-
+        void set_flag(const int32_t flag)
+        {
+          flag_ = flag;
+        }
+        int32_t get_flag() const
+        {
+          return flag_;
+        }
       private:
         int32_t mode_;
         int32_t size_;
+        int32_t flag_;
         uint64_t block_ids_[common::MAX_BATCH_SIZE];
     };
 

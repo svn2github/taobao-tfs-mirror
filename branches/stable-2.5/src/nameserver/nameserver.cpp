@@ -383,6 +383,7 @@ namespace tfs
         uint64_t block_id = message->get_block_id();
         uint64_t lease_id = common::INVALID_LEASE_ID;
         int32_t  mode     = message->get_mode();
+        int32_t  flag     = 0;
         int32_t  version  = 0;
         time_t now = Func::get_monotonic_time();
         uint64_t ipport = msg->get_connection()->getServerId();
@@ -391,7 +392,7 @@ namespace tfs
         common::FamilyInfoExt family_info;  // unused in old version
 
         ret = layout_manager_.get_client_request_server().open(block_id, lease_id, version, helper,
-              family_info, mode, now);
+              family_info, mode, now, flag);
         if (TFS_SUCCESS == ret)
         {
           for (int64_t index = 0; index < helper.get_array_index(); ++index)
@@ -428,6 +429,7 @@ namespace tfs
         uint64_t block_id = message->get_block_id();
         uint64_t lease_id = common::INVALID_LEASE_ID;
         int32_t  mode     = message->get_mode();
+        int32_t  flag     = message->get_flag();
         int32_t  version  = 0;
         time_t now = Func::get_monotonic_time();
         uint64_t ipport = msg->get_connection()->getServerId();
@@ -435,7 +437,7 @@ namespace tfs
         common::ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, meta.ds_);
 
         ret = layout_manager_.get_client_request_server().open(block_id, lease_id, version, servers,
-                meta.family_info_, mode, now);
+                meta.family_info_, mode, now, flag);
         if (TFS_SUCCESS == ret)
         {
           meta.block_id_ = block_id;
@@ -530,7 +532,8 @@ namespace tfs
       {
         BatchGetBlockInfoMessage* message = dynamic_cast<BatchGetBlockInfoMessage*>(msg);
         int32_t block_count = message->get_block_count();
-        int32_t  mode     = message->get_mode();
+        int32_t mode     = message->get_mode();
+        int32_t flag     = 0;
         uint64_t blocks[message->get_block_id().size()];
         for (uint32_t index = 0; index < message->get_block_id().size(); index++)
         {
@@ -541,7 +544,7 @@ namespace tfs
         common::ArrayHelper<BlockMeta> meta_helper(MAX_BATCH_SIZE, metas);
         BatchSetBlockInfoMessage* reply = new (std::nothrow)BatchSetBlockInfoMessage();
         assert(NULL != reply);
-        ret = layout_manager_.get_client_request_server().batch_open(helper, mode, block_count, meta_helper);
+        ret = layout_manager_.get_client_request_server().batch_open(helper, mode, block_count, meta_helper, flag);
         TBSYS_LOG(DEBUG, "batch open return %"PRI64_PREFIX"d blocks meta.", meta_helper.get_array_index());
         if (TFS_SUCCESS == ret)
         {
@@ -592,9 +595,10 @@ namespace tfs
         BatchGetBlockInfoRespMessageV2* reply = new (std::nothrow)BatchGetBlockInfoRespMessageV2();
         ArrayHelper<uint64_t> blocks(message->get_size(), message->get_block_ids(), message->get_size());
         ArrayHelper<BlockMeta> meta(MAX_BATCH_SIZE, reply->get_block_metas());
+        int32_t  flag     = message->get_flag();
         int32_t  mode     = message->get_mode();
         int32_t  block_count = message->get_size();
-        ret = layout_manager_.get_client_request_server().batch_open(blocks, mode, block_count, meta);
+        ret = layout_manager_.get_client_request_server().batch_open(blocks, mode, block_count, meta, flag);
         if (TFS_SUCCESS == ret)
         {
           reply->set_size(meta.get_array_index());

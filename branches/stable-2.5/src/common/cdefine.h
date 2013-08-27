@@ -98,6 +98,11 @@ typedef enum
   T_LARGE = 64,
   T_UNLINK = 128,
   T_FORCE = 256
+} OpenMode;
+
+typedef enum
+{
+  F_FAMILY_INFO = 1
 } OpenFlag;
 
 typedef enum

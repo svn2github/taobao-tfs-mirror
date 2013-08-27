@@ -103,14 +103,14 @@ namespace tfs
 
     int ClientRequestServer::open(uint64_t& block_id, uint64_t& lease_id, int32_t& version,
         common::ArrayHelper<uint64_t>& servers, FamilyInfoExt&  family_info,
-        const int32_t mode, const time_t now)
+        const int32_t mode, const time_t now, const int32_t flag)
     {
       servers.clear();
       family_info.family_id_ = INVALID_FAMILY_ID;
       int32_t ret = TFS_SUCCESS;
       if (mode & T_READ)//read mode
       {
-        ret = open_read_mode_(servers, family_info, block_id);
+        ret = open_read_mode_(servers, family_info, block_id, flag);
       }
       else//write mode
       {
@@ -143,7 +143,7 @@ namespace tfs
       return ret;
     }
 
-    int ClientRequestServer::open_read_mode_(common::ArrayHelper<uint64_t>& servers, FamilyInfoExt& family_info, const uint64_t block) const
+    int ClientRequestServer::open_read_mode_(common::ArrayHelper<uint64_t>& servers, FamilyInfoExt& family_info, const uint64_t block, const int32_t flag) const
     {
       int32_t ret = (INVALID_BLOCK_ID == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
@@ -156,7 +156,7 @@ namespace tfs
         {
           ret = manager_.get_block_manager().get_servers(servers, pblock);
           int64_t family_id = pblock->get_family_id();
-          if (TFS_SUCCESS != ret && INVALID_FAMILY_ID != family_id)
+          if (INVALID_FAMILY_ID != family_id && ( TFS_SUCCESS != ret || flag & F_FAMILY_INFO))
           {
             common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MAX_MARSHALLING_NUM, family_info.members_);
             ret = open(family_info.family_aid_info_, helper, T_READ, family_id);
@@ -184,9 +184,9 @@ namespace tfs
     }
 
     int ClientRequestServer::batch_open(const ArrayHelper<uint64_t>& blocks, const int32_t mode,
-          const int32_t block_count, common::ArrayHelper<BlockMeta>& out)
+          const int32_t block_count, common::ArrayHelper<BlockMeta>& out, const int32_t flag)
     {
-      int32_t ret =  mode & T_READ ? batch_open_read_mode_(out, blocks) : batch_open_write_mode_(out,mode, block_count);
+      int32_t ret =  mode & T_READ ? batch_open_read_mode_(out, blocks, flag) : batch_open_write_mode_(out,mode, block_count);
       std::vector<stat_int_t> stat(4, 0);
       if (mode & T_READ)
       {
@@ -311,7 +311,7 @@ namespace tfs
               ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
               if (TFS_SUCCESS == ret)
               {
-                if ((block->get_servers_size() <= 0)
+                /*if ((block->get_servers_size() <= 0)//这里不能删除已经存在的BLOCK,如果删除有可能会出现数据丢失
                       && (!block->is_creating())
                       && (block->get_last_update_time() + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now))
                 {
@@ -321,7 +321,7 @@ namespace tfs
                     manager_.get_gc_manager().add(pobject, now);
                   ret = EXIT_BLOCK_NOT_FOUND;
                 }
-                else
+                else*/
                 {
                   if (WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_YES == SYSPARAM_NAMESERVER.write_file_check_copies_complete_)
                   {
@@ -402,7 +402,7 @@ namespace tfs
      * @return: success or failure
      */
 
-    int ClientRequestServer::batch_open_read_mode_(common::ArrayHelper<BlockMeta>& out, const common::ArrayHelper<uint64_t>& blocks) const
+    int ClientRequestServer::batch_open_read_mode_(common::ArrayHelper<BlockMeta>& out, const common::ArrayHelper<uint64_t>& blocks, const int32_t flag) const
     {
       for (int64_t index = 0; index < blocks.get_array_index(); ++index)
       {
@@ -411,7 +411,7 @@ namespace tfs
         BlockMeta* meta = out.at(index);
         meta->block_id_ = block;
         common::ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, meta->ds_);
-        int32_t ret = open_read_mode_(servers, meta->family_info_, block);
+        int32_t ret = open_read_mode_(servers, meta->family_info_, block, flag);
         if (TFS_SUCCESS == ret)
           meta->size_ = servers.get_array_index();
       }
