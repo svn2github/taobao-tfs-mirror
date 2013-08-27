@@ -21,7 +21,7 @@ namespace tfs
   namespace message
   {
     GetBlockInfoMessageV2::GetBlockInfoMessageV2():
-      block_id_(INVALID_BLOCK_ID), mode_(0)
+      block_id_(INVALID_BLOCK_ID), mode_(0), flag_(0)
     {
       _packetHeader._pcode = GET_BLOCK_INFO_MESSAGE_V2;
     }
@@ -99,7 +99,8 @@ namespace tfs
       return block_meta_.length();
     }
 
-    BatchGetBlockInfoMessageV2::BatchGetBlockInfoMessageV2()
+    BatchGetBlockInfoMessageV2::BatchGetBlockInfoMessageV2():
+      mode_(0), flag_(0)
     {
       _packetHeader._pcode = BATCH_GET_BLOCK_INFO_MESSAGE_V2;
     }
