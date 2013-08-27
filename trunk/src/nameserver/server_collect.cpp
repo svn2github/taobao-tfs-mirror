@@ -323,11 +323,14 @@ namespace tfs
           RWLock::Lock lock(mutex_, WRITE_LOCKER);
           ret = issued_leases_->insert_unique(rt , entry->block_id_);
           assert((TFS_SUCCESS == ret || EXIT_ELEMENT_EXIST == ret));
+          if (EXIT_ELEMENT_EXIST == ret)
+            ret = TFS_SUCCESS;
         }
-        if (TFS_SUCCESS == ret || EXIT_LEASE_EXISTED == ret)
+        if (TFS_SUCCESS == ret)
         {
           ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, entry->servers_);
           block_manager.get_servers(servers, pblock);
+          entry->size_ = servers.get_array_index();
         }
       }
       return TFS_SUCCESS;
@@ -386,7 +389,7 @@ namespace tfs
               block_manager.giveup_lease(start, id(), now, NULL);
             }
           }
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS == ret || EXIT_ELEMENT_EXIST == ret)
           {
             result.push_back(BlockLease());
             BlockLease* entry = result.at(result.get_array_index() - 1);
@@ -395,6 +398,7 @@ namespace tfs
             entry->result_   = TFS_SUCCESS;
             ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, entry->servers_);
             block_manager.get_servers(servers, pblock);
+            entry->size_ = servers.get_array_index();
           }
         }
       }
@@ -506,6 +510,7 @@ namespace tfs
 
     int ServerCollect::reset(const DataServerStatInfo& info, const int64_t now, LayoutManager& manager)
     {
+      UNUSED(now);
       int32_t args = CALL_BACK_FLAG_CLEAR;
       callback(reinterpret_cast<void*>(&args), manager);
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
@@ -518,7 +523,7 @@ namespace tfs
       total_network_bandwith_ = info.total_network_bandwith_;
       current_load_ = info.current_load_;
       block_count_ = info.block_count_;
-      startup_time_ = now;
+      startup_time_ = info.startup_time_;
       for (int8_t index = 0; index < MAX_RW_STAT_PAIR_NUM; ++index)
       {
         write_bytes_[index] = info.write_bytes_[index];

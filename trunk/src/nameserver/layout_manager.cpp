@@ -858,7 +858,7 @@ namespace tfs
       bool all_over = false;
       int32_t ret = TFS_SUCCESS;
       uint64_t last_traverse_server = INVALID_SERVER_ID;
-      const int32_t SLEEP_TIME_MS = 2000;
+      const int32_t SLEEP_TIME_US = 2000000;  // 2 seconds
       NsGlobalStatisticsInfo stat_info;
       memset(&stat_info, 0, sizeof(stat_info));
       ServerCollect* servers[MAX_PROCESS_NUMS];
@@ -898,7 +898,7 @@ namespace tfs
         {
           memset(&stat_info, 0, sizeof(stat_info));
           last_traverse_server = INVALID_SERVER_ID;
-          usleep(SLEEP_TIME_MS);
+          usleep(SLEEP_TIME_US);
         }
         else
         {
