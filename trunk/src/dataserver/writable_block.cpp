@@ -36,7 +36,7 @@ namespace tfs
     {
     }
 
-    void WritableBlock::set_servers(const common::ArrayHelper<uint64_t> servers)
+    void WritableBlock::set_servers(const common::ArrayHelper<uint64_t>& servers)
     {
       assert(servers.get_array_index() <= MAX_REPLICATION_NUM);
       server_size_ = servers.get_array_index();

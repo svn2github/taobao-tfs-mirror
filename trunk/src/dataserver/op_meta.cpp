@@ -54,6 +54,18 @@ namespace tfs
       }
     }
 
+    void OpMeta::reset_members()
+    {
+      done_server_size_ = 0;
+      start_time_ = Func::get_monotonic_time_us();
+      for (int32_t index = 0; index < server_size_; index++)
+      {
+        members_[index].info_.block_id_ = INVALID_BLOCK_ID;
+        members_[index].info_.version_= INVALID_VERSION;
+        members_[index].status_ = EXIT_NOT_ALL_SUCCESS;
+      }
+    }
+
     void OpMeta::update_member()
     {
       tbutil::Mutex::Lock lock(mutex_);
@@ -71,6 +83,7 @@ namespace tfs
           members_[index].info_ = info;
           members_[index].status_  = status;
           done_server_size_++;
+          break;
         }
       }
     }
@@ -93,20 +106,13 @@ namespace tfs
       return ret;
     }
 
-    bool OpMeta::get_highest_version_member(common::BlockInfoV2& info)
+    void OpMeta::get_servers(common::VUINT64& servers) const
     {
-      tbutil::Mutex::Lock lock(mutex_);
-      int32_t max_version = -1;
+      servers.clear();
       for (int index = 0; index < server_size_; index++)
       {
-        if ((TFS_SUCCESS == members_[index].status_) &&
-            (members_[index].info_.version_ > max_version))
-        {
-          max_version = members_[index].info_.version_;
-          info = members_[index].info_;
-        }
+        servers.push_back(members_[index].server_);
       }
-      return max_version >= 0;
     }
 
     bool OpMeta::check(OpStat& stat)

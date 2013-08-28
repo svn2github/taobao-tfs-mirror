@@ -134,11 +134,12 @@ namespace tfs
 
         // member opertion
         void set_members(const common::VUINT64& servers);
+        void reset_members();
         void update_member(const uint64_t server,
             const common::BlockInfoV2& info, const int32_t status);
         void update_member();   // update when received a error packet
         int get_members(common::ArrayHelper< BlockReplicaInfo >& helper) const;
-        bool get_highest_version_member(common::BlockInfoV2& info);
+        void get_servers(common::VUINT64& servers) const;
 
         // check op staa
         // if all finish return true

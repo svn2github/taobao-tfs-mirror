@@ -102,8 +102,7 @@ namespace tfs
       {
         if (0 != ns_ip_port_[i])
         {
-          // TODO, compare with real ns role
-          valid = lease_meta_[i].ns_role_ != 0 && !is_expired(now, i);
+          valid = (lease_meta_[i].ns_role_ == NS_ROLE_MASTER) && !is_expired(now, i);
         }
       }
       return valid;
@@ -198,7 +197,6 @@ namespace tfs
         ArrayHelper<BlockInfoV2> blocks(MAX_WRITABLE_BLOCK_COUNT, block_infos);
         get_writable_block_manager().get_blocks(blocks, BLOCK_WRITABLE);
         req_msg.set_size(blocks.get_array_index());
-        get_writable_block_manager().expire_update_blocks();
       }
 
       tbnet::Packet* ret_msg = NULL;
@@ -302,6 +300,7 @@ namespace tfs
     void LeaseManager::run_lease(const int32_t who)
     {
       int ret = TFS_SUCCESS;
+      int32_t SLEEP_TIME_US = 1 * 1000 * 1000;  // 1 seconds
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       while (!ds_info.is_destroyed())
       {
@@ -330,7 +329,12 @@ namespace tfs
               break;
             }
           }
-          if (TFS_SUCCESS != ret)
+
+          if (TFS_SUCCESS == ret)
+          {
+            get_writable_block_manager().expire_update_blocks();
+          }
+          else
           {
             lease_status_[who] = LEASE_APPLY;
             get_writable_block_manager().expire_all_blocks();  // lease expired
@@ -339,7 +343,7 @@ namespace tfs
               tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str(), who, ret);
         }
 
-        usleep(500000);  // check every 500ms
+        usleep(SLEEP_TIME_US);
       }
 
       ret = giveup(who);

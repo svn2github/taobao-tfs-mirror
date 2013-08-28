@@ -92,14 +92,14 @@ namespace tfs
         int giveup_writable_block();
 
       private:
-        int32_t* select_size(const BlockType type);
+        int32_t& select_size(const BlockType type);
         WritableBlock* insert_(const uint64_t block_id,
             const common::ArrayHelper<uint64_t>& servers, const BlockType type);
         WritableBlock* remove_(const uint64_t block_id);
         WritableBlock* get_(const uint64_t block_id);
         void apply_block_callback(message::DsApplyBlockResponseMessage* response);
         void giveup_block_callback(message::DsGiveupBlockResponseMessage* response);
-        void process_apply_update_block(message::DsApplyBlockForUpdateResponseMessage* response);
+        int process_apply_update_block(message::DsApplyBlockForUpdateResponseMessage* response);
 
       private:
         DataService& service_;

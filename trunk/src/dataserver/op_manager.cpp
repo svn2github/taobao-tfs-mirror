@@ -58,13 +58,13 @@ namespace tfs
     // prepare_op is called in write/prepare unlink stage
     // a client request directly send to ds when direct flag is set
     int OpManager::prepare_op(uint64_t& block_id, uint64_t& file_id, uint64_t& op_id,
-        const OpType type, VUINT64& servers, bool direct)
+        const OpType type, const bool is_master, VUINT64& servers)
     {
       int ret = TFS_SUCCESS;
 
-      if (direct)
+      WritableBlock* block = NULL;
+      if (is_master)
       {
-        WritableBlock* block = NULL;
         if (INVALID_BLOCK_ID == block_id)
         {
           ret = get_lease_manager().alloc_writable_block(block);
@@ -131,16 +131,15 @@ namespace tfs
     }
 
     int OpManager::reset_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
-        const OpType type, const common::VUINT64& servers, const bool direct)
+        common::VUINT64& servers)
     {
-      UNUSED(type);
       int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
           (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
 
-      if (TFS_SUCCESS == ret && direct)
+      if (TFS_SUCCESS == ret)
       {
         ret = get_lease_manager().has_valid_lease(Func::get_monotonic_time()) ?
-          EXIT_BLOCK_LEASE_INVALID_ERROR: TFS_SUCCESS;
+          TFS_SUCCESS : EXIT_BLOCK_LEASE_INVALID_ERROR;
       }
 
       if (TFS_SUCCESS == ret)
@@ -150,7 +149,8 @@ namespace tfs
         ret = get(oid, op_meta);
         if (TFS_SUCCESS == ret)
         {
-          op_meta->set_members(servers);
+          op_meta->reset_members();
+          op_meta->get_servers(servers);
         }
         put(op_meta);
       }
@@ -234,16 +234,13 @@ namespace tfs
       return all_finish;
     }
 
-    void OpManager::release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id, const bool direct)
+    void OpManager::release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id)
     {
       int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
           (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        if (direct)
-        {
-          get_lease_manager().free_writable_block(block_id);
-        }
+        get_lease_manager().free_writable_block(block_id);
         OpId oid(block_id, file_id, op_id);
         remove(oid);
       }
@@ -265,9 +262,9 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "write check block version. blockid: %"PRI64_PREFIX"u, "
-            "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
-            "remote version: %d, local version: %d, ret: %d",
-            block_id, file_id, op_id, remote_version, local.version_, ret);
+              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
+              "remote version: %d, local version: %d, ret: %d",
+              block_id, file_id, op_id, remote_version, local.version_, ret);
         }
       }
 
@@ -384,33 +381,6 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           op_meta->set_file_size(file_size);
-        }
-        put(op_meta);
-      }
-
-      return ret;
-    }
-
-    int OpManager::update_block_info(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
-        const common::UpdateBlockInfoType type)
-    {
-      int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
-          (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-
-      if (TFS_SUCCESS == ret)
-      {
-        BlockInfoV2 block_info;
-        OpId oid(block_id, file_id, op_id);
-        OpMeta* op_meta = NULL;
-        ret = get(oid, op_meta);
-        if (TFS_SUCCESS == ret)
-        {
-          // get the blockinfo with highest version
-          // commit blockinfo to ns only if at least one ds success
-          if (op_meta->get_highest_version_member(block_info))
-          {
-            ret = update_block_info(block_info, type);
-          }
         }
         put(op_meta);
       }

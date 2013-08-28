@@ -62,14 +62,14 @@ namespace tfs
        *    3. alloc a operation id if needed
        */
       int prepare_op(uint64_t& block_id, uint64_t& file_id, uint64_t& op_id,
-        const OpType type, common::VUINT64& servers, const bool direct);
+        const OpType type, const bool is_master, common::VUINT64& servers);
 
       /*
        * when receive a close/unlink reqeust
        * ds should reset opertion meta
        */
       int reset_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
-        const OpType type, const common::VUINT64& servers, const bool direct);
+        common::VUINT64& servers);
 
       /*
        * when receive a response from peer server
@@ -95,7 +95,7 @@ namespace tfs
       /*
        * release operation metadata when operation finished
        */
-      void release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id, const bool direct);
+      void release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id);
 
     public:
       int write_file(const uint64_t block_id, const uint64_t attach_block_id,
@@ -114,9 +114,6 @@ namespace tfs
       int unlink_file(const uint64_t block_id, const uint64_t attach_block_id,
         const uint64_t file_id, const int64_t op_id, const int32_t action,
         common::BlockInfoV2& local);
-
-      int update_block_info(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
-          const common::UpdateBlockInfoType type);
 
       int update_block_info(const common::BlockInfoV2& block_info,
           const common::UpdateBlockInfoType type);

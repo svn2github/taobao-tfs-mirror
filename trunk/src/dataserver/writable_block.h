@@ -80,7 +80,7 @@ namespace tfs
           return status_;
         }
 
-        void set_servers(const common::ArrayHelper<uint64_t> servers);
+        void set_servers(const common::ArrayHelper<uint64_t>& servers);
         void get_servers(common::ArrayHelper<uint64_t>& servers);
         void get_servers(common::VUINT64& servers);
 

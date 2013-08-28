@@ -327,7 +327,6 @@ namespace tfs
       int32_t offset = message->get_offset();
       int32_t length = message->get_length();
       int32_t version = message->get_version();
-      bool direct = message->get_direct_flag();
       VUINT64 servers = message->get_ds(); // will copy vector
       const char* data = message->get_data();
       uint64_t master_id = message->get_master_id();
@@ -339,9 +338,7 @@ namespace tfs
       bool op_ready = false;
 
       int ret = TFS_SUCCESS;
-      if ((INVALID_BLOCK_ID == block_id) ||
-          (INVALID_BLOCK_ID == attach_block_id) ||
-          (NULL == data) || (offset < 0) || (length <= 0))
+      if ((NULL == data) || (offset < 0) || (length <= 0))
       {
         ret = EXIT_PARAMETER_ERROR;
       }
@@ -367,7 +364,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = get_op_manager().prepare_op(attach_block_id,
-            file_id, lease_id, OP_TYPE_WRITE, servers, direct);
+            file_id, lease_id, OP_TYPE_WRITE, is_master, servers);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "prepare write lease fail. blockid: %"PRI64_PREFIX"u, "
@@ -380,6 +377,8 @@ namespace tfs
           op_ready = true;
 
           // callback & slave will use
+          message->set_block_id(attach_block_id);
+          message->set_attach_block_id(attach_block_id);
           message->set_file_id(file_id);
           message->set_lease_id(lease_id);
         }
@@ -452,7 +451,7 @@ namespace tfs
         // slave write fail, release op
         if (TFS_SUCCESS != ret)
         {
-          get_op_manager().release_op(attach_block_id, file_id, lease_id, direct);
+          get_op_manager().release_op(attach_block_id, file_id, lease_id);
         }
       }
 
@@ -478,7 +477,6 @@ namespace tfs
       uint64_t master_id = message->get_master_id();
       uint32_t crc = message->get_crc();
       int32_t status = message->get_status();
-      bool direct = message->get_direct_flag();
       FamilyInfoExt& family_info = message->get_family_info();
       int64_t family_id = family_info.family_id_;
       bool tmp = message->get_tmp_flag(); // if true, we are writing a tmp block
@@ -512,8 +510,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = get_op_manager().reset_op(attach_block_id,
-            file_id, lease_id, OP_TYPE_WRITE, servers, direct);
+        ret = get_op_manager().reset_op(attach_block_id, file_id, lease_id, servers);
         if (TFS_SUCCESS != ret)
         {
          TBSYS_LOG(WARN, "prepare write lease fail. blockid: %"PRI64_PREFIX"u, "
@@ -588,7 +585,7 @@ namespace tfs
         resp_msg->set_block_info(local);
         resp_msg->set_status(ret);
         message->reply(resp_msg);
-        get_op_manager().release_op(attach_block_id, file_id, lease_id, direct);
+        get_op_manager().release_op(attach_block_id, file_id, lease_id);
       }
 
      TIMER_END();
@@ -617,7 +614,6 @@ namespace tfs
       int32_t version = message->get_version();
       uint64_t master_id = message->get_master_id();
       bool prepare = message->get_prepare_flag();
-      bool direct = message->get_direct_flag();
       FamilyInfoExt& family_info = message->get_family_info();
       int64_t family_id = family_info.family_id_;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
@@ -651,12 +647,11 @@ namespace tfs
         if (prepare)
         {
           ret = get_op_manager().prepare_op(attach_block_id,
-              file_id, lease_id, OP_TYPE_UNLINK, servers, direct);
+              file_id, lease_id, OP_TYPE_UNLINK, is_master, servers);
         }
         else
         {
-          ret = get_op_manager().reset_op(attach_block_id,
-              file_id, lease_id, OP_TYPE_UNLINK, servers, direct);
+          ret = get_op_manager().reset_op(attach_block_id, file_id, lease_id, servers);
         }
 
         if (TFS_SUCCESS != ret)
@@ -754,7 +749,7 @@ namespace tfs
 
         if (!prepare || (prepare && (TFS_SUCCESS != ret)))
         {
-          get_op_manager().release_op(attach_block_id, file_id, lease_id, direct);
+          get_op_manager().release_op(attach_block_id, file_id, lease_id);
         }
       }
 
@@ -900,7 +895,6 @@ namespace tfs
       uint32_t length = message->get_length();
       uint32_t offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
-      bool direct = message->get_direct_flag();
       OpStat op_stat;
 
       int ret = TFS_SUCCESS;
@@ -923,12 +917,13 @@ namespace tfs
           message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, op_stat.error_.str().c_str());
 
           // if fail, close will never happen, release op
-          get_op_manager().release_op(attach_block_id, file_id, lease_id, direct);
+          get_op_manager().release_op(attach_block_id, file_id, lease_id);
         }
         else
         {
           WriteFileRespMessageV2* resp_msg = new (std::nothrow) WriteFileRespMessageV2();
           assert(NULL != resp_msg);
+          resp_msg->set_block_id(attach_block_id);
           resp_msg->set_file_id(file_id);
           resp_msg->set_lease_id(lease_id);
           message->reply(resp_msg);
@@ -958,7 +953,6 @@ namespace tfs
       uint64_t peer_id = message->get_connection()->getPeerId();
       int32_t option_flag = message->get_flag();
       bool tmp = message->get_tmp_flag();
-      bool direct = message->get_direct_flag();
       OpStat op_stat;
 
       int ret = TFS_SUCCESS;
@@ -966,30 +960,18 @@ namespace tfs
       if (all_finish)
       {
         ret = op_stat.status_;
-        if (!tmp) // close tmp block no need to commit & write log
+        // close tmp block no need to commit & write log
+        if (!tmp && (TFS_SUCCESS == ret) && (0 == (option_flag & TFS_FILE_NO_SYNC_LOG)))
         {
-          int tmp_ret = get_op_manager().update_block_info(attach_block_id,
-              file_id, lease_id, UPDATE_BLOCK_INFO_WRITE);
-          if (TFS_SUCCESS != tmp_ret)
+          std::vector<SyncBase*>& sync_mirror = service_.get_sync_mirror();
+          for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)
           {
-            ret = tmp_ret;
-            TBSYS_LOG(WARN, "update block info fail. blockid: %"PRI64_PREFIX"u, "
-                "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
-                attach_block_id, file_id, lease_id, ret);
-          }
-
-          if ((TFS_SUCCESS == ret) && (0 == (option_flag & TFS_FILE_NO_SYNC_LOG)))
-          {
-            std::vector<SyncBase*>& sync_mirror = service_.get_sync_mirror();
-            for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)
+            ret = sync_mirror[i]->write_sync_log(OPLOG_INSERT, attach_block_id, file_id);
+            if (TFS_SUCCESS != ret)
             {
-              ret = sync_mirror[i]->write_sync_log(OPLOG_INSERT, attach_block_id, file_id);
-              if (TFS_SUCCESS != ret)
-              {
-                TBSYS_LOG(WARN, "write sync log fail. blockid: %"PRI64_PREFIX"u, "
-                    "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, index: %d, ret: %d",
-                    attach_block_id, file_id, lease_id, i, ret);
-              }
+              TBSYS_LOG(WARN, "write sync log fail. blockid: %"PRI64_PREFIX"u, "
+                  "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, index: %d, ret: %d",
+                  attach_block_id, file_id, lease_id, i, ret);
             }
           }
         }
@@ -1006,7 +988,7 @@ namespace tfs
         get_traffic_control().rw_stat(RW_STAT_TYPE_WRITE, ret, true, op_stat.size_);
 
         // after close, release op
-        get_op_manager().release_op(attach_block_id, file_id, lease_id, direct);
+        get_op_manager().release_op(attach_block_id, file_id, lease_id);
 
         TBSYS_LOG(INFO, "CLOSE file %s. blockid: %"PRI64_PREFIX"u, "
             "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d",
@@ -1024,7 +1006,6 @@ namespace tfs
       uint64_t lease_id = message->get_lease_id();
       int32_t action = message->get_action();
       uint64_t peer_id = message->get_connection()->getPeerId();
-      bool direct = message->get_direct_flag();
       OpStat op_stat;
 
       int ret = TFS_SUCCESS;
@@ -1047,7 +1028,7 @@ namespace tfs
           message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, op_stat.error_.str().c_str());
 
           // prepare unlink fail, real unlink won't happen
-          get_op_manager().release_op(attach_block_id, file_id, lease_id, direct);
+          get_op_manager().release_op(attach_block_id, file_id, lease_id);
         }
         else
         {
@@ -1078,7 +1059,6 @@ namespace tfs
       int32_t action = message->get_action();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int32_t option_flag = message->get_flag();
-      bool direct = message->get_direct_flag();
       OpStat op_stat;
 
       int ret = TFS_SUCCESS;
@@ -1086,16 +1066,6 @@ namespace tfs
       if (all_finish)
       {
         ret = op_stat.status_;
-        int tmp_ret = get_op_manager().update_block_info(attach_block_id,
-            file_id, lease_id, UPDATE_BLOCK_INFO_UNLINK);
-        if (TFS_SUCCESS != tmp_ret)
-        {
-          ret = tmp_ret;
-          TBSYS_LOG(WARN, "update block info fail. blockid: %"PRI64_PREFIX"u, "
-              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
-              attach_block_id, file_id, lease_id, ret);
-        }
-
         if ((TFS_SUCCESS == ret) && (0 == (option_flag & TFS_FILE_NO_SYNC_LOG)))
         {
           std::vector<SyncBase*>& sync_mirror = service_.get_sync_mirror();
@@ -1125,7 +1095,7 @@ namespace tfs
         get_traffic_control().rw_stat(RW_STAT_TYPE_UNLINK, ret, true, 0);
 
         // after unlink, release op
-        get_op_manager().release_op(attach_block_id, file_id, lease_id, direct);
+        get_op_manager().release_op(attach_block_id, file_id, lease_id);
 
         TBSYS_LOG(INFO, "UNLINK file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
             "leaseid: %"PRI64_PREFIX"u, action: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",
