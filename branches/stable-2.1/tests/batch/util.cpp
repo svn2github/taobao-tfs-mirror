@@ -14,10 +14,10 @@
  *
  */
 #include "util.h"
-#include "new_client/fsname.h"
+#include "clientv2/fsname.h"
 #include "common/func.h"
 
-using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace tfs::common;
 using namespace std;
 
@@ -33,7 +33,6 @@ int fetch_input_opt(int argc, char** argv, ThreadParam& param, int& thread_count
     case 'd':
       {
         param.ns_ip_port_ = optarg;
-        printf("%s\n", param.ns_ip_port_.c_str());
         string::size_type tmppos = param.ns_ip_port_.find_first_of(":");
         if (string::npos == tmppos)
         {
@@ -43,11 +42,9 @@ int fetch_input_opt(int argc, char** argv, ThreadParam& param, int& thread_count
       break;
     case 'f':
       param.conf_ = optarg;
-      printf("%s\n", param.conf_.c_str());
       break;
     case 'c':
       param.file_count_ = atoi(optarg);
-      printf("%d\n", param.file_count_);
       break;
     case 'n':
       param.file_size_ = atoi(optarg);
@@ -67,7 +64,6 @@ int fetch_input_opt(int argc, char** argv, ThreadParam& param, int& thread_count
         maxs = range.substr(pos + 1, string::npos);
         param.min_size_ = atoi(mins.c_str());
         param.max_size_ = atoi(maxs.c_str());
-        printf("%d:%d\n", param.min_size_, param.max_size_);
         //printf("range : %s,mins : %s, maxs : %s,min_size : %d,max_size : %d\n",range.c_str(),mins.c_str(),maxs.c_str(),param.min_size,param.max_size);
       }
       break;
@@ -82,6 +78,9 @@ int fetch_input_opt(int argc, char** argv, ThreadParam& param, int& thread_count
       break;
     case 'o':
       param.oper_ratio_ = optarg;
+      break;
+    case 'l':
+      param.log_level_ = optarg;
       break;
     default:
       return EXIT_FAILURE;
@@ -132,13 +131,13 @@ int read_local_file(const char* filename, char* data, uint32_t& length)
   return 0;
 }
 
-int retry_open_file(TfsClient* tfsclient, char* filename, char* prefix, int mode, int& fd)
+int retry_open_file(TfsClientImplV2* tfsclient, char* filename, char* prefix, int mode, int& fd)
 {
   int retry = 0;
   int ret;
   while (retry++ < RETRY_TIMES)
   {
-    ret = tfsclient->open(filename, prefix, mode);
+    ret = tfsclient->open(filename, prefix, NULL, mode);
     if (ret > 0)
     {
       fd = ret;
@@ -165,7 +164,7 @@ uint32 convname(const char* tfsname, char* prefix, uint32_t& blockid, uint64_t& 
   return blockid;
 }
 
-int write_data(TfsClient* tfsclient, int fd, char* data, uint32_t length)
+int write_data(TfsClientImplV2* tfsclient, int fd, char* data, uint32_t length)
 {
   int num_wrote = 0;
   int left = length - num_wrote;
@@ -196,7 +195,7 @@ int write_data(TfsClient* tfsclient, int fd, char* data, uint32_t length)
   return num_wrote;
 }
 
-int copy_file(TfsClient* tfsclient, char* tfsname, int local_fd)
+int copy_file(TfsClientImplV2* tfsclient, char* tfsname, int local_fd)
 {
 
   //char tmpstr[32];
@@ -209,7 +208,7 @@ int copy_file(TfsClient* tfsclient, char* tfsname, int local_fd)
   prefix = tfsname + FILE_NAME_LEN;
 
   int fd;
-  if ((fd = tfsclient->open(tfsname, prefix, T_READ)) <= 0 )
+  if ((fd = tfsclient->open(tfsname, prefix, NULL, T_READ)) <= 0 )
   {
     fprintf(stderr, "open tfsfile fail\n");
     return EXIT_FAILURE;
@@ -265,7 +264,7 @@ int copy_file(TfsClient* tfsclient, char* tfsname, int local_fd)
   return EXIT_SUCCESS;
 }
 
-/*int copy_file_v3(TfsClient &tfsclient, char* tfsname, uint32_t width, uint32_t height, int local_fd, bool& zoomed)
+/*int copy_file_v3(TfsClientImplV2 &tfsclient, char* tfsname, uint32_t width, uint32_t height, int local_fd, bool& zoomed)
 {
   //char tmpstr[32];
   char *prefix = NULL;
@@ -347,7 +346,7 @@ int copy_file(TfsClient* tfsclient, char* tfsname, int local_fd)
   return EXIT_SUCCESS;
 }
 */
-int copy_file_v2(TfsClient* tfsclient, char* tfsname, int local_fd)
+int copy_file_v2(TfsClientImplV2* tfsclient, char* tfsname, int local_fd)
 {
 
   //char tmpstr[32];
@@ -360,7 +359,7 @@ int copy_file_v2(TfsClient* tfsclient, char* tfsname, int local_fd)
   prefix = tfsname + FILE_NAME_LEN;
 
   int fd;
-  if ((fd = tfsclient->open(tfsname, prefix, T_READ)) <= 0)
+  if ((fd = tfsclient->open(tfsname, prefix, NULL, T_READ)) <= 0)
   {
     fprintf(stderr, "open tfsfile fail\n");
     return EXIT_FAILURE;
@@ -399,7 +398,7 @@ int copy_file_v2(TfsClient* tfsclient, char* tfsname, int local_fd)
   tfsclient->close(fd);
   if (crc != fstat.crc_ || total_size != fstat.size_)
   {
-    fprintf(stderr, "crc error: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d\n", 
+    fprintf(stderr, "crc error: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d\n",
         crc, fstat.crc_, total_size, fstat.size_);
     return EXIT_FAILURE;
   }
@@ -407,13 +406,13 @@ int copy_file_v2(TfsClient* tfsclient, char* tfsname, int local_fd)
   return EXIT_SUCCESS;
 }
 
-int read_data(TfsClient* tfsclient, char* filename)
+int read_data(TfsClientImplV2* tfsclient, char* filename)
 {
 
   int ret = 0;
 
   int fd;
-  fd = tfsclient->open(filename, NULL, T_READ);
+  fd = tfsclient->open(filename, NULL, NULL, T_READ);
   if (fd <= 0)
   {
     printf("tfsopen failed:(%s)\n", filename);
