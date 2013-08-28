@@ -64,5 +64,7 @@ namespace tfs
     int64_t ClientConfig::wait_timeout_ = DEFAULT_NETWORK_CALL_TIMEOUT;  // wait single response timeout
     uint32_t ClientConfig::update_kmt_interval_count_ = DEFAULT_UPDATE_KMT_INTERVAL_COUNT;  // kv meta table
     uint32_t ClientConfig::update_kmt_fail_count_ = DEFAULT_UPDATE_KMT_FAIL_COUNT;  // kv meta table
+    uint32_t ClientConfig::update_dst_interval_count_ = DEFAULT_UPDATE_DST_INTERVAL_COUNT; // update ds table
+    uint32_t ClientConfig::update_dst_fail_count_ = DEFAULT_UPDATE_DST_FAIL_COUNT;
   }
 }

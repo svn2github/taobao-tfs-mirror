@@ -22,7 +22,8 @@ namespace tfs
 {
   namespace clientv2
   {
-    TfsSessionPool::TfsSessionPool()
+    TfsSessionPool::TfsSessionPool(tbutil::TimerPtr timer):
+      timer_(timer)
     {
     }
 
@@ -49,7 +50,7 @@ namespace tfs
       }
       else
       {
-        session = new TfsSession(std::string(ns_addr), cache_time, cache_items);
+        session = new TfsSession(timer_, std::string(ns_addr), cache_time, cache_items);
         int32_t ret = session->initialize();
         if (TFS_SUCCESS == ret)
         {

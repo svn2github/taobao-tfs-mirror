@@ -15,12 +15,14 @@
  */
 #include <tbsys.h>
 #include <Memory.hpp>
+#include "Timer.h"
 #include "common/client_manager.h"
 #include "common/new_client.h"
 #include "common/error_msg.h"
 #include "common/status_message.h"
 #include "message/block_info_message_v2.h"
 #include "message/client_cmd_message.h"
+#include "message/server_status_message.h"
 
 #include "tfs_file.h"
 #include "tfs_session.h"
@@ -33,13 +35,56 @@ namespace tfs
 {
   namespace clientv2
   {
-
 #ifdef WITH_TAIR_CACHE
     TairCacheHelper* TfsSession::remote_cache_helper_ = NULL;
 #endif
 
-    TfsSession::TfsSession(const string& ns_addr,
+    ServerStat::ServerStat():
+      id_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
+      last_update_time_(0), startup_time_(0), current_time_(0)
+    {
+      memset(&total_tp_, 0, sizeof(total_tp_));
+      memset(&last_tp_, 0, sizeof(last_tp_));
+    }
+
+    ServerStat::~ServerStat()
+    {
+    }
+
+    int ServerStat::deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset)
+    {
+      if (input.getDataLen() <= 0 || offset >= length)
+      {
+        return TFS_ERROR;
+      }
+      int32_t len = input.getDataLen();
+      id_ = input.readInt64();
+      use_capacity_ = input.readInt64();
+      total_capacity_ = input.readInt64();
+      current_load_ = input.readInt32();
+      block_count_  = input.readInt32();
+      last_update_time_ = input.readInt64();
+      startup_time_ = input.readInt64();
+      total_tp_.write_byte_ = input.readInt64();
+      total_tp_.read_byte_ = input.readInt64();
+      total_tp_.write_file_count_ = input.readInt64();
+      total_tp_.read_file_count_ = input.readInt64();
+      total_tp_.unlink_file_count_ = input.readInt64();
+      total_tp_.fail_write_byte_ = input.readInt64();
+      total_tp_.fail_read_byte_ = input.readInt64();
+      total_tp_.fail_write_file_count_ = input.readInt64();
+      total_tp_.fail_read_file_count_ = input.readInt64();
+      total_tp_.fail_unlink_file_count_ = input.readInt64();
+      current_time_ = input.readInt64();
+      status_ = (DataServerLiveStatus)input.readInt32();
+      offset += (len - input.getDataLen());
+
+      return TFS_SUCCESS;
+    }
+
+    TfsSession::TfsSession(tbutil::TimerPtr timer, const string& ns_addr,
         const int64_t cache_time, const int64_t cache_items):
+      timer_(timer),
       ns_addr_(ns_addr),
       block_cache_time_(cache_time),
       block_cache_items_(cache_items)
@@ -81,7 +126,117 @@ namespace tfs
         ret = EXIT_PARAMETER_ERROR;
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = update_dst();
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = stat_mgr_.initialize(timer_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t current = tbsys::CTimeUtil::getTime();
+
+        StatEntry<string, string>::StatEntryPtr access_stat_ptr =
+          new StatEntry<string, string>(StatItem::client_access_stat_, current, false);
+        access_stat_ptr->add_sub_key(StatItem::read_success_);
+        access_stat_ptr->add_sub_key(StatItem::read_fail_);
+        access_stat_ptr->add_sub_key(StatItem::write_success_);
+        access_stat_ptr->add_sub_key(StatItem::write_fail_);
+        access_stat_ptr->add_sub_key(StatItem::stat_success_);
+        access_stat_ptr->add_sub_key(StatItem::stat_fail_);
+        access_stat_ptr->add_sub_key(StatItem::unlink_success_);
+        access_stat_ptr->add_sub_key(StatItem::unlink_fail_);
+
+        StatEntry<string, string>::StatEntryPtr cache_stat_ptr =
+          new StatEntry<string, string>(StatItem::client_cache_stat_, current, false);
+        cache_stat_ptr->add_sub_key(StatItem::local_cache_hit_);
+        cache_stat_ptr->add_sub_key(StatItem::local_cache_miss_);
+
+#ifdef WITH_TAIR_CACHE
+        cache_stat_ptr->add_sub_key(StatItem::remote_cache_hit_);
+        cache_stat_ptr->add_sub_key(StatItem::remote_cache_miss_);
+#endif
+
+        stat_mgr_.add_entry(access_stat_ptr, ClientConfig::stat_interval_ * 1000);
+        stat_mgr_.add_entry(cache_stat_ptr, ClientConfig::stat_interval_ * 1000);
+      }
+
       return ret;
+    }
+
+    bool TfsSession::need_update_dst()
+    {
+      uint32_t success_ops =
+        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::read_success_) +
+        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::write_success_) +
+        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::stat_success_) +
+        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::unlink_success_);
+
+      uint64_t fail_ops =
+        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::read_fail_) +
+        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::write_fail_) +
+        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::stat_fail_) +
+        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::unlink_fail_);
+
+      uint64_t total_ops = success_ops + fail_ops;
+      return  (total_ops % ClientConfig::update_dst_interval_count_ == 0) ||
+        (fail_ops % ClientConfig::update_dst_fail_count_ == 0);
+    }
+
+    void TfsSession::update_stat(const StatType type, bool success)
+    {
+      switch (type)
+      {
+        case ST_READ:
+        {
+          string& target = success ? StatItem::read_success_ : StatItem::read_fail_;
+          stat_mgr_.update_entry(StatItem::client_access_stat_, target, 1);
+          break;
+        }
+        case ST_WRITE:
+        {
+          string& target = success ? StatItem::write_success_ : StatItem::write_fail_;
+          stat_mgr_.update_entry(StatItem::client_access_stat_, target, 1);
+          break;
+        }
+        case ST_STAT:
+        {
+          string& target = success ? StatItem::stat_success_ : StatItem::stat_fail_;
+          stat_mgr_.update_entry(StatItem::client_access_stat_, target, 1);
+          break;
+        }
+        case ST_UNLINK:
+        {
+          string& target = success ? StatItem::unlink_success_ : StatItem::unlink_fail_;
+          stat_mgr_.update_entry(StatItem::client_access_stat_, target, 1);
+          break;
+        }
+        case ST_LOCAL_CACHE:
+        {
+          string& target = success ? StatItem::local_cache_hit_ : StatItem::local_cache_miss_;
+          stat_mgr_.update_entry(StatItem::client_cache_stat_, target, 1);
+          break;
+        }
+#ifdef WITH_TAIR_CACHE
+        case ST_REMOTE_CACHE:
+        {
+          string& target = success ? StatItem::remote_cache_hit_ : StatItem::remote_cache_miss_;
+          stat_mgr_.update_entry(StatItem::client_cache_stat_, target, 1);
+          break;
+        }
+#endif
+        default:
+          break; // do nothing
+      }
+
+      if (need_update_dst())
+      {
+        update_dst();
+      }
     }
 
     void TfsSession::destroy()
@@ -212,7 +367,6 @@ namespace tfs
     int TfsSession::get_block_info(uint64_t& block_id, File& file)
     {
       int ret = TFS_SUCCESS;
-      int32_t& mode = file.mode_;
       int32_t& version = file.version_;
       VUINT64& ds = file.ds_;
       FamilyInfoExt& info = file.family_info_;
@@ -220,89 +374,82 @@ namespace tfs
       CacheHitStatus& cache_hit = file.cache_hit_;
       cache_hit = CACHE_HIT_NONE;  // reset cache hit status
 
-      if (mode & T_UNLINK)
+      if (INVALID_BLOCK_ID == block_id)
       {
-        ret = get_block_info_ex(mode, block_id, version, ds, info);
-      }
-      else if (mode & (T_CREATE | T_WRITE))
-      {
-        if ((mode & T_NEWBLK) == 0)
+        uint64_t server = select_server_from_dst();
+        ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_NO_DATASERVER;
+        if (TFS_SUCCESS == ret)
         {
-          mode |= T_CREATE;
+          ds.push_back(server);
         }
-        ret = get_block_info_ex(mode, block_id, version, ds, info);
       }
-      else // only read request use block cache
+      else
       {
-        if (INVALID_BLOCK_ID == block_id)
+        if ((ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL) &&
+            (last_cache_hit < CACHE_HIT_LOCAL) &&
+            (cache_hit == CACHE_HIT_NONE))
         {
-          TBSYS_LOG(ERROR, "blockid %"PRI64_PREFIX"u invalid, mode: %d", block_id, mode);
-          ret = EXIT_PARAMETER_ERROR;
-        }
-        else
-        {
-          if ((ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL) &&
-              (last_cache_hit < CACHE_HIT_LOCAL) &&
-              (cache_hit == CACHE_HIT_NONE))
+          // search in the local cache
+          bool local_cache_hit = query_local_block_cache(block_id, ds, info);
+          if (local_cache_hit)
           {
-            // search in the local cache
-            if (query_local_block_cache(block_id, ds, info))
-            {
-              cache_hit = CACHE_HIT_LOCAL;
-              TBSYS_LOG(DEBUG, "local cache hit, blockid: %"PRI64_PREFIX"u", block_id);
-            }
-            else
-            {
-              TBSYS_LOG(DEBUG, "local cache miss, blockid: %"PRI64_PREFIX"u", block_id);
-            }
+            cache_hit = CACHE_HIT_LOCAL;
+            TBSYS_LOG(DEBUG, "local cache hit, blockid: %"PRI64_PREFIX"u", block_id);
           }
+          else
+          {
+            TBSYS_LOG(DEBUG, "local cache miss, blockid: %"PRI64_PREFIX"u", block_id);
+          }
+          update_stat(ST_LOCAL_CACHE, cache_hit);
+        }
 
 #ifdef WITH_TAIR_CACHE
-          if ((ClientConfig::use_cache_ & USE_CACHE_FLAG_REMOTE) &&
-              (last_cache_hit < CACHE_HIT_REMOTE) &&
-              (cache_hit == CACHE_HIT_NONE))
-          {
-            if (CACHE_HIT_NONE == cache_hit)
-            {
-              // query remote tair cache
-              if (query_remote_block_cache(block_id, ds, info))
-              {
-                cache_hit = CACHE_HIT_REMOTE;
-                TBSYS_LOG(DEBUG, "remote cache hit, blockid: %"PRI64_PREFIX"u", block_id);
-                if (ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL)
-                {
-                  insert_local_block_cache(block_id, ds, info);
-                }
-              }
-              else
-              {
-                TBSYS_LOG(DEBUG, "remote cache miss, blockid: %"PRI64_PREFIX"u", block_id);
-              }
-            }
-          }
-#endif
-
-          // get block info from ns
+        if ((ClientConfig::use_cache_ & USE_CACHE_FLAG_REMOTE) &&
+            (last_cache_hit < CACHE_HIT_REMOTE) &&
+            (cache_hit == CACHE_HIT_NONE))
+        {
           if (CACHE_HIT_NONE == cache_hit)
           {
-            ret = get_block_info_ex(T_READ, block_id, version, ds, info);
-            TBSYS_LOG(DEBUG, "query block from ns %s, blockid: %"PRI64_PREFIX"u",
-                ns_addr_.c_str(), block_id);
-            if (TFS_SUCCESS == ret)
+            // query remote tair cache
+            bool remote_cache_hit = query_remote_block_cache(block_id, ds, info);
+            if (remote_cache_hit)
             {
-              // update cache
+              cache_hit = CACHE_HIT_REMOTE;
+              TBSYS_LOG(DEBUG, "remote cache hit, blockid: %"PRI64_PREFIX"u", block_id);
               if (ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL)
               {
                 insert_local_block_cache(block_id, ds, info);
               }
+            }
+            else
+            {
+              TBSYS_LOG(DEBUG, "remote cache miss, blockid: %"PRI64_PREFIX"u", block_id);
+            }
+            update_stat(ST_REMOTE_CACHE, cache_hit);
+          }
+        }
+#endif
+
+        // get block info from ns
+        if (CACHE_HIT_NONE == cache_hit)
+        {
+          ret = get_block_info_ex(T_READ, block_id, version, ds, info);
+          TBSYS_LOG(DEBUG, "query block from ns %s, blockid: %"PRI64_PREFIX"u",
+              ns_addr_.c_str(), block_id);
+          if (TFS_SUCCESS == ret)
+          {
+            // update cache
+            if (ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL)
+            {
+              insert_local_block_cache(block_id, ds, info);
+            }
 
 #ifdef WITH_TAIR_CACHE
-              if (ClientConfig::use_cache_ & USE_CACHE_FLAG_REMOTE)
-              {
-                insert_remote_block_cache(block_id, ds, info);
-              }
-#endif
+            if (ClientConfig::use_cache_ & USE_CACHE_FLAG_REMOTE)
+            {
+              insert_remote_block_cache(block_id, ds, info);
             }
+#endif
           }
         }
       }
@@ -376,6 +523,14 @@ namespace tfs
          }
 #endif
        }
+     }
+
+     uint64_t TfsSession::select_server_from_dst() const
+     {
+       uint64_t server = INVALID_SERVER_ID;
+       uint32_t index = random() % ds_table_.size();
+       server = ds_table_[index];
+       return server;
      }
 
      int TfsSession::get_block_info_ex(const int32_t flag, uint64_t& block_id,
@@ -543,5 +698,78 @@ namespace tfs
       NewClientManager::get_instance().destroy_client(client);
       return ret;
     }
+
+    int TfsSession::update_dst()
+    {
+      ShowServerInformationMessage msg;
+      SSMScanParameter& param = msg.get_param();
+      param.type_ = SSM_TYPE_SERVER;
+      param.child_type_ = SSM_CHILD_SERVER_TYPE_INFO;
+      param.start_next_position_ = 0x0;
+      param.should_actual_count_= (100 << 16);  // get 100 ds every turn
+      param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
+
+      if (false == NewClientManager::get_instance().is_init())
+      {
+        TBSYS_LOG(ERROR, "new client manager not init.");
+        return TFS_ERROR;
+      }
+
+      bool need_clear_table = true;
+      while (!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES))
+      {
+        param.data_.clear();
+        tbnet::Packet* ret_msg = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        int ret = send_msg_to_server(ns_id_, client, &msg, ret_msg);
+        if (TFS_SUCCESS != ret || ret_msg == NULL)
+        {
+          TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
+          NewClientManager::get_instance().destroy_client(client);
+          return TFS_ERROR;
+        }
+        if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
+        {
+          TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
+          NewClientManager::get_instance().destroy_client(client);
+          return TFS_ERROR;
+        }
+
+        // success, clear table first
+        if (need_clear_table)
+        {
+          ds_table_.clear();
+          need_clear_table = false;
+        }
+
+        ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
+        SSMScanParameter& ret_param = message->get_param();
+
+        int32_t data_len = ret_param.data_.getDataLen();
+        int32_t offset = 0;
+        while (data_len > offset)
+        {
+          ServerStat server;
+          if (TFS_SUCCESS == server.deserialize(ret_param.data_, data_len, offset))
+          {
+            ds_table_.push_back(server.id_);
+            std::string ip_port = Func::addr_to_str(server.id_, true);
+          }
+        }
+        param.addition_param1_ = ret_param.addition_param1_;
+        param.addition_param2_ = ret_param.addition_param2_;
+        param.end_flag_ = ret_param.end_flag_;
+        NewClientManager::get_instance().destroy_client(client);
+      }
+
+      TBSYS_LOG(DEBUG, "dump dataserver table, size: %zd", ds_table_.size());
+      for (uint32_t i = 0; i < ds_table_.size(); i++)
+      {
+        TBSYS_LOG(DEBUG, tbsys::CNetUtil::addrToString(ds_table_[i]).c_str());
+      }
+
+      return TFS_SUCCESS;
+    }
+
   }
 }

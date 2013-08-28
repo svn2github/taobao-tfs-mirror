@@ -75,6 +75,8 @@ namespace tfs
       static bool client_retry_flag_;
       static uint32_t update_kmt_interval_count_;
       static uint32_t update_kmt_fail_count_;
+      static uint32_t update_dst_interval_count_;
+      static uint32_t update_dst_fail_count_;
     };
   }
 }

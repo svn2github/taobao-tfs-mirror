@@ -19,6 +19,7 @@
 #include <map>
 #include <tbsys.h>
 #include <Mutex.h>
+#include "Timer.h"
 #include "tfs_session.h"
 
 namespace tfs
@@ -29,7 +30,7 @@ namespace tfs
     {
       typedef std::map<std::string, TfsSession*> SESSION_MAP;
       public:
-        TfsSessionPool();
+        TfsSessionPool(tbutil::TimerPtr timer);
         virtual ~TfsSessionPool();
 
         TfsSession* get(const char* ns_addr,
@@ -41,6 +42,7 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN( TfsSessionPool);
         tbutil::Mutex mutex_;
         SESSION_MAP pool_;
+        tbutil::TimerPtr timer_;
     };
   }
 }

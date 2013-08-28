@@ -118,7 +118,8 @@ namespace tfs
       int32_t cluster_id_;
       FILE_MAP tfs_file_map_;
       tbutil::Mutex mutex_;
-      TfsSessionPool session_pool_;
+      tbutil::TimerPtr timer_;
+      TfsSessionPool* session_pool_;
       common::BasePacketFactory* packet_factory_;
       common::BasePacketStreamer* packet_streamer_;
       TfsSession* default_session_;

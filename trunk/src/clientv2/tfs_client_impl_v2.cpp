@@ -33,6 +33,8 @@ namespace tfs
     ns_addr_(0), cluster_id_(0), packet_factory_(NULL), packet_streamer_(NULL),
     default_session_(NULL)
     {
+      timer_ = new tbutil::Timer();
+      session_pool_ = new TfsSessionPool(timer_);
       packet_factory_ = new MessageFactory();
       packet_streamer_ = new BasePacketStreamer(packet_factory_);
     }
@@ -45,6 +47,7 @@ namespace tfs
       }
       tfs_file_map_.clear();
 
+      tbsys::gDelete(session_pool_);
       tbsys::gDelete(packet_factory_);
       tbsys::gDelete(packet_streamer_);
     }
@@ -70,7 +73,7 @@ namespace tfs
       {
         if (NULL != ns_addr)
         {
-          TfsSession* session = session_pool_.get(ns_addr, cache_time, cache_items);
+          TfsSession* session = session_pool_->get(ns_addr, cache_time, cache_items);
           if (NULL != session)
           {
             default_session_ = session;
@@ -96,6 +99,7 @@ namespace tfs
     int TfsClientImplV2::destroy()
     {
       tbutil::Mutex::Lock lock(mutex_);
+      timer_->destroy();
       if (is_init_)
       {
         is_init_ = false;
@@ -131,7 +135,7 @@ namespace tfs
       }
       else
       {
-        session = session_pool_.get(ns_addr);
+        session = session_pool_->get(ns_addr);
         if (NULL == session)
         {
           // invalid ns addr
@@ -252,6 +256,7 @@ namespace tfs
         else
         {
           ret = tfs_file->read(buf, count);
+          tfs_file->get_session()->update_stat(ST_READ, ret > 0);
         }
       }
       return ret;
@@ -278,6 +283,7 @@ namespace tfs
           {
             ret = tfs_file->read(buf, count);
           }
+          tfs_file->get_session()->update_stat(ST_READ, ret > 0);
         }
       }
       return ret;
@@ -301,6 +307,7 @@ namespace tfs
         {
           tfs_file->set_option_flag(READ_DATA_OPTION_WITH_FINFO);
           ret = tfs_file->read(buf, count, file_info);
+          tfs_file->get_session()->update_stat(ST_READ, ret > 0);
         }
       }
       return ret;
@@ -345,6 +352,7 @@ namespace tfs
         else
         {
           ret = tfs_file->stat(*buf);
+          tfs_file->get_session()->update_stat(ST_STAT, TFS_SUCCESS == ret);
         }
       }
 
@@ -369,6 +377,7 @@ namespace tfs
         else
         {
           ret = tfs_file->close(status);
+          tfs_file->get_session()->update_stat(ST_WRITE, ret > 0);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
@@ -409,6 +418,7 @@ namespace tfs
         else
         {
           ret = tfs_file->unlink(action, file_size);
+          tfs_file->get_session()->update_stat(ST_UNLINK, TFS_SUCCESS == ret);
         }
       }
       return ret;

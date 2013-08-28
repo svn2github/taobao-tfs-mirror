@@ -90,7 +90,6 @@ namespace tfs
         int write_ex(const char* buf, int64_t count);
         int close_ex(const int32_t status);
         int unlink_ex(const int32_t action, int64_t& file_size, const bool prepare = false);
-        void transfer_mode(const int32_t mode);
 
       private:
         File file_;

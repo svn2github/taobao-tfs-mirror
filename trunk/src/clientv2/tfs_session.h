@@ -19,6 +19,7 @@
 #include <Mutex.h>
 
 #include "common/internal.h"
+#include "common/statistics.h"
 #include "lru.h"
 
 #ifdef WITH_TAIR_CACHE
@@ -29,6 +30,16 @@ namespace tfs
 {
   namespace clientv2
   {
+    enum StatType
+    {
+      ST_READ,
+      ST_WRITE,
+      ST_STAT,
+      ST_UNLINK,
+      ST_LOCAL_CACHE,
+      ST_REMOTE_CACHE
+    };
+
     enum CacheHitStatus
     {
       CACHE_HIT_NONE = 0,           // all cache miss
@@ -43,6 +54,26 @@ namespace tfs
       common::FamilyInfoExt info_;
     };
 
+    class ServerStat
+    {
+      public:
+        ServerStat();
+        virtual ~ServerStat();
+
+        int deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset);
+        uint64_t id_;
+        int64_t use_capacity_;
+        int64_t total_capacity_;
+        common::Throughput total_tp_;
+        common::Throughput last_tp_;
+        int32_t current_load_;
+        int32_t block_count_;
+        time_t last_update_time_;
+        time_t startup_time_;
+        time_t current_time_;
+        common::DataServerLiveStatus status_;
+   };
+
     struct File;
     class TfsSession
     {
@@ -51,7 +82,8 @@ namespace tfs
         typedef BLOCK_CACHE_MAP::iterator BLOCK_CACHE_MAP_ITER;
 
       public:
-        TfsSession(const std::string& ns_addr_, const int64_t cache_time, const int64_t cache_items);
+        TfsSession(tbutil::TimerPtr timer,
+            const std::string& ns_addr_, const int64_t cache_time, const int64_t cache_items);
         virtual ~TfsSession();
 
         int initialize();
@@ -76,6 +108,8 @@ namespace tfs
         {
           return block_cache_items_;
         }
+
+        void update_stat(const StatType type, bool success);
 
         // global cache control
         int get_block_info(uint64_t& block_id, File& file);
@@ -110,6 +144,9 @@ namespace tfs
         TfsSession();
         DISALLOW_COPY_AND_ASSIGN(TfsSession);
 
+        // random select a server from table
+        uint64_t select_server_from_dst() const;
+
         // get block info from nameserver
         int get_block_info_ex(const int32_t flag, uint64_t& block_id,
             int32_t& version, common::VUINT64& ds, common::FamilyInfoExt& info);
@@ -117,7 +154,14 @@ namespace tfs
         // get cluster id from nameserver
         int get_cluster_id_from_ns();
 
+        // if need update dataserver table
+        bool need_update_dst();
+
+        // update dataserver table from ns
+        int update_dst();
+
       private:
+        tbutil::TimerPtr timer_;
         tbutil::Mutex mutex_;
         std::string ns_addr_;
         uint64_t ns_id_;
@@ -125,6 +169,8 @@ namespace tfs
         const int64_t block_cache_time_;
         const int64_t block_cache_items_;
         BLOCK_CACHE_MAP block_cache_map_;
+        common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
+        std::vector<uint64_t> ds_table_;
     };
   }
 }
