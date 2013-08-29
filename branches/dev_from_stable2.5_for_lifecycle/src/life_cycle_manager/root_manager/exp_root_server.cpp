@@ -99,6 +99,11 @@ namespace tfs
       rt_es_heartbeat_workers_.wait();
       manager_.destroy();
       handle_task_helper_.destroy();
+      if (kv_engine_helper_ != NULL)
+      {
+        delete kv_engine_helper_;
+        kv_engine_helper_ = NULL;
+      }
       return TFS_SUCCESS;
     }
 

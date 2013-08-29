@@ -85,6 +85,7 @@ namespace tfs
         int32_t note_interval_;
 
       private:
+        bool destroy_;
         ExpServerManager &manager_;
         DISALLOW_COPY_AND_ASSIGN(HandleTaskHelper);
     };

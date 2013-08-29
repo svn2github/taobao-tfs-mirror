@@ -49,7 +49,7 @@ namespace tfs
     HandleTaskHelper::HandleTaskHelper(ExpServerManager &manager)
       :kv_engine_helper_(NULL), lifecycle_area_(0),
       assign_task_thread_(0), task_period_(0),
-      note_interval_(0), manager_(manager)
+      note_interval_(0), destroy_(false), manager_(manager)
     {
     }
 
@@ -59,10 +59,11 @@ namespace tfs
 
     int HandleTaskHelper::destroy()
     {
-      kv_engine_helper_ = NULL;
+      destroy_ = true;
       if (0 != assign_task_thread_)
       {
         assign_task_thread_->join();
+        assign_task_thread_ = 0;
       }
       return TFS_SUCCESS;
     }
@@ -82,10 +83,10 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        assign_task_thread_ = new AssignTaskThreadHelper(*this);
         lifecycle_area_ = SYSPARAM_EXPIREROOTSERVER.lifecycle_area_;
         task_period_ = SYSPARAM_EXPIREROOTSERVER.task_period_;
         note_interval_ = SYSPARAM_EXPIREROOTSERVER.note_interval_;
+        assign_task_thread_ = new AssignTaskThreadHelper(*this);
       }
 
       return ret;
@@ -312,7 +313,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
 
-      while (true)
+      while (!destroy_)
       {
         ExpTable exp_table;
         ret = manager_.get_table(exp_table);
