@@ -29,7 +29,8 @@ namespace tfs
       oid_(oid),
       file_size_(0),
       server_size_(0),
-      done_server_size_(0)
+      done_server_size_(0),
+      ref_count_(0)
     {
       start_time_ = Func::get_monotonic_time_us();
       last_update_time_ = Func::get_monotonic_time();

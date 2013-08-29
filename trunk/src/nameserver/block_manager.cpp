@@ -901,7 +901,7 @@ namespace tfs
         {
           if (info.version_ >= pblock->version())
             pblock->update(info);
-          ret = pblock->has_valid_lease(now) ? EXIT_LEASE_EXPIRED : TFS_SUCCESS;
+          ret = pblock->has_valid_lease(now) ? TFS_SUCCESS: EXIT_LEASE_EXPIRED;
         }
         if (TFS_SUCCESS == ret)
         {

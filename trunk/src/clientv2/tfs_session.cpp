@@ -528,8 +528,11 @@ namespace tfs
      uint64_t TfsSession::select_server_from_dst() const
      {
        uint64_t server = INVALID_SERVER_ID;
-       uint32_t index = random() % ds_table_.size();
-       server = ds_table_[index];
+       if (ds_table_.size() > 0)
+       {
+         uint32_t index = random() % ds_table_.size();
+         server = ds_table_[index];
+       }
        return server;
      }
 

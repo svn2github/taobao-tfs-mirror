@@ -183,6 +183,14 @@ namespace tfs
       assert(NULL != response);
       lease_meta_[who] = response->get_lease_meta();
       last_renew_time_[who] = Func::get_monotonic_time();
+      if (NS_ROLE_MASTER == lease_meta_[who].ns_role_)
+      {
+        DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+        ds_info.max_mr_network_bandwidth_mb_ = lease_meta_[who].max_mr_network_bandwith_;
+        ds_info.max_rw_network_bandwidth_mb_ = lease_meta_[who].max_rw_network_bandwith_;
+        ds_info.max_block_size_ = lease_meta_[who].max_block_size_;
+        ds_info.max_write_file_count_ = lease_meta_[who].max_write_file_count_;
+      }
     }
 
     int LeaseManager::renew(const int32_t timeout_ms, const int32_t who)
@@ -233,6 +241,15 @@ namespace tfs
       assert(NULL != response);
       lease_meta_[who] = response->get_lease_meta();
       last_renew_time_[who] = Func::get_monotonic_time();
+      if (NS_ROLE_MASTER == lease_meta_[who].ns_role_)
+      {
+        DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+        ds_info.max_mr_network_bandwidth_mb_ = lease_meta_[who].max_mr_network_bandwith_;
+        ds_info.max_rw_network_bandwidth_mb_ = lease_meta_[who].max_rw_network_bandwith_;
+        ds_info.max_block_size_ = lease_meta_[who].max_block_size_;
+        ds_info.max_write_file_count_ = lease_meta_[who].max_write_file_count_;
+      }
+
       ArrayHelper<BlockLease> leases(response->get_size(),
           response->get_block_lease(), response->get_size());
       for (int index = 0; index < response->get_size(); index++)
@@ -252,6 +269,7 @@ namespace tfs
         {
           get_writable_block_manager().expire_one_block(lease.block_id_);
         }
+        TBSYS_LOG(DEBUG, "renew block %"PRI64_PREFIX"u ret: %d", lease.block_id_, lease.result_);
       }
     }
 
@@ -378,7 +396,7 @@ namespace tfs
           }
 
           // apply writable block
-          int32_t need = MAX_WRITABLE_BLOCK_COUNT -
+          int32_t need = ds_info.max_write_file_count_ -
             get_writable_block_manager().size(BLOCK_WRITABLE);
           if (need > 0)
           {

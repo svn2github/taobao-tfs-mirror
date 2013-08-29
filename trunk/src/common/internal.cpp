@@ -2557,6 +2557,16 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::get_int32(data, data_len, pos, &max_block_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &max_write_file_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         for (int index = 0; index < 4 && TFS_SUCCESS == ret; index++)
         {
           ret = Serialization::get_int32(data, data_len, pos, &reserve_[index]);
@@ -2611,6 +2621,16 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::set_int32(data, data_len, pos, max_block_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, max_write_file_count_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         for (int index = 0; index < 4 && TFS_SUCCESS == ret; index++)
         {
           ret = Serialization::set_int32(data, data_len, pos, reserve_[index]);
@@ -2622,7 +2642,7 @@ namespace tfs
 
     int64_t LeaseMeta::length() const
     {
-      return INT64_SIZE + 11 * INT_SIZE;
+      return INT64_SIZE + 13 * INT_SIZE;
     }
 
 

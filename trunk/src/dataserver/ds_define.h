@@ -150,6 +150,8 @@ namespace tfs
       uint64_t ns_vip_port_;
       int32_t max_mr_network_bandwidth_mb_;
       int32_t max_rw_network_bandwidth_mb_;
+      int32_t max_block_size_;
+      int32_t max_write_file_count_;
       DsRuntimeGlobalInformation();
       static DsRuntimeGlobalInformation& instance();
     };

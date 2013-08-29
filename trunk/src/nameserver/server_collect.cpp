@@ -434,7 +434,6 @@ namespace tfs
         }
         else
         {
-          RWLock::Lock lock(mutex_, WRITE_LOCKER);
           cleanup_invalid_block_(pblock);
         }
       }
@@ -472,7 +471,6 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          RWLock::Lock lock(mutex_, WRITE_LOCKER);
           cleanup_invalid_block_(pblock);
         }
       }

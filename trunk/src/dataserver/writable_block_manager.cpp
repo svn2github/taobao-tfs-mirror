@@ -53,10 +53,7 @@ namespace tfs
       WritableBlock* block = get_(block_id);
       if (NULL != block)
       {
-        int32_t& old_size = select_size(block->get_type());
-        block->set_type(BLOCK_EXPIRED);
-        old_size--;
-        expired_size_++;
+        expire_one_block_(block);
       }
     }
 
@@ -68,11 +65,9 @@ namespace tfs
       {
         if ((*iter)->get_type() == BLOCK_UPDATE)
         {
-          (*iter)->set_type(BLOCK_EXPIRED);
+          expire_one_block_(*iter);
         }
       }
-      expired_size_ += update_size_;
-      update_size_ = 0;
     }
 
     void WritableBlockManager::expire_all_blocks()
@@ -81,11 +76,16 @@ namespace tfs
       BLOCK_TABLE::iterator iter = writable_.begin();
       for ( ; iter != writable_.end(); iter++)
       {
-        (*iter)->set_type(BLOCK_EXPIRED);
+        expire_one_block_(*iter);
       }
-      expired_size_ += writable_size_ + update_size_;
-      writable_size_ = 0;
-      update_size_ = 0;
+    }
+
+    bool WritableBlockManager::is_full(const uint64_t block_id)
+    {
+      int32_t block_size = 0;
+      get_block_manager().get_used_offset(block_size, block_id);
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      return BLOCK_RESERVER_LENGTH + block_size >= ds_info.max_block_size_;
     }
 
     int32_t WritableBlockManager::size(const BlockType type)
@@ -127,6 +127,17 @@ namespace tfs
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
       return get_(block_id);
+    }
+
+    void WritableBlockManager::expire_one_block_(WritableBlock* block)
+    {
+      if (NULL != block)
+      {
+        int32_t& old_size = select_size(block->get_type());
+        block->set_type(BLOCK_EXPIRED);
+        old_size--;
+        expired_size_++;
+      }
     }
 
     WritableBlock* WritableBlockManager::insert_(const uint64_t block_id,
@@ -210,7 +221,11 @@ namespace tfs
         int32_t index = write_index_++;
         WritableBlock* target = writable_.at(index);
         assert(NULL != target);
-        if (target->get_type() == BLOCK_WRITABLE && !target->get_use_flag())
+        if (is_full(target->get_block_id()))
+        {
+          expire_one_block_(target);
+        }
+        else if (target->get_type() == BLOCK_WRITABLE && !target->get_use_flag())
         {
           target->set_use_flag(true);
           block_id = target->get_block_id();
@@ -372,7 +387,7 @@ namespace tfs
       return ret;
     }
 
-    void WritableBlockManager::get_blocks(common::ArrayHelper<BlockInfoV2> blocks,
+    void WritableBlockManager::get_blocks(common::ArrayHelper<BlockInfoV2>& blocks,
         const BlockType type)
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);

@@ -867,11 +867,13 @@ namespace tfs
       while (!ngi.is_destroyed())
       {
         int64_t now = Func::get_monotonic_time();
+        /*
         if (ngi.in_safe_mode_time(now))
         {
           Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
         }
         now = Func::get_monotonic_time();
+        */
 
         //check dataserver is alive
         helper.clear();  // avoid report block dead loop

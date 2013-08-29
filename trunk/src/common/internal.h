@@ -208,7 +208,7 @@ namespace tfs
 
     static const int32_t MAX_SINGLE_FILE_SIZE = 16 * 1024 * 1024;//16MB
     static const int32_t MAX_SINGLE_DISK_BLOCK_COUNT = UINT16_MAX;
-    static const int32_t MAX_WRITABLE_BLOCK_COUNT = 128;
+    static const int32_t MAX_WRITABLE_BLOCK_COUNT = 256;
 
     enum NsRole
     {
@@ -1266,6 +1266,8 @@ namespace tfs
       int32_t max_mr_network_bandwith_;
       int32_t max_rw_network_bandwith_;
       int32_t ns_role_;
+      int32_t max_block_size_;
+      int32_t max_write_file_count_;
       int32_t reserve_[4];
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);

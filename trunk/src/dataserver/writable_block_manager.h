@@ -84,7 +84,7 @@ namespace tfs
         int alloc_update_block(const uint64_t block_id, WritableBlock*& block);
 
         // used when renew lease & expire block
-        void get_blocks(common::ArrayHelper<common::BlockInfoV2> blocks, const BlockType type);
+        void get_blocks(common::ArrayHelper<common::BlockInfoV2>& blocks, const BlockType type);
 
         // apply block helper function
         int apply_writable_block(const int32_t count);
@@ -92,7 +92,9 @@ namespace tfs
         int giveup_writable_block();
 
       private:
+        bool is_full(const uint64_t block_id);
         int32_t& select_size(const BlockType type);
+        void expire_one_block_(WritableBlock* block);
         WritableBlock* insert_(const uint64_t block_id,
             const common::ArrayHelper<uint64_t>& servers, const BlockType type);
         WritableBlock* remove_(const uint64_t block_id);

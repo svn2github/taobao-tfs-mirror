@@ -101,7 +101,7 @@ namespace tfs
 
         bool is_master(const int32_t who) const
         {
-          return lease_meta_[who].ns_role_ != 0; // TODO
+          return lease_meta_[who].ns_role_ == common::NS_ROLE_MASTER;
         }
 
       private:

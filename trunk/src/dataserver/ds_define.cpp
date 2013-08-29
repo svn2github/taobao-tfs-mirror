@@ -55,6 +55,10 @@ namespace tfs
     DsRuntimeGlobalInformation::DsRuntimeGlobalInformation():ns_vip_port_(0)
     {
       memset(&information_, 0, sizeof(information_));
+      max_mr_network_bandwidth_mb_ = 0;
+      max_rw_network_bandwidth_mb_ = 0;
+      max_block_size_ = 0;
+      max_write_file_count_ = 0;
     }
 
     void DsRuntimeGlobalInformation::startup()
