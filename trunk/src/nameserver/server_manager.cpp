@@ -113,6 +113,7 @@ namespace tfs
         ret = wait_free_servers_.insert_unique(result, pserver);
         assert(common::TFS_SUCCESS == ret);
         assert(NULL != result);
+        servers_.erase(pserver);
       }
       rwmutex_.unlock();
       if (common::TFS_SUCCESS == ret)

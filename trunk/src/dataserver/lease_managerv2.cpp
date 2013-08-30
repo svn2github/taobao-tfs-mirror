@@ -374,7 +374,6 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       const int32_t SLEEP_TIME_US = 1 * 1000 * 1000;
-      int64_t last_giveup_time = 0;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       while (!ds_info.is_destroyed())
       {
