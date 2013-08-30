@@ -527,6 +527,7 @@ namespace tfs
 
      uint64_t TfsSession::select_server_from_dst() const
      {
+       tbutil::Mutex::Lock lock(table_mutex_);
        uint64_t server = INVALID_SERVER_ID;
        if (ds_table_.size() > 0)
        {
@@ -741,6 +742,7 @@ namespace tfs
         // success, clear table first
         if (need_clear_table)
         {
+          tbutil::Mutex::Lock lock(table_mutex_);
           ds_table_.clear();
           need_clear_table = false;
         }
@@ -748,6 +750,7 @@ namespace tfs
         ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
         SSMScanParameter& ret_param = message->get_param();
 
+        tbutil::Mutex::Lock lock(table_mutex_);
         int32_t data_len = ret_param.data_.getDataLen();
         int32_t offset = 0;
         while (data_len > offset)

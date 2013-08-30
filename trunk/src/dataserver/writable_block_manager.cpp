@@ -49,7 +49,7 @@ namespace tfs
 
     void WritableBlockManager::expire_one_block(const uint64_t block_id)
     {
-      RWLock::Lock lock(rwmutex_, READ_LOCKER);
+      RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
       WritableBlock* block = get_(block_id);
       if (NULL != block)
       {
@@ -207,33 +207,49 @@ namespace tfs
 
     int WritableBlockManager::alloc_writable_block(WritableBlock*& block)
     {
-      RWLock::Lock lock(rwmutex_, READ_LOCKER);
+      rwmutex_.rdlock();
       int retry = 0;
       int count = writable_.size();
-      uint64_t block_id = INVALID_BLOCK_ID;
+      VUINT64 expires;
       block = NULL;
-      while ((INVALID_BLOCK_ID == block_id) && (retry++ < count))
+      while ((NULL == block) && (retry++ < count))
       {
+        int index = write_index_++;
+        if (index >= count)
+        {
+          index = 0;
+        }
         if (write_index_ >= count)
         {
           write_index_ = 0;
         }
-        int32_t index = write_index_++;
         WritableBlock* target = writable_.at(index);
         assert(NULL != target);
         if (is_full(target->get_block_id()))
         {
-          expire_one_block_(target);
+          TBSYS_LOG(DEBUG, "block %"PRI64_PREFIX"u has been full", target->get_block_id());
+          expires.push_back(target->get_block_id());
         }
         else if (target->get_type() == BLOCK_WRITABLE && !target->get_use_flag())
         {
           target->set_use_flag(true);
-          block_id = target->get_block_id();
           block = target;
         }
       }
+      rwmutex_.unlock();
 
-      TBSYS_LOG(DEBUG, "alloc writable block %"PRI64_PREFIX"u", block_id);
+      // expire full blocks
+      if (expires.size() > 0)
+      {
+        VUINT64::iterator iter = expires.begin();
+        for ( ;iter != expires.end(); iter++)
+        {
+          expire_one_block(*iter);
+        }
+      }
+
+      TBSYS_LOG(DEBUG, "alloc writable block %"PRI64_PREFIX"u",
+          (NULL != block) ? block->get_block_id() : 0);
 
       return (NULL != block) ? TFS_SUCCESS : EXIT_NO_WRITABLE_BLOCK;
     }
@@ -354,13 +370,8 @@ namespace tfs
         }
         NewClientManager::get_instance().destroy_client(new_client);
       }
-      else
-      {
-        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
-      }
 
       return ret;
-
     }
 
     // asynchronized request to nameserver

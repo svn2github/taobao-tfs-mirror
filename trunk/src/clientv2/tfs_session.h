@@ -171,6 +171,7 @@ namespace tfs
         BLOCK_CACHE_MAP block_cache_map_;
         common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
         std::vector<uint64_t> ds_table_;
+        tbutil::Mutex table_mutex_;
     };
   }
 }

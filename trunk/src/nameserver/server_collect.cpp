@@ -332,6 +332,11 @@ namespace tfs
           block_manager.get_servers(servers, pblock);
           entry->size_ = servers.get_array_index();
         }
+        else
+        {
+          TBSYS_LOG(WARN, "%s apply update block %"PRI64_PREFIX"u ret %d",
+              CNetUtil::addrToString(id()).c_str(), entry->block_id_, ret);
+        }
       }
       return TFS_SUCCESS;
     }
@@ -363,7 +368,7 @@ namespace tfs
           }
           if (TFS_SUCCESS == ret)
           {
-            ret = pblock->is_writable() && pblock->is_master(id()) ? TFS_SUCCESS : EXIT_BLOCK_NOT_IN_CURRENT_GROUP;
+            ret = pblock->is_writable() && pblock->is_master(id()) ? TFS_SUCCESS : EXIT_BLOCK_NO_WRITABLE;
             if (TFS_SUCCESS != ret)
             {
               if (pblock->has_version_conflict() || pblock->is_full() || !is_equal_group(start) || !pblock->is_master(id()))
@@ -431,6 +436,7 @@ namespace tfs
         {
           ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, result->servers_);
           block_manager.get_servers(servers, pblock);
+          result->size_ = servers.get_array_index();
         }
         else
         {
@@ -726,16 +732,19 @@ namespace tfs
     bool ServerCollect::cleanup_invalid_block_(BlockCollect* block)
     {
       bool ret = false;
-      RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      if (!block->is_writable() || !block->is_master(id()))
+      if (NULL != block)
       {
-        ret = true;
-        remove_(block->id(), *issued_leases_);
-      }
-      if (block->is_full() || !block->is_master(id()) || block->has_version_conflict())
-      {
-        ret = true;
-        remove_(block->id(), *writable_);
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
+        if (!block->is_writable() || !block->is_master(id()))
+        {
+          ret = true;
+          remove_(block->id(), *issued_leases_);
+        }
+        if (block->is_full() || !block->is_master(id()) || block->has_version_conflict())
+        {
+          ret = true;
+          remove_(block->id(), *writable_);
+        }
       }
       return ret;
     }

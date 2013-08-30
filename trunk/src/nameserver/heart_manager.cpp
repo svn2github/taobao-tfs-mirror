@@ -256,6 +256,7 @@ namespace tfs
         DsApplyLeaseResponseMessage * reply_msg = new (std::nothrow)DsApplyLeaseResponseMessage();
         LeaseMeta& meta = reply_msg->get_lease_meta();
         meta.lease_id_ = info.id_;
+        meta.ns_role_ = GFactory::get_runtime_info().get_role();
         meta.max_block_size_ = SYSPARAM_NAMESERVER.max_block_size_;
         meta.max_write_file_count_ = SYSPARAM_NAMESERVER.max_write_file_count_;
         server_manager.calc_single_process_max_network_bandwidth(

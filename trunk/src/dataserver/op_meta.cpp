@@ -51,7 +51,7 @@ namespace tfs
         members_[index].server_ = servers[index];
         members_[index].info_.block_id_ = INVALID_BLOCK_ID;
         members_[index].info_.version_= INVALID_VERSION;
-        members_[index].status_ = EXIT_NOT_ALL_SUCCESS;
+        members_[index].status_ = EXIT_TIMEOUT_ERROR;
       }
     }
 
@@ -63,7 +63,7 @@ namespace tfs
       {
         members_[index].info_.block_id_ = INVALID_BLOCK_ID;
         members_[index].info_.version_= INVALID_VERSION;
-        members_[index].status_ = EXIT_NOT_ALL_SUCCESS;
+        members_[index].status_ = EXIT_TIMEOUT_ERROR;
       }
     }
 

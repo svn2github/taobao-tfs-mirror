@@ -269,7 +269,8 @@ namespace tfs
         {
           get_writable_block_manager().expire_one_block(lease.block_id_);
         }
-        TBSYS_LOG(DEBUG, "renew block %"PRI64_PREFIX"u ret: %d", lease.block_id_, lease.result_);
+        TBSYS_LOG(DEBUG, "renew block %"PRI64_PREFIX"u, replica: %d, ret: %d",
+            lease.block_id_, lease.size_, lease.result_);
       }
     }
 
@@ -374,7 +375,6 @@ namespace tfs
       int ret = TFS_SUCCESS;
       const int32_t SLEEP_TIME_US = 1 * 1000 * 1000;
       int64_t last_giveup_time = 0;
-      int32_t async_timeout = DEFAULT_NETWORK_CALL_TIMEOUT * 1000 + 100000;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       while (!ds_info.is_destroyed())
       {
@@ -388,11 +388,17 @@ namespace tfs
 
           // giveup expired block first
           int32_t expired = get_writable_block_manager().size(BLOCK_EXPIRED);
-          if (expired > 0 && last_giveup_time + async_timeout < now) // wait giveup callback end
+          if (expired > 0)
           {
             ret = get_writable_block_manager().giveup_writable_block();
             last_giveup_time = now;
-            TBSYS_LOG(DEBUG, "giveup writable block, ret: %d", ret);
+            TBSYS_LOG(DEBUG, "giveup writable block, count: %d, ret: %d", expired, ret);
+          }
+
+          // sleep 100ms between giveup and apply, wait for giveup finish
+          if (expired > 0)
+          {
+            usleep(100000);
           }
 
           // apply writable block

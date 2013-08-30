@@ -78,6 +78,7 @@ namespace tfs
         {
           block_id = block->get_block_id();
           block->get_servers(servers);
+          assert(servers.size() > 0);
         }
       }
 
