@@ -390,7 +390,6 @@ namespace tfs
           if (expired > 0)
           {
             ret = get_writable_block_manager().giveup_writable_block();
-            last_giveup_time = now;
             TBSYS_LOG(DEBUG, "giveup writable block, count: %d, ret: %d", expired, ret);
           }
 
