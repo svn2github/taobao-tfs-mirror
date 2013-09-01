@@ -99,7 +99,8 @@ namespace tfs
 
     int64_t GetAllBlocksHeaderRespMessage::length() const
     {
-      return INT_SIZE + all_blocks_header_.size() * all_blocks_header_.begin()->length();
+      IndexHeaderV2 header;
+      return INT_SIZE + all_blocks_header_.size() * header.length();
     }
 
   }

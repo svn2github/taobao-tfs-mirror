@@ -1285,6 +1285,11 @@ namespace tfs
       {
         ret = message->reply(resp_msg);
       }
+      else
+      {
+        tbsys::gDelete(resp_msg);
+        TBSYS_LOG(WARN, "get all blocks header fail, ret: %d", ret);
+      }
       return ret;
     }
 
