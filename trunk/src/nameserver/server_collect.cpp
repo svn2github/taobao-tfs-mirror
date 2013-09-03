@@ -372,8 +372,10 @@ namespace tfs
             if (TFS_SUCCESS != ret)
             {
               if (pblock->has_version_conflict() || pblock->is_full() || !is_equal_group(start) || !pblock->is_master(id()))
-              RWLock::Lock lock(mutex_, WRITE_LOCKER);
-              remove_(start, *writable_);
+              {
+                RWLock::Lock lock(mutex_, WRITE_LOCKER);
+                remove_(start, *writable_);
+              }
             }
           }
           if (TFS_SUCCESS == ret)

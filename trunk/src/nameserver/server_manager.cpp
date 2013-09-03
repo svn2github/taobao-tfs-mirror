@@ -676,8 +676,7 @@ namespace tfs
         count = SYSPARAM_NAMESERVER.add_primary_block_count_;
         server->calc_regular_create_block_count(average_used_capacity, manager_,promote, count);
         int64_t now = Func::get_monotonic_time();
-        while (TFS_SUCCESS == ret && GFactory::get_runtime_info().is_master()
-              && !GFactory::get_runtime_info().in_safe_mode_time(now) && count-- > 0)
+        while (TFS_SUCCESS == ret && GFactory::get_runtime_info().is_master() && count-- > 0)
         {
           uint64_t new_block_id = INVALID_BLOCK_ID;
           BlockCollect* pblock = manager_.add_new_block(new_block_id, server, now);

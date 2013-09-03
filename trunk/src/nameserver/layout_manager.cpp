@@ -916,6 +916,9 @@ namespace tfs
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
+        if (ngi.in_safe_mode_time(Func::get_monotonic_time()))
+          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
+
         bool complete = get_server_manager().size() < SYSPARAM_NAMESERVER.max_replication_;
         if (!complete)
         {
