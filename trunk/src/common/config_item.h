@@ -33,6 +33,8 @@ namespace tfs
 #define CONF_SN_CHECKSERVER                           "checkserver"
 #define CONF_SN_KVMETA                                "kvmetaserver"
 #define CONF_SN_KVROOTSERVER                          "kvrootserver"
+#define CONF_SN_SYNCSERVER                            "syncserver"
+#define CONF_SN_MIGRATESERVER                         "migrateserver"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"
@@ -153,6 +155,10 @@ namespace tfs
 #define CONF_SYNC_FAIL_RETRY_INTERVAL                 "sync_fail_retry_interval"
 #define CONF_MAX_INIT_INDEX_ELEMENT_NUMS              "max_init_index_element_nums"
 #define CONF_MAX_EXTEND_INDEX_ELEMENT_NUMS            "max_extend_index_element_nums"
+#define CONF_SYNC_FILE_ENTRY_QUEUE_LIMIT              "sync_file_entry_queue_limit"
+#define CONF_SYNC_FILE_ENTRY_QUEUE_WARN_RATIO         "sync_file_entry_queue_warn_ratio"
+#define CONF_SYNC_FILE_ENTRY_DEST_ADDR                "sync_file_entry_dest_addr"
+#define CONF_MIGRATE_SERVER_ADDR                      "migrate_server_addr"
 
 //rc
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"

@@ -513,6 +513,18 @@ namespace tfs
           case common::GET_ALL_BLOCKS_HEADER_RESP_MESSAGE:
             packet = new (std::nothrow)GetAllBlocksHeaderRespMessage();
             break;
+          case common::REQ_SYNC_FILE_ENTRY_MESSAGE:
+            packet = new (std::nothrow)SyncFileEntryMessage();
+            break;
+          case common::RSP_SYNC_FILE_ENTRY_MESSAGE:
+            packet = new (std::nothrow)SyncFileEntryResponseMessage();
+            break;
+          case common::REQ_MIGRATE_DS_HEARTBEAT_MESSAGE:
+            packet = new (std::nothrow)MigrateDsHeartMessage();
+            break;
+          case common::RSP_MIGRATE_DS_HEARTBEAT_MESSAGE:
+            packet = new (std::nothrow)MigrateDsHeartResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;

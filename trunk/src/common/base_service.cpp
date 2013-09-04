@@ -212,12 +212,12 @@ namespace tfs
     int BaseService::initialize_network(const char* app_name)
     {
       int32_t iret = TFS_SUCCESS;
-      const char* ip_addr = get_ip_addr();
+      /*const char* ip_addr = get_ip_addr();
       if (NULL == ip_addr)//get ip addr
       {
         iret =  EXIT_CONFIG_ERROR;
         TBSYS_LOG(ERROR, "%s not set ip_addr", app_name);
-      }
+      }*/
 
       int32_t port = 0;
       if (TFS_SUCCESS == iret)

@@ -963,17 +963,8 @@ namespace tfs
         // close tmp block no need to commit & write log
         if (!tmp && (TFS_SUCCESS == ret) && (0 == (option_flag & TFS_FILE_NO_SYNC_LOG)))
         {
-          std::vector<SyncBase*>& sync_mirror = service_.get_sync_mirror();
-          for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)
-          {
-            ret = sync_mirror[i]->write_sync_log(OPLOG_INSERT, attach_block_id, file_id);
-            if (TFS_SUCCESS != ret)
-            {
-              TBSYS_LOG(WARN, "write sync log fail. blockid: %"PRI64_PREFIX"u, "
-                  "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, index: %d, ret: %d",
-                  attach_block_id, file_id, lease_id, i, ret);
-            }
-          }
+          SyncManager& manager = service_.get_sync_manager();
+          ret = manager.insert(INVALID_SERVER_ID, 0, attach_block_id, file_id, OPLOG_INSERT);
         }
 
         if (TFS_SUCCESS != ret)
@@ -1068,17 +1059,8 @@ namespace tfs
         ret = op_stat.status_;
         if ((TFS_SUCCESS == ret) && (0 == (option_flag & TFS_FILE_NO_SYNC_LOG)))
         {
-          std::vector<SyncBase*>& sync_mirror = service_.get_sync_mirror();
-          for (uint32_t i = 0; (TFS_SUCCESS == ret) && i < sync_mirror.size(); i++)
-          {
-            ret = sync_mirror[i]->write_sync_log(OPLOG_REMOVE, attach_block_id, file_id, action);
-            if (TFS_SUCCESS != ret)
-            {
-              TBSYS_LOG(WARN, "write sync log fail. blockid: %"PRI64_PREFIX"u, "
-                  "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, index: %d, ret: %d",
-                  attach_block_id, file_id, lease_id, i, ret);
-            }
-          }
+          SyncManager& manager = service_.get_sync_manager();
+          ret = manager.insert(INVALID_SERVER_ID, 0, attach_block_id, file_id, OPLOG_REMOVE);
         }
 
         if (TFS_SUCCESS != ret)

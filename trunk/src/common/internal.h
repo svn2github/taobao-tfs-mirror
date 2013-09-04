@@ -210,6 +210,8 @@ namespace tfs
     static const int32_t MAX_SINGLE_DISK_BLOCK_COUNT = UINT16_MAX;
     static const int32_t MAX_WRITABLE_BLOCK_COUNT = 256;
 
+    static const int32_t MAX_SYNC_FILE_ENTRY_COUNT = 32;
+
     enum NsRole
     {
       NS_ROLE_NONE = 0x00,
@@ -465,11 +467,11 @@ namespace tfs
       TFS_FILE_NAME_V2
     };
 
-    /*enum BlkType
-      {
-      BLOCK_TYPE_DATA_BLOCK = 0,
-      BLOCK_TYPE_CHECK_BLOCK
-      };*/
+    enum DataServerDiskType
+    {
+      DATASERVER_DISK_TYPE_FULL   = 0,//data disk
+      DATASERVER_DISK_TYPE_SYSTEM = 1//system disk
+    };
 
     struct SSMScanParameter
     {
@@ -628,7 +630,7 @@ namespace tfs
       int32_t last_update_time_;
       int32_t startup_time_;
       int32_t current_time_;
-      int32_t status_;
+      int32_t type_;
       int32_t total_network_bandwith_;
     };
 
@@ -1277,6 +1279,26 @@ namespace tfs
       LeaseMeta(): lease_id_(INVALID_LEASE_ID)
       {
       }
+    };
+
+    struct SyncFileEntry
+    {
+      int64_t app_id_;
+      uint64_t block_id_;
+      uint64_t file_id_;
+      uint64_t source_ds_addr_;
+      uint64_t source_ns_addr_;
+      uint64_t dest_ns_addr_;
+      int64_t  reserve_[2];
+      int32_t  last_sync_time_;
+      int16_t  sync_fail_count_;
+      int16_t  type_;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+      bool check_need_sync(const time_t now) const;
+      void dump(const int32_t level, const char* file, const int32_t line,
+                const char* function, pthread_t thid, const char* format, ...);
     };
 
     // defined type typedef

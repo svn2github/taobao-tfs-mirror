@@ -114,7 +114,7 @@ namespace tfs
     const int32_t EIXT_SERVER_OBJECT_NOT_FOUND = -5017;//server object not found in XXX
     const int32_t EXIT_UPDATE_RELATION_ERROR = -5018;//update relation error
     const int32_t EXIT_DISCARD_NEWBLK_ERROR  = -5019;//nameserver in safe_mode_time, discard newblk packet
-    const int32_t EXIT_BLOCK_REPLICATE_EXIST = -5020;//ÈÄöËøáÂ∑•ÂÖ∑Âä†ËΩΩblockÊó∂ÔºåblockÁöÑÂ§á‰ªΩÂ∑≤ÁªèÂ≠òÂú®
+    const int32_t EXIT_BLOCK_REPLICATE_EXIST = -5020;//Õ®π˝π§æﬂº”‘ÿblock ±£¨blockµƒ±∏∑›“—æ≠¥Ê‘⁄
     const int32_t EXIT_CHOOSE_CREATE_BLOCK_TARGET_SERVER_ERROR = -5021;
     const int32_t EXIT_ADD_TASK_ERROR = -5022;
     const int32_t EXIT_ADD_NEW_BLOCK_ERROR = -5023;
@@ -153,6 +153,8 @@ namespace tfs
     const int32_t EXIT_INITIALIZE_TAIR_ERROR = -5056;
     const int32_t EXIT_BLOCK_NOT_IN_CURRENT_GROUP = -5057;
     const int32_t EXIT_BLOCK_COPIES_INCOMPLETE = -5058;
+    const int32_t EXIT_SEND_SYNC_FILE_ENTRY_MSG_ERROR = -5059;
+    const int32_t EXIT_CHOOSE_SOURCE_SERVER_ERROR = -5060;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error
@@ -222,7 +224,7 @@ namespace tfs
     const int32_t EXIT_PHYSICAL_BLOCK_EXIST_ERROR = -8066;
     const int32_t EXIT_VERIFY_INDEX_BLOCK_NOT_FOUND_ERROR = -8067;
     const int32_t EXIT_INDEX_DATA_INVALID_ERROR = -8068;
-    const int32_t EXIT_ALLOC_PHYSICAL_BLOCK_USE_ERROR = -8069;//ÂΩìÂâçÁâ©ÁêÜBLOCKÊ≠£Âú®‰ΩøÁî®
+    const int32_t EXIT_ALLOC_PHYSICAL_BLOCK_USE_ERROR = -8069;//µ±«∞ŒÔ¿ÌBLOCK’˝‘⁄ π”√
     const int32_t EXIT_NOT_SUPPORT_ERROR = -8070; // a clue to old clients
     const int32_t EXIT_BLOCK_LEASE_OVERLOAD_ERROR = -8071;
     const int32_t EXIT_BLOCK_LEASE_INVALID_ERROR = -8072;
@@ -233,6 +235,7 @@ namespace tfs
     const int32_t EXIT_OP_META_ERROR = -8077;
     const int32_t EXIT_NO_WRITABLE_BLOCK = -8078;
     const int32_t EXIT_BLOCK_HAS_WRITE = -8079;
+    const int32_t EXIT_MIGRATE_DS_HEARTBEAT_ERROR = -8080;
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;
@@ -291,6 +294,14 @@ namespace tfs
     const int32_t EXIT_BUCKET_EXIST = -17007;// bucket already exist
     const int32_t EXIT_INVALID_KV_META_SERVER = -17008;// no kv meta server
     const int32_t EXIT_KV_RETURN_HAS_MORE_DATA = -17009; //tair return over 1M of get range once
+
+
+    // sync server error code
+    const int32_t EXIT_SOURCE_DS_SYNC_THREAD_NOT_FOUND = -18000;
+
+
+    // migrate server error code
+    const int32_t EXIT_GET_ALL_BLOCK_HEADER_ERROR = -19000;
 
   }
 }

@@ -46,6 +46,8 @@ namespace tfs
         client_request_server_(*this),
         writable_block_manager_(*this),
         check_manager_(*this),
+        sync_manager_(NULL),
+        migrate_manager_(NULL),
         timeout_thread_(0),
         task_thread_(0),
         check_thread_(0)
@@ -55,9 +57,8 @@ namespace tfs
 
     DataService::~DataService()
     {
-      vector<SyncBase*>::iterator iter = sync_mirror_.begin();
-      for (; iter != sync_mirror_.end(); ++iter)
-        tbsys::gDelete((*iter));
+      tbsys::gDelete(sync_manager_);
+      tbsys::gDelete(migrate_manager_);
       tbsys::gDelete(lease_manager_);
       tbsys::gDelete(block_manager_);
       timeout_thread_ = 0;
@@ -146,11 +147,19 @@ namespace tfs
     int DataService::initialize(int argc, char* argv[])
     {
       UNUSED(argc);
+      srandom(time(NULL));
       int32_t ret = SYSPARAM_DATASERVER.initialize(config_file_, server_index_);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "load dataserver parameter failed: %d", ret);
         ret = EXIT_GENERAL_ERROR;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        const int32_t server_index = atoi(server_index_.c_str());
+        DsRuntimeGlobalInformation& instance = DsRuntimeGlobalInformation::instance();
+        instance.information_.type_ = 0 == server_index ? DATASERVER_DISK_TYPE_SYSTEM : DATASERVER_DISK_TYPE_FULL;
       }
 
       if (TFS_SUCCESS == ret)
@@ -260,15 +269,59 @@ namespace tfs
       // sync mirror should init after bootstrap
       if (TFS_SUCCESS == ret)
       {
-        ret = initialize_sync_mirror_();
-        if (TFS_SUCCESS != ret)
-          TBSYS_LOG(ERROR, "dataservice::start, init sync mirror fail!, ret: %d", ret);
+        const int32_t limit = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_SYNC_FILE_ENTRY_QUEUE_LIMIT, 100 * 30 * 60);
+        const char* ratio = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_SYNC_FILE_ENTRY_QUEUE_WARN_RATIO,"0.8");
+        float warn_ratio  = strtof(ratio, NULL);
+        const char* str_dest_addr = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_SYNC_FILE_ENTRY_DEST_ADDR, NULL);
+        uint64_t dest_addr = INVALID_SERVER_ID;
+        if (NULL != str_dest_addr)
+        {
+          std::vector<string> vec;
+          common::Func::split_string(str_dest_addr, ':', vec);
+          ret = vec.size() == 2U ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            dest_addr = tbsys::CNetUtil::strToAddr(vec[0].c_str(), atoi(vec[0].c_str()));
+          }
+        }
+        if (TFS_SUCCESS == ret && INVALID_SERVER_ID != dest_addr)
+        {
+          DsRuntimeGlobalInformation& instance = DsRuntimeGlobalInformation::instance();
+          sync_manager_ = new (std::nothrow)SyncManager(dest_addr, instance.information_.id_, instance.ns_vip_port_, limit, warn_ratio);
+          assert(NULL != sync_manager_);
+        }
+        if (INVALID_SERVER_ID != dest_addr)
+        {
+          TBSYS_LOG(INFO, "start sync file queue %s, queue limit: %d, queue warn ratio: %f, dest_addr: %s",
+            TFS_SUCCESS == ret ? "successful" : "failed", limit, warn_ratio, NULL != str_dest_addr ? str_dest_addr : "null");
+        }
       }
-
-      // set seed for rand() when service start
       if (TFS_SUCCESS == ret)
       {
-        srandom(time(NULL));
+        const char* str_dest_addr = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_MIGRATE_SERVER_ADDR, NULL);
+        uint64_t migrate_addr = common::INVALID_SERVER_ID;
+        if (NULL != str_dest_addr)
+        {
+          std::vector<string> vec;
+          common::Func::split_string(str_dest_addr, ':', vec);
+          ret = vec.size() == 2U ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            migrate_addr = tbsys::CNetUtil::strToAddr(vec[0].c_str(), atoi(vec[0].c_str()));
+          }
+        }
+        if (TFS_SUCCESS == ret && INVALID_SERVER_ID != migrate_addr)
+        {
+          DsRuntimeGlobalInformation& instance = DsRuntimeGlobalInformation::instance();
+          migrate_manager_ = new (std::nothrow)MigrateManager(migrate_addr, instance.information_.id_);
+          assert(NULL != migrate_manager_);
+        }
+
+        if (INVALID_SERVER_ID != migrate_addr)
+        {
+          TBSYS_LOG(INFO, "start migrate heartbeat %s, migrate serveraddr: %s",
+            TFS_SUCCESS == ret ? "successful" : "failed", NULL != str_dest_addr ? str_dest_addr : "null");
+        }
       }
 
       // init lease manager
@@ -287,35 +340,6 @@ namespace tfs
         assert(0 != timeout_thread_);
         check_thread_ = new (std::nothrow)RunCheckThreadHelper(*this);
         assert(0 != check_thread_);
-      }
-      return ret;
-    }
-
-    int DataService::initialize_sync_mirror_()
-    {
-      int32_t ret = (!SYSPARAM_DATASERVER.local_ns_ip_.empty()
-                    &&  SYSPARAM_DATASERVER.local_ns_port_ > 1024
-                    &&  SYSPARAM_DATASERVER.local_ns_port_ < 65535) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        char src_addr[common::MAX_SYNC_IPADDR_LENGTH] = {'\0'};
-        char dest_addr[common::MAX_SYNC_IPADDR_LENGTH] = {'\0'};
-        snprintf(src_addr, MAX_SYNC_IPADDR_LENGTH, "%s:%d",
-            SYSPARAM_DATASERVER.local_ns_ip_.c_str(), SYSPARAM_DATASERVER.local_ns_port_);
-        std::vector<std::string> slave_ns_ip;
-        common::Func::split_string(SYSPARAM_DATASERVER.slave_ns_ip_.c_str(), '|', slave_ns_ip);
-        std::vector<std::string>::iterator iter = slave_ns_ip.begin();
-        for (int32_t index = 0; iter != slave_ns_ip.end() && TFS_SUCCESS == ret; ++iter, index++)
-        {
-          snprintf(dest_addr, MAX_SYNC_IPADDR_LENGTH, "%s", (*iter).c_str());
-          SyncBase* sync_base = new (std::nothrow)SyncBase(*this, SYNC_TO_TFS_MIRROR, index, src_addr, dest_addr);
-          assert(NULL != sync_base);
-          ret = sync_base->init();
-          if (TFS_SUCCESS != ret)
-            TBSYS_LOG(ERROR, "initialize sync mirror failed, local cluster ns ip addr: %s, remote cluster ns ip addr: %s",src_addr, dest_addr);
-          else
-            sync_mirror_.push_back(sync_base);
-        }
       }
       return ret;
     }
@@ -374,9 +398,11 @@ namespace tfs
     {
       DsRuntimeGlobalInformation::instance().destroy();
 
-      vector<SyncBase*>::iterator iter = sync_mirror_.begin();
-      for (; iter != sync_mirror_.end(); iter++)
-        (*iter)->stop();
+      if (NULL != sync_manager_)
+        sync_manager_->destroy();
+
+      if (NULL != migrate_manager_)
+        migrate_manager_->destroy();
 
       if (NULL != lease_manager_)
          lease_manager_->destroy();
@@ -535,19 +561,8 @@ namespace tfs
             int32_t option_flag = message->get_option_flag();
             if (all_success && 0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
             {
-              if (sync_mirror_.size() > 0)
-              {
-                for (uint32_t i = 0; i < sync_mirror_.size(); i++)
-                {
-                  // ignore return value, just print error log for rename
-                  int tmp_ret = sync_mirror_.at(i)->write_sync_log(OPLOG_RENAME, block_id, new_file_id, file_id);
-                  if (TFS_SUCCESS != tmp_ret)
-                  {
-                    TBSYS_LOG(ERROR, " write sync log fail (id:%d), blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
-                      i, block_id, file_id, tmp_ret);
-                  }
-                }
-              }
+              SyncManager& manager = get_sync_manager();
+              ret = manager.insert(INVALID_SERVER_ID, 0, block_id, file_id, OPLOG_RENAME);
             }
             else if (!all_success)
             {
@@ -585,26 +600,11 @@ namespace tfs
             {
               if (TFS_SUCCESS == ret)
               {
-                //sync to mirror
-                if (sync_mirror_.size() > 0)
+                int option_flag = message->get_option_flag();
+                if (0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
                 {
-                  int option_flag = message->get_option_flag();
-                  if (0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
-                  {
-                    TBSYS_LOG(INFO, " write sync log, blockid: %u, fileid: %" PRI64_PREFIX "u", close_file_info.block_id_,
-                        close_file_info.file_id_);
-                    for (uint32_t i = 0; i < sync_mirror_.size(); i++)
-                    {
-                      ret = sync_mirror_.at(i)->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
-                          close_file_info.file_id_);
-                      if (TFS_SUCCESS != ret)
-                      {
-                        TBSYS_LOG(ERROR, " write sync log fail (id:%d), blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
-                            i, close_file_info.block_id_, close_file_info.file_id_, ret);
-                        break;
-                      }
-                    }
-                  }
+                  SyncManager& manager = get_sync_manager();
+                  ret = manager.insert(INVALID_SERVER_ID, 0, close_file_info.block_id_, close_file_info.file_id_, OPLOG_INSERT);
                 }
               }
               if (TFS_SUCCESS == ret)
@@ -1029,25 +1029,10 @@ namespace tfs
                 ret = ds_requester_.req_block_write_complete(close_file_info.block_id_, lease_id, TFS_SUCCESS);
                 if (TFS_SUCCESS == ret)
                 {
-                  //sync to mirror
-                  if (sync_mirror_.size() > 0)
+                  if (0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
                   {
-                    if (0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
-                    {
-                      TBSYS_LOG(INFO, " write sync log, blockid: %u, fileid: %" PRI64_PREFIX "u", close_file_info.block_id_,
-                          close_file_info.file_id_);
-                      for (uint32_t i = 0; i < sync_mirror_.size(); i++)
-                      {
-                        ret = sync_mirror_.at(i)->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
-                          close_file_info.file_id_);
-                        if (TFS_SUCCESS != ret)
-                        {
-                          TBSYS_LOG(ERROR, " write sync log fail (id:%d), blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
-                              i, close_file_info.block_id_, close_file_info.file_id_, ret);
-                          break;
-                        }
-                      }
-                    }
+                    SyncManager& manager = get_sync_manager();
+                    ret = manager.insert(INVALID_SERVER_ID, 0, close_file_info.block_id_, close_file_info.file_id_, OPLOG_INSERT);
                   }
                 }
 
@@ -1292,27 +1277,10 @@ namespace tfs
         char data[128];
         snprintf(data, 128, "%"PRI64_PREFIX"d", file_size);
         message->reply(new StatusMessage(STATUS_MESSAGE_OK, data));
-
-        //sync log
-        if (sync_mirror_.size() > 0)
+        if (is_master && 0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
         {
-          if (is_master && 0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
-          {
-            TBSYS_LOG(DEBUG, "master dataserver: delete synclog. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d\n",
-                block_id, file_id, action);
-            {
-              for (uint32_t i = 0; i < sync_mirror_.size(); i++)
-              {
-                // ignore return value, just print error log for unlink
-                int tmp_ret = sync_mirror_.at(i)->write_sync_log(OPLOG_REMOVE, block_id, file_id, action);
-                if (TFS_SUCCESS != tmp_ret)
-                {
-                  TBSYS_LOG(ERROR, " write sync log fail (id:%d), blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
-                      i, block_id, file_id, tmp_ret);
-                }
-              }
-            }
-          }
+          SyncManager& manager = get_sync_manager();
+          ret = manager.insert(INVALID_SERVER_ID, 0, block_id, file_id, OPLOG_REMOVE);
         }
       }
 

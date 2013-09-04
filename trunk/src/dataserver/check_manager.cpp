@@ -48,7 +48,8 @@ namespace tfs
 
     std::vector<SyncBase*>& CheckManager::get_sync_mirror()
     {
-      return service_.get_sync_mirror();
+      static std::vector<SyncBase*> sync_mirror;
+      return sync_mirror;
     }
 
     void CheckManager::run_check()
@@ -200,12 +201,15 @@ namespace tfs
       int ret = get_block_manager().traverse(main_header, main_finfos, block_id, block_id);
       if (TFS_SUCCESS == ret && main_finfos.size() > 0) // ignore empty block
       {
-        vector<SyncBase*>& sync_mirror = get_sync_mirror();
+        std::string dest_addr;//TODO
+        ret = check_single_block(block_id, main_finfos, dest_addr);
+        /*//vector<SyncBase*>& sync_mirror = get_sync_mirror();
+        vector<SyncBase*> sync_mirror;//TODO
         vector<SyncBase*>::iterator iter = sync_mirror.begin();
         for ( ; (TFS_SUCCESS == ret) && (iter != sync_mirror.end()); iter++)
         {
           ret = check_single_block(block_id, main_finfos, **iter);
-        }
+        }*/
       }
       TIMER_END();
       TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u %s, file count: %zd, cost: %"PRI64_PREFIX"d",
@@ -215,9 +219,9 @@ namespace tfs
     }
 
     int CheckManager::check_single_block(const uint64_t block_id,
-        vector<FileInfoV2>& finfos, SyncBase& peer)
+        vector<FileInfoV2>& finfos, const std::string& dest_addr)
     {
-      uint64_t peer_ns = Func::get_host_ip(peer.get_dest_addr().c_str());
+      uint64_t peer_ns = Func::get_host_ip(dest_addr.c_str());
       vector<uint64_t> replicas;
       IndexDataV2 peer_index;
       int ret = get_data_helper().get_block_replicas(peer_ns, block_id, replicas);
@@ -254,21 +258,21 @@ namespace tfs
             block_id, tbsys::CNetUtil::addrToString(peer_ns).c_str(),
             more.size(), diff.size(), less.size());
 
-        ret = process_more_files(peer, block_id, more);
+        ret = process_more_files(peer_ns, block_id, more);
         if (TFS_SUCCESS == ret)
         {
-          ret = process_diff_files(peer, block_id, diff);
+          ret = process_diff_files(peer_ns, block_id, diff);
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = process_less_files(peer, block_id, less);
+          ret = process_less_files(peer_ns, block_id, less);
         }
       }
 
       return ret;
     }
 
-    int CheckManager::process_more_files(SyncBase& peer,
+    int CheckManager::process_more_files(const uint64_t dest_ns_addr,
         const uint64_t block_id, const vector<FileInfoV2>& more)
     {
       int ret = TFS_SUCCESS;
@@ -278,25 +282,27 @@ namespace tfs
         // ignore deleted and invalid files
         if (!(iter->status_ & FI_DELETED) && !(iter->status_ & FI_INVALID))
         {
-          ret = peer.write_sync_log(OPLOG_INSERT, block_id, iter->id_);
+          SyncManager& manager = service_.get_sync_manager();
+          ret = manager.insert(dest_ns_addr, 0, block_id, iter->id_, OPLOG_INSERT);
         }
       }
       return ret;
     }
 
-    int CheckManager::process_diff_files(SyncBase& peer,
+    int CheckManager::process_diff_files(const uint64_t dest_ns_addr,
         const uint64_t block_id, const vector<FileInfoV2>& diff)
     {
       int ret = TFS_SUCCESS;
       vector<FileInfoV2>::const_iterator iter = diff.begin();
       for ( ; (TFS_SUCCESS == ret) && (iter != diff.end()); iter++)
       {
-        ret = peer.write_sync_log(OPLOG_REMOVE, block_id, iter->id_);
+        SyncManager& manager = service_.get_sync_manager();
+        ret = manager.insert(dest_ns_addr, 0, block_id, iter->id_, OPLOG_REMOVE);
       }
       return ret;
     }
 
-    int CheckManager::process_less_files(SyncBase& peer,
+    int CheckManager::process_less_files(const uint64_t dest_ns_addr,
         const uint64_t block_id, const vector<FileInfoV2>& less)
     {
       vector<FileInfoV2>::const_iterator iter = less.begin();
@@ -304,7 +310,7 @@ namespace tfs
       {
         // TODO: process less file in master cluster
         TBSYS_LOG(INFO, "less file in %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
-            peer.get_dest_addr().c_str(), block_id, iter->id_);
+            tbsys::CNetUtil::addrToString(dest_ns_addr).c_str(), block_id, iter->id_);
       }
       return TFS_SUCCESS;
     }

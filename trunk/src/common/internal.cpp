@@ -556,7 +556,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &status_);
+        ret = Serialization::get_int32(data, data_len, pos, &type_);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -632,7 +632,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, status_);
+        ret = Serialization::set_int32(data, data_len, pos, type_);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -2645,6 +2645,122 @@ namespace tfs
       return INT64_SIZE + 13 * INT_SIZE;
     }
 
+    int SyncFileEntry::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &app_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&block_id_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&source_ds_addr_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&source_ns_addr_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&dest_ns_addr_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int16(data, data_len, pos, &type_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t index = 0; index < 2; ++index)
+        {
+          ret = Serialization::get_int64(data, data_len, pos, &reserve_[index]);
+        }
+      }
+      return ret;
+    }
 
+    int SyncFileEntry::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, app_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, block_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, file_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, source_ds_addr_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, source_ns_addr_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, dest_ns_addr_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int16(data, data_len, pos, type_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t index = 0; index < 2; ++index)
+        {
+          ret = Serialization::set_int64(data, data_len, pos, reserve_[index]);
+        }
+      }
+      return ret;
+    }
+
+    int64_t SyncFileEntry::length() const
+    {
+      return INT64_SIZE * 8 + INT16_SIZE;
+    }
+
+    bool SyncFileEntry::check_need_sync(const time_t now) const
+    {
+      bool ret = 0 == sync_fail_count_;
+      if (!ret)
+      {
+        //这里可以设计一些同步失败后的策略
+        ret = now - last_sync_time_ >= 30;//30s
+      }
+      return ret;
+    }
+
+    void SyncFileEntry::dump(const int32_t level, const char* file, const int32_t line,
+                const char* function, pthread_t thid, const char* format, ...)
+    {
+      if (level <= TBSYS_LOGGER._level)
+      {
+        char msgstr[256] = {'\0'};/** include '\0'*/
+        va_list ap;
+        va_start(ap, format);
+        vsnprintf(msgstr, 256, NULL == format ? "" : format, ap);
+        va_end(ap);
+        std::stringstream str;
+        TBSYS_LOGGER.logMessage(level, file, line, function, thid,
+          "%s, app_id: %"PRI64_PREFIX"d, block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u, dest_ns_addr: %s, source_ds addr: %s, source ns addr: %s type: %d\
+          last_sync_time: %d, sync_fail_count: %u",
+            msgstr, app_id_, block_id_, file_id_, tbsys::CNetUtil::addrToString(dest_ns_addr_).c_str(),
+            tbsys::CNetUtil::addrToString(source_ds_addr_).c_str(),
+            tbsys::CNetUtil::addrToString(source_ns_addr_).c_str(), type_, last_sync_time_, sync_fail_count_);
+      }
+    }
   } /** nameserver **/
 }/** tfs **/

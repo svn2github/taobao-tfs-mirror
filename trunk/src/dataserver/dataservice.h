@@ -29,7 +29,7 @@
 #include "common/statistics.h"
 #include "common/status_message.h"
 #include "message/message_factory.h"
-#include "sync_base.h"
+#include "sync_manager.h"
 #include "data_management.h"
 #include "requester.h"
 #include "gc.h"
@@ -41,6 +41,7 @@
 #include "traffic_control.h"
 #include "check_manager.h"
 #include "writable_block_manager.h"
+#include "migrate_manager.h"
 
 
 namespace tfs
@@ -49,9 +50,6 @@ namespace tfs
   {
     class DataService: public common::BaseService
     {
-
-      friend int SyncBase::run_sync_mirror();
-
       public:
       DataService();
 
@@ -111,7 +109,7 @@ namespace tfs
       inline DataHelper&  get_data_helper() { return data_helper_;}
       inline TaskManager&  get_task_manager() { return task_manager_;}
       inline TrafficControl& get_traffic_control() { return traffic_control_;}
-      inline std::vector<SyncBase*>& get_sync_mirror() { return sync_mirror_; }
+      inline SyncManager& get_sync_manager() { return *sync_manager_;}
       inline WritableBlockManager& get_writable_block_manager() { return writable_block_manager_; }
 
       protected:
@@ -152,7 +150,6 @@ namespace tfs
 
       private:
       int initialize_nameserver_ip_addr_(std::vector<uint64_t>& ns_ip_port);
-      int initialize_sync_mirror_();
       void timeout_();
       void run_task_();
       void run_check_();
@@ -222,7 +219,8 @@ namespace tfs
       ClientRequestServer client_request_server_;
       WritableBlockManager writable_block_manager_;
       CheckManager check_manager_;
-      std::vector<SyncBase*> sync_mirror_;
+      SyncManager*  sync_manager_;
+      MigrateManager* migrate_manager_;
       TimeoutThreadHelperPtr  timeout_thread_;
       RunTaskThreadHelperPtr  task_thread_;
       RunCheckThreadHelperPtr check_thread_;

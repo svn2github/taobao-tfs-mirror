@@ -25,7 +25,6 @@
 #include "common/status_message.h"
 #include "message/message_factory.h"
 #include "common/client_manager.h"
-#include "sync_base.h"
 #include "op_manager.h"
 #include "data_helper.h"
 
