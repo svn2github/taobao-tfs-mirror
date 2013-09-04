@@ -5,6 +5,7 @@ AM_CPPFLAGS =-I$(top_srcdir)/src\
 AM_LDFLAGS=-lrt -lpthread -ldl
 
 LDADD=$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
+      $(top_builddir)/src/requester/libtfsrequester.a\
       $(top_builddir)/src/message/libtfsmessage.a\
       $(top_builddir)/src/common/libtfscommon.a\
       $(UNIQUE_STORE_LDFLAGS)\

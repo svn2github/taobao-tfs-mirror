@@ -233,6 +233,7 @@ AC_CONFIG_FILES([Makefile
                  src/new_client/Makefile
                  src/clientv2/Makefile
                  src/common/Makefile
+                 src/requester/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
                  src/monitor/Makefile
@@ -262,5 +263,6 @@ AC_CONFIG_FILES([Makefile
                  tests/rootserver/Makefile
                  tests/dataserver/Makefile
                  tests/clientv2/Makefile
+                 tests/requester/Makefile
                  tests/intergrate/Makefile])
 AC_OUTPUT

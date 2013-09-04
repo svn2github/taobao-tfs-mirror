@@ -23,12 +23,14 @@
 #include "message/block_info_message_v2.h"
 #include "message/client_cmd_message.h"
 #include "message/server_status_message.h"
+#include "requester/ns_requester.h"
 
 #include "tfs_file.h"
 #include "tfs_session.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
+using namespace tfs::requester;
 using namespace std;
 
 namespace tfs
@@ -38,49 +40,6 @@ namespace tfs
 #ifdef WITH_TAIR_CACHE
     TairCacheHelper* TfsSession::remote_cache_helper_ = NULL;
 #endif
-
-    ServerStat::ServerStat():
-      id_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
-      last_update_time_(0), startup_time_(0), current_time_(0)
-    {
-      memset(&total_tp_, 0, sizeof(total_tp_));
-      memset(&last_tp_, 0, sizeof(last_tp_));
-    }
-
-    ServerStat::~ServerStat()
-    {
-    }
-
-    int ServerStat::deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset)
-    {
-      if (input.getDataLen() <= 0 || offset >= length)
-      {
-        return TFS_ERROR;
-      }
-      int32_t len = input.getDataLen();
-      id_ = input.readInt64();
-      use_capacity_ = input.readInt64();
-      total_capacity_ = input.readInt64();
-      current_load_ = input.readInt32();
-      block_count_  = input.readInt32();
-      last_update_time_ = input.readInt64();
-      startup_time_ = input.readInt64();
-      total_tp_.write_byte_ = input.readInt64();
-      total_tp_.read_byte_ = input.readInt64();
-      total_tp_.write_file_count_ = input.readInt64();
-      total_tp_.read_file_count_ = input.readInt64();
-      total_tp_.unlink_file_count_ = input.readInt64();
-      total_tp_.fail_write_byte_ = input.readInt64();
-      total_tp_.fail_read_byte_ = input.readInt64();
-      total_tp_.fail_write_file_count_ = input.readInt64();
-      total_tp_.fail_read_file_count_ = input.readInt64();
-      total_tp_.fail_unlink_file_count_ = input.readInt64();
-      current_time_ = input.readInt64();
-      status_ = (DataServerLiveStatus)input.readInt32();
-      offset += (len - input.getDataLen());
-
-      return TFS_SUCCESS;
-    }
 
     TfsSession::TfsSession(tbutil::TimerPtr timer, const string& ns_addr,
         const int64_t cache_time, const int64_t cache_items):
@@ -581,200 +540,33 @@ namespace tfs
 
     int TfsSession::get_cluster_id_from_ns()
     {
-      ClientCmdMessage cc_message;
-      cc_message.set_cmd(CLIENT_CMD_SET_PARAM);
-      cc_message.set_value3(20);
-
-      tbnet::Packet* rsp = NULL;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      int ret = send_msg_to_server(ns_id_, client, &cc_message, rsp, ClientConfig::wait_timeout_);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "get cluster id from ns fail, ret: %d", ret);
-      }
-      else if (STATUS_MESSAGE == rsp->getPCode())
-      {
-        StatusMessage* status_msg = dynamic_cast<StatusMessage*>(rsp);
-        //ugly use error msg
-        if (status_msg->get_status() == STATUS_MESSAGE_OK &&
-            strlen(status_msg->get_error()) > 0)
-        {
-          char cluster_id = static_cast<char> (atoi(status_msg->get_error()));
-          if (isdigit(cluster_id) || isalpha(cluster_id))
-          {
-            cluster_id_ = cluster_id - '0';
-            TBSYS_LOG(INFO, "get cluster id from nameserver success. cluster id: %d", cluster_id_);
-          }
-          else
-          {
-            TBSYS_LOG(ERROR, "get cluster id from nameserver fail. cluster id: %c", cluster_id);
-            ret = TFS_ERROR;
-          }
-        }
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "get cluster id from ns failed, msg type error. type: %d", rsp->getPCode());
-        ret = EXIT_UNKNOWN_MSGTYPE;
-      }
-      NewClientManager::get_instance().destroy_client(client);
-      return ret;
+      return NsRequester::get_cluster_id(ns_id_, cluster_id_);
     }
 
     int TfsSession::get_cluster_group_count_from_ns()
     {
-      ClientCmdMessage cc_message;
-      cc_message.set_cmd(CLIENT_CMD_SET_PARAM);
-      cc_message.set_value3(22);
-
-      tbnet::Packet* rsp = NULL;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      int ret = send_msg_to_server(ns_id_, client, &cc_message, rsp, ClientConfig::wait_timeout_);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "get cluster group count from ns fail, ret: %d", ret);
-        ret = -1;
-      }
-      else if (STATUS_MESSAGE == rsp->getPCode())
-      {
-        StatusMessage* status_msg = dynamic_cast<StatusMessage*>(rsp);
-        if (status_msg->get_status() == STATUS_MESSAGE_OK &&
-            strlen(status_msg->get_error()) > 0)
-        {
-          ret = atoi(status_msg->get_error());
-          if (ret > 0)
-          {
-            TBSYS_LOG(INFO, "get cluster group count from nameserver success. cluster group count: %d", ret);
-          }
-          else
-          {
-            TBSYS_LOG(WARN, "get cluster group count from nameserver fail.");
-            return DEFAULT_CLUSTER_GROUP_COUNT;
-          }
-        }
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "get cluster group count from nameserver failed, msg type error. type: %d", rsp->getPCode());
-        ret = -1;
-      }
-      NewClientManager::get_instance().destroy_client(client);
-      return ret;
+      int32_t group_count = DEFAULT_CLUSTER_GROUP_COUNT;
+      NsRequester::get_group_count(ns_id_, group_count);
+      return group_count;
     }
 
     int TfsSession::get_cluster_group_seq_from_ns()
     {
-      ClientCmdMessage cc_message;
-      cc_message.set_cmd(CLIENT_CMD_SET_PARAM);
-      cc_message.set_value3(23);
-
-      tbnet::Packet* rsp = NULL;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      int ret = send_msg_to_server(ns_id_, client, &cc_message, rsp, ClientConfig::wait_timeout_);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "get cluster group seq from ns fail, ret: %d", ret);
-        ret = -1;
-      }
-      else if (STATUS_MESSAGE == rsp->getPCode())
-      {
-        StatusMessage* status_msg = dynamic_cast<StatusMessage*>(rsp);
-        if (status_msg->get_status() == STATUS_MESSAGE_OK &&
-            strlen(status_msg->get_error()) > 0)
-        {
-          ret = atoi(status_msg->get_error());
-          if (ret >= 0)
-          {
-            TBSYS_LOG(INFO, "get cluster group seq from nameserver success. cluster group seq: %d", ret);
-          }
-          else
-          {
-            TBSYS_LOG(WARN, "get cluster group seq from nameserver fail.");
-            return DEFAULT_CLUSTER_GROUP_SEQ;
-          }
-        }
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "get cluster group seq from nameserver failed, msg type error. type: %d", rsp->getPCode());
-        ret = -1;
-      }
-      NewClientManager::get_instance().destroy_client(client);
-      return ret;
+      int32_t group_seq = DEFAULT_CLUSTER_GROUP_COUNT;
+      NsRequester::get_group_seq(ns_id_, group_seq);
+      return group_seq;
     }
 
     int TfsSession::update_dst()
     {
-      ShowServerInformationMessage msg;
-      SSMScanParameter& param = msg.get_param();
-      param.type_ = SSM_TYPE_SERVER;
-      param.child_type_ = SSM_CHILD_SERVER_TYPE_INFO;
-      param.start_next_position_ = 0x0;
-      param.should_actual_count_= (100 << 16);  // get 100 ds every turn
-      param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
-
-      if (false == NewClientManager::get_instance().is_init())
+      VUINT64 tmp_table;
+      int ret = NsRequester::get_ds_list(ns_id_, tmp_table);
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(ERROR, "new client manager not init.");
-        return TFS_ERROR;
-      }
-
-      bool need_clear_table = true;
-      while (!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES))
-      {
-        param.data_.clear();
-        tbnet::Packet* ret_msg = NULL;
-        NewClient* client = NewClientManager::get_instance().create_client();
-        int ret = send_msg_to_server(ns_id_, client, &msg, ret_msg);
-        if (TFS_SUCCESS != ret || ret_msg == NULL)
-        {
-          TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
-          NewClientManager::get_instance().destroy_client(client);
-          return TFS_ERROR;
-        }
-        if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
-        {
-          TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
-          NewClientManager::get_instance().destroy_client(client);
-          return TFS_ERROR;
-        }
-
-        // success, clear table first
-        if (need_clear_table)
-        {
-          tbutil::Mutex::Lock lock(table_mutex_);
-          ds_table_.clear();
-          need_clear_table = false;
-        }
-
-        ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
-        SSMScanParameter& ret_param = message->get_param();
-
         tbutil::Mutex::Lock lock(table_mutex_);
-        int32_t data_len = ret_param.data_.getDataLen();
-        int32_t offset = 0;
-        while (data_len > offset)
-        {
-          ServerStat server;
-          if (TFS_SUCCESS == server.deserialize(ret_param.data_, data_len, offset))
-          {
-            ds_table_.push_back(server.id_);
-            std::string ip_port = Func::addr_to_str(server.id_, true);
-          }
-        }
-        param.addition_param1_ = ret_param.addition_param1_;
-        param.addition_param2_ = ret_param.addition_param2_;
-        param.end_flag_ = ret_param.end_flag_;
-        NewClientManager::get_instance().destroy_client(client);
+        ds_table_ = tmp_table;
       }
-
-      TBSYS_LOG(DEBUG, "dump dataserver table, size: %zd", ds_table_.size());
-      for (uint32_t i = 0; i < ds_table_.size(); i++)
-      {
-        TBSYS_LOG(DEBUG, tbsys::CNetUtil::addrToString(ds_table_[i]).c_str());
-      }
-
-      return TFS_SUCCESS;
+      return ret;
     }
 
   }

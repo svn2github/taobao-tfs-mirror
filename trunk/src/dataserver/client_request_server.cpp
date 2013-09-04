@@ -1218,7 +1218,7 @@ namespace tfs
       }
       TIMER_END();
 
-      TBSYS_LOG(DEBUG, "read index fail. blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(DEBUG, "read index. blockid: %"PRI64_PREFIX"u, "
           "attach_block_id: %"PRI64_PREFIX"u, cost: %"PRI64_PREFIX"d, ret: %d",
           block_id, attach_block_id, TIMER_DURATION(), ret);
 

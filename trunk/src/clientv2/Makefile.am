@@ -18,6 +18,7 @@ api_source_list = tfs_client_api_v2.cpp tfs_client_impl_v2.cpp tfs_file.cpp fsna
                   $(tair_cache_source)
 
 ld_fg = $(AM_LDFLAGS) \
+        $(top_srcdir)/src/requester/libtfsrequester.a \
         $(top_srcdir)/src/message/libtfsmessage.a \
         $(top_srcdir)/src/common/libtfscommon.a
 

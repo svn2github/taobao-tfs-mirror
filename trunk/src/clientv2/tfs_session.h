@@ -54,26 +54,6 @@ namespace tfs
       common::FamilyInfoExt info_;
     };
 
-    class ServerStat
-    {
-      public:
-        ServerStat();
-        virtual ~ServerStat();
-
-        int deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset);
-        uint64_t id_;
-        int64_t use_capacity_;
-        int64_t total_capacity_;
-        common::Throughput total_tp_;
-        common::Throughput last_tp_;
-        int32_t current_load_;
-        int32_t block_count_;
-        time_t last_update_time_;
-        time_t startup_time_;
-        time_t current_time_;
-        common::DataServerLiveStatus status_;
-   };
-
     struct File;
     class TfsSession
     {
