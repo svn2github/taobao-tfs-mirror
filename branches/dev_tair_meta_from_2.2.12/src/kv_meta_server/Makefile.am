@@ -1,7 +1,7 @@
 AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
             -I$(TBLIB_ROOT)/include/tbnet \
-						  $(TAIR_META_CPPFLAGS)
+						 $(TAIR_META_CPPFLAGS)
 
 AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid $(TAIR_META_LDFLAGS)
 
@@ -12,10 +12,10 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 
 noinst_LIBRARIES=libkvmetaserver.a libkvrootserver.a
 
-kvmetaserver_INCLUDE=kvengine_helper.h        kv_meta_server_manager.h  kv_root_server.h    tairengine_helper.h kv_meta_heart_manager.h  kv_meta_service.h         meta_info_helper.h
+kvmetaserver_INCLUDE=kvengine_helper.h kv_meta_server_manager.h  kv_root_server.h tairengine_helper.h kv_meta_heart_manager.h kv_meta_service.h meta_info_helper.h
 
 if WITH_KV_META
-tair_kv_source=tairengine_helper.cpp tairengine_helper.h
+tair_kv_source=tairengine_helper.cpp
 endif
 
 libkvmetaserver_a_SOURCES=kvengine_helper.cpp kv_meta_service.cpp meta_info_helper.cpp kv_meta_heart_manager.cpp \

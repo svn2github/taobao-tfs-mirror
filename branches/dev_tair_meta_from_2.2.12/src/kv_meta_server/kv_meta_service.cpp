@@ -189,6 +189,9 @@ namespace tfs
           case REQ_KVMETA_GET_OBJECT_MESSAGE:
             ret = get_object(dynamic_cast<ReqKvMetaGetObjectMessage*>(base_packet));
             break;
+          case REQ_KVMETA_DEL_MULTI_OBJECT_MESSAGE:
+            ret = del_multi_object(dynamic_cast<ReqKvMetaDelMultiObjectMessage*>(base_packet));
+            break;
           case REQ_KVMETA_DEL_OBJECT_MESSAGE:
             ret = del_object(dynamic_cast<ReqKvMetaDelObjectMessage*>(base_packet));
             break;
@@ -245,6 +248,12 @@ namespace tfs
             break;
           case REQ_KVMETA_ABORT_MULTIPART_MESSAGE:
             ret = abort_multipart(dynamic_cast<ReqKvMetaAbortMulitpartMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_PUT_BUCKET_LOGGING_MESSAGE:
+            ret = put_bucket_logging(dynamic_cast<ReqKvMetaPutBucketLoggingMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_GET_BUCKET_LOGGING_MESSAGE:
+            ret = get_bucket_logging(dynamic_cast<ReqKvMetaGetBucketLoggingMessage*>(base_packet));
             break;
           default:
             ret = EXIT_UNKNOWN_MSGTYPE;
@@ -339,7 +348,8 @@ namespace tfs
                                            req_get_object_msg->get_file_name(),
                                            req_get_object_msg->get_offset(),
                                            req_get_object_msg->get_length(),
-                                           &object_info, &still_have);
+                                           &object_info, &still_have,
+                                           req_get_object_msg->get_user_info());
         TBSYS_LOG(DEBUG, "get object, bucket_name: %s , object_name: %s, still_have: %d owner_id: %"PRI64_PREFIX"d ret: %d",
                   req_get_object_msg->get_bucket_name().c_str(),
                   req_get_object_msg->get_file_name().c_str(),
@@ -363,6 +373,39 @@ namespace tfs
           req_get_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),
                ret, "get object fail");
         }
+      }
+      return ret;
+    }
+
+    int KvMetaService::del_multi_object(ReqKvMetaDelMultiObjectMessage* req_del_multi_object_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == req_del_multi_object_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::del_multi_object fail, ret: %d", ret);
+      }
+
+      RspKvMetaDelMultiObjectMessage *rsp = new RspKvMetaDelMultiObjectMessage();
+      if (TFS_SUCCESS == ret)
+      {
+        const string &bucket_name = req_del_multi_object_msg->get_bucket_name();
+        const set<string> &s_file_name = req_del_multi_object_msg->get_s_file_name();
+        const UserInfo &user_info = req_del_multi_object_msg->get_user_info();
+        const bool quiet = req_del_multi_object_msg->get_quiet_mode();
+        ret = meta_info_helper_.del_multi_object(bucket_name, s_file_name, quiet, rsp->get_mutable_delete_result(), user_info);
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = req_del_multi_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "del multi object fail");
+        tbsys::gDelete(rsp);
+      }
+      else
+      {
+        ret = req_del_multi_object_msg->reply(rsp);
+        //stat_mgr_.update_entry(tfs_kv_meta_stat_, "del multi object", 1);
       }
       return ret;
     }
@@ -415,8 +458,9 @@ namespace tfs
       RspKvMetaHeadObjectMessage *rsp = new RspKvMetaHeadObjectMessage();
       if (TFS_SUCCESS == ret)
       {
+        const UserInfo &user_info = req_head_object_msg->get_user_info();
         ret = meta_info_helper_.head_object(req_head_object_msg->get_bucket_name(),
-            req_head_object_msg->get_file_name(), rsp->get_mutable_object_info());
+            req_head_object_msg->get_file_name(), rsp->get_mutable_object_info(), user_info);
       }
 
       if (TFS_SUCCESS != ret)
@@ -524,7 +568,8 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = meta_info_helper_.del_bucket(del_bucket_msg->get_bucket_name());
+        const UserInfo &user_info = del_bucket_msg->get_user_info();
+        ret = meta_info_helper_.del_bucket(del_bucket_msg->get_bucket_name(), user_info);
       }
 
       if (TFS_SUCCESS != ret)
@@ -592,13 +637,10 @@ namespace tfs
         const string &start_id = list_multipart_object_msg->get_start_id();
         char delimiter = list_multipart_object_msg->get_delimiter();
         int32_t limit = list_multipart_object_msg->get_limit();
-
-        //ret = meta_info_helper_.list_multipart_object(bucket_name, prefix, start_key, start_id, delimiter, &limit,
-            //rsp->get_mutable_v_object_meta_info(), rsp->get_mutable_v_object_name(), rsp->get_mutable_s_common_prefix(),
-            //rsp->get_mutable_truncated());
+        const UserInfo &user_info = list_multipart_object_msg->get_user_info();
 
         ListMultipartObjectResult list_multipart_object_result;
-        ret = meta_info_helper_.list_multipart_object(bucket_name, prefix, start_key, start_id, delimiter, limit, &list_multipart_object_result);
+        ret = meta_info_helper_.list_multipart_object(bucket_name, prefix, start_key, start_id, delimiter, limit, &list_multipart_object_result, user_info);
 
         if (TFS_SUCCESS == ret)
         {
@@ -631,6 +673,70 @@ namespace tfs
         //stat_mgr_.update_entry(tfs_kv_meta_stat_, "get_bucket", 1);
       }
       //stat_info_helper_.get_bucket()
+      return ret;
+    }
+
+    //about logging
+    int KvMetaService::put_bucket_logging(ReqKvMetaPutBucketLoggingMessage* put_bucket_logging_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == put_bucket_logging_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::put_bucket_logging fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.put_bucket_logging(put_bucket_logging_msg->get_bucket_name(),
+            put_bucket_logging_msg->get_logging_status(), put_bucket_logging_msg->get_target_bucket_name(),
+            put_bucket_logging_msg->get_target_prefix(), put_bucket_logging_msg->get_user_info());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = put_bucket_logging_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "put bucket logging fail");
+      }
+      else
+      {
+        ret = put_bucket_logging_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        //stat_mgr_.update_entry(tfs_kv_meta_stat_, "put_bucket_logging", 1);
+      }
+      //stat_info_helper_.put_bucket()
+      return ret;
+    }
+
+    int KvMetaService::get_bucket_logging(ReqKvMetaGetBucketLoggingMessage* get_bucket_logging_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == get_bucket_logging_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::get_bucket_logging fail, ret: %d", ret);
+      }
+
+      RspKvMetaGetBucketLoggingMessage* rsp = new RspKvMetaGetBucketLoggingMessage();
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.get_bucket_logging(get_bucket_logging_msg->get_bucket_name(),
+            get_bucket_logging_msg->get_user_info(), rsp->get_mutable_logging_status(),
+            rsp->get_mutable_target_bucket_name(), rsp->get_mutable_target_prefix());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = get_bucket_logging_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "get bucket_logging fail");
+        tbsys::gDelete(rsp);
+      }
+      else
+      {
+        ret = get_bucket_logging_msg->reply(rsp);
+        //stat_mgr_.update_entry(tfs_kv_meta_stat_, "get_bucket_logging", 1);
+      }
+      //stat_info_helper_.get_bucket_logging()
       return ret;
     }
 
@@ -787,6 +893,7 @@ namespace tfs
       }
       return ret;
     }
+
     //about bucket acl
     int KvMetaService::put_bucket_acl(ReqKvMetaPutBucketAclMessage* put_bucket_acl_msg)
     {
@@ -873,7 +980,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = meta_info_helper_.init_multipart(req_init_multi_msg->get_bucket_name(),
-            req_init_multi_msg->get_file_name(), &upload_id);
+            req_init_multi_msg->get_file_name(), &upload_id, req_init_multi_msg->get_user_info());
       }
 
       if (TFS_SUCCESS == ret)
@@ -938,7 +1045,8 @@ namespace tfs
         ret = meta_info_helper_.complete_multipart(req_comp_multi_msg->get_bucket_name(),
               req_comp_multi_msg->get_file_name(),
               req_comp_multi_msg->get_upload_id(),
-              req_comp_multi_msg->get_v_part_num());
+              req_comp_multi_msg->get_v_part_num(),
+              req_comp_multi_msg->get_user_info());
       }
 
       if (TFS_SUCCESS != ret)
@@ -965,7 +1073,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = meta_info_helper_.list_multipart(req_list_multi_msg->get_bucket_name(),
-            req_list_multi_msg->get_file_name(), req_list_multi_msg->get_upload_id(), &v_part_num);
+            req_list_multi_msg->get_file_name(), req_list_multi_msg->get_upload_id(), &v_part_num,
+            req_list_multi_msg->get_user_info());
       }
 
       if (TFS_SUCCESS == ret)

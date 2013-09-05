@@ -52,7 +52,8 @@ namespace tfs
 
         int head_object(const std::string &bucket_name,
                         const std::string &file_name,
-                        common::ObjectInfo *object_info_zero);
+                        common::ObjectInfo *object_info_zero,
+                        const common::UserInfo &user_info);
 
         int put_object(const std::string& bucket_name,
                        const std::string& file_name,
@@ -62,7 +63,11 @@ namespace tfs
         int get_object(const std::string& bucket_name,
                        const std::string& file_name,
                        const int64_t offset, const int64_t length,
-                       common::ObjectInfo *object_info, bool *still_have);
+                       common::ObjectInfo *object_info, bool *still_have,
+                       const common::UserInfo &user_info);
+
+        int del_multi_object(const std::string &bucket_name, const std::set<std::string> &s_file_name, const bool quiet,
+            common::DeleteResult *delete_result, const common::UserInfo &user_info);
 
         int del_object(const std::string& bucket_name,
                        const std::string& file_name,
@@ -81,8 +86,14 @@ namespace tfs
             const std::string& start_key, const char delimiter, int32_t *limit,
             std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
             std::set<std::string>* s_common_prefix, int8_t* is_truncated, const common::UserInfo &user_info);
-        int del_bucket(const std::string& bucket_name);
-        int list_multipart_object(const std::string &bucket_name, const std::string &prefix, const std::string &start_key, const std::string &start_id, const char delimiter, const int32_t &limit, common::ListMultipartObjectResult *list_multipart_object_result);
+        int del_bucket(const std::string& bucket_name, const common::UserInfo &user_info);
+        int list_multipart_object(const std::string &bucket_name, const std::string &prefix, const std::string &start_key, const std::string &start_id, const char delimiter, const int32_t &limit, common::ListMultipartObjectResult *list_multipart_object_result, const common::UserInfo &user_info);
+
+        int put_bucket_logging(const std::string &bucket_name, const bool logging_status,
+            const std::string &target_bucket_name,
+            const std::string &target_prefix, const common::UserInfo &user_info);
+        int get_bucket_logging(const std::string &bucket_name, const common::UserInfo &user_info,
+            bool *logging_status, std::string *target_bucket_name, std::string *target_prefix);
 
         int put_bucket_tag(const std::string &bucket_name, const common::MAP_STRING &bucket_tag_map);
         int get_bucket_tag(const std::string &bucket_name, common::MAP_STRING *bucket_tag_map);
@@ -93,8 +104,9 @@ namespace tfs
         int apply_authorize(const std::string& user_name,
                     std::string* access_key_id, std::string* access_secret_key);
 
-        int put_bucket_acl(const std::string &bucket_name, const common::MAP_STRING_INT &bucket_acl_map);
-        int get_bucket_acl(const std::string &bucket_name, common::MAP_STRING_INT *bucket_acl_map);
+        /*int put_bucket_acl(const std::string &bucket_name, const common::MAP_STRING_INT &bucket_acl_map);
+        int get_bucket_acl(const std::string &bucket_name, common::MAP_STRING_INT *bucket_acl_map);*/
+
         int put_bucket_acl(const std::string &bucket_name,
             const common::MAP_INT64_INT &bucket_acl_map, const common::UserInfo &user_info);
 
@@ -110,15 +122,17 @@ namespace tfs
         int is_equal_v_part_num(const std::vector<int32_t>& v_part_num_kv, const std::vector<int32_t>& v_part_num);
         int get_v_partnum_kv(const std::string& bucket_name, const std::string& file_name,
             const std::string &upload_id, std::vector<int32_t>* const p_v_part_num);
-        int init_multipart(const std::string& bucket_name,
-                         const std::string& file_name, std::string* upload_id);
+        int init_multipart(const std::string& bucket_name, const std::string& file_name,
+            std::string* upload_id, const common::UserInfo &user_info);
         int upload_multipart(const std::string &bucket_name,
              const std::string &file_name, const std::string &upload_id, const int32_t part_num,
              common::ObjectInfo &object_info, const common::UserInfo &user_info);
         int complete_multipart(const std::string &bucket_name,
-            const std::string &file_name, const std::string &upload_id, const std::vector<int32_t>& v_part_num);
+            const std::string &file_name, const std::string &upload_id,
+            const std::vector<int32_t>& v_part_num, const common::UserInfo &user_info);
         int list_multipart(const std::string& bucket_name, const std::string& file_name,
-                           const std::string& upload_id, std::vector<int32_t>* const p_v_part_num);
+                           const std::string& upload_id, std::vector<int32_t>* const p_v_part_num,
+                           const common::UserInfo &user_info);
         int abort_multipart(const std::string &bucket_name, const std::string &file_name,
             const std::string &upload_id, common::ObjectInfo *object_info, bool* still_have);
         int del_part_num_key(const std::string &bucket_name,

@@ -59,6 +59,7 @@ namespace tfs
       int put_bucket_acl(message::ReqKvMetaPutBucketAclMessage *put_bucket_acl_msg);
       int get_bucket_acl(message::ReqKvMetaGetBucketAclMessage *get_bucket_acl_msg);
 
+      int del_multi_object(message::ReqKvMetaDelMultiObjectMessage *del_multi_object_msg);
       int del_object(message::ReqKvMetaDelObjectMessage* del_object_msg);
       int head_object(message::ReqKvMetaHeadObjectMessage *head_object_msg);
       int head_bucket(message::ReqKvMetaHeadBucketMessage *head_bucket_msg);
@@ -66,6 +67,9 @@ namespace tfs
       int put_bucket_tag(message::ReqKvMetaPutBucketTagMessage *put_bucket_tag_msg);
       int get_bucket_tag(message::ReqKvMetaGetBucketTagMessage *get_bucket_tag_msg);
       int del_bucket_tag(message::ReqKvMetaDelBucketTagMessage *del_bucket_tag_msg);
+
+      int put_bucket_logging(message::ReqKvMetaPutBucketLoggingMessage *put_bucket_logging_msg);
+      int get_bucket_logging(message::ReqKvMetaGetBucketLoggingMessage *get_bucket_logging_msg);
 
       int apply_authorize(message::ReqApplyAuthorizeMessage* req_apply_authorize_msg);
       int get_authorize(message::ReqGetAuthorizeMessage* req_get_authorize_msg);
