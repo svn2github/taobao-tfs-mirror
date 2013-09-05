@@ -13,7 +13,8 @@ bin_PROGRAMS = clear_file_system\
 							 convert_name\
                reload_config\
                reverse_name\
-               tfsping
+               tfsping\
+							 recover_disk_data_to_clusterv2
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
@@ -47,6 +48,7 @@ read_index_tool_SOURCES = read_index_tool.cpp
 
 #view_local_key_SOURCES = view_local_key.cpp
 
+recover_disk_data_to_clusterv2_SOURCES = recover_disk_data_to_cluster_v2.cpp
 #recover_disk_data_to_cluster_SOURCES = recover_disk_data_to_cluster.cpp
 
 #recover_sync_file_queue_SOURCES = recover_sync_file_queue.cpp
