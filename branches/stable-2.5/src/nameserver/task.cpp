@@ -98,7 +98,7 @@ namespace tfs
     const char* Task::transform_status_to_str(const int8_t status) const
     {
       return status == PLAN_STATUS_BEGIN ? "begin" : status == PLAN_STATUS_TIMEOUT ? "timeout" : status == PLAN_STATUS_END
-            ? "finish" : status == PLAN_STATUS_FAILURE ? "failure": "unknow";
+            ? "finish" : status == PLAN_STATUS_FAILURE ? "failure": status == PLAN_STATUS_PART_END ? "part-end": "unknow";
     }
 
     void Task::dump(tbnet::DataBuffer& stream)
