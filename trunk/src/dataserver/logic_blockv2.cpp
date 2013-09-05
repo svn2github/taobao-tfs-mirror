@@ -433,13 +433,6 @@ namespace tfs
       int8_t status = FILE_STATUS_NOMARL;
       int32_t ret = TFS_SUCCESS, tmp_action = action;
 
-      // TODO: remove this code after all cluster upgraded
-      if (action > OVERRIDE)//TODO这里其实是有问题，需要修改，统一使用位来操作
-      {
-        status = (action >> 4) & 0x7;
-        tmp_action = SYNC;
-      }
-
       if (TEST_OVERRIDE_FLAG(action))
       {
         status = GET_OVERRIDE_FLAG(action);
@@ -448,7 +441,6 @@ namespace tfs
 
       switch(tmp_action)
       {
-        case SYNC:
         case OVERRIDE:
           if ((finfo.status_ & FILE_STATUS_DELETE) != (status & FILE_STATUS_DELETE))
           {
@@ -566,14 +558,13 @@ namespace tfs
       new_finfo.create_time_ = update ? old_finfo.create_time_ : now;
       new_finfo.modify_time_ = now;
       new_finfo.crc_ = datafile.crc();
+      new_finfo.status_ = FILE_STATUS_NOMARL;
       if (update)
       {
-        new_finfo.status_ = old_finfo.status_;
         new_finfo.next_ = old_finfo.next_;
       }
       else
       {
-        new_finfo.status_ = FILE_STATUS_NOMARL;
         new_finfo.next_   = 0;
       }
       new_finfo.size_ = file_size;

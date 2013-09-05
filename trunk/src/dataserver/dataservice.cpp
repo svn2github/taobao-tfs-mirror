@@ -238,6 +238,23 @@ namespace tfs
         }
       }
 
+      //start clientmanager
+      if (TFS_SUCCESS == ret)
+      {
+        NewClientManager::get_instance().destroy();
+        assert(NULL != get_packet_streamer());
+        assert(NULL != get_packet_factory());
+        BasePacketStreamer* packet_streamer = dynamic_cast<BasePacketStreamer*>(get_packet_streamer());
+        BasePacketFactory* packet_factory   = dynamic_cast<BasePacketFactory*>(get_packet_factory());
+        ret = NewClientManager::get_instance().initialize(packet_factory, packet_streamer,
+                NULL, &BaseService::golbal_async_callback_func, this);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "start client manager failed, must be exit!!!");
+          ret = EXIT_NETWORK_ERROR;
+        }
+      }
+
       if (TFS_SUCCESS == ret)
       {
         //init file number to management
@@ -437,6 +454,77 @@ namespace tfs
       }
     }
 
+    void DataService::dump_stat_(time_t now)
+    {
+      // dump every minute
+      if (now % 60 == 0)
+      {
+        static int64_t last_write_bytes[2] = {0};
+        static int64_t last_write_file_count[2] = {0};
+        static int64_t last_read_bytes[2] = {0};
+        static int64_t last_read_file_count[2] = {0};
+        static int64_t last_stat_file_count[2] = {0};
+        static int64_t last_unlink_file_count[2] = {0};
+
+        DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
+        char buf[1024];
+        const char header_fmt[] = "\t%-12s%12s%18s%12s%18s\n";
+        const char fmt[] = "\t%-12s%12"PRI64_PREFIX"d%18"PRI64_PREFIX"d%12"PRI64_PREFIX"d%18"PRI64_PREFIX"d\n";
+        int pos = 0;
+        pos += sprintf(buf + pos, header_fmt,
+            "Oper-Type", "Succ-Count", "Succ-Bytes(KB)", "Fail-Count", "Fail-Bytes(KB)");
+
+        // dump total access info
+        pos += sprintf(buf + pos, fmt, "total-read",
+            info.read_file_count_[0], info.read_bytes_[0] / 1024,
+            info.read_file_count_[1], info.read_bytes_[1] / 1024);
+        pos += sprintf(buf + pos, fmt, "total-write",
+            info.write_file_count_[0], info.write_bytes_[0] / 1024,
+            info.write_file_count_[1], info.write_bytes_[1] / 1024);
+        pos += sprintf(buf + pos, fmt, "total-stat",
+            info.stat_file_count_[0], 0L,
+            info.stat_file_count_[1], 0L);
+        pos += sprintf(buf + pos, fmt, "total-unlink",
+            info.unlink_file_count_[0], 0L,
+            info.unlink_file_count_[1], 0L);
+
+        // dump last minute access info
+        pos += sprintf(buf + pos, fmt, "last-read",
+            info.read_file_count_[0] - last_read_file_count[0],
+            (info.read_bytes_[0] - last_read_bytes[0]) / 1024,
+            info.read_file_count_[1] - last_read_file_count[1],
+            (info.read_bytes_[1] - last_read_bytes[1]) / 1024);
+        pos += sprintf(buf + pos, fmt, "last-write",
+            info.write_file_count_[0] - last_write_file_count[0],
+            (info.write_bytes_[0] - last_write_bytes[0]) / 1024,
+            info.write_file_count_[1] - last_write_file_count[1],
+            (info.write_bytes_[1] - last_write_bytes[1]) / 1024);
+        pos += sprintf(buf + pos, fmt, "last-stat",
+            info.stat_file_count_[0] - last_stat_file_count[0], 0L,
+            info.stat_file_count_[1] - last_stat_file_count[1], 0L);
+        pos += sprintf(buf + pos, fmt, "last_unlink",
+            info.unlink_file_count_[0] - last_unlink_file_count[0], 0L,
+            info.unlink_file_count_[1] - last_unlink_file_count[1], 0L);
+
+        TBSYS_LOG(INFO, "DUMP ACCESS STAT BEGIN\n%s", buf);
+        TBSYS_LOG(INFO, "DUMP ACCESS STAT END");
+
+        // update last info for next dump
+        last_write_file_count[0] = info.write_file_count_[0];
+        last_write_file_count[1] = info.write_file_count_[1];
+        last_write_bytes[0] = info.write_bytes_[0];
+        last_write_bytes[1] = info.write_bytes_[1];
+        last_read_file_count[0] = info.read_file_count_[0];
+        last_read_file_count[1] = info.read_file_count_[1];
+        last_read_bytes[0] = info.read_bytes_[0];
+        last_read_bytes[1] = info.read_bytes_[1];
+        last_stat_file_count[0] = info.stat_file_count_[0];
+        last_stat_file_count[1] = info.stat_file_count_[1];
+        last_unlink_file_count[0] = info.unlink_file_count_[0];
+        last_unlink_file_count[1] = info.unlink_file_count_[1];
+      }
+    }
+
     void DataService::timeout_()
     {
       tzset();
@@ -447,6 +535,9 @@ namespace tfs
         now = time(NULL);
         //rotate log
         rotate_(last_rotate_log_time, now, zonesec);
+
+        // dump access stat
+        dump_stat_(now);
 
         //check datafile
         data_management_.gc_data_file();
@@ -679,7 +770,7 @@ namespace tfs
               hret = tbnet::IPacketHandler::KEEP_CHANNEL;
             else
             {
-              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard", get_ip_addr());
+              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "%s, task message beyond max queue size, discard", get_ip_addr());
               bpacket->free();
             }
           }
@@ -938,6 +1029,7 @@ namespace tfs
       int32_t lease_id = message->get_lease_id();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int32_t option_flag = message->get_option_flag();
+      int32_t force_status = message->get_status();
 
       TBSYS_LOG(
           DEBUG,
@@ -967,7 +1059,7 @@ namespace tfs
       else
       {
         int32_t write_file_size = 0;
-        ret = data_management_.close_write_file(close_file_info, write_file_size);
+        ret = data_management_.close_write_file(close_file_info, force_status, write_file_size);
         if (TFS_SUCCESS != ret)
         {
           if (EXIT_DATAFILE_EXPIRE_ERROR == ret)
@@ -1355,6 +1447,26 @@ namespace tfs
         // no longer has MAX_VISIT_COUNT information
       }
       else if (GSS_BLOCK_FILE_INFO == type)
+      {
+        uint64_t block_id = message->get_return_row();
+        uint64_t attach_block_id = block_id;
+        //get block file list
+        BlockFileInfoMessage* resp_bfi_msg = new (std::nothrow) BlockFileInfoMessage();
+        assert(NULL != resp_bfi_msg);
+        FILE_INFO_LIST& fileinfos = resp_bfi_msg->get_fileinfo_list();
+        int ret = get_block_manager().traverse(fileinfos, block_id, attach_block_id);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(resp_bfi_msg);
+          ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+              "GSS_BLOCK_FILE_INFO fail, blockid: %"PRI64_PREFIX"u, ret: %d", block_id, ret);
+        }
+        else
+        {
+          ret = message->reply(resp_bfi_msg);
+        }
+      }
+      else if (GSS_BLOCK_FILE_INFO_V2 == type)
       {
         uint64_t block_id = message->get_return_row();
         uint64_t attach_block_id = message->get_from_row();

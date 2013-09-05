@@ -353,7 +353,7 @@ namespace tfs
 
     int TaskManager::add_task_queue(Task* task)
     {
-      TBSYS_LOG(INFO, "Add task %s", task->dump().c_str());
+      TBSYS_LOG(DEBUG, "Add task %s", task->dump().c_str());
       task_monitor_.lock();
       task_queue_.push_back(task);
       task_monitor_.notify();
@@ -383,7 +383,8 @@ namespace tfs
         task_queue_.pop_front();
         task_monitor_.unlock();
 
-        TBSYS_LOG(INFO, "start task, seqno: %"PRI64_PREFIX"d, type: %d, %s", task->get_seqno(), task->get_type(), task->dump().c_str());
+        TBSYS_LOG(INFO, "start task, seqno: %"PRI64_PREFIX"d, type: %s, %s",
+            task->get_seqno(), task->get_type(), task->dump().c_str());
 
         int ret = TFS_SUCCESS;
         int64_t start_time = Func::get_monotonic_time_us();
@@ -393,7 +394,7 @@ namespace tfs
 
         int64_t end_time = Func::get_monotonic_time_us();
 
-        TBSYS_LOG(INFO, "finish task, seqno: %"PRI64_PREFIX"d, type: %d, cost time: %"PRI64_PREFIX"d, ret: %d",
+        TBSYS_LOG(INFO, "finish task, seqno: %"PRI64_PREFIX"d, type: %s, cost time: %"PRI64_PREFIX"d, ret: %d",
           task->get_seqno(), task->get_type(), end_time - start_time, ret);
 
         if (task->is_completed())

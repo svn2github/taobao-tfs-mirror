@@ -11,14 +11,16 @@ Prefix:%{_prefix}
 Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
-BuildRequires: t-csrd-tbnet-devel = 1.0.8
-BuildRequires: MySQL-devel-community = 5.1.48 
-BuildRequires: tair-devel = 2.3.1.7
-BuildRequires: boost-devel >= 1.3 
-BuildRequires: readline-devel
-BuildRequires: ncurses-devel
-BuildRequires: google-perftools >= 1.3 
-BuildRequires: jemalloc-devel >= 2.2
+#BuildRequires: t-csrd-tbnet-devel >= 1.0.8
+#BuildRequires: MySQL-devel-community = 5.1.48 
+#BuildRequires: tair-devel = 2.3.2.3
+#BuildRequires: boost-devel >= 1.3 
+#BuildRequires: readline-devel
+#BuildRequires: ncurses-devel
+#BuildRequires: google-perftools = 1.7
+#BuildRequires: jemalloc-devel >= 2.2
+#BuildRequires: snappy-devel >= 1.0.5
+#BuildRequires: libunwind
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}
@@ -40,8 +42,7 @@ files for developing applications that use the %name package.
 %build
 chmod u+x build.sh
 ./build.sh init
-#./configure --prefix=%{_prefix}
-./configure --prefix=%{_prefix} --enable-uniquestore --enable-taircache --with-tair-root=/opt/csr/tair-2.3
+./configure --prefix=%{_prefix} --without-tcmalloc --enable-uniquestore --enable-taircache --with-tair-root=/opt/csr/tair-2.3
 make %{?_smp_mflags}
 
 %install
@@ -54,11 +55,15 @@ rm -rf $RPM_BUILD_ROOT
 %post
 echo %{_prefix}/lib > /etc/ld.so.conf.d/tfs-%{VERSION}.conf
 echo /opt/csr/common/lib >> /etc/ld.so.conf.d/tfs-%{VERSION}.conf
+echo /usr/local/lib >> /etc/ld.so.conf.d/tfs-%{VERSION}.conf
+echo /usr/local/lib64 >> /etc/ld.so.conf.d/tfs-%{VERSION}.conf
 /sbin/ldconfig
 
 %post devel
 echo %{_prefix}/lib > /etc/ld.so.conf.d/tfs-%{VERSION}.conf
 echo /opt/csr/common/lib >> /etc/ld.so.conf.d/tfs-%{VERSION}.conf
+echo /usr/local/lib >> /etc/ld.so.conf.d/tfs-%{VERSION}.conf
+echo /usr/local/lib64 >> /etc/ld.so.conf.d/tfs-%{VERSION}.conf
 /sbin/ldconfig
 
 %postun

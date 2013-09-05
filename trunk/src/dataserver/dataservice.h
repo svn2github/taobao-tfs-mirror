@@ -154,6 +154,7 @@ namespace tfs
       void run_task_();
       void run_check_();
       void rotate_(time_t& last_rotate_log_time, time_t now, time_t zonesec);
+      void dump_stat_(time_t now);
 
       private:
       class TimeoutThreadHelper: public tbutil::Thread

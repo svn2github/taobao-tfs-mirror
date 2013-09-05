@@ -146,6 +146,11 @@ namespace tfs
       return count == max_alloc_ext_block_count;
     }
 
+    int AllocPhysicalBlock::fdatasync()
+    {
+      return file_op_.fdatasync();
+    }
+
     int AllocPhysicalBlock::load_alloc_bit_map_()
     {
       int32_t ret = file_op_.pread(reinterpret_cast<char*>(&alloc_bit_map_), STORE_ALLOC_BIT_MAP_SIZE, 0);
@@ -211,6 +216,11 @@ namespace tfs
         }
       }
       return ret;
+    }
+
+    int PhysicalBlock::fdatasync()
+    {
+      return file_op_.fdatasync();
     }
   }/** end namespace dataserver**/
 }/** end namespace tfs **/

@@ -70,7 +70,7 @@ namespace tfs
       }
       apply_block_thread_ = new (std::nothrow)RunApplyBlockThreadHelper(*this);
       assert(0 != apply_block_thread_);
-      info.status_ = DATASERVER_STATUS_ALIVE;
+      //info.status_ = DATASERVER_STATUS_ALIVE;//TODO
       return TFS_SUCCESS;
     }
 

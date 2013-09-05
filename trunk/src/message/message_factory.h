@@ -66,7 +66,7 @@
 #include "get_dataserver_all_blocks_header.h"
 #include "sync_file_entry_message.h"
 #include "migrate_ds_heart_message.h"
-
+#include "expire_message.h"
 
 namespace tfs
 {

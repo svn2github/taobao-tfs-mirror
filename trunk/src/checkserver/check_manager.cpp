@@ -40,8 +40,7 @@ namespace tfs
     static const float   SERVER_SLOT_EXPAND_RATION_DEFAULT = 0.1;
     static const int32_t MAX_BLOCK_CHUNK_NUMS = 1024;
     static const int32_t DEFAULT_NETWORK_RETRY_TIMES = 2;
-    static const int32_t CHECK_TIME_PER_BLOCK = 50; // ms
-    static const int32_t CHECK_TIME_RESERVE = 30;   // seconds
+    static const int32_t CHECK_TIME_RESERVE = 30000; // mill seconds
 
     CheckManager::CheckManager(BaseServerHelper* server_helper):
       all_servers_(SERVER_SLOT_INIT_SIZE,
@@ -429,10 +428,13 @@ namespace tfs
           }
 
           // wait dataserver check finish
-          int32_t wait_time = max_dispatch_num_ * CHECK_TIME_PER_BLOCK / 1000 + CHECK_TIME_RESERVE;
-          TBSYS_LOG(INFO, "seqno %"PRI64_PREFIX"u sleep %d seconds to wait dataserver response",
-              seqno_, wait_time);
-          sleep(wait_time);
+          int32_t per_block_time = SYSPARAM_CHECKSERVER.block_check_interval_ +
+            SYSPARAM_CHECKSERVER.block_check_cost_;
+          int32_t wait_time_ms = max_dispatch_num_ * per_block_time + CHECK_TIME_RESERVE;
+
+          TBSYS_LOG(INFO, "seqno %"PRI64_PREFIX"u sleep %d millseconds to wait dataserver response",
+              seqno_, wait_time_ms);
+          usleep(wait_time_ms * 1000);
 
           // if all blocks have been checked
           if (0 == get_block_size())
@@ -530,13 +532,13 @@ namespace tfs
     }
 
     int CheckManager::retry_dispatch_check_blocks(const uint64_t ds_id,
-        const int64_t seqno, const common::VUINT64& blocks)
+        const int64_t seqno, const int32_t interval, const common::VUINT64& blocks)
     {
       int ret = TFS_SUCCESS;
       int retry_times = DEFAULT_NETWORK_RETRY_TIMES;
       for (int index = 0; index < retry_times; index++)
       {
-        ret = server_helper_->dispatch_check_blocks(ds_id, seqno, blocks);
+        ret = server_helper_->dispatch_check_blocks(ds_id, seqno, interval, blocks);
         if (TFS_SUCCESS == ret)
         {
           break;
@@ -628,7 +630,7 @@ namespace tfs
           continue;
         }
         int ret = check_manager_.retry_dispatch_check_blocks((*iter)->get_server_id(),
-            check_manager_.get_seqno(), (*iter)->get_blocks());
+            check_manager_.get_seqno(), SYSPARAM_CHECKSERVER.block_check_interval_, (*iter)->get_blocks());
         TBSYS_LOG(INFO, "dispatch task to server %s, ret: %d",
             tbsys::CNetUtil::addrToString((*iter)->get_server_id()).c_str(), ret);
       }

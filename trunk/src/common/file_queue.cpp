@@ -383,7 +383,7 @@ int FileQueue::clear()
   {
     TBSYS_LOG(ERROR, "file queue call clear error");
   }
-  return TFS_ERROR;
+  return TFS_SUCCESS;
 }
 
 bool FileQueue::empty() const

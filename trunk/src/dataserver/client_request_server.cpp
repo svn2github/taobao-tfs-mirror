@@ -127,12 +127,15 @@ namespace tfs
         CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(message);
         ReportBlocksToNsRequestMessage req_msg;
         req_msg.set_server(info.information_.id_);
-        int32_t block_count = get_block_manager().get_all_logic_block_count();
-        BlockInfoV2* blocks_ext = req_msg.alloc_blocks_ext(block_count);
-        assert(NULL != blocks_ext);
-        ArrayHelper<BlockInfoV2> blocks_helper(block_count, blocks_ext);
-        get_block_manager().get_all_block_info(blocks_helper);
-        TBSYS_LOG(INFO, "report block to ns, blocks size: %d",req_msg.get_block_count());
+        int32_t block_count = 0;
+        BlockInfoV2* blocks_ext = NULL;
+        TIMER_START();
+        get_block_manager().get_all_block_info(blocks_ext, block_count);
+        TIMER_END();
+        TBSYS_LOG(INFO, "report block to ns, blocks size: %d, cost: %"PRI64_PREFIX"d",
+            block_count, TIMER_DURATION());
+        req_msg.set_block_count(block_count);
+        req_msg.set_blocks_ext(blocks_ext);
 
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* message = NULL;
@@ -199,9 +202,9 @@ namespace tfs
       get_traffic_control().rw_stat(RW_STAT_TYPE_STAT, ret, true, 0);
 
       // access log
-      TBSYS_LOG(INFO, "STAT file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(INFO, "STAT file %s, ret: %d. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
-          (TFS_SUCCESS == ret) ? "success" : "fail", block_id, attach_block_id, file_id,
+          (TFS_SUCCESS == ret) ? "success" : "fail", ret, block_id, attach_block_id, file_id,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(), ret);
 
       return ret;
@@ -301,10 +304,10 @@ namespace tfs
       get_traffic_control().rw_stat(RW_STAT_TYPE_READ, ret, offset <= FILEINFO_EXT_SIZE, length);
 
       // access log
-      TBSYS_LOG(INFO, "READ file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(INFO, "READ file %s, ret: %d. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, length: %d, offset: %d, peer ip: %s, "
           "cost: %"PRI64_PREFIX"d, degrade: %s, ret: %d",
-          TFS_SUCCESS == ret ? "success" : "fail", block_id, attach_block_id, file_id, length, offset,
+          TFS_SUCCESS == ret ? "success" : "fail", ret, block_id, attach_block_id, file_id, length, offset,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(),
           INVALID_FAMILY_ID == family_info.family_id_ ? "no" : "yes", ret);
 
@@ -403,6 +406,7 @@ namespace tfs
           ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
           if (TFS_SUCCESS != ret)
           {
+            NewClientManager::get_instance().destroy_client(client);
             TBSYS_LOG(WARN, "write file to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: master ret: %d",
                 attach_block_id, file_id, lease_id, ret);
@@ -542,6 +546,7 @@ namespace tfs
           ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
           if (TFS_SUCCESS != ret)
           {
+            NewClientManager::get_instance().destroy_client(client);
             TBSYS_LOG(WARN, "close file to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: master ret: %d",
                 attach_block_id, file_id, lease_id, ret);
@@ -653,7 +658,6 @@ namespace tfs
         {
           ret = get_op_manager().reset_op(attach_block_id, file_id, lease_id, servers);
         }
-
         if (TFS_SUCCESS != ret)
         {
          TBSYS_LOG(WARN, "prepare unlink lease fail. blockid: %"PRI64_PREFIX"u, "
@@ -686,6 +690,7 @@ namespace tfs
           ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
           if (TFS_SUCCESS != ret)
           {
+            NewClientManager::get_instance().destroy_client(client);
             TBSYS_LOG(WARN, "unlink file to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: master ret: %d",
                 attach_block_id, file_id, lease_id, ret);
@@ -711,9 +716,9 @@ namespace tfs
         {
           TBSYS_LOG(WARN, "unlink file fail. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
               "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, action: %d, "
-              "version: %d, role: %s, prepare: %s, ret: %d",
+              "version: %d, role: %s, ret: %d",
             block_id, attach_block_id, file_id, lease_id, action,
-            version, is_master ? "master" : "slave", prepare ? "true" : "false", ret);
+            version, is_master ? "master" : "slave", ret);
         }
         get_op_manager().update_op(attach_block_id, file_id, lease_id, ret, local);
       }
@@ -724,14 +729,7 @@ namespace tfs
       {
         if (op_ready)
         {
-          if (prepare)
-          {
-            prepare_unlink_file_callback(message);
-          }
-          else
-          {
-            unlink_file_callback(message);
-          }
+          unlink_file_callback(message);
         }
         else
         {
@@ -758,10 +756,9 @@ namespace tfs
       // access log
       TBSYS_LOG(INFO, "unlink file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, action: %d, version: %d, role: %s, "
-          "prepare: %s, peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
+          "peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, attach_block_id, file_id, lease_id, action, version,
-          is_master ? "master" : "slave", prepare ? "true" : "false",
-          tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(), ret);
+          is_master ? "master" : "slave", tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(), ret);
 
       return TFS_SUCCESS;
     }
@@ -907,11 +904,12 @@ namespace tfs
           // req ns resolve version conflict
           if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == ret)
           {
-            if (TFS_SUCCESS != get_op_manager().resolve_block_version_conflict(attach_block_id, file_id, lease_id))
+            int32_t tmp_ret = get_op_manager().resolve_block_version_conflict(attach_block_id, file_id, lease_id);
+            if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(WARN, "resolve block version conflict fail. "
-                  "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
-                  attach_block_id, file_id, lease_id, ret);
+                  "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d, tmp_ret: %d",
+                  attach_block_id, file_id, lease_id, ret, tmp_ret);
             }
           }
           message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, op_stat.error_.str().c_str());
@@ -934,7 +932,7 @@ namespace tfs
           get_traffic_control().rw_stat(RW_STAT_TYPE_WRITE, ret, 0 == offset, length);
         }
 
-        TBSYS_LOG(INFO, "WRITE file %s, ret: %d, attach_blockid: %"PRI64_PREFIX"u, "
+        TBSYS_LOG(INFO, "WRITE file %s, ret: %d. blockid: %"PRI64_PREFIX"u, "
             "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
             "length: %d, offset: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",
             (TFS_SUCCESS == ret) ? "success": "fail", ret, attach_block_id,
@@ -981,15 +979,18 @@ namespace tfs
         // after close, release op
         get_op_manager().release_op(attach_block_id, file_id, lease_id);
 
-        TBSYS_LOG(INFO, "CLOSE file %s. blockid: %"PRI64_PREFIX"u, "
+        TBSYS_LOG(INFO, "CLOSE file %s, ret: %d. blockid: %"PRI64_PREFIX"u, "
             "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d",
-            TFS_SUCCESS == ret ? "success" : "fail", attach_block_id, file_id, lease_id,
+            TFS_SUCCESS == ret ? "success" : "fail", ret, attach_block_id, file_id, lease_id,
             tbsys::CNetUtil::addrToString(peer_id).c_str(), op_stat.cost_);
       }
 
       return TFS_SUCCESS;
     }
 
+    // this function is not used currently
+    // the number of unlink beyonds 1/3 of write ops
+    // check version between unlink will have big impact on tfs client
     int ClientRequestServer::prepare_unlink_file_callback(UnlinkFileMessageV2* message)
     {
       uint64_t attach_block_id = message->get_attach_block_id();
@@ -1033,9 +1034,10 @@ namespace tfs
           get_traffic_control().rw_stat(RW_STAT_TYPE_UNLINK, ret, true, 0);
         }
 
-        TBSYS_LOG(INFO, "PREPARE UNLINK file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
+        TBSYS_LOG(INFO, "PREPARE UNLINK file %s, ret: %d. "
+            "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
             "leaseid: %"PRI64_PREFIX"u, action: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",
-          TFS_SUCCESS == ret ? "success" : "fail", attach_block_id, file_id, lease_id, action,
+          TFS_SUCCESS == ret ? "success" : "fail", ret, attach_block_id, file_id, lease_id, action,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), op_stat.cost_);
       }
 
@@ -1051,7 +1053,6 @@ namespace tfs
       uint64_t peer_id = message->get_connection()->getPeerId();
       int32_t option_flag = message->get_flag();
       OpStat op_stat;
-
       int ret = TFS_SUCCESS;
       bool all_finish = get_op_manager().check_op(attach_block_id, file_id, lease_id, op_stat);
       if (all_finish)
@@ -1062,7 +1063,6 @@ namespace tfs
           SyncManager& manager = service_.get_sync_manager();
           ret = manager.insert(INVALID_SERVER_ID, 0, attach_block_id, file_id, OPLOG_REMOVE);
         }
-
         if (TFS_SUCCESS != ret)
         {
           message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, op_stat.error_.str().c_str());
@@ -1079,9 +1079,9 @@ namespace tfs
         // after unlink, release op
         get_op_manager().release_op(attach_block_id, file_id, lease_id);
 
-        TBSYS_LOG(INFO, "UNLINK file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
+        TBSYS_LOG(INFO, "UNLINK file %s, ret: %d. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
             "leaseid: %"PRI64_PREFIX"u, action: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",
-          TFS_SUCCESS == ret ? "success" : "fail", attach_block_id, file_id, lease_id, action,
+          TFS_SUCCESS == ret ? "success" : "fail", ret, attach_block_id, file_id, lease_id, action,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), op_stat.cost_);
       }
 

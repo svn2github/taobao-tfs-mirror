@@ -74,7 +74,14 @@ namespace tfs
           int32_t index = random() % servers.size();
           uint64_t server = servers[index];
           GetServerStatusMessage req_msg;
-          req_msg.set_status_type(GSS_BLOCK_FILE_INFO);
+          if (0 == version)
+          {
+            req_msg.set_status_type(GSS_BLOCK_FILE_INFO);
+          }
+          else if (1 == version)
+          {
+            req_msg.set_status_type(GSS_BLOCK_FILE_INFO_V2);
+          }
           req_msg.set_return_row(block);
           req_msg.set_from_row(block);
           tbnet::Packet* ret_msg= NULL;

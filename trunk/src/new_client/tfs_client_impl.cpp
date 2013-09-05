@@ -214,7 +214,7 @@ int TfsClientImpl::fstat(const int fd, TfsFileStat* buf, const TfsStatType mode)
   return ret;
 }
 
-int TfsClientImpl::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len, const bool simple)
+int TfsClientImpl::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len, const bool simple, const int force_status)
 {
   int ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
@@ -222,7 +222,7 @@ int TfsClientImpl::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs
   {
     {
       ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
-      ret = tfs_file->close();
+      ret = tfs_file->close(force_status);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);

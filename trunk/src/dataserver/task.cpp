@@ -60,35 +60,22 @@ namespace tfs
       return service_.get_block_manager();
     }
 
+    const char* Task::get_type() const
+    {
+      const char* typestr = NULL;
+      if (type_ <= PLAN_TYPE_EC_MARSHALLING)
+      {
+        typestr = planstr[type_];
+      }
+      return typestr;
+    }
+
     string Task::dump() const
     {
       std::stringstream tmp_stream;
-      std::string type;
       const char* delim = ", ";
 
-      switch (type_)
-      {
-        case  PLAN_TYPE_REPLICATE:
-          type = "replicate";
-          break;
-        case  PLAN_TYPE_COMPACT:
-          type = "compact";
-          break;
-        case PLAN_TYPE_EC_MARSHALLING:
-          type = "marshalling";
-          break;
-        case PLAN_TYPE_EC_REINSTATE:
-          type = "reinstate";
-          break;
-        case PLAN_TYPE_EC_DISSOLVE:
-          type = "dissolve";
-          break;
-        default:
-          type = "unknown";
-          break;
-      }
-
-      tmp_stream << "dump " << type << " task. ";
+      tmp_stream << "dump " << get_type() << " task. ";
       tmp_stream << "seqno: " << seqno_ << delim;
       tmp_stream << "task source: " << tbsys::CNetUtil::addrToString(source_id_) << delim;
       tmp_stream << "expire time: " << expire_time_ << delim;
@@ -735,7 +722,7 @@ namespace tfs
       const int32_t DATA_NUM = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t CHECK_NUM = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const char* delim = ", ";
-      const char* nf = "\n";
+      const char* nf = " | ";
       std::stringstream tmp_stream;
       tmp_stream << Task::dump();
       tmp_stream << "family id: " << family_id_ << delim;
@@ -1311,7 +1298,7 @@ namespace tfs
         {
           ret = get_data_helper().write_file(family_members_[dest].server_,
               family_members_[dest].block_, block_id,
-              finfos[i].id_, data, length, true);  // write to a temp block
+              finfos[i].id_, data, length, finfos[i].status_, true);  // write to a temp block
         }
         tbsys::gDeleteA(data);
       }

@@ -384,6 +384,18 @@ namespace tfs
           case common::RSP_KV_RT_GET_TABLE_MESSAGE:
             packet = new (std::nothrow)GetTableFromKvRtsResponseMessage();
             break;
+          case common::REQ_KVMETA_SET_LIFE_CYCLE_MESSAGE:
+            packet = new ReqKvMetaSetLifeCycleMessage();
+            break;
+          case common::REQ_KVMETA_GET_LIFE_CYCLE_MESSAGE:
+            packet = new ReqKvMetaGetLifeCycleMessage();
+            break;
+          case common::RSP_KVMETA_GET_LIFE_CYCLE_MESSAGE:
+            packet = new RspKvMetaGetLifeCycleMessage();
+            break;
+          case common::REQ_KVMETA_RM_LIFE_CYCLE_MESSAGE:
+            packet = new ReqKvMetaRmLifeCycleMessage();
+            break;
           case common::GET_BLOCK_INFO_MESSAGE_V2:
             packet = new (std::nothrow)GetBlockInfoMessageV2();
             break;
@@ -524,6 +536,24 @@ namespace tfs
             break;
           case common::RSP_MIGRATE_DS_HEARTBEAT_MESSAGE:
             packet = new (std::nothrow)MigrateDsHeartResponseMessage();
+            break;
+          case common::REQ_EXPIRE_CLEAN_TASK_MESSAGE:
+            packet = new ReqCleanTaskFromRtsMessage();
+            break;
+          case common::REQ_RT_FINISH_TASK_MESSAGE:
+            packet = new ReqFinishTaskFromEsMessage();
+            break;
+          case common::REQ_RT_ES_KEEPALIVE_MESSAGE:
+            packet = new ReqRtsEsHeartMessage();
+            break;
+          case common::RSP_RT_ES_KEEPALIVE_MESSAGE:
+            packet = new RspRtsEsHeartMessage();
+            break;
+          case common::REQ_QUERY_PROGRESS_MESSAGE:
+            packet = new ReqQueryProgressMessage();
+            break;
+          case common::RSP_QUERY_PROGRESS_MESSAGE:
+            packet = new RspQueryProgressMessage();
             break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);

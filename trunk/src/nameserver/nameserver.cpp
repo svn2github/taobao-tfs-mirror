@@ -241,7 +241,7 @@ namespace tfs
               if (!main_workers_.push(bpacket, work_queue_size_, false))
               {
                 hret = tbnet::IPacketHandler::FREE_CHANNEL;
-                bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard, peer ip: %s", get_ip_addr(),
+                bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "%s, task message beyond max queue size, discard, peer ip: %s", get_ip_addr(),
                   tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
                 bpacket->free();
               }
@@ -387,7 +387,6 @@ namespace tfs
         const uint64_t ipport = msg->get_connection()->getServerId();
         BlockMeta& meta = result_msg->get_block_meta();
         common::ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, meta.ds_);
-
         ret = layout_manager_.get_client_request_server().open(block_id, mode, flag, now, lease_id, servers,
                 meta.family_info_);
         if (TFS_SUCCESS == ret)
@@ -546,7 +545,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
           ret = msg->reply(new StatusMessage(STATUS_MESSAGE_OK, buf));
         else
-          ret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), STATUS_MESSAGE_ERROR, buf);
+          ret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, buf);
       }
       return ret;
     }

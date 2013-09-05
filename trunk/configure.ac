@@ -66,6 +66,19 @@ if test "${enable_readline}" = "yes"; then
 fi
 AC_SUBST([READLINE_INCLUDE])
 AC_SUBST([READLINE_LIB])
+AC_ARG_WITH([restful-root],
+           AS_HELP_STRING([--with-restful-root],
+           [restful client install path]),
+           TREST_ROOT=${withval})
+AC_SUBST([TREST_ROOT])
+
+AC_ARG_ENABLE([lifecycle],
+           AS_HELP_STRING([--enable-lifecycle],
+           [enable life cycle module use --with-restful-root to specify path]),
+           [enable_lifecycle=${enableval}],
+           [enable_lifecycle="no"])
+
+AM_CONDITIONAL([WITH_LIFECYCLE],[test x$enable_lifecycle = xyes])
 
 AC_ARG_WITH([tair-root],
            AS_HELP_STRING([--with-tair-root],
@@ -132,7 +145,7 @@ if test "${enable_kvmeta}" = "yes"; then
                 exit 1;
         fi
         TAIR_META_CPPFLAGS="-DWITH_TAIR_META -I${TAIR_ROOT}/include"
-        TAIR_META_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz"
+        TAIR_META_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz -lsnappy"
 fi
 AM_CONDITIONAL([WITH_KV_META],[test x$enable_kvmeta = xyes])
 AC_SUBST([TAIR_META_CPPFLAGS])
@@ -229,20 +242,22 @@ AC_CONFIG_FILES([Makefile
                  scripts/Makefile
                  scripts/ha/Makefile
                  src/Makefile
-                 src/adminserver/Makefile
                  src/new_client/Makefile
                  src/clientv2/Makefile
                  src/common/Makefile
                  src/requester/Makefile
+                 src/common/mysql_cluster/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
                  src/monitor/Makefile
                  src/nameserver/Makefile
                  src/rcserver/Makefile
-                 src/name_meta_server/Makefile
                  src/kv_meta_server/Makefile
-                 src/rootserver/Makefile
                  src/syncserver/Makefile
+                 src/checkserver/Makefile
+                 src/life_cycle_manager/Makefile
+                 src/life_cycle_manager/root_manager/Makefile
+                 src/life_cycle_manager/expire_server/Makefile
                  src/tools/Makefile
                  src/tools/rcserver/Makefile
                  src/tools/util/Makefile
@@ -251,19 +266,17 @@ AC_CONFIG_FILES([Makefile
                  src/tools/adminserver/Makefile
                  src/tools/transfer/Makefile
                  src/tools/cluster/Makefile
-                 src/tools/workers/Makefile
-                 src/checkserver/Makefile
-                 src/tools/metaserver/Makefile
-                 tests/Makefile
-                 tests/batch/Makefile
-                 tests/rcserver/Makefile
-                 tests/kv_meta_server/Makefile
-                 tests/name_meta_server/Makefile
-                 tests/common/Makefile
-                 tests/nameserver/Makefile
-                 tests/rootserver/Makefile
-                 tests/dataserver/Makefile
-                 tests/clientv2/Makefile
-                 tests/requester/Makefile
-                 tests/intergrate/Makefile])
+                 src/tools/workers/Makefile])
+                 #tests/Makefile
+                 #tests/batch/Makefile
+                 #tests/rcserver/Makefile
+                 #tests/kv_meta_server/Makefile
+                 #tests/name_meta_server/Makefile
+                 #tests/common/Makefile
+                 #tests/nameserver/Makefile
+                 #tests/rootserver/Makefile
+                 #tests/dataserver/Makefile
+                 #tests/clientv2/Makefile
+                 #tests/requester/Makefile
+                 #tests/intergrate/Makefile])
 AC_OUTPUT

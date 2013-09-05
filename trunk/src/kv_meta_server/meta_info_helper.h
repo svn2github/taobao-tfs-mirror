@@ -21,8 +21,8 @@
 #include "common/base_service.h"
 #include "common/status_message.h"
 #include "common/kv_meta_define.h"
+#include "common/kvengine_helper.h"
 #include "message/message_factory.h"
-#include "kvengine_helper.h"
 
 namespace tfs
 {
@@ -33,7 +33,7 @@ namespace tfs
       public:
         MetaInfoHelper();
         virtual ~MetaInfoHelper();
-        int init();
+        int init(common::KvEngineHelper*);
         int put_meta(const std::string& bucket_name, const std::string& file_name,
             /*const int64_t offset,*/ const common::TfsFileInfo& tfs_file_info
             /* const taglist , versioning*/
@@ -94,9 +94,9 @@ namespace tfs
             int64_t *offset, int64_t *version);
         int serialize_key(const std::string &bucket_name,
                         const std::string &file_name, const int64_t offset,
-                        KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
+                        common::KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
         int serialize_key_ex(const std::string &file_name, const int64_t offset,
-                        KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
+                        common::KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
 
       protected:
         int group_objects(const std::string &object_name, const std::string &v, const std::string &prefix,
@@ -110,17 +110,19 @@ namespace tfs
             common::ObjectInfo *object_info_zero, int64_t *offset,
             const int64_t length, int64_t version, bool is_append);
 
-        int get_range(const KvKey &pkey, const std::string &start_key,
-            int32_t offset, const int32_t limit, std::vector<KvValue*> *kv_value_keys,
-            std::vector<KvValue*> *kv_value_values, int32_t *result_size);
+        int get_range(const common::KvKey &pkey, const std::string &start_key,
+            int32_t offset, const int32_t limit, std::vector<common::KvValue*> *kv_value_keys,
+            std::vector<common::KvValue*> *kv_value_values, int32_t *result_size);
 
-        int list_objects(const KvKey &pkey, const std::string &prefix,
+        int list_objects(const common::KvKey &pkey, const std::string &prefix,
             const std::string &start_key, const char delimiter, int32_t *limit,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info, common::VSTRING *v_object_name,
             std::set<std::string> *s_common_prefix, int8_t *is_truncated);
 
+
       protected:
-        KvEngineHelper* kv_engine_helper_;
+        common::KvEngineHelper* kv_engine_helper_;
+        int32_t meta_info_name_area_;
       private:
         DISALLOW_COPY_AND_ASSIGN(MetaInfoHelper);
     };

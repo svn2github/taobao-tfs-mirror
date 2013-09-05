@@ -515,6 +515,7 @@ namespace tfs
             TBSYS_LOG(DEBUG, "block: %"PRI64_PREFIX"u, server: %s",
                 file_.family_info_.members_[i].first,
                 tbsys::CNetUtil::addrToString(file_.family_info_.members_[i].second).c_str());
+            TBSYS_LOG(DEBUG, "%dth dataserver: %s", i, tbsys::CNetUtil::addrToString(file_.ds_[i]).c_str());
           }
         }
       }

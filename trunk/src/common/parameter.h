@@ -83,6 +83,7 @@ namespace tfs
       int32_t between_ns_and_ds_lease_retry_times_;
       int32_t between_ns_and_ds_lease_retry_expire_time_;
       int32_t resolve_version_conflic_task_expired_time_;
+      int32_t write_file_check_copies_complete_;
       double  balance_percent_;
       static NameServerParameter ns_parameter_;
       static NameServerParameter& instance()
@@ -229,6 +230,8 @@ namespace tfs
       int32_t thread_count_;
       int32_t check_retry_turns_;
       int32_t turn_interval_;
+      int32_t block_check_interval_;            // mill seconds
+      int32_t block_check_cost_;                // mill seoncds
 
       int initialize(const std::string& config_file);
 
@@ -241,10 +244,11 @@ namespace tfs
 
     struct KvMetaParameter
     {
-      std::string tair_master_;
-      std::string tair_slave_;
-      std::string tair_group_;
-      int tair_object_area_;
+      std::string conn_str_;
+      std::string user_name_;
+      std::string pass_wd_;
+      int object_area_;
+      int lifecycle_area_;
       int32_t dump_stat_info_interval_;
       uint64_t rs_ip_port_;
       uint64_t ms_ip_port_;
@@ -274,6 +278,49 @@ namespace tfs
       }
     };
 
+    struct ExpireServerParameter
+    {
+      std::string conn_str_;
+      std::string user_name_;
+      std::string pass_wd_;
+      int lifecycle_area_;
+      uint64_t ers_ip_port_;
+      uint64_t es_ip_port_;
+      std::string nginx_root_;
+      int re_clean_days_;
+      std::string es_appkey_;
+      std::string log_level_;
+
+      int initialize(const std::string& config_file);
+
+      static ExpireServerParameter expire_server_parameter_;
+      static ExpireServerParameter& instance()
+      {
+        return expire_server_parameter_;
+      }
+    };
+
+    struct ExpireRootServerParameter
+    {
+      std::string conn_str_;
+      std::string user_name_;
+      std::string pass_wd_;
+      int lifecycle_area_;
+
+      int32_t es_rts_lease_expired_time_;  //4s
+      int32_t es_rts_check_lease_interval_;  //1s
+      int32_t es_rts_heart_interval_;       //2s
+      int32_t safe_mode_time_;
+
+      int initialize(const std::string &config_file);
+
+      static ExpireRootServerParameter expire_root_server_parameter_;
+      static ExpireRootServerParameter& instance()
+      {
+        return expire_root_server_parameter_;
+      }
+    };
+
 #define SYSPARAM_NAMESERVER NameServerParameter::instance()
 #define SYSPARAM_DATASERVER DataServerParameter::instance()
 #define SYSPARAM_FILESYSPARAM FileSystemParameter::instance()
@@ -283,6 +330,8 @@ namespace tfs
 #define SYSPARAM_CHECKSERVER CheckServerParameter::instance()
 #define SYSPARAM_KVMETA KvMetaParameter::instance()
 #define SYSPARAM_KVRTSERVER KvRtServerParameter::instance()
+#define SYSPARAM_EXPIRESERVER ExpireServerParameter::instance()
+#define SYSPARAM_EXPIREROOTSERVER ExpireRootServerParameter::instance()
   }/** common **/
 }/** tfs **/
 #endif //TFS_COMMON_SYSPARAM_H_

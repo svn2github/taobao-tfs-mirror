@@ -139,7 +139,7 @@ namespace tfs
         DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
         SetDataserverMessage req_msg;
         req_msg.set_dataserver_information(info);
-        TBSYS_LOG(INFO, "KEEPALIVE, %ld %ld %ld", info.write_bytes_[0], info.write_file_count_[0], info.unlink_file_count_[0]);
+        TBSYS_LOG(INFO, "KEEPALIVE, who: %d", who);
         tbnet::Packet* message = NULL;
         NewClient* client = NewClientManager::get_instance().create_client();
         ret = NULL != client ? TFS_SUCCESS : SEND_BLOCK_TO_NS_CREATE_NETWORK_CLIENT_ERROR;

@@ -860,6 +860,82 @@ namespace tfs
       return ret;
     }
 
+    TfsRetType KvMetaClientImpl::set_life_cycle(const int32_t file_type, const char *file_name,
+                                                const int32_t invalid_time_s, const char *app_key)
+    {
+      TfsRetType ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_set_life_cycle(meta_server_id, file_type, file_name, invalid_time_s, app_key);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::get_life_cycle(const int32_t file_type, const char *file_name,
+                                                int32_t *invalid_time_s)
+    {
+      TfsRetType ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_get_life_cycle(meta_server_id, file_type, file_name, invalid_time_s);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+
+    }
+
+    TfsRetType KvMetaClientImpl::rm_life_cycle(const int32_t file_type, const char *file_name)
+    {
+      TfsRetType ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_rm_life_cycle(meta_server_id, file_type, file_name);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    /* ==========================================================*/
     int KvMetaClientImpl::do_put_bucket(const char *bucket_name, const BucketMetaInfo& bucket_meta_info, const UserInfo &user_info)
     {
       int ret = TFS_SUCCESS;
@@ -1102,12 +1178,12 @@ namespace tfs
           else
           {
             if (!islower(bucket_name[i]) && !isdigit(bucket_name[i])
-                && PERIOD != bucket_name[i] && DASH != bucket_name[i])
+                && KvDefine::PERIOD != bucket_name[i] && KvDefine::DASH != bucket_name[i])
             {
               is_valid = false;
               break;
             }
-            else if (PERIOD == bucket_name[i])
+            else if (KvDefine::PERIOD == bucket_name[i])
             {
               if (conjoin)
               {
@@ -1138,7 +1214,7 @@ namespace tfs
           {
             digit_size++;
           }
-          else if (PERIOD == bucket_name[i])
+          else if (KvDefine::PERIOD == bucket_name[i])
           {
             period_size++;
           }

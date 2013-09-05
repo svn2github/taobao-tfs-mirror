@@ -9,6 +9,7 @@ bin_PROGRAMS = sync_by_blk sync_by_log sync_by_file transfer_by_file block_tool 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
   $(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
+	$(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(UNIQUE_STORE_LDFLAGS)\

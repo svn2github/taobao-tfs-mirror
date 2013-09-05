@@ -337,7 +337,7 @@ namespace tfs
         if (NULL != client)
         {
           GetServerStatusMessage req_gss_msg;
-          req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
+          req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO_V2);
           req_gss_msg.set_return_row(block_id);
           req_gss_msg.set_from_row(attach_block_id);
 

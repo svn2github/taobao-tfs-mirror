@@ -215,7 +215,8 @@ namespace tfs
         int retry_get_all_ds(const uint64_t ns_id, common::VUINT64& servers);
         int retry_get_block_replicas(const uint64_t ns_id, const uint64_t block_id, common::VUINT64& servers);
         int retry_fetch_check_blocks(const uint64_t ds_id, const common::TimeRange& range, common::VUINT64& blocks);
-        int retry_dispatch_check_blocks(const uint64_t ds_id, const int64_t seqno, const common::VUINT64& blocks);
+        int retry_dispatch_check_blocks(const uint64_t ds_id,
+            const int64_t seqno, const int32_t interval, const common::VUINT64& blocks);
 
       private:
         void clear();

@@ -16,6 +16,7 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/dataserver/libdataserver.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
 	$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
+	$(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(UNIQUE_STORE_LDFLAGS)\
@@ -44,5 +45,5 @@ endif
 
 check_replication_SOURCES=check_replication.cpp
 repair_file_tool_SOURCES=repair_file_tool.cpp
-stat_tool_SOURCES=stat_main.cpp stat_tool.cpp common.cpp common.h
+stat_tool_SOURCES=stat_main.cpp stat_tool.cpp common.cpp common.h stat_tool.h
 gen_compact_blk_order_SOURCES = gen_compact_blk_order.cpp common.cpp common.h

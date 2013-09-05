@@ -26,7 +26,7 @@ api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session
                   tfs_rc_helper.cpp tfs_rc_client_api.cpp tfs_rc_client_api_impl.cpp \
 									tfs_meta_helper.cpp tfs_meta_manager.cpp tfs_meta_client_api_impl.cpp \
 								 	tfs_meta_client_api.cpp tfs_kv_meta_client_impl.cpp tfs_kv_meta_client_api.cpp\
-                  tfs_kv_meta_helper.cpp tfs_cluster_manager.cpp\
+                  tfs_kv_meta_helper.cpp tfs_cluster_manager.cpp \
 								 	encode.h\
 									bg_task.h client_config.h fsname.h gc_file.h gc_worker.h local_key.h\
 									lru.h md5.h segment_container.h tfs_client_api.h tfs_client_capi.h\

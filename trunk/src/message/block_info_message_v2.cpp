@@ -51,7 +51,7 @@ namespace tfs
       {
         ret = input.get_int32(&mode_);
       }
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && input.get_data_length() > 0)
       {
         ret = input.get_int32(&flag_);
       }
@@ -100,9 +100,7 @@ namespace tfs
     }
 
     BatchGetBlockInfoMessageV2::BatchGetBlockInfoMessageV2():
-      mode_(0),
-      size_(0),
-      flag_(0)
+      mode_(0), size_(0), flag_(0)
     {
       _packetHeader._pcode = BATCH_GET_BLOCK_INFO_MESSAGE_V2;
     }
@@ -142,7 +140,7 @@ namespace tfs
       {
         ret = input.get_int32(&mode_);
       }
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && input.get_data_length() > 0)
       {
         ret = input.get_int32(&flag_);
       }

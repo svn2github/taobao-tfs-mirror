@@ -127,6 +127,7 @@ namespace tfs
         data_file_mutex_.unlock();
         return EXIT_DATA_FILE_ERROR;
       }
+      datafile->add_ref();
       datafile->set_last_update();
       data_file_mutex_.unlock();
 
@@ -140,14 +141,16 @@ namespace tfs
             "Datafile write error. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, req writelen: %d, actual writelen: %d",
             write_info.block_id_, write_info.file_id_, write_info.file_number_, write_info.length_, write_len);
         // clean dirty data
+        datafile->sub_ref();
         erase_data_file(write_info.file_number_);
         return EXIT_DATA_FILE_ERROR;
       }
 
+      datafile->sub_ref();
       return TFS_SUCCESS;
     }
 
-    int DataManagement::close_write_file(const CloseFileInfo& colse_file_info, int32_t& write_file_size)
+    int DataManagement::close_write_file(const CloseFileInfo& colse_file_info, const int32_t force_status, int32_t& write_file_size)
     {
       uint32_t block_id = colse_file_info.block_id_;
       uint64_t file_id = colse_file_info.file_id_;
@@ -174,6 +177,7 @@ namespace tfs
         data_file_mutex_.unlock();
         return EXIT_DATAFILE_EXPIRE_ERROR;
       }
+      datafile->set_status(force_status);
       datafile->set_last_update();
       datafile->add_ref();
       data_file_mutex_.unlock();

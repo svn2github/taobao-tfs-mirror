@@ -63,7 +63,7 @@ namespace tfs
       gc_manager_(*this, SYSPARAM_NAMESERVER.object_wait_free_time_ms_, SYSPARAM_NAMESERVER.object_wait_clear_time_ms_),
       family_manager_(*this)
     {
-      srand(time(NULL));
+      srandom(time(NULL));
       tzset();
       zonesec_ = 86400 + timezone;
       last_rotate_log_time_ = 0;
@@ -100,7 +100,6 @@ namespace tfs
         //initialize thread
         build_plan_thread_ = new BuildPlanThreadHelper(*this);
         check_dataserver_thread_ = new CheckDataServerThreadHelper(*this);
-        run_plan_thread_ = new RunPlanThreadHelper(*this);
         regular_create_block_for_serversthread_ = new AddBlockInAllServerThreadHelper(*this);
         run_plan_thread_ = new RunPlanThreadHelper(*this);
         balance_thread_  = new BuildBalanceThreadHelper(*this);
@@ -517,6 +516,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.max_rw_network_bandwith_ratio_,
           &SYSPARAM_NAMESERVER.compact_family_member_ratio_,
           &SYSPARAM_NAMESERVER.max_single_machine_network_bandwith_,
+          &SYSPARAM_NAMESERVER.write_file_check_copies_complete_,
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
@@ -709,7 +709,9 @@ namespace tfs
           total_capacity = 0, total_use_capacity = 0, alive_server_nums = 0, sleep_nums = 0;
           get_server_manager().move_statistic_all_server_info(total_capacity,
               total_use_capacity, alive_server_nums);
-          if (total_capacity > 0 && total_use_capacity > 0 && alive_server_nums > 0)
+          if (total_capacity > 0 && total_use_capacity > 0 && alive_server_nums > 0
+             && !get_block_manager().has_emergency_replicate_in_queue()
+             && get_family_manager().reinstate_or_dissolve_queue_empty())
           {
             source.clear();
             targets.clear();
@@ -1445,7 +1447,7 @@ namespace tfs
     bool LayoutManager::build_dissolve_task_(int64_t& need, const FamilyCollect* family,
           const common::ArrayHelper<FamilyMemberInfo>& reinstate_members, const time_t now)
     {
-      int32_t ret = ((NULL != family) && reinstate_members.get_array_index() >= 0
+      int32_t ret = ((NULL != family)
                   && (plan_run_flag_ & PLAN_RUN_FALG_DISSOLVE) && need > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -1484,8 +1486,8 @@ namespace tfs
                       && INVALID_SERVER_ID != members[index].server_
                       && INVALID_BLOCK_ID != members[index].block_)
                   {
-                    bool target = get_task_manager().is_target(members[index], index, PLAN_TYPE_EC_REINSTATE, family->get_family_aid_info());
-                    bool next_target = get_task_manager().is_target(members[next_index], next_index, PLAN_TYPE_EC_REINSTATE, family->get_family_aid_info());
+                    bool target = get_task_manager().is_target(members[index], index, PLAN_TYPE_EC_DISSOLVE, family->get_family_aid_info());
+                    bool next_target = get_task_manager().is_target(members[next_index], next_index, PLAN_TYPE_EC_DISSOLVE, family->get_family_aid_info());
                     ret = ((!get_task_manager().exist_block(members[index].block_))
                           &&(!get_task_manager().exist_server(members[index].server_))
                           &&(!get_task_manager().exist_server(members[next_index].server_))
@@ -1719,7 +1721,6 @@ namespace tfs
     bool LayoutManager::scan_family_(common::ArrayHelper<FamilyCollect*>& results, int64_t& need, int64_t& start,
           const int32_t max_query_family_num, const time_t now, const bool compact_time)
     {
-      UNUSED(compact_time);
       UNUSED(need);
       results.clear();
       bool ret  = false;
@@ -1742,7 +1743,7 @@ namespace tfs
         {
 
         }
-        ret = ((!ret) && get_family_manager().check_need_compact(family, now));
+        ret = ((!ret) && compact_time && get_family_manager().check_need_compact(family, now));
         if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_DISSOLVE)))
         {
 

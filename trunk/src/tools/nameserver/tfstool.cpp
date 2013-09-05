@@ -174,6 +174,11 @@ int cmd_get_object(const VSTRING& param);
 int cmd_del_object(const VSTRING& param);
 int cmd_head_object(const VSTRING& param);
 
+/* for lifecycle */
+int cmd_set_life_cycle(const VSTRING& param);
+int cmd_get_life_cycle(const VSTRING& param);
+int cmd_del_life_cycle(const VSTRING& param);
+
 const char* rc_addr = NULL;
 const char* nsip = NULL;
 const char* krs_addr = NULL;
@@ -394,6 +399,9 @@ void init()
     g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name local_file [app_key]", "get a object", 3, 4, cmd_get_object);
     g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name [app_key]", "delete a object", 2, 3, cmd_del_object);
     g_cmd_map["head_object"] = CmdNode("head_object bucket_name object_name [app_key]", "stat a object", 2, 3, cmd_head_object);
+    g_cmd_map["set_life_cycle"] = CmdNode("set_life_cycle file_type file_name invalid_time_s app_key", "set a expire time for file", 4, 4, cmd_set_life_cycle);
+    g_cmd_map["get_life_cycle"] = CmdNode("get_life_cycle file_type file_name", "get a expire time for a file", 2, 2, cmd_get_life_cycle);
+    g_cmd_map["del_life_cycle"] = CmdNode("del_life_cycle file_type file_name", "delete a expire time for a file", 2, 2, cmd_del_life_cycle);
     break;
   }
 }
@@ -960,7 +968,7 @@ int cmd_stat_blk(const VSTRING& param)
     fprintf(stderr, "invalid blockid: %"PRI64_PREFIX"u\n", block_id);
   }
 
-  if (param.size() > 2)
+  if (param.size() >= 2)
   {
     server_id = Func::get_host_ip(param[1].c_str());
   }
@@ -1924,8 +1932,8 @@ int cmd_get_bucket(const VSTRING& param)
   const char *bucket_name = NULL;
   const char *prefix = NULL;
   const char *start_key = NULL;
-  char delimiter = DEFAULT_CHAR;
-  int32_t limit = MAX_LIMIT;
+  char delimiter = KvDefine::DEFAULT_CHAR;
+  int32_t limit = KvDefine::MAX_LIMIT;
 
   bucket_name = param[0].c_str();
 
@@ -1943,7 +1951,7 @@ int cmd_get_bucket(const VSTRING& param)
 
   if (size > 3)
   {
-    delimiter = canonical_param(param[3]) == NULL ? DEFAULT_CHAR : (param[3].size() == 1 ? param[3][0] : DEFAULT_CHAR);
+    delimiter = canonical_param(param[3]) == NULL ? KvDefine::DEFAULT_CHAR : (param[3].size() == 1 ? param[3][0] : KvDefine::DEFAULT_CHAR);
   }
 
   if (size > 4)
@@ -2229,6 +2237,90 @@ int cmd_head_object(const VSTRING& param)
   }
   ToolUtil::print_info(ret, "head bucket: %s, object: %s", bucket_name, object_name);
 
+  return ret;
+}
+
+int cmd_set_life_cycle(const VSTRING& param)
+{
+  int32_t file_type = atoi(param[0].c_str());
+  const char* file_name = param[1].c_str();
+  int32_t invalid_time_s = atoi(param[2].c_str());
+  const char* user_appkey = param[3].c_str();
+  char appkey[257];
+
+  strcpy(appkey, app_key);
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.set_life_cycle(file_type, file_name, invalid_time_s, user_appkey);
+    TBSYS_LOG(DEBUG, "set_life_cycle return ret: %d", ret);
+  }
+  if (TFS_SUCCESS == ret)
+  {
+    ToolUtil::print_info(ret, "set life cycle file %s invalid_time_s : %d", file_name, invalid_time_s);
+  }
+  return ret;
+}
+
+int cmd_get_life_cycle(const VSTRING& param)
+{
+  int32_t file_type = atoi(param[0].c_str());
+  const char* file_name = param[1].c_str();
+
+  char appkey[257];
+
+  strcpy(appkey, app_key);
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
+  int32_t invalid_time_s = 0;
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.get_life_cycle(file_type, file_name, &invalid_time_s);
+  }
+  if (TFS_SUCCESS == ret)
+  {
+    ToolUtil::print_info(ret, "get life cycle file %s invalid_time_s : %d", file_name, invalid_time_s);
+  }
+  return ret;
+}
+
+int cmd_del_life_cycle(const VSTRING& param)
+{
+  int32_t file_type = atoi(param[0].c_str());
+  const char* file_name = param[1].c_str();
+
+  char appkey[257];
+
+  strcpy(appkey, app_key);
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.rm_life_cycle(file_type, file_name);
+  }
+  if (TFS_SUCCESS == ret)
+  {
+    ToolUtil::print_info(ret, "del life cycle file %s success", file_name);
+  }
   return ret;
 }
 

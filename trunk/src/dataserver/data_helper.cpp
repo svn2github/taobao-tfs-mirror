@@ -326,9 +326,13 @@ namespace tfs
       return ret;
     }
 
+    /*
+     * if status >= 0
+     * status will directly set to target file
+     */
     int DataHelper::write_file(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, const uint64_t file_id,
-        const char* data, const int32_t len, const bool tmp)
+        const char* data, const int32_t len, const int32_t status, const bool tmp)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (INVALID_BLOCK_ID == attach_block_id) || (INVALID_FILE_ID == file_id) ||
@@ -360,7 +364,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = close_file_ex(server_id, block_id, attach_block_id, file_id, lease_id, tmp);
+        ret = close_file_ex(server_id, block_id, attach_block_id, file_id, lease_id, status, tmp);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "close file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
@@ -858,7 +862,8 @@ namespace tfs
     }
 
     int DataHelper::close_file_ex(const uint64_t server_id, const uint64_t block_id,
-        const uint64_t attach_block_id, const uint64_t file_id, const uint64_t lease_id, const bool tmp)
+        const uint64_t attach_block_id, const uint64_t file_id, const uint64_t lease_id,
+        const int32_t status, const bool tmp)
     {
       vector<uint64_t> dslist;
       dslist.push_back(server_id);
@@ -869,6 +874,7 @@ namespace tfs
       req_msg.set_file_id(file_id);
       req_msg.set_lease_id(lease_id);
       req_msg.set_master_id(server_id);
+      req_msg.set_status(status);
       req_msg.set_tmp_flag(tmp);
       return send_simple_request(server_id, &req_msg);
     }

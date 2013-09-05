@@ -51,7 +51,7 @@ namespace tfs
       int get_blocks_in_time_range(const common::TimeRange& range, std::vector<uint64_t>& blocks, const int32_t group_count, const int32_t group_seq) const;
       int get_all_block_info(std::set<common::BlockInfo>& blocks) const;
       int get_all_block_info(std::vector<common::BlockInfoV2>& blocks) const;
-      int get_all_block_info(common::ArrayHelper<common::BlockInfoV2>& blocks) const;
+      int get_all_block_info(common::BlockInfoV2*& blocks, int32_t& block_count) const;
       int get_all_block_header(std::vector<common::IndexHeaderV2>& headers) const;
       int get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const;
       int32_t size() const;

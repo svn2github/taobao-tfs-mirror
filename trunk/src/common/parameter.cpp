@@ -40,6 +40,8 @@ namespace tfs
     CheckServerParameter CheckServerParameter::cs_parameter_;
     KvMetaParameter KvMetaParameter::kv_meta_parameter_;
     KvRtServerParameter KvRtServerParameter::kv_rt_parameter_;
+    ExpireServerParameter ExpireServerParameter::expire_server_parameter_;
+    ExpireRootServerParameter ExpireRootServerParameter::expire_root_server_parameter_;
 
     static void set_hour_range(const char *str, int32_t& min, int32_t& max)
     {
@@ -76,6 +78,7 @@ namespace tfs
       between_ns_and_ds_lease_safe_time_   = 2;//2s
       between_ns_and_ds_lease_retry_times_ = 3;
       between_ns_and_ds_lease_retry_expire_time_  = 2;//2s
+      write_file_check_copies_complete_ = WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_NO;
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
       report_block_time_interval_min_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL_MIN, 0);
       max_write_timeout_= TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_TIMEOUT, 3);
@@ -516,6 +519,8 @@ namespace tfs
         cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
         check_retry_turns_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RETRY_TURN, 3);
         turn_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_TURN_INTERVAL, 180);
+        block_check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_CHECK_INTERVAL, 0);
+        block_check_cost_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_CHECK_COST, 50);
       }
 
       if (TFS_SUCCESS == ret)
@@ -569,10 +574,11 @@ namespace tfs
         return TFS_ERROR;
       }
 
-      tair_master_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_MASTER, "");
-      tair_slave_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_SLAVE, "");
-      tair_group_ = config.getString(CONF_SN_KVMETA, CONF_TAIR_GROUP, "");
-      tair_object_area_ = config.getInt(CONF_SN_KVMETA, CONF_TAIR_OBJECT_AREA, -1);
+      conn_str_ = config.getString(CONF_SN_KVMETA, CONF_KV_DB_CONN, "");
+      user_name_ = config.getString(CONF_SN_KVMETA, CONF_KV_DB_USER, "");
+      pass_wd_ = config.getString(CONF_SN_KVMETA, CONF_KV_DB_PASS, "");
+      object_area_ = config.getInt(CONF_SN_KVMETA, CONF_OBJECT_AREA, -1);
+      lifecycle_area_ = config.getInt(CONF_SN_KVMETA, CONF_LIFECYCLE_AREA, -1);
       dump_stat_info_interval_ = config.getInt(CONF_SN_KVMETA, CONF_STAT_INFO_INTERVAL, 60000000);
 
       if (TFS_SUCCESS == ret)
@@ -619,6 +625,7 @@ namespace tfs
       }
       return ret;
     }
+
     int KvRtServerParameter::initialize(void)
     {
       int32_t iret = TFS_SUCCESS;
@@ -653,6 +660,123 @@ namespace tfs
       }
       return iret;
     }
+
+    int ExpireServerParameter::initialize(const std::string& config_file)
+    {
+      tbsys::CConfig config;
+      int32_t ret = config.load(config_file.c_str());
+      if (EXIT_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "load config file erro.");
+        return TFS_ERROR;
+      }
+      conn_str_ = config.getString(CONF_SN_EXPIRESERVER, CONF_KV_DB_CONN, "");
+      user_name_ = config.getString(CONF_SN_EXPIRESERVER, CONF_KV_DB_USER, "");
+      pass_wd_ = config.getString(CONF_SN_EXPIRESERVER, CONF_KV_DB_PASS, "");
+      lifecycle_area_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_LIFECYCLE_AREA, -1);
+
+      re_clean_days_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_EXPIRE_RE_CLEAN_DAYS, 1);
+      nginx_root_ = config.getString(CONF_SN_EXPIRESERVER, CONF_ES_NGINX_ROOT, "");
+      es_appkey_ = config.getString(CONF_SN_EXPIRESERVER, CONF_ES_APPKEY, "");
+      log_level_ = config.getString(CONF_SN_PUBLIC, CONF_LOG_LEVEL, "debug");
+      if (TFS_SUCCESS == ret)
+      {
+        std::string ips1 = TBSYS_CONFIG.getString(CONF_SN_EXPIRESERVER, CONF_EXPIRE_ROOT_SERVER_IPPORT, "");
+        std::vector<std::string> items1;
+        Func::split_string(ips1.c_str(), ':', items1);
+        if (items1.size() != 2U)
+        {
+          TBSYS_LOG(ERROR, "%s is invalid", ips1.c_str());
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          int32_t port1 = atoi(items1[1].c_str());
+          if (port1 <= 1024 || port1 >= 65535)
+          {
+            TBSYS_LOG(ERROR, "%s is invalid", ips1.c_str());
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            ers_ip_port_ = tbsys::CNetUtil::strToAddr(items1[0].c_str(), atoi(items1[1].c_str()));
+          }
+          TBSYS_LOG(INFO, "expire root server ip addr: %s", ips1.c_str());
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        std::string ips2 = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_IP_ADDR, "");
+        std::string ports2 = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_PORT, "");
+
+        int32_t port2 = atoi(ports2.c_str());
+        if (port2 <= 1024 || port2 >= 65535)
+        {
+          TBSYS_LOG(ERROR, "%s is invalid", ports2.c_str());
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          es_ip_port_ = tbsys::CNetUtil::strToAddr(ips2.c_str(), port2);
+        }
+        TBSYS_LOG(INFO, "expire server ip addr: %s:%d", ips2.c_str(), port2);
+      }
+      return ret;
+    }
+
+    int ExpireRootServerParameter::initialize(const std::string& config_file)
+    {
+      tbsys::CConfig config;
+      int32_t ret = config.load(config_file.c_str());
+      if (EXIT_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "load config file erro.");
+        return TFS_ERROR;
+      }
+
+      conn_str_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_CONN, "");
+      user_name_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_USER, "");
+      pass_wd_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_PASS, "");
+      lifecycle_area_ = config.getInt(CONF_SN_EXPIREROOTSERVER, CONF_LIFECYCLE_AREA, -1);
+
+
+      es_rts_check_lease_interval_ =
+        TBSYS_CONFIG.getInt(CONF_SN_EXPIREROOTSERVER, CONF_ES_RTS_LEASE_CHECK_TIME, 1);
+      if (es_rts_check_lease_interval_ <= 0)
+      {
+        TBSYS_LOG(ERROR, "es_rts_check_lease_interval_: %d is invalid", es_rts_check_lease_interval_);
+        ret = TFS_ERROR;
+      }
+
+      es_rts_lease_expired_time_ =
+        TBSYS_CONFIG.getInt(CONF_SN_EXPIREROOTSERVER, CONF_ES_RTS_LEASE_EXPIRED_TIME, 4);
+      if (es_rts_lease_expired_time_ <= 0)
+      {
+        TBSYS_LOG(ERROR, "es_rts_lease_expired_time: %d is invalid", es_rts_lease_expired_time_);
+        ret = TFS_ERROR;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        es_rts_heart_interval_
+        = TBSYS_CONFIG.getInt(CONF_SN_EXPIREROOTSERVER, CONF_ES_RTS_HEART_INTERVAL, 2);
+        if (es_rts_heart_interval_ > es_rts_lease_expired_time_ / 2 )
+        {
+          TBSYS_LOG(ERROR, "es_rts_lease_expired_interval: %d is invalid, less than: %d",
+            es_rts_heart_interval_, es_rts_lease_expired_time_ / 2 + 1);
+          ret = TFS_ERROR;
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          safe_mode_time_ = TBSYS_CONFIG.getInt(CONF_SN_EXPIREROOTSERVER, CONF_SAFE_MODE_TIME, 60);
+        }
+      }
+
+      return ret;
+    }
+
   }/** common **/
 }/** tfs **/
 

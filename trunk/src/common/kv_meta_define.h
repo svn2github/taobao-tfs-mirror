@@ -25,12 +25,16 @@ namespace tfs
 {
   namespace common
   {
-    const char PERIOD = '.';
-    const char DASH = '-';
-    const char DEFAULT_CHAR = 7;
-    const int32_t MAX_LIMIT = 1000;
-    const int32_t VERSION_ERROR_RETRY_COUNT = 3;
-    const int64_t MAX_VERSION = (1L<<16) - 1;
+    class KvDefine
+    {
+      public:
+      static const char PERIOD;
+      static const char DASH;
+      static const char DEFAULT_CHAR;
+      static const int32_t MAX_LIMIT;
+      static const int32_t VERSION_ERROR_RETRY_COUNT;
+      static const int64_t MAX_VERSION;
+    };
 
     struct TfsFileInfo
     {

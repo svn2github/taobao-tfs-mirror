@@ -185,9 +185,9 @@ int TfsLargeFile::fstat(TfsFileStat* file_info, const TfsStatType mode)
   return ret;
 }
 
-int TfsLargeFile::close()
+int TfsLargeFile::close(const int32_t force_status)
 {
-  return close_ex();
+  return close_ex(force_status);
 }
 
 int64_t TfsLargeFile::get_file_length()

@@ -888,7 +888,7 @@ namespace tfs
       int32_t mode = ds_task.mode_;
 
       GetServerStatusMessage req_gss_msg;
-      req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
+      req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO_V2);
       req_gss_msg.set_return_row(block_id);
       req_gss_msg.set_from_row(attach_block_id);
 
@@ -958,7 +958,7 @@ namespace tfs
     int DsLib::check_file_info(DsTask& ds_task)
     {
       GetServerStatusMessage req_gss_msg;
-      req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
+      req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO_V2);
       req_gss_msg.set_return_row(ds_task.block_id_);
 
       tbnet::Packet* rsp = NULL;

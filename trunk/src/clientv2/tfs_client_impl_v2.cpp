@@ -29,6 +29,8 @@ namespace tfs
 {
   namespace clientv2
   {
+    const int32_t DEFAULT_RETRY_TIMES = 2;
+
     TfsClientImplV2::TfsClientImplV2() : is_init_(false), fd_(0),
     ns_addr_(0), cluster_id_(0), packet_factory_(NULL), packet_streamer_(NULL),
     default_session_(NULL)
@@ -102,6 +104,7 @@ namespace tfs
       timer_->destroy();
       if (is_init_)
       {
+        NewClientManager::get_instance().destroy();
         is_init_ = false;
       }
       return TFS_SUCCESS;
@@ -449,13 +452,9 @@ namespace tfs
     int TfsClientImplV2::stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix,
         const common::TfsStatType stat_type, const char* ns_addr)
     {
-      int ret = TFS_SUCCESS;
       int fd = open(file_name, suffix, ns_addr, T_READ);
-      if (fd < 0)
-      {
-        ret = EXIT_INVALIDFD_ERROR;
-      }
-      else
+      int ret = fd < 0 ? fd : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
         set_option_flag(fd, stat_type);
         ret = fstat(fd, file_stat);
@@ -475,7 +474,14 @@ namespace tfs
       }
       else
       {
-        ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, mode, NULL, suffix, ns_addr);
+        for (int i = 0; i < DEFAULT_RETRY_TIMES; i++)
+        {
+          ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, mode, NULL, suffix, ns_addr);
+          if (ret >= 0)
+          {
+            break;
+          }
+        }
       }
       return ret;
     }
@@ -570,7 +576,14 @@ namespace tfs
       }
       else
       {
-        ret = save_buf_ex(ret_tfs_name, ret_tfs_name_len, buf, buf_len, mode, NULL, suffix, ns_addr);
+        for (int i = 0; i < DEFAULT_RETRY_TIMES; i++)
+        {
+          ret = save_buf_ex(ret_tfs_name, ret_tfs_name_len, buf, buf_len, mode, NULL, suffix, ns_addr);
+          if (ret >= 0)
+          {
+            break;
+          }
+        }
       }
       return ret;
     }
@@ -689,13 +702,9 @@ namespace tfs
     int TfsClientImplV2::unlink(int64_t& file_size, const char* file_name, const char* suffix,
         const common::TfsUnlinkType action, const char* ns_addr)
     {
-      int ret = TFS_SUCCESS;
       int fd = open(file_name, suffix, ns_addr, T_UNLINK);
-      if (fd < 0)
-      {
-        ret = EXIT_INVALIDFD_ERROR;
-      }
-      else
+      int ret = fd < 0 ? fd : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
         ret = unlink(file_size, fd, action);
         close(fd);

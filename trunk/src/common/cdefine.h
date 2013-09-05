@@ -103,7 +103,7 @@ typedef enum
 typedef enum
 {
   F_FAMILY_INFO = 1
-};
+} OpenFlag;
 
 typedef enum
 {
@@ -132,8 +132,7 @@ typedef enum
   UNDELETE = 2,
   CONCEAL = 4,
   REVEAL = 6,
-  OVERRIDE = 8,
-  SYNC = 126
+  OVERRIDE = 128
 } TfsUnlinkType;
 
 typedef enum

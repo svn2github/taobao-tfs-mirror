@@ -64,17 +64,20 @@ namespace tfs
     void DsRuntimeGlobalInformation::startup()
     {
       information_.startup_time_ = time(NULL);
-      information_.status_ = common::DATASERVER_STATUS_ALIVE;
+      //TODO
+      //information_.status_ = common::DATASERVER_STATUS_ALIVE;
     }
 
     void DsRuntimeGlobalInformation::destroy()
     {
-      information_.status_ = common::DATASERVER_STATUS_DEAD;
+      //TODO
+      //information_.status_ = common::DATASERVER_STATUS_DEAD;
     }
 
     bool DsRuntimeGlobalInformation::is_destroyed() const
     {
-      return information_.status_ == common::DATASERVER_STATUS_DEAD;
+      return false;//TODO
+      //return information_.status_ == common::DATASERVER_STATUS_DEAD;
     }
 
     DsRuntimeGlobalInformation& DsRuntimeGlobalInformation::instance()

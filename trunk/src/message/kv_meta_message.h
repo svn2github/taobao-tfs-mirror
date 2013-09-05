@@ -671,6 +671,153 @@ namespace tfs
         common::BucketMetaInfo bucket_meta_info_;
     };
 
+    class ReqKvMetaSetLifeCycleMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaSetLifeCycleMessage();
+        virtual ~ReqKvMetaSetLifeCycleMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const int32_t get_file_type() const
+        {
+          return file_type_;
+        }
+
+        const int32_t get_invalid_time_s() const
+        {
+          return invalid_time_s_;
+        }
+
+        const std::string& get_app_key() const
+        {
+          return app_key_;
+        }
+
+        const std::string& get_file_name() const
+        {
+          return file_name_;
+        }
+
+        void set_file_type(const int32_t file_type)
+        {
+          file_type_ = file_type;
+        }
+
+        void set_invalid_time_s(const int32_t invalid_time_s)
+        {
+          invalid_time_s_ = invalid_time_s;
+        }
+
+        void set_app_key(const std::string& app_key)
+        {
+          app_key_ = app_key;
+        }
+
+        void set_file_name(const std::string& file_name)
+        {
+          file_name_ = file_name;
+        }
+
+      private:
+        int32_t file_type_;
+        std::string file_name_;
+        int32_t invalid_time_s_;
+        std::string app_key_;
+    };
+
+    class ReqKvMetaGetLifeCycleMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaGetLifeCycleMessage();
+        virtual ~ReqKvMetaGetLifeCycleMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const int32_t get_file_type() const
+        {
+          return file_type_;
+        }
+
+        const std::string& get_file_name() const
+        {
+          return file_name_;
+        }
+
+        void set_file_type(const int32_t file_type)
+        {
+          file_type_ = file_type;
+        }
+
+        void set_file_name(const std::string& file_name)
+        {
+          file_name_ = file_name;
+        }
+
+      private:
+        int32_t file_type_;
+        std::string file_name_;
+    };
+
+    class RspKvMetaGetLifeCycleMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaGetLifeCycleMessage();
+        virtual ~RspKvMetaGetLifeCycleMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const int32_t get_invalid_time_s() const
+        {
+          return invalid_time_s_;
+        }
+
+        void set_invalid_time_s(const int32_t invalid_time_s)
+        {
+          invalid_time_s_ = invalid_time_s;
+        }
+
+      private:
+        int32_t invalid_time_s_;
+    };
+
+    class ReqKvMetaRmLifeCycleMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaRmLifeCycleMessage();
+        virtual ~ReqKvMetaRmLifeCycleMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const int32_t get_file_type() const
+        {
+          return file_type_;
+        }
+
+        const std::string& get_file_name() const
+        {
+          return file_name_;
+        }
+
+        void set_file_type(const int32_t file_type)
+        {
+          file_type_ = file_type;
+        }
+
+        void set_file_name(const std::string& file_name)
+        {
+          file_name_ = file_name;
+        }
+
+      private:
+        int32_t file_type_;
+        std::string file_name_;
+    };
+
   }
 }
 

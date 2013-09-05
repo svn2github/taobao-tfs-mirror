@@ -20,13 +20,13 @@
 #include <string>
 #include <vector>
 
-#include "common/define.h"
-#include "common/internal.h"
-#include "common/kv_meta_define.h"
+#include "define.h"
+#include "internal.h"
+#include "kv_meta_define.h"
 
 namespace tfs
 {
-  namespace kvmetaserver
+  namespace common
   {
     //key of object is like this
     //  bucketname\filename\offset\version_id
@@ -48,6 +48,9 @@ namespace tfs
         KEY_TYPE_USER = 1,
         KEY_TYPE_BUCKET = 2,
         KEY_TYPE_OBJECT = 3,
+        KEY_TYPE_NAME_EXPTIME = 4,
+        KEY_TYPE_EXPTIME_APPKEY = 5,
+        KEY_TYPE_ES_STAT = 6,
       };
     };
 
@@ -85,18 +88,13 @@ namespace tfs
       KvEngineHelper(){};
       virtual ~KvEngineHelper(){};
       virtual int init() = 0;
-      //qixiao new add
-      virtual int scan_keys(const KvKey& start_key, const KvKey& end_key, const int32_t limit, const int32_t offset,
+      virtual int scan_keys(const int32_t name_area, const KvKey& start_key, const KvKey& end_key, const int32_t limit, const int32_t offset,
                             std::vector<KvValue*> *keys, std::vector<KvValue*> *values, int32_t* result_size, short scan_type) = 0;
-      virtual int get_key(const KvKey& key, KvValue **pp_value, int64_t *version) = 0;
-      virtual int put_key(const KvKey& key, const KvMemValue &value, const int64_t version) = 0;
-      //qixiao new end
-      virtual int delete_key(const KvKey& key) = 0;
-      virtual int delete_keys(const std::vector<KvKey>& vec_keys) = 0;
-      //virtual int scan_keys(const KvKey& start_key, const KvKey& end_key,
-          //const int32_t offset, const int32_t limit, /*std::vector<KvKey>* vec_keys,*/
-          //std::vector<std::string>* vec_realkey,
-          //std::vector<std::string>* vec_values, int32_t* result_size) = 0;
+      virtual int get_key(const int32_t name_area, const KvKey& key, KvValue **pp_value, int64_t *version) = 0;
+      virtual int put_key(const int32_t name_area, const KvKey& key, const KvMemValue &value, const int64_t version) = 0;
+      virtual int delete_key(const int32_t name_area, const KvKey& key) = 0;
+      virtual int delete_keys(const int32_t name_area, const std::vector<KvKey>& vec_keys) = 0;
+
     private:
       DISALLOW_COPY_AND_ASSIGN(KvEngineHelper);
 

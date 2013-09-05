@@ -421,6 +421,8 @@ namespace tfs
             current =  (finfos + slot);
             ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           }
+          if (key > header->seq_no_)
+            header->seq_no_ = key;
         }
       }
       return ret;

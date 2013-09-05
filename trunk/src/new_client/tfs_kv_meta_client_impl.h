@@ -71,6 +71,13 @@ namespace tfs
         TfsRetType head_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info, const common::UserInfo &user_info);
 
+        TfsRetType set_life_cycle(const int32_t file_type, const char *file_name,
+                                  const int32_t invalid_time_s, const char *app_key);
+        TfsRetType get_life_cycle(const int32_t file_type, const char *file_name,
+                                  int32_t *invalid_time_s);
+        TfsRetType rm_life_cycle(const int32_t file_type, const char *file_name);
+
+
         int do_put_bucket(const char *bucket_name,
             const common::BucketMetaInfo& bucket_meta_info, const common::UserInfo &user_info);
         int do_get_bucket(const char *bucket_name, const char *prefix,
@@ -105,6 +112,7 @@ namespace tfs
             const std::vector<common::TfsFileInfo> &v_tfs_info,
             void *buffer, int64_t offset, int64_t length, bool still_have);
         int unlink_file(const std::vector<common::TfsFileInfo> &v_tfs_info);
+
 
       private:
         DISALLOW_COPY_AND_ASSIGN(KvMetaClientImpl);

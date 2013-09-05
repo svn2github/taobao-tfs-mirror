@@ -52,7 +52,8 @@ namespace tfs
       private:
         int get_check_blocks(message::CheckBlockRequestMessage* message);
         int add_check_blocks(message::ReportCheckBlockMessage* message);
-        void add_check_blocks(const int64_t seqno, const uint64_t check_server_id, const common::VUINT64& blocks);
+        void add_check_blocks(const int64_t seqno,
+            const uint64_t check_server_id, const int32_t interval, const common::VUINT64& blocks);
         int report_check_blocks();
         int check_block(const uint64_t block_id);
         int check_single_block(const uint64_t block_id,
@@ -63,7 +64,8 @@ namespace tfs
             const uint64_t block_id, const std::vector<common::FileInfoV2>& diff);
         int process_less_files(const uint64_t dest_ns_addr,
             const uint64_t block_id, const std::vector<common::FileInfoV2>& less);
-        void compare_block_fileinfos(const std::vector<common::FileInfoV2>& left,
+        void compare_block_fileinfos(const uint64_t block_id,
+            const std::vector<common::FileInfoV2>& left,
             const std::vector<common::FileInfoV2>& right,
             std::vector<common::FileInfoV2>& more,
             std::vector<common::FileInfoV2>& diff,
@@ -76,6 +78,7 @@ namespace tfs
         tbutil::Mutex mutex_;
         int64_t seqno_;
         int64_t check_server_id_;
+        int32_t interval_;  // check interval between block, ms
     };
   }
 }

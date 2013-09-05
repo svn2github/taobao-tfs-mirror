@@ -57,9 +57,10 @@
 #define IS_VERFIFY_BLOCK(x) (x >> 63)
 
 // Macros used for overriding file flag in unlink call
-#define SET_OVERRIDE_FLAG(x, f) ((x) = OVERRIDE | f)
-#define GET_OVERRIDE_FLAG(x) ((x) & 0x7)
-#define TEST_OVERRIDE_FLAG(x) ((x) & OVERRIDE)
+// the 5-7bit is used as flag
+#define SET_OVERRIDE_FLAG(x, f) ((x) = (OVERRIDE | (f << 4)))
+#define GET_OVERRIDE_FLAG(x) (((x) >> 4) & 0x7)
+#define TEST_OVERRIDE_FLAG(x) ((x) > REVEAL) // TODO, change to (x) & OVERRIDE
 
 #if __WORDSIZE == 32
 namespace __gnu_cxx
@@ -287,7 +288,8 @@ namespace tfs
       GSS_MAX_VISIT_COUNT,
       GSS_BLOCK_FILE_INFO,
       GSS_BLOCK_RAW_META_INFO,
-      GSS_CLIENT_ACCESS_INFO
+      GSS_CLIENT_ACCESS_INFO,
+      GSS_BLOCK_FILE_INFO_V2
     };
 
     enum CheckDsBlockType
@@ -362,7 +364,8 @@ namespace tfs
       CLIENT_CMD_ROTATE_LOG,
       CLIENT_CMD_GET_BALANCE_PERCENT,
       CLIENT_CMD_SET_BALANCE_PERCENT,
-      CLIENT_CMD_CLEAR_SYSTEM_TABLE
+      CLIENT_CMD_CLEAR_SYSTEM_TABLE,
+      CLIENT_CMD_DELETE_FAMILY
     };
 
     enum PlanType
@@ -375,6 +378,9 @@ namespace tfs
       PLAN_TYPE_EC_MARSHALLING,
       PLAN_TYPE_RESOLVE_VERSION_CONFLICT
     };
+
+    // order shoule be consistent with PlanType
+    extern const char* planstr[PLAN_TYPE_EC_MARSHALLING + 1];
 
     enum PlanStatus
     {
@@ -1060,7 +1066,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[48];
+    extern const char* dynamic_parameter_str[49];
 
 #pragma pack (1)
     struct FileInfoV2//30
@@ -1301,6 +1307,12 @@ namespace tfs
                 const char* function, pthread_t thid, const char* format, ...);
     };
 
+    enum WriteFileCheckCopiesCompleteFlag
+    {
+      WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_NO = 0,
+      WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_YES = 1,
+    };
+
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;
@@ -1355,6 +1367,9 @@ namespace tfs
 
       //KvMetaTable
       KV_META_TABLE_V_META_TABLE_TAG = 601,
+
+      //ExpTable
+      EXP_TABLE_V_EXP_TABLE_TAG = 701,
 
       //UserInfo
       USER_INFO_OWNER_ID_TAG = 801,

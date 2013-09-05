@@ -226,7 +226,7 @@ namespace tfs
 
     void print_int64(const common::ArrayHelper<uint64_t>& servers, std::string& result)
     {
-      for (int32_t i = 0; i < servers.get_array_index(); ++i)
+      for (int64_t i = 0; i < servers.get_array_index(); ++i)
       {
         result += "/";
         result += tbsys::CNetUtil::addrToString(*servers.at(i));

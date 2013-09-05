@@ -35,6 +35,8 @@ namespace tfs
 #define CONF_SN_KVROOTSERVER                          "kvrootserver"
 #define CONF_SN_SYNCSERVER                            "syncserver"
 #define CONF_SN_MIGRATESERVER                         "migrateserver"
+#define CONF_SN_EXPIRESERVER                          "expireserver"
+#define CONF_SN_EXPIREROOTSERVER                      "expirerootserver"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"
@@ -201,15 +203,23 @@ namespace tfs
 #define CONF_NS_IP                                    "ns_ip"
 #define CONF_CHECK_RETRY_TURN                         "check_retry_turn"
 #define CONF_TURN_INTERVAL                            "turn_interval"
+#define CONF_BLOCK_CHECK_INTERVAL                     "block_check_interval"
+#define CONF_BLOCK_CHECK_COST                         "block_check_cost"
 
 //kv meta server
-#define CONF_TAIR_MASTER                             "tair_master"
-#define CONF_TAIR_SLAVE                              "tair_slave"
-#define CONF_TAIR_GROUP                              "tair_group"
-#define CONF_TAIR_OBJECT_AREA                        "tair_object_area"
+#define CONF_KV_DB_CONN                             "kv_db_conn"
+#define CONF_KV_DB_USER                              "kv_db_user"
+#define CONF_KV_DB_PASS                              "kv_db_pass"
+#define CONF_OBJECT_AREA                            "object_area"
+#define CONF_LIFECYCLE_AREA                       "lifecycle_area"
 #define CONF_STAT_INFO_INTERVAL                      "stat_info_interval"
 #define CONF_KV_META_IPPORT                          "kv_meta_ip_port"
 #define CONF_KV_ROOT_IPPORT                          "kv_root_ip_port"
+
+#define CONF_TAIR_MASTER                             "tair_master"
+#define CONF_TAIR_SLAVE                              "tair_slave"
+#define CONF_TAIR_GROUP                              "tair_group"
+#define CONF_TAIR_LIFECYCLE_AREA                     "tair_lifecycle_area"
 
 //kv root server
 #define CONF_KV_MTS_RTS_LEASE_CHECK_TIME                 "mts_rts_lease_check_time" //(s)
@@ -217,6 +227,21 @@ namespace tfs
 #define CONF_KV_MTS_RTS_HEART_INTERVAL                   "mts_rts_heart_interval" //(s)
 #define CONF_KV_RT_TABLE_FILE_PATH                       "table_file_path"
 #define CONF_KV_UPDATE_TABLE_THREAD_COUNT                "update_table_thread_count"
+
+/* expire server */
+#define CONF_EXPIRE_SERVER_IPPORT                     "es_ip_port"
+#define CONF_EXPIRE_ROOT_SERVER_IPPORT                "ers_ip_port"
+#define CONF_EXPIRE_RE_CLEAN_DAYS                     "re_clean_days"
+#define CONF_ES_NGINX_ROOT                            "nginx_root"
+#define CONF_ES_APPKEY                                "es_appkey"
+
+
+/*expire root server*/
+#define CONF_TAIR_LIFECYCLE_AREA                     "tair_lifecycle_area"
+#define CONF_ES_RTS_LEASE_CHECK_TIME                 "es_rts_lease_check_time" //(s)
+#define CONF_ES_RTS_LEASE_EXPIRED_TIME               "es_rts_lease_expired_time" //(s)
+#define CONF_ES_RTS_HEART_INTERVAL                   "es_rts_heart_interval" //(s)
+
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

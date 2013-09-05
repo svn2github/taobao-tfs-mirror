@@ -88,7 +88,7 @@ namespace tfs
 
         inline int get_unlink_type() const
         {
-          return unlink_file_info_.is_server_ & common::SYNC;
+          return unlink_file_info_.is_server_ & 0xfffffffe;
         }
 
         inline void set_unlink_flag(const int32_t flag)

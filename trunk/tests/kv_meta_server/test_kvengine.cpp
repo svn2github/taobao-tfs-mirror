@@ -21,11 +21,9 @@
 #include "common/error_msg.h"
 
 using namespace std;
-using namespace tair;
 namespace tfs
 {
-  using namespace common;
-  namespace kvmetaserver
+  namespace common
   {
     TestEngineHelper::TestEngineHelper()
     {
@@ -42,10 +40,19 @@ namespace tfs
       return ret;
     }
 
-    int TestEngineHelper::put_key(const KvKey& key, const KvMemValue& value, const int64_t version)
+    int TestEngineHelper::put_key(const int32_t name_area, const KvKey& key, const KvMemValue& value, const int64_t version)
     {
       int ret = TFS_SUCCESS;
-      string inner_key(key.key_, key.key_size_);
+      //TBSYS_LOG(DEBUG, "put name_area, %d key size %d key_type %d", name_area, key.key_size_, key.key_type_);
+      //for (int i = 0 ; i < key.key_size_; i++)
+      //{
+      //  TBSYS_LOG(DEBUG, "key char %d: %d", i, key.key_[i]);
+      //}
+      string inner_key;
+      //inner_key += name_area;
+      UNUSED(name_area);
+      string tmp_key(key.key_, key.key_size_);
+      inner_key += tmp_key;
       CONTAINER::iterator iter = map_store_.find(inner_key);
       int64_t inner_version = 0;
       if (iter != map_store_.end())
@@ -67,10 +74,14 @@ namespace tfs
       return ret;
     }
 
-    int TestEngineHelper::get_key(const KvKey& key, KvValue** value, int64_t* version)
+    int TestEngineHelper::get_key(const int32_t name_area, const KvKey& key, KvValue** value, int64_t* version)
     {
       int ret = TFS_SUCCESS;
-      string inner_key(key.key_, key.key_size_);
+      string inner_key;
+      //inner_key += name_area;
+      UNUSED(name_area);
+      string tmp_key(key.key_, key.key_size_);
+      inner_key += tmp_key;
       CONTAINER::iterator iter = map_store_.find(inner_key);
       if (iter == map_store_.end())
       {
@@ -89,35 +100,51 @@ namespace tfs
       return ret;
     }
 
-    int TestEngineHelper::delete_key(const KvKey& key)
+    int TestEngineHelper::delete_key(const int32_t name_area, const KvKey& key)
     {
       int ret = TFS_SUCCESS;
-      string inner_key(key.key_, key.key_size_);
+      //TBSYS_LOG(DEBUG, "delete name_area, %d key size %d key_type %d", name_area, key.key_size_, key.key_type_);
+      //for (int i = 0 ; i < key.key_size_; i++)
+      //{
+      //  TBSYS_LOG(DEBUG, "key char %d: %d", i, key.key_[i]);
+      //}
+      string inner_key;
+      //inner_key += name_area;
+      UNUSED(name_area);
+      string tmp_key(key.key_, key.key_size_);
+      inner_key += tmp_key;
       map_store_.erase(inner_key);
       return ret;
     }
 
-    int TestEngineHelper::delete_keys(const std::vector<KvKey>& vec_keys)
+    int TestEngineHelper::delete_keys(const int32_t name_area, const std::vector<KvKey>& vec_keys)
     {
       int ret = TFS_SUCCESS;
 
       std::vector<KvKey>::const_iterator iter = vec_keys.begin();
       for(; iter != vec_keys.end(); ++iter)
       {
-        delete_key(*iter);
+        delete_key(name_area, *iter);
       }
       return ret;
     }
-    int TestEngineHelper::scan_keys(const KvKey& start_key, const KvKey& end_key,
+    int TestEngineHelper::scan_keys(const int32_t name_area, const KvKey& start_key, const KvKey& end_key,
         const int32_t limit, const int32_t offset, std::vector<KvValue*> *vec_realkey,
         std::vector<KvValue*> *vec_values, int32_t* result_size, short scan_type)
     {
 
-      string temp_start_key = NULL != start_key.key_ ? string(start_key.key_, start_key.key_size_) : "";
-      string temp_end_key = NULL != end_key.key_ ? string(end_key.key_, end_key.key_size_) : "";
+      string temp_start_key1 = NULL != start_key.key_ ? string(start_key.key_, start_key.key_size_) : "";
+      string temp_end_key1 = NULL != end_key.key_ ? string(end_key.key_, end_key.key_size_) : "";
+      string temp_start_key;
+      string temp_end_key;
+      //temp_start_key += name_area;
+      temp_start_key += temp_start_key1;
+      //temp_end_key += name_area;
+      UNUSED(name_area);
+      temp_end_key += temp_end_key1;
+
 
       CONTAINER::iterator iter = map_store_.lower_bound(temp_start_key);
-
       int count = 0;
       int temp_offset = 0;
       for (; iter != map_store_.end() && count < limit; iter++)
@@ -152,7 +179,6 @@ namespace tfs
       *result_size = count;
       return TFS_SUCCESS;
     }
-
 
   }
 }

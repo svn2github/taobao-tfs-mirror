@@ -404,6 +404,9 @@ namespace tfs
           BlockInfoV2* info = *blocks.at(i);
           uint64_t block_id = info->block_id_;
 
+          if (INVALID_BLOCK_ID == info->block_id_)
+            continue;
+
           // check block version, rebuilding relation.
           get_mutex_(block_id).wrlock();
           BlockCollect* block = get_(block_id);

@@ -302,16 +302,24 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int LogicBlockManager::get_all_block_info(common::ArrayHelper<common::BlockInfoV2>& blocks) const
+    // memory will be alloced in this function
+    // the caller should free it
+    int LogicBlockManager::get_all_block_info(common::BlockInfoV2*& blocks, int32_t& block_count) const
     {
-      blocks.clear();
-      int32_t ret = TFS_SUCCESS, index = 0;
-      int32_t array_size = blocks.get_array_size();
+      int32_t ret = TFS_SUCCESS;
+      int32_t all_block_count = logic_blocks_.size();
+      block_count = 0;
+      blocks = new (std::nothrow) BlockInfoV2[all_block_count];
+      assert(NULL != blocks);
+
       LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
-      for (; iter != logic_blocks_.end() && index < array_size && TFS_SUCCESS == ret; ++iter, ++index)
+      for (; iter != logic_blocks_.end() && block_count < all_block_count && TFS_SUCCESS == ret; ++iter)
       {
-        common::BlockInfoV2& info = *(blocks.get_base_address() + index);
-        ret = (*iter)->get_block_info(info);
+        ret = (*iter)->get_block_info(blocks[block_count]);
+        if (TFS_SUCCESS == ret)
+        {
+          block_count++;
+        }
       }
       return TFS_SUCCESS;
     }

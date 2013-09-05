@@ -522,7 +522,7 @@ namespace tfs
           {
             task = new (std::nothrow)ECReinstateTask(*this, family_id, family_aid_info, MAX_NUM, info);
           }
-          else if (msg->getPCode() == REQ_EC_DISSOLVE_COMMIT_MESSAGE);
+          else if (msg->getPCode() == REQ_EC_DISSOLVE_COMMIT_MESSAGE)
           {
             task = new (std::nothrow)ECDissolveTask(*this, family_id, family_aid_info, MAX_NUM, info);
           }

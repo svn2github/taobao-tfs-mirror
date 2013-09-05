@@ -59,7 +59,7 @@ namespace tfs
         int get_all_block_ids(std::vector<uint64_t>& blocks) const;
         int get_all_block_info(std::set<common::BlockInfo>& blocks) const;
         int get_all_block_info(std::vector<common::BlockInfoV2>& blocks) const;
-        int get_all_block_info(common::ArrayHelper<common::BlockInfoV2>& blocks) const;
+        int get_all_block_info(common::BlockInfoV2*& blocks, int32_t& block_count) const;
         int get_all_block_header(std::vector<common::IndexHeaderV2>& headers) const;
         int get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const;
         int32_t get_all_logic_block_count() const;
@@ -97,6 +97,7 @@ namespace tfs
 
         int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, uint64_t attach_logic_block_id, const bool tmp = false, const bool partial = false);
         int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id, uint64_t attach_logic_block_id) const;
+        int traverse(std::vector<common::FileInfo>& finfos, const uint64_t logic_block_id, uint64_t attach_logic_block_id) const;
         int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks, const uint64_t logic_block_id) const;
         int get_index_num(int32_t& index_num, const uint64_t logic_block_id) const;
 

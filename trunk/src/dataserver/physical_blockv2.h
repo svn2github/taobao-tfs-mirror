@@ -41,8 +41,7 @@ namespace tfs
         explicit BasePhysicalBlock(const int32_t physical_block_id);//for query
         inline  int32_t id() const { return physical_block_id_;}
         inline  int32_t length() const { return end_ - start_;}
-      protected:
-        DISALLOW_COPY_AND_ASSIGN(BasePhysicalBlock);
+        virtual int fdatasync() { return common::TFS_SUCCESS;}
         static const int32_t MAX_WARN_CONSUME_TIME_US;
         int32_t physical_block_id_;
         int32_t start_;//the data start offset of this block file
@@ -65,6 +64,7 @@ namespace tfs
         int free(const int8_t index, const int32_t max_main_block_size, const int32_t max_ext_block_size);
         bool empty(const int32_t max_main_block_size, const int32_t max_ext_block_size) const;
         bool full(const int32_t max_main_block_size, const int32_t max_ext_block_size) const;
+        int fdatasync();
 
         static const int32_t STORE_ALLOC_BIT_MAP_SIZE;
         static const int32_t ALLOC_BIT_MAP_SIZE;
@@ -84,6 +84,7 @@ namespace tfs
         virtual ~PhysicalBlock();
         int pwrite(const char* buf, const int32_t nbytes, const int32_t offset);
         int pread(char* buf, const int32_t nbytes, const int32_t offset);
+        int fdatasync();
       private:
         DISALLOW_COPY_AND_ASSIGN(PhysicalBlock);
         common::FileOperation file_op_;//file operation handle

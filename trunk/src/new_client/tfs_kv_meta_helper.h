@@ -59,6 +59,17 @@ namespace tfs
                                const char *object_name,
                                common::ObjectInfo *object_info,
                                const common::UserInfo &user_info);
+
+      static int do_set_life_cycle(const uint64_t server_id,
+                                   const int32_t file_type, const char *file_name,
+                                   const int32_t invalid_time_s, const char *app_key);
+
+      static int do_get_life_cycle(const uint64_t server_id,
+                                   const int32_t file_type, const char *file_name,
+                                   int32_t *invalid_time_s);
+
+      static int do_rm_life_cycle(const uint64_t server_id,
+                                  const int32_t file_type, const char *file_name);
     };
   }
 }

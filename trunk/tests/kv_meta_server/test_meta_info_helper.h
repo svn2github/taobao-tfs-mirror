@@ -21,19 +21,23 @@
 #include "common/base_service.h"
 #include "common/status_message.h"
 #include "common/kv_meta_define.h"
+#include "common/kvengine_helper.h"
 #include "message/message_factory.h"
-#include "kvengine_helper.h"
 #include "kv_meta_server/meta_info_helper.h"
 
 namespace tfs
 {
   namespace kvmetaserver
   {
+    using namespace common;
     class TestMetaInfoHelper :public MetaInfoHelper
     {
     public:
       TestMetaInfoHelper()
       {
+      }
+      int init(common::KvEngineHelper*){
+        return TFS_SUCCESS;
       }
       void set_kv_engine(KvEngineHelper *r)
       {

@@ -4,8 +4,7 @@ AM_CPPFLAGS =-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl
 
-LDADD=$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
-      $(top_builddir)/src/requester/libtfsrequester.a\
+LDADD=$(top_builddir)/src/requester/libtfsrequester.a\
       $(top_builddir)/src/message/libtfsmessage.a\
       $(top_builddir)/src/common/libtfscommon.a\
       $(UNIQUE_STORE_LDFLAGS)\
@@ -21,7 +20,7 @@ logic_blockv2.h logic_block_manager.h block_manager.h lease_managerv2.h gc.h req
 client_request_server.h data_management.h  migrate_manager.h\
 dataservice.h data_helper.h galois.h jerasure.h erasure_code.h task_manager.h task.h\
 traffic_control.h check_manager.h op_meta.h op_manager.h writable_block.h \
-writable_block_manager.h sync_manager.h
+writable_block_manager.h sync_manager.h migrate_manager.h
 
 DATASERVER_SOURCE_LIST=ds_define.cpp super_block_manager.cpp physical_blockv2.cpp\
 physical_block_manager.cpp index_handlev2.cpp data_handlev2.cpp data_file.cpp \

@@ -4,8 +4,6 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbnet\
 	    			$(TAIR_STORE_CPPFLAGS)
 
-#AM_LDFLAGS=-lz -lrt -lpthread -ldl -lgcov
-#AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic ${TCMALLOC_LDFLAGS}
 AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic $(TAIR_STORE_LDFLAGS) -lsnappy ${TCMALLOC_LDFLAGS}
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \

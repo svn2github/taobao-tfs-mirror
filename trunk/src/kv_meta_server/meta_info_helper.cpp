@@ -15,9 +15,8 @@
  */
 
 
-#include "meta_info_helper.h"
 #include <malloc.h>
-#include "tairengine_helper.h"
+#include "meta_info_helper.h"
 using namespace std;
 namespace tfs
 {
@@ -28,7 +27,7 @@ namespace tfs
     const int VALUE_BUFF_SIZE = 1024*1024;
     const int KV_VALUE_BUFF_SIZE = 1024*1024;
     const int32_t KEY_BUFF_SIZE = 512 + 8 + 8;
-    const int32_t SCAN_LIMIT = 500;
+    const int32_t SCAN_LIMIT = 20;
     const int32_t MESS_LIMIT = 10;
     const int64_t INT64_INFI = 0x7FFFFFFFFFFFFFFF;
     enum
@@ -44,21 +43,26 @@ namespace tfs
     };
     MetaInfoHelper::MetaInfoHelper()
     {
-      kv_engine_helper_ = new TairEngineHelper();
+      kv_engine_helper_ = NULL;
+      meta_info_name_area_ = 0;
     }
 
     MetaInfoHelper::~MetaInfoHelper()
     {
-      delete kv_engine_helper_;
       kv_engine_helper_ = NULL;
     }
 
-    int MetaInfoHelper::init()
+    int MetaInfoHelper::init(common::KvEngineHelper* kv_engine_helper)
     {
-      int ret = TFS_ERROR;
-      if (NULL != kv_engine_helper_)
+      int ret = TFS_SUCCESS;
+      kv_engine_helper_ = kv_engine_helper;
+
+      //TODO change later
+      meta_info_name_area_ = SYSPARAM_KVMETA.object_area_;
+      if (meta_info_name_area_ <= 0 )
       {
-        ret = kv_engine_helper_->init();
+        TBSYS_LOG(ERROR, "area error %d", meta_info_name_area_);
+        ret = TFS_ERROR;
       }
       return ret;
     }
@@ -252,7 +256,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         kv_value.set_data(value_buff, pos);
-        ret = kv_engine_helper_->put_key(key, kv_value, lock_version);
+        ret = kv_engine_helper_->put_key(meta_info_name_area_, key, kv_value, lock_version);
       }
 
       if (NULL != value_buff)
@@ -310,7 +314,7 @@ namespace tfs
         const bool is_append)
     {
       int ret = TFS_SUCCESS;
-      int32_t retry = VERSION_ERROR_RETRY_COUNT;
+      int32_t retry = KvDefine::VERSION_ERROR_RETRY_COUNT;
       bool is_old_data = false;
       //-5 means transfer data from mysql
       if (-5 == object_info_zero->meta_info_.max_tfs_file_size_)
@@ -410,7 +414,7 @@ namespace tfs
         offset = object_info.v_tfs_file_info_.front().offset_;
       }
 
-      int64_t version = MAX_VERSION;
+      int64_t version = KvDefine::MAX_VERSION;
       bool is_append = (-1 == offset);
       // assume this is object info zero
       if (is_append)
@@ -532,7 +536,7 @@ namespace tfs
       KvValue *kv_value = NULL;
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->get_key(key, &kv_value, lock_version);
+        ret = kv_engine_helper_->get_key(meta_info_name_area_, key, &kv_value, lock_version);
         if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
         {
           ret = EXIT_OBJECT_NOT_EXIST;
@@ -565,25 +569,26 @@ namespace tfs
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0 && length >= 0
           && offset >= 0 && object_info != NULL && still_have != NULL) ? TFS_SUCCESS : TFS_ERROR;
-
+      ret = TFS_SUCCESS;
       common::ObjectInfo object_info_zero;
       if (TFS_SUCCESS == ret)
       {
         int64_t version = 0;
         int64_t offset_zero = 0;
         ret = get_object_part(bucket_name, file_name, offset_zero, &object_info_zero, &version);
+        TBSYS_LOG(DEBUG, "version: %"PRI64_PREFIX"d", version);
         *object_info = object_info_zero;
         *still_have = false;
         if (EXIT_OBJECT_NOT_EXIST == ret)
         {
-          TBSYS_LOG(ERROR, "object not exist");
+          TBSYS_LOG(ERROR, "object %s %s not exist", bucket_name.c_str(), file_name.c_str());
         }
       }
       if (TFS_SUCCESS == ret)
       {
         if (offset > object_info_zero.meta_info_.big_file_size_)
         {
-          TBSYS_LOG(ERROR, "req offset is out of big_file_size_");
+          TBSYS_LOG(ERROR, "object %s %s req offset is out of big_file_size_", bucket_name.c_str(), file_name.c_str());
           ret = EXIT_READ_OFFSET_ERROR;
         }
       }
@@ -609,7 +614,7 @@ namespace tfs
         }
         if (is_big_file)//big file
         {
-          TBSYS_LOG(ERROR, "is big_file");
+          TBSYS_LOG(DEBUG, "is big_file");
           //op key
           char *start_key_buff = NULL;
           if (TFS_SUCCESS == ret)
@@ -631,7 +636,7 @@ namespace tfs
           }
           KvKey start_key;
           KvKey end_key;
-          int64_t start_offset = offset - MAX_SEGMENT_SIZE > 0 ? offset - MAX_SEGMENT_SIZE : 0;
+          int64_t start_offset = offset;
           int64_t end_offset = offset + length;
           if (TFS_SUCCESS == ret)
           {
@@ -659,7 +664,7 @@ namespace tfs
           {
             int32_t result_size = 0;
             int64_t last_offset = 0;
-            ret = kv_engine_helper_->scan_keys(start_key, end_key, SCAN_LIMIT, scan_offset,
+            ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_key, end_key, SCAN_LIMIT, scan_offset,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
             if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
             {//metainfo exist but data not exist
@@ -676,6 +681,59 @@ namespace tfs
               if (tmp_object_info.v_tfs_file_info_.size() > 0)
               {
                 last_offset = tmp_object_info.v_tfs_file_info_[0].offset_;
+                if (0 == i )
+                {
+                  if (tmp_object_info.v_tfs_file_info_[0].offset_ > offset)
+                  {
+                    //we should find pre record
+                    vector<KvValue*> kv_value_keys;
+                    vector<KvValue*> kv_value_values;
+                    int32_t result_size = 0;
+                    KvKey rend_key;
+                    char *rend_key_buff = NULL;
+                    rend_key_buff = (char*) malloc(KEY_BUFF_SIZE);
+                    assert(NULL != rend_key_buff);
+
+                    ret = serialize_key(bucket_name, file_name, 0,
+                        &rend_key, rend_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+                    if (TFS_SUCCESS == ret)
+                    {
+                      ret = kv_engine_helper_->scan_keys(meta_info_name_area_,
+                          start_key, rend_key, -1, true,
+                          &kv_value_keys, &kv_value_values, &result_size, scan_type);
+                    }
+                    free(rend_key_buff);
+                    if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret ||TFS_SUCCESS == ret )
+                    {
+                      if (TFS_SUCCESS == ret)
+                      {
+                        for(int i = result_size -1 ; i >= 0; i--)
+                        {
+                          common::ObjectInfo tmp_object_info;
+                          //value get
+                          int64_t pos = 0;
+                          tmp_object_info.deserialize(kv_value_values[i]->get_data(),
+                              kv_value_values[i]->get_size(), pos);
+                          if (tmp_object_info.v_tfs_file_info_.size() > 0)
+                          {
+                            object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[0]);
+                            valid_result++;
+                          }
+                          kv_value_values[i]->free();
+                          kv_value_keys[i]->free();
+                        }
+                      }
+                      ret = TFS_SUCCESS;
+
+                    }
+                    else
+                    {
+                      go_on=false;
+                    }
+
+
+                  }//end deal pre record
+                }
                 if (tmp_object_info.v_tfs_file_info_[0].offset_ + tmp_object_info.v_tfs_file_info_[0].file_size_ <= offset)
                 {//invalid frag
                   continue;
@@ -705,8 +763,10 @@ namespace tfs
             for(i = 0; i < result_size; ++i)//free kv
             {
               kv_value_values[i]->free();
+              kv_value_keys[i]->free();
             }
             kv_value_values.clear();
+            kv_value_keys.clear();
           }//end while
 
           if (NULL != start_key_buff)
@@ -781,7 +841,7 @@ namespace tfs
       int32_t result_size = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->scan_keys(start_key, end_key, limit + 1, scan_offset,
+        ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_key, end_key, limit + 1, scan_offset,
           &kv_value_keys, &kv_value_values, &result_size, scan_type);
         TBSYS_LOG(DEBUG, "del object, bucekt_name: %s, object_name: %s, "
             "scan ret: %d, limit: %d, result size: %d",
@@ -835,7 +895,7 @@ namespace tfs
         //del from kv
         if(TFS_SUCCESS == ret && result_size > 0)
         {
-           ret = kv_engine_helper_->delete_keys(vec_keys);
+           ret = kv_engine_helper_->delete_keys(meta_info_name_area_, vec_keys);
         }
         for(i = 0; i < result_size; ++i)//free kv
         {
@@ -889,7 +949,7 @@ namespace tfs
           *prefix_flag = true;
         }
 
-        if (*prefix_flag && DEFAULT_CHAR != delimiter)
+        if (*prefix_flag && KvDefine::DEFAULT_CHAR != delimiter)
         {
           for (size_t j = start_pos; j < strlen(key); j++)
           {
@@ -917,7 +977,9 @@ namespace tfs
       KvKey end_obj_key;
 
       string skey(pkey.key_);
+      string ekey(pkey.key_);
       skey += KvKey::DELIMITER;
+      ekey += (KvKey::DELIMITER+1);
       if (!start_key.empty())
       {
         skey += start_key;
@@ -926,7 +988,15 @@ namespace tfs
       start_obj_key.key_size_ = skey.length();
       start_obj_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
 
-      ret = kv_engine_helper_->scan_keys(start_obj_key, end_obj_key, limit, offset, kv_value_keys, kv_value_values, result_size, scan_type);
+      end_obj_key.key_ = ekey.c_str();
+      end_obj_key.key_size_ = ekey.length();
+      start_obj_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
+
+      ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_obj_key, end_obj_key, limit, offset, kv_value_keys, kv_value_values, result_size, scan_type);
+      if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+      {
+        ret = TFS_SUCCESS;
+      }
 
       return ret;
     }
@@ -1037,10 +1107,10 @@ namespace tfs
         ret = TFS_ERROR;
       }
 
-      if (*limit > MAX_LIMIT or *limit < 0)
+      if (*limit > KvDefine::MAX_LIMIT or *limit < 0)
       {
         TBSYS_LOG(WARN, "limit: %d will be cutoff", *limit);
-        *limit = MAX_LIMIT;
+        *limit = KvDefine::MAX_LIMIT;
       }
 
       if (TFS_SUCCESS == ret)
@@ -1197,7 +1267,7 @@ namespace tfs
       int64_t version = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->get_key(key, &value, &version);
+        ret = kv_engine_helper_->get_key(meta_info_name_area_, key, &value, &version);
       }
       if (ret == EXIT_KV_RETURN_DATA_NOT_EXIST)
       {
@@ -1249,7 +1319,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->put_key(key, value, lock_version);
+        ret = kv_engine_helper_->put_key(meta_info_name_area_, key, value, lock_version);
       }
 
       if (NULL != kv_value_bucket_info_buff)
@@ -1285,7 +1355,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         bucket_meta_info.owner_id_ = user_info.owner_id_;
-        int64_t ver = MAX_VERSION;
+        int64_t ver = KvDefine::MAX_VERSION;
         ret = put_bucket_ex(bucket_name, bucket_meta_info, ver);
       }
 
@@ -1331,7 +1401,7 @@ namespace tfs
       pkey.key_size_ = bucket_name.length();
       pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
 
-      int32_t limit = MAX_LIMIT;
+      int32_t limit = KvDefine::MAX_LIMIT;
       int32_t res_size = -1;
       vector<KvValue*> kv_value_keys;
       vector<KvValue*> kv_value_values;
@@ -1349,7 +1419,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = kv_engine_helper_->delete_key(pkey);
+        ret = kv_engine_helper_->delete_key(meta_info_name_area_, pkey);
       }
 
       //delete for kv

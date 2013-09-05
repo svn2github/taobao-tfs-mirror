@@ -143,8 +143,8 @@ namespace tfs
           }
           if (TFS_SUCCESS != ret)
           {
-            bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%d, unknown msg type: %d, discard, peer ip: %s", pcode, manager_.get_ip_addr(),
-               tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
+            bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, unknown msg type: %d, discard, peer ip: %s", manager_.get_ip_addr(), pcode,
+                tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
             bpacket->free();
           }
         }

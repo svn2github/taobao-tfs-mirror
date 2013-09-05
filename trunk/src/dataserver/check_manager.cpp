@@ -148,23 +148,26 @@ namespace tfs
       int64_t seqno = message->get_seqno();
       uint64_t check_server_id = message->get_server_id();
       const VUINT64& blocks = message->get_blocks();
+      const int32_t interval = message->get_interval();
       int ret = ((seqno > 0) && (INVALID_SERVER_ID != check_server_id)) ?
         TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        add_check_blocks(seqno, check_server_id, blocks);
+        add_check_blocks(seqno, check_server_id, interval, blocks);
         ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
       return ret;
     }
 
-    void CheckManager::add_check_blocks(const int64_t seqno, const uint64_t check_server_id, const common::VUINT64& blocks)
+    void CheckManager::add_check_blocks(const int64_t seqno,
+        const uint64_t check_server_id, const int32_t interval, const common::VUINT64& blocks)
     {
       Mutex::Lock lock(mutex_);
       pending_blocks_.clear();
       success_blocks_.clear();
       seqno_ = seqno;
       check_server_id_ = check_server_id;
+      interval_ = interval;
       VUINT64::const_iterator iter = blocks.begin();
       for ( ; iter != blocks.end(); iter++)
       {
@@ -210,9 +213,13 @@ namespace tfs
         {
           ret = check_single_block(block_id, main_finfos, **iter);
         }*/
+        if (interval_ > 0)
+        {
+          usleep(interval_ * 1000);
+        }
       }
       TIMER_END();
-      TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u %s, file count: %zd, cost: %"PRI64_PREFIX"d",
+      TBSYS_LOG(INFO, "check block %"PRI64_PREFIX"u %s, file count: %zd, cost: %"PRI64_PREFIX"d",
           block_id, (TFS_SUCCESS == ret) ? "success" : "fail", main_finfos.size(), TIMER_DURATION());
 
       return ret;
@@ -253,7 +260,7 @@ namespace tfs
         vector<FileInfoV2> more;
         vector<FileInfoV2> diff;
         vector<FileInfoV2> less;
-        compare_block_fileinfos(finfos, peer_index.finfos_, more, diff, less);
+        compare_block_fileinfos(block_id, finfos, peer_index.finfos_, more, diff, less);
         TBSYS_LOG(INFO, "compare block %"PRI64_PREFIX"u with %s more %zd diff %zd less %zd",
             block_id, tbsys::CNetUtil::addrToString(peer_ns).c_str(),
             more.size(), diff.size(), less.size());
@@ -298,6 +305,8 @@ namespace tfs
       {
         SyncManager& manager = service_.get_sync_manager();
         ret = manager.insert(dest_ns_addr, 0, block_id, iter->id_, OPLOG_REMOVE);
+        TBSYS_LOG(DEBUG, "DIFF file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+            tbsys::CNetUtil::addrToString(dest_ns_addr).c_str(), block_id, iter->id_);
       }
       return ret;
     }
@@ -309,7 +318,7 @@ namespace tfs
       for ( ; iter != less.end(); iter++)
       {
         // TODO: process less file in master cluster
-        TBSYS_LOG(INFO, "less file in %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+        TBSYS_LOG(DEBUG, "LESS file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
             tbsys::CNetUtil::addrToString(dest_ns_addr).c_str(), block_id, iter->id_);
       }
       return TFS_SUCCESS;
@@ -323,7 +332,8 @@ namespace tfs
       }
     };
 
-    void CheckManager::compare_block_fileinfos(const vector<FileInfoV2>& left,
+    void CheckManager::compare_block_fileinfos(const uint64_t block_id,
+        const vector<FileInfoV2>& left,
         const vector<FileInfoV2>& right, vector<FileInfoV2>& more,
         vector<FileInfoV2>& diff, vector<FileInfoV2>& less)
     {
@@ -338,6 +348,15 @@ namespace tfs
       iter = left.begin();
       for ( ; iter != left.end(); iter++)
       {
+        // deleted or invalid, ignore
+        if (iter->status_ & (FI_DELETED | FI_INVALID))
+        {
+          TBSYS_LOG(DEBUG, "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u has been deleted.",
+              block_id, iter->id_);
+          files.erase(*iter);
+          continue;
+        }
+
         set<FileInfoV2, FileInfoCompare>::iterator sit = files.find(*iter);
         if (sit == files.end()) // not found
         {
