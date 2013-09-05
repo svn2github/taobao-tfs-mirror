@@ -15,6 +15,7 @@
  */
 
 #include "stat_tool.h"
+#include "common/version.h"
 
 using namespace std;
 using namespace tfs::common;
@@ -156,16 +157,23 @@ void usage(const char *name)
   fprintf(stderr, "\n****************************************************************************** \n");
   fprintf(stderr, "use this tool to get cluster file and block stat info.\n");
   fprintf(stderr, "Usage: \n");
-  fprintf(stderr, "  %s -s ns_addr [-f log_file] [-m top_num] [-n]\n", name);
+  fprintf(stderr, "  %s -s ns_addr [-f log_file] [-m top_num] [-n][-h][-v]\n", name);
   fprintf(stderr, "     -s ns_addr.   cluster ns addr\n");
   fprintf(stderr, "     -f log_file.  log file for recoding stat info, default is stat_log\n");
   fprintf(stderr, "     -m top_num.   one stat info param, to get top n most biggest blocks, default is 20\n");
   fprintf(stderr, "     -n.           set log level to info, default is debug\n");
+  fprintf(stderr, "     -h.           show this info\n");
+  fprintf(stderr, "     -v.           version\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n");
   exit(TFS_ERROR);
 }
 
+void version(const char* app_name)
+{
+  fprintf(stderr, "%s %s\n", app_name, Version::get_build_description());
+  exit(0);
+}
 
 int main(int argc,char** argv)
 {
@@ -174,7 +182,7 @@ int main(int argc,char** argv)
   string log_file("stat_log");
   int32_t top_num = 20;
   bool is_debug = true;
-  while ((i = getopt(argc, argv, "s:f:m:nh")) != EOF)
+  while ((i = getopt(argc, argv, "s:f:m:nhv")) != EOF)
   {
     switch (i)
     {
@@ -189,6 +197,9 @@ int main(int argc,char** argv)
         break;
       case 'n':
         is_debug = false;
+        break;
+      case 'v':
+        version(argv[0]);
         break;
       case 'h':
       default:

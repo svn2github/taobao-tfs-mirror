@@ -28,6 +28,7 @@
 #include "metacmp.h"
 #include "message/message_factory.h"
 #include "common/base_packet_streamer.h"
+#include "common/version.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
@@ -503,6 +504,7 @@ void print_help()
   fprintf(stderr, "quit(q)      quit\n");
   fprintf(stderr, "exit      exit\n");
   fprintf(stderr, "help(h)      show help info\n");
+  fprintf(stderr, "vesion(v)      show version info\n");
 }
 
 int cmd_show_help(VSTRING&)
@@ -673,12 +675,19 @@ int usage(const char *name)
   fprintf(stderr, "\n****************************************************************************** \n");
   fprintf(stderr, "You can both get and compare cluster info by this tool.\n");
   fprintf(stderr, "Usage: \n");
-  fprintf(stderr, "  %s -s ns_ip_port [-i exec command]    show server, block, machine and rack machine info.\n", name);
-  fprintf(stderr, "  %s -m master_ip_port -s slave_ip_port [-i exec command]   compare server, block info.\n", name);
+  fprintf(stderr, "  %s -s ns_ip_port [-i exec command] [-v]   show server, block, machine and rack machine info.\n", name);
+  fprintf(stderr, "  %s -m master_ip_port -s slave_ip_port [-i exec command] [-v]  compare server, block info.\n", name);
   fprintf(stderr, "****************************************************************************** \n");
   fprintf(stderr, "\n");
   exit(TFS_ERROR);
 }
+
+void version(const char* app_name)
+{
+  fprintf(stderr, "%s %s\n", app_name, Version::get_build_description());
+  exit(0);
+}
+
 static void sign_handler(int32_t sig)
 {
   switch (sig)
@@ -749,7 +758,7 @@ int main(int argc,char** argv)
   string ns_ip_port_1;
   string ns_ip_port_2;
   bool directly = false;
-  while ((i = getopt(argc, argv, "s:m:ih")) != EOF)
+  while ((i = getopt(argc, argv, "s:m:ihv")) != EOF)
   {
     switch (i)
     {
@@ -762,6 +771,9 @@ int main(int argc,char** argv)
         break;
       case 'i':
         directly = true;
+        break;
+      case 'v':
+        version(argv[0]);
         break;
       case 'h':
       default:
