@@ -5,12 +5,12 @@ AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
 						  $(TAIR_META_CPPFLAGS) $(MYSQL_CFLAGS)
 
 #AM_LDFLAGS=-lz -lrt -lpthread -ldl -lgcov
-AM_LDFLAGS=-lz -lrt -lpthread -ldl $(MYSQL_LDFLAGS)
-
+AM_LDFLAGS=-lz -lrt -lpthread -ldl 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
-			$(TAIR_META_LDFLAGS) \
 			$(top_builddir)/src/common/mysql_cluster/libkvengine_mysql.a \
+			$(TAIR_META_LDFLAGS) \
+			$(MYSQL_LDFLAGS)\
       $(TBLIB_ROOT)/lib/libtbnet.a \
       $(TBLIB_ROOT)/lib/libtbsys.a
 
