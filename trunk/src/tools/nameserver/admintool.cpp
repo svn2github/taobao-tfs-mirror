@@ -39,6 +39,10 @@ static TfsClient* g_tfs_client = NULL;
 static STR_FUNC_MAP g_cmd_map;
 static const int32_t CMD_MAX_LEN = 4096;
 
+static bool g_suspend_compact = false;
+static int32_t g_num = 100;
+static int32_t g_sleep_seconds = 0;
+
 int usage(const char *name);
 static void sign_handler(const int32_t sig);
 int main_loop();
@@ -65,6 +69,7 @@ int cmd_dump_plan(const VSTRING &param);
 int cmd_set_bpr(const VSTRING &param);
 int cmd_get_bpr(const VSTRING &param);
 int cmd_batch_file(const VSTRING& param);
+int cmd_batch_compact_file(const VSTRING& param);
 int cmd_clear_system_table(const VSTRING& param);
 
 template<class T> const char* get_str(T it)
@@ -123,9 +128,13 @@ void init()
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
   g_cmd_map["param"] = CmdNode("param name [set value]", "get/set param value, default get.", 0, 4, cmd_set_run_param);
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block by blockid which not exist or expire in ns.", 1, 1, cmd_add_block);
-  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [flag [dsip:port]]",
-      "remove block. flag: 1--remove block from both ds and ns, 2-remove block from ds and relieve relation from ns but keep block in ns's block table,"
-      " 4-just relieve relation between block and the ds of dsip:port, default is 1.",
+  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [flag | dsip:port]",
+      "remove block. "
+      "flag: 1--remove block from both ds and ns, "
+      "flag: 2--relieve block and all ds(hold the block) relations from ns, "
+      "flag: 4--remove block from ds holding the block and relieve their relations from ns but keep block alone in ns's block table, "
+      "dsip:port--just relieve relation between block and the dsip:port, "
+      "default is 1.",
       1, 3, cmd_remove_block);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list.", 1, 1, cmd_list_block);
   //g_cmd_map["loadblk"] = CmdNode("loadblk blockid dsip:port", "build relationship between block and dataserver.", 2, 2, cmd_load_block);
@@ -150,6 +159,7 @@ void init()
       2, 2, cmd_set_bpr);
   g_cmd_map["getbpr"] = CmdNode("getbpr", "get balance percent ratio, float value, ex: 1.000000 or 0.000005", 0, 0, cmd_get_bpr);
   g_cmd_map["batch"] = CmdNode("batch file", "batch run command in file", 1, 1, cmd_batch_file);
+  g_cmd_map["batch_compact"] = CmdNode("batch_compact file num interval", "batch compact blockid in file, when send num line(blockid) continuously to ns, then sleep interval(s)", 3, 3, cmd_batch_compact_file);
 }
 
 void version()
@@ -434,7 +444,7 @@ int cmd_add_block(const VSTRING& param)
 
 int cmd_remove_block(const VSTRING& param)
 {
-  uint32_t flag = 1;
+  uint32_t flag = 0;
   if (param.empty())
   {
     fprintf(stderr, "invalid parameter, param.empty\n");
@@ -447,29 +457,37 @@ int cmd_remove_block(const VSTRING& param)
     return TFS_ERROR;
   }
   uint64_t server_id = 0;
-  if(param.size() > 1)
+  if(param.size() == 1)
   {
-    flag = atoi(param[1].c_str());
-    if(4 == flag)
+    flag = 1;//default
+  }
+  else if(param.size() == 2)
+  {
+    if(param[1].length() == 1)
     {
-      if(3 != param.size())
+      flag = atoi(param[1].c_str());
+      if(1 != flag && 2 != flag && 4 != flag)
       {
-        fprintf(stderr, "invalid parameter, if flag is 4, must have dsip:port behind\n");
-        return TFS_ERROR; 
-      }
-      server_id = Func::get_host_ip(param[2].c_str()); 
-      if (0 == server_id) 
-      { 
-        fprintf(stderr, "invalid addr %s\n", param[2].c_str()); 
+        fprintf(stderr, "removeblock's flag parameter invalid\n");
         return TFS_ERROR;
-      } 
+      }
     }
-    else if(1 != flag && 2 != flag)
+    else//ds_ip:port
     {
-       fprintf(stderr, "removeblock's flag parameter invalid\n");
-       return TFS_ERROR;
+      //flag = 8;//HANDLE_DELETE_BLOCK_FLAG_ONLY_ONE_RELATION
+      server_id = Func::get_host_ip(param[1].c_str());
+      if (0 == server_id)
+      {
+        fprintf(stderr, "invalid addr %s\n", param[1].c_str());
+        return TFS_ERROR;
+      }
     }
-  }//default flag = 1
+  }
+  else
+  {
+    fprintf(stderr, "removeblock's parameter invalid\n");
+    return TFS_ERROR;
+  }
 
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
@@ -478,13 +496,17 @@ int cmd_remove_block(const VSTRING& param)
   req_cc_msg.set_value4(flag);
 
   int32_t status = TFS_ERROR;
-
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
 
-  if (1 == flag || 2 == flag)
+  if(STATUS_MESSAGE_OK == status)
+    status = TFS_SUCCESS;
+  else
+    status = TFS_ERROR;
+
+  if (1 == flag || 2 == flag || 4 == flag)
     ToolUtil::print_info(status, "removeblock: %s", param[0].c_str());
-  else//  flag=4
-    ToolUtil::print_info(status, "removeblock: %s from ds:%s", param[0].c_str(), param[2].c_str());
+  else//flag=8,ds_ip:port
+    ToolUtil::print_info(status, "removeblock: %s from ds:%s", param[0].c_str(), param[1].c_str());
   return status;
 }
 
@@ -558,6 +580,72 @@ int cmd_compact_block(const VSTRING& param)
   ToolUtil::print_info(status, "compactblock %"PRI64_PREFIX"u", block_id);
 
   return status;
+}
+
+int cmd_batch_compact_file(const VSTRING& param)
+{
+  if(param.size() != 3)
+  {
+    fprintf(stderr, "invalid param number, command should like 'batch_compact file num interval'\n");
+    return TFS_ERROR;
+  }
+  const char* batch_file = expand_path(const_cast<string&>(param[0]));
+  g_num = (atoi(param[1].c_str()));
+  g_sleep_seconds = (atoi(param[2].c_str()));
+
+  if(g_num <= 0 || g_sleep_seconds < 0)
+  {
+    fprintf(stderr, "invalid num: %d or interval: %d, they should > 0\n", g_num, g_sleep_seconds);
+    return TFS_ERROR;
+  }
+  FILE* fp = fopen(batch_file, "rb");
+  int ret = TFS_SUCCESS;
+  if (fp == NULL)
+  {
+    fprintf(stderr, "open file error: %s\n\n", batch_file);
+    ret = TFS_ERROR;
+  }
+  else
+  {
+    signal(SIGUSR1, sign_handler);
+    signal(SIGUSR2, sign_handler);
+    signal(SIGHUP, sign_handler);
+
+    int32_t error_count = 0;
+    int32_t count = 0;
+    char buffer[MAX_CMD_SIZE];
+    VSTRING sub_param(1);
+    while (fgets(buffer, MAX_CMD_SIZE, fp))
+    {
+      sub_param[0] = string(buffer);
+      if ((ret = cmd_compact_block(sub_param)) != TFS_SUCCESS)
+      {
+        error_count++;
+      }
+      if (++count % 100 == 0)
+      {
+        fprintf(stdout, "total: %d, %d errors.\n", count, error_count);
+        fflush(stdout);
+      }
+      if (TFS_CLIENT_QUIT == ret)
+      {
+        break;
+      }
+      do
+      {
+        if (g_suspend_compact || 0 == count % g_num)// suspend when signal SIGHUP set g_suspend_compact
+        {
+          fprintf(stdout, "sleep %ds, num: %d, current line no: %d, be suspended: %s\n",
+              g_sleep_seconds, g_num, count, g_suspend_compact ? "true" : "false");
+          fflush(stdout);
+          sleep((unsigned int)g_sleep_seconds);
+        }
+      }while (g_suspend_compact);
+    }
+    fprintf(stdout, "total: %d, %d errors.\n\n", count, error_count);
+    fclose(fp);
+  }
+  return TFS_SUCCESS;
 }
 
 int cmd_replicate_block(const VSTRING& param)
@@ -1098,15 +1186,47 @@ int usage(const char *name)
 
 static void sign_handler(const int32_t sig)
 {
+  TBSYS_LOG(INFO, "receive signal: %d", sig);
   switch (sig)
   {
-  case SIGINT:
-  case SIGTERM:
-    fprintf(stderr, "admintool exit.\n");
-    exit(TFS_ERROR);
-    break;
-  default:
-    break;
+    case SIGUSR1:
+      if (!g_suspend_compact)
+      {
+        g_sleep_seconds *= 2;
+      }
+      else
+      {
+        g_num *= 2;
+      }
+      break;
+    case SIGUSR2:
+      if (!g_suspend_compact)
+      {
+        g_sleep_seconds /= 2;
+        if (0 == g_sleep_seconds)
+        {
+          g_sleep_seconds = 1;
+        }
+      }
+      else
+      {
+        g_num /= 2;
+        if (0 == g_num)
+        {
+          g_num = 1;
+        }
+      }
+      break;
+    case SIGHUP:
+      g_suspend_compact = !g_suspend_compact;
+      break;
+    case SIGINT:
+    case SIGTERM:
+      fprintf(stderr, "admintool exit.\n");
+      exit(TFS_ERROR);
+      break;
+    default:
+      break;
   }
 }
 
@@ -1293,7 +1413,7 @@ int cmd_dump_plan(const VSTRING& param)
 //      printf("Plan Number(running + pending):%d\n", plan_num);
 //      printf("seqno   type       status    block_id   last_update_time    runer  \n");
       printf("---------------------------------------------------------\n");
- 
+
       type_print_map.insert(make_pair(PLAN_TYPE_REPLICATE, "replicate"));
       type_print_map.insert(make_pair(PLAN_TYPE_MOVE, "move"));
       type_print_map.insert(make_pair(PLAN_TYPE_COMPACT, "compact"));
