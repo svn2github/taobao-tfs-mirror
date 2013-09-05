@@ -26,6 +26,7 @@
 #include "message/block_info_message.h"
 #include "message/block_info_message_v2.h"
 #include "new_client/tfs_client_impl.h"
+#include "clientv2/tfs_client_impl_v2.h"
 #include "new_client/fsname.h"
 #include "util.h"
 #include "tool_util.h"
@@ -33,6 +34,7 @@
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace std;
 
 namespace tfs
@@ -179,8 +181,72 @@ namespace tfs
             //Func::hex_dump(data, 10, true, TBSYS_LOG_LEVEL_INFO);
             //TBSYS_LOG(INFO, "FILENAME : %s, READ LENGTH: %d, crc: %u", filename.c_str(), rlen, crc);
           }
+          else
+          {
+            break;
+          }
         }
         TfsClientImpl::Instance()->close(fd);
+      }
+      return ret;
+    }
+
+    int Util::read_file_info_v2(const std::string& ns_addr, const std::string& filename, FileInfoV2& info)
+    {
+      int32_t ret = TFS_SUCCESS;
+      TfsFileStat stat;
+      ret = TfsClientImplV2::Instance()->stat_file(&stat, filename.c_str(), NULL, FORCE_STAT, ns_addr.c_str());
+      if (TFS_SUCCESS == ret)
+      {
+        info.id_ = stat.file_id_;
+        info.offset_ = stat.offset_;
+        info.size_ = stat.size_;
+        info.modify_time_ = stat.modify_time_;
+        info.create_time_ = stat.create_time_;
+        info.status_= stat.flag_;
+        info.crc_ = stat.crc_;
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "stat file:%s fail, ns:%s, ret:%d", filename.c_str(), ns_addr.c_str(), ret);
+      }
+      return ret;
+    }
+
+    int Util::read_file_real_crc_v2(const std::string& ns_addr, const std::string& filename, uint32_t& crc, const bool force)
+    {
+      crc = 0;
+      int32_t fd = TfsClientImplV2::Instance()->open(filename.c_str(), NULL, ns_addr.c_str(), T_READ);
+      int32_t ret = fd < 0 ? fd : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret && force)
+      {
+        ret = TfsClientImplV2::Instance()->set_option_flag(fd, READ_DATA_OPTION_FLAG_FORCE);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t total = 0;
+        char data[MAX_READ_SIZE]={'\0'};
+        TfsFileStat stat;
+        while (true)
+        {
+          int32_t rlen = TfsClientImplV2::Instance()->readv2(fd, data, MAX_READ_SIZE, &stat);
+          ret = rlen < 0 ? rlen : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
+          {
+            total += rlen;
+            crc = Func::crc(crc, data, rlen);
+            //Func::hex_dump(data, 10, true, TBSYS_LOG_LEVEL_INFO);
+            //TBSYS_LOG(INFO, "FILENAME : %s, READ LENGTH: %d, crc: %u", filename.c_str(), rlen, crc);
+            if(rlen < MAX_READ_SIZE)
+              break;
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "read file fail, filename:%s, ns:%s, ret:%d", filename.c_str(), ns_addr.c_str(), ret);
+            break;
+          }
+        }
+        TfsClientImplV2::Instance()->close(fd);
       }
       return ret;
     }

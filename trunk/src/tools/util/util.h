@@ -31,13 +31,23 @@ namespace tfs
       }
     };
 
+    struct CompareFileInfoV2ByFileId
+    {
+      bool operator()(const common::FileInfoV2& left, const common::FileInfoV2& right) const
+      {
+        return left.id_ < right.id_;
+      }
+    };
+
     class Util
     {
       public:
       static int read_file_infos(const std::string& ns_addr, const uint64_t block, std::multiset<std::string>& files, const int32_t version);
       static int read_file_infos(const std::string& ns_addr, const uint64_t block, std::set<common::FileInfo, CompareFileInfoByFileId>& files, const int32_t version);
       static int read_file_info(const std::string& ns_addr, const std::string& filename, common::FileInfo& info);
+      static int read_file_info_v2(const std::string& ns_addr, const std::string& filename, common::FileInfoV2& info);
       static int read_file_real_crc(const std::string& ns_addr, const std::string& filename, uint32_t& crc);
+      static int read_file_real_crc_v2(const std::string& ns_addr, const std::string& filename, uint32_t& crc, const bool force);
     };
   }
 }

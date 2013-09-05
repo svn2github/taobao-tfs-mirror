@@ -75,7 +75,7 @@ namespace tfs
       int ret = TFS_ERROR;
       if (0 == server_id)
       {
-        TBSYS_LOG(ERROR, "server is is invalid: %"PRI64_PREFIX"u", server_id);
+        TBSYS_LOG(ERROR, "server id is invalid: %"PRI64_PREFIX"u", server_id);
       }
       else
       {
@@ -100,8 +100,7 @@ namespace tfs
           }
           else if (rsp->getPCode() == STATUS_MESSAGE)
           {
-            ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
-            fprintf(stderr, "get block info fail, error: %s\n,", dynamic_cast<StatusMessage*>(rsp)->get_error());
+            fprintf(stderr, "get block info fail, error: %s\n", dynamic_cast<StatusMessage*>(rsp)->get_error());
             ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
           }
         }
@@ -116,6 +115,36 @@ namespace tfs
       return ret;
     }
 
+
+    int ToolUtil::read_file_infos_v2(const uint64_t ns_id, const uint64_t block_id, std::vector<FileInfoV2>& finofs)
+    {
+      int ret = TFS_SUCCESS;
+      VUINT64 ds_list;
+      ret = get_block_ds_list_v2(ns_id, block_id, ds_list);
+      if(TFS_SUCCESS == ret)
+      {
+        if(ds_list.size() > 0)
+        {
+          int index = random() % ds_list.size();
+          uint64_t ds_server = ds_list.at(index);
+          ret = list_file_v2(ds_server, block_id, block_id, finofs);
+          if(TFS_SUCCESS != ret)
+          {
+             TBSYS_LOG(WARN, "get blockid: %"PRI64_PREFIX"u files list fail, ds_id:%s, ret:%d", block_id, tbsys::CNetUtil::addrToString(ds_server).c_str(), ret);
+          }
+        }
+        else
+        {
+          ret = EXIT_TFS_ERROR;//有编组的block丢失,虽然可以继续退化读，但是效率太低，还是不要读了
+          TBSYS_LOG(WARN, "unknown error, get block ds list success, but ds list is empty, only can degrade read, blockid: %"PRI64_PREFIX"u, ns_addr:%s", block_id, tbsys::CNetUtil::addrToString(ns_id).c_str());
+        }
+      }
+      else
+      {
+        TBSYS_LOG(WARN, "get blockid: %"PRI64_PREFIX"u ds list fail, ns_addr:%s, ret:%d", block_id, tbsys::CNetUtil::addrToString(ns_id).c_str(), ret);
+      }
+      return ret;
+    }
 
     int ToolUtil::read_file_info(const uint64_t server_id, const uint64_t block_id, const uint64_t file_id, const int32_t flag, FileInfo& info)
     {
@@ -339,6 +368,78 @@ namespace tfs
         {
           TBSYS_LOG(WARN, "create new client error");
           ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        }
+      }
+
+      return ret;
+    }
+
+    int ToolUtil::get_all_blocks_meta(const uint64_t ns_id, VUINT64& blocks, std::vector<BlockMeta>& blocks_meta, const bool need_check_block)
+    {
+      int ret = TFS_SUCCESS;
+      BatchGetBlockInfoMessageV2 bgbi_message;
+      uint64_t* pblocks = bgbi_message.get_block_ids();
+      bgbi_message.set_mode(T_READ);
+      bgbi_message.set_flag(F_FAMILY_INFO);//需要获取到family info
+
+      int32_t batch_index = 0;
+      uint32_t index = 0;
+      while (true)
+      {
+        while (index < blocks.size() && batch_index < MAX_BATCH_SIZE)
+        {
+          uint64_t block_id = blocks.at(index++);
+          if (!IS_VERFIFY_BLOCK(block_id) || need_check_block)
+          {
+            pblocks[batch_index++] = block_id;
+          }
+          else
+          {
+            TBSYS_LOG(DEBUG, "skip verify block, blockid: %"PRI64_PREFIX"u,", block_id);
+          }
+        }
+
+        if (0 == batch_index)
+        {
+          break;
+        }
+        bgbi_message.set_size(batch_index);
+        batch_index = 0;
+
+        tbnet::Packet* rsp = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        ret = send_msg_to_server(ns_id, client, &bgbi_message, rsp);
+        if (TFS_SUCCESS == ret)
+        {
+          if (rsp->getPCode() == BATCH_GET_BLOCK_INFO_RESP_MESSAGE_V2)
+          {
+            BatchGetBlockInfoRespMessageV2* bgbi_resp = dynamic_cast<BatchGetBlockInfoRespMessageV2*>(rsp);
+            BlockMeta* pblocks_meta = bgbi_resp->get_block_metas();
+            for (int32_t i = 0; i < bgbi_resp->get_size(); ++i)
+            {
+              blocks_meta.push_back(pblocks_meta[i]);// 如果block不存在或者ds_list为空则pblocks_meta[i].size为0
+            }
+          }
+          else if (rsp->getPCode() == STATUS_MESSAGE)
+          {
+            StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+            ret = sm->get_status();
+            TBSYS_LOG(WARN, "batch get block info fail, error msg: %s, ret: %d", sm->get_error(), ret);
+          }
+          else
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+            TBSYS_LOG(WARN, "batch get block info fail, unknown msg, pcode: %d", rsp->getPCode());
+          }
+        }
+        else
+        {
+          TBSYS_LOG(WARN, "batch get block info fail, ret: %d", ret);
+        }
+
+        if (TFS_SUCCESS != ret || index >= blocks.size())
+        {
+          break;
         }
       }
 
