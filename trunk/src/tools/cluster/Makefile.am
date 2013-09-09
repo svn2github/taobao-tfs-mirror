@@ -3,7 +3,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 	    -I$(TBLIB_ROOT)/include/tbnet\
       $(READLINE_INCLUDE)
 
-AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -lsnappy
+AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
 
 bin_PROGRAMS = sync_by_blk sync_by_log sync_by_file transfer_by_file block_tool calc_ip_addr sync_by_blkv2 sync_by_filev2 block_toolv2
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\

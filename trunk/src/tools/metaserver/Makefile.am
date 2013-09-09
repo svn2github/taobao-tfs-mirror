@@ -4,7 +4,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 						$(MYSQL_CFLAGS)
 						$(READLINE_INCLUDE)
 
-AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid -lsnappy $(MYSQL_LDFLAGS)
+AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid $(MYSQL_LDFLAGS)
 
 bin_PROGRAMS =  dump2mysql press_select meta_transfer txt2new txt2new_V2 check_old_new check_old_new_V2 sync_nginx2kv go_tair_for_kv  # del_from_tair put_bucket_to_tair
 

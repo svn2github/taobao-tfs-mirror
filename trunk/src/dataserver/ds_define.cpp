@@ -64,8 +64,7 @@ namespace tfs
     void DsRuntimeGlobalInformation::startup()
     {
       information_.startup_time_ = time(NULL);
-      //TODO
-      //information_.status_ = common::DATASERVER_STATUS_ALIVE;
+      //information_.status_ = common::DATASERVER_STATUS_ALIVE;//TODO
     }
 
     void DsRuntimeGlobalInformation::destroy()
@@ -76,8 +75,9 @@ namespace tfs
 
     bool DsRuntimeGlobalInformation::is_destroyed() const
     {
-      return false;//TODO
+      //TODO
       //return information_.status_ == common::DATASERVER_STATUS_DEAD;
+      return false;
     }
 
     DsRuntimeGlobalInformation& DsRuntimeGlobalInformation::instance()

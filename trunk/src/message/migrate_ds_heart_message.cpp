@@ -6,10 +6,10 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: heart_message.cpp 384 2011-05-31 07:47:07Z duanfei@taobao.com $
+ * Version: $Id: migrate_ds_heart_message.cpp 384 2013-09-08 09:47:07Z duanfei@taobao.com $
  *
  * Authors:
- *   duolong <duolong@taobao.com>
+ *   duanfei <duanfei@taobao.com>
  *      - initial release
  *
  */

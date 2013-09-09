@@ -388,7 +388,6 @@ namespace tfs
       return ret;
     }
 
-
     int ClientRequestServer::handle_control_compact_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
       TBSYS_LOG(INFO, "handle control compact block: %"PRI64_PREFIX"u", info.value3_);
@@ -423,7 +422,7 @@ namespace tfs
         ret = NULL == block ? EXIT_NO_BLOCK : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
-          ret = 0 == info.value3_ ? EXIT_BLOCK_ID_INVALID_ERROR : TFS_SUCCESS;
+          ret = INVALID_BLOCK_ID == info.value3_ ? EXIT_BLOCK_ID_INVALID_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
             new_create_block_collect = true;
@@ -438,7 +437,7 @@ namespace tfs
           uint64_t servers[MAX_REPLICATION_NUM+ 1];
           ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM+ 1, servers);
           manager_.get_block_manager().get_servers(helper, info.value3_);
-          if (0 != info.value1_)
+          if (INVALID_SERVER_ID != info.value1_)
             source = manager_.get_server_manager().get(info.value1_);
           else
             manager_.get_server_manager().choose_replicate_source_server(source, helper);
@@ -452,7 +451,7 @@ namespace tfs
           {
             if (!helper.exist(source->id()))
               helper.push_back(source->id());
-            if (0 != info.value2_)
+            if (INVALID_SERVER_ID != info.value2_)
               target = manager_.get_server_manager().get(info.value2_);
             else//这里复制和均衡都采用同样的策略，如果迁移时直接采用迁移策略代价太大
               manager_.get_server_manager().choose_replicate_target_server(target, helper);
@@ -464,6 +463,17 @@ namespace tfs
             }
           }
           if (TFS_SUCCESS == ret)//NULL != source && NULL != target
+          {
+            uint32_t lan = Func::get_lan(source->id(), SYSPARAM_NAMESERVER.group_mask_);
+            uint32_t lan2= Func::get_lan(target->id(), SYSPARAM_NAMESERVER.group_mask_);
+            ret = (lan != lan2) ? TFS_SUCCESS : EXIT_CHOOSE_RACK_ERROR;
+            if (TFS_SUCCESS != ret)
+            {
+              snprintf(buf, buf_length, "immediately %s block: %"PRI64_PREFIX"u fail, choose rack error: %u == %u",
+                  info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", info.value3_, lan, lan2);
+            }
+          }
+          if (TFS_SUCCESS == ret)
           {
             helper.clear();
             helper.push_back(source->id());

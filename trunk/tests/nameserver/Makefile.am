@@ -8,7 +8,7 @@ AM_CPPFLAGS=-I${top_srcdir}/src/nameserver\
 			$(TAIR_STORE_CPPFLAGS)
 
 #AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -lgcov
-AM_LDFLAGS=-lpthread -lrt -lm -lgtest -lsnappy $(MYSQL_LDFLAGS) 
+AM_LDFLAGS=-lpthread -lrt -lm -lgtest $(MYSQL_LDFLAGS) 
  
 LDADD=$(top_builddir)/src/nameserver/libnameserver.a \
 			$(top_builddir)/src/message/libtfsmessage.a\

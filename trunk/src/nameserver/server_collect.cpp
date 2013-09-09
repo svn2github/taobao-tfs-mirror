@@ -74,6 +74,7 @@ namespace tfs
       total_network_bandwith_(128),//MB
       write_index_(0),
       status_(SERVICE_STATUS_ONLINE),
+      disk_type_(info.type_),
       rb_status_(REPORT_BLOCK_STATUS_REPORTING)
     {
         float   expand_ratio = 0.0;
@@ -530,6 +531,7 @@ namespace tfs
       current_load_ = info.current_load_;
       block_count_ = info.block_count_;
       startup_time_ = info.startup_time_;
+      disk_type_   = info.type_;
       for (int8_t index = 0; index < MAX_RW_STAT_PAIR_NUM; ++index)
       {
         write_bytes_[index] = info.write_bytes_[index];

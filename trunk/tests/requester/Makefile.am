@@ -3,7 +3,7 @@ AM_CPPFLAGS=-I${top_srcdir}/src \
 						-I$(TBLIB_ROOT)/include/tbnet \
 						$(TAIR_CACHE_CPPFLAGS)
 
-AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -static-libgcc -lsnappy
+AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -static-libgcc 
 
 LDADD=$(top_builddir)/src/requester/libtfsrequester.a \
 			$(top_builddir)/src/message/libtfsmessage.a \

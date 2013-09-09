@@ -3,7 +3,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 	    -I$(TBLIB_ROOT)/include/tbnet\
 			-DUSE_NEW_CLIENT
 
-AM_LDFLAGS=-lrt -lpthread -ldl -luuid -lz -lsnappy
+AM_LDFLAGS=-lrt -lpthread -ldl -luuid -lz
 
 bin_PROGRAMS = transfer_block split_block_tool compare_crc compare_same_cluster \
 transfer_same_cluster_block compare_same_cluster_ext  remove_block verify_file_same_cluster\

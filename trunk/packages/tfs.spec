@@ -11,16 +11,16 @@ Prefix:%{_prefix}
 Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
-#BuildRequires: t-csrd-tbnet-devel >= 1.0.8
-#BuildRequires: MySQL-devel-community = 5.1.48 
-#BuildRequires: tair-devel = 2.3.2.3
-#BuildRequires: boost-devel >= 1.3 
-#BuildRequires: readline-devel
-#BuildRequires: ncurses-devel
-#BuildRequires: google-perftools = 1.7
-#BuildRequires: jemalloc-devel >= 2.2
-#BuildRequires: snappy-devel >= 1.0.5
-#BuildRequires: libunwind
+BuildRequires: t-csrd-tbnet-devel >= 1.0.8
+BuildRequires: MySQL-devel-community = 5.1.48 
+BuildRequires: tair-devel = 2.3.2.3
+BuildRequires: boost-devel >= 1.3 
+BuildRequires: readline-devel
+BuildRequires: ncurses-devel
+BuildRequires: google-perftools = 1.7
+BuildRequires: jemalloc-devel >= 2.2
+BuildRequires: snappy-devel >= 1.0.5
+BuildRequires: libunwind
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}

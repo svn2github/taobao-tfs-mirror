@@ -86,6 +86,7 @@ namespace tfs
       inline uint64_t id() const { return id_;}
       inline int8_t get_status() const { return status_;}
       inline void set_status(const int8_t status) { status_ = status;}
+      inline int8_t get_disk_type() const { return disk_type_;}
       inline bool is_alive() const { return common::SERVICE_STATUS_ONLINE == status_;}
       inline int8_t get_wait_free_phase() const { return wait_free_phase_;}
       inline void set_wait_free_phase(const int8_t wait_free_phase) { wait_free_phase_ = wait_free_phase;}
@@ -146,7 +147,8 @@ namespace tfs
       int32_t total_network_bandwith_;
       mutable int32_t write_index_;
       int8_t  reserve_[3];
-      int8_t  status_:2;
+      int8_t  status_:1;
+      int8_t  disk_type_:1;
       int8_t  wait_free_phase_:3;
       int8_t  rb_status_:3;//report block complete status
    };

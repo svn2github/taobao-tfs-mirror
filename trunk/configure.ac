@@ -109,7 +109,7 @@ if test "${enable_uniquestore}" = "yes"; then
                 exit 1;
         fi
         UNIQUE_STORE_CPPFLAGS="-DWITH_UNIQUE_STORE -I${TAIR_ROOT}/include"
-        UNIQUE_STORE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz -lsnaapy"
+        UNIQUE_STORE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz -lsnappy"
 fi
 AM_CONDITIONAL([WITH_UNIQUE_STORE],[test x$enable_uniquestore = xyes])
 AC_SUBST([UNIQUE_STORE_CPPFLAGS])
@@ -254,6 +254,7 @@ AC_CONFIG_FILES([Makefile
                  src/rcserver/Makefile
                  src/kv_meta_server/Makefile
                  src/syncserver/Makefile
+                 src/migrateserver/Makefile
                  src/checkserver/Makefile
                  src/life_cycle_manager/Makefile
                  src/life_cycle_manager/root_manager/Makefile

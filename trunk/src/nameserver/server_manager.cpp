@@ -270,6 +270,10 @@ namespace tfs
         ret = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
+          ret = DATASERVER_DISK_TYPE_FULL == pserver->get_disk_type() ? TFS_SUCCESS : EXIT_DATASERVER_READ_ONLY;
+        }
+        if (TFS_SUCCESS == ret)
+        {
           ret = pserver->apply_block(manager_, output);
         }
       }
@@ -547,7 +551,8 @@ namespace tfs
         TBSYS_LOG(DEBUG, "==============addr: %s, lans : %u", tbsys::CNetUtil::addrToString(pserver->id()).c_str(), lan);
         if (manager_.get_task_manager().has_space_do_task_in_machine(pserver->id(), true)
             && !manager_.get_task_manager().exist_server(pserver->id())
-            && lans.find(lan) == lans.end())
+            && lans.find(lan) == lans.end()
+            && DATASERVER_DISK_TYPE_FULL == pserver->get_disk_type())
         {
           lans.insert(lan);
           sources.erase(pserver);
@@ -811,7 +816,8 @@ namespace tfs
         random_index = random() % servers_.size();
         ServerCollect* pserver = servers_.at(random_index);
         assert(NULL != pserver);
-        bool valid  = ((!pserver->is_full()) && (!except.exist(pserver->id())));
+        bool valid  = ((!pserver->is_full()) && (!except.exist(pserver->id()))
+                      && (DATASERVER_DISK_TYPE_FULL == pserver->get_disk_type()));
         if (valid && !lans.empty())
         {
           uint32_t lan =  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);

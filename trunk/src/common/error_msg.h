@@ -156,6 +156,7 @@ namespace tfs
     const int32_t EXIT_BLOCK_COPIES_INCOMPLETE = -5058;
     const int32_t EXIT_SEND_SYNC_FILE_ENTRY_MSG_ERROR = -5059;
     const int32_t EXIT_CHOOSE_SOURCE_SERVER_ERROR = -5060;
+    const int32_t EXIT_CHOOSE_RACK_ERROR = -5061;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error
@@ -237,6 +238,7 @@ namespace tfs
     const int32_t EXIT_NO_WRITABLE_BLOCK = -8078;
     const int32_t EXIT_BLOCK_HAS_WRITE = -8079;
     const int32_t EXIT_MIGRATE_DS_HEARTBEAT_ERROR = -8080;
+    const int32_t EXIT_DATASERVER_READ_ONLY = -8081;//current dataserver read only
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;
@@ -302,7 +304,7 @@ namespace tfs
 
     // migrate server error code
     const int32_t EXIT_GET_ALL_BLOCK_HEADER_ERROR = -19000;
-
+    const int32_t EXIT_SEND_MIGRATE_MSG_ERROR = -19001;
     // sync server error code
     const int32_t EXIT_SOURCE_DS_SYNC_THREAD_NOT_FOUND = -20000;
   }
