@@ -62,7 +62,8 @@ namespace tfs
        *    3. alloc a operation id if needed
        */
       int prepare_op(uint64_t& block_id, uint64_t& file_id, uint64_t& op_id,
-        const OpType type, const bool is_master, common::VUINT64& servers);
+        const OpType type, const bool is_master, const common::FamilyInfoExt& family_info,
+        common::VUINT64& servers);
 
       /*
        * when receive a close/unlink reqeust
@@ -70,6 +71,12 @@ namespace tfs
        */
       int reset_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
         common::VUINT64& servers);
+
+      /**
+       * forward request to slave
+       */
+      int forward_op(tbnet::Packet* message,
+          const uint64_t block_id, const int64_t family_id, const common::VUINT64& servers);
 
       /*
        * when receive a response from peer server

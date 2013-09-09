@@ -58,7 +58,7 @@ namespace tfs
     // prepare_op is called in write/prepare unlink stage
     // a client request directly send to ds when direct flag is set
     int OpManager::prepare_op(uint64_t& block_id, uint64_t& file_id, uint64_t& op_id,
-        const OpType type, const bool is_master, VUINT64& servers)
+        const OpType type, const bool is_master, const FamilyInfoExt& family_info, VUINT64& servers)
     {
       int ret = TFS_SUCCESS;
 
@@ -86,6 +86,20 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      }
+
+      // transfor server if block in family
+      if ((TFS_SUCCESS == ret) && (INVALID_FAMILY_ID != family_info.family_id_))
+      {
+        VUINT64 check_servers;
+        family_info.get_check_servers(check_servers);
+        for (uint32_t i = 0; i < check_servers.size(); i++)
+        {
+          if (INVALID_SERVER_ID != check_servers[i])
+          {
+            servers.push_back(check_servers[i]);
+          }
+        }
       }
 
       if ((TFS_SUCCESS == ret) && (0 == (file_id & 0xFFFFFFFF)))
@@ -154,6 +168,72 @@ namespace tfs
           op_meta->get_servers(servers);
         }
         put(op_meta);
+      }
+
+      return ret;
+    }
+
+    int OpManager::forward_op(tbnet::Packet* message,
+        const uint64_t block_id, const int64_t family_id, const VUINT64& servers)
+    {
+      // post request to slaves
+      int ret = TFS_SUCCESS;
+      NewClient* client = NewClientManager::get_instance().create_client();
+      assert(NULL != client);
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+
+      // take master's version to slave
+      BlockInfoV2 block_info;
+      ret = get_block_manager().get_block_info(block_info, block_id);
+      for (uint32_t i = 0; TFS_SUCCESS == ret && i < servers.size(); i++)
+      {
+        if (servers[i] == ds_info.information_.id_)
+        {
+          continue;  // exclude self
+        }
+
+        if (WRITE_FILE_MESSAGE_V2 == message->getPCode())
+        {
+          WriteFileMessageV2* msg = dynamic_cast<WriteFileMessageV2*>(message);
+          msg->set_version(block_info.version_);
+          if (INVALID_FAMILY_ID != family_id)
+          {
+            FamilyInfoExt& info = msg->get_family_info();
+            msg->set_block_id(info.get_block(servers[i]));
+            info.family_id_ = INVALID_FAMILY_ID;  // family will not take to slave
+          }
+        }
+        else if (CLOSE_FILE_MESSAGE_V2 == message->getPCode())
+        {
+          CloseFileMessageV2* msg = dynamic_cast<CloseFileMessageV2*>(message);
+          if (INVALID_FAMILY_ID != family_id)
+          {
+            FamilyInfoExt& info = msg->get_family_info();
+            msg->set_block_id(info.get_block(servers[i]));
+            info.family_id_ = INVALID_FAMILY_ID;
+          }
+        }
+        else if (UNLINK_FILE_MESSAGE_V2 == message->getPCode())
+        {
+          UnlinkFileMessageV2* msg = dynamic_cast<UnlinkFileMessageV2*>(message);
+          msg->set_version(block_info.version_);
+          if (INVALID_FAMILY_ID != family_id)
+          {
+            FamilyInfoExt& info = msg->get_family_info();
+            msg->set_block_id(info.get_block(servers[i]));
+            info.family_id_ = INVALID_FAMILY_ID;
+          }
+        }
+        else
+        {
+          assert(false);
+        }
+
+        ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "forward request to slave fail, ret : %d", ret);
+        }
       }
 
       return ret;
@@ -232,6 +312,18 @@ namespace tfs
         }
         put(op_meta);
       }
+
+      // parameter invalid, or lease expired, etc
+      // request is finished, just return error to client
+      if (TFS_SUCCESS != ret)
+      {
+        all_finish = true;
+        stat.status_ = ret;
+        stat.error_ << "prepare fail or meta expired";
+        stat.size_ = 0;
+        stat.cost_ = 0;
+      }
+
       return all_finish;
     }
 
@@ -262,10 +354,8 @@ namespace tfs
         ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "write check block version. blockid: %"PRI64_PREFIX"u, "
-              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
-              "remote version: %d, local version: %d, ret: %d",
-              block_id, file_id, op_id, remote_version, local.version_, ret);
+          TBSYS_LOG(WARN, "write version conflict. blockid: %"PRI64_PREFIX"u, version: %d<>%d",
+            block_id, remote_version, local.version_);
         }
       }
 
@@ -307,9 +397,9 @@ namespace tfs
           DataFile& data_file = dynamic_cast<WriteOpMeta* >(op_meta)->get_data_file();
           if (crc != data_file.crc())
           {
-            TBSYS_LOG(WARN, "check crc fail. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
-                "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, crc: %u:%u",
-                block_id, attach_block_id, file_id, op_id, crc, data_file.crc());
+            TBSYS_LOG(WARN, "crc error. blockid: %"PRI64_PREFIX"u, "
+                "attach_blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, crc: %u<>%u",
+                block_id, attach_block_id, file_id, crc, data_file.crc());
             ret = EXIT_CHECK_CRC_ERROR;
           }
         }
@@ -346,10 +436,8 @@ namespace tfs
         ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "unlink check block version conflict. blockid: %"PRI64_PREFIX"u, "
-              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
-              "remote version: %d, local version: %d, ret: %d",
-              block_id, file_id, op_id, remote_version, local.version_, ret);
+          TBSYS_LOG(WARN, "unlink version conflict. blockid: %"PRI64_PREFIX"u, version: %d<>%d",
+            block_id, remote_version, local.version_);
         }
       }
 

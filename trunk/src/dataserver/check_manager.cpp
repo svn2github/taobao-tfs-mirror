@@ -261,7 +261,7 @@ namespace tfs
         vector<FileInfoV2> diff;
         vector<FileInfoV2> less;
         compare_block_fileinfos(block_id, finfos, peer_index.finfos_, more, diff, less);
-        TBSYS_LOG(INFO, "compare block %"PRI64_PREFIX"u with %s more %zd diff %zd less %zd",
+        TBSYS_LOG(DEBUG, "compare block %"PRI64_PREFIX"u with %s more %zd diff %zd less %zd",
             block_id, tbsys::CNetUtil::addrToString(peer_ns).c_str(),
             more.size(), diff.size(), less.size());
 
@@ -318,7 +318,7 @@ namespace tfs
       for ( ; iter != less.end(); iter++)
       {
         // TODO: process less file in master cluster
-        TBSYS_LOG(DEBUG, "LESS file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+        TBSYS_LOG(DEBUG, "LESS file in %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
             tbsys::CNetUtil::addrToString(dest_ns_addr).c_str(), block_id, iter->id_);
       }
       return TFS_SUCCESS;
