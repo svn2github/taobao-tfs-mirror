@@ -59,25 +59,23 @@ namespace tfs
       max_rw_network_bandwidth_mb_ = 0;
       max_block_size_ = 0;
       max_write_file_count_ = 0;
+      status_ = common::DATASERVER_STATUS_DEAD;
     }
 
     void DsRuntimeGlobalInformation::startup()
     {
       information_.startup_time_ = time(NULL);
-      //information_.status_ = common::DATASERVER_STATUS_ALIVE;//TODO
+      status_ = common::DATASERVER_STATUS_ALIVE;
     }
 
     void DsRuntimeGlobalInformation::destroy()
     {
-      //TODO
-      //information_.status_ = common::DATASERVER_STATUS_DEAD;
+      status_ = common::DATASERVER_STATUS_DEAD;
     }
 
     bool DsRuntimeGlobalInformation::is_destroyed() const
     {
-      //TODO
-      //return information_.status_ == common::DATASERVER_STATUS_DEAD;
-      return false;
+      return status_ == common::DATASERVER_STATUS_DEAD;
     }
 
     DsRuntimeGlobalInformation& DsRuntimeGlobalInformation::instance()

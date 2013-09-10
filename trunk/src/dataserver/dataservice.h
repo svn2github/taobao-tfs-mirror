@@ -30,8 +30,6 @@
 #include "common/status_message.h"
 #include "message/message_factory.h"
 #include "sync_manager.h"
-#include "data_management.h"
-#include "requester.h"
 #include "gc.h"
 #include "client_request_server.h"
 #include "op_manager.h"
@@ -40,6 +38,7 @@
 #include "task_manager.h"
 #include "traffic_control.h"
 #include "check_manager.h"
+#include "block_manager.h"
 #include "writable_block_manager.h"
 #include "migrate_manager.h"
 
@@ -97,7 +96,6 @@ namespace tfs
       /** handle packet*/
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
 
-      bool check_response(common::NewClient* client);
       int callback(common::NewClient* client);
 
       std::string get_real_work_dir();
@@ -109,7 +107,7 @@ namespace tfs
       inline DataHelper&  get_data_helper() { return data_helper_;}
       inline TaskManager&  get_task_manager() { return task_manager_;}
       inline TrafficControl& get_traffic_control() { return traffic_control_;}
-      inline SyncManager& get_sync_manager() { return *sync_manager_;}
+      inline SyncManager* get_sync_manager() { return sync_manager_;}
       inline WritableBlockManager& get_writable_block_manager() { return writable_block_manager_; }
 
       protected:
@@ -117,25 +115,6 @@ namespace tfs
       virtual const char* get_pid_file_path();
 
       private:
-      int create_file_number(message::CreateFilenameMessage* message);
-      int write_data(message::WriteDataMessage* message);
-      int close_write_file(message::CloseFileMessage* message);
-
-      //int write_raw_data(message::WriteRawDataMessage* message);
-      //int batch_write_info(message::WriteInfoBatchMessage* message);
-
-      int read_data(message::ReadDataMessage* message);
-      int read_data_extra(message::ReadDataMessageV2* message, int32_t version);
-      int read_raw_data(message::ReadRawDataMessage* message);
-      int read_file_info(message::FileInfoMessage* message);
-
-      //int rename_file(message::RenameFileMessage* message);
-      int unlink_file(message::UnlinkFileMessage* message);
-
-      //NS <-> DS
-      int new_block(message::NewBlockMessage* message);
-      int remove_block(message::RemoveBlockMessage* message);
-
       //get single blockinfo
       int get_block_info(message::GetBlockInfoMessageV2* message);
 
@@ -209,13 +188,11 @@ namespace tfs
       DISALLOW_COPY_AND_ASSIGN(DataService);
 
       std::string server_index_;
-      Requester ds_requester_;
       OpManager op_manager_;
       LeaseManager *lease_manager_;
       DataHelper data_helper_;
       TaskManager task_manager_;
       BlockManager *block_manager_;
-      DataManagement data_management_;
       TrafficControl traffic_control_;
       ClientRequestServer client_request_server_;
       WritableBlockManager writable_block_manager_;

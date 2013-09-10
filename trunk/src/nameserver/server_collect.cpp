@@ -65,7 +65,7 @@ namespace tfs
       id_(info.id_),
       use_capacity_(info.use_capacity_),
       total_capacity_(info.total_capacity_),
-      startup_time_(now),
+      startup_time_(info.startup_time_),
       rb_expired_time_(0),
       next_report_block_time_(0),
       scan_writable_block_id_(0),

@@ -798,8 +798,11 @@ namespace tfs
         // close tmp block no need to commit & write log
         if (!tmp && (TFS_SUCCESS == ret) && (0 == (option_flag & TFS_FILE_NO_SYNC_LOG)))
         {
-          SyncManager& manager = service_.get_sync_manager();
-          ret = manager.insert(INVALID_SERVER_ID, 0, attach_block_id, file_id, OPLOG_INSERT);
+          SyncManager* manager = service_.get_sync_manager();
+          if (NULL != manager)
+          {
+            ret = manager->insert(INVALID_SERVER_ID, 0, attach_block_id, file_id, OPLOG_INSERT);
+          }
         }
 
         if (TFS_SUCCESS != ret)
@@ -897,8 +900,11 @@ namespace tfs
         ret = op_stat.status_;
         if ((TFS_SUCCESS == ret) && (0 == (option_flag & TFS_FILE_NO_SYNC_LOG)))
         {
-          SyncManager& manager = service_.get_sync_manager();
-          ret = manager.insert(INVALID_SERVER_ID, 0, attach_block_id, file_id, OPLOG_REMOVE);
+          SyncManager* manager = service_.get_sync_manager();
+          if (NULL != manager)
+          {
+            ret = manager->insert(INVALID_SERVER_ID, 0, attach_block_id, file_id, OPLOG_REMOVE);
+          }
         }
         if (TFS_SUCCESS != ret)
         {

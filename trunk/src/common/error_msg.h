@@ -83,6 +83,7 @@ namespace tfs
     const int32_t EXIT_FILE_BUSY_ERROR = -2009;
     const int32_t EXIT_UNLINK_FILE_ERROR = -2010;
     const int32_t EXIT_CLOSE_FILE_ERROR = -2011;
+    const int32_t EXIT_DS_TABLE_EMPTY = -2022;
 
     const int32_t EXIT_NETWORK_ERROR = -3000;
     const int32_t EXIT_IOCTL_ERROR = -3001;

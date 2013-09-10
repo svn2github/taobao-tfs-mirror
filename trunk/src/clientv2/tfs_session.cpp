@@ -336,7 +336,7 @@ namespace tfs
       if (INVALID_BLOCK_ID == block_id)
       {
         uint64_t server = select_server_from_dst();
-        ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_NO_DATASERVER;
+        ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_DS_TABLE_EMPTY;
         if (TFS_SUCCESS == ret)
         {
           ds.push_back(server);
@@ -392,7 +392,7 @@ namespace tfs
         // get block info from ns
         if (CACHE_HIT_NONE == cache_hit)
         {
-          ret = get_block_info_ex(T_READ, block_id, version, ds, info);
+          ret = get_block_info_ex(T_READ | file.mode_, block_id, version, ds, info);
           TBSYS_LOG(DEBUG, "query block from ns %s, blockid: %"PRI64_PREFIX"u",
               ns_addr_.c_str(), block_id);
           if (TFS_SUCCESS == ret)

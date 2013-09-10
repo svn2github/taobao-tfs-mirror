@@ -289,8 +289,11 @@ namespace tfs
         // ignore deleted and invalid files
         if (!(iter->status_ & FI_DELETED) && !(iter->status_ & FI_INVALID))
         {
-          SyncManager& manager = service_.get_sync_manager();
-          ret = manager.insert(dest_ns_addr, 0, block_id, iter->id_, OPLOG_INSERT);
+          SyncManager* manager = service_.get_sync_manager();
+          if (NULL != manager)
+          {
+            ret = manager->insert(dest_ns_addr, 0, block_id, iter->id_, OPLOG_INSERT);
+          }
         }
       }
       return ret;
@@ -303,10 +306,13 @@ namespace tfs
       vector<FileInfoV2>::const_iterator iter = diff.begin();
       for ( ; (TFS_SUCCESS == ret) && (iter != diff.end()); iter++)
       {
-        SyncManager& manager = service_.get_sync_manager();
-        ret = manager.insert(dest_ns_addr, 0, block_id, iter->id_, OPLOG_REMOVE);
-        TBSYS_LOG(DEBUG, "DIFF file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
-            tbsys::CNetUtil::addrToString(dest_ns_addr).c_str(), block_id, iter->id_);
+        SyncManager* manager = service_.get_sync_manager();
+        if (NULL != manager)
+        {
+          ret = manager->insert(dest_ns_addr, 0, block_id, iter->id_, OPLOG_REMOVE);
+          TBSYS_LOG(DEBUG, "DIFF file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+              tbsys::CNetUtil::addrToString(dest_ns_addr).c_str(), block_id, iter->id_);
+        }
       }
       return ret;
     }

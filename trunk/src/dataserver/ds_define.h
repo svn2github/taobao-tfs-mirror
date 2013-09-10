@@ -152,6 +152,7 @@ namespace tfs
       int32_t max_rw_network_bandwidth_mb_;
       int32_t max_block_size_;
       int32_t max_write_file_count_;
+      common::DataServerLiveStatus status_;
       DsRuntimeGlobalInformation();
       static DsRuntimeGlobalInformation& instance();
     };

@@ -18,7 +18,6 @@
 #include "common/atomic.h"
 #include "common/internal.h"
 #include "dataservice.h"
-
 #include "lease_managerv2.h"
 
 using namespace std;
@@ -55,8 +54,10 @@ namespace tfs
 
     int LeaseManager::initialize()
     {
-      DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
-      info.startup_time_ = time(NULL);
+
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      ds_info.startup();
+      DataServerStatInfo& info = ds_info.information_;
       IpAddr* adr = reinterpret_cast<IpAddr*>(&info.id_);
       adr->ip_ = tbsys::CNetUtil::getAddr(service_.get_ip_addr());
       adr->port_ = service_.get_listen_port();
@@ -70,7 +71,6 @@ namespace tfs
       }
       apply_block_thread_ = new (std::nothrow)RunApplyBlockThreadHelper(*this);
       assert(0 != apply_block_thread_);
-      //info.status_ = DATASERVER_STATUS_ALIVE;//TODO
       return TFS_SUCCESS;
     }
 

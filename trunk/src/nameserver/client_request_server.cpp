@@ -148,18 +148,11 @@ namespace tfs
         ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
       }
 
-      if (TFS_SUCCESS != ret)
+      if (EXIT_BLOCK_NOT_FOUND == ret && mode & T_NEWBLK)
       {
-        if (mode & T_NEWBLK)
-        {
-          NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-          ret = ngi.in_discard_newblk_safe_mode_time(now) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
-        }
-      }
-
-      if (EXIT_BLOCK_NOT_FOUND == ret)
-      {
-        if (mode & T_NEWBLK)
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        ret = ngi.in_discard_newblk_safe_mode_time(now) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
         {
           ret = manager_.open_helper_create_new_block_by_id(block_id);
           if (TFS_SUCCESS != ret)
