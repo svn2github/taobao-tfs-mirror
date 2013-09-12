@@ -766,12 +766,12 @@ namespace tfs
             std::vector<FileInfo>::iterator iter = infos.end() - 1;
             (*iter).id_     = current->id_;
             (*iter).offset_ = current->offset_;
-            (*iter).size_   = current->size_;
+            (*iter).size_   = current->size_ - FILEINFO_EXT_SIZE;
             (*iter).modify_time_ = current->modify_time_;
             (*iter).create_time_ = current->create_time_;
             (*iter).flag_   = current->status_;
             (*iter).crc_    = current->crc_;
-            (*iter).usize_  = current->size_;
+            (*iter).usize_  = current->size_ - FILEINFO_EXT_SIZE;
           }
         }
       }
