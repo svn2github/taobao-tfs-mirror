@@ -77,6 +77,25 @@ namespace tfs
       exit(0);
     }
 
+    string get_day(const int32_t days, const bool is_after)
+    {
+      time_t now = time((time_t*)NULL);
+      time_t end_time;
+      if (is_after)
+      {
+        end_time = now + 86400 * days;
+      }
+      else
+      {
+        end_time = now - 86400 * days;
+      }
+      char tmp[64];
+      struct tm *ttime;
+      ttime = localtime(&end_time);
+      strftime(tmp,64,"%Y%m%d",ttime);
+      return string(tmp);
+    }
+
     void BaseWorkerManager::handle_signal(int signal)
     {
       TBSYS_LOG(INFO, "receive signal: %d", signal);
@@ -119,7 +138,7 @@ namespace tfs
     int BaseWorkerManager::main(int argc, char* argv[])
     {
       int ret = TFS_SUCCESS;
-      string timestamp;
+      string timestamp = get_day(1, true);//第二天0点
       output_dir_ = "./output";  // default output directory
       int flag = 0;
 
@@ -183,7 +202,12 @@ namespace tfs
       TBSYS_LOGGER.setMaxFileSize(1024 * 1024 * 1024);
       TBSYS_LOGGER.setLogLevel(log_level_.c_str());
 
-      begin(); // callback begin function
+      ret = begin(); // callback begin function
+      if(TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "some initialization fail in begin stage, ret:%d", ret);
+        return ret;
+      }
 
       string succ_path = output_dir_ + "/success";
       string fail_path = output_dir_ + "/fail";

@@ -181,7 +181,7 @@ namespace tfs
       public:
         BaseWorkerManager();
         virtual ~BaseWorkerManager();
-        virtual void begin() {}
+        virtual int begin(){ return common::TFS_SUCCESS; }
         virtual void end() {}
         virtual BaseWorker* create_worker() = 0;
         int main(int argc, char* argv[]);
@@ -245,7 +245,7 @@ namespace tfs
         FILE* fail_fp_;
 
       protected:
-        void usage(const char* app_name);
+        virtual void usage(const char* app_name);
         void version(const char* app_name);
         static void handle_signal(const int signal);
     };

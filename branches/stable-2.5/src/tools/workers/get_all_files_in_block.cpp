@@ -75,11 +75,12 @@ class ListFileWorkerManager : public BaseWorkerManager
       return new ListFileWorker();
     }
 
-    void begin()
+    int begin()
     {
       string result_path = output_dir_ + "/file_list";
       result_fp = fopen(result_path.c_str(), "a");
       assert(NULL != result_fp);
+      return TFS_SUCCESS;
     }
 
     void end()

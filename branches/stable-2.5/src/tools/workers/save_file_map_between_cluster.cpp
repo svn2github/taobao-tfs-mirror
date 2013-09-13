@@ -119,7 +119,7 @@ class SaveFileWorkerManager : public BaseWorkerManager
       return new SaveFileWorker();
     }
 
-    void begin()
+    int begin()
     {
       string result_path = output_dir_ + "/file_map";
       result_fp = fopen(result_path.c_str(), "a");
@@ -127,6 +127,7 @@ class SaveFileWorkerManager : public BaseWorkerManager
 
       int ret = tfs_client->initialize(NULL, 1800, 0, true);
       assert(TFS_SUCCESS == ret);
+      return ret;
     }
 
     void end()
