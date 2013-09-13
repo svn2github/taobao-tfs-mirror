@@ -345,6 +345,112 @@ int KvMetaHelper::do_head_bucket(const uint64_t server_id, const char *bucket_na
   return ret;
 }
 
+//put bucket logging
+int KvMetaHelper::do_put_bucket_logging(const uint64_t server_id, const char *bucket_name,
+    const bool logging_status, const char *target_bucket_name,
+    const char *target_prefix, const UserInfo &user_info)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name || NULL == target_bucket_name || NULL == target_prefix)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaPutBucketLoggingMessage req_pbl_msg;
+    req_pbl_msg.set_bucket_name(bucket_name);
+    req_pbl_msg.set_logging_status(logging_status);
+    req_pbl_msg.set_target_bucket_name(target_bucket_name);
+    req_pbl_msg.set_target_prefix(target_prefix);
+    req_pbl_msg.set_user_info(user_info);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_pbl_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call put bucket logging fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "put bucket logging return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "put bucket logging fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_get_bucket_logging(const uint64_t server_id, const char *bucket_name,
+    bool *logging_status, string *target_bucket_name,
+    string *target_prefix, const UserInfo &user_info)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name || NULL == logging_status
+      || NULL == target_bucket_name || NULL == target_prefix)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaGetBucketLoggingMessage req_gbl_msg;
+    req_gbl_msg.set_bucket_name(bucket_name);
+    req_gbl_msg.set_user_info(user_info);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_gbl_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call get bucket logging fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_GET_BUCKET_LOGGING_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaGetBucketLoggingMessage* rsp_gbl_msg = dynamic_cast<RspKvMetaGetBucketLoggingMessage*>(rsp);
+      *logging_status = *(rsp_gbl_msg->get_mutable_logging_status());
+      *target_bucket_name = *(rsp_gbl_msg->get_mutable_target_bucket_name());
+      *target_prefix = *(rsp_gbl_msg->get_mutable_target_prefix());
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "get bucket logging fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
 int KvMetaHelper::do_put_bucket_acl(const uint64_t server_id, const char *bucket_name,
     const CANNED_ACL acl, const UserInfo &user_info)
 {
@@ -669,13 +775,13 @@ int KvMetaHelper::do_del_bucket_tag(const uint64_t server_id, const char *bucket
       StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
       if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
       {
-        TBSYS_LOG(ERROR, "get bucket tag return error, ret: %d", ret);
+        TBSYS_LOG(ERROR, "del bucket tag return error, ret: %d", ret);
       }
     }
     else
     {
       ret = EXIT_UNKNOWN_MSGTYPE;
-      TBSYS_LOG(ERROR, "get bucket tag fail,"
+      TBSYS_LOG(ERROR, "del bucket tag fail,"
           "server_addr: %s, bucket_name: %s, "
           "ret: %d, msg type: %d",
           tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret, rsp->getPCode());
@@ -792,6 +898,64 @@ const int64_t offset, const int64_t length, ObjectInfo *object_info, bool *still
           "server_addr: %s, bucket_name: %s, "
           "object_name: %s, ret: %d, msg type: %d",
           tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, object_name, ret, rsp->getPCode());
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return ret;
+}
+
+int KvMetaHelper::do_del_multi_object(const uint64_t server_id, const char *bucket_name,
+    const set<string> &s_object_name, const bool quiet, DeleteResult *delete_result, const UserInfo &user_info)
+{
+  int ret = TFS_SUCCESS;
+  if (0 == server_id)
+  {
+    ret = EXIT_INVALID_KV_META_SERVER;
+  }
+  else if (NULL == bucket_name || s_object_name.size() <= 0u)
+  {
+    ret = EXIT_INVALID_FILE_NAME;
+  }
+  else
+  {
+    ReqKvMetaDelMultiObjectMessage req_dmo_msg;
+    req_dmo_msg.set_bucket_name(bucket_name);
+    req_dmo_msg.set_s_file_name(s_object_name);
+    req_dmo_msg.set_quiet_mode(quiet);
+    req_dmo_msg.set_user_info(user_info);
+
+    tbnet::Packet* rsp = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    ret = send_msg_to_server(server_id, client, &req_dmo_msg, rsp, ClientConfig::wait_timeout_);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "call del multi object fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), bucket_name, ret);
+      ret = EXIT_NETWORK_ERROR;
+    }
+    else if (RSP_KVMETA_DEL_MULTI_OBJECT_MESSAGE == rsp->getPCode())
+    {
+      RspKvMetaDelMultiObjectMessage* rsp_dmo_msg = dynamic_cast<RspKvMetaDelMultiObjectMessage*>(rsp);
+      *delete_result = *(rsp_dmo_msg->get_delete_result());
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "del multi object return error, ret: %d", ret);
+      }
+    }
+    else
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "del multi object fail,"
+          "server_addr: %s, bucket_name: %s, "
+          "ret: %d, msg type: %d",
+          tbsys::CNetUtil::addrToString(server_id).c_str(),
+          bucket_name, ret, rsp->getPCode());
     }
     NewClientManager::get_instance().destroy_client(client);
   }

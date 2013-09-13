@@ -63,6 +63,11 @@ namespace tfs
 
         TfsRetType get_service(common::BucketsResult *buckets_result, const common::UserInfo &user_info);
 
+        TfsRetType put_bucket_logging(const char *bucket_name, const bool logging_status,
+            const char *target_bucket_name, const char *target_prefix, const common::UserInfo &user_info);
+        TfsRetType get_bucket_logging(const char *bucket_name, bool *logging_status,
+            std::string *target_bucket_name, std::string *target_prefix, const common::UserInfo &user_info);
+
         TfsRetType put_bucket_tag(const char *bucket_name, const common::MAP_STRING &bucket_tag_map);
         TfsRetType get_bucket_tag(const char *bucket_name, common::MAP_STRING *bucket_tag_map);
         TfsRetType del_bucket_tag(const char *bucket_name);
@@ -84,6 +89,9 @@ namespace tfs
         TfsRetType get_object(const char *bucket_name, const char *object_name,
             const char* local_file, common::ObjectMetaInfo *object_meta_info,
             common::CustomizeInfo *customize_info, const common::UserInfo &user_info);
+
+        TfsRetType del_multi_object(const char *bucket_name, const std::set<std::string> &s_object_name,
+            const bool quiet, common::DeleteResult *delete_result, const common::UserInfo &user_info);
         TfsRetType del_object(const char *bucket_name, const char *object_name,
             const common::UserInfo &user_info);
         TfsRetType head_object(const char *bucket_name, const char *object_name,
@@ -127,6 +135,13 @@ namespace tfs
         int do_head_bucket(const char *bucket_name, common::BucketMetaInfo *bucket_meta_info,
             const common::UserInfo &user_info);
 
+        int do_put_bucket_logging(const char *bucket_name, const bool logging_status,
+            const char *target_bucket_name, const char *target_prefix,
+            const common::UserInfo &user_info);
+        int do_get_bucket_logging(const char *bucket_name, bool *logging_status,
+            std::string *target_bucket_name, std::string *target_prefix,
+            const common::UserInfo &user_info);
+
         int do_put_bucket_acl(const char *bucket_name, const common::CANNED_ACL acl,
             const common::UserInfo &user_info);
         int do_put_bucket_acl(const char *bucket_name, const common::MAP_INT64_INT &bucket_acl_map,
@@ -145,6 +160,9 @@ namespace tfs
         int do_get_object(const char *bucket_name, const char *object_name,
             const int64_t offset, const int64_t length, common::ObjectInfo *object_info,
             bool *still_have, const common::UserInfo &user_info);
+
+        int do_del_multi_object(const char *bucket_name, const std::set<std::string> &s_object_name,
+            const bool quiet, common::DeleteResult *delete_result, const common::UserInfo &user_info);
         int do_del_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info,
             bool *still_have, const common::UserInfo &user_info);

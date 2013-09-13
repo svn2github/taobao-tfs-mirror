@@ -160,6 +160,10 @@ namespace tfs
       bool has_tag_info_;
       MAP_STRING bucket_tag_map_;
       MAP_INT64_INT bucket_acl_map_;
+
+      bool logging_status_;
+      std::string target_bucket_name_;
+      std::string target_prefix_;
     };
 
     struct UserInfo
@@ -223,6 +227,17 @@ namespace tfs
       MAP_BUCKET_INFO bucket_info_map_;
     };
 
+    struct DeleteResult
+    {
+      DeleteResult();
+      int64_t length() const;
+      int serialize(char *data, const int64_t data_len, int64_t &pos) const;
+      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
+
+      std::vector<std::string> v_suc_objects_;
+      std::vector<std::string> v_fail_objects_;
+      std::vector<std::string> v_fail_msg_;
+    };
   }
 }
 

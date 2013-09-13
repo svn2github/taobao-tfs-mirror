@@ -27,7 +27,8 @@ libtfsmessage_a_SOURCES = dump_plan_message.cpp client_cmd_message.cpp heart_mes
 													message_factory.cpp get_dataserver_information_message.cpp \
 													meta_nameserver_client_message.cpp rts_ms_heart_message.cpp\
 													get_tables_from_rts_message.cpp update_table_message.cpp\
-													rts_rts_heart_message.cpp checkserver_message.cpp kv_meta_message.cpp kv_rts_message.cpp $(HEADER)
+													rts_rts_heart_message.cpp checkserver_message.cpp kv_meta_message.cpp kv_rts_message.cpp\
+													$(HEADER)
 
 libtfsmessage_a_CPPFLAGS = $(AM_CPPFLAGS)
 

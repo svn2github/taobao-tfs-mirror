@@ -341,6 +341,59 @@ namespace tfs
       return ret;
     }
 
+    TfsRetType KvMetaClientImpl::put_bucket_logging(const char *bucket_name, const bool logging_status,
+            const char *target_bucket_name, const char *target_prefix, const common::UserInfo &user_info)
+    {
+      TfsRetType ret = TFS_ERROR;
+
+      if (!is_valid_bucket_name(bucket_name) || NULL == target_bucket_name || NULL == target_prefix)
+      {
+        TBSYS_LOG(ERROR, "param is invalid");
+      }
+      else
+      {
+        ret = TFS_SUCCESS;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = do_put_bucket_logging(bucket_name, logging_status, target_bucket_name, target_prefix, user_info);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "put bucket logging failed. bucket: %s", bucket_name);
+        }
+      }
+
+      return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::get_bucket_logging(const char *bucket_name, bool *logging_status,
+            string *target_bucket_name, string *target_prefix, const common::UserInfo &user_info)
+    {
+      TfsRetType ret = TFS_ERROR;
+
+      if (!is_valid_bucket_name(bucket_name) || NULL == logging_status
+          || NULL == target_bucket_name || NULL == target_prefix)
+      {
+        TBSYS_LOG(ERROR, "param is invalid");
+      }
+      else
+      {
+        ret = TFS_SUCCESS;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = do_get_bucket_logging(bucket_name, logging_status, target_bucket_name, target_prefix, user_info);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "get bucket tag failed. bucket: %s", bucket_name);
+        }
+      }
+
+      return ret;
+    }
+
     TfsRetType KvMetaClientImpl::put_bucket_tag(const char *bucket_name, const MAP_STRING &bucket_tag_map)
     {
       TfsRetType ret = TFS_ERROR;
@@ -1018,6 +1071,28 @@ namespace tfs
       return ret;
     }
 
+    TfsRetType KvMetaClientImpl::del_multi_object(const char *bucket_name, const std::set<std::string> &s_object_name,
+            const bool quiet, common::DeleteResult *delete_result, const common::UserInfo &user_info)
+    {
+      TfsRetType ret = TFS_ERROR;
+      if (!is_valid_bucket_name(bucket_name) || s_object_name.size() <= 0u)
+      {
+        TBSYS_LOG(ERROR, "bucket name or object name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = do_del_multi_object(bucket_name, s_object_name, quiet, delete_result, user_info);
+
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "del multi object failed. bucket: %s", bucket_name);
+        }
+      }
+
+      return ret;
+    }
+
     TfsRetType KvMetaClientImpl::del_object(const char *bucket_name,
         const char *object_name, const UserInfo &user_info)
     {
@@ -1306,6 +1381,44 @@ namespace tfs
       return ret;
     }
 
+
+    //bucket logging
+    int KvMetaClientImpl::do_put_bucket_logging(const char *bucket_name, const bool logging_status,
+        const char *target_bucket_name, const char *target_prefix, const UserInfo &user_info)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_put_bucket_logging(meta_server_id, bucket_name, logging_status,
+            target_bucket_name, target_prefix, user_info);
+        update_fail_info(ret);
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    int KvMetaClientImpl::do_get_bucket_logging(const char *bucket_name, bool *logging_status,
+        string *target_bucket_name, string *target_prefix, const UserInfo &user_info)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_get_bucket_logging(meta_server_id, bucket_name, logging_status,
+            target_bucket_name, target_prefix, user_info);
+        update_fail_info(ret);
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
     //bucket tag
     int KvMetaClientImpl::do_put_bucket_tag(const char *bucket_name, const MAP_STRING &bucket_tag_map)
     {
@@ -1355,7 +1468,6 @@ namespace tfs
       return ret;
     }
 
-
     int KvMetaClientImpl::do_put_object(const char *bucket_name,
         const char *object_name, const ObjectInfo &object_info, const UserInfo &user_info)
     {
@@ -1384,6 +1496,23 @@ namespace tfs
       {
         meta_server_id = get_meta_server_id();
         ret = KvMetaHelper::do_get_object(meta_server_id, bucket_name, object_name, offset, length, object_info, still_have, user_info);
+        update_fail_info(ret);
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    int KvMetaClientImpl::do_del_multi_object(const char *bucket_name, const set<string> &s_object_name,
+        const bool quiet, DeleteResult *delete_result, const UserInfo &user_info)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_del_multi_object(meta_server_id, bucket_name, s_object_name, quiet, delete_result, user_info);
         update_fail_info(ret);
       }
       while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);

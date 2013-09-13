@@ -204,6 +204,18 @@ namespace tfs
       return impl_->head_bucket(bucket_name, bucket_meta_info, user_info);
     }
 
+    TfsRetType RcClient::put_bucket_logging(const char *bucket_name, const bool logging_status,
+        const char *target_bucket_name, const char *target_prefix, const UserInfo &user_info)
+    {
+      return impl_->put_bucket_logging(bucket_name, logging_status, target_bucket_name, target_prefix, user_info);
+    }
+
+    TfsRetType RcClient::get_bucket_logging(const char *bucket_name, bool *logging_status,
+        string *target_bucket_name, string *target_prefix, const UserInfo &user_info)
+    {
+      return impl_->get_bucket_logging(bucket_name, logging_status, target_bucket_name, target_prefix, user_info);
+    }
+
     TfsRetType RcClient::put_bucket_tag(const char *bucket_name, const MAP_STRING &bucket_tag_map)
     {
       return impl_->put_bucket_tag(bucket_name, bucket_tag_map);
@@ -278,6 +290,12 @@ namespace tfs
     {
       return impl_->get_object(bucket_name, object_name, local_file,
           user_info);
+    }
+
+    TfsRetType RcClient::del_multi_objects(const char *bucket_name, const set<string> &s_object_name,
+        const bool quiet, DeleteResult *delete_result, const UserInfo &user_info)
+    {
+      return impl_->del_multi_objects(bucket_name, s_object_name, quiet, delete_result, user_info);
     }
 
     TfsRetType RcClient::del_object(const char *bucket_name, const char *object_name,

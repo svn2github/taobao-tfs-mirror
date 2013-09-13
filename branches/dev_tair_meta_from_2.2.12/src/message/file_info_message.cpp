@@ -48,7 +48,7 @@ namespace tfs
       return common::INT_SIZE * 2 + common::INT64_SIZE;
     }
 
-    int FileInfoMessage::serialize(common::Stream& output) const 
+    int FileInfoMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -96,7 +96,7 @@ namespace tfs
       return file_info_ .id_ > 0 ? common::INT_SIZE + file_info_.length() : common::INT_SIZE;
     }
 
-    int RespFileInfoMessage::serialize(common::Stream& output) const 
+    int RespFileInfoMessage::serialize(common::Stream& output) const
     {
       int32_t size = file_info_.id_ > 0 ? file_info_.length() : 0;
       int32_t iret = output.set_int32(size);

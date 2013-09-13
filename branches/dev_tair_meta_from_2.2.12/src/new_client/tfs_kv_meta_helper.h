@@ -54,6 +54,12 @@ namespace tfs
                                const int64_t offset, const int64_t length,
                                common::ObjectInfo *object_info, bool *still_have,
                                const common::UserInfo &user_info);
+      static int do_del_multi_object(const uint64_t server_id,
+                                     const char *bucket_name,
+                                     const std::set<std::string> &s_object_name,
+                                     const bool quiet,
+                                     common::DeleteResult *delete_result,
+                               const common::UserInfo &user_info);
       static int do_del_object(const uint64_t server_id,
                                const char *bucket_name,
                                const char *object_name,
@@ -64,6 +70,14 @@ namespace tfs
                                const char *object_name,
                                common::ObjectInfo *object_info,
                                const common::UserInfo &user_info);
+
+      static int do_put_bucket_logging(const uint64_t server_id, const char *bucket_name,
+          const bool logging_status, const char *target_bucket_name, const char *target_prefix,
+          const common::UserInfo &user_info);
+
+      static int do_get_bucket_logging(const uint64_t server_id, const char *bucket_name,
+          bool *logging_status, std::string *target_bucket_name, std::string *target_prefix,
+          const common::UserInfo &user_info);
 
       static int do_put_bucket_acl(const uint64_t server_id, const char *bucket_name,
           const common::CANNED_ACL acl, const common::UserInfo &user_info);

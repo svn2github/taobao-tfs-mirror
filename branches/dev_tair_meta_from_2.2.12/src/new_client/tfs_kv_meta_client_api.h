@@ -63,6 +63,11 @@ namespace tfs
         TfsRetType get_bucket_tag(const char *bucket_name, common::MAP_STRING *bucket_tag_map);
         TfsRetType del_bucket_tag(const char *bucket_name);
 
+        TfsRetType put_bucket_logging(const char *bucket_name, const bool logging_status,
+            const char *target_bucket_name, const char *target_prefix, const common::UserInfo &user_info);
+        TfsRetType get_bucket_logging(const char *bucket_name, bool *logging_status,
+            std::string *target_bucket_name, std::string *target_prefix, const common::UserInfo &user_info);
+
         TfsRetType list_multipart_object(const char *bucket_name, const char *prefix,
             const char *start_key, const char *start_id, const char delimiter,
             const int32_t limit, common::ListMultipartObjectResult *list_multipart_object_result,
@@ -83,6 +88,8 @@ namespace tfs
         TfsRetType get_object(const char *bucket_name,
             const char *object_name, const char* local_file,
             const common::UserInfo &user_info);
+        TfsRetType del_multi_object(const char *bucket_name, const std::set<std::string> &s_object_name,
+            const bool quiet, common::DeleteResult *delete_result, const common::UserInfo &user_info);
         TfsRetType del_object(const char *bucket_name,
             const char *object_name, const common::UserInfo &user_info);
         TfsRetType head_object(const char *bucket_name, const char *object_name,

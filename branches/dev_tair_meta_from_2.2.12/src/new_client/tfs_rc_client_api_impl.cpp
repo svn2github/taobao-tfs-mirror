@@ -32,7 +32,6 @@ namespace
   const int INIT_LOGINED = 1;
   const int CLUSTER_ACCESS_TYPE_READ_ONLY = 1;
   const int CLUSTER_ACCESS_TYPE_READ_WRITE = 2;
-
 }
 
 namespace tfs
@@ -1586,6 +1585,29 @@ namespace tfs
         return ret;
       }
 
+      TfsRetType RcClientImpl::put_bucket_logging(const char *bucket_name, const bool logging_status,
+            const char *target_bucket_name, const char *target_prefix, const common::UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->put_bucket_logging(bucket_name, logging_status,
+              target_bucket_name, target_prefix, user_info);
+        }
+        return ret;
+      }
+      TfsRetType RcClientImpl::get_bucket_logging(const char *bucket_name, bool *logging_status,
+            std::string *target_bucket_name, std::string *target_prefix, const common::UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->get_bucket_logging(bucket_name, logging_status,
+              target_bucket_name, target_prefix, user_info);
+        }
+        return ret;
+      }
+
       TfsRetType RcClientImpl::put_bucket_acl(const char *bucket_name, const CANNED_ACL acl,
           const UserInfo &user_info)
       {
@@ -1692,6 +1714,17 @@ namespace tfs
           CustomizeInfo customize_info;
           ret = kv_meta_client_->get_object(bucket_name, object_name,
               local_file, &object_meta_info, &customize_info, user_info);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::del_multi_objects(const char *bucket_name, const set<string> &s_object_name,
+          const bool quiet, DeleteResult *delete_result, const UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->del_multi_object(bucket_name, s_object_name, quiet, delete_result, user_info);
         }
         return ret;
       }

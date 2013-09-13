@@ -11,7 +11,7 @@ libtfscommon_a_SOURCES = internal.cpp parameter.cpp func.cpp file_queue.cpp \
 			 file_op.cpp base_main.cpp base_service.cpp new_client.cpp client_manager.cpp\
        base_packet_streamer.cpp base_packet_factory.cpp meta_server_define.cpp session_util.cpp \
 			 stream.cpp status_message.cpp rc_define.cpp kv_meta_define.cpp mmap_file.cpp rts_define.cpp meta_hash_helper.cpp tfs_vector.ipp \
-       meta_define.cpp kv_rts_define.cpp \
+       meta_define.cpp kv_rts_define.cpp\
 			 meta_server_define.h  tfs_vector.h\
 			 atomic.h base_main.h base_packet_factory.h base_packet.h base_packet_streamer.h \
 			 base_service.h buffer.h cdefine.h client_manager.h config_item.h define.h\

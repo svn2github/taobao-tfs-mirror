@@ -541,7 +541,7 @@ namespace tfs
 
     //bucketmetainfo
     BucketMetaInfo::BucketMetaInfo()
-      :create_time_(0), owner_id_(0), has_tag_info_(false)
+      :create_time_(0), owner_id_(0), has_tag_info_(false), logging_status_(false)
     {}
 
     int64_t BucketMetaInfo::length() const
@@ -567,6 +567,12 @@ namespace tfs
         len += INT64_SIZE;
         len += INT_SIZE;
       }
+
+      //add bucket logging
+      len += INT_SIZE * 3; //tag
+      len += INT8_SIZE;
+      len += common::Serialization::get_string_length(target_bucket_name_);
+      len += common::Serialization::get_string_length(target_prefix_);
 
       return len;
     }
@@ -646,6 +652,32 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKET_META_INFO_LOGGING_STATUS_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int8(data, data_len, pos, logging_status_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKET_META_INFO_TARGET_BUCKET_NAME_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_string(data, data_len, pos, target_bucket_name_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKET_META_INFO_TARGET_PREFIX_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_string(data, data_len, pos, target_prefix_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::set_int32(data, data_len, pos, END_TAG);
       }
       return ret;
@@ -700,27 +732,39 @@ namespace tfs
               }
               break;
             case BUCKET_META_INFO_BUCKET_ACL_MAP_TAG:
-              int32_t size;
-              ret = Serialization::get_int32(data, data_len, pos, &size);
-
               if (TFS_SUCCESS == ret)
               {
-                int64_t key;
-                int32_t value;
-                for (int32_t i = 0; i < size && TFS_SUCCESS == ret; i++)
-                {
-                  ret = Serialization::get_int64(data, data_len, pos, &key);
-                  if (TFS_SUCCESS == ret)
-                  {
-                    ret = Serialization::get_int32(data, data_len, pos, &value);
-                  }
+                int32_t size = -1;
+                ret = Serialization::get_int32(data, data_len, pos, &size);
 
-                  if (TFS_SUCCESS == ret)
+                if (TFS_SUCCESS == ret)
+                {
+                  int64_t key;
+                  int32_t value;
+                  for (int32_t i = 0; i < size && TFS_SUCCESS == ret; i++)
                   {
-                    bucket_acl_map_.insert(std::make_pair(key, value));
+                    ret = Serialization::get_int64(data, data_len, pos, &key);
+                    if (TFS_SUCCESS == ret)
+                    {
+                      ret = Serialization::get_int32(data, data_len, pos, &value);
+                    }
+
+                    if (TFS_SUCCESS == ret)
+                    {
+                      bucket_acl_map_.insert(std::make_pair(key, value));
+                    }
                   }
                 }
               }
+              break;
+            case BUCKET_META_INFO_LOGGING_STATUS_TAG:
+              ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&logging_status_));
+              break;
+            case BUCKET_META_INFO_TARGET_BUCKET_NAME_TAG:
+              ret = Serialization::get_string(data, data_len, pos, target_bucket_name_);
+              break;
+            case BUCKET_META_INFO_TARGET_PREFIX_TAG:
+              ret = Serialization::get_string(data, data_len, pos, target_prefix_);
               break;
             case END_TAG:
               ;
@@ -932,8 +976,6 @@ namespace tfs
     ListMultipartObjectResult::ListMultipartObjectResult()
       :limit_(0), delimiter_(DEFAULT_CHAR), is_truncated_(false)
     {
-      s_common_prefix_.clear();
-      v_object_upload_info_.clear();
     }
 
     //BucketsResult
@@ -1061,6 +1103,98 @@ namespace tfs
       return ret;
     }
 
+    //DeleteResult
+    DeleteResult::DeleteResult()
+    {}
+
+    int64_t DeleteResult::length() const
+    {
+      int64_t len = 0;
+
+      //v_suc_obj_tag + v_fail_obj_tag + v_fail_obj_tag + end_tag
+      len += 4 * INT_SIZE;
+
+      len += Serialization::get_vstring_length(v_suc_objects_);
+      len += Serialization::get_vstring_length(v_fail_objects_);
+      len += Serialization::get_vstring_length(v_fail_msg_);
+
+      return len;
+    }
+
+    int DeleteResult::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, DELETE_RESULT_V_SUC_OBJECTS_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_vstring(data, data_len, pos, v_suc_objects_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, DELETE_RESULT_V_FAIL_OBJECTS_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_vstring(data, data_len, pos, v_fail_objects_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, DELETE_RESULT_V_FAIL_MSG_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_vstring(data, data_len, pos, v_fail_msg_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
+
+      return ret;
+    }
+
+    int DeleteResult::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    {
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
+
+      while (TFS_SUCCESS == ret)
+      {
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
+
+        if (TFS_SUCCESS == ret)
+        {
+          switch (type_tag)
+          {
+            case DELETE_RESULT_V_SUC_OBJECTS_TAG:
+              ret = Serialization::get_vstring(data, data_len, pos, v_suc_objects_);
+              break;
+            case DELETE_RESULT_V_FAIL_OBJECTS_TAG:
+              ret = Serialization::get_vstring(data, data_len, pos, v_fail_objects_);
+              break;
+            case DELETE_RESULT_V_FAIL_MSG_TAG:
+              ret = Serialization::get_vstring(data, data_len, pos, v_fail_msg_);
+              break;
+            case END_TAG:
+              ;
+              break;
+            default:
+              TBSYS_LOG(ERROR, "delete result: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
+          }
+        }
+
+        if (END_TAG == type_tag)
+        {
+          break;
+        }
+      }
+      return ret;
+    }
   }
 }
 

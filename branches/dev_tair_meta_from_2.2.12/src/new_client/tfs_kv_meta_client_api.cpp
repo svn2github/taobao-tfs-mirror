@@ -101,6 +101,17 @@ namespace tfs
       return impl_->get_service(buckets_result, user_info);
     }
 
+    TfsRetType KvMetaClient::put_bucket_logging(const char *bucket_name, const bool logging_status, const char *target_bucket_name, const char *target_prefix, const common::UserInfo &user_info)
+    {
+      return impl_->put_bucket_logging(bucket_name, logging_status, target_bucket_name, target_prefix, user_info);
+    }
+
+    TfsRetType KvMetaClient::get_bucket_logging(const char *bucket_name, bool *logging_status,
+        string *target_bucket_name, string *target_prefix, const common::UserInfo &user_info)
+    {
+      return impl_->get_bucket_logging(bucket_name, logging_status, target_bucket_name, target_prefix, user_info);
+    }
+
     TfsRetType KvMetaClient::put_bucket_tag(const char *bucket_name, const common::MAP_STRING &bucket_tag_map)
     {
       return impl_->put_bucket_tag(bucket_name, bucket_tag_map);
@@ -156,6 +167,12 @@ namespace tfs
     {
       return impl_->get_object(bucket_name, object_name, local_file,
           NULL, NULL, user_info);
+    }
+
+    TfsRetType KvMetaClient::del_multi_object(const char *bucket_name, const std::set<std::string> &s_object_name,
+        const bool quiet, common::DeleteResult *delete_result, const common::UserInfo &user_info)
+    {
+      return impl_->del_multi_object(bucket_name, s_object_name, quiet, delete_result, user_info);
     }
 
     TfsRetType KvMetaClient::del_object(const char *bucket_name,

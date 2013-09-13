@@ -208,8 +208,13 @@ namespace tfs
     const int32_t EXIT_OVER_OWN_BUCKETS_SIZE = -16022; //one owner has max 100 buckets
     const int32_t EXIT_OWNER_HAS_NO_BUCKETS = -16023;   //owner_id has no buckets
     const int32_t EXIT_FATAL_OWNER_ID = -16024;         //bucket_meta_info's owner_id neq buckets_result's owner_id
-    const int32_t EXIT_AUTHORIZE_NOT_EXIST = -16200;//authorize key not exist
-    const int32_t EXIT_SIGNTURE_NOT_EQUAL = -16201;//
+
+    const int32_t KV_RETURN_HAS_MORE_DATA = -16025;   //get range once return over 1M of limit
+    const int32_t EXIT_RULE_OVER_MAX_SIZE = -16026;  //over 1000 rule
+    const int32_t EXIT_BUCKET_RULE_OVERLAP = -16027;  //rule overlap
+
+    const int32_t EXIT_AUTHORIZE_NOT_EXIST = -16028;//authorize key not exist
+    const int32_t EXIT_SIGNTURE_NOT_EQUAL = -16029;//
 
   }
 }
