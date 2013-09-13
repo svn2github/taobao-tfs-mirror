@@ -846,7 +846,7 @@ namespace tfs
         TBSYS_LOG(DEBUG, "del object, bucekt_name: %s, object_name: %s, "
             "scan ret: %d, limit: %d, result size: %d",
             bucket_name.c_str(), file_name.c_str(), ret, limit + 1, result_size);
-        if (TFS_SUCCESS == ret && result_size == 0)
+        if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret && result_size == 0)
         {
           ret = EXIT_OBJECT_NOT_EXIST;
         }
