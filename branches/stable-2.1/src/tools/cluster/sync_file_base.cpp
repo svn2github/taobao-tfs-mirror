@@ -161,7 +161,7 @@ int SyncFileBase::cmp_file_info_ex(const string& file_name, const TfsFileStat& s
   // 1. dest file exists and is new file, just skip.
   if (ret == TFS_SUCCESS && dest_buf.modify_time_ > modify_time)
   {
-    TBSYS_LOG(WARN, "dest file(%s) has been modifyed!!! %s->%s", file_name.c_str(), dest_buf.modify_time_, modify_time);
+    TBSYS_LOG(WARN, "dest file(%s) has been modifyed!!! %d->%d", file_name.c_str(), dest_buf.modify_time_, modify_time);
   }
   // 2. source file exists, dest file is not exist or diff from source, rewrite file.
   else if (ret != TFS_SUCCESS || ((dest_buf.size_ != source_buf.size_) || (dest_buf.crc_ != source_buf.crc_))) // dest file exist
