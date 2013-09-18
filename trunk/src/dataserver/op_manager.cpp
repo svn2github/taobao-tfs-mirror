@@ -63,7 +63,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
 
       WritableBlock* block = NULL;
-      if (is_master)
+      if (is_master && INVALID_OP_ID == op_id)
       {
         if (INVALID_BLOCK_ID == block_id)
         {
@@ -327,7 +327,8 @@ namespace tfs
       return all_finish;
     }
 
-    void OpManager::release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id)
+    void OpManager::release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
+        const bool expire)
     {
       int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
           (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -336,6 +337,12 @@ namespace tfs
         get_lease_manager().free_writable_block(block_id);
         OpId oid(block_id, file_id, op_id);
         remove(oid);
+
+        // this block no longer writable
+        if (expire)
+        {
+          get_lease_manager().expire_block(block_id);
+        }
       }
     }
 
@@ -648,6 +655,7 @@ namespace tfs
       {
         if (iter->second->get_ref() <= 0 && iter->second->timeout(now))
         {
+          get_lease_manager().free_writable_block(iter->first.block_id_);
           tbsys::gDelete(iter->second);
           op_metas_.erase(iter++);
         }

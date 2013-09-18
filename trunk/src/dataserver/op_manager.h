@@ -102,7 +102,8 @@ namespace tfs
       /*
        * release operation metadata when operation finished
        */
-      void release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id);
+      void release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
+          const bool expire = false);
 
     public:
       int write_file(const uint64_t block_id, const uint64_t attach_block_id,

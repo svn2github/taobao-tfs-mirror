@@ -70,16 +70,6 @@ namespace tfs
           return type_;
         }
 
-        void set_status(const int32_t status)
-        {
-          status_ = status;
-        }
-
-        int32_t get_status() const
-        {
-          return status_;
-        }
-
         void set_servers(const common::ArrayHelper<uint64_t>& servers);
         void get_servers(common::ArrayHelper<uint64_t>& servers);
         void get_servers(common::VUINT64& servers);
@@ -88,7 +78,6 @@ namespace tfs
         uint64_t block_id_;
         uint64_t servers_[common::MAX_REPLICATION_NUM];
         int32_t server_size_;
-        int32_t status_;
         BlockType type_;
         bool use_; // if block using by write, update or unlink ops
     };

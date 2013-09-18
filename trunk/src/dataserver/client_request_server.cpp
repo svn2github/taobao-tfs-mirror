@@ -334,6 +334,7 @@ namespace tfs
       const char* data = message->get_data();
       uint64_t master_id = message->get_master_id();
       uint64_t peer_id = message->get_connection()->getPeerId();
+      int32_t flag = message->get_flag();
       const FamilyInfoExt& family_info = message->get_family_info();
       int64_t family_id = family_info.family_id_;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
@@ -348,22 +349,37 @@ namespace tfs
       // tbnet already receive this packet from network
       get_traffic_control().rw_traffic_stat(true, length);
 
-      // first write, create file id & lease id
       if (TFS_SUCCESS == ret)
       {
-        ret = get_op_manager().prepare_op(attach_block_id,
-            file_id, lease_id, OP_TYPE_WRITE, is_master, family_info, servers);
-        if (TFS_SUCCESS == ret)
+        if (is_master && INVALID_LEASE_ID == lease_id)
         {
-          // callback & slave will use
-          if (INVALID_BLOCK_ID == block_id) // data block
+          // first write to master
+          ret = get_op_manager().prepare_op(attach_block_id,
+              file_id, lease_id, OP_TYPE_WRITE, is_master, family_info, servers);
+          if (TFS_SUCCESS == ret)
           {
-            block_id = attach_block_id;
+            // callback & slave will use
+            if (INVALID_BLOCK_ID == block_id) // data block
+            {
+              block_id = attach_block_id;
+            }
+            message->set_block_id(block_id);
+            message->set_attach_block_id(attach_block_id);
+            message->set_file_id(file_id);
+            message->set_lease_id(lease_id);
+            message->set_flag(TFS_FILE_FIRST_WRITE_TO_SLAVE);
           }
-          message->set_block_id(block_id);
-          message->set_attach_block_id(attach_block_id);
-          message->set_file_id(file_id);
-          message->set_lease_id(lease_id);
+        }
+        else if (!is_master && (flag & TFS_FILE_FIRST_WRITE_TO_SLAVE))
+        {
+          // first write to slave
+          ret = get_op_manager().prepare_op(attach_block_id,
+              file_id, lease_id, OP_TYPE_WRITE, is_master, family_info, servers);
+        }
+        else
+        {
+          // not the first wirte, just reset operation
+          ret = get_op_manager().reset_op(attach_block_id, file_id, lease_id, servers);
         }
       }
 
@@ -751,8 +767,8 @@ namespace tfs
           }
           message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, op_stat.error_.str().c_str());
 
-          // if fail, close will never happen, release op
-          get_op_manager().release_op(attach_block_id, file_id, lease_id);
+          // if fail, close will never happen, release op, expire writable block
+          get_op_manager().release_op(attach_block_id, file_id, lease_id, true);
         }
         else
         {
@@ -817,7 +833,7 @@ namespace tfs
         get_traffic_control().rw_stat(RW_STAT_TYPE_WRITE, ret, true, op_stat.size_);
 
         // after close, release op
-        get_op_manager().release_op(attach_block_id, file_id, lease_id);
+        get_op_manager().release_op(attach_block_id, file_id, lease_id, TFS_SUCCESS == ret);
 
         TBSYS_LOG(INFO, "CLOSE file %s, ret: %d. blockid: %"PRI64_PREFIX"u, "
             "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d",
@@ -859,8 +875,8 @@ namespace tfs
           }
           message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, op_stat.error_.str().c_str());
 
-          // prepare unlink fail, real unlink won't happen
-          get_op_manager().release_op(attach_block_id, file_id, lease_id);
+          // prepare unlink fail, real unlink won't happen, expire writable block
+          get_op_manager().release_op(attach_block_id, file_id, lease_id, true);
         }
         else
         {
@@ -920,7 +936,7 @@ namespace tfs
         get_traffic_control().rw_stat(RW_STAT_TYPE_UNLINK, ret, true, 0);
 
         // after unlink, release op
-        get_op_manager().release_op(attach_block_id, file_id, lease_id);
+        get_op_manager().release_op(attach_block_id, file_id, lease_id, TFS_SUCCESS == ret);
 
         TBSYS_LOG(INFO, "UNLINK file %s, ret: %d. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
             "leaseid: %"PRI64_PREFIX"u, action: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",

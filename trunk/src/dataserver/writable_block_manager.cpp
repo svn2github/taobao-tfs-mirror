@@ -260,6 +260,13 @@ namespace tfs
       block = NULL;
       WritableBlock* target = NULL;
 
+      // check if block exists
+      if (TFS_SUCCESS == ret)
+      {
+        BlockInfoV2 info;
+        ret = get_block_manager().get_block_info(info, block_id);
+      }
+
       if (TFS_SUCCESS == ret)
       {
         rwmutex_.rdlock();
