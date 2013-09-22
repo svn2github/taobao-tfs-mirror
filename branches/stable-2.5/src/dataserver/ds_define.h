@@ -55,6 +55,9 @@ namespace tfs
     static const int32_t TRAFFIC_BYTES_STAT_INTERVAL = 1 * 1000 * 1000;//1s
     static const int32_t BUSY_RETRY_TIMES = 3;
 
+    // checkserver param
+    static const int32_t MAX_CHECK_QUEUE_SIZE = 10;
+
     /*#define RW_COUNT_STAT "rw-count-stat"
     #define RW_COUNT_R_SUCCESS "rw-count-r-success"
     #define RW_COUNT_W_SUCCESS "rw-count-w-success"

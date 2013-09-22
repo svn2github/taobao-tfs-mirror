@@ -104,7 +104,7 @@ namespace tfs
     class ReportCheckBlockMessage: public common::BasePacket
     {
       public:
-        ReportCheckBlockMessage(): seqno_(0), server_id_(common::INVALID_SERVER_ID)
+        ReportCheckBlockMessage()
         {
           _packetHeader._pcode = common::REPORT_CHECK_BLOCK_MESSAGE;
         }
@@ -113,9 +113,44 @@ namespace tfs
         {
         }
 
+        common::CheckParam& get_param()
+        {
+          return param_;
+        }
+
+        void set_param(const common::CheckParam& param)
+        {
+          param_ = param;
+        }
+
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+      private:
+        common::CheckParam param_;
+    };
+
+    class ReportCheckBlockResponseMessage: public common::BasePacket
+    {
+      public:
+        ReportCheckBlockResponseMessage(): seqno_(0), server_id_(common::INVALID_SERVER_ID)
+        {
+          _packetHeader._pcode = common::REPORT_CHECK_BLOCK_RESPONSE_MESSAGE;
+        }
+
+        virtual ~ReportCheckBlockResponseMessage()
+        {
+        }
+
         void set_seqno(const int64_t seqno)
         {
           seqno_ = seqno;
+        }
+
+        int64_t get_seqno() const
+        {
+          return seqno_;
         }
 
         void set_server_id(const uint64_t server_id)
@@ -128,29 +163,14 @@ namespace tfs
           return server_id_;
         }
 
-        int64_t get_seqno() const
+        std::vector<common::CheckResult>& get_result()
         {
-          return seqno_;
+          return result_;
         }
 
-        int32_t get_interval() const
+        void set_result(const std::vector<common::CheckResult>& result)
         {
-          return interval_;
-        }
-
-        void set_interval(const int32_t interval)
-        {
-          interval_ = interval;
-        }
-
-        void set_blocks(const common::VUINT64& blocks)
-        {
-          blocks_ = blocks;
-        }
-
-        common::VUINT64& get_blocks()
-        {
-          return blocks_;
+          result_ = result;
         }
 
         virtual int serialize(common::Stream& output) const;
@@ -160,9 +180,9 @@ namespace tfs
       private:
         int64_t seqno_;
         uint64_t server_id_;
-        common::VUINT64 blocks_;
-        int32_t interval_;
+        std::vector<common::CheckResult> result_;
     };
+
 
  }/** end namespace message **/
 }/** end namespace tfs **/

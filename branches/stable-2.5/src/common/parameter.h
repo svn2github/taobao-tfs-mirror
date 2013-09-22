@@ -220,14 +220,16 @@ namespace tfs
     {
       uint64_t self_id_;
       uint64_t ns_id_;
+      uint64_t peer_ns_id_;
       int32_t cluster_id_;
       int32_t check_interval_;
       int32_t check_span_;
       int32_t thread_count_;
       int32_t check_retry_turns_;
-      int32_t turn_interval_;
       int32_t block_check_interval_;            // mill seconds
       int32_t block_check_cost_;                // mill seoncds
+      int32_t check_flag_;
+      int32_t check_reserve_time_;
 
       int initialize(const std::string& config_file);
 

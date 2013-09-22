@@ -509,16 +509,15 @@ namespace tfs
       {
         check_span_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_SPAN, 86400); // recent day
         if (0 == check_span_)
-        {
           check_span_ = INT_MAX;
-        }
         check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 86400);  // check every day
         thread_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_THREAD_COUNT, 1);
         cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
-        check_retry_turns_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RETRY_TURN, 3);
-        turn_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_TURN_INTERVAL, 180);
+        check_retry_turns_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RETRY_TURN, 2);
         block_check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_CHECK_INTERVAL, 0);
         block_check_cost_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_CHECK_COST, 50);
+        check_flag_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_FLAG, 0);
+        check_reserve_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RESERVE_TIME, 60);
       }
 
       if (TFS_SUCCESS == ret)
@@ -555,6 +554,29 @@ namespace tfs
         else
         {
           TBSYS_LOG(ERROR, "ns_ip config item not found.");
+          ret = TFS_ERROR;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        const char* ns_ip  = config.getString(CONF_SN_CHECKSERVER, CONF_PEER_NS_IP, NULL);
+        if (NULL != ns_ip)
+        {
+          std::vector<std::string> ns_ip_parts;
+          common::Func::split_string(ns_ip, ':', ns_ip_parts);
+          if (2 == ns_ip_parts.size())
+          {
+            peer_ns_id_ = Func::str_to_addr(ns_ip_parts[0].c_str(), atoi(ns_ip_parts[1].c_str()));
+          }
+          else
+          {
+            ret = TFS_ERROR;
+          }
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "peer_ns_ip config item not found.");
           ret = TFS_ERROR;
         }
       }

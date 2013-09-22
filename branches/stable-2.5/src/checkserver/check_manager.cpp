@@ -144,8 +144,8 @@ namespace tfs
       int pcode = packet->getPCode();
       switch(pcode)
       {
-        case REPORT_CHECK_BLOCK_MESSAGE:
-          ret = update_task(dynamic_cast<ReportCheckBlockMessage*>(packet));
+        case REPORT_CHECK_BLOCK_RESPONSE_MESSAGE:
+          ret = update_task(dynamic_cast<ReportCheckBlockResponseMessage*>(packet));
           break;
         default:
           ret = TFS_ERROR;
@@ -334,8 +334,6 @@ namespace tfs
       for ( ; iter != all_servers_.end(); iter++)
       {
         int64_t current = (*iter)->get_blocks().size();
-        TBSYS_LOG(INFO, "server %s dispatched %"PRI64_PREFIX"d blocks",
-            tbsys::CNetUtil::addrToString((*iter)->get_server_id()).c_str(), current);
         if (current > max_dispatch_num_)
         {
           max_dispatch_num_ = current;
@@ -346,28 +344,33 @@ namespace tfs
 
     }
 
-    int CheckManager::update_task(message::ReportCheckBlockMessage* message)
+    int CheckManager::update_task(message::ReportCheckBlockResponseMessage* message)
     {
       int64_t seqno = message->get_seqno();
       uint64_t server_id = message->get_server_id();
-      VUINT64& blocks = message->get_blocks();
+      vector<CheckResult>& result = message->get_result();
       TBSYS_LOG(INFO, "server %s report seqno %"PRI64_PREFIX"u finish %zd blocks",
-            tbsys::CNetUtil::addrToString(server_id).c_str(), seqno, blocks.size());
+            tbsys::CNetUtil::addrToString(server_id).c_str(), seqno, result.size());
       if ((0 != seqno_) && (seqno == seqno_))
       {
-        VUINT64::iterator iter = blocks.begin();
-        for ( ; iter < blocks.end(); iter++)
+        vector<CheckResult>::iterator iter = result.begin();
+        for ( ; iter < result.end(); iter++)
         {
-          int32_t slot = *iter % MAX_BLOCK_CHUNK_NUMS;
-          BlockObject query(*iter);
-          Mutex::Lock lock(bmutex_[slot]);
-          BLOCK_MAP_ITER bit = all_blocks_[slot].find(&query);
-          if (bit != all_blocks_[slot].end())  // remove succussfully checked block
+          if (TFS_SUCCESS == iter->status_)
           {
-            // gDelete(*bit);
-            all_blocks_[slot].erase(bit);
-            delete(*bit);
-            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u check done", *iter);
+            int32_t slot = iter->block_id_ % MAX_BLOCK_CHUNK_NUMS;
+            BlockObject query(iter->block_id_);
+            Mutex::Lock lock(bmutex_[slot]);
+            BLOCK_MAP_ITER bit = all_blocks_[slot].find(&query);
+            if (bit != all_blocks_[slot].end())  // remove succussfully checked block
+            {
+              all_blocks_[slot].erase(bit);
+              delete(*bit);
+            }
+
+            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u check %s. more: %d, diff: %d, less: %d, ret: %d",
+                iter->block_id_, TFS_SUCCESS == iter->status_ ? "success" : "fail",
+                iter->more_, iter->diff_, iter->less_, iter->status_);
           }
         }
       }
@@ -384,7 +387,7 @@ namespace tfs
         int64_t now = Func::curr_time();
         seqno_ = now;
         TimeRange range;
-        range.end_ = (now / 1000000) - 60; // ignore recent 1 minutes modify
+        range.end_ = (now / 1000000) - SYSPARAM_CHECKSERVER.check_reserve_time_; // ignore recent modify
         range.start_ = range.end_ - SYSPARAM_CHECKSERVER.check_span_;
         range.start_ = std::max(range.start_, 0L);  // if start equals 0, do full check
         check_blocks(range);
@@ -395,6 +398,11 @@ namespace tfs
         for (int index = 0; index < wait_time && !stop_; index++)
         {
           sleep(1);  // check if stoped every seconds, may receive stop signal
+        }
+
+        if (!stop_)
+        {
+          TBSYS_LOGGER.rotateLog(NULL);              // rotate log every check
         }
       }
     }
@@ -531,14 +539,21 @@ namespace tfs
       return ret;
     }
 
-    int CheckManager::retry_dispatch_check_blocks(const uint64_t ds_id,
-        const int64_t seqno, const int32_t interval, const common::VUINT64& blocks)
+    int CheckManager::retry_dispatch_check_blocks(const uint64_t ds_id, const uint64_t peer_id,
+        const int64_t seqno, const int32_t interval, const CheckFlag flag, const common::VUINT64& blocks)
     {
       int ret = TFS_SUCCESS;
       int retry_times = DEFAULT_NETWORK_RETRY_TIMES;
       for (int index = 0; index < retry_times; index++)
       {
-        ret = server_helper_->dispatch_check_blocks(ds_id, seqno, interval, blocks);
+        CheckParam param;
+        param.seqno_ = seqno;
+        param.interval_ = interval;
+        param.blocks_ = blocks;
+        param.cs_id_ = SYSPARAM_CHECKSERVER.self_id_;
+        param.peer_id_ =  peer_id;
+        param.flag_ = flag;
+        ret = server_helper_->dispatch_check_blocks(ds_id, param);
         if (TFS_SUCCESS == ret)
         {
           break;
@@ -596,7 +611,7 @@ namespace tfs
             VUINT64 replicas;
             int ret = check_manager_.retry_get_block_replicas(SYSPARAM_CHECKSERVER.ns_id_,
                 (*bit)->get_block_id(), replicas);
-            TBSYS_LOG(INFO, "update block %"PRI64_PREFIX"u replica info from ns",
+            TBSYS_LOG(DEBUG, "update block %"PRI64_PREFIX"u replica info from ns",
                 (*bit)->get_block_id());
             if (TFS_SUCCESS == ret)
             {
@@ -630,9 +645,11 @@ namespace tfs
           continue;
         }
         int ret = check_manager_.retry_dispatch_check_blocks((*iter)->get_server_id(),
-            check_manager_.get_seqno(), SYSPARAM_CHECKSERVER.block_check_interval_, (*iter)->get_blocks());
-        TBSYS_LOG(INFO, "dispatch task to server %s, ret: %d",
-            tbsys::CNetUtil::addrToString((*iter)->get_server_id()).c_str(), ret);
+            SYSPARAM_CHECKSERVER.peer_ns_id_, check_manager_.get_seqno(), SYSPARAM_CHECKSERVER.block_check_interval_,
+            static_cast<CheckFlag>(SYSPARAM_CHECKSERVER.check_flag_),  (*iter)->get_blocks());
+        TBSYS_LOG(INFO, "dispatch task to server %s, block_count: %zd, ret: %d",
+            tbsys::CNetUtil::addrToString((*iter)->get_server_id()).c_str(),
+            (*iter)->get_blocks().size(), ret);
       }
     }
 

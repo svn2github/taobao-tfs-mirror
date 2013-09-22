@@ -480,6 +480,9 @@ namespace tfs
           case common::REPORT_CHECK_BLOCK_MESSAGE:
             packet = new ReportCheckBlockMessage();
             break;
+          case common::REPORT_CHECK_BLOCK_RESPONSE_MESSAGE:
+            packet = new ReportCheckBlockResponseMessage();
+            break;
           case common::REQ_EXPIRE_CLEAN_TASK_MESSAGE:
             packet = new ReqCleanTaskFromRtsMessage();
             break;

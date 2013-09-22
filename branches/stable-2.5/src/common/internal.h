@@ -1233,6 +1233,40 @@ namespace tfs
       WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_YES = 1,
     };
 
+    enum CheckFlag
+    {
+      CHECK_FLAG_NONE = 0,
+      CHECK_FLAG_SYNC
+    };
+
+    struct CheckParam
+    {
+      std::vector<uint64_t> blocks_;
+      int64_t seqno_;
+      uint64_t cs_id_;
+      uint64_t peer_id_;
+      int32_t interval_; // ms
+      CheckFlag flag_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+    };
+
+    struct CheckResult
+    {
+      uint64_t block_id_;
+      int32_t status_;
+      uint16_t more_;
+      uint16_t diff_;
+      uint16_t less_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+    };
+
+
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;
