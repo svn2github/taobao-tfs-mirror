@@ -84,11 +84,11 @@ namespace tfs
       if (!flag)
       {
         ret = EXIT_BUCKET_PERMISSION_DENY;
-        TBSYS_LOG(ERROR, "user_id: %"PRI64_PREFIX"d get bucket have no read acl", user_id);
+        TBSYS_LOG(ERROR, "user_id: %"PRI64_PREFIX"d get bucket have no %d acl", user_id, per);
       }
 
       //TODO fix trick
-      ret = TFS_SUCCESS;
+      //ret = TFS_SUCCESS;
       return ret;
     }
 
@@ -1628,6 +1628,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        buckets_result->bucket_info_map_.clear();
         set<string>::iterator iter = s_bucket_name.begin();
         for (; TFS_SUCCESS == ret && iter != s_bucket_name.end(); iter++)
         {
@@ -2205,26 +2206,57 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = check_bucket_acl(new_bucket_meta_info.bucket_acl_map_, user_info.owner_id_, WRITE);
+        if (EXIT_BUCKET_PERMISSION_DENY == ret)
+        {
+          TBSYS_LOG(ERROR, "delete bucket: %s failed! permission deny, ret: %d", bucket_name.c_str(), ret);
+        }
       }
 
       if (TFS_SUCCESS == ret)
       {
         ret = get_range(pkey, "", 0, limit, &kv_value_keys, &kv_value_values, &res_size);
-      }
-
-      if (res_size == 0 && TFS_SUCCESS == ret)
-      {
-        TBSYS_LOG(DEBUG, "bucket: %s is empty", bucket_name.c_str());
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "delete bucket: %s failed! bucket is not empty", bucket_name.c_str());
-        ret = EXIT_DELETE_DIR_WITH_FILE_ERROR;
+        if (res_size == 0 && TFS_SUCCESS == ret)
+        {
+          TBSYS_LOG(DEBUG, "bucket: %s is empty", bucket_name.c_str());
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "delete bucket: %s failed! bucket is not empty", bucket_name.c_str());
+          ret = EXIT_DELETE_DIR_WITH_FILE_ERROR;
+        }
       }
 
       if (TFS_SUCCESS == ret)
       {
         ret = kv_engine_helper_->delete_key(pkey);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t retry = VERSION_ERROR_RETRY_COUNT;
+        do
+        {
+          set<string> tmp_name_set;
+          int64_t version;
+          ret = get_bucket_name_set(user_info.owner_id_, &tmp_name_set, &version);
+          if (TFS_SUCCESS == ret)
+          {
+            if (tmp_name_set.find(bucket_name) == tmp_name_set.end())
+            {
+              TBSYS_LOG(WARN, "owner_id: %"PRI64_PREFIX"d has no bucket: %s in owner_id->bucket table", user_info.owner_id_, bucket_name.c_str());
+            }
+            else
+            {
+              tmp_name_set.erase(bucket_name);
+              ret = put_bucket_name_set(user_info.owner_id_, tmp_name_set, version);
+            }
+          }
+        } while (retry-- && EXIT_KV_RETURN_VERSION_ERROR == ret);
+
+        if (EXIT_KV_RETURN_VERSION_ERROR == ret)
+        {
+          TBSYS_LOG(WARN, "update owner_id: %"PRI64_PREFIX"d bucket name set version error", user_info.owner_id_);
+        }
       }
 
       //delete for kv
