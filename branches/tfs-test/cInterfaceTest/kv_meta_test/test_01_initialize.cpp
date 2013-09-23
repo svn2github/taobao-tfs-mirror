@@ -31,8 +31,8 @@
 
 TEST_F(TFS_Without_Init,02_initialize_int64)
 {
-  const char*kms_addr="10.232.36.210:7201";
-  const char*rc_addr="10.232.36.202:5202";
+  const char*kms_addr="10.232.4.12:3300";
+  const char*rc_addr="10.232.4.12:2800";
   int Ret ;
 
   int64_t kms_addr_int64 = tfs::common::Func::get_host_ip(kms_addr);

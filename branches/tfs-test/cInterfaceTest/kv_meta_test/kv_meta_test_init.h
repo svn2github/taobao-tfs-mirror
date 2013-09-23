@@ -28,12 +28,12 @@ static TMP tmp; //this is make tfsclient init first
 static RcClient kv_meta_client ;
 //static RcClientImpl kv_meta_client ;
 
-#define RC_2M    "/home/yiming.czw/kv_meta_test/resouce/2m"
-#define RC_100M  "/home/yiming.czw/kv_meta_test/resouce/100m"
-#define RC_5M    "/home/yiming.czw/kv_meta_test/resouce/5m"
-#define RC_2K    "/home/yiming.czw/kv_meta_test/resouce/2k"
-#define RC_00    "/home/yiming.czw/kv_meta_test/resouce/empty"
-#define RC_20M   "/home/yiming.czw/kv_meta_test/resouce/20m"
+#define RC_2M    "/home/admin/workspace/diqing/resource/2m"
+#define RC_100M  "/home/admin/workspace/diqing/resource/100m"
+#define RC_5M    "/home/admin/workspace/diqing/resource/5m"
+#define RC_2K    "/home/admin/workspace/diqing/resource/2k"
+#define RC_00    "/home/admin/workspace/diqing/resource/empty"
+#define RC_20M   "/home/admin/workspace/diqing/resource/20m"
 
 class TFS_Init : public testing::Test
 {
@@ -41,19 +41,18 @@ class TFS_Init : public testing::Test
 
     static void SetUpTestCase()
     {
-      const char*kms_addr="10.232.36.210:7201";
-      // const char*kms_addr="10.232.35.40:5977";
-      const char*rc_addr="10.232.36.202:9202";
+      const char*kv_root_server_addr="10.232.4.12:4567";
+      // const char*kv_root_server_addr="10.232.35.40:5977";
+      const char*rc_addr="10.232.4.12:7269";
       //const char*rc_addr="10.232.36.200:5755";
-      //const char*app_key="tfsNginxA01";
-      const char*app_key="Test_11";
+      const char*app_key="tappkey";
       int Ret ;
 
       //		kv_meta_client = new KvMetaClient();
-      //		Ret = kv_meta_client->initialize(kms_addr,ns_addr);
+      //		Ret = kv_meta_client->initialize(kv_root_server_addr,ns_addr);
 
 
-      kv_meta_client.set_kv_rs_addr(kms_addr);
+      kv_meta_client.set_kv_rs_addr(kv_root_server_addr);
       Ret = kv_meta_client.initialize(rc_addr,app_key);
 
       if(Ret<0)
@@ -78,67 +77,71 @@ class TFS_Init_Data : public testing::Test
 
     static void SetUpTestCase()
     {
-      //const char*kms_addr="10.232.35.40:5977";
-      const char*kms_addr="10.232.36.210:7201";
-      const char*rc_addr="10.232.36.202:9202";
-      const char*app_key="Test_11";
+      const char*kv_root_server_addr="10.232.4.12:4567";
+      const char*rc_addr="10.232.4.12:7269";
+      const char*app_key="tappkey";
 
-      tfs::common::UserInfo user_info;
-      user_info.owner_id_=1;
+       tfs::common::UserInfo user_info;
+       user_info.owner_id_=1;
+       tfs::common::CustomizeInfo customize_info;
+      
       const char*bucket_name="a1a";
       const char* local_file=RC_2M;
 
       int Ret ;
 
       //kv_meta_client = new KvMetaClient();
-      kv_meta_client.set_kv_rs_addr(kms_addr);
+      kv_meta_client.set_kv_rs_addr(kv_root_server_addr);
       Ret = kv_meta_client.initialize(rc_addr,app_key);
       if(Ret<0)
         cout<<"Client initalize fail!"<<endl;
 
-      kv_meta_client.put_bucket(bucket_name,user_info);
+      Ret =kv_meta_client.put_bucket(bucket_name,user_info);
+      EXPECT_EQ(Ret,0);
 
-      Ret = kv_meta_client.put_object(bucket_name,"abc/",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abc/",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 1 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"ab/c",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"ab/c",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 2 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abc/a",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abc/a",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 3 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abc/b",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abc/b",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 4 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abc/c",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abc/c",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 5 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abca/",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abca/",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 6 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abcb/",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abcb/",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 7 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abcc/",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abcc/",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 8 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abcaa/",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abcaa/",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 9 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abcab/",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abcab/",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 10 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abcac/",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abcac/",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 11 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abcba",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abcba",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 12 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abcbb",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abcbb",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 13 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abcbc",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abcbc",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 14 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abcca/",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abcca/",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 15 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abccb/",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abccb/",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 16 fail !"<<endl;
-      Ret = kv_meta_client.put_object(bucket_name,"abccc/",local_file,user_info);
+      Ret = kv_meta_client.put_object(bucket_name,"abccc/",local_file,user_info,customize_info);
       if(Ret<0) cout<<"put_objct 17 fail !"<<endl;
     }
 
     static void TearDownTestCase()
     {
-      const char*bucket_name="a1a";
-      tfs::common::UserInfo user_info;
-      user_info.owner_id_=1;
+       const char*bucket_name="a1a";
+       tfs::common::UserInfo user_info;
+       user_info.owner_id_=1;
+       tfs::common::CustomizeInfo customize_info;
+
 
       kv_meta_client.del_object(bucket_name,"abc/",user_info);
       kv_meta_client.del_object(bucket_name,"ab/c",user_info);

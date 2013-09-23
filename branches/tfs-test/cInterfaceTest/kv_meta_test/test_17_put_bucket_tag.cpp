@@ -9,62 +9,64 @@
 * Version: $Id
 *
 * Authors:
-*   yiming.czw <yiming.czw@taobao.com>
+*   diqing <diqing@taobao.com>
 *      - initial release
 *
 */
-
 #include"kv_meta_test_init.h"
+using namespace tfs::common;
 
-TEST_F(TFS_Init,01_del_bucket)
+TEST_F(TFS_Init,01_put_bucket_tag)
 {
   int Ret ;
   const char* bucket_name = "a1a";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
-
+  
+  MAP_STRING bucket_tag_map;
+  bucket_tag_map.clear();
+  bucket_tag_map.insert(std::make_pair("aaa","bbb"));
+  
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 
+  Ret = kv_meta_client.put_bucket_tag(bucket_name,bucket_tag_map);
+  EXPECT_EQ(Ret,0);
+  
+ 
   Ret = kv_meta_client.del_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 }
 
-TEST_F(TFS_Init,02_del_bucket_double)
+TEST_F(TFS_Init,02_put_bucket_logging_null)
 {
   int Ret ;
-  const char* bucket_name = "a1a";
+  const char* bucket_name = NULL;
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
 
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
-  EXPECT_EQ(Ret,0);
-
-  Ret = kv_meta_client.del_bucket(bucket_name,user_info);
-  EXPECT_EQ(Ret,0);
+  EXPECT_NE(Ret,0);
 
   Ret = kv_meta_client.del_bucket(bucket_name,user_info);
   EXPECT_NE(Ret,0);
 }
 
-TEST_F(TFS_Init,03_del_bucket_null)
+TEST_F(TFS_Init,03_put_bucket_logging_empty)
 {
   int Ret ;
-  const char* bucket_name = "a1a";
+  const char* bucket_name = "";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
 
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
-  EXPECT_EQ(Ret,0);
-
-  Ret = kv_meta_client.del_bucket(NULL,user_info);
   EXPECT_NE(Ret,0);
 
   Ret = kv_meta_client.del_bucket(bucket_name,user_info);
-  EXPECT_EQ(Ret,0);
+  EXPECT_NE(Ret,0);
 }
 
-TEST_F(TFS_Init,04_del_bucket_empty)
+TEST_F(TFS_Init,04_put_bucket_logging_double)
 {
   int Ret ;
   const char* bucket_name = "a1a";
@@ -74,35 +76,8 @@ TEST_F(TFS_Init,04_del_bucket_empty)
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 
-  Ret = kv_meta_client.del_bucket("",user_info);
-  EXPECT_NE(Ret,0);
-
-  Ret = kv_meta_client.del_bucket(bucket_name,user_info);
-  EXPECT_EQ(Ret,0);
-}
-
-TEST_F(TFS_Init,05_del_bucket_with_object)
-{
-  int Ret ;
-  const char* bucket_name = "a1a";
-  const char* object_name = "BBB";
-  const char* local_file = RC_2K;
-
-  tfs::common::UserInfo user_info;
-  user_info.owner_id_ = 1;
-  tfs::common::CustomizeInfo customize_info; 
-
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
-  EXPECT_EQ(Ret,0);
-
-  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info,customize_info);
-  EXPECT_EQ(Ret,0);
-
-  Ret = kv_meta_client.del_bucket(bucket_name,user_info);
   EXPECT_NE(Ret,0);
-
-  Ret = kv_meta_client.del_object(bucket_name,object_name,user_info);
-  EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.del_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);

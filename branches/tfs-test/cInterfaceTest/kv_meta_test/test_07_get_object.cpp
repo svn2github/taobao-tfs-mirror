@@ -27,14 +27,14 @@ TEST_F(TFS_Init,01_get_object)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
-
+  tfs::common::CustomizeInfo customize_info;
   int32_t length = 2*(1<<20);
 
   uint32_t local_crc = Get_crc(local_file,length);
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 
-  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info);
+  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info,customize_info);
   EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.get_object(bucket_name,object_name,local_file_rcv,user_info);
@@ -61,6 +61,7 @@ TEST_F(TFS_Init,02_get_object_2K)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   int32_t length = 2*(1<<10);
 
@@ -68,7 +69,7 @@ TEST_F(TFS_Init,02_get_object_2K)
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 
-  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info);
+  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info,customize_info);
   EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.get_object(bucket_name,object_name,local_file_rcv,user_info);
@@ -95,6 +96,7 @@ TEST_F(TFS_Init,03_get_object_5M)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   int32_t length = 5*(1<<20);
 
@@ -102,7 +104,7 @@ TEST_F(TFS_Init,03_get_object_5M)
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 
-  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info);
+  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info,customize_info);
   EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.get_object(bucket_name,object_name,local_file_rcv,user_info);
@@ -129,6 +131,7 @@ TEST_F(TFS_Init,04_get_object_100M)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   int32_t length = 100*(1<<20);
 
@@ -136,7 +139,7 @@ TEST_F(TFS_Init,04_get_object_100M)
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 
-  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info);
+  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info,customize_info);
   EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.get_object(bucket_name,object_name,local_file_rcv,user_info);
@@ -162,6 +165,7 @@ TEST_F(TFS_Init,05_get_object_non_exist_bucket)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   Ret = kv_meta_client.get_object(bucket_name,object_name,local_file_rcv,user_info);
   EXPECT_NE(Ret,0);
@@ -176,6 +180,7 @@ TEST_F(TFS_Init,06_get_object_null_bucket)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   Ret = kv_meta_client.get_object(bucket_name,object_name,local_file_rcv,user_info);
   EXPECT_NE(Ret,0);
@@ -190,6 +195,7 @@ TEST_F(TFS_Init,07_get_object_empty_bucket)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   Ret = kv_meta_client.get_object(bucket_name,object_name,local_file_rcv,user_info);
   EXPECT_NE(Ret,0);
@@ -204,6 +210,7 @@ TEST_F(TFS_Init,08_get_object_non_exist)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
@@ -225,6 +232,7 @@ TEST_F(TFS_Init,09_get_object_null_object)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
@@ -246,6 +254,7 @@ TEST_F(TFS_Init,10_get_object_empty_object)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
@@ -268,11 +277,12 @@ TEST_F(TFS_Init,11_get_object_null_local_file)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 
-  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info);
+  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info,customize_info);
   EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.get_object(bucket_name,object_name,local_file_rcv,user_info);
@@ -296,11 +306,12 @@ TEST_F(TFS_Init,14_get_object_empty_local_file)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 
-  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info);
+  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info,customize_info);
   EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.get_object(bucket_name,object_name,local_file_rcv,user_info);
@@ -327,11 +338,12 @@ TEST_F(TFS_Init,15_get_object_zore)
 
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
+  tfs::common::CustomizeInfo customize_info;
 
   Ret = kv_meta_client.put_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 
-  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info);
+  Ret = kv_meta_client.put_object(bucket_name,object_name,local_file,user_info,customize_info);
   EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.get_object(bucket_name,object_name,local_file_rcv,user_info);
