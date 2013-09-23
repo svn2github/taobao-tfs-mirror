@@ -170,6 +170,8 @@ ngx_http_lifecycle_parse_custom_name(ngx_http_request_t *r,
             break;
         case sw_appid:
             if (ch == '/') {
+                /* new add */
+                ctx->file_path_s.data = start;
                 rc = ngx_http_lifecycle_atoull(start, p - start,
                                          (unsigned long long *)&ctx->app_id);
                 if (rc == NGX_ERROR || ctx->app_id == 0) {
@@ -227,7 +229,7 @@ ngx_http_lifecycle_parse_custom_name(ngx_http_request_t *r,
                 } else {
                     return NGX_ERROR;
                 }
-                ctx->file_path_s.data = p;
+                //ctx->file_path_s.data = p;
                 state = sw_name;
             }
             break;
@@ -238,7 +240,7 @@ ngx_http_lifecycle_parse_custom_name(ngx_http_request_t *r,
 
 
     ctx->file_path_s.len = p - ctx->file_path_s.data;
-    // TODO: trim whitespace && adjacent '/' && tailing '/'
+
     if (ctx->file_path_s.len < 1
         || ctx->file_path_s.len > NGX_HTTP_LIFECYCLE_MAX_FILE_NAME_LEN)
     {
@@ -259,22 +261,19 @@ ngx_http_lifecycle_parse_custom_name(ngx_http_request_t *r,
 
 
 static ngx_int_t
-ngx_http_lifecycle_parse_action(ngx_http_request_t *r,
+ngx_http_lifecycle_parse_action_custom(ngx_http_request_t *r,
     ngx_http_lifecycle_restful_ctx_t *ctx)
 {
     ngx_int_t  rc;
-    ngx_str_t  arg_value, file_path_d;
+    ngx_str_t  arg_value;
 
     switch(r->method) {
     case NGX_HTTP_GET:
-    /* GET /lifecycle/v2/appkey/appid/uid/file/tfsname */
+    /* GET /lifecycle/v2/tfscom/123/456/file/test001 */
         ctx->file_name = ctx->file_path_s;
         ctx->action.code = NGX_HTTP_LIFECYCLE_ACTION_GET;
         ngx_str_set(&ctx->action.msg, "get_life_cycle");
 
-        if (r->headers_in.range != NULL) {
-            return NGX_HTTP_BAD_REQUEST;
-        }
         break;
 
     case NGX_HTTP_POST:
@@ -282,6 +281,41 @@ ngx_http_lifecycle_parse_action(ngx_http_request_t *r,
      * positive_expiretime=D2013-12-12T03:05:58 */
         ctx->action.code = NGX_HTTP_LIFECYCLE_ACTION_POST;
         ngx_str_set(&ctx->action.msg, "post_life_cycle");
+        if (ngx_http_arg(r, positive_expiretime_str,
+            ngx_strlen(positive_expiretime_str), &arg_value) == NGX_OK)
+        {
+            ctx->expiretime_type = NGX_HTTP_LIFECYCLE_POSITIVE_TIME;
+            if (arg_value.len != 0) {
+                ctx->lifecycle_on = 1;
+                ctx->absolute_time = ngx_http_lifecycle_get_positive_time(&arg_value);
+                if (ctx->absolute_time == NGX_ERROR) {
+                    return NGX_HTTP_BAD_REQUEST;
+                }
+            } else {
+                return NGX_HTTP_BAD_REQUEST;
+            }
+        } else if (ngx_http_arg(r, relative_expiretime_str,
+                   ngx_strlen(relative_expiretime_str), &arg_value) == NGX_OK)
+        {
+            ctx->expiretime_type = NGX_HTTP_LIFECYCLE_RELATIVE_TIME;
+            if (arg_value.len != 0) {
+                ctx->lifecycle_on = 1;
+                ctx->absolute_time = 0;
+                ctx->absolute_time = ngx_http_lifecycle_get_relative_time(&arg_value);
+                ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+                              "=====relative time: %d", ctx->absolute_time);
+                if (ctx->absolute_time == NGX_ERROR) {
+                    return NGX_HTTP_BAD_REQUEST;
+                } else {
+                    ctx->absolute_time += ngx_time();
+                }
+            } else {
+                return NGX_HTTP_BAD_REQUEST;
+            }
+        } else {
+            ctx->lifecycle_on = 0;
+        }
+        ctx->file_name = ctx->file_path_s;
         break;
 
     case NGX_HTTP_PUT:
@@ -289,10 +323,49 @@ ngx_http_lifecycle_parse_action(ngx_http_request_t *r,
      * positive_expiretime=D2013-12-12T03:05:58 */
         ctx->action.code = NGX_HTTP_LIFECYCLE_ACTION_PUT;
         ngx_str_set(&ctx->action.msg, "put_life_cycle");
+        if (ngx_http_arg(r, positive_expiretime_str,
+            ngx_strlen(positive_expiretime_str), &arg_value) == NGX_OK)
+        {
+            ctx->expiretime_type = NGX_HTTP_LIFECYCLE_POSITIVE_TIME;
+            if (arg_value.len != 0) {
+                ctx->lifecycle_on = 1;
+                ctx->absolute_time = ngx_http_lifecycle_get_positive_time(&arg_value);
+                if (ctx->absolute_time == NGX_ERROR) {
+                    return NGX_HTTP_BAD_REQUEST;
+                }
+            } else {
+                return NGX_HTTP_BAD_REQUEST;
+            }
+        } else if (ngx_http_arg(r, relative_expiretime_str,
+                   ngx_strlen(relative_expiretime_str), &arg_value) == NGX_OK)
+        {
+            ctx->expiretime_type = NGX_HTTP_LIFECYCLE_RELATIVE_TIME;
+            if (arg_value.len != 0) {
+                ctx->lifecycle_on = 1;
+                ctx->absolute_time = 0;
+                ctx->absolute_time = ngx_http_lifecycle_get_relative_time(&arg_value);
+                ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+                              "=====relative time: %d", ctx->absolute_time);
+                if (ctx->absolute_time == NGX_ERROR) {
+                    return NGX_HTTP_BAD_REQUEST;
+                }
+            } else {
+                return NGX_HTTP_BAD_REQUEST;
+            }
+        } else {
+            ctx->lifecycle_on = 0;
+        }
+        if (ctx->file_path_s.data == NULL) {
+            return NGX_HTTP_BAD_REQUEST;
+        }
+        ctx->file_name = ctx->file_path_s;
+        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0, "======^^^^^^^===== %d",  ctx->file_name.len);
         break;
 
     case NGX_HTTP_DELETE:
     /* DELETE */
+        ctx->lifecycle_on = 1;
+        ctx->file_name = ctx->file_path_s;
         ctx->action.code = NGX_HTTP_LIFECYCLE_ACTION_DEL;
         ngx_str_set(&ctx->action.msg, "del_life_cycle");
         break;
@@ -325,50 +398,45 @@ ngx_http_lifecycle_parse_action_raw(ngx_http_request_t *r, ngx_http_lifecycle_re
         ctx->action.code = NGX_HTTP_LIFECYCLE_ACTION_POST;
         ngx_str_set(&ctx->action.msg, "post_life_cycle");
 
-        if (NGX_HTTP_LIFECYCLE_POSITIVE_TIME == ctx->expiretime_type) {
-
-            if (ngx_http_arg(r, positive_expiretime_str,
-                ngx_strlen(positive_expiretime_str), &arg_value) == NGX_OK)
-            {
-                if (arg_value.len != 0) {
-                    ctx->absolute_time = ngx_http_lifecycle_get_positive_time(&arg_value);
-                    if (ctx->absolute_time == NGX_ERROR) {
-                        return NGX_HTTP_BAD_REQUEST;
-                    }
-                } else {
+        if (ngx_http_arg(r, positive_expiretime_str,
+            ngx_strlen(positive_expiretime_str), &arg_value) == NGX_OK)
+        {
+            ctx->expiretime_type = NGX_HTTP_LIFECYCLE_POSITIVE_TIME;
+            if (arg_value.len != 0) {
+                ctx->lifecycle_on = 1;
+                ctx->absolute_time = ngx_http_lifecycle_get_positive_time(&arg_value);
+                if (ctx->absolute_time == NGX_ERROR) {
                     return NGX_HTTP_BAD_REQUEST;
                 }
             } else {
                 return NGX_HTTP_BAD_REQUEST;
             }
-        } else if (NGX_HTTP_LIFECYCLE_RELATIVE_TIME == ctx->expiretime_type) {
-
-            if (ngx_http_arg(r, relative_expiretime_str,
-                ngx_strlen(relative_expiretime_str), &arg_value) == NGX_OK)
-            {
-                if (arg_value.len != 0) {
-                    ctx->absolute_time = 0;
-                    ctx->absolute_time = ngx_http_lifecycle_get_relative_time(&arg_value);
-                    ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
-                                  "=====relative time: %d", ctx->absolute_time);
-                    if (ctx->absolute_time == NGX_ERROR) {
-                        return NGX_HTTP_BAD_REQUEST;
-                    } else {
-                        ctx->absolute_time += ngx_time();
-                    }
-                } else {
+        } else if (ngx_http_arg(r, relative_expiretime_str,
+                   ngx_strlen(relative_expiretime_str), &arg_value) == NGX_OK)
+        {
+            ctx->expiretime_type = NGX_HTTP_LIFECYCLE_RELATIVE_TIME;
+            if (arg_value.len != 0) {
+                ctx->lifecycle_on = 1;
+                ctx->absolute_time = 0;
+                ctx->absolute_time = ngx_http_lifecycle_get_relative_time(&arg_value);
+                ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+                              "=====relative time: %d", ctx->absolute_time);
+                if (ctx->absolute_time == NGX_ERROR) {
                     return NGX_HTTP_BAD_REQUEST;
+                } else {
+                    ctx->absolute_time += ngx_time();
                 }
             } else {
                 return NGX_HTTP_BAD_REQUEST;
             }
         } else {
-            return NGX_HTTP_BAD_REQUEST;
+            ctx->lifecycle_on = 0;
         }
         return NGX_OK;
 
     case NGX_HTTP_DELETE:
         /* DELETE /v1/12345/T29RETBgVv1RymAV6K HTTP/1.1 */
+        ctx->lifecycle_on = 1;
         ctx->file_name = ctx->file_path_s;
         ctx->action.code = NGX_HTTP_LIFECYCLE_ACTION_DEL;
         ngx_str_set(&ctx->action.msg, "del_life_cycle");
@@ -379,43 +447,37 @@ ngx_http_lifecycle_parse_action_raw(ngx_http_request_t *r, ngx_http_lifecycle_re
         ctx->action.code = NGX_HTTP_LIFECYCLE_ACTION_PUT;
         ngx_str_set(&ctx->action.msg, "put_life_cycle");
 
-        if (NGX_HTTP_LIFECYCLE_POSITIVE_TIME == ctx->expiretime_type) {
-
-            if (ngx_http_arg(r, positive_expiretime_str,
-                ngx_strlen(positive_expiretime_str), &arg_value) == NGX_OK)
-            {
-                if (arg_value.len != 0) {
-                    ctx->absolute_time = ngx_http_lifecycle_get_positive_time(&arg_value);
-                    if (ctx->absolute_time == NGX_ERROR) {
-                        return NGX_HTTP_BAD_REQUEST;
-                    }
-                } else {
+        if (ngx_http_arg(r, positive_expiretime_str,
+            ngx_strlen(positive_expiretime_str), &arg_value) == NGX_OK)
+        {
+            ctx->expiretime_type = NGX_HTTP_LIFECYCLE_POSITIVE_TIME;
+            if (arg_value.len != 0) {
+                ctx->lifecycle_on = 1;
+                ctx->absolute_time = ngx_http_lifecycle_get_positive_time(&arg_value);
+                if (ctx->absolute_time == NGX_ERROR) {
                     return NGX_HTTP_BAD_REQUEST;
                 }
             } else {
                 return NGX_HTTP_BAD_REQUEST;
             }
-        } else if (NGX_HTTP_LIFECYCLE_RELATIVE_TIME == ctx->expiretime_type) {
-
-            if (ngx_http_arg(r, relative_expiretime_str,
-                ngx_strlen(relative_expiretime_str), &arg_value) == NGX_OK)
-            {
-                if (arg_value.len != 0) {
-                    ctx->absolute_time = 0;
-                    ctx->absolute_time = ngx_http_lifecycle_get_relative_time(&arg_value);
-                    ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
-                                  "=====relative time: %d", ctx->absolute_time);
-                    if (ctx->absolute_time == NGX_ERROR) {
-                        return NGX_HTTP_BAD_REQUEST;
-                    }
-                } else {
+        } else if (ngx_http_arg(r, relative_expiretime_str,
+                   ngx_strlen(relative_expiretime_str), &arg_value) == NGX_OK)
+        {
+            ctx->expiretime_type = NGX_HTTP_LIFECYCLE_RELATIVE_TIME;
+            if (arg_value.len != 0) {
+                ctx->lifecycle_on = 1;
+                ctx->absolute_time = 0;
+                ctx->absolute_time = ngx_http_lifecycle_get_relative_time(&arg_value);
+                ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+                              "=====relative time: %d", ctx->absolute_time);
+                if (ctx->absolute_time == NGX_ERROR) {
                     return NGX_HTTP_BAD_REQUEST;
                 }
             } else {
                 return NGX_HTTP_BAD_REQUEST;
             }
         } else {
-            return NGX_HTTP_BAD_REQUEST;
+            ctx->lifecycle_on = 0;
         }
         if (ctx->file_path_s.data == NULL) {
             return NGX_HTTP_BAD_REQUEST;
@@ -507,7 +569,7 @@ ngx_http_lifecycle_parse_uri(ngx_http_request_t *r, ngx_http_lifecycle_restful_c
     return NGX_ERROR;
 }
 
-
+/*
 ngx_int_t
 ngx_http_lifecycle_on_off(ngx_http_request_t *r, ngx_http_lifecycle_restful_ctx_t *ctx)
 {
@@ -543,28 +605,30 @@ ngx_http_lifecycle_on_off(ngx_http_request_t *r, ngx_http_lifecycle_restful_ctx_
                   "!!!!!!!lifecycle_on is: %d and rc is %d", ctx->lifecycle_on, rc);
     return rc;
 }
+*/
 
 ngx_int_t
 ngx_http_lifecycle_parse(ngx_http_request_t *r, ngx_http_lifecycle_restful_ctx_t *ctx)
 {
     ngx_int_t            rc;
 
-    rc = ngx_http_lifecycle_on_off(r, ctx);
-
-    if (ctx->lifecycle_on) {
-
-        if (rc == NGX_ERROR) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "parse uri failed");
-            return NGX_HTTP_BAD_REQUEST;
-        }
+    /*
+     * rc = ngx_http_lifecycle_on_off(r, ctx);
+     *
+     */
+    rc = ngx_http_lifecycle_parse_uri(r, ctx);
+    if (rc == NGX_OK) {
 
         if (ctx->version == 1) {
             rc = ngx_http_lifecycle_parse_action_raw(r, ctx);
         }
 
         if (ctx->version == 2) {
-            rc = ngx_http_lifecycle_parse_action(r, ctx);
+            rc = ngx_http_lifecycle_parse_action_custom(r, ctx);
         }
+    } else {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "parse uri failed");
+        return NGX_HTTP_BAD_REQUEST;
     }
 
     return rc;
