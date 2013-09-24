@@ -1046,7 +1046,7 @@ namespace tfs
         for (; iter != s_file_name.end(); iter++)
         {
           (delete_result->v_fail_objects_).push_back(*iter);
-        (delete_result->v_fail_msg_).push_back(PERMISSION_ERROR_STR);
+          (delete_result->v_fail_msg_).push_back(PERMISSION_ERROR_STR);
         }
         ret = TFS_SUCCESS;
       }
@@ -1057,7 +1057,11 @@ namespace tfs
         {
           ObjectInfo object_info;
           bool still_have = false;
-          ret = del_object(bucket_name, *iter, &object_info, &still_have, user_info);
+          do
+          {
+            ret = del_object(bucket_name, *iter, &object_info, &still_have, user_info);
+          } while (TFS_SUCCESS == ret && still_have);
+
           // if not found means suc
           if (EXIT_OBJECT_NOT_EXIST == ret || TFS_SUCCESS == ret)
           {
