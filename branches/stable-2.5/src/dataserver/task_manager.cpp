@@ -353,12 +353,17 @@ namespace tfs
 
     int TaskManager::add_task_queue(Task* task)
     {
-      TBSYS_LOG(DEBUG, "Add task %s", task->dump().c_str());
-      task_monitor_.lock();
-      task_queue_.push_back(task);
-      task_monitor_.notify();
-      task_monitor_.unlock();
-      return TFS_SUCCESS;
+      int ret = add_block(task) ? TFS_SUCCESS : EXIT_BLOCK_IN_TASK_QUEUE;
+      if (TFS_SUCCESS == ret)
+      {
+        task_monitor_.lock();
+        task_queue_.push_back(task);
+        task_monitor_.notify();
+        task_monitor_.unlock();
+      }
+
+      TBSYS_LOG(DEBUG, "Add task %s, ret: %d", task->dump().c_str(), ret);
+      return ret;
     }
 
     void TaskManager::run_task()
@@ -612,5 +617,62 @@ namespace tfs
       }
       return ret;
     }
+
+    bool TaskManager::add_block(Task* task)
+    {
+      Mutex::Lock lock(running_blocks_mutex_);
+      bool ok = (NULL != task);
+      if (ok)
+      {
+        uint64_t blocks[MAX_MARSHALLING_NUM];
+        ArrayHelper<uint64_t> helper(MAX_MARSHALLING_NUM, blocks);
+        ok = task->get_involved_blocks(helper);
+        if (ok)
+        {
+          for (int32_t index = 0; index < helper.get_array_index(); index++)
+          {
+            std::set<uint64_t>::iterator iter = running_blocks_.find(*helper.at(index));
+            if (iter != running_blocks_.end())
+            {
+              // block already in task queue
+              ok = false;
+              break;
+            }
+          }
+        }
+
+        if (ok) // all blocks are not in task queue
+        {
+          for (int32_t index = 0; index < helper.get_array_index(); index++)
+          {
+            running_blocks_.insert(*helper.at(index));
+          }
+        }
+      }
+
+      return ok;
+    }
+
+    void TaskManager::remove_block(Task* task)
+    {
+      Mutex::Lock lock(running_blocks_mutex_);
+      if (NULL != task)
+      {
+        uint64_t blocks[MAX_MARSHALLING_NUM];
+        ArrayHelper<uint64_t> helper(MAX_MARSHALLING_NUM, blocks);
+        task->get_involved_blocks(helper);
+        for (int32_t index = 0; index < helper.get_array_index(); index++)
+        {
+          running_blocks_.erase(*helper.at(index));
+        }
+      }
+    }
+
+    bool TaskManager::exist_block(const uint64_t block_id) const
+    {
+      Mutex::Lock lock(running_blocks_mutex_);
+      return running_blocks_.find(block_id) != running_blocks_.end();
+    }
+
   }
 }

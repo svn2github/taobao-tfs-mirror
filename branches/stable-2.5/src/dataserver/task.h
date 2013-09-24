@@ -23,6 +23,7 @@
 #include "common/error_msg.h"
 #include "ds_define.h"
 #include "common/base_packet.h"
+#include "common/array_helper.h"
 
 namespace tfs
 {
@@ -168,6 +169,11 @@ namespace tfs
          */
         virtual std::string dump() const ;
 
+        /**
+         * @brief get all blocks in task
+         */
+        virtual bool get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const = 0;
+
       private:
         DISALLOW_COPY_AND_ASSIGN(Task);
 
@@ -206,6 +212,7 @@ namespace tfs
         virtual std::string dump() const ;
         virtual int report_to_ns(const int status);
         virtual int report_to_ds(const int status);
+        virtual bool get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const;
 
       private:
         DISALLOW_COPY_AND_ASSIGN(CompactTask);
@@ -242,6 +249,7 @@ namespace tfs
         virtual std::string dump() const;
         virtual int report_to_ns(const int status);
         virtual int report_to_ds(const int status);
+        virtual bool get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const;
 
       private:
         DISALLOW_COPY_AND_ASSIGN(ReplicateTask);
@@ -267,6 +275,7 @@ namespace tfs
         virtual int handle();
         virtual std::string dump() const;
         virtual int report_to_ns(const int status);
+        virtual bool get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const;
 
       private:
         DISALLOW_COPY_AND_ASSIGN(MarshallingTask);

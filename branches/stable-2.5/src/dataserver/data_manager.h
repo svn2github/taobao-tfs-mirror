@@ -27,6 +27,7 @@ namespace tfs
 {
   namespace dataserver
   {
+    class TaskManager;
     class Dataservice;
     class DataManager
     {
@@ -37,6 +38,7 @@ namespace tfs
       public:
         /** lease management */
         inline BlockManager& get_block_manager();
+        inline TaskManager& get_task_manager();
         int prepare_lease(const uint64_t block_id, uint64_t& file_id, uint64_t& lease_id,
             const LeaseType type, const common::VUINT64& servers, const bool alloc);
         int update_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,

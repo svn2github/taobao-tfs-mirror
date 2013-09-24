@@ -170,6 +170,17 @@ namespace tfs
       return tmp_stream.str();
     }
 
+    bool CompactTask::get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const
+    {
+      bool ret = blocks.get_array_size() >= 1;
+      if (ret)
+      {
+        blocks.clear();
+        blocks.push_back(block_id_);
+      }
+      return ret;
+    }
+
     void CompactTask::add_response(const uint64_t server, const int status,
         const common::BlockInfoV2& info)
     {
@@ -196,6 +207,8 @@ namespace tfs
       cmit_cpt_msg.set_block_info(info_);
       cmit_cpt_msg.set_result(result_);
       ret = get_data_helper().send_simple_request(source_id_, &cmit_cpt_msg);
+
+      service_.get_task_manager().remove_block(this);
 
       TBSYS_LOG(INFO, "compact report to ns. seqno: %"PRI64_PREFIX"d, "
           "blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
@@ -231,6 +244,8 @@ namespace tfs
       // post repsonse to master ds, won't care result
       NewClient* client = NewClientManager::get_instance().create_client();
       post_msg_to_server(source_id_, client, &resp_cpt_msg, Task::ds_task_callback);
+
+      service_.get_task_manager().remove_block(this);
 
       TBSYS_LOG(INFO, "compact report to ds. seqno: %"PRI64_PREFIX"d, "
           "blockid: %"PRI64_PREFIX"u, status: %d, source: %s",
@@ -492,6 +507,17 @@ namespace tfs
       return tmp_stream.str();
     }
 
+    bool ReplicateTask::get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const
+    {
+      bool ret = blocks.get_array_size() >= 1;
+      if (ret)
+      {
+        blocks.clear();
+        blocks.push_back(repl_info_.block_id_);
+      }
+      return ret;
+    }
+
     int ReplicateTask::report_to_ns(const int status)
     {
       ReplicateBlockMessage req_rb_msg;
@@ -546,6 +572,8 @@ namespace tfs
             repl_info_.block_id_, rm_ret);
       }
 
+      service_.get_task_manager().remove_block(this);
+
       TBSYS_LOG(INFO, "replicate report to ns. seqno: %"PRI64_PREFIX"d, "
           "blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
@@ -567,6 +595,8 @@ namespace tfs
 
       NewClient* client = NewClientManager::get_instance().create_client();
       post_msg_to_server(source_id_, client, &resp_repl_msg, Task::ds_task_callback);
+
+      service_.get_task_manager().remove_block(this);
       return TFS_SUCCESS;
     }
 
@@ -740,6 +770,22 @@ namespace tfs
       return tmp_stream.str();
     }
 
+    bool MarshallingTask::get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const
+    {
+      const int32_t DATA_NUM = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t CHECK_NUM = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      bool ret = blocks.get_array_size() >= DATA_NUM + CHECK_NUM;
+      if (ret)
+      {
+        blocks.clear();
+        for (int32_t index = 0; index < DATA_NUM + CHECK_NUM; index++)
+        {
+          blocks.push_back(family_members_[index].block_);
+        }
+      }
+      return ret;
+    }
+
     int MarshallingTask::handle()
     {
       int ret = do_marshalling();
@@ -761,6 +807,8 @@ namespace tfs
         ret = send_msg_to_server(source_id_, &cmit_msg, status);
         ret = (ret < 0) ? ret : status;
       }
+
+      service_.get_task_manager().remove_block(this);
 
       TBSYS_LOG(INFO, "marshalling report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
           seqno_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);

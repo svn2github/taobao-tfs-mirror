@@ -505,8 +505,9 @@ namespace tfs
           {
             manager_.get_block_manager().remove(pobject, info.value3_);
             snprintf(buf, buf_length, " block: %"PRI64_PREFIX"u no exist or dataserver not found, ret: %d", info.value3_, ret);
+            ret = TFS_SUCCESS; // block has no replica, remove success
           }
-          if (TFS_SUCCESS == ret)
+          else
           {
             BlockCollect* block = manager_.get_block_manager().get(info.value3_);
             ret = NULL == block ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;

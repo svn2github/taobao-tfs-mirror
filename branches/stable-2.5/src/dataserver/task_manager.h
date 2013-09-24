@@ -47,6 +47,10 @@ namespace tfs
 
         BlockManager& get_block_manager();
 
+        bool add_block(Task* task);
+        void remove_block(Task* task);
+        bool exist_block(const uint64_t block_id) const;
+
       private:
         DISALLOW_COPY_AND_ASSIGN(TaskManager);
 
@@ -75,6 +79,9 @@ namespace tfs
 
         std::map<int64_t, Task*> running_task_;
         tbutil::Mutex running_task_mutex_;
+
+        std::set<uint64_t> running_blocks_;
+        tbutil::Mutex running_blocks_mutex_;
     };
   }
 }

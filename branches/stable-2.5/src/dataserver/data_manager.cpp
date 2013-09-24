@@ -44,10 +44,21 @@ namespace tfs
       return service_.get_block_manager();
     }
 
+    inline TaskManager& DataManager::get_task_manager()
+    {
+      return service_.get_task_manager();
+    }
+
     int DataManager::prepare_lease(const uint64_t block_id, uint64_t& file_id, uint64_t& lease_id,
         const LeaseType type, const VUINT64& servers, const bool alloc)
     {
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret && LEASE_TYPE_WRITE == type)
+      {
+        ret = get_task_manager().exist_block(block_id) ?
+          EXIT_BLOCK_IN_TASK_QUEUE : TFS_SUCCESS;
+      }
+
       if ((TFS_SUCCESS == ret) && (0 == (file_id & 0xFFFFFFFF)))
       {
         // should keep the high-32 bit of file_id unchanged
