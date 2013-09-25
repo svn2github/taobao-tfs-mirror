@@ -374,6 +374,12 @@ namespace tfs
           }
         }
       }
+      else
+      {
+        TBSYS_LOG(WARN, "seqno not match %"PRI64_PREFIX"d:%"PRI64_PREFIX"d.", seqno, seqno_);
+      }
+
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
 
       return TFS_SUCCESS;
     }

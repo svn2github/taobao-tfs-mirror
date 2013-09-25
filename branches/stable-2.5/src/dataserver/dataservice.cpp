@@ -717,6 +717,10 @@ namespace tfs
           {
             ret = client_request_server_.callback(client);
           }
+          else if (REPORT_CHECK_BLOCK_RESPONSE_MESSAGE == pcode)
+          {
+            TBSYS_LOG(INFO, "report check result succuss");
+          }
           else
           {
             TBSYS_LOG(ERROR, "callback handle error message pcode: %d", pcode);

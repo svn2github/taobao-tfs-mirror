@@ -144,7 +144,6 @@ namespace tfs
     const int32_t EXIT_BLOCK_CANNOT_REINSTATE = -5054;
     const int32_t EXIT_COMMIT_BLOCK_UPDATE_ERROR = -5055;
     const int32_t EXIT_INITIALIZE_TAIR_ERROR = -5056;
-    const int32_t EXIT_CHECK_QUEUE_FULL = -5057;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error
@@ -223,6 +222,7 @@ namespace tfs
     const int32_t EXIT_BLOCK_SIZE_OUT_OF_RANGE = -8075;
     const int32_t EXIT_BLOCK_VERSION_CONFLICT_ERROR = -8076;
     const int32_t EXIT_BLOCK_IN_TASK_QUEUE = -8077;
+    const int32_t EXIT_CHECK_QUEUE_FULL = -8078;
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;

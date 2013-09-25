@@ -133,7 +133,7 @@ namespace tfs
       int ret = input.get_int64(reinterpret_cast<int64_t*>(&server_id_));
       if (TFS_SUCCESS == ret)
       {
-        input.get_int64(&seqno_);
+        ret = input.get_int64(&seqno_);
       }
       int32_t size = 0;
       if (TFS_SUCCESS == ret)

@@ -549,6 +549,7 @@ namespace tfs
           else
           {
             ret = TFS_ERROR;
+            TBSYS_LOG(ERROR, "ns_ip config invalid. must be ip:port.");
           }
         }
         else
@@ -572,6 +573,7 @@ namespace tfs
           else
           {
             ret = TFS_ERROR;
+            TBSYS_LOG(ERROR, "peer_ns_ip config invalid. must be ip:port.");
           }
         }
         else
