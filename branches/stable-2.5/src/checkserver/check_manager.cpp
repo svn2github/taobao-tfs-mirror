@@ -368,9 +368,13 @@ namespace tfs
               delete(*bit);
             }
 
-            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u check %s. more: %d, diff: %d, less: %d, ret: %d",
-                iter->block_id_, TFS_SUCCESS == iter->status_ ? "success" : "fail",
-                iter->more_, iter->diff_, iter->less_, iter->status_);
+            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u check success. more: %d, diff: %d, less: %d",
+                iter->block_id_, iter->more_, iter->diff_, iter->less_);
+          }
+          else
+          {
+            TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u check fail, ret: %d",
+                iter->block_id_, iter->status_);
           }
         }
       }
@@ -465,7 +469,7 @@ namespace tfs
           for ( ; iter != all_blocks_[index].end(); iter++)
           {
             fail_count++;
-            TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u check fail.", (*iter)->get_block_id());
+            TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u check failed finally.", (*iter)->get_block_id());
           }
         }
 

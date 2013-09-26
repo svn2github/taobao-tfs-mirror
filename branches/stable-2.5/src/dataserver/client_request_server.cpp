@@ -1273,6 +1273,7 @@ namespace tfs
               ret = get_data_manager().update_block_info(local_info, UPDATE_BLOCK_INFO_REPL);
             }
           }
+
           if (TFS_SUCCESS == ret)
           {
             ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
@@ -1371,6 +1372,12 @@ namespace tfs
             TBSYS_LOG(WARN, "switch logic block fail. blockid: %"PRI64_PREFIX"u, "
                 "ret: %d", block_id, ret);
           }
+        }
+
+        // run to here, it must be a normal block
+        if (TFS_SUCCESS == ret)
+        {
+          ret = get_block_manager().flush(block_id, false);
         }
 
         if (TFS_SUCCESS == ret)

@@ -77,6 +77,8 @@ namespace tfs
         int get_index_header(common::IndexHeaderV2& header, const uint64_t logic_block_id) const;
         int set_index_header(const common::IndexHeaderV2& header, const uint64_t logic_block_id, const bool tmp = false);
 
+        int flush(const uint64_t logic_block_id, const bool tmp = false);
+
         int check_block_version(common::BlockInfoV2& info, const int32_t remote_version,
               const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const;
         int update_block_info(const common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;

@@ -1336,7 +1336,7 @@ namespace tfs
 
         updated = true;
         int32_t offset = FILEINFO_EXT_SIZE;  // every file has a header, ignore it
-        int32_t length = finfos[i].size_ - offset;
+        int32_t length = finfos[i].size_ - offset; // filesize should be limited
         char *data = new (std::nothrow) char[length];
         assert(NULL != data);
         ret = get_data_helper().read_file(family_members_[src].server_,

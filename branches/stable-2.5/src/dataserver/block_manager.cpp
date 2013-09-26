@@ -389,6 +389,21 @@ namespace tfs
       return ret;
     }
 
+    int BlockManager::flush(const uint64_t logic_block_id, const bool tmp)
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id, tmp);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->flush();
+        }
+      }
+      return ret;
+    }
+
     int BlockManager::check_block_version(common::BlockInfoV2& info, const int32_t remote_version,
         const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const
     {

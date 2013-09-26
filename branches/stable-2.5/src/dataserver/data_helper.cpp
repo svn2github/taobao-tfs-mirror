@@ -364,13 +364,14 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = close_file_ex(server_id, block_id, attach_block_id, file_id, lease_id, status, tmp);
+        uint32_t crc = Func::crc(0, data, len);
+        ret = close_file_ex(server_id, block_id, attach_block_id, file_id, lease_id, crc, status, tmp);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "close file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
-              "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, ret: %d",
+              "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, crc: %u, ret: %d",
               tbsys::CNetUtil::addrToString(server_id).c_str(),
-              block_id, attach_block_id, file_id, ret);
+              block_id, attach_block_id, file_id, crc, ret);
         }
       }
 
@@ -863,7 +864,7 @@ namespace tfs
 
     int DataHelper::close_file_ex(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, const uint64_t file_id, const uint64_t lease_id,
-        const int32_t status, const bool tmp)
+        const uint32_t crc, const int32_t status, const bool tmp)
     {
       vector<uint64_t> dslist;
       dslist.push_back(server_id);
@@ -876,6 +877,7 @@ namespace tfs
       req_msg.set_master_id(server_id);
       req_msg.set_status(status);
       req_msg.set_tmp_flag(tmp);
+      req_msg.set_crc(crc);
       return send_simple_request(server_id, &req_msg);
     }
 

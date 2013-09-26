@@ -587,6 +587,11 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
+          ret = flush();
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
           is_load_ = true;
         }
       }
@@ -722,6 +727,11 @@ namespace tfs
             FileInfoV2& finfo = (*iter);
             ret = insert_file_info_(finfo, threshold, max_hash_bucket, false);
           }
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = flush();
         }
       }
       return ret;
@@ -1044,6 +1054,11 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
+          ret = flush();
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
           is_load_ = true;
         }
       }
@@ -1151,6 +1166,11 @@ namespace tfs
           }
           if (NULL != data)
             free_index_mem_(data, *index, TFS_SUCCESS == ret);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = flush();
         }
       }
       return ret;

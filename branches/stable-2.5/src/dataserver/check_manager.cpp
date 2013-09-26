@@ -206,10 +206,18 @@ namespace tfs
         }
       }
       TIMER_END();
-      TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u. "
-          "count: %zd, more: %d, diff: %d, less: %d, cost: %"PRI64_PREFIX"d, ret: %d",
-          block_id, main_finfos.size(), result.more_, result.diff_, result.less_,
-          TIMER_DURATION(), result.status_);
+
+      if (TFS_SUCCESS != result.status_)
+      {
+        TBSYS_LOG(WARN, "check block %"PRI64_PREFIX"u fail, ret: %d", block_id, result.status_);
+      }
+      else
+      {
+        TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u success. "
+            "count: %zd, more: %d, diff: %d, less: %d, cost: %"PRI64_PREFIX"d",
+            block_id, main_finfos.size(), result.more_, result.diff_, result.less_,
+            TIMER_DURATION());
+      }
     }
 
     int CheckManager::check_single_block(const uint64_t block_id,

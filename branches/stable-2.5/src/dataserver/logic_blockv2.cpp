@@ -184,6 +184,12 @@ namespace tfs
       return index_handle_->set_index_header(header);
     }
 
+    int BaseLogicBlock::flush()
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      return index_handle_->flush();
+    }
+
     int BaseLogicBlock::load_index(const common::MMapOption mmap_option)
     {
       int32_t ret = (mmap_option.check()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -365,8 +371,8 @@ namespace tfs
         {
           if (offset + nbytes > inner_offset)
             nbytes = inner_offset - offset;
-          ret = (nbytes > 0) ? TFS_SUCCESS : EXIT_READ_OFFSET_ERROR;
-          if (TFS_SUCCESS == ret)
+          ret = (nbytes >= 0) ? TFS_SUCCESS : EXIT_READ_OFFSET_ERROR;
+          if (TFS_SUCCESS == ret && nbytes > 0)
           {
             ret = data_handle_.pread(buf, nbytes, offset);
           }

@@ -290,7 +290,7 @@ namespace tfs
         ret = lease_manager_.get(lid, now_us, lease);
       }
 
-      if ((TFS_SUCCESS == ret) && !tmp) // write tmp block won't check crc
+      if (TFS_SUCCESS == ret)
       {
         DataFile& data_file = dynamic_cast<WriteLease* >(lease)->get_data_file();
         if (crc != data_file.crc())
