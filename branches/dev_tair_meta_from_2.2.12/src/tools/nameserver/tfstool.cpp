@@ -163,6 +163,7 @@ int cmd_is_dir_exist_meta(const VSTRING& param);
 int cmd_is_file_exist_meta(const VSTRING& param);
 
 // for kv meta server
+int cmd_get_service(const VSTRING& param);
 int cmd_put_bucket(const VSTRING& param);
 int cmd_get_bucket(const VSTRING& param);
 int cmd_del_bucket(const VSTRING& param);
@@ -170,6 +171,11 @@ int cmd_head_bucket(const VSTRING& param);
 int cmd_put_bucket_tag(const VSTRING &param);
 int cmd_get_bucket_tag(const VSTRING &param);
 int cmd_del_bucket_tag(const VSTRING &param);
+
+int cmd_put_bucket_logging(const VSTRING &param);
+int cmd_get_bucket_logging(const VSTRING &param);
+int cmd_list_mul_obj(const VSTRING &param);
+
 //int cmd_list_mul_obj(const VSTRING &param);
 
 //for test
@@ -177,7 +183,7 @@ int cmd_pwrite_object(const VSTRING& param);
 int cmd_pread_object(const VSTRING& param);
 //end for test
 
-
+int cmd_del_multi_objects(const VSTRING &param);
 int cmd_put_object(const VSTRING& param);
 int cmd_get_object(const VSTRING& param);
 int cmd_del_object(const VSTRING& param);
@@ -402,25 +408,30 @@ void init()
         "check if file exist", 1, 4, cmd_is_file_exist_meta);
     break;
   case META_KV:
+    g_cmd_map["get_service"] = CmdNode("get_service owner_id", "list buckets", 1, 1, cmd_get_service);
     g_cmd_map["put_bucket"] = CmdNode("put_bucket bucket_name owner_id", "create a bucket", 2, 2, cmd_put_bucket);
     g_cmd_map["get_bucket"] = CmdNode("get_bucket bucket_name [ prefix start_key delimiter limit ]", "get a bucket(list object)", 1, 5, cmd_get_bucket);
-    g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name", "delete a bucket", 1, 1, cmd_del_bucket);
+    g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name owner_id", "delete a bucket", 2, 2, cmd_del_bucket);
     g_cmd_map["head_bucket"] = CmdNode("head_bucket bucket_name", "stat a bucket", 1, 1, cmd_head_bucket);
-/*
+
   //  g_cmd_map["list_mul_obj"] = CmdNode("list_mul_obj bucket_name [prefix start_key start_id delimiter limit]", "list multipart objects", 1, 6, cmd_list_mul_obj);
-*/
+
     g_cmd_map["put_bucket_tag"] = CmdNode("put_bucket_tag bucket_name map_size key value [key value]", "put bucket tag", 4, 22, cmd_put_bucket_tag);
     g_cmd_map["get_bucket_tag"] = CmdNode("get_bucket_tag bucket_name", "get bucket tag", 1, 1, cmd_get_bucket_tag);
     g_cmd_map["del_bucket_tag"] = CmdNode("del_bucket_tag bucket_name", "del bucket tag", 1, 1, cmd_del_bucket_tag);
+
+    g_cmd_map["put_bucket_logging"] = CmdNode("put_bucket_logging bucket_name logging_status target_bucket_name target_prefix", "put bucket logging", 4, 4, cmd_put_bucket_logging);
+    g_cmd_map["get_bucket_logging"] = CmdNode("get_bucket_logging bucket_name", "get bucket logging", 1, 1, cmd_get_bucket_logging);
 
     //for test
     g_cmd_map["pwrite_object"] =  CmdNode("pwrite_object bucket_name object_name local_file owner_id offset length", "put a object", 4, 6, cmd_pwrite_object);
     g_cmd_map["pread_object"] = CmdNode("pread_object bucket_name object_name local_file owner_id offset length", "get a object", 4, 6, cmd_pread_object);
     //end for test
 
+    g_cmd_map["del_multi_objects"] = CmdNode("del_multi_objects bucket_name owner_id mode object_size [object_name object_name]", "del multi objects", 4, 24, cmd_del_multi_objects);
     g_cmd_map["put_object"] = CmdNode("put_object bucket_name object_name local_file owner_id map_size [key value]", "put a object", 5, 25, cmd_put_object);
     g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name local_file", "get a object", 3, 3, cmd_get_object);
-    g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name", "delete a object", 2, 2, cmd_del_object);
+    g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name owner_id", "delete a object", 3, 3, cmd_del_object);
     g_cmd_map["head_object"] = CmdNode("head_object bucket_name object_name", "stat a object", 2, 2, cmd_head_object);
 
     g_cmd_map["apply_authorize"] = CmdNode("apply_authorize user_name", "apply authorize (access id and secret key)", 1, 1, cmd_apply_authorize);
@@ -1887,6 +1898,36 @@ int cmd_is_file_exist_meta(const VSTRING& param)
   return ret;
 }
 
+int cmd_get_service(const VSTRING& param)
+{
+  int64_t owner_id = strtoll(param[0].c_str(), NULL, 10);
+  UserInfo user_info;
+  user_info.owner_id_ = owner_id;
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+  BucketsResult buckets_result;
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.get_service(&buckets_result, user_info);
+  }
+  if (TFS_SUCCESS == ret)
+  {
+    map<string, BucketMetaInfo>::const_iterator iter = buckets_result.bucket_info_map_.begin();
+    for (; iter != buckets_result.bucket_info_map_.end(); iter++)
+    {
+      cout << "bucket_name: " << (iter->first) << endl;
+    }
+    ToolUtil::print_info(ret, "get service, owner_id : %"PRI64_PREFIX"d", owner_id);
+  }
+  return ret;
+}
+
 int cmd_put_bucket(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
@@ -1951,6 +1992,7 @@ int cmd_get_bucket(const VSTRING& param)
   int8_t is_truncated = 0;
   UserInfo user_info;
 
+  user_info.owner_id_ = 123;
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
   ret = impl.initialize(rc_addr, app_key, app_ip);
@@ -1988,7 +2030,8 @@ int cmd_get_bucket(const VSTRING& param)
   ToolUtil::print_info(ret, "get bucket %s", bucket_name);
   return ret;
 }
-/*
+
+
 int cmd_list_mul_obj(const VSTRING& param)
 {
   int size = param.size();
@@ -2058,7 +2101,8 @@ int cmd_list_mul_obj(const VSTRING& param)
     printf("bucket: %s has %d objects\n", bucket_name, static_cast<int>(list_multipart_object_result.v_object_upload_info_.size()));
     for (int i = 0; i < static_cast<int>(list_multipart_object_result.v_object_upload_info_.size()); i++)
     {
-      cout << i << ": " << list_multipart_object_result.v_object_upload_info_[i].object_name_ << endl;
+      cout << i << ": " << list_multipart_object_result.v_object_upload_info_[i].object_name_;
+      cout << " " << list_multipart_object_result.v_object_upload_info_[i].upload_id_ << endl;
     }
   }
 
@@ -2067,12 +2111,14 @@ int cmd_list_mul_obj(const VSTRING& param)
   ToolUtil::print_info(ret, "get bucket %s", bucket_name);
   return ret;
 }
-*/
 
 int cmd_del_bucket(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
+  int64_t owner_id = strtoll(param[1].c_str(), NULL, 10);
   UserInfo user_info;
+
+  user_info.owner_id_ = owner_id;
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
@@ -2227,6 +2273,71 @@ int cmd_del_bucket_tag(const VSTRING& param)
   return ret;
 }
 
+int cmd_put_bucket_logging(const VSTRING& param)
+{
+  const char *bucket_name = param[0].c_str();
+  bool logging_status = atoi(param[1].c_str());
+  const char *target_bucket_name = canonical_param(param[2]);
+  const char *target_prefix = canonical_param(param[3]);
+
+  int ret = TFS_SUCCESS;
+  if (TFS_SUCCESS == ret)
+  {
+    UserInfo user_info;
+    user_info.owner_id_ = 123;
+    RcClientImpl impl;
+    impl.set_kv_rs_addr(krs_addr);
+    int ret = impl.initialize(rc_addr, app_key, app_ip);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+    }
+    else
+    {
+      ret = impl.put_bucket_logging(bucket_name, logging_status, target_bucket_name, target_prefix, user_info);
+    }
+    if (TFS_SUCCESS == ret)
+    {
+      ToolUtil::print_info(ret, "put bucket: %s logging", bucket_name);
+    }
+  }
+  return ret;
+}
+
+int cmd_get_bucket_logging(const VSTRING& param)
+{
+  const char *bucket_name = param[0].c_str();
+  int ret = TFS_SUCCESS;
+
+  if (TFS_SUCCESS == ret)
+  {
+    UserInfo user_info;
+    user_info.owner_id_ = 123;
+    bool logging_status = false;
+    string target_bucket_name;
+    string target_prefix;
+    RcClientImpl impl;
+    impl.set_kv_rs_addr(krs_addr);
+    int ret = impl.initialize(rc_addr, app_key, app_ip);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+    }
+    else
+    {
+      ret = impl.get_bucket_logging(bucket_name, &logging_status, &target_bucket_name, &target_prefix, user_info);
+    }
+    if (TFS_SUCCESS == ret)
+    {
+      ToolUtil::print_info(ret, "put bucket: %s logging", bucket_name);
+      printf("logging status: %s\n", logging_status ? "true" : "false");
+      printf("target bucket name: %s", target_bucket_name.c_str());
+      printf("target prefix: %s", target_prefix.c_str());
+    }
+  }
+  return ret;
+}
+
 
 int cmd_put_object(const VSTRING& param)
 {
@@ -2262,6 +2373,7 @@ int cmd_put_object(const VSTRING& param)
   }
 
   UserInfo user_info;
+  user_info.owner_id_ = 123;
   CustomizeInfo customize_info;
   if (meta_data.size() > 0)
   {
@@ -2410,6 +2522,53 @@ int cmd_pread_object(const VSTRING& param)
 
 //end for test
 
+int cmd_del_multi_objects(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  int64_t owner_id = strtoll(param[1].c_str(), NULL, 10);
+  int32_t mode = atoi(param[2].c_str());
+  int32_t objects_size = atoi(param[3].c_str());
+
+  set<string> s_file_name;
+  for (int i = 0; i < objects_size; i++)
+  {
+    s_file_name.insert(param[i+4]);
+  }
+  UserInfo user_info;
+  user_info.owner_id_ = owner_id;
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  DeleteResult delete_result;
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.del_multi_objects(bucket_name, s_file_name, mode, &delete_result, user_info);
+
+    if (TFS_SUCCESS == ret)
+    {
+      for (uint32_t i = 0; i < delete_result.v_suc_objects_.size(); i++)
+      {
+        printf("suc objects: %s ", delete_result.v_suc_objects_[i].c_str());
+      }
+      printf("\n");
+
+      for (uint32_t i = 0; i < delete_result.v_fail_objects_.size(); i++)
+      {
+        printf("fail objects: %s, error: %s", delete_result.v_fail_objects_[i].c_str(), delete_result.v_fail_msg_[i].c_str());
+      }
+      printf("\n");
+    }
+  }
+  ToolUtil::print_info(ret, "del bucket: %s multi objects", bucket_name);
+
+  return ret;
+}
 
 int cmd_get_object(const VSTRING& param)
 {
@@ -2441,7 +2600,9 @@ int cmd_del_object(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   const char* object_name = param[1].c_str();
+  int64_t owner_id = strtoll(param[2].c_str(), NULL, 10);
   UserInfo user_info;
+  user_info.owner_id_ = owner_id;
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
@@ -2468,6 +2629,7 @@ int cmd_head_object(const VSTRING& param)
   ObjectInfo object_info;
   UserInfo user_info;
 
+  user_info.owner_id_ = 123;
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
   int ret = impl.initialize(rc_addr, app_key, app_ip);
@@ -2670,6 +2832,7 @@ int cmd_list_multipart(const VSTRING& param)
   }
   return ret;
 }
+
 int cmd_abort_multipart(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
