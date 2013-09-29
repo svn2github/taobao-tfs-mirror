@@ -201,6 +201,7 @@ namespace tfs
           int32_t insert_ret = wait_report_block_servers_.insert_unique(result, server);
           assert(TFS_SUCCESS == insert_ret);
           assert(result);
+          server->set_report_block_status(REPORT_BLOCK_STATUS_IN_REPORT_QUEUE);
         }
       }
       return ret;
@@ -242,6 +243,8 @@ namespace tfs
           wait_report_block_servers_.erase(server);
           current_reporting_block_servers_.insert_unique(result, server);
           helper.push_back(server);
+          int64_t now = Func::get_monotonic_time();
+          server->set_report_block_info(now, REPORT_BLOCK_STATUS_REPORTING);
         }
       }
       return helper.get_array_index();
@@ -740,7 +743,8 @@ namespace tfs
       {
         server = (*iter);
         assert(NULL != server);
-        if (server->is_report_block_expired(now))
+        if (server->get_report_block_status() != REPORT_BLOCK_STATUS_REPORTING ||
+          server->is_report_block_expired(now))
           helper.push_back(server);
       }
       for (int64_t index = 0; index < helper.get_array_index(); ++index)

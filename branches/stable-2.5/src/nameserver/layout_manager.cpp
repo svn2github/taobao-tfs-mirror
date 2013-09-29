@@ -954,7 +954,6 @@ namespace tfs
 
     void LayoutManager::check_all_server_report_block_()
     {
-      time_t now = 0;
       int32_t ret = TFS_SUCCESS;
       const int32_t MAX_SLOT_NUMS = 64;
       const int32_t SLEEP_TIME_US = 1000;
@@ -974,19 +973,13 @@ namespace tfs
         {
           last = *helper.at(index);
           assert(NULL != last);
-          now = Func::get_monotonic_time();
-          if (!last->is_report_block_expired(now))
-          {
-            CallDsReportBlockRequestMessage req;
-            req.set_server(ngi.heart_ip_port_);
-            client = NewClientManager::get_instance().create_client();
-            if (NULL != client)
-              ret = post_msg_to_server(last->id(), client, &req, ns_async_callback);
-            if (TFS_SUCCESS != ret)
-              NewClientManager::get_instance().destroy_client(client);
-            now = Func::get_monotonic_time();
-            last->set_report_block_info(now, REPORT_BLOCK_STATUS_REPORTING);
-          }
+          CallDsReportBlockRequestMessage req;
+          req.set_server(ngi.heart_ip_port_);
+          client = NewClientManager::get_instance().create_client();
+          if (NULL != client)
+            ret = post_msg_to_server(last->id(), client, &req, ns_async_callback);
+          if (TFS_SUCCESS != ret)
+            NewClientManager::get_instance().destroy_client(client);
         }
         usleep(100);
       }

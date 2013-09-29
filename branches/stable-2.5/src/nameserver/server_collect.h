@@ -87,6 +87,10 @@ namespace tfs
       {
         rb_status_ = status;
       }
+      inline int8_t get_report_block_status() const
+      {
+        return rb_status_;
+      }
       inline bool is_report_block(bool& rb_expire, const time_t now, const bool isnew) const
       {
         if (!isnew)
