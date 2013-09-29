@@ -419,6 +419,7 @@ namespace tfs
 
     int CheckManager::check_blocks(const TimeRange& range)
     {
+      int64_t total = 0;
       int ret = get_group_info();
       if (TFS_SUCCESS == ret && !stop_)
       {
@@ -433,6 +434,10 @@ namespace tfs
           if (TFS_SUCCESS == ret && !stop_)
           {
             ret = fetch_blocks(range);
+            if (TFS_SUCCESS == ret && 0 == total)
+            {
+              total = get_block_size();  // store total block size for log
+            }
           }
 
           if (TFS_SUCCESS == ret && !stop_)
@@ -474,8 +479,8 @@ namespace tfs
         }
 
         TBSYS_LOG(INFO, "CHECK RESULT: "
-            "seqno %"PRI64_PREFIX"d start at %s finish. fail count: %"PRI64_PREFIX"d",
-            seqno_, Func::time_to_str(seqno_/1000000, 0).c_str(), fail_count);
+            "start at %s. total: %"PRI64_PREFIX"d, fail count: %"PRI64_PREFIX"d",
+            Func::time_to_str(seqno_/1000000, 0).c_str(), total, fail_count);
       }
 
       return ret;
