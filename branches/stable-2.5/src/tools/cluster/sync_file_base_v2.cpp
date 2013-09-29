@@ -57,7 +57,7 @@ int SyncFileBase::cmp_and_sync_file(const uint64_t block_id, const FileInfoV2& s
   ret = sync_file(file_name, source_buf, dest_buf, timestamp, force, unlink, result);
   if (TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(INFO, "sync file (%s) failed, blockid: %"PRI64_PREFIX"u fileid: %"PRI64_PREFIX"d, ret: %d", file_name.c_str(), block_id, source_file_info.id_, ret);
+    TBSYS_LOG(INFO, "sync file (%s) failed, blockid: %"PRI64_PREFIX"u fileid: %"PRI64_PREFIX"u, ret: %d", file_name.c_str(), block_id, source_file_info.id_, ret);
   }
   return ret;
 }

@@ -59,7 +59,7 @@ namespace tfs
         "-f           input file name\n"
         "-m           timestamp eg: 20130610, optional, default 0\n"
         "-i           sleep interval (ms), optional, default 0\n"
-        "-o           output directory, optional, default ./output\n"
+        "-p           output directory, optional, default ./logs\n"
         "-x           extend arg, optional, default empty\n"
         "-t           thread count, optional, defaul 1\n"
         "-l           log level, optional, default info\n"
@@ -139,10 +139,10 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       string timestamp = get_day(1, true);//第二天0点
-      output_dir_ = "./output";  // default output directory
+      output_dir_ = "./logs";  // default output directory
       int flag = 0;
 
-      while ((flag = getopt(argc, argv, "s:d:m:f:o:x:t:l:i:hv")) != EOF)
+      while ((flag = getopt(argc, argv, "s:d:m:f:p:x:t:l:i:hv")) != EOF)
       {
         switch (flag)
         {
@@ -156,12 +156,12 @@ namespace tfs
             input_file_ = optarg;
             break;
           case 'm':
-            timestamp = string(optarg) + string("000000");
+            timestamp = string(optarg);
             break;
           case 'i':
             interval_ms_ = atoi(optarg);
             break;
-          case 'o':
+          case 'p':
             output_dir_ = optarg;
             break;
           case 'x':
@@ -188,7 +188,13 @@ namespace tfs
       {
         usage(argv[0]);  // will exit
       }
+      timestamp += "000000";
       timestamp_ = tbsys::CTimeUtil::strToTime(const_cast<char*>(timestamp.c_str()));
+      if (0 == timestamp_)
+      {
+        TBSYS_LOG(ERROR, "timestamp param: %s error", timestamp.c_str());
+        return TFS_ERROR;
+      }
 
       string log_dir = output_dir_ + string("/logs/");
       DirectoryOp::create_directory(output_dir_.c_str());
@@ -232,6 +238,11 @@ namespace tfs
             files.push_back(line);
           }
           fclose(fp);
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "open input file: %s fail, ret: %d", input_file_.c_str(), ret);
+          return ret;
         }
       }
 

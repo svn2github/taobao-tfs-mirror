@@ -130,8 +130,7 @@ void init()
   g_cmd_map["param"] = CmdNode("param name [set value]", "get/set param value, default get.", 0, 4, cmd_set_run_param);
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block by blockid which not exist or expire in ns.", 1, 1, cmd_add_block);
   g_cmd_map["removeblk"] = CmdNode("removeblk blockid [flag|dsip:port]",
-      "remove block. flag: 1--remove block from both ds and ns, 2-remove block from ds and relieve relation from ns but keep block in ns's block table,"
-      " 4-just relieve relation between block and all ds, otherwise flag should be a ds address, remove relation between block and specific ds. default is 1.",
+      "remove block. flag: 1--remove block from both ds and ns, 2--just relieve relation from ns, default is 1.",
       1, 3, cmd_remove_block);
   g_cmd_map["removefamily"] = CmdNode("removefamily family_id", "remove family", 1, 1, cmd_remove_family);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list.", 1, 1, cmd_list_block);

@@ -451,8 +451,7 @@ int TranBlock::read_data()
       rrd_msg.set_block_id(src_block_id_);
       rrd_msg.set_offset(cur_offset_);
       rrd_msg.set_length(read_size);
-      //rrd_msg.set_degrade_flag(true);
-      //不考虑设置degrade read
+      rrd_msg.set_degrade_flag(true);// degrade read do not traffic control when reading from src cluster
 
       // fetch data from random ds
       NewClient* client = NewClientManager::get_instance().create_client();
@@ -471,19 +470,19 @@ int TranBlock::read_data()
         {
           ReadRawdataRespMessageV2* rsp_rrd_msg = dynamic_cast<ReadRawdataRespMessageV2*>(rsp);
           int len = rsp_rrd_msg->get_length();
-          assert(len >= 0);
-          if (len < read_size || len == 0)
-          {
+          assert(len > 0);
+          src_content_buf_.writeBytes(rsp_rrd_msg->get_data(), len);
+          cur_offset_ += len;
+          if (len < read_size || cur_offset_ == src_header_.info_.size_)
+          {// send read raw msg if and only if exist remainder data, or will occur EXIT_READ_OFFSET_ER
             eof_flag = true;
             TBSYS_LOG(INFO, "read raw data from ds: %s finish, blockid: %"PRI64_PREFIX"u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, ret: %d, read_size:%ld, len: %d",
               tbsys::CNetUtil::addrToString(src_ds_addr_random_).c_str(), src_block_id_, cur_offset_, remainder_retrys, ret, read_size, len);
           }
-          if (len > 0)
+          else
           {
             TBSYS_LOG(DEBUG, "read raw data from ds: %s succ, blockid: %"PRI64_PREFIX"u, offset: %d, len: %d, data: %p",
                 tbsys::CNetUtil::addrToString(src_ds_addr_random_).c_str(), src_block_id_, cur_offset_, len, rsp_rrd_msg->get_data());
-            src_content_buf_.writeBytes(rsp_rrd_msg->get_data(), len);
-            cur_offset_ += len;
           }
         }
         else if (STATUS_MESSAGE == rsp->getPCode())
@@ -523,6 +522,12 @@ int TranBlock::read_data()
   }
 
   total_tran_size_ += src_content_buf_.getDataLen();
+  if (TFS_SUCCESS == ret && cur_offset_ != src_header_.info_.size_)
+  {
+    ret = EXIT_READ_FILE_SIZE_ERROR;
+    TBSYS_LOG(ERROR, "read raw data from ds: %s failed fatally, blockid: %"PRI64_PREFIX"u, blockinfo size: %d, read real size: %d",
+        tbsys::CNetUtil::addrToString(src_ds_addr_random_).c_str(), src_block_id_, src_header_.info_.size_, cur_offset_);
+  }
   return ret;
 }
 
@@ -608,7 +613,7 @@ int TranBlock::check_dest_blk()
       int32_t ds_size = static_cast<int32_t>(dest_ds.size());
       if (ds_size > 0)
       {
-        TBSYS_LOG(WARN, "block exists in dest cluster, now we will remove it completely before transfer. block list size is %d, the first ds is:%s, blockid: %"PRI64_PREFIX"u", ds_size, tbsys::CNetUtil::addrToString(dest_ds[0]).c_str(), src_block_id_);
+        TBSYS_LOG(WARN, "block exists in dest cluster, now we will remove it completely before transfer. block ds_list size is %d, the first ds is:%s, blockid: %"PRI64_PREFIX"u", ds_size, tbsys::CNetUtil::addrToString(dest_ds[0]).c_str(), src_block_id_);
         ret = rm_block_from_ns();
         for (int i = 0; i < ds_size && TFS_SUCCESS == ret; i++)
         {
@@ -633,7 +638,7 @@ int TranBlock::check_dest_blk()
       {
         ret = TFS_SUCCESS;
       }
-      TBSYS_LOG(INFO, "Check OK, blockid: %"PRI64_PREFIX"u not exists in dest cluster, ret:%d", src_block_id_, ret);
+      TBSYS_LOG(INFO, "Check %s, blockid: %"PRI64_PREFIX"u not exists in dest cluster, ret: %d", TFS_SUCCESS == ret ? "ok" : "fail", src_block_id_, ret);
     }
   }
   else//不支持集群内迁移
