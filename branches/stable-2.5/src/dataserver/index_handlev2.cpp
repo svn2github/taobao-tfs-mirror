@@ -595,8 +595,8 @@ namespace tfs
           is_load_ = true;
         }
       }
-      TBSYS_LOG(INFO, "create index %s, ret: %d, block id : %"PRI64_PREFIX"u, max_bucket_size: %d, file_size: %"PRI64_PREFIX"d",
-          TFS_SUCCESS == ret ? "successful" : "failed", ret, logic_block_id, max_bucket_size, file_size);
+      TBSYS_LOG(INFO, "create index %s, ret: %d, file path: %s, block id : %"PRI64_PREFIX"u, max_bucket_size: %d, file_size: %"PRI64_PREFIX"d",
+          TFS_SUCCESS == ret ? "successful" : "failed", ret, file_op_.get_path().c_str(), logic_block_id, max_bucket_size, file_size);
       return ret;
     }
 

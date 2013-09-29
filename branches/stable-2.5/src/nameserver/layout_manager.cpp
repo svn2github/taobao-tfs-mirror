@@ -1407,7 +1407,7 @@ namespace tfs
           if (NULL == source)
           {
             print_int64(helper, result);
-            TBSYS_LOG(INFO, "replicate block: %"PRI64_PREFIX"u cannot found source dataserver, %s", block->id(), result.c_str());
+            TBSYS_LOG(DEBUG, "replicate block: %"PRI64_PREFIX"u cannot found source dataserver, %s", block->id(), result.c_str());
           }
           else
           {
@@ -1415,7 +1415,7 @@ namespace tfs
             if (NULL == target)
             {
               print_int64(helper, result);
-              TBSYS_LOG(INFO, "replicate block: %"PRI64_PREFIX"u cannot found target dataserver, %s", block->id(), result.c_str());
+              TBSYS_LOG(DEBUG, "replicate block: %"PRI64_PREFIX"u cannot found target dataserver, %s", block->id(), result.c_str());
             }
           }
 

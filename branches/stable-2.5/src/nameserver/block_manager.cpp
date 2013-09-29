@@ -503,8 +503,11 @@ namespace tfs
 
           if (EXIT_EXPIRE_SELF_ERROR == ret && ngi.is_master())
           {
-            ret = TFS_SUCCESS;
             push_to_delete_queue(info.block_id_, server->id());
+          }
+          if (EXIT_EXPIRE_SELF_ERROR == ret)
+          {
+            ret = TFS_SUCCESS;
           }
         }
       }

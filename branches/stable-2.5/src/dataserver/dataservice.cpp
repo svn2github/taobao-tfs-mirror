@@ -1403,7 +1403,7 @@ namespace tfs
       }
 
       TIMER_END();
-      TBSYS_LOG(INFO, "unlink file %s. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d, isserver: %s, peer ip: %s, cost time: %" PRI64_PREFIX "d",
+      TBSYS_LOG(INFO, "unlink file %s. blockid: %"PRI64_PREFIX"u, fileid: %" PRI64_PREFIX "u, action: %d, isserver: %s, peer ip: %s, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, action, is_master ? "master" : "slave",
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
       traffic_control_.rw_stat(RW_STAT_TYPE_UNLINK, ret, true,0);

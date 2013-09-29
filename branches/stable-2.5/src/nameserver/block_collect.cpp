@@ -81,13 +81,13 @@ namespace tfs
             if (INVALID_SERVER_ID == servers_[index])
             {
               complete = true;
+              ++server_size_;
               servers_[index] = server;
             }
           }
           ret = complete ? TFS_SUCCESS : EXIT_INSERT_SERVER_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            ++server_size_;
             master = is_master(server);
           }
         }
@@ -366,12 +366,22 @@ namespace tfs
         }
         if (child_type & SSM_CHILD_BLOCK_TYPE_SERVER)
         {
-          param.data_.writeInt8(server_size_);
+          int8_t count = 0;
+          param.data_.writeInt8(count);
+          unsigned char* pdata = reinterpret_cast<unsigned char*>(param.data_.getFree() - INT8_SIZE);
           for (int8_t index = 0; index < SYSPARAM_NAMESERVER.max_replication_; ++index)
           {
             uint64_t server = servers_[index];
             if (INVALID_SERVER_ID != server)
+            {
+              ++count;
               param.data_.writeInt64(server);
+            }
+          }
+          param.data_.fillInt8(pdata, count);
+          if (count != server_size_)
+          {
+            dump(TBSYS_LOG_LEVEL(WARN));
           }
         }
       }
@@ -394,10 +404,10 @@ namespace tfs
           }
         }
         TBSYS_LOGGER.logMessage(level, file, line, function,thid,
-            "family id: %"PRI64_PREFIX"d,block_id: %"PRI64_PREFIX"u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, update_file_count: %d, update_file_size: %d, servers: %s",
+            "dump block information: family id: %"PRI64_PREFIX"d,block_id: %"PRI64_PREFIX"u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, update_file_count: %d, update_file_size: %d, server_size: %d, servers: %s",
             info_.family_id_, info_.block_id_, info_.version_, info_.file_count_,
             info_.size_, info_.del_file_count_, info_.del_size_,
-            info_.update_file_count_, info_.update_size_, str.c_str());
+            info_.update_file_count_, info_.update_size_, server_size_, str.c_str());
       }
     }
 
