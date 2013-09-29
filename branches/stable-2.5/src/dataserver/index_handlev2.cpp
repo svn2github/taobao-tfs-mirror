@@ -626,16 +626,28 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         is_load_ = true;
-        /*IndexHeaderV2* header = get_index_header_();
+        int64_t size = 0;
+        IndexHeaderV2* header = get_index_header_();
         assert(NULL !=header);
         ret = (INVALID_BLOCK_ID == header->info_.block_id_
             || logic_block_id != header->info_.block_id_
             || header->file_info_bucket_size_ <= 0) ? EXIT_INDEX_CORRUPT_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          int64_t size = INDEX_HEADER_V2_LENGTH + header->file_info_bucket_size_ * FILE_INFO_V2_LENGTH;
+          size = INDEX_HEADER_V2_LENGTH + header->file_info_bucket_size_ * FILE_INFO_V2_LENGTH;
           ret = (file_size < size ) ? EXIT_INDEX_CORRUPT_ERROR : TFS_SUCCESS;
-        }*/
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "index corrupt. logic blockid: %"PRI64_PREFIX"u, header blockid: %"PRI64_PREFIX"u, file size: %"PRI64_PREFIX"d, header file size : %"PRI64_PREFIX"d, bucket size: %d",
+              logic_block_id, header->info_.block_id_, file_size, size, header->file_info_bucket_size_);
+        }
+
+        assert(INVALID_BLOCK_ID != logic_block_id);
+        assert(logic_block_id == header->info_.block_id_);
+        assert(header->file_info_bucket_size_ > 0);
+        assert(file_size >= size);
       }
       if (TFS_SUCCESS == ret)
       {
