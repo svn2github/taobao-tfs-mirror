@@ -47,8 +47,6 @@ namespace tfs
 
         BlockManager& get_block_manager();
 
-        int add_resolve_conflict_task(const uint64_t blockid, common::VUINT64& servers);
-
       private:
         DISALLOW_COPY_AND_ASSIGN(TaskManager);
 

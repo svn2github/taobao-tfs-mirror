@@ -409,6 +409,59 @@ namespace tfs
       return ret;
     }
 
+    int DataHelper::get_block_info(const uint64_t ds_id, const uint64_t block_id, BlockInfoV2& info)
+    {
+      int ret = ((INVALID_SERVER_ID != ds_id) && (INVALID_BLOCK_ID != block_id)) ?
+        TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_info_ex(ds_id, block_id, info);
+      }
+      return ret;
+    }
+
+    int DataHelper::get_block_info_ex(const uint64_t ds_id, const uint64_t block_id, BlockInfoV2& info)
+    {
+      int ret = TFS_SUCCESS;
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      if (ds_id == ds_info.information_.id_)
+      {
+        ret = get_block_manager().get_block_info(info, block_id);
+      }
+      else
+      {
+        NewClient* new_client = NewClientManager::get_instance().create_client();
+        ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          GetBlockInfoMessageV2 req_msg;
+          req_msg.set_block_id(block_id);
+
+          tbnet::Packet* ret_msg = NULL;
+          ret = send_msg_to_server(ds_id, new_client, &req_msg, ret_msg);
+          if (TFS_SUCCESS == ret)
+          {
+            if (UPDATE_BLOCK_INFO_MESSAGE_V2 == ret_msg->getPCode())
+            {
+              UpdateBlockInfoMessageV2* message = dynamic_cast<UpdateBlockInfoMessageV2*>(ret_msg);
+              info = message->get_block_info();
+            }
+            else if(STATUS_MESSAGE == ret_msg->getPCode())
+            {
+              StatusMessage* resp_msg = dynamic_cast<StatusMessage* >(ret_msg);
+              ret = resp_msg->get_status();
+            }
+            else
+            {
+              ret = EXIT_UNKNOWN_MSGTYPE;
+            }
+          }
+          NewClientManager::get_instance().destroy_client(new_client);
+        }
+      }
+      return ret;
+    }
+
     int DataHelper::new_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
         const bool tmp, const uint64_t family_id, const int32_t index_num, const int32_t expire_time)
     {

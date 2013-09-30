@@ -1569,6 +1569,7 @@ namespace tfs
     {
       type_ = PLAN_TYPE_RESOLVE_VERSION_CONFLICT;
       block_id_ = block_id;
+      size_  = 0;
     }
 
     ResolveVersionConflictTask::~ResolveVersionConflictTask()
@@ -1586,7 +1587,34 @@ namespace tfs
     int ResolveVersionConflictTask::report_to_ns(const int32_t status)
     {
       UNUSED(status);
-      return 0;
+      ResolveBlockVersionConflictMessage req_msg;
+      int ret = req_msg.set_members(members_, size_);
+      if (TFS_SUCCESS == ret)
+      {
+        tbnet::Packet* ret_msg = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        ret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = send_msg_to_server(source_id_, client, &req_msg, ret_msg);
+          if (TFS_SUCCESS == ret)
+          {
+            if (RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE == ret_msg->getPCode())
+            {
+              ResolveBlockVersionConflictResponseMessage* msg =
+                dynamic_cast<ResolveBlockVersionConflictResponseMessage*>(ret_msg);
+              ret = msg->get_status();
+            }
+            else
+            {
+              ret = EXIT_RESOLVE_BLOCK_VERSION_CONFLICT_ERROR;
+            }
+            NewClientManager::get_instance().destroy_client(client);
+          }
+        }
+      }
+
+      return ret;
     }
 
     string ResolveVersionConflictTask::dump() const
@@ -1595,7 +1623,7 @@ namespace tfs
       std::stringstream tmp_stream;
       tmp_stream << Task::dump();
       tmp_stream << "block id: " << block_id_ << delim;
-      for (uint32_t i = 0; i < servers_.size(); i++)
+      for (int32_t i = 0; i < size_; i++)
       {
         tmp_stream << "server: " << tbsys::CNetUtil::addrToString(servers_[i]) << delim;
       }
@@ -1608,9 +1636,13 @@ namespace tfs
         TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        size_ = size;
         for (int32_t index = 0; index < size; index++)
         {
-          servers_.push_back(servers[index]);
+          servers_[index] = servers[index];
+          members_[index].first = servers[index];
+          members_[index].second.block_id_ = block_id_;
+          members_[index].second.version_ = -1;
         }
       }
       return ret;
@@ -1618,188 +1650,14 @@ namespace tfs
 
     int ResolveVersionConflictTask::do_resolve()
     {
-      int ret = TFS_SUCCESS;
-      FILE_SET per_files[MAX_REPLICATION_NUM];
-      OPER_TABLE op_table;
-      const int32_t replica_size = servers_.size();
-
-      // get every replica's file list, sorted by fileid
-      for (int32_t index = 0; index < replica_size && TFS_SUCCESS == ret; index++)
+      // get every replica's block info
+      for (int32_t index = 0; index < size_; index++)
       {
-        ret = get_block_file_set(servers_[index], block_id_, per_files[index]);
+        get_data_helper().get_block_info(servers_[index],
+            block_id_, members_[index].second);
       }
-
-      // generate op entry by compare fileinfo
-      if (TFS_SUCCESS == ret)
-      {
-        ArrayHelper< FILE_SET >  files_helper(replica_size, per_files, replica_size);
-        gen_entry_table(files_helper, op_table);
-      }
-
-      // replay oper entry
-      if (TFS_SUCCESS == ret)
-      {
-        ret = replay_oper_entry(op_table);
-      }
-
-      return ret;
-    }
-
-    int ResolveVersionConflictTask::get_block_file_set(const uint64_t server_id,
-        const uint64_t block_id, FILE_SET& sorted_files)
-    {
-      int ret = INVALID_SERVER_ID != server_id && INVALID_BLOCK_ID != block_id ?
-        TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        IndexDataV2 index_data;
-        ret = get_data_helper().read_index(server_id, block_id, block_id, index_data);
-        if (TFS_SUCCESS == ret)
-        {
-          sorted_files.clear();
-          vector<FileInfoV2>::iterator iter = index_data.finfos_.begin();
-          for ( ; iter != index_data.finfos_.end(); iter++)
-          {
-            sorted_files.insert(*iter);
-          }
-        }
-      }
-      return ret;
-    }
-
-    // find the file info with latest modify time in multi-replicas
-    int ResolveVersionConflictTask::select_master(const common::ArrayHelper<common::FileInfoV2>& infos)
-    {
-      assert(infos.get_array_index() > 0);
-      time_t mtime = 0;
-      int32_t master_index = -1;
-      for (int32_t index = 0; index < infos.get_array_index(); index++)
-      {
-        if (infos.at(index)->modify_time_ > mtime)
-        {
-          mtime = infos.at(index)->modify_time_;
-          master_index = index;
-        }
-      }
-      assert(master_index > 0 && master_index < infos.get_array_index());
-      return master_index;
-    }
-
-    void ResolveVersionConflictTask::gen_oper_entry(const common::ArrayHelper<common::FileInfoV2>& infos,
-        OPER_TABLE& op_table)
-    {
-      OperEntry entry;
-      int32_t master_index = select_master(infos);
-      entry.src_ds_ = servers_[master_index];
-      entry.info_ = *infos.at(master_index);
-      for (int index = 0; index < infos.get_array_index(); index++)
-      {
-        if (index == master_index)
-        {
-          continue;
-        }
-
-        entry.dest_ds_ = servers_[index];
-        if (INVALID_FILE_ID == infos.at(index)->id_)
-        {
-          entry.type_ = OPER_INSERT;
-        }
-        else
-        {
-          entry.type_ = OPER_DELETE;
-        }
-
-        op_table.push_back(entry);
-      }
-    }
-
-    void ResolveVersionConflictTask::gen_entry_table(const common::ArrayHelper<FILE_SET>& per_files,
-        OPER_TABLE& op_table)
-    {
-      FileInfoV2 empty_info;
-      memset(&empty_info, 0, sizeof(FileInfoV2));
-      FileInfoV2 infos[MAX_REPLICATION_NUM];
-      const int32_t replica_size = servers_.size();
-      for (int32_t index = 0; index < replica_size; index++)
-      {
-        FILE_SET::iterator iter = per_files.at(index)->begin();
-        for ( ; iter != per_files.at(index)->end(); iter++)
-        {
-          infos[index] = *iter;
-          for (int32_t target = 0; target < index; target++)
-          {
-            infos[target] = empty_info;
-          }
-
-          for (int32_t target = index + 1; target < replica_size; target++)
-          {
-            FILE_SET::iterator it = per_files.at(target)->find(*iter);
-            if (it != per_files.at(target)->end())
-            {
-              infos[target] = *it;
-              per_files.at(target)->erase(it);
-            }
-            else
-            {
-              infos[target] = empty_info;
-            }
-          }
-
-          ArrayHelper<FileInfoV2> infos_helper(replica_size, infos, replica_size);
-          gen_oper_entry(infos_helper, op_table);
-        }
-      }
-    }
-
-    int ResolveVersionConflictTask::replay_oper_entry(const OPER_TABLE& table)
-    {
-      UNUSED(table);
       return TFS_SUCCESS;
     }
 
-    int ResolveVersionConflictTask::replay_one_entry(const OperEntry& entry)
-    {
-      int ret = TFS_SUCCESS;
-      switch (entry.type_)
-      {
-        case OPER_INSERT:
-          ret = replay_write(entry);
-          break;
-        case OPER_DELETE:
-          ret = replay_unlink(entry);
-        default:
-          ret = EXIT_PARAMETER_ERROR;
-          break;
-      }
-      return ret;
-    }
-
-    int ResolveVersionConflictTask::replay_write(const OperEntry& entry)
-    {
-      assert(OPER_INSERT == entry.type_);
-      int32_t offset = FILEINFO_EXT_SIZE;  // every file has a header, ignore it
-      int32_t length = entry.info_.size_ - offset;
-      char *data = new (std::nothrow) char[length];
-      assert(NULL != data);
-      int ret = get_data_helper().read_file(entry.src_ds_,
-        entry.block_id_, entry.block_id_, entry.info_.size_, data, length, offset,
-        READ_DATA_OPTION_FLAG_FORCE);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = get_data_helper().write_file(entry.dest_ds_,
-            entry.block_id_, entry.block_id_, entry.info_.id_, data, length,
-            entry.info_.status_, false);
-      }
-      tbsys::gDeleteA(data);
-
-      return ret;
-    }
-
-    int ResolveVersionConflictTask::replay_unlink(const OperEntry& entry)
-    {
-      assert(OPER_DELETE == entry.type_);
-      return get_data_helper().unlink_file(entry.dest_ds_,
-          entry.block_id_, entry.block_id_, entry.info_.id_, entry.info_.status_);
-    }
   }
 }

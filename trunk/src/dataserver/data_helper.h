@@ -83,6 +83,7 @@ namespace tfs
 
         int get_block_replicas(const uint64_t ns_id, const uint64_t block_id,
             common::VUINT64& servers);
+        int get_block_info(const uint64_t ns_id, const uint64_t block_id, common::BlockInfoV2& info);
 
       private:
         int new_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
@@ -130,6 +131,7 @@ namespace tfs
 
         int get_block_replicas_ex(const uint64_t ns_id, const uint64_t block_id,
             common::VUINT64& servers);
+        int get_block_info_ex(const uint64_t ns_id, const uint64_t block_id, common::BlockInfoV2& info);
 
         // async request interface
         void process_fail_response(common::NewClient* new_client);

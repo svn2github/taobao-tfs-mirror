@@ -65,6 +65,19 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
         inline BlockMember* get_members() { return members_; }
+        inline int set_members(const std::pair<uint64_t, common::BlockInfoV2>* members, const int32_t size)
+        {
+          int ret = (NULL != members && size >= 0) ? common::TFS_SUCCESS : common::EXIT_PARAMETER_ERROR;
+          if (common::TFS_SUCCESS == ret)
+          {
+            size_ = size;
+            for (int32_t index = 0; index < size; index++)
+            {
+              members_[index] = members[index];
+            }
+          }
+          return ret;
+        }
         inline void set_size(int32_t size) { size_ = size; }
         inline int32_t get_size() const { return size_; }
         inline void set_block(const uint64_t block) { block_ = block;}
