@@ -23,6 +23,7 @@
 #include "common/error_msg.h"
 #include "ds_define.h"
 #include "common/base_packet.h"
+#include "common/array_helper.h"
 
 namespace tfs
 {
@@ -332,6 +333,49 @@ namespace tfs
         std::vector<std::pair<uint64_t, int8_t> > result_;
     };
 
+    struct OperEntry
+    {
+      uint64_t block_id_;
+      uint64_t src_ds_;
+      uint64_t dest_ds_;
+      common::FileInfoV2 info_;
+      OperType type_;
+    };
+
+    class ResolveVersionConflictTask: public Task
+    {
+      typedef std::set<common::FileInfoV2, FileInfoCompare> FILE_SET;
+      typedef FILE_SET::iterator FILE_STE_ITER;
+      typedef std::vector<OperEntry> OPER_TABLE;
+      typedef OPER_TABLE::iterator OPER_TABLE_ITER;
+
+      public:
+      ResolveVersionConflictTask(DataService& service, const int64_t seqno,
+        const uint64_t source_id, const int32_t expire_time, const uint32_t block_id);
+        ~ResolveVersionConflictTask();
+
+        virtual int handle();
+        virtual std::string dump() const;
+        virtual int report_to_ns(const int status);
+        int set_servers(const uint64_t* servers, const int32_t size);
+
+      private:
+        DISALLOW_COPY_AND_ASSIGN(ResolveVersionConflictTask);
+        int do_resolve();
+        int get_block_file_set(const uint64_t server_id, const uint64_t block_id,
+            FILE_SET& sorted_files);
+        int select_master(const common::ArrayHelper<common::FileInfoV2>& infos);
+        void gen_oper_entry(const common::ArrayHelper<common::FileInfoV2>& infos, OPER_TABLE& op_table);
+        void gen_entry_table(const common::ArrayHelper<FILE_SET>& per_files, OPER_TABLE& op_table);
+        int replay_oper_entry(const OPER_TABLE& table);
+        int replay_one_entry(const OperEntry& entry);
+        int replay_write(const OperEntry& entry);
+        int replay_unlink(const OperEntry& entry);
+
+      private:
+        uint64_t block_id_;
+        common::VUINT64 servers_;
+    };
   }
 }
 #endif //TFS_DATASERVER_TASK_H_

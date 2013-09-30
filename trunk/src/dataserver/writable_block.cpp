@@ -26,7 +26,6 @@ namespace tfs
       GCObject(Func::get_monotonic_time()),
       block_id_(block_id),
       server_size_(0),
-      status_(TFS_SUCCESS),
       type_(BLOCK_WRITABLE),
       use_(false)
     {

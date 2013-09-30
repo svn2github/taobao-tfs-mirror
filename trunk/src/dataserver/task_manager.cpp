@@ -96,6 +96,9 @@ namespace tfs
         case REQ_EC_DISSOLVE_MESSAGE:
           ret = add_dissolve_task(dynamic_cast<ECDissolveMessage*>(packet));
           break;
+        case NS_REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
+          ret = add_resolve_conflict_task(dynamic_cast<NsReqResolveBlockVersionConflictMessage*>(packet));
+          return ret;
         case RESP_DS_REPLICATE_BLOCK_MESSAGE:
         case RESP_DS_COMPACT_BLOCK_MESSAGE:
           ret = handle_complete(packet);
@@ -348,6 +351,35 @@ namespace tfs
           }
         }
       }
+      return ret;
+    }
+
+    int TaskManager::add_resolve_conflict_task(NsReqResolveBlockVersionConflictMessage* message)
+    {
+      int64_t seqno = message->get_seqno();
+      int32_t expire_time = message->get_expire_time();
+      uint64_t block_id = message->get_block();
+      uint64_t* servers= message->get_members();
+      int32_t size = message->get_size();
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      int ret = ((seqno < 0) || (expire_time <= 0) || INVALID_BLOCK_ID == block_id ||
+          (NULL == servers) || (size <= 1)) ?EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        ResolveVersionConflictTask* task = new (std::nothrow) ResolveVersionConflictTask(service_,
+            seqno, ds_info.ns_vip_port_, expire_time, block_id);
+        assert(NULL != task);
+        ret = task->set_servers(servers, size);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = add_task_queue(task);
+        }
+        if (TFS_SUCCESS != ret)
+        {
+          get_block_manager().get_gc_manager().add(task);
+        }
+      }
+
       return ret;
     }
 

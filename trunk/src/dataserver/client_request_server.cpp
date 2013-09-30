@@ -768,7 +768,7 @@ namespace tfs
           message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, op_stat.error_.str().c_str());
 
           // if fail, close will never happen, release op, expire writable block
-          get_op_manager().release_op(attach_block_id, file_id, lease_id, true);
+          get_op_manager().release_op(attach_block_id, file_id, lease_id, ret);
         }
         else
         {
@@ -833,7 +833,7 @@ namespace tfs
         get_traffic_control().rw_stat(RW_STAT_TYPE_WRITE, ret, true, op_stat.size_);
 
         // after close, release op
-        get_op_manager().release_op(attach_block_id, file_id, lease_id, TFS_SUCCESS == ret);
+        get_op_manager().release_op(attach_block_id, file_id, lease_id, ret);
 
         TBSYS_LOG(INFO, "CLOSE file %s, ret: %d. blockid: %"PRI64_PREFIX"u, "
             "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d",
@@ -876,7 +876,7 @@ namespace tfs
           message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, op_stat.error_.str().c_str());
 
           // prepare unlink fail, real unlink won't happen, expire writable block
-          get_op_manager().release_op(attach_block_id, file_id, lease_id, true);
+          get_op_manager().release_op(attach_block_id, file_id, lease_id, ret);
         }
         else
         {
@@ -936,7 +936,7 @@ namespace tfs
         get_traffic_control().rw_stat(RW_STAT_TYPE_UNLINK, ret, true, 0);
 
         // after unlink, release op
-        get_op_manager().release_op(attach_block_id, file_id, lease_id, TFS_SUCCESS == ret);
+        get_op_manager().release_op(attach_block_id, file_id, lease_id, ret);
 
         TBSYS_LOG(INFO, "UNLINK file %s, ret: %d. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
             "leaseid: %"PRI64_PREFIX"u, action: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",

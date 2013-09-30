@@ -330,14 +330,6 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    struct FileInfoCompare
-    {
-      bool operator () (const FileInfoV2& left, const FileInfoV2& right)
-      {
-        return left.id_ < right.id_;
-      }
-    };
-
     void CheckManager::compare_block_fileinfos(const uint64_t block_id,
         const vector<FileInfoV2>& left,
         const vector<FileInfoV2>& right, vector<FileInfoV2>& more,

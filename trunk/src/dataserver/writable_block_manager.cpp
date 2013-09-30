@@ -66,6 +66,8 @@ namespace tfs
         if ((*iter)->get_type() == BLOCK_UPDATE)
         {
           expire_one_block_(*iter);
+          TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because update",
+              (*iter)->get_block_id());
         }
       }
     }
@@ -245,6 +247,7 @@ namespace tfs
         for ( ;iter != expires.end(); iter++)
         {
           expire_one_block(*iter);
+          TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because block full", *iter);
         }
       }
 

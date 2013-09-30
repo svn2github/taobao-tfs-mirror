@@ -70,6 +70,14 @@ namespace tfs
       FI_CONCEAL = 4
     };
 
+    struct FileInfoCompare
+    {
+      bool operator () (const common::FileInfoV2& left, const common::FileInfoV2& right)
+      {
+        return left.id_ < right.id_;
+      }
+    };
+
     struct SuperBlockInfo
     {
       int32_t version_;

@@ -268,6 +268,8 @@ namespace tfs
         else  // move to expired list
         {
           get_writable_block_manager().expire_one_block(lease.block_id_);
+          TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because renew fail, ret: %d",
+              lease.block_id_, lease.result_);
         }
         TBSYS_LOG(DEBUG, "renew block %"PRI64_PREFIX"u, replica: %d, ret: %d",
             lease.block_id_, lease.size_, lease.result_);

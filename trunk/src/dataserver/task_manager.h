@@ -47,6 +47,8 @@ namespace tfs
 
         BlockManager& get_block_manager();
 
+        int add_resolve_conflict_task(const uint64_t blockid, common::VUINT64& servers);
+
       private:
         DISALLOW_COPY_AND_ASSIGN(TaskManager);
 
@@ -58,6 +60,7 @@ namespace tfs
         int add_marshalling_task(ECMarshallingMessage* message);
         int add_reinstate_task(ECReinstateMessage* message);
         int add_dissolve_task(ECDissolveMessage* message);
+        int add_resolve_conflict_task(NsReqResolveBlockVersionConflictMessage* message);
 
         int check_source(const uint64_t* servers, const int32_t source_num);
         int check_family(const int64_t family_id, const int32_t family_aid_info);

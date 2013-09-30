@@ -377,6 +377,22 @@ namespace tfs
       return ret;
     }
 
+    int DataHelper::unlink_file(const uint64_t server_id, const uint64_t block_id,
+        const uint64_t attach_block_id, const uint64_t file_id,
+        const int32_t status)
+    {
+      int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
+          (INVALID_BLOCK_ID == attach_block_id) || (INVALID_FILE_ID == file_id)) ?
+        EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = unlink_file_ex(server_id, block_id, attach_block_id, file_id, status);
+      }
+
+      return ret;
+    }
+
     int DataHelper::get_block_replicas(const uint64_t ns_id, const uint64_t block_id, VUINT64& servers)
     {
       int ret = ((INVALID_SERVER_ID != ns_id) && (INVALID_BLOCK_ID != block_id)) ?
@@ -877,6 +893,63 @@ namespace tfs
       req_msg.set_status(status);
       req_msg.set_tmp_flag(tmp);
       return send_simple_request(server_id, &req_msg);
+    }
+
+    int DataHelper::unlink_file_ex(const uint64_t server_id, const uint64_t block_id,
+        const uint64_t attach_block_id, const uint64_t file_id,
+        const int32_t status)
+    {
+      uint64_t lease_id = 0;
+      vector<uint64_t> dslist;
+      dslist.push_back(server_id);
+
+      // prepare unlink
+      UnlinkFileMessageV2 req_msg;
+      req_msg.set_ds(dslist);
+      req_msg.set_block_id(block_id);
+      req_msg.set_attach_block_id(attach_block_id);
+      req_msg.set_file_id(file_id);
+      req_msg.set_lease_id(0);
+      req_msg.set_master_id(server_id);
+      req_msg.set_prepare_flag(true);
+
+      tbnet::Packet* ret_msg = NULL;
+      NewClient* new_client = NewClientManager::get_instance().create_client();
+      int ret = NULL != new_client ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = send_msg_to_server(server_id, new_client, &req_msg, ret_msg);
+        if (TFS_SUCCESS == ret)
+        {
+          if (ret_msg->getPCode() == STATUS_MESSAGE)
+          {
+            StatusMessage* smsg = dynamic_cast<StatusMessage*>(ret_msg);
+            ret = smsg->get_status();
+            if (TFS_SUCCESS == ret)
+            {
+              lease_id = strtoul(smsg->get_error(), NULL, 10);
+            }
+          }
+          else
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+          }
+        }
+        NewClientManager::get_instance().destroy_client(new_client);
+      }
+
+      // real unlink
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t action = 0;
+        SET_OVERRIDE_FLAG(action, status);
+        req_msg.set_lease_id(lease_id);
+        req_msg.set_prepare_flag(false);
+        req_msg.set_action(action);
+        ret = send_simple_request(server_id, &req_msg);
+      }
+
+      return ret;
     }
 
     int DataHelper::prepare_read_degrade(const FamilyInfoExt& family_info, int* erased)

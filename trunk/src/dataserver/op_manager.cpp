@@ -328,7 +328,7 @@ namespace tfs
     }
 
     void OpManager::release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
-        const bool expire)
+        const int32_t status)
     {
       int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
           (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -338,10 +338,11 @@ namespace tfs
         OpId oid(block_id, file_id, op_id);
         remove(oid);
 
-        // this block no longer writable
-        if (expire)
+        // write error, this block no longer writable, expire it
+        if (TFS_SUCCESS != status)
         {
           get_lease_manager().expire_block(block_id);
+          TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because write error, ret: %d", block_id, ret);
         }
       }
     }

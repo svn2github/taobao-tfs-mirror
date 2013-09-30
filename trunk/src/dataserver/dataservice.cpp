@@ -654,6 +654,7 @@ namespace tfs
             case REQ_EC_MARSHALLING_MESSAGE:
             case REQ_EC_REINSTATE_MESSAGE:
             case REQ_EC_DISSOLVE_MESSAGE:
+            case NS_REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
               ret = task_manager_.handle(dynamic_cast<BaseTaskMessage*>(packet));
               break;
             case GET_BLOCK_INFO_MESSAGE_V2:
