@@ -1588,6 +1588,7 @@ namespace tfs
     {
       UNUSED(status);
       ResolveBlockVersionConflictMessage req_msg;
+      req_msg.set_seqno(get_seqno());
       int ret = req_msg.set_members(members_, size_);
       if (TFS_SUCCESS == ret)
       {
