@@ -368,7 +368,6 @@ namespace tfs
         {
           int8_t count = 0;
           param.data_.writeInt8(count);
-          unsigned char* pdata = reinterpret_cast<unsigned char*>(param.data_.getFree() - INT8_SIZE);
           for (int8_t index = 0; index < SYSPARAM_NAMESERVER.max_replication_; ++index)
           {
             uint64_t server = servers_[index];
@@ -378,6 +377,8 @@ namespace tfs
               param.data_.writeInt64(server);
             }
           }
+          // data addr will change when expand, so can't keep absolute addr
+          unsigned char* pdata = reinterpret_cast<unsigned char*>(param.data_.getFree() - count * INT64_SIZE - INT8_SIZE);
           param.data_.fillInt8(pdata, count);
           if (count != server_size_)
           {
@@ -390,7 +391,7 @@ namespace tfs
 
     void BlockCollect::dump(int32_t level, const char* file, const int32_t line, const char* function, const pthread_t thid) const
     {
-      if (level >= TBSYS_LOGGER._level)
+      if (level <= TBSYS_LOGGER._level)
       {
         std::string str;
         uint64_t server;
