@@ -81,6 +81,12 @@ namespace tfs
           write_info.block_id_, write_info.file_id_, write_info.file_number_, lease_id);
 
       UNUSED(version);
+
+      if (service_.get_task_manager().exist_block(write_info.block_id_))
+      {
+        return EXIT_BLOCK_IN_TASK_QUEUE;
+      }
+
       //if the first fragment, check version
       // int ret = TFS_SUCCESS;
       /*
@@ -181,6 +187,14 @@ namespace tfs
       datafile->set_last_update();
       datafile->add_ref();
       data_file_mutex_.unlock();
+
+      if (service_.get_task_manager().exist_block(block_id))
+      {
+        datafile->sub_ref();
+        erase_data_file(file_number);
+        TBSYS_LOG(ERROR, "block %u in task queue, cannot write.", block_id);
+        return EXIT_BLOCK_IN_TASK_QUEUE;
+      }
 
       //compare crc
       uint32_t datafile_crc = datafile->crc();

@@ -282,6 +282,12 @@ namespace tfs
         ret = EXIT_PARAMETER_ERROR;
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_task_manager().exist_block(block_id) ?
+          EXIT_BLOCK_IN_TASK_QUEUE : TFS_SUCCESS;
+      }
+
       Lease* lease = NULL;
       if (TFS_SUCCESS == ret)
       {
