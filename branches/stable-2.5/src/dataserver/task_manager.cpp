@@ -362,7 +362,7 @@ namespace tfs
         task_monitor_.unlock();
       }
 
-      TBSYS_LOG(DEBUG, "Add task %s, ret: %d", task->dump().c_str(), ret);
+      TBSYS_LOG(INFO, "Add task %s, ret: %d", task->dump().c_str(), ret);
       return ret;
     }
 

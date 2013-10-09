@@ -587,13 +587,10 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
+          is_load_ = true;
           ret = flush();
         }
 
-        if (TFS_SUCCESS == ret)
-        {
-          is_load_ = true;
-        }
       }
       TBSYS_LOG(INFO, "create index %s, ret: %d, file path: %s, block id : %"PRI64_PREFIX"u, max_bucket_size: %d, file_size: %"PRI64_PREFIX"d",
           TFS_SUCCESS == ret ? "successful" : "failed", ret, file_op_.get_path().c_str(), logic_block_id, max_bucket_size, file_size);
@@ -606,7 +603,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id &&  options.check()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = is_load_ ? EXIT_INDEX_NOT_LOAD_ERROR : TFS_SUCCESS;
+        ret = is_load_ ? EXIT_INDEX_ALREADY_LOADED_ERROR : TFS_SUCCESS;
       }
       if (TFS_SUCCESS == ret)
       {
@@ -654,7 +651,6 @@ namespace tfs
         IndexHeaderV2* header = get_index_header_();
         header->avail_offset_ = 0;
       }
-      is_load_ = TFS_SUCCESS == ret;
       TBSYS_LOG(INFO, "load index %s, ret: %d, block id : %"PRI64_PREFIX"u, file_size: %"PRI64_PREFIX"d",
           TFS_SUCCESS == ret ? "successful" : "failed", ret, logic_block_id, file_size);
       return ret;
@@ -1066,12 +1062,8 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          ret = flush();
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
           is_load_ = true;
+          ret = flush();
         }
       }
       TBSYS_LOG(INFO, "create verify block index %s, ret: %d, block id : %"PRI64_PREFIX"u, file_size: %"PRI64_PREFIX"d",
@@ -1086,7 +1078,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = is_load_ ? EXIT_INDEX_NOT_LOAD_ERROR : TFS_SUCCESS;
+        ret = is_load_ ? EXIT_INDEX_ALREADY_LOADED_ERROR : TFS_SUCCESS;
       }
       if (TFS_SUCCESS == ret)
       {
