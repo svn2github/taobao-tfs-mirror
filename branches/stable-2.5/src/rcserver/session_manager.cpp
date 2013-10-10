@@ -30,8 +30,14 @@ namespace tfs
 
     SessionManager::SessionManager(IResourceManager* resource_manager, tbutil::TimerPtr timer)
       : resource_manager_(resource_manager), timer_(timer),
-      monitor_task_(0), stat_task_(0), is_init_(false)
+      monitor_task_(0), stat_task_(0), interval_(0L), is_init_(false)
     {
+      last_report_time_ = time(NULL);
+      curr_stat_map_.clear();
+      last_stat_map_.clear();
+
+      curr_map_ = &curr_stat_map_;
+      last_map_ = &last_stat_map_;
     }
     SessionManager::~SessionManager()
     {
@@ -116,7 +122,7 @@ namespace tfs
       }
       else if (((ret = timer_->scheduleRepeated(monitor_task_, tbutil::Time::seconds(SYSPARAM_RCSERVER.monitor_interval_))) != 0)
           || ((ret = timer_->scheduleRepeated(stat_task_, tbutil::Time::seconds(SYSPARAM_RCSERVER.stat_interval_))) != 0)
-         )
+          )
       { //schedule fail. will not happen
         TBSYS_LOG(ERROR, "call scheduleRepeated failed, stat_interval_: %"PRI64_PREFIX"d, monitor_interval_: %"PRI64_PREFIX"d,"
             " ret: %d",
@@ -173,6 +179,43 @@ namespace tfs
       int32_t app_id = 0;
       int64_t session_ip = 0;
       BaseInfo base_info_befor_sort;
+
+      const SessionStat& stat_info = keep_alive_info.s_stat_;
+      TBSYS_LOG(DEBUG, "stat_info size = %ld", stat_info.app_oper_info_.size());
+      TBSYS_LOG(DEBUG, "interval = %ld", interval_);
+
+      time_t t = time(NULL);
+      if (interval_ < MIN_STAT_INTERVAL)
+      {
+        interval_ = MIN_STAT_INTERVAL;
+      }
+      else if (interval_ > MAX_STAT_INTERVAL)
+      {
+        interval_ = MAX_STAT_INTERVAL;
+      }
+
+      tbutil::Mutex::Lock lock(mutex_);
+      if (t > last_report_time_ + interval_)
+      {
+        last_map_->clear();
+        TBSYS_LOG(DEBUG, "switch map");
+        common::SessionStatMap* tmp = curr_map_;
+        curr_map_ = last_map_;
+        last_map_ = tmp;
+        TBSYS_LOG(DEBUG, "last map size = %ld", last_map_->size());
+        last_report_time_ += interval_;
+      }
+      else
+      {
+        if (stat_info.app_oper_info_.size() != 0)
+        {
+          TBSYS_LOG(DEBUG, "last_report_time_ = %ld", keep_alive_info.last_report_time_ + curr_map_->size());
+          curr_map_->insert(pair<uint64_t, SessionStat>(keep_alive_info.last_report_time_ + curr_map_->size(), stat_info));
+        }
+        TBSYS_LOG(DEBUG, "curr map size = %ld", curr_map_->size());
+        TBSYS_LOG(DEBUG, "last map size = %ld", last_map_->size());
+      }
+
       if ((ret = SessionUtil::parse_session_id(session_id, app_id, session_ip)) == TFS_SUCCESS)
       {
         // first check update info, then update session info
@@ -225,6 +268,30 @@ namespace tfs
         TBSYS_LOG(ERROR, "call SessionUtil::parse_session_id failed, session_id: %s, modify time: %"PRI64_PREFIX"d, ret: %d",
             session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, ret);
       }
+
+      return ret;
+    }
+
+    int SessionManager::stat(const int32_t app_id, const int32_t oper_type, AppOperInfoMap &cond_map)
+    {
+      int ret = TFS_SUCCESS;
+
+      tbutil::Mutex::Lock lock(mutex_);
+      TBSYS_LOG(DEBUG,"RcService::req_stat last_stat_map_ size : %ld",last_map_->size());
+      SessionStatMapConstIter mit = last_map_->begin();
+      for (; mit != last_map_->end(); ++mit)
+      {
+        AppOperInfoMapConstIter mit2 = mit->second.app_oper_info_.begin();
+        for (; mit2 != mit->second.app_oper_info_.end(); ++mit2)
+        {
+          if((app_id == 0 || app_id == mit2->second.oper_app_id_) && (oper_type == 0 || oper_type == mit2->second.oper_type_))
+          {
+            cond_map.insert(pair<OperType, AppOperInfo>(mit2->first, mit2->second));
+          }
+        }
+      }
+
+      TBSYS_LOG(DEBUG,"SessionManager::cond map size : %ld",cond_map.size());
 
       return ret;
     }

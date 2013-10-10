@@ -195,6 +195,12 @@ namespace tfs
           case common::REQ_RC_LOGIN_MESSAGE:
             packet = new ReqRcLoginMessage();
             break;
+          case common::REQ_RC_REQ_STAT_MESSAGE:
+            packet = new ReqRcStatMessage();
+            break;
+          case common::RSP_RC_REQ_STAT_MESSAGE:
+            packet = new RspRcStatMessage();
+            break;
           case common::RSP_RC_LOGIN_MESSAGE:
             packet = new RspRcLoginMessage();
             break;

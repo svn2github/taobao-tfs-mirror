@@ -25,6 +25,7 @@ namespace tfs
   {
     class IResourceManager;
     class SessionManager;
+
     class RcService : public common::BaseService
     {
       public:
@@ -68,6 +69,7 @@ namespace tfs
         int req_keep_alive(common::BasePacket* packet);
         int req_logout(common::BasePacket* packet);
         int req_reload(common::BasePacket* packet);
+        int req_stat(common::BasePacket *packet);
 
         // reload config
         int req_reload_config();

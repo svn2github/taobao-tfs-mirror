@@ -21,6 +21,7 @@
 #include <string>
 
 #include <stdint.h>
+#include "internal.h"
 
 namespace tfs
 {
@@ -147,17 +148,21 @@ namespace tfs
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
-      int64_t length() const;
+      static int64_t length()
+      {
+        return INT_SIZE  + INT64_SIZE * 4;
+      }
       void dump() const;
 
       OperType oper_type_;
-      int64_t oper_times_;  //total
-      int64_t oper_size_;   //succ
-      int64_t oper_rt_;     //succ 累加值
-      int64_t oper_succ_;
+      int64_t oper_times_;  //times
+      int64_t oper_size_;   //size
+      int64_t oper_rt_;     //time
+      int64_t oper_succ_;   //succ
+      int32_t oper_app_id_;
 
       AppOperInfo() : oper_type_(OPER_INVALID), oper_times_(0),
-                      oper_size_(0), oper_rt_(0), oper_succ_(0)
+      oper_size_(0), oper_rt_(0), oper_succ_(0),oper_app_id_(0)
       {
       }
 
@@ -246,6 +251,14 @@ namespace tfs
     typedef std::map<int32_t, SessionCollectMap> AppSessionMap;
     typedef AppSessionMap::const_iterator AppSessionMapConstIter;
     typedef AppSessionMap::iterator AppSessionMapIter;
+
+    typedef std::multimap<uint64_t, SessionStat> SessionStatMap;
+    typedef SessionStatMap::const_iterator SessionStatMapConstIter;
+    typedef SessionStatMap::iterator SessionStatMapIter;
+
+    typedef std::multimap<OperType, AppOperInfo> AppOperInfoMap;
+    typedef AppOperInfoMap ::const_iterator AppOperInfoMapConstIter;
+    typedef AppOperInfoMap ::iterator AppOperInfoMapIter;
   }
 }
 #endif //TFS_RC_DEFINE_H_

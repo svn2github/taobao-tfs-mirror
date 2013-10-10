@@ -31,6 +31,11 @@ namespace tfs
 {
   namespace rcserver
   {
+
+    #define   MAX_MAP_SIZE          100000
+    #define   MIN_STAT_INTERVAL     60
+    #define   MAX_STAT_INTERVAL     30*60
+
     class SessionManager;
     class ISessionTask : public tbutil::TimerTask
     {
@@ -136,6 +141,7 @@ namespace tfs
         int keep_alive(const std::string& session_id, const common::KeepAliveInfo& keep_alive_info,
             bool& update_flag, common::BaseInfo& base_info);
         int logout(const std::string& session_id, const common::KeepAliveInfo& keep_alive_info);
+        int stat(const int32_t app_id, const int32_t oper_type, common::AppOperInfoMap &cond_map);
 
       private:
         int update_session_info(const int32_t app_id, const std::string& session_id,
@@ -149,6 +155,13 @@ namespace tfs
 
         SessionMonitorTaskPtr monitor_task_;
         SessionStatTaskPtr stat_task_;
+
+        common::SessionStatMap last_stat_map_;
+        common::SessionStatMap curr_stat_map_;
+        common::SessionStatMap *curr_map_;
+        common::SessionStatMap *last_map_;
+        time_t  last_report_time_;
+        int64_t interval_;
 
         bool is_init_;
         tbutil::Mutex mutex_;
