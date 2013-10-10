@@ -558,9 +558,24 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           if (file_size > 0)
-            TBSYS_LOG(WARN, "index file %s maybe reuse!", file_op_.get_path().c_str());
-          if (0 == file_size)
           {
+            TBSYS_LOG(WARN, "index file %s mybe reuse!", file_op_.get_path().c_str());
+            ret = file_op_.unlink();
+            if (TFS_SUCCESS == ret)
+            {
+              file_size = file_op_.size();  // will create a new index file
+              ret = file_size < 0 ? EXIT_FILE_OP_ERROR : TFS_SUCCESS;
+            }
+
+            if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(WARN, "cannot reuse index file %s.", file_op_.get_path().c_str());
+            }
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            assert(0 == file_size);
             IndexHeaderV2 header;
             memset(&header, 0, sizeof(header));
             header.info_.block_id_ = logic_block_id;
@@ -1028,9 +1043,24 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           if (file_size > 0)
-            TBSYS_LOG(WARN, "index file %s mybe reuse!", file_op_.get_path().c_str());
-          if (0 == file_size)
           {
+            TBSYS_LOG(WARN, "index file %s mybe reuse!", file_op_.get_path().c_str());
+            ret = file_op_.unlink();
+            if (TFS_SUCCESS == ret)
+            {
+              file_size = file_op_.size();  // will create a new index file
+              ret = file_size < 0 ? EXIT_FILE_OP_ERROR : TFS_SUCCESS;
+            }
+
+            if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(WARN, "cannot reuse index file %s.", file_op_.get_path().c_str());
+            }
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            assert(0 == file_size);
             IndexHeaderV2 header;
             memset(&header, 0, sizeof(header));
             header.info_.block_id_ = logic_block_id;
