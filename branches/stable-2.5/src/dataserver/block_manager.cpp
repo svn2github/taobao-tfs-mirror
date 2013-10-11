@@ -1079,18 +1079,21 @@ namespace tfs
       {
         BasePhysicalBlock* physical_block = NULL;
         std::vector<int32_t> physical_blocks;
-        logic_block->rename_index_filename();//rename index file name
-        logic_block->get_all_physical_blocks(physical_blocks);
-        std::vector<int32_t>::const_iterator iter = physical_blocks.begin();
-        for (; iter != physical_blocks.end(); ++iter)
+        ret = logic_block->rename_index_filename();//rename index file name
+        if (TFS_SUCCESS == ret)
         {
-          ret = get_physical_block_manager().remove(physical_block, (*iter));//remove physical block form physical block map, but not free pointer
-          assert(TFS_SUCCESS == ret);
-          ret = get_super_block_manager().cleanup_block_index((*iter));//cleanup block index
-          assert(TFS_SUCCESS == ret);
-          get_gc_manager().add(physical_block);
+          logic_block->get_all_physical_blocks(physical_blocks);
+          std::vector<int32_t>::const_iterator iter = physical_blocks.begin();
+          for (; iter != physical_blocks.end(); ++iter)
+          {
+            ret = get_physical_block_manager().remove(physical_block, (*iter));//remove physical block form physical block map, but not free pointer
+            assert(TFS_SUCCESS == ret);
+            ret = get_super_block_manager().cleanup_block_index((*iter));//cleanup block index
+            assert(TFS_SUCCESS == ret);
+            get_gc_manager().add(physical_block);
+          }
+          get_gc_manager().add(logic_block);
         }
-        get_gc_manager().add(logic_block);
 
         if (TFS_SUCCESS == ret)
         {

@@ -122,7 +122,8 @@ namespace tfs
         }
 
         datafile = new DataFile(write_info.file_number_,
-            dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir());
+            dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir(),
+            DsRuntimeGlobalInformation::instance().information_.id_);
         data_file_map_.insert(DataFileMap::value_type(write_info.file_number_, datafile));
       }
 

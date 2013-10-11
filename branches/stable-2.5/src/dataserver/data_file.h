@@ -34,7 +34,7 @@ namespace tfs
       FRIEND_TEST(TestDataFile, write_read);
       #endif
       public:
-        DataFile(const uint64_t fn, const std::string& work_dir);
+        DataFile(const uint64_t fn, const std::string& work_dir, const uint64_t suffix);
         virtual ~DataFile();
 
         int pwrite(const common::FileInfoInDiskExt& info, const char* data, const int32_t nbytes, const int32_t offset);

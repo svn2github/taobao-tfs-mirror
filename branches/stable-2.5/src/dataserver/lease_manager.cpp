@@ -185,7 +185,9 @@ namespace tfs
 
     WriteLease::WriteLease(const LeaseId& lease_id, const int64_t now_us, const VUINT64& servers):
       Lease(lease_id, now_us, servers),
-      data_file_(lease_id.lease_id_, dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir())
+      data_file_(lease_id.lease_id_,
+          dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir(),
+          DsRuntimeGlobalInformation::instance().information_.id_)
     {
 
     }
