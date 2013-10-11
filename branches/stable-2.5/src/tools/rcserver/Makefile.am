@@ -22,5 +22,5 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 
 parse_SOURCES = parse_session_id.cpp
 gene_SOURCES = gene_session_id.cpp
-rcstat_SOURCES = rcstat.cpp
+rcstat_SOURCES = rcstat.cpp rcstat.h
 
