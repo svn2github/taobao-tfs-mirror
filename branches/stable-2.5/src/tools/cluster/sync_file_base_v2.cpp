@@ -182,7 +182,8 @@ int SyncFileBase::unlink_file(const string& file_name, const int32_t status)
   int32_t override_action = 0;
   int64_t file_size;//unlink可以获取操作成功后文件的size大小，这里没用
   SET_OVERRIDE_FLAG(override_action, status);//将源集群的文件状态原样同步到目标机器
-  ret = TfsClientImplV2::Instance()->unlink(file_size, file_name.c_str(), NULL, static_cast<TfsUnlinkType>(override_action), dest_ns_addr_.c_str());
+  ret = TfsClientImplV2::Instance()->unlink(file_size, file_name.c_str(), NULL,
+      static_cast<TfsUnlinkType>(override_action), dest_ns_addr_.c_str(), TFS_FILE_NO_SYNC_LOG);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "unlink dest tfsfile fail, filename: %s, src status:%d, ret:%d", file_name.c_str(), status, ret);

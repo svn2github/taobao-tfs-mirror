@@ -78,7 +78,7 @@ namespace tfs
           const char* ns_addr = NULL);
       int unlink(int64_t& file_size, const char* file_name, const char* suffix = NULL,
           const common::TfsUnlinkType action = common::DELETE,
-          const char* ns_addr = NULL);
+          const char* ns_addr = NULL, const int32_t flag = common::TFS_FILE_DEFAULT_OPTION);
 
       int64_t get_server_id();
       int32_t get_cluster_id();

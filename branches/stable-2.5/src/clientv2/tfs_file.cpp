@@ -731,8 +731,8 @@ namespace tfs
           WriteFileRespMessageV2* response = dynamic_cast<WriteFileRespMessageV2*>(resp_msg);
           file_.lease_id_ = response->get_lease_id();
           fsname_.set_file_id(response->get_file_id());
-          TBSYS_LOG(DEBUG, "write file %s. fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u",
-              fsname_.get_name(), fsname_.get_file_id(), file_.lease_id_);
+          TBSYS_LOG(DEBUG, "write file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u",
+              fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(), file_.lease_id_);
         }
       }
       NewClientManager::get_instance().destroy_client(client);

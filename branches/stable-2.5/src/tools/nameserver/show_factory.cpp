@@ -46,6 +46,12 @@ namespace tfs
       result_tp->read_byte_ = atp->read_byte_ + sign * btp->read_byte_;
       result_tp->read_file_count_ = atp->read_file_count_ + sign * btp->read_file_count_;
     }
+    // if ds restart, will exist negative number
+    bool is_tp_valid(const Throughput* tp)
+    {
+       return tp->write_byte_ >= 0 && tp->write_file_count_ >= 0
+           && tp->read_byte_ >= 0 && tp->read_file_count_ >= 0;
+    }
     void print_header(const int8_t print_type, const int8_t type, FILE* fp)
     {
       if(print_type & FAMILY_TYPE)
@@ -182,7 +188,14 @@ namespace tfs
     {
       int32_t time = current_time_ - old_server.current_time_;
       add_tp(&total_tp_, &old_server.total_tp_, &last_tp_, SUB_OP);
-      compute_tp(&last_tp_, time);//计算ssm对该ds两次拉取的时间段的单位流量
+      if (is_tp_valid(&last_tp_))
+      {
+        compute_tp(&last_tp_, time);//计算ssm对该ds两次拉取的时间段的单位流量
+      }
+      else// it will heppen when dataserver restart
+      {
+        memset(&last_tp_, 0, sizeof(Throughput));
+      }
       time = current_time_ - startup_time_;
       compute_tp(&total_tp_, time);//total_tp_是从ds直接获取的累计字节数
       return TFS_SUCCESS;
@@ -485,7 +498,7 @@ namespace tfs
     }
 
     void BlockDistributionStruct::dump(const int8_t type, FILE* fp) const
-    {	
+    {
       if (fp == NULL) { return; }
 
       if (type & BLOCK_IP_DISTRIBUTION_TYPE)
@@ -501,7 +514,7 @@ namespace tfs
       }
       fprintf(fp, "\n");
       //fprintf(fp, "The count of ip or rack unnormal total blocks is %d in cluster.\n", total_block_count_);
-    }	
+    }
 
     //**********************************************************************
     //**************************Machine Info**********************************
@@ -535,25 +548,29 @@ namespace tfs
       int32_t time = server.current_time_ - old_server.current_time_;
       Throughput tmp_tp_;
       add_tp(&server.total_tp_, &old_server.total_tp_, &tmp_tp_, SUB_OP);
-
-      //last tp, sum all last server value
-      add_tp(&last_tp_, &tmp_tp_, &last_tp_, ADD_OP);
-      consume_time_ += time;
-      index_++;
-
-      //get max tp, which is the max tp(average) of one process
-      compute_tp(&tmp_tp_, time);
-
-      if (max_tp_.write_byte_ <= tmp_tp_.write_byte_)
+      // if dataserver restart, tmp_tp_ will invalid
+      if (is_tp_valid(&tmp_tp_))
       {
-        max_tp_.write_byte_ = tmp_tp_.write_byte_;
-        max_tp_.write_file_count_ = tmp_tp_.write_file_count_;
+        //last tp, sum all last server value
+        add_tp(&last_tp_, &tmp_tp_, &last_tp_, ADD_OP);
+        consume_time_ += time;
+        index_++;
+
+        //get max tp, which is the max tp(average) of one process
+        compute_tp(&tmp_tp_, time);
+
+        if (max_tp_.write_byte_ <= tmp_tp_.write_byte_)
+        {
+          max_tp_.write_byte_ = tmp_tp_.write_byte_;
+          max_tp_.write_file_count_ = tmp_tp_.write_file_count_;
+        }
+        if (max_tp_.read_byte_ <= tmp_tp_.read_byte_)
+        {
+          max_tp_.read_byte_ = tmp_tp_.read_byte_;
+          max_tp_.read_file_count_ = tmp_tp_.read_file_count_;
+        }
       }
-      if (max_tp_.read_byte_ <= tmp_tp_.read_byte_)
-      {
-        max_tp_.read_byte_ = tmp_tp_.read_byte_;
-        max_tp_.read_file_count_ = tmp_tp_.read_file_count_;
-      }
+
       if (last_startup_time_ < server.startup_time_)
       {
         last_startup_time_ = server.startup_time_;
