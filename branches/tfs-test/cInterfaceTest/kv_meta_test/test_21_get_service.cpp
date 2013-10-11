@@ -19,7 +19,6 @@
 TEST_F(TFS_Init,01_get_service)
 {
   int Ret ;
-  int i ;
   const char* bucket_name = "a1a";
   const char* local_file=RC_2M; 
   tfs::common::BucketsResult buckets_result;
@@ -44,7 +43,6 @@ TEST_F(TFS_Init,01_get_service)
 TEST_F(TFS_Init,test_1)
 {
   int Ret ;
-  int i ;
   const char* bucket_name = "a1a";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;
@@ -58,7 +56,6 @@ TEST_F(TFS_Init,test_1)
 TEST_F(TFS_Init,test_2)
 {
   int Ret ;
-  int i ;
   const char* bucket_name = "a1a";
   tfs::common::UserInfo user_info;
   user_info.owner_id_ = 1;

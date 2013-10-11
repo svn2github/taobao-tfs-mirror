@@ -32,7 +32,7 @@ TEST_F(TFS_Init,01_get_bucket_acl_read_write_acp)
   
   Ret =kv_meta_client.get_bucket_acl(bucket_name,&bucket_acl_map,user_info);
   EXPECT_EQ(Ret,0);
-  cout<<"the acl is "<< bucket_acl_map[1]<<endl; 
+  EXPECT_EQ(bucket_acl_map[1],13); 
  
   bucket_acl_map.clear();
   bucket_acl_map.insert(std::make_pair(1,WRITE|WRITE_ACP));

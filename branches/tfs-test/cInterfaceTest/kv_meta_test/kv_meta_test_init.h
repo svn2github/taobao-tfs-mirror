@@ -8,8 +8,8 @@
 #include <gtest/gtest.h>
 #include <stdio.h>
 #include <string>
-#include <vector.h>
-#include <set.h>
+#include <vector>
+#include <set>
 #include <sys/stat.h>
 #include "tfs_rc_client_api_impl.h"
 

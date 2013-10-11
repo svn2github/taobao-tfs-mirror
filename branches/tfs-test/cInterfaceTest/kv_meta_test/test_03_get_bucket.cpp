@@ -15,7 +15,7 @@
 */
 
 #include"kv_meta_test_init.h"
-
+unsigned int int0=0;
 TEST_F(TFS_Init_Data,01_get_bucket_prefix_abc)
 {
   int Ret ;
@@ -62,13 +62,15 @@ TEST_F(TFS_Init_Data,01_get_bucket_prefix_abc)
   e_object_name.push_back("abccc/");
 
   Ret = kv_meta_client.get_bucket(bucket_name, prefix, start_key, delimiter, limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated, user_info);
-
+  cout<<"#########"<<endl;
   Show_Object_Name(v_object_name);
+  cout<<"#########"<<endl;
   EXPECT_EQ(Ret,0);
   EXPECT_EQ(is_truncated,0);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,02_get_bucket_prefix_1)
@@ -93,9 +95,10 @@ TEST_F(TFS_Init_Data,02_get_bucket_prefix_1)
 
   EXPECT_EQ(Ret,0);
   EXPECT_EQ(is_truncated,0);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,03_get_bucket_prefix_abc_limit)
@@ -142,7 +145,8 @@ TEST_F(TFS_Init_Data,03_get_bucket_prefix_abc_limit)
   EXPECT_EQ(is_truncated,1);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,04_get_bucket_start_key_abc)
@@ -197,7 +201,8 @@ TEST_F(TFS_Init_Data,04_get_bucket_start_key_abc)
   EXPECT_EQ(is_truncated,0);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,05_get_bucket_start_key_abcb)
@@ -243,7 +248,8 @@ TEST_F(TFS_Init_Data,05_get_bucket_start_key_abcb)
   EXPECT_EQ(is_truncated,0);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,06_get_bucket_start_key_1)
@@ -301,7 +307,8 @@ TEST_F(TFS_Init_Data,06_get_bucket_start_key_1)
   EXPECT_EQ(is_truncated,0);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,07_get_bucket_start_key_limit)
@@ -350,7 +357,8 @@ TEST_F(TFS_Init_Data,07_get_bucket_start_key_limit)
   EXPECT_EQ(is_truncated,1);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,08_get_bucket_delimiter)
@@ -442,9 +450,10 @@ TEST_F(TFS_Init_Data,09_get_bucket_delimiter_limit)
   Show_Prefix_Name(s_common_prefix);
 
   EXPECT_EQ(Ret,0);
-  EXPECT_EQ(is_truncated,1);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
+  EXPECT_EQ(is_truncated,1);  
+  unsigned int int0=0;
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
   EXPECT_EQ(0,Is_Common_Prefix_EQ(e_common_prefix,s_common_prefix));
 }
 
@@ -556,7 +565,8 @@ TEST_F(TFS_Init_Data,11_get_bucket_prefix_abc_delimiter_1)
   EXPECT_EQ(is_truncated,0);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,12_get_bucket_prefix_1_delimiter)
@@ -580,9 +590,10 @@ TEST_F(TFS_Init_Data,12_get_bucket_prefix_1_delimiter)
 
   EXPECT_EQ(Ret,0);
   EXPECT_EQ(is_truncated,0);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,13_get_bucket_prefix_abc_delimiter_limit)
@@ -614,8 +625,9 @@ TEST_F(TFS_Init_Data,13_get_bucket_prefix_abc_delimiter_limit)
 
   EXPECT_EQ(Ret,0);
   EXPECT_EQ(is_truncated,1);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
   EXPECT_EQ(0,Is_Common_Prefix_EQ(e_common_prefix,s_common_prefix));
 }
 
@@ -715,7 +727,8 @@ TEST_F(TFS_Init_Data,15_get_bucket_start_key_abcb_delimiter_1)
   EXPECT_EQ(is_truncated,0);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,16_get_bucket_start_key_s_delimiter)
@@ -739,9 +752,10 @@ TEST_F(TFS_Init_Data,16_get_bucket_start_key_s_delimiter)
 
   EXPECT_EQ(Ret,0);
   EXPECT_EQ(is_truncated,0);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,17_get_bucket_start_key_abcb_delimiter_limit)
@@ -840,7 +854,8 @@ TEST_F(TFS_Init_Data,18_get_bucket_prefix_abc_start_key_abc)
   EXPECT_EQ(is_truncated,0);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,19_get_bucket_prefix_abc_start_key_abcb)
@@ -886,7 +901,8 @@ TEST_F(TFS_Init_Data,19_get_bucket_prefix_abc_start_key_abcb)
   EXPECT_EQ(is_truncated,0);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,20_get_bucket_prefix_abcb_start_key_abc)
@@ -928,7 +944,8 @@ TEST_F(TFS_Init_Data,20_get_bucket_prefix_abcb_start_key_abc)
   EXPECT_EQ(is_truncated,0);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;  
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,21_get_bucket_prefix_1_start_key_abc)
@@ -952,9 +969,10 @@ TEST_F(TFS_Init_Data,21_get_bucket_prefix_1_start_key_abc)
 
   EXPECT_EQ(Ret,0);
   EXPECT_EQ(is_truncated,0);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,22_get_bucket_prefix_abc_start_key_s)
@@ -978,9 +996,10 @@ TEST_F(TFS_Init_Data,22_get_bucket_prefix_abc_start_key_s)
 
   EXPECT_EQ(Ret,0);
   EXPECT_EQ(is_truncated,0);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,23_get_bucket_prefix_abc_start_key_abcb_limit)
@@ -1025,7 +1044,8 @@ TEST_F(TFS_Init_Data,23_get_bucket_prefix_abc_start_key_abcb_limit)
   EXPECT_EQ(is_truncated,1);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int int0=0;
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,24_get_bucket_prefix_abc_start_key_abc_delimiter)
@@ -1200,9 +1220,9 @@ TEST_F(TFS_Init_Data,27_get_bucket_prefix_1_start_key_abc_delimiter)
 
   EXPECT_EQ(Ret,0);
   EXPECT_EQ(is_truncated,0);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,28_get_bucket_prefix_abc_start_key_s_delimiter)
@@ -1226,9 +1246,9 @@ TEST_F(TFS_Init_Data,28_get_bucket_prefix_abc_start_key_s_delimiter)
 
   EXPECT_EQ(Ret,0);
   EXPECT_EQ(is_truncated,0);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,29_get_bucket_prefix_abc_start_key_abcb_delimiter_limit)
@@ -1298,9 +1318,9 @@ TEST_F(TFS_Init_Data,30_get_bucket_non_exist_bucket)
   Ret = kv_meta_client.get_bucket(bucket_name, prefix, start_key, delimiter, limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated, user_info);
 
   EXPECT_NE(Ret,0);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,31_get_bucket_null_bucket)
@@ -1323,9 +1343,9 @@ TEST_F(TFS_Init_Data,31_get_bucket_null_bucket)
   Ret = kv_meta_client.get_bucket(bucket_name, prefix, start_key, delimiter, limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated, user_info);
 
   EXPECT_NE(Ret,0);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,32_get_bucket_empty_bucket)
@@ -1348,9 +1368,9 @@ TEST_F(TFS_Init_Data,32_get_bucket_empty_bucket)
   Ret = kv_meta_client.get_bucket(bucket_name, prefix, start_key, delimiter, limit, &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated, user_info);
 
   EXPECT_NE(Ret,0);
-  EXPECT_EQ(0,v_object_name.size());
-  EXPECT_EQ(0,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  EXPECT_EQ(int0,v_object_name.size());
+  EXPECT_EQ(int0,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,33_get_bucket_empty_prefix)
@@ -1374,9 +1394,10 @@ TEST_F(TFS_Init_Data,33_get_bucket_empty_prefix)
 
   Show_Object_Name(v_object_name);
   EXPECT_EQ(Ret,0);
-  EXPECT_EQ(17,v_object_name.size());
-  EXPECT_EQ(17,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int uint17=17;
+  EXPECT_EQ(uint17,v_object_name.size());
+  EXPECT_EQ(uint17,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,34_get_bucket_empty_start_key)
@@ -1400,9 +1421,10 @@ TEST_F(TFS_Init_Data,34_get_bucket_empty_start_key)
 
   Show_Object_Name(v_object_name);
   EXPECT_EQ(Ret,0);
-  EXPECT_EQ(17,v_object_name.size());
-  EXPECT_EQ(17,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int uint17=17;
+  EXPECT_EQ(uint17,v_object_name.size());
+  EXPECT_EQ(uint17,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,35_get_bucket_delimiter)
@@ -1426,9 +1448,10 @@ TEST_F(TFS_Init_Data,35_get_bucket_delimiter)
   Show_Object_Name(v_object_name);
 
   EXPECT_EQ(Ret,0);
-  EXPECT_EQ(17,v_object_name.size());
-  EXPECT_EQ(17,v_object_meta_info.size());
-  EXPECT_EQ(0,s_common_prefix.size());
+  unsigned int uint17=17;
+  EXPECT_EQ(uint17,v_object_name.size());
+  EXPECT_EQ(uint17,v_object_meta_info.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,36_get_bucket_prefix_abc_limit_EQ)
@@ -1483,7 +1506,7 @@ TEST_F(TFS_Init_Data,36_get_bucket_prefix_abc_limit_EQ)
   EXPECT_EQ(is_truncated,1);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,37_get_bucket_start_key_abc_add)
@@ -1537,7 +1560,7 @@ TEST_F(TFS_Init_Data,37_get_bucket_start_key_abc_add)
   EXPECT_EQ(is_truncated,0);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 TEST_F(TFS_Init_Data,38_get_bucket_start_key_abc_add_limit)
@@ -1591,7 +1614,7 @@ TEST_F(TFS_Init_Data,38_get_bucket_start_key_abc_add_limit)
   EXPECT_EQ(is_truncated,1);
   EXPECT_EQ(0,Is_Object_Name_EQ(e_object_name,v_object_name));
   EXPECT_EQ(0,Is_Object_Meta_Info_EQ(e_object_meta_info,v_object_meta_info,1,2*(2<<20)));
-  EXPECT_EQ(0,s_common_prefix.size());
+  EXPECT_EQ(int0,s_common_prefix.size());
 }
 
 

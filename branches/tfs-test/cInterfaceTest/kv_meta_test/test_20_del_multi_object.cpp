@@ -23,7 +23,7 @@ TEST_F(TFS_Init,01_del_multi_object)
   const char* object_name = "BBB";
   const char* object_name_1="CCC";
   const char* local_file = RC_2M;
-  const bool  quiet = true; 
+  const bool  quiet = false; 
 
   std::set<std::string> s_object_name;
   s_object_name.insert(object_name);
@@ -44,7 +44,27 @@ TEST_F(TFS_Init,01_del_multi_object)
 
   Ret = kv_meta_client.del_multi_objects(bucket_name,s_object_name, quiet, &delete_result, user_info);
   EXPECT_EQ(Ret,0);
+  std::vector<std::string> v_suc_objects_r;
+   v_suc_objects_r.push_back("BBB");
+   v_suc_objects_r.push_back("CCC");
 
+  std::vector<std::string> v_fail_objects_r;
+ 
+  std::vector<std::string> v_fail_msg_r;
+//cout<<"#######"<<endl;
+//Show_Object_Name(delete_result.v_suc_objects_);
+//Show_Object_Name(delete_result.v_fail_objects_);
+//Show_Object_Name(delete_result.v_fail_msg_);
+//cout<<"########"<<endl;
+//
+//Show_Object_Name(v_suc_objects_r);
+//Show_Object_Name(v_fail_objects_r);
+//Show_Object_Name(v_fail_msg_r);
+//cout<<"########"<<endl;
+
+  EXPECT_EQ(delete_result.v_suc_objects_== v_suc_objects_r,1);
+  EXPECT_EQ(delete_result.v_fail_objects_==v_fail_objects_r,1);
+  EXPECT_EQ(delete_result.v_fail_msg_==v_fail_msg_r,1);
   Ret = kv_meta_client.del_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
 }
@@ -247,7 +267,7 @@ TEST_F(TFS_Init,08_del_object_non_exsit_object_2)
   EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.del_multi_objects(bucket_name,s_object_name, quiet, &delete_result, user_info);
-  EXPECT_NE(Ret,0);
+  EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.del_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
@@ -277,10 +297,10 @@ int Ret ;
   EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.del_multi_objects(bucket_name,s_object_name, quiet, &delete_result, user_info);
-  EXPECT_NE(Ret,0);
+  EXPECT_EQ(Ret,0);
   
   Ret = kv_meta_client.del_object(bucket_name,object_name,user_info);
-  EXPECT_EQ(Ret,0);
+  EXPECT_NE(Ret,0);
 
   Ret = kv_meta_client.del_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
@@ -354,7 +374,7 @@ TEST_F(TFS_Init,11_del_object_double_del)
   EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.del_multi_objects(bucket_name,s_object_name, quiet, &delete_result, user_info);
-  EXPECT_NE(Ret,0);
+  EXPECT_EQ(Ret,0);
 
   Ret = kv_meta_client.del_bucket(bucket_name,user_info);
   EXPECT_EQ(Ret,0);
