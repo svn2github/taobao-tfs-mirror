@@ -350,6 +350,7 @@ int SyncByBlockWorker::read_data(const uint64_t src_ds_id)
 int SyncByBlockWorker::write_file(const string& file_name, char* data, int32_t size, int32_t status)
 {
   int ret = TFS_SUCCESS;
+  //TODO: add crc check
   if (NULL == data)
   {
     TBSYS_LOG(ERROR, "input source data is null, filename: %s", file_name.c_str());
@@ -393,7 +394,7 @@ int SyncByBlockWorker::write_block()
   bool all_success = true;
   char* pstart = NULL;
   vector<FileInfoV2>::iterator it = src_file_list_.begin();
-  for ( ; it != src_file_list_.end(); ++it)
+  for ( ; it != src_file_list_.end() && !stop_ ; ++it)
   {
     SyncResult result = SYNC_NOTHING;
     FSName fsname(block_id_, it->id_);
@@ -579,7 +580,8 @@ int SyncByBlockWorker::process(string& line)
 
           if (TFS_SUCCESS == ret)
           {
-            ret = sync_block_by_block();
+          //  ret = sync_block_by_block();
+            ret = sync_block_by_file(src_finfos, dest_finfos);
             TBSYS_LOG(INFO, "blockid: %"PRI64_PREFIX"u is not exist in dest cluster, sync block %s by read raw data finally", block_id_, TFS_SUCCESS == ret ? "success":"fail");
           }
           else
