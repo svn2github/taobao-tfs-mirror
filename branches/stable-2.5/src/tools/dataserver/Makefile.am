@@ -14,7 +14,8 @@ bin_PROGRAMS = clear_file_system\
                reload_config\
                reverse_name\
                tfsping\
-							 recover_disk_data_to_clusterv2
+							 recover_disk_data_to_clusterv2\
+               check_super_block
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
@@ -30,6 +31,8 @@ LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 clear_file_system_SOURCES = clear_file_system.cpp
 
 read_super_block_SOURCES = read_super_block.cpp
+
+check_super_block_SOURCES = check_super_block.cpp
 
 convert_name_SOURCES = convert_name.cpp
 
