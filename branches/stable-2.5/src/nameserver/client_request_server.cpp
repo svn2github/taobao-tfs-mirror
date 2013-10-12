@@ -216,8 +216,8 @@ namespace tfs
       uint64_t block_id = parameter.block_info_.block_id_;
       if (WRITE_COMPLETE_STATUS_YES !=  parameter.status_)
       {
-        TBSYS_LOG(INFO, "close block: %"PRI64_PREFIX"u successful, but client write operation error,lease: %"PRI64_PREFIX"u",
-            block_id, parameter.lease_id_);
+        TBSYS_LOG(INFO, "close block: %"PRI64_PREFIX"u successful, but client write operation error,lease: %"PRI64_PREFIX"u, close server: %s",
+            block_id, parameter.lease_id_, tbsys::CNetUtil::addrToString(parameter.id_).c_str());
       }
       else
       {
@@ -236,13 +236,14 @@ namespace tfs
             ret = block->version() >= parameter.block_info_.version_ ? EXIT_COMMIT_ERROR : TFS_SUCCESS;
             if (TFS_SUCCESS != ret)
             {
-              snprintf(parameter.error_msg_, 256, "close block: %"PRI64_PREFIX"u failed, version error: %d:%d",
-                  block_id, block->version(),parameter.block_info_.version_);
+              snprintf(parameter.error_msg_, 256, "close block: %"PRI64_PREFIX"u failed, version error: %d:%d, close server: %s",
+                  block_id, block->version(),parameter.block_info_.version_, tbsys::CNetUtil::addrToString(parameter.id_).c_str());
             }
           }
           else
           {
-            snprintf(parameter.error_msg_, 256, "close block: %"PRI64_PREFIX"u failed, block not exist, ret: %d", block_id, ret);
+            snprintf(parameter.error_msg_, 256, "close block: %"PRI64_PREFIX"u failed, block not exist, ret: %d, close server: %s",
+							block_id, ret, tbsys::CNetUtil::addrToString(parameter.id_).c_str());
           }
         }
         if (TFS_SUCCESS == ret)
@@ -251,7 +252,8 @@ namespace tfs
           ret = manager_.update_block_info(parameter.block_info_, parameter.id_, Func::get_monotonic_time(), parameter.type_ == UPDATE_BLOCK_INFO_REPL);
           if (TFS_SUCCESS != ret)
           {
-            snprintf(parameter.error_msg_,256,"close block: %"PRI64_PREFIX"u successful, but update block information failed, ret: %d, type: %d", block_id, ret, parameter.type_);
+            snprintf(parameter.error_msg_,256,"close block: %"PRI64_PREFIX"u successful, but update block information failed, ret: %d, type: %d, close server: %s",
+								block_id, ret, parameter.type_, tbsys::CNetUtil::addrToString(parameter.id_).c_str());
           }
         }
       }

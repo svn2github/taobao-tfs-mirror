@@ -195,13 +195,16 @@ namespace tfs
             info_ = info;
             if (!isnew)//release dataserver
             {
-              TBSYS_LOG(INFO, "block: %"PRI64_PREFIX"u in dataserver: %s version error %d:%d,replace ns version, current dataserver size: %u",
+              cleanup(expires);
+              update_last_time(now);
+							std::string str;
+							print_int64(expires, str);
+              TBSYS_LOG(INFO, "block: %"PRI64_PREFIX"u in dataserver: %s version error %d:%d,replace nameserver version, release dataservers: %s",
                   info.block_id_, tbsys::CNetUtil::addrToString(server).c_str(),
-                  info_.version_, info.version_, server_size_);
-              if (GFactory::get_runtime_info().is_master())
+                  info_.version_, info.version_, str.c_str());
+              if (!GFactory::get_runtime_info().is_master())
               {
-                update_last_time(now);
-                cleanup(expires);
+								expires.clear();
               }
             }
           }
