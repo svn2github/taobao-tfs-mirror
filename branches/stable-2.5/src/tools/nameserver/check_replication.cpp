@@ -179,6 +179,9 @@ bool compare_block_data(const uint64_t block_id,
     }
   }
 
+  tbsys::gDeleteA(left_buf);
+  tbsys::gDeleteA(right_buf);
+
   return same;
 }
 
