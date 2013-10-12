@@ -24,14 +24,14 @@ namespace tfs
 {
   namespace dataserver
   {
-    DataFile::DataFile(const uint64_t fn, const std::string& work_dir):
+    DataFile::DataFile(const uint64_t fn, const std::string& work_dir, const uint64_t suffix):
       fd_(-1),
       length_(0),
       crc_(0),
       status_(-1)
     {
       atomic_set(&ref_count_, 0);
-      path_ << work_dir << "/tmp/" << fn;
+      path_ << work_dir << "/tmp/" << fn << "_" << suffix;
     }
 
     DataFile::~DataFile()
@@ -124,7 +124,7 @@ namespace tfs
             const int32_t max = WRITE_DATA_TMPBUF_SIZE;
             nbytes = std::min(nbytes, max);
             int32_t length = ::pread(fd_, data_, nbytes, offset);
-            ret = length >= 0 ? TFS_SUCCESS : EXIT_READ_FILE_ERROR;
+            ret = length > 0 ? TFS_SUCCESS : EXIT_READ_FILE_ERROR;
             if (TFS_SUCCESS == ret)
             {
               nbytes = length;
