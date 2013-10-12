@@ -43,7 +43,8 @@ namespace tfs
         inline DataHelper& get_data_helper();
         inline BlockManager& get_block_manager();
 
-        const char* get_type() const;
+        const char* get_type_str() const;
+        common::PlanType get_type() const { return type_; }
         void set_type(const common::PlanType type) { type_ = type; }
 
         int64_t get_seqno() const { return seqno_; }

@@ -353,7 +353,29 @@ namespace tfs
 
     int TaskManager::add_task_queue(Task* task)
     {
-      int ret = add_block(task) ? TFS_SUCCESS : EXIT_BLOCK_IN_TASK_QUEUE;
+      int ret = TFS_SUCCESS;
+      bool need_add_block = false;
+      if (PLAN_TYPE_COMPACT == task->get_type())
+      {
+        if (task->task_from_ds())
+        {
+          need_add_block = true;
+        }
+      }
+      else if (PLAN_TYPE_REPLICATE == task->get_type())
+      {
+        need_add_block = true;
+      }
+      else
+      {
+        // TODO: marshalling, reinstate, dissolve control
+      }
+
+      if (need_add_block)
+      {
+        ret = add_block(task) ? TFS_SUCCESS : EXIT_BLOCK_IN_TASK_QUEUE;
+      }
+
       if (TFS_SUCCESS == ret)
       {
         task_monitor_.lock();
@@ -389,7 +411,7 @@ namespace tfs
         task_monitor_.unlock();
 
         TBSYS_LOG(INFO, "start task, seqno: %"PRI64_PREFIX"d, type: %s, %s",
-            task->get_seqno(), task->get_type(), task->dump().c_str());
+            task->get_seqno(), task->get_type_str(), task->dump().c_str());
 
         int ret = TFS_SUCCESS;
         int64_t start_time = Func::get_monotonic_time_us();
@@ -400,7 +422,7 @@ namespace tfs
         int64_t end_time = Func::get_monotonic_time_us();
 
         TBSYS_LOG(INFO, "finish task, seqno: %"PRI64_PREFIX"d, type: %s, cost time: %"PRI64_PREFIX"d, ret: %d",
-          task->get_seqno(), task->get_type(), end_time - start_time, ret);
+          task->get_seqno(), task->get_type_str(), end_time - start_time, ret);
 
         if (task->is_completed())
         {
@@ -452,7 +474,14 @@ namespace tfs
      list<Task*>::iterator it = expire_tasks.begin();
      for ( ; it != expire_tasks.end(); it++)
      {
-       (*it)->report_to_ns(PLAN_STATUS_TIMEOUT);
+       if ((*it)->task_from_ds())
+       {
+         (*it)->report_to_ds(PLAN_STATUS_TIMEOUT);
+       }
+       else
+       {
+         (*it)->report_to_ns(PLAN_STATUS_TIMEOUT);
+       }
        get_block_manager().get_gc_manager().add(*it);
      }
 

@@ -60,7 +60,7 @@ namespace tfs
       return service_.get_block_manager();
     }
 
-    const char* Task::get_type() const
+    const char* Task::get_type_str() const
     {
       const char* typestr = NULL;
       if (type_ <= PLAN_TYPE_EC_MARSHALLING)
@@ -75,7 +75,7 @@ namespace tfs
       std::stringstream tmp_stream;
       const char* delim = ", ";
 
-      tmp_stream << "dump " << get_type() << " task. ";
+      tmp_stream << "dump " << get_type_str() << " task. ";
       tmp_stream << "seqno: " << seqno_ << delim;
       tmp_stream << "task source: " << tbsys::CNetUtil::addrToString(source_id_) << delim;
       tmp_stream << "expire time: " << expire_time_ << delim;
@@ -124,6 +124,7 @@ namespace tfs
       else
       {
         // initialize status
+        info_.block_id_ = block_id_;
         for (uint32_t i = 0; i < servers_.size(); i++)
         {
           result_.push_back(std::make_pair(servers_[i], common::PLAN_STATUS_TIMEOUT));
@@ -207,8 +208,6 @@ namespace tfs
       cmit_cpt_msg.set_block_info(info_);
       cmit_cpt_msg.set_result(result_);
       ret = get_data_helper().send_simple_request(source_id_, &cmit_cpt_msg);
-
-      service_.get_task_manager().remove_block(this);
 
       TBSYS_LOG(INFO, "compact report to ns. seqno: %"PRI64_PREFIX"d, "
           "blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
@@ -807,8 +806,6 @@ namespace tfs
         ret = send_msg_to_server(source_id_, &cmit_msg, status);
         ret = (ret < 0) ? ret : status;
       }
-
-      service_.get_task_manager().remove_block(this);
 
       TBSYS_LOG(INFO, "marshalling report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
           seqno_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
