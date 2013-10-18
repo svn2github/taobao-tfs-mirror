@@ -76,7 +76,7 @@ namespace tfs
       }
       NewClientManager::get_instance().destroy_client(client);
       return ret;
-   }
+    }
 
     void MigrateManager::run_()
     {
@@ -91,6 +91,8 @@ namespace tfs
         for (index = 0; index < MAX_RETRY_TIMES && TFS_SUCCESS == ret; ++index)
         {
           ret = do_migrate_heartbeat_(MAX_TIMEOUT_MS);
+          if (TFS_SUCCESS != ret && EXIT_TIMEOUT_ERROR != ret)
+            sleep(1);
         }
         int32_t sleep_time =  MAX_SLEEP_TIME - index;
         for (index = 0; index < sleep_time && !rgi.is_destroyed(); ++index)

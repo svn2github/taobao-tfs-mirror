@@ -56,7 +56,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int MigrateManager::keepalive(common::DataServerStatInfo& server)
+    int MigrateManager::keepalive(const common::DataServerStatInfo& server)
     {
       int32_t ret = (INVALID_SERVER_ID  == server.id_) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
@@ -97,9 +97,9 @@ namespace tfs
     void MigrateManager::run_()
     {
       int64_t index  = 0;
-      const int32_t MAX_SLEEP_TIME = 5;//5s
+      const int32_t MAX_SLEEP_TIME = 30;//30s
       const int32_t MAX_ARRAY_SIZE = 128;
-      const int32_t CHECK_COMPLETE_WAIT_TIME = 60;//120s
+      const int32_t CHECK_COMPLETE_WAIT_TIME = 120;//120s
 
       std::pair<uint64_t, int32_t> array[MAX_ARRAY_SIZE];
       common::ArrayHelper<std::pair<uint64_t, int32_t> >helper(MAX_ARRAY_SIZE, array);
@@ -178,16 +178,17 @@ namespace tfs
 
     int64_t MigrateManager::calc_block_weight_(const common::IndexHeaderV2& info, const int32_t type) const
     {
-      int64_t weights = INT64_MAX -1;
+      int64_t weights = 0;
       const int32_t TWO_MONTH = 2 * 31 * 86400;
-      const int32_t LAST_ACCESS_TIME_RATIO = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 5 : 75;
-      const int32_t READ_RATIO   = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 50 : 10;
-      const int32_t WRITE_RATIO  = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 30 : 5;
-      const int32_t UPDATE_RATIO = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 10 : 5;
+      const int32_t LAST_ACCESS_TIME_RATIO = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 50 : 50;
+      const int32_t READ_RATIO   = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 20 : 10;
+      const int32_t WRITE_RATIO  = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 20 : 30;
+      const int32_t UPDATE_RATIO = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 5  : 5;
       const int32_t UNLINK_RATIO = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 5  : 5;
       const ThroughputV2& th = info.throughput_;
-      const int64_t now = Func::get_monotonic_time();
-      if (th.last_statistics_time_+ TWO_MONTH < now)
+      const int64_t now = time(NULL);
+      bool calc = common::DATASERVER_DISK_TYPE_SYSTEM == type ? true : th.last_statistics_time_+ TWO_MONTH < now;
+      if (calc)
       {
         weights = th.last_statistics_time_ * LAST_ACCESS_TIME_RATIO+ th.read_visit_count_ * READ_RATIO
           + th.write_visit_count_ * WRITE_RATIO + th.update_visit_count_ * UPDATE_RATIO
@@ -249,12 +250,10 @@ namespace tfs
       {
         bool target = entry.dest_addr_ != INVALID_SERVER_ID;
         int32_t index = target ? 1 : 0;
-        CONST_BLOCK_MAP_ITER iter = blocks_[index].begin();
+        CONST_BLOCK_MAP_REVERSE_ITER iter = blocks_[index].rbegin();
         entry.block_id_    = (*iter).second.second;
-        if (target)
-          ret = choose_source_server_(entry.dest_addr_, entry.source_addr_) ? TFS_SUCCESS : EXIT_CHOOSE_SOURCE_SERVER_ERROR;
-        else
-          ret = choose_target_server_(entry.source_addr_, entry.dest_addr_) ? TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
+        ret = choose_move_server_(target ? entry.dest_addr_: entry.source_addr_,
+            target ? entry.source_addr_ : entry.dest_addr_) ? TFS_SUCCESS : EXIT_CHOOSE_SOURCE_SERVER_ERROR;
       }
       return ret;
     }
@@ -271,6 +270,7 @@ namespace tfs
         req_msg.set_value1(current.source_addr_);
         req_msg.set_value2(current.dest_addr_);
         req_msg.set_value3(current.block_id_);
+        req_msg.set_value4(REPLICATE_BLOCK_MOVE_FLAG_YES);
         req_msg.set_cmd(CLIENT_CMD_IMMEDIATELY_REPL);
         int32_t retry_times = 3;
         const int32_t TIMEOUT_MS = 2000;
@@ -300,12 +300,12 @@ namespace tfs
         while (retry_times-- > 0 && TFS_SUCCESS != ret);
       }
       TBSYS_LOG(INFO, "send migrate message %s, ret: %d,error msg: %s block: %"PRI64_PREFIX"u, source: %s, dest: %s , ns_vip: %s",
-        TFS_SUCCESS == ret ? "successful" : "failed", ret, msg, current.block_id_, tbsys::CNetUtil::addrToString(current.source_addr_).c_str(),
-        tbsys::CNetUtil::addrToString(current.dest_addr_).c_str(), tbsys::CNetUtil::addrToString(ns_vip_port_).c_str());
+          TFS_SUCCESS == ret ? "successful" : "failed", ret, msg, current.block_id_, tbsys::CNetUtil::addrToString(current.source_addr_).c_str(),
+          tbsys::CNetUtil::addrToString(current.dest_addr_).c_str(), tbsys::CNetUtil::addrToString(ns_vip_port_).c_str());
       return ret;
     }
 
-    bool MigrateManager::choose_target_server_(const uint64_t source_addr, uint64_t& dest_addr) const
+    bool MigrateManager::choose_move_server_(const uint64_t source_addr, uint64_t& dest_addr) const
     {
       dest_addr = INVALID_SERVER_ID;
       tbutil::Mutex::Lock lock(mutex_);
@@ -321,24 +321,6 @@ namespace tfs
         }
       }
       return dest_addr == INVALID_SERVER_ID;
-    }
-
-    bool MigrateManager::choose_source_server_(const uint64_t dest_addr, uint64_t& source_addr) const
-    {
-      source_addr = INVALID_SERVER_ID;
-      tbutil::Mutex::Lock lock(mutex_);
-      int32_t random_index = -1, retry_times = servers_.size();
-      while (retry_times-- > 0 && INVALID_SERVER_ID == source_addr)
-      {
-        random_index = random() % servers_.size();
-        CONST_SERVER_MAP_ITER iter = servers_.begin();
-        for (; iter != servers_.end(); ++iter)
-        {
-          if (dest_addr != iter->second.id_)
-            source_addr = iter->second.id_;
-        }
-      }
-      return source_addr == INVALID_SERVER_ID;
     }
 
     void MigrateManager::statistic_all_server_info_(int64_t& total_capacity, int64_t& use_capacity) const

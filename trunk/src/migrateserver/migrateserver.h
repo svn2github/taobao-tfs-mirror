@@ -80,11 +80,9 @@ namespace tfs
       virtual const char* get_pid_file_path() { return NULL;}
 
       private:
-      //int get_migrateserver_information(common::BasePacket* packet);
-
-      private:
       void rotate_(time_t& last_rotate_log_time, time_t now, time_t zonesec);
       void timeout_();
+      int  keepalive_(common::BasePacket* packet);
 
       private:
       class TimeoutThreadHelper: public tbutil::Thread

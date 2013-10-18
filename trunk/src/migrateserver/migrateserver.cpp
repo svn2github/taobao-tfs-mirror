@@ -12,13 +12,14 @@
  *   duanfei<duanfei@taobao.com>
  *      - initial release
  */
-#include "ms_define.h"
-#include "migrateserver.h"
 #include <Memory.hpp>
 #include "common/client_manager.h"
 #include "common/func.h"
 #include "common/config_item.h"
 #include "common/directory_op.h"
+
+#include "ms_define.h"
+#include "migrateserver.h"
 
 namespace tfs
 {
@@ -49,7 +50,7 @@ namespace tfs
       int32_t ret = (NULL != ipaddr && port > 1024 && port < 65535) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(WARN, "%s not set ipaddr: %s or port: %d, must be exit", argv[0], NULL == ipaddr ? "null" : ipaddr, port);
+        TBSYS_LOG(ERROR, "%s not set (nameserver vip) ipaddr: %s or port: %d, must be exit", argv[0], NULL == ipaddr ? "null" : ipaddr, port);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -110,6 +111,27 @@ namespace tfs
 
         usleep(MAX_SLEEP_TIME_US);
       }
+    }
+
+    int MigrateService::keepalive_(common::BasePacket* packet)
+    {
+      int32_t ret = (NULL != packet && packet->getPCode() == REQ_MIGRATE_DS_HEARTBEAT_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        assert(NULL != manager_);
+        MigrateDsHeartMessage* msg = dynamic_cast<MigrateDsHeartMessage*>(packet);
+        assert(NULL != msg);
+        const common::DataServerStatInfo& info = msg->get_dataserver_information();
+        ret = manager_->keepalive(info);
+        MigrateDsHeartResponseMessage* reply_msg = new (std::nothrow)MigrateDsHeartResponseMessage();
+        assert(NULL != reply_msg);
+        reply_msg->set_ret_value(ret);
+        TBSYS_LOG(INFO, "%s keepalive %s, ret: %d, total_capacity: %"PRI64_PREFIX"d, use_capacity: %"PRI64_PREFIX"d, block_count: %d, disk type: %d",
+            tbsys::CNetUtil::addrToString(info.id_).c_str(), TFS_SUCCESS == ret ? "successful" : "failed", ret,
+            info.total_capacity_, info.use_capacity_, info.block_count_, info.type_);
+        ret = msg->reply(reply_msg);
+      }
+      return ret;
     }
 
     bool MigrateService::check_response(common::NewClient* client)
@@ -222,6 +244,8 @@ namespace tfs
         {
           switch (pcode)
           {
+            case REQ_MIGRATE_DS_HEARTBEAT_MESSAGE:
+              break;
             default:
               ret = EXIT_UNKNOWN_MSGTYPE;
               break;
@@ -241,7 +265,7 @@ namespace tfs
       service_.timeout_();
     }
 
-    int ss_amigrate_callback(common::NewClient* client)
+    int ms_async_callback(common::NewClient* client)
     {
       MigrateService* service = dynamic_cast<MigrateService*>(BaseMain::instance());
       int32_t ret = NULL != service ? TFS_SUCCESS : TFS_ERROR;

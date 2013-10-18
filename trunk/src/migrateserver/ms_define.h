@@ -6,15 +6,15 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: ss_define.h 983 2013-08-29 09:59:33Z duanfei $
+ * Version: $Id: ms_define.h 983 2013-08-29 09:59:33Z duanfei $
  *
  * Authors:
  *   duanfei <duanfei@taobao.com>
  *      - initial release
  *
  */
-#ifndef TFS_SYNCSERVER_DEFINE_H_
-#define TFS_SYNCSERVER_DEFINE_H_
+#ifndef MIGRATESERVER_DEFINE_H_
+#define MIGRATESERVER_DEFINE_H_
 
 #include <Mutex.h>
 #include <tbsys.h>
@@ -29,12 +29,6 @@ namespace tfs
 {
   namespace migrateserver
   {
-    static const int32_t MAX_SYNC_CLUSTER_SIZE = 4;
-    typedef enum
-    {
-      SYNC_CLIENT_VERSION_V0 = 0,
-      SYNC_CLIENT_VERSION_V1 = 1
-    };
     struct MsRuntimeGlobalInformation
     {
       bool is_destroyed() const { return is_destroy_;}
@@ -45,7 +39,7 @@ namespace tfs
       MsRuntimeGlobalInformation();
       static MsRuntimeGlobalInformation& instance();
     };
-    extern int ss_async_callback(common::NewClient* client);
+    extern int ms_async_callback(common::NewClient* client);
  }/** migrateserver **/
 }/** tfs **/
 

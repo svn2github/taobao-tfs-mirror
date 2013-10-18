@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: sync_manager.h 746 2013-08-28 07:27:59Z duanfei@taobao.com $
+ * Version: $Id: migrate_manager.h 746 2013-08-28 07:27:59Z duanfei@taobao.com $
  *
  * Authors:
  *   duanfei<duanfei@taobao.com>
@@ -51,6 +51,7 @@ namespace tfs
       typedef std::multimap<int64_t, std::pair<uint64_t, uint64_t> > BLOCK_MAP;
       typedef BLOCK_MAP::iterator BLOCK_MAP_ITER;
       typedef BLOCK_MAP::const_iterator CONST_BLOCK_MAP_ITER;
+      typedef BLOCK_MAP::const_reverse_iterator CONST_BLOCK_MAP_REVERSE_ITER;
       typedef std::map<uint64_t, common::DataServerStatInfo> SERVER_MAP;
       typedef SERVER_MAP::iterator SERVER_MAP_ITER;
       typedef SERVER_MAP::const_iterator CONST_SERVER_MAP_ITER;
@@ -59,7 +60,7 @@ namespace tfs
       virtual ~MigrateManager();
       int initialize();
       int destroy();
-      int keepalive(common::DataServerStatInfo& server);
+      int keepalive(const common::DataServerStatInfo& server);
       void timeout(const int64_t now);
       private:
       void run_();
@@ -70,8 +71,7 @@ namespace tfs
       void calc_system_disk_migrate_info_(MigrateEntry& entry) const;
       int choose_migrate_entry_(MigrateEntry& output) const;
       int do_migrate_(MigrateEntry& current);
-      bool choose_target_server_(const uint64_t source_addr, uint64_t& dest_addr) const;
-      bool choose_source_server_(const uint64_t dest_addr, uint64_t& source_addr) const;
+      bool choose_move_server_(const uint64_t source_addr, uint64_t& dest_addr) const;
       void statistic_all_server_info_(int64_t& total_capacity, int64_t& use_capacity) const;
       private:
       tbutil::Mutex mutex_;
