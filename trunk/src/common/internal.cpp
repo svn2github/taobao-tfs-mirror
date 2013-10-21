@@ -1717,12 +1717,17 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = family_info_.serialize(data, data_len, pos);
+        ret = Serialization::set_int32(data, data_len, pos, result_);
       }
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, result_);
+        ret = Serialization::set_int32(data, data_len, pos, reserve_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = family_info_.serialize(data, data_len, pos);
       }
 
       return ret;
@@ -1761,19 +1766,25 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = family_info_.deserialize(data, data_len, pos);
+        ret = Serialization::get_int32(data, data_len, pos, &result_);
       }
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &result_);
+        ret = Serialization::get_int32(data, data_len, pos, &reserve_);
       }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = family_info_.deserialize(data, data_len, pos);
+      }
+
       return ret;
     }
 
     int64_t BlockMeta::length() const
     {
-      return INT64_SIZE + INT_SIZE * 3 + size_ * INT64_SIZE + family_info_.length();
+      return INT64_SIZE + INT_SIZE * 4 + size_ * INT64_SIZE + family_info_.length();
     }
 
     int FileSegment::serialize(char* data, const int64_t data_len, int64_t& pos) const
