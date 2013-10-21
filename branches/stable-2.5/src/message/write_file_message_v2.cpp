@@ -160,9 +160,10 @@ namespace tfs
     }
 
     WriteFileRespMessageV2::WriteFileRespMessageV2():
-      file_id_(0), lease_id_(INVALID_LEASE_ID)
+      file_id_(0), lease_id_(INVALID_LEASE_ID), block_id_(INVALID_BLOCK_ID)
     {
       _packetHeader._pcode = WRITE_FILE_RESP_MESSAGE_V2;
+      memset(reserve_, 0, sizeof(reserve_));
     }
 
     WriteFileRespMessageV2::~WriteFileRespMessageV2()
@@ -176,6 +177,14 @@ namespace tfs
       {
         ret = output.set_int64(lease_id_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(block_id_);
+      }
+      for (int index = 0; index < 4 && TFS_SUCCESS == ret; index++)
+      {
+        ret = output.set_int32(reserve_[index]);
+      }
       return ret;
     }
 
@@ -186,12 +195,20 @@ namespace tfs
       {
         ret = input.get_int64(reinterpret_cast<int64_t *>(&lease_id_));
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
+      }
+      for (int index = 0; index < 4 && TFS_SUCCESS == ret; index++)
+      {
+        ret = input.get_int32(&reserve_[index]);
+      }
       return ret;
     }
 
     int64_t WriteFileRespMessageV2::length() const
     {
-      return 2 * INT64_SIZE;
+      return 3 * INT64_SIZE + 4 * INT_SIZE;
     }
 
     SlaveDsRespMessage::SlaveDsRespMessage():

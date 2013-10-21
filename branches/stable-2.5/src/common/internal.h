@@ -1019,6 +1019,8 @@ namespace tfs
       uint64_t ds_[MAX_REPLICATION_NUM];
       int32_t size_;
       int32_t version_;
+      int32_t result_;    // unused
+      int32_t reserve_;   // unused
       FamilyInfoExt family_info_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -1026,7 +1028,7 @@ namespace tfs
       int64_t length() const;
 
       BlockMeta():
-        size_(0), version_(INVALID_VERSION)
+        size_(0), version_(INVALID_VERSION), result_(TFS_SUCCESS), reserve_(0)
       {
       }
     };

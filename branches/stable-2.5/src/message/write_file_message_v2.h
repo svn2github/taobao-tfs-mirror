@@ -205,6 +205,8 @@ namespace tfs
       private:
         uint64_t file_id_;
         uint64_t lease_id_;
+        uint64_t block_id_;      // unused
+        int32_t reserve_[4];     // unused
     };
 
     class SlaveDsRespMessage: public common::BasePacket
