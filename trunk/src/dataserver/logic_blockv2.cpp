@@ -449,29 +449,20 @@ namespace tfs
           finfo.status_ = status;
           break;
         case DELETE:
-          ret = (0 != (finfo.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID))) ? EXIT_FILE_STATUS_ERROR : TFS_SUCCESS;
-          if (TFS_SUCCESS == ret)
-          {
-            oper_type = OPER_DELETE;
-            finfo.status_ |= FILE_STATUS_DELETE;
-          }
+          oper_type = OPER_DELETE;
+          finfo.status_ |= FILE_STATUS_DELETE;
           break;
         case UNDELETE:
-          ret = (0 == (finfo.status_ & FILE_STATUS_DELETE)) ? EXIT_FILE_STATUS_ERROR : TFS_SUCCESS;
-          if (TFS_SUCCESS == ret)
-          {
-            oper_type = OPER_UNDELETE;
-            finfo.status_ &= (~FILE_STATUS_DELETE);
-          }
+          oper_type = OPER_UNDELETE;
+          finfo.status_ &= (~FILE_STATUS_DELETE);
           break;
         case CONCEAL:
-          ret = (0 != (finfo.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID | FILE_STATUS_CONCEAL))) ? EXIT_FILE_STATUS_ERROR : TFS_SUCCESS;
+          ret = (0 != (finfo.status_ & FILE_STATUS_DELETE)) ? EXIT_FILE_STATUS_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
             finfo.status_ |= FILE_STATUS_CONCEAL;
           break;
         case REVEAL:
-          ret = ((0 == (finfo.status_ & FILE_STATUS_CONCEAL))
-              || (0 != (finfo.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID)))) ? EXIT_FILE_STATUS_ERROR : TFS_SUCCESS;
+          ret = (0 != (finfo.status_ & FILE_STATUS_DELETE)) ? EXIT_FILE_STATUS_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
             finfo.status_ &= (~FILE_STATUS_CONCEAL);
           break;

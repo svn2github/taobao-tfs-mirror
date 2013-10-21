@@ -292,7 +292,8 @@ namespace tfs
         ret = (new_size >= 0  && NULL != header) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
         if (TFS_SUCCESS == ret && !rollback)
         {
-          header->info_.version_ += VERSION_INC_STEP_DEFAULT;
+          if (OPER_DELETE != oper_type && OPER_UNDELETE != oper_type)
+            header->info_.version_ += VERSION_INC_STEP_DEFAULT;
         }
         if (TFS_SUCCESS == ret)
         {
