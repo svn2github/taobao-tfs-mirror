@@ -24,14 +24,14 @@ namespace tfs
 {
   namespace dataserver
   {
-    DataFile::DataFile(const uint64_t fn, const std::string& work_dir, const uint64_t suffix):
+    DataFile::DataFile(const uint64_t fn, const uint64_t block_id, const uint64_t file_id, const std::string& work_dir):
       fd_(-1),
       length_(0),
       crc_(0),
       status_(-1)
     {
       atomic_set(&ref_count_, 0);
-      path_ << work_dir << "/tmp/" << fn << "_" << suffix;
+      path_ << work_dir << "/tmp/" << fn << "_" << block_id << "_" << file_id;
     }
 
     DataFile::~DataFile()

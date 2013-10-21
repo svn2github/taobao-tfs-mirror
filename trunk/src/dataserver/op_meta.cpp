@@ -164,9 +164,8 @@ namespace tfs
 
     WriteOpMeta::WriteOpMeta(const OpId& oid, const common::VUINT64& servers):
       OpMeta(oid, servers),
-      data_file_(oid.op_id_,
-          dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir(),
-          DsRuntimeGlobalInformation::instance().information_.id_)
+      data_file_(oid.op_id_, oid.block_id_, oid.file_id_,
+          dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir())
     {
     }
 

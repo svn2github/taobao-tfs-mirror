@@ -32,8 +32,13 @@ namespace tfs
 {
   namespace dataserver
   {
-    OpManager::OpManager(DataService& service): service_(service), base_op_id_(0)
+    OpManager::OpManager(DataService& service): service_(service)
     {
+      uint64_t self_id = DsRuntimeGlobalInformation::instance().information_.id_;
+      uint32_t ip = self_id & 0xFFFFFFFF;
+      uint32_t port = self_id >> 32;
+      base_op_id_ = ((ip & 0xFFFFFF00) | (port & 0xFF));
+      base_op_id_ = base_op_id_ << 32;
     }
 
     OpManager::~OpManager()
