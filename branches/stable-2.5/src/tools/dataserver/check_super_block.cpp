@@ -111,6 +111,8 @@ int main(int argc, char* argv[])
     return ret;
   }
 
+  TBSYS_LOG(INFO, "check super block start");
+
   string super_block_path = string(SYSPARAM_FILESYSPARAM.mount_name_) + SUPERBLOCK_NAME;
   BlockManager block_manager(super_block_path);
   {
@@ -195,6 +197,8 @@ int main(int argc, char* argv[])
       }
     }
   }
+
+  TBSYS_LOG(INFO, "check super block end");
 
   return 0;
 }
