@@ -185,9 +185,8 @@ namespace tfs
 
     WriteLease::WriteLease(const LeaseId& lease_id, const int64_t now_us, const VUINT64& servers):
       Lease(lease_id, now_us, servers),
-      data_file_(lease_id.lease_id_,
-          dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir(),
-          DsRuntimeGlobalInformation::instance().information_.id_)
+      data_file_(lease_id.lease_id_, lease_id.block_, lease_id.file_id_,
+          dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir())
     {
 
     }
@@ -197,11 +196,15 @@ namespace tfs
 
     }
 
-    LeaseManager::LeaseManager():
-      base_lease_id_(0)
+    LeaseManager::LeaseManager()
     {
-
+      uint64_t self_id = DsRuntimeGlobalInformation::instance().information_.id_;
+      uint32_t ip = self_id & 0xFFFFFFFF;
+      uint32_t port = self_id >> 32;
+      base_lease_id_ = ((ip & 0xFFFFFF00) | (port & 0xFF));
+      base_lease_id_ = base_lease_id_ << 32;
     }
+
     LeaseManager::~LeaseManager()
     {
       LEASE_MAP_ITER iter = leases_.begin();
