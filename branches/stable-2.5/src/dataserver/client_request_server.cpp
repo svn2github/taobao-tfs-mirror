@@ -1059,7 +1059,6 @@ namespace tfs
       int32_t action = message->get_action();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int32_t option_flag = message->get_flag();
-      int32_t version = message->get_version();
       int64_t file_size = 0;
       int64_t req_cost_time = 0;
       stringstream err_msg;
@@ -1069,16 +1068,17 @@ namespace tfs
           file_id, lease_id, ret, req_cost_time, file_size, err_msg);
       if (all_finish)
       {
+        // update 2013-10-22, unlink no longer inc block version, no need commit
         // commit success, keep ret unchanged; commit fail, set ret to error code
-        int tmp_ret = get_data_manager().update_block_info(attach_block_id,
-            file_id, lease_id, version, UPDATE_BLOCK_INFO_UNLINK);
-        if (TFS_SUCCESS != tmp_ret)
-        {
-          ret = tmp_ret;
-          TBSYS_LOG(WARN, "update block info fail. blockid: %"PRI64_PREFIX"u, "
-              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
-              attach_block_id, file_id, lease_id, ret);
-        }
+        // int tmp_ret = get_data_manager().update_block_info(attach_block_id,
+        //     file_id, lease_id, version, UPDATE_BLOCK_INFO_UNLINK);
+        // if (TFS_SUCCESS != tmp_ret)
+        // {
+        //   ret = tmp_ret;
+        //   TBSYS_LOG(WARN, "update block info fail. blockid: %"PRI64_PREFIX"u, "
+        //       "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
+        //       attach_block_id, file_id, lease_id, ret);
+        // }
 
         if ((TFS_SUCCESS == ret) && (0 == (option_flag & TFS_FILE_NO_SYNC_LOG)))
         {

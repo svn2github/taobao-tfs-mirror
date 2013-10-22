@@ -1397,10 +1397,11 @@ namespace tfs
         }
       }
 
-      if (is_master && message->get_lease_id())
-      {
-        ds_requester_.req_block_write_complete(block_id, message->get_lease_id(), ret, UNLINK_FLAG_YES);
-      }
+      // unlink no longer inc block version
+      // if (is_master && message->get_lease_id())
+      // {
+      //   ds_requester_.req_block_write_complete(block_id, message->get_lease_id(), ret, UNLINK_FLAG_YES);
+      // }
 
       TIMER_END();
       TBSYS_LOG(INFO, "unlink file %s. blockid: %u, fileid: %" PRI64_PREFIX "u, action: %d, isserver: %s, peer ip: %s, cost time: %" PRI64_PREFIX "d",
