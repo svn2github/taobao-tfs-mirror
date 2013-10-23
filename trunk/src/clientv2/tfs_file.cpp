@@ -448,11 +448,7 @@ namespace tfs
       }
       else
       {
-        ret = unlink_ex(action, file_size, true); // prepare unlink
-        if (TFS_SUCCESS == ret)
-        {
-          ret = unlink_ex(action, file_size, false);  // real unlink
-        }
+        ret = unlink_ex(action, file_size, false);  // real unlink
       }
 
       // tell close should do nothing because unlink fail
