@@ -63,7 +63,6 @@ namespace tfs
         /** write, close, unlink callback */
         int write_file_callback(message::WriteFileMessageV2* message);
         int close_file_callback(message::CloseFileMessageV2* message);
-        int prepare_unlink_file_callback(message::UnlinkFileMessageV2* message);
         int unlink_file_callback(message::UnlinkFileMessageV2* message);
 
         /** block service interface */

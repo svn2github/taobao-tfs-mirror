@@ -200,7 +200,7 @@ namespace tfs
         if (WRITE_FILE_MESSAGE_V2 == message->getPCode())
         {
           WriteFileMessageV2* msg = dynamic_cast<WriteFileMessageV2*>(message);
-          msg->set_version(block_info.version_);
+          msg->set_version(block_info.version_);  // version will take to slave
           if (INVALID_FAMILY_ID != family_id)
           {
             FamilyInfoExt& info = msg->get_family_info();
@@ -221,7 +221,6 @@ namespace tfs
         else if (UNLINK_FILE_MESSAGE_V2 == message->getPCode())
         {
           UnlinkFileMessageV2* msg = dynamic_cast<UnlinkFileMessageV2*>(message);
-          msg->set_version(block_info.version_);
           if (INVALID_FAMILY_ID != family_id)
           {
             FamilyInfoExt& info = msg->get_family_info();
@@ -433,28 +432,6 @@ namespace tfs
       put(op_meta);
 
       return (ret < 0) ? ret: TFS_SUCCESS;
-    }
-
-    int OpManager::prepare_unlink_file(const uint64_t block_id, const uint64_t attach_block_id,
-        const uint64_t file_id, const int64_t op_id, const int32_t action,
-        const int32_t remote_version, BlockInfoV2& local)
-    {
-      UNUSED(action);
-      int ret = (INVALID_BLOCK_ID != block_id) && (INVALID_BLOCK_ID != attach_block_id) &&
-        (INVALID_FILE_ID != file_id) && (INVALID_LEASE_ID != op_id ) ?
-        TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-
-      if ((TFS_SUCCESS == ret) && (remote_version >= 0))
-      {
-        ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(WARN, "unlink version conflict. blockid: %"PRI64_PREFIX"u, version: %d<>%d",
-            block_id, remote_version, local.version_);
-        }
-      }
-
-      return ret;
     }
 
     int OpManager::unlink_file(const uint64_t block_id, const uint64_t attach_block_id,

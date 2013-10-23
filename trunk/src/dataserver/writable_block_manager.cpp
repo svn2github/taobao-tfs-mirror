@@ -303,7 +303,7 @@ namespace tfs
         target->set_use_flag(true);
       }
 
-      TBSYS_LOG(DEBUG, "apply update block ret: %d", ret);
+      TBSYS_LOG(DEBUG, "alloc update block ret: %d", ret);
 
       return ret;
     }

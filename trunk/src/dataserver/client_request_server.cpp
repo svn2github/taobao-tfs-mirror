@@ -521,7 +521,6 @@ namespace tfs
       VUINT64 servers = message->get_ds(); // will copy vector
       int32_t version = message->get_version();
       uint64_t master_id = message->get_master_id();
-      bool prepare = message->get_prepare_flag();
       const FamilyInfoExt& family_info = message->get_family_info();
       int64_t family_id = family_info.family_id_;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
@@ -537,15 +536,8 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        if (prepare)
-        {
-          ret = get_op_manager().prepare_op(attach_block_id,
-              file_id, lease_id, OP_TYPE_UNLINK, is_master, family_info, servers);
-        }
-        else
-        {
-          ret = get_op_manager().reset_op(attach_block_id, file_id, lease_id, servers);
-        }
+        ret = get_op_manager().prepare_op(attach_block_id,
+            file_id, lease_id, OP_TYPE_UNLINK, is_master, family_info, servers);
         if (TFS_SUCCESS == ret)
         {
           // callback & slave will use
@@ -562,16 +554,8 @@ namespace tfs
       BlockInfoV2 local;
       if (TFS_SUCCESS == ret)
       {
-        if (prepare)
-        {
-          ret = get_op_manager().prepare_unlink_file(block_id,
-              attach_block_id, file_id, lease_id, action, version, local);
-        }
-        else
-        {
-          ret = get_op_manager().unlink_file(block_id,
-              attach_block_id, file_id, lease_id, action, local);
-        }
+        ret = get_op_manager().unlink_file(block_id,
+            attach_block_id, file_id, lease_id, action, local);
         get_op_manager().update_op(attach_block_id, file_id, lease_id, ret, local);
       }
 
@@ -579,14 +563,7 @@ namespace tfs
       // slave response to master
       if (is_master)
       {
-        if (prepare)
-        {
-          prepare_unlink_file_callback(message);
-        }
-        else
-        {
-          unlink_file_callback(message);
-        }
+        unlink_file_callback(message);
       }
       else
       {
@@ -597,10 +574,7 @@ namespace tfs
         resp_msg->set_status(ret);
         message->reply(resp_msg);
 
-        if (!prepare || (prepare && (TFS_SUCCESS != ret)))
-        {
-          get_op_manager().release_op(attach_block_id, file_id, lease_id);
-        }
+        get_op_manager().release_op(attach_block_id, file_id, lease_id);
       }
 
       TIMER_END();
@@ -717,20 +691,12 @@ namespace tfs
           uint64_t block_id = msg->get_attach_block_id();
           uint64_t file_id = msg->get_file_id();
           uint64_t lease_id = msg->get_lease_id();
-          bool prepare = msg->get_prepare_flag();
           NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
           for ( ; iter != sresponse->end(); iter++)
           {
             get_op_manager().update_op(block_id, file_id, lease_id, iter->second.second);
           }
-          if (prepare)
-          {
-            prepare_unlink_file_callback(msg);
-          }
-          else
-          {
-            unlink_file_callback(msg);
-          }
+          unlink_file_callback(msg);
         }
       }
 
@@ -839,62 +805,6 @@ namespace tfs
             "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d",
             TFS_SUCCESS == ret ? "success" : "fail", ret, attach_block_id, file_id, lease_id,
             tbsys::CNetUtil::addrToString(peer_id).c_str(), op_stat.cost_);
-      }
-
-      return TFS_SUCCESS;
-    }
-
-    // this function is not used currently
-    // the number of unlink beyonds 1/3 of write ops
-    // check version between unlink will have big impact on tfs client
-    int ClientRequestServer::prepare_unlink_file_callback(UnlinkFileMessageV2* message)
-    {
-      uint64_t attach_block_id = message->get_attach_block_id();
-      uint64_t file_id = message->get_file_id();
-      uint64_t lease_id = message->get_lease_id();
-      int32_t action = message->get_action();
-      uint64_t peer_id = message->get_connection()->getPeerId();
-      OpStat op_stat;
-
-      int ret = TFS_SUCCESS;
-      bool all_finish = get_op_manager().check_op(attach_block_id, file_id, lease_id, op_stat);
-      if (all_finish)
-      {
-        ret = op_stat.status_;
-        if (TFS_SUCCESS != ret)
-        {
-          if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == ret)
-          {
-            // ignore return value
-            if (TFS_SUCCESS != get_op_manager().resolve_block_version_conflict(attach_block_id, file_id, lease_id))
-            {
-              TBSYS_LOG(WARN, "resolve block version conflict fail. "
-                  "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u",
-                  attach_block_id, file_id, lease_id);
-            }
-          }
-          message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, op_stat.error_.str().c_str());
-
-          // prepare unlink fail, real unlink won't happen, expire writable block
-          get_op_manager().release_op(attach_block_id, file_id, lease_id, ret);
-        }
-        else
-        {
-          char ex_msg[64];
-          snprintf(ex_msg, 64, "%"PRI64_PREFIX"d", lease_id);
-          message->reply(new StatusMessage(STATUS_MESSAGE_OK, ex_msg));
-        }
-
-        if (TFS_SUCCESS != ret)
-        {
-          get_traffic_control().rw_stat(RW_STAT_TYPE_UNLINK, ret, true, 0);
-        }
-
-        TBSYS_LOG(INFO, "PREPARE UNLINK file %s, ret: %d. "
-            "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
-            "leaseid: %"PRI64_PREFIX"u, action: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",
-          TFS_SUCCESS == ret ? "success" : "fail", ret, attach_block_id, file_id, lease_id, action,
-          tbsys::CNetUtil::addrToString(peer_id).c_str(), op_stat.cost_);
       }
 
       return TFS_SUCCESS;

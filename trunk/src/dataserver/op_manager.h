@@ -34,7 +34,8 @@ namespace tfs
     class WritableBlockManager;
     class LeaseManager;
 
-    // write, update, unlink operation manager
+    // manage asynchronized operation, including write, update, unlink
+    // shoule only used in client_request_server.cpp
     class OpManager
     {
       typedef std::map<OpId, OpMeta*> OPMETA_MAP;
