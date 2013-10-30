@@ -252,7 +252,7 @@ namespace tfs
         }
 
         const QueueInformationHeader* header = fail_file_queue_->get_queue_information_header();
-        TBSYS_LOG(INFO, "sync fail queue item size: %d", header->queue_size_);
+        TBSYS_LOG(INFO, "sync fail queue item size: %d, dest_addr: %s", header->queue_size_, dest_addr_.c_str());
 
         // default 5 minutes
         int retry_interval = SYSPARAM_DATASERVER.sync_fail_retry_interval_;

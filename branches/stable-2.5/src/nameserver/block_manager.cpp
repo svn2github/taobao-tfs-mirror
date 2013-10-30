@@ -178,7 +178,7 @@ namespace tfs
       bool ret = ((NULL != block) && (!block->in_replicate_queue()));
       if (ret)
       {
-        TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u mybe lack of backup, we'll replicate", block->id());
+        TBSYS_LOG(DEBUG, "block %"PRI64_PREFIX"u maybe lack of backup, we'll replicate", block->id());
         block->set_in_replicate_queue(BLOCK_IN_REPLICATE_QUEUE_YES);
         emergency_replicate_queue_.push_back(block->id());
       }

@@ -149,7 +149,7 @@ namespace tfs
         }
         block.destination_id_ = servers_[1];
         block.start_time_ = Func::get_monotonic_time();
-        block.is_move_ = PLAN_TYPE_MOVE  == type_;
+        block.is_move_ = PLAN_TYPE_MOVE  == type_ ? REPLICATE_BLOCK_MOVE_FLAG_YES : REPLICATE_BLOCK_MOVE_FLAG_NO;
         block.source_num_ = (server_num_ - 1);
         msg.set_repl_block(&block);
         msg.set_status(PLAN_STATUS_BEGIN);

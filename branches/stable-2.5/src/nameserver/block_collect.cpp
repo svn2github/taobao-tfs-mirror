@@ -192,6 +192,7 @@ namespace tfs
 
           if (info.version_ > info_.version_)
           {
+            int32_t old_version = info_.version_;
             info_ = info;
             if (!isnew)//release dataserver
             {
@@ -201,7 +202,7 @@ namespace tfs
 							print_int64(expires, str);
               TBSYS_LOG(INFO, "block: %"PRI64_PREFIX"u in dataserver: %s version error %d:%d,replace nameserver version, release dataservers: %s",
                   info.block_id_, tbsys::CNetUtil::addrToString(server).c_str(),
-                  info_.version_, info.version_, str.c_str());
+                  old_version, info.version_, str.c_str());
               if (!GFactory::get_runtime_info().is_master())
               {
 								expires.clear();

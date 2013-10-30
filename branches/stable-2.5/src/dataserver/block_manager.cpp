@@ -215,7 +215,7 @@ namespace tfs
 
     int32_t BlockManager::get_all_logic_block_count() const
     {
-      RWLock::Lock lock(mutex_, READ_LOCKER);
+      //RWLock::Lock lock(mutex_, READ_LOCKER);
       return logic_block_manager_.size();
     }
 

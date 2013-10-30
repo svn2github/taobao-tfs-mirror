@@ -896,19 +896,19 @@ namespace tfs
         if (file_not_exist(ret))
         {
           ret = TFS_SUCCESS;
-          TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u not exists in src: %s, ret: %d, need not sync",
-              block_id, file_id, src_addr_, ret);
+          TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u not exists in src: %s, dest: %s, ret: %d, need not sync",
+              block_id, file_id, src_addr_, dest_addr_, ret);
         }
         else
         {
-          TBSYS_LOG(ERROR, "tfs mirror copy file fail to dest: %s. blockid: %d, fileid: %"PRI64_PREFIX"u, ret: %d",
-              dest_addr_, block_id, file_id, ret);
+          TBSYS_LOG(ERROR, "tfs mirror copy file fail to dest: %s. src: %s, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
+              dest_addr_,src_addr_,block_id, file_id, ret);
         }
       }
       else
       {
-        TBSYS_LOG(INFO, "tfs mirror copy file success to dest: %s. blockid: %d, fileid: %"PRI64_PREFIX"u",
-            dest_addr_, block_id, file_id);
+        TBSYS_LOG(INFO, "tfs mirror copy file success to dest: %s. src: %s, blockid: %u, fileid: %"PRI64_PREFIX"u",
+            dest_addr_, src_addr_, block_id, file_id);
       }
 
       return ret;

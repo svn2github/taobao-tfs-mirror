@@ -1460,7 +1460,7 @@ namespace tfs
           ret = helper.exist(source->id());
           if (!ret)
           {
-            TBSYS_LOG(INFO, "cannot choose move source server, block: %"PRI64_PREFIX"u, source: %s",
+            TBSYS_LOG(DEBUG, "cannot choose move source server, block: %"PRI64_PREFIX"u, source: %s",
                 block->id(), CNetUtil::addrToString(source->id()).c_str());
           }
           else
@@ -1469,7 +1469,7 @@ namespace tfs
             ret = NULL != result;
             if (!ret)
             {
-              TBSYS_LOG(INFO, "cannot choose move target server, block: %"PRI64_PREFIX"u, source: %s",
+              TBSYS_LOG(DEBUG, "cannot choose move target server, block: %"PRI64_PREFIX"u, source: %s",
                   block->id(), CNetUtil::addrToString(source->id()).c_str());
             }
             else

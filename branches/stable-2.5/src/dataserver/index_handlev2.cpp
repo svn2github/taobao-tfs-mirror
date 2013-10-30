@@ -624,7 +624,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         file_size = file_op_.size();
-        ret = file_size < 0 ? EXIT_INDEX_CORRUPT_ERROR : TFS_SUCCESS;
+        ret = file_size <= 0 ? EXIT_INDEX_CORRUPT_ERROR : TFS_SUCCESS;
       }
       if (TFS_SUCCESS == ret)
       {
