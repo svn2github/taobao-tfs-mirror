@@ -371,6 +371,7 @@ namespace tfs
       monitor_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_MONITOR_INTERVAL, 60);
       stat_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_STAT_INTERVAL, 120);
       update_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_UPDATE_INTERVAL, 30);
+      count_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_COUNT_INTERVAL, 10);
       return TFS_SUCCESS;
     }
 

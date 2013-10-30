@@ -160,6 +160,7 @@ namespace tfs
       int64_t monitor_interval_;
       int64_t stat_interval_;
       int64_t update_interval_;
+      int64_t count_interval_;
 
       static RcServerParameter rc_parameter_;
       static RcServerParameter& instance()

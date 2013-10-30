@@ -170,10 +170,10 @@ namespace tfs
         TBSYS_LOG(DEBUG, "call RspRcLoginMessage::login start. app_key: %s, app_ip: %"PRI64_PREFIX"d, ret: %d",
             req_login_msg->get_app_key(), req_login_msg->get_app_ip(), ret);
         if ((ret = session_manager_->login(req_login_msg->get_app_key(),
-                req_login_msg->get_app_ip(), session_id, base_info)) != TFS_SUCCESS)
+            req_login_msg->get_app_ip(), session_id, base_info)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "call SessionManager::login fail. app_key: %s, app_ip: %"PRI64_PREFIX"d, ret: %d",
-            req_login_msg->get_app_key(), req_login_msg->get_app_ip(), ret);
+              req_login_msg->get_app_key(), req_login_msg->get_app_ip(), ret);
         }
         else
         {
@@ -212,7 +212,8 @@ namespace tfs
       else
       {
         ReqRcKeepAliveMessage* req_ka_msg = dynamic_cast<ReqRcKeepAliveMessage*>(packet);
-        TBSYS_LOG(ERROR, "RcService::receive req_keep_alive id:%ld.", req_ka_msg->get_id());
+        TBSYS_LOG(DEBUG, "RcService::receive req_keep_alive id:%ld.", req_ka_msg->get_id());
+
         const KeepAliveInfo& ka_info = req_ka_msg->get_ka_info();
         bool update_flag = false;
 
@@ -364,7 +365,6 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       int32_t  app_id, oper_type;
-      int64_t interval;
 
       if (NULL == packet)
       {
@@ -380,14 +380,12 @@ namespace tfs
           AppOperInfoMap cond_map;
           app_id = req_stat_msg->get_app_id();
           oper_type = req_stat_msg->get_oper_type();
-          interval = req_stat_msg->get_interval();
-          TBSYS_LOG(DEBUG, "interval = %ld", interval);
 
           cond_map.clear();
           if ((ret = session_manager_->stat(app_id, oper_type, cond_map)) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "call SessionManager::stat fail. app_id: %d, app_oper_type: %d, interval: %ld",
-                req_stat_msg->get_app_id(), req_stat_msg->get_oper_type(), req_stat_msg->get_interval());
+                req_stat_msg->get_app_id(), req_stat_msg->get_oper_type(), SYSPARAM_RCSERVER.count_interval_);
           }
           else
           {

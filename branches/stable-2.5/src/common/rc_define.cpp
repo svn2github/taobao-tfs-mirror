@@ -364,11 +364,6 @@ namespace tfs
       return ret;
     }
 
-    /*static int64_t AppOperInfo::length() 
-    {
-      return INT_SIZE  + INT64_SIZE * 4;
-    }*/
-
     void AppOperInfo::dump() const
     {
       TBSYS_LOG(DEBUG, "oper_type: %d, oper_times: %"PRI64_PREFIX"d, oper_size: %"PRI64_PREFIX"d, oper_rt: %"PRI64_PREFIX"d, oper_succ: %"PRI64_PREFIX"d",
@@ -448,6 +443,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::get_int64(data, data_len, pos, &cache_hit_ratio_);
+
       }
       return ret;
     }

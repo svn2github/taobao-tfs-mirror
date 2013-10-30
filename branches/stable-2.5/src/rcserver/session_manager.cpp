@@ -182,20 +182,18 @@ namespace tfs
 
       const SessionStat& stat_info = keep_alive_info.s_stat_;
       TBSYS_LOG(DEBUG, "stat_info size = %ld", stat_info.app_oper_info_.size());
-      TBSYS_LOG(DEBUG, "interval = %ld", interval_);
-
-      time_t t = time(NULL);
-      if (interval_ < MIN_STAT_INTERVAL)
-      {
-        interval_ = MIN_STAT_INTERVAL;
-      }
-      else if (interval_ > MAX_STAT_INTERVAL)
-      {
-        interval_ = MAX_STAT_INTERVAL;
-      }
+      TBSYS_LOG(DEBUG, "interval = %ld", SYSPARAM_RCSERVER.count_interval_);
 
       tbutil::Mutex::Lock lock(mutex_);
-      if (t > last_report_time_ + interval_)
+      if (stat_info.app_oper_info_.size() > 0)
+      {
+        curr_map_->insert(pair<uint64_t, SessionStat>(keep_alive_info.last_report_time_ + curr_map_->size(), stat_info));
+      }
+
+      TBSYS_LOG(DEBUG, "curr map size = %ld", curr_map_->size());
+      TBSYS_LOG(DEBUG, "last map size = %ld", last_map_->size());
+      time_t t = time(NULL);
+      if (t > last_report_time_ + SYSPARAM_RCSERVER.count_interval_)
       {
         last_map_->clear();
         TBSYS_LOG(DEBUG, "switch map");
@@ -203,17 +201,7 @@ namespace tfs
         curr_map_ = last_map_;
         last_map_ = tmp;
         TBSYS_LOG(DEBUG, "last map size = %ld", last_map_->size());
-        last_report_time_ += interval_;
-      }
-      else
-      {
-        if (stat_info.app_oper_info_.size() != 0)
-        {
-          TBSYS_LOG(DEBUG, "last_report_time_ = %ld", keep_alive_info.last_report_time_ + curr_map_->size());
-          curr_map_->insert(pair<uint64_t, SessionStat>(keep_alive_info.last_report_time_ + curr_map_->size(), stat_info));
-        }
-        TBSYS_LOG(DEBUG, "curr map size = %ld", curr_map_->size());
-        TBSYS_LOG(DEBUG, "last map size = %ld", last_map_->size());
+        last_report_time_ += SYSPARAM_RCSERVER.count_interval_;
       }
 
       if ((ret = SessionUtil::parse_session_id(session_id, app_id, session_ip)) == TFS_SUCCESS)
@@ -281,17 +269,21 @@ namespace tfs
       SessionStatMapConstIter mit = last_map_->begin();
       for (; mit != last_map_->end(); ++mit)
       {
-        AppOperInfoMapConstIter mit2 = mit->second.app_oper_info_.begin();
-        for (; mit2 != mit->second.app_oper_info_.end(); ++mit2)
+        if (mit->second.app_oper_info_.size() > 0 )
         {
-          if((app_id == 0 || app_id == mit2->second.oper_app_id_) && (oper_type == 0 || oper_type == mit2->second.oper_type_))
+          AppOperInfoMapConstIter mit2 = mit->second.app_oper_info_.begin();
+          for (; mit2 != mit->second.app_oper_info_.end(); ++mit2)
           {
-            cond_map.insert(pair<OperType, AppOperInfo>(mit2->first, mit2->second));
+            TBSYS_LOG(DEBUG,"RcService::app_id = %d oper_type = %d",mit2->second.oper_app_id_, mit2->second.oper_type_);
+            if((app_id == 0 || app_id == mit2->second.oper_app_id_) && (oper_type == 0 || oper_type == mit2->second.oper_type_))
+            {
+              cond_map.insert(pair<OperType, AppOperInfo>(mit2->first, mit2->second));
+            }
           }
         }
       }
 
-      TBSYS_LOG(DEBUG,"SessionManager::cond map size : %ld",cond_map.size());
+      TBSYS_LOG(INFO,"SessionManager::cond map size : %ld",cond_map.size());
 
       return ret;
     }

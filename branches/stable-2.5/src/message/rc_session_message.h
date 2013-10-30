@@ -174,13 +174,10 @@ namespace tfs
         const int32_t get_app_id() const;
         void set_oper_type(const int32_t oper_type);
         const int32_t get_oper_type() const;
-        void set_interval(const int64_t interval);
-        const int64_t get_interval() const;
 
       private:
         int32_t app_id_;
         int32_t oper_type_;
-        int64_t interval_;
     };
   }
 }

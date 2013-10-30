@@ -420,16 +420,6 @@ namespace tfs
       app_id_ = app_id;
     }
 
-    const int64_t ReqRcStatMessage::get_interval() const
-    {
-      return interval_;
-    }
-
-    void ReqRcStatMessage::set_interval(const int64_t interval)
-    {
-      interval_ = interval;
-    }
-
     const int32_t ReqRcStatMessage::get_app_id() const
     {
       return app_id_;
@@ -457,10 +447,6 @@ namespace tfs
       {
         ret = output.set_int32(oper_type_);
       }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_int64(interval_);
-      }
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "ReqRcStatMessage serialize error.");
@@ -480,10 +466,6 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int32(&oper_type_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_int64(&interval_);
       }
       if (TFS_SUCCESS != ret)
       {

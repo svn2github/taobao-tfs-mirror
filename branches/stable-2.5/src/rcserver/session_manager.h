@@ -33,8 +33,6 @@ namespace tfs
   {
 
     #define   MAX_MAP_SIZE          100000
-    #define   MIN_STAT_INTERVAL     60
-    #define   MAX_STAT_INTERVAL     30*60
 
     class SessionManager;
     class ISessionTask : public tbutil::TimerTask
