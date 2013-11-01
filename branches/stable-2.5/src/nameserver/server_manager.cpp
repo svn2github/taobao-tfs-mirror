@@ -115,13 +115,13 @@ namespace tfs
 
       if (NULL != object)
       {
+        del_report_block_server(object);
+
         object->update_status();
         object->set_in_dead_queue_timeout(now);
 
         //release all relations of blocks belongs to it
         relieve_relation_(object, now);
-
-        del_report_block_server(object);
       }
       return TFS_SUCCESS;
     }
