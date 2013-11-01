@@ -15,6 +15,7 @@
  */
 #include "sync_file_base.h"
 
+#define MAX_RETRY_TIMES 5
 using namespace std;
 using namespace tfs::common;
 using namespace tfs::client;
@@ -414,7 +415,11 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, FILE_SET& n
     // do sync file
     if (ret == TFS_SUCCESS)
     {
-      ret = sync_op.do_action(file_name, sync_action);
+      int32_t do_action_count = 0;
+      do
+      {
+        ret = sync_op.do_action(file_name, sync_action);
+      } while (TFS_SUCCESS != ret && ++do_action_count< MAX_RETRY_TIMES);
     }
     if (ret == TFS_SUCCESS)
     {

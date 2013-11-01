@@ -397,9 +397,10 @@ SyncResultType check_status(const TfsFileStat& src_stat, const vector<FileInfo>&
 bool is_diff_copys(const vector<FileInfo>& fileinfos)
 {
   bool is_diff = false;
-  for (int32_t i = 0; i < MAX_REPL_COUNT - 1; i++)
+  int32_t size = fileinfos.size();
+  for (int32_t i = 0; i < size - 1; i++)
   {
-    for (int32_t j = i + 1; j < MAX_REPL_COUNT; j++)
+    for (int32_t j = i + 1; j < size; j++)
     {
        if (fileinfos.at(i).flag_ != fileinfos.at(j).flag_)
        {
