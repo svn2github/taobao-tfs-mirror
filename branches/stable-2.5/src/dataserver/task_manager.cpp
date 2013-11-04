@@ -353,27 +353,32 @@ namespace tfs
 
     int TaskManager::add_task_queue(Task* task)
     {
-      int ret = TFS_SUCCESS;
-      bool need_add_block = false;
-      if (PLAN_TYPE_COMPACT == task->get_type())
+      int ret = task_queue_.size() < static_cast<uint32_t>(SYSPARAM_DATASERVER.max_bg_task_queue_size_) ?
+        TFS_SUCCESS : EXIT_BG_TASK_QUEUE_FULL;
+
+      if (TFS_SUCCESS == ret)
       {
-        if (task->task_from_ds())
+        bool need_add_block = false;
+        if (PLAN_TYPE_COMPACT == task->get_type())
+        {
+          if (task->task_from_ds())
+          {
+            need_add_block = true;
+          }
+        }
+        else if (PLAN_TYPE_REPLICATE == task->get_type())
         {
           need_add_block = true;
         }
-      }
-      else if (PLAN_TYPE_REPLICATE == task->get_type())
-      {
-        need_add_block = true;
-      }
-      else
-      {
-        // TODO: marshalling, reinstate, dissolve control
-      }
+        else
+        {
+          // TODO: marshalling, reinstate, dissolve control
+        }
 
-      if (need_add_block)
-      {
-        ret = add_block(task) ? TFS_SUCCESS : EXIT_BLOCK_IN_TASK_QUEUE;
+        if (need_add_block)
+        {
+          ret = add_block(task) ? TFS_SUCCESS : EXIT_BLOCK_IN_TASK_QUEUE;
+        }
       }
 
       if (TFS_SUCCESS == ret)

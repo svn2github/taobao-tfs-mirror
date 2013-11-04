@@ -140,6 +140,7 @@ namespace tfs
       int32_t max_sync_retry_count_;
       int32_t max_sync_retry_interval_;
       int32_t sync_fail_retry_interval_;
+      int32_t max_bg_task_queue_size_;
       static std::string get_real_file_name(const std::string& src_file,
           const std::string& index, const std::string& suffix);
       static int get_real_ds_port(const int ds_port, const std::string& index);

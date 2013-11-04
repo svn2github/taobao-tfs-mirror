@@ -223,6 +223,7 @@ namespace tfs
     const int32_t EXIT_BLOCK_VERSION_CONFLICT_ERROR = -8076;
     const int32_t EXIT_BLOCK_IN_TASK_QUEUE = -8077;
     const int32_t EXIT_CHECK_QUEUE_FULL = -8078;
+    const int32_t EXIT_BG_TASK_QUEUE_FULL = -8079;
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;
