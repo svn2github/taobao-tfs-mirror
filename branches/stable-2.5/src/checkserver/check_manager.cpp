@@ -421,6 +421,19 @@ namespace tfs
     {
       int64_t total = 0;
       int ret = get_group_info();
+      if (TFS_SUCCESS == ret)
+      {
+        // if force flag set
+        // checkserver will compare all blocks
+        // but won't do sync operation
+        if (0 != SYSPARAM_CHECKSERVER.force_check_all_)
+        {
+          group_count_ = 1;
+          group_seq_ = 0;
+          SYSPARAM_CHECKSERVER.check_flag_ = 0;
+        }
+      }
+
       if (TFS_SUCCESS == ret && !stop_)
       {
         ret = fetch_servers();
