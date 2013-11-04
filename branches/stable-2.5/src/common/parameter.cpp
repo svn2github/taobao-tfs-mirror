@@ -519,6 +519,7 @@ namespace tfs
         block_check_cost_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_CHECK_COST, 50);
         check_flag_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_FLAG, 0);
         check_reserve_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RESERVE_TIME, 60);
+        force_check_all_ = config.getInt(CONF_SN_CHECKSERVER, CONF_FORCE_CHECK_ALL, 0);
       }
 
       if (TFS_SUCCESS == ret)

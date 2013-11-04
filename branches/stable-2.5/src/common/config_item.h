@@ -200,6 +200,7 @@ namespace tfs
 #define CONF_BLOCK_CHECK_COST                         "block_check_cost"
 #define CONF_CHECK_FLAG                               "check_flag"
 #define CONF_CHECK_RESERVE_TIME                      "check_reserve_time"
+#define CONF_FORCE_CHECK_ALL                          "force_check_all"
 
 //kv meta server
 #define CONF_KV_DB_CONN                             "kv_db_conn"
