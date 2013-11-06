@@ -514,13 +514,13 @@ namespace tfs
         if (0 == check_span_)
           check_span_ = INT_MAX;
         check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 86400);  // check every day
-        thread_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_THREAD_COUNT, 1);
+        thread_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_THREAD_COUNT, 8);
         cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
-        check_retry_turns_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RETRY_TURN, 2);
+        check_retry_turns_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RETRY_TURN, 3);
         block_check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_CHECK_INTERVAL, 0);
         block_check_cost_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_CHECK_COST, 50);
         check_flag_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_FLAG, 0);
-        check_reserve_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RESERVE_TIME, 60);
+        check_reserve_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RESERVE_TIME, 180);
       }
 
       if (TFS_SUCCESS == ret)
