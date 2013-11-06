@@ -284,6 +284,7 @@ namespace tfs
       max_sync_retry_count_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_COUNT, 3);
       max_sync_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_INTERVAL, 30);
       sync_fail_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_SYNC_FAIL_RETRY_INTERVAL, 300);
+      max_bg_task_queue_size_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_BG_TASK_QUEUE_SIZE, 5);
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 
@@ -521,6 +522,7 @@ namespace tfs
         block_check_cost_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_CHECK_COST, 50);
         check_flag_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_FLAG, 0);
         check_reserve_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RESERVE_TIME, 180);
+        force_check_all_ = config.getInt(CONF_SN_CHECKSERVER, CONF_FORCE_CHECK_ALL, 0);
       }
 
       if (TFS_SUCCESS == ret)
