@@ -122,7 +122,7 @@ namespace tfs
         in_dead_queue_timeout_ = now + common::SYSPARAM_NAMESERVER.replicate_wait_time_;
       }
 
-      void set_next_report_block_time(const time_t now, const int64_t time_seed, const bool ns_switch);
+      void set_next_report_block_time(const time_t now, const int64_t time_seed, const int32_t flag);
       int choose_writable_block(BlockCollect*& result);
       int choose_move_block_random(uint64_t& result) const;
       int expand_ratio(const float expand_ratio = 0.1);

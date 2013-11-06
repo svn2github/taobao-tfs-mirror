@@ -351,7 +351,8 @@ namespace tfs
       CLIENT_CMD_GET_BALANCE_PERCENT,
       CLIENT_CMD_SET_BALANCE_PERCENT,
       CLIENT_CMD_CLEAR_SYSTEM_TABLE,
-      CLIENT_CMD_DELETE_FAMILY
+      CLIENT_CMD_DELETE_FAMILY,
+      CLIENT_CMD_SET_ALL_SERVER_REPORT_BLOCK
     };
 
     enum PlanType
@@ -1050,7 +1051,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[49];
+    extern const char* dynamic_parameter_str[50];
 
     #pragma pack (1)
     struct FileInfoV2//30
@@ -1268,6 +1269,12 @@ namespace tfs
       int64_t length() const;
     };
 
+    enum SetServerNextRerportBlockTimeFlag
+    {
+      SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_NONE = 0,
+      SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_SWITCH,
+      SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_IMMEDIATELY
+    };
 
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;

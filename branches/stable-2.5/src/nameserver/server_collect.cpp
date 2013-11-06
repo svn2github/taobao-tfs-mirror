@@ -508,16 +508,22 @@ namespace tfs
       UNUSED(manager);
     }
 
-    void ServerCollect::set_next_report_block_time(const time_t now, const int64_t time_seed, const bool ns_switch)
+    void ServerCollect::set_next_report_block_time(const time_t now, const int64_t time_seed, const int32_t flag)
     {
       int32_t hour = common::SYSPARAM_NAMESERVER.report_block_time_upper_ - common::SYSPARAM_NAMESERVER.report_block_time_lower_ ;
       time_t current = time(NULL);
       time_t next    = current;
-      if (ns_switch)
+      if (SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_SWITCH == flag)
       {
         next += (time_seed % (hour * 3600));
       }
-      else
+
+      if (SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_IMMEDIATELY == flag)
+      {
+        next += (time_seed % 300);
+      }
+
+      if (SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_NONE == flag)
       {
         if (common::SYSPARAM_NAMESERVER.report_block_time_interval_ > 0)
         {

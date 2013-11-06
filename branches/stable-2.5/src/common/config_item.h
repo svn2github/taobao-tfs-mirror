@@ -106,6 +106,7 @@ namespace tfs
 #define CONF_DUMP_STAT_INFO_INTERVAL                  "dump_stat_info_interval"
 
 #define CONF_CHOOSE_TARGET_SERVER_RANDOM_MAX_NUM      "choose_target_server_random_max_num"
+#define CONF_CHOOSE_TARGET_SERVER_RETRY_MAX_NUM       "choose_target_server_retry_max_num"
 
 #define CONF_MARSHALLING_DELETE_RATIO                 "marshalling_delete_ratio"
 #define CONF_MARSHALLING_HOUR_RANGE                   "marshalling_hour_range"
@@ -152,7 +153,6 @@ namespace tfs
 #define CONF_SYNC_FAIL_RETRY_INTERVAL                 "sync_fail_retry_interval"
 #define CONF_MAX_INIT_INDEX_ELEMENT_NUMS              "max_init_index_element_nums"
 #define CONF_MAX_EXTEND_INDEX_ELEMENT_NUMS            "max_extend_index_element_nums"
-#define CONF_MAX_BG_TASK_QUEUE_SIZE                   "max_bg_task_queue_size"
 
 //rc
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"
@@ -201,7 +201,6 @@ namespace tfs
 #define CONF_BLOCK_CHECK_COST                         "block_check_cost"
 #define CONF_CHECK_FLAG                               "check_flag"
 #define CONF_CHECK_RESERVE_TIME                      "check_reserve_time"
-#define CONF_FORCE_CHECK_ALL                          "force_check_all"
 
 //kv meta server
 #define CONF_KV_DB_CONN                             "kv_db_conn"

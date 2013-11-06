@@ -550,7 +550,7 @@ namespace tfs
     {
       get_task_manager().clear();
       GFactory::get_runtime_info().switch_role(now);
-      get_server_manager().set_all_server_next_report_time(now);
+      get_server_manager().set_all_server_next_report_time(SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_SWITCH, now);
       oplog_sync_mgr_.switch_role();
     }
 
@@ -599,7 +599,7 @@ namespace tfs
       time_t  now = 0, current = 0;
       int64_t need = 0, family_start = 0;
       const int32_t MAX_QUERY_FAMILY_NUMS = 32;
-      const int32_t MAX_QUERY_BLOCK_NUMS = 4096;
+      const int32_t MAX_QUERY_BLOCK_NUMS = 4096 * 4;
       const int32_t MIN_SLEEP_TIME_US= 5000;
       const int32_t MAX_SLEEP_TIME_US = 1000000;//1s
       const int32_t MAX_LOOP_NUMS = 1000000 / MIN_SLEEP_TIME_US;
@@ -681,8 +681,10 @@ namespace tfs
           }
         }
         ++loop;
-        sleep_time = (get_block_manager().has_emergency_replicate_in_queue()
-                      || get_family_manager().reinstate_or_dissolve_queue_empty()) ? MAX_SLEEP_TIME_US : MIN_SLEEP_TIME_US;
+        //sleep_time = (get_block_manager().has_emergency_replicate_in_queue()
+        //              || get_family_manager().reinstate_or_dissolve_queue_empty()) ? MAX_SLEEP_TIME_US : MIN_SLEEP_TIME_US;
+
+        sleep_time = has_space_in_task_queue_() <= 0 ? MAX_SLEEP_TIME_US : MIN_SLEEP_TIME_US;
         usleep(sleep_time);
       }
     }

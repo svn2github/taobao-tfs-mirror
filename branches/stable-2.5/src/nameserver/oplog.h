@@ -104,7 +104,7 @@ namespace tfs
           return &oplog_rotate_header_;
         }
       public:
-        static int const MAX_LOG_SIZE = sizeof(OpLogHeader) + common::BLOCKINFO_SIZE + 1 + 64 * common::INT64_SIZE;
+        static int const MAX_LOG_SIZE = sizeof(OpLogHeader) + sizeof(common::BlockInfoV2) + 1 + 64 * common::INT64_SIZE;
         const int MAX_LOG_SLOTS_SIZE;
         const int MAX_LOG_BUFFER_SIZE;
       private:

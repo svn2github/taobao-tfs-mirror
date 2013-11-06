@@ -445,14 +445,14 @@ namespace tfs
       return actual;
     }
 
-    void ServerManager::set_all_server_next_report_time(const time_t now)
+    void ServerManager::set_all_server_next_report_time(const int32_t flag , const time_t now)
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
       SERVER_TABLE_ITER iter = servers_.begin();
       for (; iter != servers_.end(); ++iter)
       {
         assert(NULL != (*iter));
-        (*iter)->set_next_report_block_time(now, random() % 0xFFFFFFF, true);
+        (*iter)->set_next_report_block_time(now, random() % 0xFFFFFFF, flag);
       }
     }
 
@@ -787,7 +787,7 @@ namespace tfs
         const common::ArrayHelper<uint64_t>& except, const std::set<uint32_t>& lans) const
     {
       rwmutex_.rdlock();
-      int64_t index = servers_.size();
+      int64_t index = std::min(servers_.size(), SYSPARAM_NAMESERVER.choose_target_server_retry_max_nums_);
       rwmutex_.unlock();
       int32_t ret = TFS_SUCCESS;
       ServerCollect* server = NULL;

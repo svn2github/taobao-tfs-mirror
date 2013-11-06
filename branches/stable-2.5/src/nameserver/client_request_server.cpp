@@ -737,8 +737,6 @@ namespace tfs
     int ClientRequestServer::handle_control_delete_family(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
       int32_t ret = (info.value3_ <= 0) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-      if (TFS_SUCCESS != ret)
-        snprintf(buf, buf_length, "parameter is invalid, value3: %"PRI64_PREFIX"u", info.value3_);
       if (TFS_SUCCESS == ret)
       {
         ret = manager_.get_oplog_sync_mgr().del_family(info.value3_);
@@ -768,6 +766,15 @@ namespace tfs
       }
 
       return ret;
+    }
+
+    int ClientRequestServer::handle_control_set_all_server_report_block(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
+    {
+      UNUSED(info);
+      UNUSED(buf_length);
+      UNUSED(buf);
+      manager_.get_server_manager().set_all_server_next_report_time(SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_IMMEDIATELY, Func::get_monotonic_time());
+      return TFS_SUCCESS;
     }
 
     int ClientRequestServer::handle_control_cmd(const ClientCmdInformation& info, common::BasePacket* msg, const int64_t buf_length, char* buf)
@@ -808,6 +815,9 @@ namespace tfs
           break;
         case CLIENT_CMD_DELETE_FAMILY:
           ret = handle_control_delete_family(info, buf_length, buf);
+          break;
+        case CLIENT_CMD_SET_ALL_SERVER_REPORT_BLOCK:
+          ret = handle_control_set_all_server_report_block(info, buf_length, buf);
           break;
         default:
           snprintf(buf, buf_length, "unknow client cmd: %d", info.cmd_);

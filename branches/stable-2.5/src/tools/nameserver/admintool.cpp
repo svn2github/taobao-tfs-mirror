@@ -72,6 +72,7 @@ int cmd_get_bpr(const VSTRING &param);
 int cmd_batch_file(const VSTRING& param);
 int cmd_batch_compact_file(const VSTRING& param);
 int cmd_clear_system_table(const VSTRING& param);
+int cmd_set_all_server_report_block(const VSTRING& param);
 
 template<class T> const char* get_str(T it)
 {
@@ -157,6 +158,7 @@ void init()
   g_cmd_map["getbpr"] = CmdNode("getbpr", "get balance percent ratio, float value, ex: 1.000000 or 0.000005", 0, 0, cmd_get_bpr);
   g_cmd_map["batch"] = CmdNode("batch file", "batch run command in file", 1, 1, cmd_batch_file);
   g_cmd_map["batch_compact"] = CmdNode("batch_compact file num interval", "batch compact blockid in file, when send num line(blockid) continuously to ns, then sleep interval(s)", 3, 3, cmd_batch_compact_file);
+  g_cmd_map["set_all_server_report_block"] = CmdNode("set_all_server_report_block", "set_all_server_report_block", 0, 0, cmd_set_all_server_report_block);
 }
 
 void version()
@@ -1524,6 +1526,19 @@ int cmd_clear_system_table(const VSTRING& param)
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
 
   ToolUtil::print_info(status, "clear system table %s",param[0].c_str());
+
+  return status;
+}
+
+int cmd_set_all_server_report_block(const VSTRING& param)
+{
+  ClientCmdMessage req_cc_msg;
+  req_cc_msg.set_cmd(CLIENT_CMD_CLEAR_SYSTEM_TABLE);
+  int status = TFS_ERROR;
+
+  int32_t ret = send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
+
+  ToolUtil::print_info(status, "clear system table %s, ret: %d",param[0].c_str(), ret);
 
   return status;
 }
