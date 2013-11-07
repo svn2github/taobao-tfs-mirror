@@ -745,6 +745,7 @@ namespace tfs
           pheader->marshalling_offset_ = header.marshalling_offset_;
           pheader->used_file_info_bucket_size_ = 0;
           pheader->file_info_bucket_size_ = file_info_bucket_size;
+          pheader->throughput_ = header.throughput_;
           std::vector<common::FileInfoV2>::iterator iter = infos.begin();
           for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
           {

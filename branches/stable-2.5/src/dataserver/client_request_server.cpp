@@ -263,9 +263,20 @@ namespace tfs
               assert(NULL != buffer);
               if (INVALID_FAMILY_ID == family_info.family_id_)
               {
+                TimeStat timer;
+                timer.start();
                 ret = get_block_manager().read(buffer,
                     length, offset, file_id, flag, block_id, attach_block_id);
+                timer.end();
                 ret = (ret < 0) ? ret: TFS_SUCCESS;
+
+                // record slow request
+                if (TFS_SUCCESS == ret && timer.duration() > SYSPARAM_DATASERVER.max_io_warn_time_)
+                {
+                  TBSYS_LOG(WARN, "slow read request. blockid: %"PRI64_PREFIX"u, "
+                      "fileid: %"PRI64_PREFIX"u, cost: %"PRI64_PREFIX"d",
+                      block_id, file_id, timer.duration());
+                }
               }
               else
               {
@@ -556,13 +567,25 @@ namespace tfs
       BlockInfoV2 local;
       if (TFS_SUCCESS == ret)
       {
+        TimeStat timer;
+        timer.start();
         ret = get_data_manager().close_file(block_id,
             attach_block_id, file_id, lease_id, crc, status, tmp, local);
+        timer.end();
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "close file fail. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
               "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, role: %s, ret: %d",
               block_id, attach_block_id, file_id, lease_id, is_master? "master" : "slave", ret);
+        }
+        else
+        {
+          if (timer.duration() > SYSPARAM_DATASERVER.max_io_warn_time_)
+          {
+            TBSYS_LOG(WARN, "slow write request. blockid: %"PRI64_PREFIX"u, "
+                "fileid: %"PRI64_PREFIX"u, cost: %"PRI64_PREFIX"d",
+                block_id, file_id, timer.duration());
+          }
         }
         get_data_manager().update_lease(attach_block_id, file_id, lease_id, ret, local);
       }
