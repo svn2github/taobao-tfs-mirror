@@ -40,7 +40,7 @@ namespace tfs
   namespace checkserver
   {
     CheckServer::CheckServer():
-      check_manager_(new DefaultServerHelper())
+      check_manager_(*this, new DefaultServerHelper())
     {
 
     }

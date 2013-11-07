@@ -29,6 +29,7 @@ using namespace tbutil;
 using namespace tbsys;
 
 #include "default_server_helper.h"
+#include "checkserver.h"
 #include "check_manager.h"
 
 namespace tfs
@@ -40,13 +41,15 @@ namespace tfs
     static const float   SERVER_SLOT_EXPAND_RATION_DEFAULT = 0.1;
     static const int32_t MAX_BLOCK_CHUNK_NUMS = 1024;
     static const int32_t DEFAULT_NETWORK_RETRY_TIMES = 2;
-    static const int32_t CHECK_TIME_RESERVE = 30000; // mill seconds
+    static const int32_t CHECK_TIME_RESERVE = 10000; // mill seconds
 
-    CheckManager::CheckManager(BaseServerHelper* server_helper):
+    CheckManager::CheckManager(CheckServer& server, BaseServerHelper* server_helper):
+      server_(server),
       all_servers_(SERVER_SLOT_INIT_SIZE,
           SERVER_SLOT_EXPAND_DEFAULT,
           SERVER_SLOT_EXPAND_RATION_DEFAULT),
       server_helper_(server_helper),
+      result_fp_(NULL),
       group_count_(1),
       group_seq_(0),
       max_dispatch_num_(0),
@@ -81,6 +84,11 @@ namespace tfs
       tbsys::gDeleteA(all_blocks_);
       tbsys::gDeleteA(bmutex_);
       tbsys::gDelete(server_helper_);
+      if (NULL != result_fp_)
+      {
+        fclose(result_fp_);
+        result_fp_ = NULL;
+      }
     }
 
     void CheckManager::clear()
@@ -356,25 +364,34 @@ namespace tfs
         vector<CheckResult>::iterator iter = result.begin();
         for ( ; iter < result.end(); iter++)
         {
+          int32_t slot = iter->block_id_ % MAX_BLOCK_CHUNK_NUMS;
+          BlockObject query(iter->block_id_);
+          Mutex::Lock lock(bmutex_[slot]);
+          BLOCK_MAP_ITER bit = all_blocks_[slot].find(&query);
           if (TFS_SUCCESS == iter->status_)
           {
-            int32_t slot = iter->block_id_ % MAX_BLOCK_CHUNK_NUMS;
-            BlockObject query(iter->block_id_);
-            Mutex::Lock lock(bmutex_[slot]);
-            BLOCK_MAP_ITER bit = all_blocks_[slot].find(&query);
             if (bit != all_blocks_[slot].end())  // remove succussfully checked block
             {
               all_blocks_[slot].erase(bit);
               delete(*bit);
             }
 
-            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u check success. more: %d, diff: %d, less: %d",
+            fprintf(result_fp_, "%-20"PRI64_PREFIX"u%-8d%-8d%-8d\n",
                 iter->block_id_, iter->more_, iter->diff_, iter->less_);
           }
           else
           {
-            TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u check fail, ret: %d",
-                iter->block_id_, iter->status_);
+            // block may already moved to other servers
+            // reliever block ==> server relationship
+            if (EXIT_NO_LOGICBLOCK_ERROR == iter->status_)
+            {
+              if (bit != all_blocks_[slot].end())
+              {
+                (*bit)->remove_server(server_id);
+              }
+            }
+            TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u check fail, server: %s, ret: %d",
+                iter->block_id_, tbsys::CNetUtil::addrToString(server_id).c_str(), iter->status_);
           }
         }
       }
@@ -395,6 +412,16 @@ namespace tfs
         TIMER_START();
         clear();  // clear servers & keep failed block
         int64_t now = Func::curr_time();
+
+        // prepare check result file
+        string result_file = server_.get_work_dir() +
+          string("/logs/check_result.") + Func::time_to_str(now / 1000000, 1);
+        TBSYS_LOG(INFO, "check result file: %s", result_file.c_str());
+        result_fp_ = fopen(result_file.c_str(), "w+");
+        assert(NULL != result_fp_);
+        fprintf(result_fp_, "%-20s%-8s%-8s%-8s\n", "BLOCKID", "MORE", "DIFF", "LESS");
+
+        // prepare check param
         seqno_ = now;
         TimeRange range;
         range.end_ = (now / 1000000) - SYSPARAM_CHECKSERVER.check_reserve_time_; // ignore recent modify
@@ -408,6 +435,12 @@ namespace tfs
         for (int index = 0; index < wait_time && !stop_; index++)
         {
           sleep(1);  // check if stoped every seconds, may receive stop signal
+        }
+
+        if (NULL != result_fp_)
+        {
+          fclose(result_fp_);
+          result_fp_ = NULL;
         }
 
         if (!stop_)
@@ -441,15 +474,21 @@ namespace tfs
 
       if (TFS_SUCCESS == ret && !stop_)
       {
-        int retry_times = SYSPARAM_CHECKSERVER.check_retry_turns_;
-        while (retry_times-- && !stop_)
+        for (int32_t retry = 0;
+            retry < SYSPARAM_CHECKSERVER.check_retry_turns_ && !stop_; retry++)
         {
           if (TFS_SUCCESS == ret && !stop_)
           {
             ret = fetch_blocks(range);
-            if (TFS_SUCCESS == ret && 0 == total)
+            if (TFS_SUCCESS == ret)
             {
-              total = get_block_size();  // store total block size for log
+              int64_t cur_size = get_block_size();
+              TBSYS_LOG(INFO, "turn %d has %"PRI64_PREFIX"d blocks",
+                  retry + 1, cur_size);
+              if (0 == retry)
+              {
+                total = cur_size;  // store total block size for log
+              }
             }
           }
 
@@ -630,16 +669,14 @@ namespace tfs
         for ( ; bit != all_blocks[index].end(); bit++)
         {
           uint64_t server_id = check_manager_.assign_block(**bit);
-          if (INVALID_SERVER_ID != server_id)
-          {
-            check_manager_.add_server(server_id, (*bit)->get_block_id()); // assign success
-          }
-          else  // assign fail, update block replica info from nameserver
+
+          // assign fail, update block replica info from nameserver
+          if (INVALID_SERVER_ID == server_id)
           {
             VUINT64 replicas;
             int ret = check_manager_.retry_get_block_replicas(SYSPARAM_CHECKSERVER.ns_id_,
                 (*bit)->get_block_id(), replicas);
-            TBSYS_LOG(DEBUG, "update block %"PRI64_PREFIX"u replica info from ns",
+            TBSYS_LOG(INFO, "update block %"PRI64_PREFIX"u replica info from ns",
                 (*bit)->get_block_id());
             if (TFS_SUCCESS == ret)
             {
@@ -651,12 +688,13 @@ namespace tfs
               }
 
               // re-assign block
-              uint64_t server_id = check_manager_.assign_block(**bit);
-              if (INVALID_SERVER_ID != server_id)
-              {
-                check_manager_.add_server(server_id, (*bit)->get_block_id()); // assign success
-              }
+              server_id = check_manager_.assign_block(**bit);
             }
+          }
+
+          if (INVALID_SERVER_ID != server_id)
+          {
+            check_manager_.add_server(server_id, (*bit)->get_block_id()); // assign success
           }
         }
       }

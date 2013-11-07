@@ -87,6 +87,30 @@ namespace tfs
           }
         }
 
+        void remove_server(const uint64_t server_id)
+        {
+          tbutil::Mutex::Lock lock(mutex_);
+          bool found = false;
+          int32_t index = 0;
+          for ( ; index < server_size_; index++)
+          {
+            if (servers_[index] == server_id)
+            {
+              found = true;
+              break;
+            }
+          }
+
+          if (found)
+          {
+            for ( ; index < server_size_ - 1; index++)
+            {
+              servers_[index] = servers_[index+1];
+            }
+            server_size_--;
+          }
+        }
+
         const uint64_t* get_servers() const
         {
           return servers_;
@@ -194,10 +218,11 @@ namespace tfs
     typedef common::TfsSortedVector<ServerObject*, ServerIdCompare>::iterator SERVER_MAP_ITER;
     typedef common::TfsSortedVector<ServerObject*, ServerIdCompare>::iterator SERVER_MAP_CONST_ITER;
 
+    class CheckServer;
     class CheckManager
     {
       public:
-        CheckManager(BaseServerHelper* server_helper);
+        CheckManager(CheckServer& server, BaseServerHelper* server_helper);
         ~CheckManager();
         int64_t get_seqno() const;
         const BLOCK_MAP* get_blocks() const;
@@ -317,10 +342,12 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN(CheckManager);
+        CheckServer& server_;
         BLOCK_MAP* all_blocks_;
         SERVER_MAP all_servers_;
         tbutil::Mutex *bmutex_;
         BaseServerHelper* server_helper_;
+        FILE* result_fp_;
         int32_t group_count_;
         int32_t group_seq_;
         int64_t max_dispatch_num_;
