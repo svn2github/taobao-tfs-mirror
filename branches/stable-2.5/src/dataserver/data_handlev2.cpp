@@ -58,7 +58,7 @@ namespace tfs
             {
               if (NULL != last_physical_block && last_physical_block != physical_block)
               {
-                ret = last_physical_block->fdatasync();
+                //ret = last_physical_block->fdatasync();
               }
               last_physical_block = physical_block;
             }
@@ -74,7 +74,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           assert(NULL != last_physical_block);
-          ret = last_physical_block->fdatasync();
+          //ret = last_physical_block->fdatasync();
         }
       }
       return TFS_SUCCESS == ret ? nbytes : ret;

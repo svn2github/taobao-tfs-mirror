@@ -83,8 +83,13 @@ namespace tfs
       ret = NULL == pserver ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        //update all relations of blocks belongs to it
-        ret = manager_.update_relation(expires, pserver, blocks, now);
+        ret = (REPORT_BLOCK_STATUS_REPORTING != pserver->get_report_block_status()) ? TFS_SUCCESS : EXIT_REPORT_BLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          //update all relations of blocks belongs to it
+          pserver->set_report_block_status(REPORT_BLOCK_STATUS_REPORTING);
+          ret = manager_.update_relation(expires, pserver, blocks, now);
+        }
         if (TFS_SUCCESS == ret)
         {
           pserver = manager_.get_server_manager().get(server);

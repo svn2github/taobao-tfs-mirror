@@ -452,7 +452,7 @@ namespace tfs
               if (TFS_SUCCESS == ret)
               {
                 ret = block->check_version(manager_, helper, server->id(), isnew, info, now);
-                if (TFS_SUCCESS == ret)//build relation
+                if (TFS_SUCCESS == ret || EXIT_SERVER_EXISTED == ret)//build relation
                   ret = build_relation_(block, writable, master, server->id(),now);
               }
               else
@@ -498,6 +498,9 @@ namespace tfs
               all_server_size = block->get_servers_size();
           }
           get_mutex_(info.block_id_).unlock();
+
+          if (EXIT_SERVER_EXISTED == ret)
+            ret = TFS_SUCCESS;
 
           if (TFS_SUCCESS == ret)
           {
@@ -568,7 +571,9 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = block->add(writable, master, server, now);
-        if (set && (TFS_SUCCESS == ret || EXIT_SERVER_EXISTED == ret))
+        if (EXIT_SERVER_EXISTED == ret)
+          ret = TFS_SUCCESS;
+        if (set && TFS_SUCCESS == ret)
           block->set_create_flag();
       }
       return ret;

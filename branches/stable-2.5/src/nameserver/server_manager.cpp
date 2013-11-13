@@ -244,7 +244,7 @@ namespace tfs
           current_reporting_block_servers_.insert_unique(result, server);
           helper.push_back(server);
           int64_t now = Func::get_monotonic_time();
-          server->set_report_block_info(now, REPORT_BLOCK_STATUS_REPORTING);
+          server->set_report_block_info(now, REPORT_BLOCK_STATUS_WAIT_REPORT);
         }
       }
       return helper.get_array_index();
@@ -465,6 +465,8 @@ namespace tfs
         //build relation between dataserver and block
         //add to dataserver's all kind of list
         ret = server->add(block, master, writable);
+        if (EXIT_ELEMENT_EXIST == ret)
+          ret = TFS_SUCCESS;
       }
       return ret;
     }
@@ -743,9 +745,10 @@ namespace tfs
       {
         server = (*iter);
         assert(NULL != server);
-        if (server->get_report_block_status() != REPORT_BLOCK_STATUS_REPORTING ||
-          server->is_report_block_expired(now))
+        if (server->is_report_block_expired(now))
+        {
           helper.push_back(server);
+        }
       }
       for (int64_t index = 0; index < helper.get_array_index(); ++index)
       {
