@@ -414,9 +414,15 @@ namespace tfs
           //ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
           if (TFS_SUCCESS != ret)
             prev = current;
+          uint32_t pos = (random() % (header->file_info_bucket_size_ - 1)) + 1;
           while (TFS_SUCCESS != ret && max_loop-- > 0 && header->used_file_info_bucket_size_ < header->file_info_bucket_size_)
           {
-            slot = ((key + random()) % (header->file_info_bucket_size_ - 1)) + 1;
+            if (pos == header->file_info_bucket_size_)
+            {
+              pos = 1;
+            }
+            slot = pos++;
+            // slot = ((key + random()) % (header->file_info_bucket_size_ - 1)) + 1;
             //slot = (key + random()) % header->file_info_bucket_size_;
             current =  (finfos + slot);
             ret = (INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_META_NOT_FOUND_ERROR;
@@ -731,6 +737,7 @@ namespace tfs
           IndexHeaderV2* pheader = get_index_header_();
           assert(NULL != pheader);
           pheader->info_ = header.info_;
+          pheader->info_.last_update_time_ = time(NULL);
           pheader->throughput_ = header.throughput_;
           pheader->marshalling_offset_ = header.marshalling_offset_;
           pheader->seq_no_ = header.seq_no_;
@@ -739,18 +746,41 @@ namespace tfs
         {
           IndexHeaderV2* pheader = get_index_header_();
           assert(NULL != pheader);
-          const int32_t file_info_bucket_size = pheader->file_info_bucket_size_;
-          pheader->info_ = header.info_;
-          pheader->seq_no_ = header.seq_no_;
-          pheader->marshalling_offset_ = header.marshalling_offset_;
-          pheader->used_file_info_bucket_size_ = 0;
-          pheader->file_info_bucket_size_ = file_info_bucket_size;
-          pheader->throughput_ = header.throughput_;
-          std::vector<common::FileInfoV2>::iterator iter = infos.begin();
-          for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
+          if (header.file_info_bucket_size_ > pheader->file_info_bucket_size_)
           {
-            FileInfoV2& finfo = (*iter);
-            ret = insert_file_info_(finfo, threshold, max_hash_bucket, false);
+            int32_t need_length = INDEX_HEADER_V2_LENGTH +
+              FILE_INFO_V2_LENGTH * header.file_info_bucket_size_;
+            int32_t pagesize = getpagesize();
+            int32_t advise_per_mmap_size = need_length - file_op_.length();
+            if (advise_per_mmap_size > 0)
+            {
+              if (advise_per_mmap_size % pagesize != 0)
+              {
+                advise_per_mmap_size = (advise_per_mmap_size / pagesize + 1) * pagesize;
+              }
+              ret = remmap_(threshold, max_hash_bucket, advise_per_mmap_size);
+              if (TFS_SUCCESS == ret)
+              {
+                // remmap success, update header address
+                pheader = get_index_header_();
+              }
+            }
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            pheader->info_ = header.info_;
+            pheader->info_.last_update_time_ = time(NULL);
+            pheader->seq_no_ = header.seq_no_;
+            pheader->marshalling_offset_ = header.marshalling_offset_;
+            pheader->used_file_info_bucket_size_ = 0;
+            pheader->throughput_ = header.throughput_;
+            std::vector<common::FileInfoV2>::iterator iter = infos.begin();
+            for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
+            {
+              FileInfoV2& finfo = (*iter);
+              ret = insert_file_info_(finfo, threshold, max_hash_bucket, false);
+            }
           }
         }
 
@@ -960,7 +990,8 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::remmap_(const double threshold, const int32_t max_hash_bucket) const
+    int IndexHandle::remmap_(const double threshold, const int32_t max_hash_bucket,
+        const int32_t advise_per_mmap_size) const
     {
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
@@ -969,13 +1000,14 @@ namespace tfs
         ret = (NULL != header) ? TFS_SUCCESS : EXIT_INDEX_HEADER_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
-          if (header->check_need_mremap(threshold) && header->file_info_bucket_size_ < max_hash_bucket)
+          if ((header->check_need_mremap(threshold) || advise_per_mmap_size > 0) &&
+              header->file_info_bucket_size_ < max_hash_bucket)
           {
             int32_t old_length = file_op_.length();
             char* old_data = new (std::nothrow)char[old_length];
             memcpy(old_data, file_op_.get_data(), old_length);
             header = reinterpret_cast<IndexHeaderV2*>(old_data);
-            ret = file_op_.mremap();//只扩大，不减小
+            ret = file_op_.mremap(advise_per_mmap_size);//只扩大，不减小
             if (TFS_SUCCESS == ret)
             {
               int32_t new_length =  file_op_.length();
@@ -1156,6 +1188,7 @@ namespace tfs
           assert(!partial);
           assert(!infos.empty());
           IndexHeaderV2* pheader = get_index_header_();
+          pheader->info_.last_update_time_ = time(NULL);
           InnerIndex* inner_index = get_inner_index_array_();
           assert(NULL != inner_index);
           InnerIndex* index = &inner_index[pheader->index_num_++];
@@ -1194,6 +1227,7 @@ namespace tfs
             IndexHeaderV2* pheader = reinterpret_cast<IndexHeaderV2*>(data);
             assert(NULL != pheader);
             pheader->info_ = header.info_;
+            pheader->info_.last_update_time_ = time(NULL);
             pheader->throughput_ = header.throughput_;
             pheader->marshalling_offset_ = header.marshalling_offset_;
             pheader->seq_no_ = header.seq_no_;

@@ -38,7 +38,7 @@ namespace tfs
 
         char* get_data() const;
         int mmap(const common::MMapOption& mmap_option);
-        int mremap();
+        int mremap(const int32_t advise_per_mmap_size);
         int munmap();
         int rename();
         int flush();

@@ -679,19 +679,17 @@ namespace tfs
                 {
                   TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
                       ret, id(), fileid);
-                  ret = get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
+                  get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
+                }
+                else
+                {
+                  fileid = new_finfo.id_;
+                  ret = index_handle_->flush();
                   if (TFS_SUCCESS != ret)
                   {
-                    TBSYS_LOG(ERROR, "write file info failed, we'll rollback failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
+                    TBSYS_LOG(INFO, "write file, flush index to disk failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
                         ret, id(), fileid);
                   }
-                }
-                fileid = new_finfo.id_;
-                ret = index_handle_->flush();
-                if (TFS_SUCCESS != ret)
-                {
-                  TBSYS_LOG(INFO, "write file, flush index to disk failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
-                      ret, id(), fileid);
                 }
               }
             }
@@ -730,7 +728,7 @@ namespace tfs
                 ret = get_index_handle_()->write_file_info(finfo, sbinfo->max_use_hash_bucket_ratio_,
                       sbinfo->max_hash_bucket_count_, id(), true);
                 if (TFS_SUCCESS != ret)
-                  ret = get_index_handle_()->update_block_statistic_info(oper_type, 0, finfo.size_, true);
+                  get_index_handle_()->update_block_statistic_info(oper_type, 0, finfo.size_, true);
                 else
                   ret = index_handle_->flush();
               }
@@ -939,12 +937,7 @@ namespace tfs
                 {
                   TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
                       ret, logic_block_id, fileid);
-                  ret = get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
-                  if (TFS_SUCCESS != ret)
-                  {
-                    TBSYS_LOG(ERROR, "write file info failed, we'll rollback failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
-                        ret, logic_block_id, fileid);
-                  }
+                  get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
                 }
               }
             }
