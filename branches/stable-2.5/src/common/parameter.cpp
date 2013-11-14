@@ -203,7 +203,7 @@ namespace tfs
 
       choose_target_server_random_max_nums_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER,CONF_CHOOSE_TARGET_SERVER_RANDOM_MAX_NUM, 8);
 
-      choose_target_server_random_max_nums_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER,CONF_CHOOSE_TARGET_SERVER_RETRY_MAX_NUM, 8);
+      choose_target_server_retry_max_nums_  = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER,CONF_CHOOSE_TARGET_SERVER_RETRY_MAX_NUM, 8);
 
       keepalive_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_MAX_QUEUE_SIZE, 1024);
 

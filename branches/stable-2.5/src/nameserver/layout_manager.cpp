@@ -526,6 +526,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.compact_family_member_ratio_,
           &SYSPARAM_NAMESERVER.max_single_machine_network_bandwith_,
           &SYSPARAM_NAMESERVER.write_file_check_copies_complete_,
+          &SYSPARAM_NAMESERVER.choose_target_server_retry_max_nums_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
