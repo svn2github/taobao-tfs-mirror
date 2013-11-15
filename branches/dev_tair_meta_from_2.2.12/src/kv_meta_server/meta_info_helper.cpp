@@ -1724,7 +1724,7 @@ namespace tfs
           ret = get_range(pkey, temp_start_key, 0, limit_size + extra,
               &kv_value_keys, &kv_value_values, &res_size);
           // error
-          if (TFS_SUCCESS != ret && KV_RETURN_HAS_MORE_DATA != ret)
+          if (TFS_SUCCESS != ret && EXIT_KV_RETURN_HAS_MORE_DATA != ret)
           {
             TBSYS_LOG(ERROR, "get range fail, ret: %d", ret);
             break;
@@ -1736,7 +1736,7 @@ namespace tfs
           {
             break;
           }
-          else if (res_size < limit_size + extra && KV_RETURN_HAS_MORE_DATA != ret)
+          else if (res_size < limit_size + extra && EXIT_KV_RETURN_HAS_MORE_DATA != ret)
           {
             loop = false;
           }

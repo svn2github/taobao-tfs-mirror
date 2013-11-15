@@ -347,7 +347,7 @@ namespace tfs
             offset, limit, tvalues, scan_type);
       }
 
-      if (TFS_SUCCESS == ret || ret == EXIT_KV_RETURN_DATA_NOT_EXIST || ret == KV_RETURN_HAS_MORE_DATA)
+      if (TFS_SUCCESS == ret || ret == EXIT_KV_RETURN_DATA_NOT_EXIST || ret == EXIT_KV_RETURN_HAS_MORE_DATA)
       {
         if (scan_type == CMD_RANGE_ALL)
         {
@@ -385,7 +385,7 @@ namespace tfs
           *result_size = static_cast<int32_t>(tvalues.size());
         }
 
-        if (ret != KV_RETURN_HAS_MORE_DATA)
+        if (ret != EXIT_KV_RETURN_HAS_MORE_DATA)
         {
           ret = TFS_SUCCESS;
         }
@@ -673,7 +673,7 @@ namespace tfs
       {
         if (tair_ret == TAIR_HAS_MORE_DATA)
         {
-          ret = KV_RETURN_HAS_MORE_DATA;
+          ret = EXIT_KV_RETURN_HAS_MORE_DATA;
         }
         else
         {

@@ -183,38 +183,41 @@ namespace tfs
     const int32_t EXIT_NEW_TABLE_INVALID = -15007;//new table invalid
     const int32_t EXIT_BUCKET_PERMISSION_DENY = -15008; //not grant fit control
 
-    const int32_t EXIT_INVALID_OBJECT = -16000;// no meta info or something
-    const int32_t EXIT_KV_RETURN_DATA_NOT_EXIST = -16001;//no data in kv
-    const int32_t EXIT_KV_RETURN_ERROR = -16002;//kv error
-    const int32_t EXIT_KV_RETURN_VERSION_ERROR = -16003;
-    const int32_t EXIT_KV_SCAN_ERROR = -16004;
+    /* erasure code related 16XXX */
 
-    const int32_t EXIT_OBJECT_OVERLAP = -16005;// pwrite object overlap
-    const int32_t EXIT_OBJECT_NOT_EXIST = -16006; //get_key(key not exist, object type)
-    const int32_t EXIT_BUCKET_EXIST = -16007;// bucket already exist
-    const int32_t EXIT_INVALID_KV_META_SERVER = -16008;// no kv meta server
+    const int32_t EXIT_INVALID_OBJECT = -17000;// no meta info or something
+    const int32_t EXIT_KV_RETURN_DATA_NOT_EXIST = -17001;//no data in kv
+    const int32_t EXIT_KV_RETURN_ERROR = -17002;//kv error
+    const int32_t EXIT_KV_RETURN_VERSION_ERROR = -17003;
+    const int32_t EXIT_KV_SCAN_ERROR = -17004;
 
-    const int32_t EXIT_TAG_KEY_OVER_LIMIT = -16009; //over bucket tag key size(10)
-    const int32_t EXIT_TAG_KEY_EXIST = -16010; //bucket has the key
-    const int32_t EXIT_BUCKET_TAG_NOT_EXIST = -16011; //del bucket tag not exist
+    const int32_t EXIT_OBJECT_OVERLAP = -17005;// pwrite object overlap
+    const int32_t EXIT_OBJECT_NOT_EXIST = -17006; //get_key(key not exist, object type)
+    const int32_t EXIT_BUCKET_EXIST = -17007;// bucket already exist
+    const int32_t EXIT_INVALID_KV_META_SERVER = -17008;// no kv meta server
+    const int32_t EXIT_KV_RETURN_HAS_MORE_DATA = -17009; //tair return over 1M of get range once
+    const int32_t EXIT_REQ_OFFSET_NOT_FIND = -17010;//do direct scan offset but reqoffset not in scan
 
+    /* bucket tag */
+    const int32_t EXIT_TAG_KEY_OVER_LIMIT = -18101; //over bucket tag key size(10)
+    const int32_t EXIT_TAG_KEY_EXIST = -18102; //bucket has the key
+    const int32_t EXIT_BUCKET_TAG_NOT_EXIST = -18103; //del bucket tag not exist
 
-    const int32_t EXIT_MULTIPART_TYPE_KEY = -16012; //deserialize key when get bucket
-    const int32_t EXIT_NOT_MULTIPART_TYPE_KEY = -16013; //deserialize key when list_multipart_objects
+    const int32_t EXIT_OVER_OWN_BUCKETS_SIZE = -18104; //one owner has max 100 buckets
+    const int32_t EXIT_OWNER_HAS_NO_BUCKETS = -18105;   //owner_id has no buckets
+    const int32_t EXIT_FATAL_OWNER_ID = -18106;         //bucket_meta_info's owner_id neq buckets_result's owner_id
+    const int32_t EXIT_RULE_OVER_MAX_SIZE = -18107;  //over 1000 rule
+    const int32_t EXIT_BUCKET_RULE_OVERLAP = -18108;  //rule overlap
 
-    const int32_t EXIT_OBJECT_EXIST = -16020; //init multipart fail
-    const int32_t EXIT_MULITIPART_LIST_DIFF = -16021;
+    /* mulitpart */
+    const int32_t EXIT_MULTIPART_TYPE_KEY = -18201; //deserialize key when get bucket
+    const int32_t EXIT_NOT_MULTIPART_TYPE_KEY = -18202; //deserialize key when list_multipart_objects
+    const int32_t EXIT_OBJECT_EXIST = -18203; //init multipart fail
+    const int32_t EXIT_MULITIPART_LIST_DIFF = -18204;
 
-    const int32_t EXIT_OVER_OWN_BUCKETS_SIZE = -16022; //one owner has max 100 buckets
-    const int32_t EXIT_OWNER_HAS_NO_BUCKETS = -16023;   //owner_id has no buckets
-    const int32_t EXIT_FATAL_OWNER_ID = -16024;         //bucket_meta_info's owner_id neq buckets_result's owner_id
-
-    const int32_t KV_RETURN_HAS_MORE_DATA = -16025;   //get range once return over 1M of limit
-    const int32_t EXIT_RULE_OVER_MAX_SIZE = -16026;  //over 1000 rule
-    const int32_t EXIT_BUCKET_RULE_OVERLAP = -16027;  //rule overlap
-
-    const int32_t EXIT_AUTHORIZE_NOT_EXIST = -16028;//authorize key not exist
-    const int32_t EXIT_SIGNTURE_NOT_EQUAL = -16029;//
+    /* AUTHORIZE */
+    const int32_t EXIT_AUTHORIZE_NOT_EXIST = -18301;//authorize key not exist
+    const int32_t EXIT_SIGNTURE_NOT_EQUAL = -18302;//
 
   }
 }
