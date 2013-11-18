@@ -809,7 +809,7 @@ namespace tfs
       bool ret = last_write_blocks_[get_chunk_(block)].end() == iter ? false : now < iter->second;
       if (ret)
       {
-        TBSYS_LOG(INFO, "block : %"PRI64_PREFIX"u, %d, %ld, %ld", block,
+        TBSYS_LOG(DEBUG, "block : %"PRI64_PREFIX"u, %d, %ld, %ld", block,
           last_write_blocks_[get_chunk_(block)].end() == iter, iter->second, now);
       }
       return ret;
