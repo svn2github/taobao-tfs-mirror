@@ -40,7 +40,7 @@ namespace tfs
       if (NULL != data_)
       {
         memset(&option_, 0, sizeof(option_));
-        ::msync(data_, length_, MS_SYNC);
+        ::msync(data_, length_, MS_ASYNC);
         ::munmap(data_, length_);
         data_ = NULL;
       }
@@ -51,7 +51,7 @@ namespace tfs
       int32_t ret = (NULL == data_) ? EXIT_MMAP_DATA_INVALID: TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        ret = 0 == ::msync(data_, length_, MS_SYNC) ? TFS_SUCCESS : -errno;
+        ret = 0 == ::msync(data_, length_, MS_ASYNC) ? TFS_SUCCESS : -errno;
       }
       return ret;
     }
