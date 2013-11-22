@@ -237,7 +237,7 @@ namespace tfs
                 read_only = false;
               }
               tmp_rack.cluster_data_.push_back(tmp_cluster);
-              if (GROUP_ACCESS_TYPE_READ_AND_WRITE == rack_group_it->cluster_rack_access_type_)
+              if (CLUSTER_ACCESS_TYPE_READ_AND_WRITE == tmp_cluster.access_type_)
               {
                 cluster_datas_for_update.push_back(tmp_cluster);
               }
