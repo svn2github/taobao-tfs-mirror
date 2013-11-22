@@ -136,8 +136,10 @@ int SyncFileBase::sync_file(const string& file_name, const TfsFileStat& source_b
     {
       ret = copy_file(file_name, source_buf.flag_);
       result = (TFS_SUCCESS == ret) ? SYNC_SUCCESS : SYNC_FAILED;
-      TBSYS_LOG(WARN, "file info size or crc conflict!! filename: %s, source size: %"PRI64_PREFIX"d -> dest size: %"PRI64_PREFIX"d, source crc: %u -> dest crc: %u, force:%d, copy file %s", file_name.c_str(), source_buf.size_, dest_buf.size_, source_buf.crc_, dest_buf.crc_, force, TFS_SUCCESS == ret ? "success" : "fail");
     }
+    TBSYS_LOG(WARN, "file info size or crc conflict!! filename: %s, source size: %"PRI64_PREFIX"d -> dest size: %"PRI64_PREFIX"d,"
+        " source crc: %u -> dest crc: %u, force:%d, copy file %s", file_name.c_str(), source_buf.size_, dest_buf.size_, source_buf.crc_, dest_buf.crc_,
+        force,  force ? (TFS_SUCCESS == ret ? "success" : "fail") : "no action");
   }
   else if (source_buf.flag_ != dest_buf.flag_)//4. dest file data has not update, keeep status agreed with src status
   { // 不需要判断 source_buf.modify_time_ >= dest_buf.modify_time_but in diff stat
