@@ -42,7 +42,7 @@ namespace tfs
     static BaseWorkerPtr* g_workers = NULL;
 
     BaseWorkerManager::BaseWorkerManager():
-      timestamp_(0), interval_ms_(0),
+      retry_count_(3), timestamp_(0), interval_ms_(0),
       succ_fp_(NULL), fail_fp_(NULL)
     {
     }
@@ -60,6 +60,7 @@ namespace tfs
         "-m           timestamp eg: 20130610, optional, default 0\n"
         "-i           sleep interval (ms), optional, default 0\n"
         "-p           output directory, optional, default ./logs\n"
+        "-c           retry count when process fail\n"
         "-x           extend arg, optional, default empty\n"
         "-t           thread count, optional, defaul 1\n"
         "-l           log level, optional, default info\n"
@@ -142,7 +143,7 @@ namespace tfs
       output_dir_ = "./logs";  // default output directory
       int flag = 0;
 
-      while ((flag = getopt(argc, argv, "s:d:m:f:p:x:t:l:i:hv")) != EOF)
+      while ((flag = getopt(argc, argv, "s:d:m:f:p:c:x:t:l:i:hv")) != EOF)
       {
         switch (flag)
         {
@@ -163,6 +164,9 @@ namespace tfs
             break;
           case 'p':
             output_dir_ = optarg;
+            break;
+          case 'c':
+            retry_count_ = atoi(optarg);
             break;
           case 'x':
             extra_arg_ = optarg;
@@ -218,11 +222,24 @@ namespace tfs
       string succ_path = output_dir_ + "/success";
       string fail_path = output_dir_ + "/fail";
 
-      succ_fp_ = fopen(succ_path.c_str(), "w");
-      fail_fp_ = fopen(fail_path.c_str(), "w");
+      succ_fp_ = fopen(succ_path.c_str(), "r+");
+      fail_fp_ = fopen(fail_path.c_str(), "a");
       ret = ((NULL != succ_fp_) && (NULL != fail_fp_)) ? TFS_SUCCESS : TFS_ERROR;
 
-      vector<string> files;
+      set<string> done;
+      if (TFS_SUCCESS == ret)
+      {
+        char line[256];
+        while (NULL != fgets(line, 256, succ_fp_))
+        {
+          int32_t len = strlen(line);
+          while (line[len-1] == '\n' || line[len-1] == ' ') len--;
+          line[len] = '\0';
+          done.insert(line);
+        }
+      }
+
+      vector<string> todo;
       if (TFS_SUCCESS == ret)
       {
         FILE* fp = fopen(input_file_.c_str(), "r");
@@ -233,64 +250,82 @@ namespace tfs
           while (NULL != fgets(line, 256, fp))
           {
             int32_t len = strlen(line);
-            while (line[len-1] == '\n') len--;
+            while (line[len-1] == '\n' || line[len-1] == ' ') len--;
             line[len] = '\0';
-            files.push_back(line);
+            // only process element not in success list
+            if (done.find(line) == done.end())
+            {
+              todo.push_back(line);
+            }
+            else
+            {
+              TBSYS_LOG(INFO, "line %s already done, won't process", line);
+            }
           }
           fclose(fp);
         }
         else
         {
           TBSYS_LOG(ERROR, "open input file: %s fail, ret: %d", input_file_.c_str(), ret);
-          return ret;
         }
       }
 
-      signal(SIGPIPE, SIG_IGN);
-      signal(SIGHUP, SIG_IGN);
-      signal(SIGINT, handle_signal);
-      signal(SIGTERM, handle_signal);
-      signal(SIGUSR1, handle_signal);
-      signal(SIGUSR2, handle_signal);
-
-      MessageFactory* factory = new (std::nothrow) MessageFactory();
-      assert(NULL != factory);
-      BasePacketStreamer* streamer = new (std::nothrow) BasePacketStreamer(factory);
-      assert(NULL != streamer);
-
-      ret = NewClientManager::get_instance().initialize(factory, streamer);
       if (TFS_SUCCESS == ret)
       {
-        g_workers = new BaseWorkerPtr[g_thread_count];
-        for (int index = 0; index < g_thread_count; ++index)
+        signal(SIGPIPE, SIG_IGN);
+        signal(SIGHUP, SIG_IGN);
+        signal(SIGINT, handle_signal);
+        signal(SIGTERM, handle_signal);
+        signal(SIGUSR1, handle_signal);
+        signal(SIGUSR2, handle_signal);
+
+        MessageFactory* factory = new (std::nothrow) MessageFactory();
+        assert(NULL != factory);
+        BasePacketStreamer* streamer = new (std::nothrow) BasePacketStreamer(factory);
+        assert(NULL != streamer);
+
+        ret = NewClientManager::get_instance().initialize(factory, streamer);
+        if (TFS_SUCCESS == ret)
         {
-          g_workers[index] = create_worker();
-          g_workers[index]->set_src_addr(src_addr_);
-          g_workers[index]->set_dest_addr(dest_addr_);
-          g_workers[index]->set_extra_arg(extra_arg_);
-          g_workers[index]->set_timestamp(timestamp_);
-          g_workers[index]->set_interval_ms(interval_ms_);
-          g_workers[index]->set_succ_fp(succ_fp_);
-          g_workers[index]->set_fail_fp(fail_fp_);
+          g_workers = new BaseWorkerPtr[g_thread_count];
+          for (int index = 0; index < g_thread_count; ++index)
+          {
+            g_workers[index] = create_worker();
+            g_workers[index]->set_src_addr(src_addr_);
+            g_workers[index]->set_dest_addr(dest_addr_);
+            g_workers[index]->set_retry_count(retry_count_);
+            g_workers[index]->set_extra_arg(extra_arg_);
+            g_workers[index]->set_timestamp(timestamp_);
+            g_workers[index]->set_interval_ms(interval_ms_);
+            g_workers[index]->set_succ_fp(succ_fp_);
+            g_workers[index]->set_fail_fp(fail_fp_);
+          }
+
+          // dispatch input file to threads
+          for (uint32_t index = 0; index < todo.size(); index++)
+          {
+            g_workers[index%g_thread_count]->add(todo[index]);
+          }
+
+          for (int index = 0; index < g_thread_count; index++)
+          {
+            g_workers[index]->start();
+          }
+
+          for (int index = 0; index < g_thread_count; index++)
+          {
+            g_workers[index]->join();
+          }
+
+          tbsys::gDeleteA(g_workers);
         }
 
-        // dispatch input file to threads
-        for (uint32_t index = 0; index < files.size(); index++)
-        {
-          g_workers[index%g_thread_count]->add(files[index]);
-        }
+        end(); // callback begin function
 
-        for (int index = 0; index < g_thread_count; index++)
-        {
-          g_workers[index]->start();
-        }
+        NewClientManager::get_instance().destroy();
 
-        for (int index = 0; index < g_thread_count; index++)
-        {
-          g_workers[index]->join();
-        }
-
-        tbsys::gDeleteA(g_workers);
+        tbsys::gDelete(streamer);
+        tbsys::gDelete(factory);
       }
 
       if (NULL != succ_fp_)
@@ -302,13 +337,6 @@ namespace tfs
       {
         fclose(fail_fp_);
       }
-
-      end(); // callback begin function
-
-      NewClientManager::get_instance().destroy();
-
-      tbsys::gDelete(streamer);
-      tbsys::gDelete(factory);
 
       return ret;
     }
