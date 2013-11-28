@@ -239,6 +239,7 @@ AC_CONFIG_FILES([Makefile
                  sql/Makefile
                  sql/ms/Makefile
                  sql/rcs/Makefile
+                 sql/kv_ms/Makefile
                  scripts/Makefile
                  scripts/ha/Makefile
                  src/Makefile
