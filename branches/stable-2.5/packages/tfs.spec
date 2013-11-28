@@ -21,6 +21,12 @@ BuildRequires: google-perftools = 1.7
 BuildRequires: jemalloc-devel >= 2.2
 BuildRequires: snappy-devel >= 1.0.5
 BuildRequires: libunwind
+Requires: jemalloc-devel >=2.2
+Requires: snappy-devel >= 1.0.5
+Requires: google-perftools = 1.7
+Requires: libunwind
+Requires: readline-devel
+Requires: ncurses-devel
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}

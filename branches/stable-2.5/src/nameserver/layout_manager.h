@@ -144,7 +144,7 @@ namespace tfs
       bool build_adjust_copies_location_task_(common::ArrayHelper<uint64_t>& copies_location, BlockCollect* block, const time_t now);
       int64_t has_space_in_task_queue_() const;
 
-      bool scan_block_(common::ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start,
+      bool scan_block_(common::ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, int64_t& max_compact_task_count,
           const int32_t max_query_block_num, const time_t now, const bool compact_time,
           const bool marshalling_time, const bool adjust_copies_location_time);
 

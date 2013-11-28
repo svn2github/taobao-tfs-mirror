@@ -35,7 +35,7 @@ namespace tfs
       int32_t replicate_wait_time_;
       int32_t compact_delete_ratio_;
       int32_t compact_update_ratio_;
-      int32_t compact_max_load_;
+      int32_t compact_task_ratio_;
       int32_t compact_time_lower_;
       int32_t compact_time_upper_;
       int32_t cluster_index_;

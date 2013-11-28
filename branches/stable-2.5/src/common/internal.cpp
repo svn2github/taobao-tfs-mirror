@@ -1406,7 +1406,7 @@ namespace tfs
         "replicate_ratio",
         "replicate_wait_time",
         "compact_delete_ratio",
-        "compact_max_load",
+        "compact_task_ratio",
         "compact_time_lower",
         "compact_time_upper",
         "max_task_in_machine_nums",
@@ -2669,6 +2669,27 @@ namespace tfs
       return INT64_SIZE + INT_SIZE + INT16_SIZE * 3;
     }
 
+   void FileInfoV2ToFileStat(const FileInfoV2& info, TfsFileStat& buf)
+   {
+      buf.file_id_ = info.id_;
+      buf.offset_ = info.offset_;
+      buf.size_ = info.size_ - FILEINFO_EXT_SIZE;//通过blockid从ds批量拉取fileinfo会比数据实际大小多这4个字节
+      buf.modify_time_ = info.modify_time_;
+      buf.create_time_ = info.create_time_;
+      buf.flag_ = info.status_;
+      buf.crc_ = info.crc_;
+   }
 
+   void FileStatToFileInfoV2(const TfsFileStat& info, FileInfoV2& buf)
+   {
+      buf.id_ = info.file_id_;
+      buf.offset_ = info.offset_;
+      buf.size_ = info.size_ + FILEINFO_EXT_SIZE;
+      buf.modify_time_ = info.modify_time_;
+      buf.create_time_ = info.create_time_;
+      buf.status_ = info.flag_;
+      buf.crc_    = info.crc_;
+      buf.usize_  = 0;
+   }
   } /** nameserver **/
 }/** tfs **/

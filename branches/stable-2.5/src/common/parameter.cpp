@@ -145,7 +145,7 @@ namespace tfs
       compact_update_ratio_  = std::min(compact_update_ratio_, 100);
       const char* compact_time_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_COMPACT_HOUR_RANGE, "2~6");
       set_hour_range(compact_time_str, compact_time_lower_, compact_time_upper_);
-      compact_max_load_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_MAX_LOAD, 100);
+      compact_task_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_TASK_RATIO, 25);
 
       object_dead_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_DEAD_MAX_TIME, 300);
       if (object_dead_max_time_ <=  300)

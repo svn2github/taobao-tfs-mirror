@@ -490,7 +490,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.replicate_ratio_,
           &SYSPARAM_NAMESERVER.replicate_wait_time_,
           &SYSPARAM_NAMESERVER.compact_delete_ratio_,
-          &SYSPARAM_NAMESERVER.compact_max_load_,
+          &SYSPARAM_NAMESERVER.compact_task_ratio_,
           &SYSPARAM_NAMESERVER.compact_time_lower_,
           &SYSPARAM_NAMESERVER.compact_time_upper_,
           &SYSPARAM_NAMESERVER.max_task_in_machine_nums_,
@@ -598,7 +598,7 @@ namespace tfs
       int32_t loop = 0, sleep_time = 0;
       uint64_t block_start = 0;
       time_t  now = 0, current = 0;
-      int64_t need = 0, family_start = 0;
+      int64_t need = 0, family_start = 0, max_compact_task_count = 0;
       const int32_t MAX_QUERY_FAMILY_NUMS = 32;
       const int32_t MAX_QUERY_BLOCK_NUMS = 4096 * 4;
       const int32_t MIN_SLEEP_TIME_US= 5000;
@@ -634,10 +634,13 @@ namespace tfs
 
           now = Func::get_monotonic_time();
 
+          need = SYSPARAM_NAMESERVER.max_replication_ > 1 ? need / SYSPARAM_NAMESERVER.max_replication_ : need / 2;
+          max_compact_task_count = need > 0 ? (need * SYSPARAM_NAMESERVER.compact_task_ratio_) / 100 : 0;
+
           query_helper.clear();
-          scan_illegal_block_(query_helper, MAX_QUERY_BLOCK_NUMS, now);
           if (need > 0)
           {
+            scan_illegal_block_(query_helper, MAX_QUERY_BLOCK_NUMS, now);
             scan_replicate_queue_(need, now);
           }
 
@@ -655,7 +658,7 @@ namespace tfs
           if (need > 0)
           {
             now = Func::get_monotonic_time();
-            over = scan_block_(results, need, block_start, MAX_QUERY_BLOCK_NUMS, now, compact_time, marshalling_time, adjust_copies_location_time);
+            over = scan_block_(results, need, block_start, max_compact_task_count, MAX_QUERY_BLOCK_NUMS, now, compact_time, marshalling_time, adjust_copies_location_time);
             if (over)
               block_start = 0;
           }
@@ -677,7 +680,7 @@ namespace tfs
             const int64_t marshalling_queue_size = get_family_manager().get_marshalling_queue_size();
             TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, emergency_replicate_queue: %"PRI64_PREFIX"d, reinsate or dissolve queue: %"PRI64_PREFIX"d, marshalling queue: %"PRI64_PREFIX"d",
               need, replicate_queue_size, reinsate_or_dissolve_queue_size, marshalling_queue_size);
-            get_task_manager().dump(TBSYS_LOG_LEVEL_INFO, "task manager all queues information: ");
+            get_task_manager().dump(TBSYS_LOG_LEVEL_DEBUG, "task manager all queues information: ");
             get_family_manager().dump_marshalling_queue(TBSYS_LOG_LEVEL_INFO, "marshalling queue information: ");
           }
         }
@@ -1800,7 +1803,7 @@ namespace tfs
       return server_manager_.size() - task_manager_.get_running_server_size();
     }
 
-    bool LayoutManager::scan_block_(ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, const int32_t max_query_block_num,
+    bool LayoutManager::scan_block_(ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, int64_t& max_compact_task_count, const int32_t max_query_block_num,
           const time_t now, const bool compact_time, const bool marshalling_time, const bool adjust_copies_location_time)
     {
       results.clear();
@@ -1820,10 +1823,13 @@ namespace tfs
         ret = (!ret && adjust_copies_location_time && (plan_run_flag_ & PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION)
             && get_block_manager().need_adjust_copies_location(copies_location,block,now));
         ret = ((ret) && (ret == build_adjust_copies_location_task_(copies_location, block, now)));
-        ret = (!ret && compact_time && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT)
+        ret = (!ret && compact_time && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT) && max_compact_task_count > 0
             && get_block_manager().need_compact(block,now));
         if ((ret) && (TFS_SUCCESS == (ret = build_compact_task_(block, now))))
+        {
           --need;
+          --max_compact_task_count;
+        }
         ret = (!ret && marshalling_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
             && get_block_manager().need_marshalling(block, now));
         if (ret)
