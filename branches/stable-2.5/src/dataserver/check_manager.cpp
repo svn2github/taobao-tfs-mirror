@@ -348,7 +348,7 @@ namespace tfs
       for ( ; iter != left.end(); iter++)
       {
         // deleted or invalid, ignore
-        if (iter->status_ & (FI_DELETED | FI_INVALID))
+        if (iter->status_ & FI_DELETED)
         {
           TBSYS_LOG(DEBUG, "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u has been deleted.",
               block_id, iter->id_);
@@ -379,7 +379,10 @@ namespace tfs
       set<FileInfoV2, FileInfoCompare>::iterator it = files.begin();
       for ( ; it != files.end(); it++)
       {
-        less.push_back(*it);
+        if (!(iter->status_ & FI_DELETED))
+        {
+          less.push_back(*it);
+        }
       }
     }
 
