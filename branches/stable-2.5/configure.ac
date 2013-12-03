@@ -246,6 +246,7 @@ AC_CONFIG_FILES([Makefile
                  src/adminserver/Makefile
                  src/new_client/Makefile
                  src/clientv2/Makefile
+                 src/requester/Makefile
                  src/common/Makefile
                  src/common/mysql_cluster/Makefile
                  src/dataserver/Makefile

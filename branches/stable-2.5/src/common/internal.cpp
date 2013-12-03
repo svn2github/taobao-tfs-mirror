@@ -2674,6 +2674,7 @@ namespace tfs
       buf.file_id_ = info.id_;
       buf.offset_ = info.offset_;
       buf.size_ = info.size_ - FILEINFO_EXT_SIZE;//通过blockid从ds批量拉取fileinfo会比数据实际大小多这4个字节
+      buf.usize_ = buf.size_;
       buf.modify_time_ = info.modify_time_;
       buf.create_time_ = info.create_time_;
       buf.flag_ = info.status_;
@@ -2689,7 +2690,6 @@ namespace tfs
       buf.create_time_ = info.create_time_;
       buf.status_ = info.flag_;
       buf.crc_    = info.crc_;
-      buf.usize_  = 0;
    }
   } /** nameserver **/
 }/** tfs **/
