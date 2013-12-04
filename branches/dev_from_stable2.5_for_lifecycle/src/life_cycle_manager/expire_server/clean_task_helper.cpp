@@ -31,7 +31,7 @@ namespace tfs
     const int32_t SCAN_LIMIT = 1000;
     const int32_t SEC_ONE_DAY = 24 * 60 * 60;
     const int32_t MAX_INT32 = (1<<31) - 1;
-    const char del = '^';
+    const char del = '/';
 
     enum
     {
@@ -303,25 +303,25 @@ namespace tfs
                     }
                     else if (file_len > 0)
                     {
-                      //file_name like appid/uid/aa/bb
+                      //file_name like appid/uid/file/aa/bb
                       string::size_type pos = 0;
-                      string::size_type begin = string::npos;
-                      string::size_type end = string::npos;
+                      string::size_type uid_pos = string::npos;
+                      string::size_type metaname_pos = string::npos;
+
                       int i = 0;
                       TBSYS_LOG(INFO, "file_name: %s", t_file_name.c_str());
-                      while(1)
+                      for (i = 0; i < 3; ++i)
                       {
                         pos = t_file_name.find_first_of(del, pos);
                         if (pos != string::npos)
                         {
                           if (i == 0)
                           {
-                            begin = pos;
-                            i++;
+                            uid_pos = pos;
                           }
-                          else if (i == 1)
+                          else if (i == 2)
                           {
-                            end = pos;
+                            metaname_pos = pos;
                             break;
                           }
                           pos++;
@@ -333,15 +333,23 @@ namespace tfs
                         }
                       }
 
-                      if (begin != string::npos && end != string::npos)
+                      if (uid_pos != string::npos && metaname_pos != string::npos)
                       {
-                        int64_t uid = atol(t_file_name.substr(begin + 1, end - begin - 1).c_str());
-                        string meta_name = t_file_name.substr(end, file_len - end);
-                        TBSYS_LOG(INFO, "uid: %"PRI64_PREFIX"d, meta_name: %s", uid, meta_name.c_str());
-                        //ret = restful_client_.rm_file(uid, meta_name.c_str(), t_appkey.c_str());
+                        int64_t appid = atoll(t_file_name.c_str());
+                        int64_t uid = atoll(t_file_name.c_str() + uid_pos + 1);
+                        //string meta_name = t_file_name.substr(metaname_pos, file_len - metaname_pos);
+                        TBSYS_LOG(INFO, "appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, meta_name: %s",
+                                  appid, uid, t_file_name.c_str() + metaname_pos);
+                        if (appid < 0 || uid < 0)
+                        {
+                            TBSYS_LOG(ERROR, "error appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, meta_name: %s",
+                                      appid, uid, t_file_name.c_str() + metaname_pos);
+                            continue;
+                        }
+                        ret = restful_client_.rm_file(uid, t_file_name.c_str() + metaname_pos, t_appkey.c_str(), appid);
                       }
-                    }
-                  }
+                    }//else if() custom
+                  }//for
 
                   TBSYS_LOG(DEBUG, "this time result_size is: %d", result_size);
 
