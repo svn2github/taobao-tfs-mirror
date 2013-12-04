@@ -42,7 +42,7 @@ namespace tfs
           stop_ = true;
         }
 
-        void reload(const int flag)
+        virtual void reload(const int flag)
         {
           if (flag == 1)
           {
@@ -55,7 +55,7 @@ namespace tfs
               interval_ms_ -= 1000;
             }
           }
-          TBSYS_LOG(INFO, "set interval to %d ms", interval_ms_);
+          TBSYS_LOG(INFO, "set interval to %d ms, flag: %d", interval_ms_, flag);
         }
 
         // argument passed by -s
@@ -92,12 +92,12 @@ namespace tfs
         }
 
         // argument passed by -m
-        uint32_t get_timestamp() const
+        int32_t get_timestamp() const
         {
           return timestamp_;
         }
 
-        void set_timestamp(const uint32_t timestamp)
+        void set_timestamp(const int32_t timestamp)
         {
           timestamp_ = timestamp;
         }
@@ -190,7 +190,7 @@ namespace tfs
         std::string dest_addr_;
         std::string extra_arg_;
         int32_t retry_count_;
-        uint32_t timestamp_;
+        int32_t timestamp_;
         int32_t interval_ms_;
         FILE* succ_fp_;
         FILE* fail_fp_;
@@ -240,7 +240,7 @@ namespace tfs
         }
 
         // argument passed by -m
-        uint32_t get_timestamp() const
+        int32_t get_timestamp() const
         {
           return timestamp_;
         }
@@ -249,6 +249,21 @@ namespace tfs
         int32_t get_interval_ms() const
         {
           return interval_ms_;
+        }
+
+        int32_t get_type() const
+        {
+          return type_;
+        }
+
+        bool get_force() const
+        {
+          return force_;
+        }
+
+        const std::string& get_dest_addr_path() const
+        {
+          return dest_addr_path_;
         }
 
         FILE* get_succ_fp()
@@ -268,9 +283,12 @@ namespace tfs
         std::string output_dir_;
         std::string extra_arg_;
         std::string log_level_;
+        std::string dest_addr_path_;
         int32_t retry_count_;
-        uint32_t timestamp_;
+        int32_t timestamp_;
         int32_t interval_ms_;
+        int32_t type_;
+        bool force_;
         FILE* succ_fp_;
         FILE* fail_fp_;
 

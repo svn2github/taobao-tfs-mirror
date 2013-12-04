@@ -205,6 +205,7 @@ namespace tfs
     static const int32_t MAX_MAIN_AND_EXT_BLOCK_SIZE = 320 * 1024 * 1024;
 
     static const int32_t MAX_SINGLE_FILE_SIZE = 16 * 1024 * 1024;//16MB
+    static const int32_t MAX_TRANSFER_FILE_SIZE = 4 * 1024 * 1024;
 
     enum VersionStep
     {
@@ -1305,6 +1306,9 @@ namespace tfs
     //static const int32_t RAW_META_SIZE = sizeof(RawMeta);
     static const int32_t INDEX_HEADER_V2_LENGTH = sizeof(IndexHeaderV2);
     static const int32_t FILE_INFO_V2_LENGTH    = sizeof(FileInfoV2);
+
+   extern void FileInfoV2ToFileStat(const FileInfoV2& info, TfsFileStat& buf);
+   extern void FileStatToFileInfoV2(const TfsFileStat& info, FileInfoV2& buf);
 
     enum identify_id
     {

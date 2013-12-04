@@ -28,6 +28,13 @@ namespace tfs
         static int read_block_index(const uint64_t ds_id,
             const uint64_t block_id, const uint64_t attach_block_id,
             common::IndexDataV2& index_data);
+        static int read_raw_data(const uint64_t server, const uint64_t block,
+            const int64_t traffic, const int64_t total_size, tbnet::DataBuffer& data);
+        static int recombine_raw_data(const common::IndexDataV2& sindex, tbnet::DataBuffer& sbuf,
+        common::IndexDataV2& dindex, tbnet::DataBuffer& dbuf, std::vector<common::FileInfoV2>& nosync_files);
+        static int write_raw_data(tbnet::DataBuffer& buf, const uint64_t block, const uint64_t server, const int32_t traffic = 4 * 1024 * 1024);
+        static int write_raw_index(const common::IndexDataV2& index_data, const uint64_t block, const uint64_t server);
+        static int remove_block(const uint64_t block, const std::string& addr, const bool tmp);
     };
   }
 }

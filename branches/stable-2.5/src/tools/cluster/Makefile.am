@@ -5,8 +5,9 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -lsnappy
 
-bin_PROGRAMS = sync_by_blk sync_by_log sync_by_file transfer_by_file block_tool calc_ip_addr sync_by_blkv2 sync_by_filev2 block_toolv2
+bin_PROGRAMS = calc_ip_addr transfer  split_item_tool
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
+  $(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
   $(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
@@ -21,7 +22,9 @@ sync_by_blk_SOURCES =  sync_by_blk.cpp sync_file_base.cpp sync_file_base.h
 sync_by_log_SOURCES =  sync_by_log.cpp sync_file_base.cpp sync_file_base.h
 sync_by_file_SOURCES =  sync_by_file.cpp sync_file_base.cpp sync_file_base.h
 
-sync_by_blkv2_SOURCES =  sync_by_blk_v2.cpp sync_file_base_v2.cpp sync_file_base_v2.h
+transfer_SOURCES =  transfer.cpp 
+split_item_tool_SOURCES = split_item_tool.cpp 
+
 sync_by_filev2_SOURCES =  sync_by_file_v2.cpp sync_file_base_v2.cpp sync_file_base_v2.h
 
 transfer_by_file_SOURCES = transfer_by_file.cpp sync_file_base.h

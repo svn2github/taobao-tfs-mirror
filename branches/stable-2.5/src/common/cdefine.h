@@ -102,6 +102,7 @@ typedef enum
 
 typedef enum
 {
+  F_FAMILY_INFO_NONE = 0,
   F_FAMILY_INFO = 1
 } OpenFlag;
 

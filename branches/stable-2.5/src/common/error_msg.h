@@ -288,6 +288,11 @@ namespace tfs
     // life cycle manager related
     const int32_t EXIT_LIFE_CYCLE_INFO_EXIST = -18000;
 
+
+    //sync file
+    const int32_t EXIT_SYNC_FILE_PART_SUCCESSFUL = -20000;
+    const int32_t EXIT_FILE_COUNT_CONFLICT_ERROR = -20001;
+    const int32_t EXIT_SYNC_FILE_NOTHING = -20002;
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_
