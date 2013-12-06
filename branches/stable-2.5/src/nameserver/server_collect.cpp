@@ -240,7 +240,7 @@ namespace tfs
     int ServerCollect::choose_writable_block_(uint64_t& result) const
     {
       result = INVALID_BLOCK_ID;
-      RWLock::Lock lock(mutex_, READ_LOCKER);
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       int32_t ret = !hold_master_->empty() ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
       if (TFS_SUCCESS == ret)
       {
