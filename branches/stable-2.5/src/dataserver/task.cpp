@@ -242,7 +242,11 @@ namespace tfs
 
       // post repsonse to master ds, won't care result
       NewClient* client = NewClientManager::get_instance().create_client();
-      post_msg_to_server(source_id_, client, &resp_cpt_msg, Task::ds_task_callback);
+      int ret = post_msg_to_server(source_id_, client, &resp_cpt_msg, Task::ds_task_callback);
+      if (TFS_SUCCESS != ret)
+      {
+        NewClientManager::get_instance().destroy_client(client);
+      }
 
       service_.get_task_manager().remove_block(this);
 
@@ -593,7 +597,11 @@ namespace tfs
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
 
       NewClient* client = NewClientManager::get_instance().create_client();
-      post_msg_to_server(source_id_, client, &resp_repl_msg, Task::ds_task_callback);
+      int ret = post_msg_to_server(source_id_, client, &resp_repl_msg, Task::ds_task_callback);
+      if (TFS_SUCCESS != ret)
+      {
+        NewClientManager::get_instance().destroy_client(client);
+      }
 
       service_.get_task_manager().remove_block(this);
       return TFS_SUCCESS;
