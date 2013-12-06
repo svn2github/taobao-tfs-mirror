@@ -195,7 +195,7 @@ class WorkThread: public tbutil::Thread
    int repair_file(const uint64_t server_id, const uint64_t block_id, const FileInfo& finfo, const string& name)
    {
      int ret = TFS_SUCCESS;
-     if (!((finfo.flag_ & FI_DELETED) || (finfo.flag_ & FI_INVALID)))
+     if (!(finfo.flag_ & FI_DELETED))
      {
        char tfs_name[TFS_FILE_LEN];
        char* data = new (std::nothrow) char[finfo.size_];

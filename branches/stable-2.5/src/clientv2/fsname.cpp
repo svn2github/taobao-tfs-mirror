@@ -98,7 +98,7 @@ namespace tfs
           else
           {
             file_name_len = FILE_NAME_LEN_V2;
-            decode(file_name + 3, (char*) &filev2_, file_name_len - 2);
+            decode(file_name + 3, (char*) &filev2_, file_name_len - 3);
           }
 
           if (NULL == suffix)

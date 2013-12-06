@@ -55,7 +55,7 @@ class ListFileWorker : public BaseWorker
         vector<FileInfo>::iterator iter = finfos.begin();
         for ( ; iter != finfos.end(); iter++)
         {
-          if (!(iter->flag_ & (FI_DELETED | FI_INVALID)))
+          if (!(iter->flag_ & FI_DELETED))
           {
             FSName fsname(block_id, iter->id_);
             fprintf(result_fp, "%s\n", fsname.get_name());
