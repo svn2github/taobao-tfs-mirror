@@ -39,7 +39,7 @@ namespace tfs
     static const int32_t SERVER_SLOT_INIT_SIZE = 1024;
     static const int32_t SERVER_SLOT_EXPAND_DEFAULT = 1024;
     static const float   SERVER_SLOT_EXPAND_RATION_DEFAULT = 0.1;
-    static const int32_t MAX_BLOCK_CHUNK_NUMS = 1024;
+    static const int32_t MAX_BLOCK_CHUNK_NUMS = 10240;
     static const int32_t DEFAULT_NETWORK_RETRY_TIMES = 2;
     static const int32_t CHECK_TIME_RESERVE = 10000; // mill seconds
 
@@ -54,21 +54,20 @@ namespace tfs
       group_seq_(0),
       max_dispatch_num_(0),
       seqno_(0),
+      turn_(1),
       stop_(false)
     {
-      all_blocks_ = new (std::nothrow) BLOCK_MAP[MAX_BLOCK_CHUNK_NUMS];
+      all_blocks_ = new (std::nothrow) BlockSlot[MAX_BLOCK_CHUNK_NUMS];
       assert(NULL != all_blocks_);
-      bmutex_ = new (std::nothrow) Mutex[MAX_BLOCK_CHUNK_NUMS];
-      assert(NULL != bmutex_);
     }
 
     CheckManager::~CheckManager()
     {
       for (int index = 0; index < MAX_BLOCK_CHUNK_NUMS; index++)
       {
-        Mutex::Lock lock(bmutex_[index]);
-        BLOCK_MAP_ITER bit = all_blocks_[index].begin();
-        for ( ; bit != all_blocks_[index].end(); bit++)
+        Mutex::Lock lock(all_blocks_[index].mutex_);
+        BLOCK_MAP_ITER bit = all_blocks_[index].blocks_.begin();
+        for ( ; bit != all_blocks_[index].blocks_.end(); bit++)
         {
           // tbsys::gDelete(*bit);
           delete(*bit);
@@ -82,7 +81,6 @@ namespace tfs
       }
 
       tbsys::gDeleteA(all_blocks_);
-      tbsys::gDeleteA(bmutex_);
       tbsys::gDelete(server_helper_);
       if (NULL != result_fp_)
       {
@@ -98,9 +96,9 @@ namespace tfs
       // keep block, but clear server list
       for (int index = 0; index < MAX_BLOCK_CHUNK_NUMS; index++)
       {
-        tbutil::Mutex::Lock lock(bmutex_[index]);
-        BLOCK_MAP_ITER iter = all_blocks_[index].begin();
-        for ( ; iter != all_blocks_[index].end(); iter++)
+        tbutil::Mutex::Lock lock(all_blocks_[index].mutex_);
+        BLOCK_MAP_ITER iter = all_blocks_[index].blocks_.begin();
+        for ( ; iter != all_blocks_[index].blocks_.end(); iter++)
         {
           (*iter)->reset();
         }
@@ -121,7 +119,7 @@ namespace tfs
       return seqno_;
     }
 
-    const BLOCK_MAP* CheckManager::get_blocks() const
+    const BlockSlot* CheckManager::get_blocks() const
     {
       return all_blocks_;
     }
@@ -131,14 +129,17 @@ namespace tfs
       return &all_servers_;
     }
 
-    int64_t CheckManager::get_block_size() const
+    void CheckManager::get_block_size(int64_t& total, int64_t& succ, int64_t& fail) const
     {
-      int64_t total = 0;
+      total = 0;
+      succ = 0;
+      fail = 0;
       for (int index = 0; index < MAX_BLOCK_CHUNK_NUMS; index++)
       {
-        total += all_blocks_[index].size();
+        total += all_blocks_[index].blocks_.size();
+        succ += all_blocks_[index].succ_count_;
+        fail += all_blocks_[index].fail_count_;
       }
-      return total;
     }
 
     int32_t CheckManager::get_server_size() const
@@ -168,14 +169,14 @@ namespace tfs
     {
       int32_t slot = block_id % MAX_BLOCK_CHUNK_NUMS;
       BlockObject query(block_id);
-      tbutil::Mutex::Lock lock(bmutex_[slot]);
-      BLOCK_MAP_ITER iter = all_blocks_[slot].find(&query);
-      if (iter == all_blocks_[slot].end())
+      tbutil::Mutex::Lock lock(all_blocks_[slot].mutex_);
+      BLOCK_MAP_ITER iter = all_blocks_[slot].blocks_.find(&query);
+      if (iter == all_blocks_[slot].blocks_.end())
       {
         BlockObject* block = new (std::nothrow) BlockObject(block_id);
         assert(NULL != block);
         block->add_server(server_id);
-        all_blocks_[slot].insert(block);
+        all_blocks_[slot].blocks_.insert(block);
       }
       else
       {
@@ -359,6 +360,7 @@ namespace tfs
       vector<CheckResult>& result = message->get_result();
       TBSYS_LOG(INFO, "server %s report seqno %"PRI64_PREFIX"u finish %zd blocks",
             tbsys::CNetUtil::addrToString(server_id).c_str(), seqno, result.size());
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       if ((0 != seqno_) && (seqno == seqno_))
       {
         vector<CheckResult>::iterator iter = result.begin();
@@ -366,14 +368,23 @@ namespace tfs
         {
           int32_t slot = iter->block_id_ % MAX_BLOCK_CHUNK_NUMS;
           BlockObject query(iter->block_id_);
-          Mutex::Lock lock(bmutex_[slot]);
-          BLOCK_MAP_ITER bit = all_blocks_[slot].find(&query);
+          Mutex::Lock lock(all_blocks_[slot].mutex_);
+          BLOCK_MAP_ITER bit = all_blocks_[slot].blocks_.find(&query);
           if (TFS_SUCCESS == iter->status_)
           {
-            if (bit != all_blocks_[slot].end())  // remove succussfully checked block
+            if (bit != all_blocks_[slot].blocks_.end())
             {
-              all_blocks_[slot].erase(bit);
-              delete(*bit);
+              int8_t old_status = (*bit)->get_status();
+              (*bit)->set_status(BLOCK_STATUS_SUCC);
+              if (old_status == BLOCK_STATUS_INIT)
+              {
+                all_blocks_[slot].succ_count_++;
+              }
+              else if (old_status == BLOCK_STATUS_FAIL)
+              {
+                all_blocks_[slot].succ_count_++;
+                all_blocks_[slot].fail_count_--;
+              }
             }
 
             fprintf(result_fp_, "%-20"PRI64_PREFIX"u%-8d%-8d%-8d\n",
@@ -385,13 +396,19 @@ namespace tfs
             // reliever block ==> server relationship
             if (EXIT_NO_LOGICBLOCK_ERROR == iter->status_)
             {
-              if (bit != all_blocks_[slot].end())
+              if (bit != all_blocks_[slot].blocks_.end())
               {
+                int8_t old_status = (*bit)->get_status();
+                (*bit)->set_status(BLOCK_STATUS_FAIL);
+                if (old_status == BLOCK_STATUS_INIT);
+                {
+                  all_blocks_[slot].fail_count_++;
+                }
                 (*bit)->remove_server(server_id);
               }
             }
-            TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u check fail, server: %s, ret: %d",
-                iter->block_id_, tbsys::CNetUtil::addrToString(server_id).c_str(), iter->status_);
+            TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u check fail in turn %d, server: %s, ret: %d",
+                iter->block_id_, turn_, tbsys::CNetUtil::addrToString(server_id).c_str(), iter->status_);
           }
         }
       }
@@ -399,8 +416,6 @@ namespace tfs
       {
         TBSYS_LOG(WARN, "seqno not match %"PRI64_PREFIX"d:%"PRI64_PREFIX"d.", seqno, seqno_);
       }
-
-      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
 
       return TFS_SUCCESS;
     }
@@ -453,6 +468,8 @@ namespace tfs
     int CheckManager::check_blocks(const TimeRange& range)
     {
       int64_t total = 0;
+      int64_t succ = 0;
+      int64_t fail = 0;
       int ret = get_group_info();
       if (TFS_SUCCESS == ret)
       {
@@ -474,21 +491,17 @@ namespace tfs
 
       if (TFS_SUCCESS == ret && !stop_)
       {
-        for (int32_t retry = 0;
-            retry < SYSPARAM_CHECKSERVER.check_retry_turns_ && !stop_; retry++)
+        for (turn_ = 1;
+            turn_ <= SYSPARAM_CHECKSERVER.check_retry_turns_ && !stop_; turn_++)
         {
           if (TFS_SUCCESS == ret && !stop_)
           {
             ret = fetch_blocks(range);
             if (TFS_SUCCESS == ret)
             {
-              int64_t cur_size = get_block_size();
-              TBSYS_LOG(INFO, "turn %d has %"PRI64_PREFIX"d blocks",
-                  retry + 1, cur_size);
-              if (0 == retry)
-              {
-                total = cur_size;  // store total block size for log
-              }
+              get_block_size(total, succ, fail);
+              TBSYS_LOG(INFO, "turn_%d total: %"PRI64_PREFIX"d succ: %"PRI64_PREFIX"d fail: %"PRI64_PREFIX"d",
+                  turn_, total, succ, fail);
             }
           }
 
@@ -507,32 +520,34 @@ namespace tfs
             SYSPARAM_CHECKSERVER.block_check_cost_;
           int32_t wait_time_ms = max_dispatch_num_ * per_block_time + CHECK_TIME_RESERVE;
 
-          TBSYS_LOG(INFO, "seqno %"PRI64_PREFIX"u sleep %d millseconds to wait dataserver response",
-              seqno_, wait_time_ms);
-          usleep(wait_time_ms * 1000);
-
-          // if all blocks have been checked
-          if (0 == get_block_size())
+          int32_t elapsed_ms = 0;
+          while (elapsed_ms < wait_time_ms && !stop_)
           {
-            break;
+            sleep(1);
+            elapsed_ms += 1000;
+            // check progress every 30 seconds
+            if (elapsed_ms % 30000 == 0)
+            {
+              get_block_size(total, succ, fail);
+              TBSYS_LOG(INFO, "current check progress. "
+                "total: %"PRI64_PREFIX"d succ: %"PRI64_PREFIX"d fail: %"PRI64_PREFIX"d",
+                total, succ, fail);
+              if (succ + fail == total)
+              {
+                break;  // all dataserver has reported
+              }
+            }
+          }
+
+          if (succ == total)
+          {
+            break;  // all blocks have beed checked successfully
           }
         }
 
-        // log all blocks that check failed
-        int64_t fail_count = 0;
-        for (int32_t index = 0; index < MAX_BLOCK_CHUNK_NUMS; index++)
-        {
-          BLOCK_MAP_ITER iter = all_blocks_[index].begin();
-          for ( ; iter != all_blocks_[index].end(); iter++)
-          {
-            fail_count++;
-            TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u check failed finally.", (*iter)->get_block_id());
-          }
-        }
-
-        TBSYS_LOG(INFO, "CHECK RESULT: "
-            "start at %s. total: %"PRI64_PREFIX"d, fail count: %"PRI64_PREFIX"d",
-            Func::time_to_str(seqno_/1000000, 0).c_str(), total, fail_count);
+        TBSYS_LOG(INFO, "CHECK RESULT: start at %s. "
+            "total: %"PRI64_PREFIX"d, succ: %"PRI64_PREFIX"d, fail: %"PRI64_PREFIX"d",
+            Func::time_to_str(seqno_/1000000, 0).c_str(), total, succ, fail);
       }
 
       return ret;
@@ -662,12 +677,16 @@ namespace tfs
 
     void CheckManager::AssignBlockThread::run()
     {
-      const BLOCK_MAP* all_blocks = check_manager_.get_blocks();
+      const BlockSlot* all_blocks = check_manager_.get_blocks();
       for (int index = thread_seq_; index < MAX_BLOCK_CHUNK_NUMS; index += thread_count_)
       {
-        BLOCK_MAP_ITER bit = all_blocks[index].begin();
-        for ( ; bit != all_blocks[index].end(); bit++)
+        BLOCK_MAP_ITER bit = all_blocks[index].blocks_.begin();
+        for ( ; bit != all_blocks[index].blocks_.end(); bit++)
         {
+          if ((*bit)->get_status() == BLOCK_STATUS_SUCC)
+          {
+            continue;
+          }
           uint64_t server_id = check_manager_.assign_block(**bit);
 
           // assign fail, update block replica info from nameserver

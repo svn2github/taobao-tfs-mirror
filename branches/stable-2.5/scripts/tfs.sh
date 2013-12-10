@@ -36,7 +36,7 @@ UP_TIME=4
 DOWN_TIME=8
 
 #mysql related variable
-HOST="xx.xx.xx.xx"
+DB_HOST="xx.xx.xx.xx"
 DB_USER="db_user"
 DB_PASS="db_pass"
 DB_NAME="db_name"
@@ -68,7 +68,7 @@ print_usage()
 mysql_op()
 {
   sql_express=$1
-  mysql -h$HOST -u$DB_USER -p$DB_PASS << EOF
+  mysql -h$DB_HOST -u$DB_USER -p$DB_PASS << EOF
   use $DB_NAME;
   $sql_express;
   QUIT
