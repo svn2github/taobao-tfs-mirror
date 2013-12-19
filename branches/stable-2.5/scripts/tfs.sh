@@ -67,8 +67,11 @@ print_usage()
 #$1: sql
 mysql_op()
 {
+  dbhost=`echo $DB_HOST | awk -F ':' 'NF == 1 { print $1":3306"; } NF != 1 {print $0;}'`
+  host=`echo $dbhost | awk -F ':' '{print $1}'`
+  port=`echo $dbhost | awk -F ':' '{print $2}'`
   sql_express=$1
-  mysql -h$DB_HOST -u$DB_USER -p$DB_PASS << EOF
+  mysql -h$host -P$port -u$DB_USER -p$DB_PASS << EOF
   use $DB_NAME;
   $sql_express;
   QUIT
@@ -215,7 +218,7 @@ get_index_from_db()
 {
   host=$1
   local ds_index_list=""
-  ret=`mysql_op "select ds_index_list from tfs_machine where ip=\"$host\""`
+  ret=`mysql_op "select index_list from t_machine_info where ip=\"$host\""`
   if [ -n "$ret" ]
   then
     ds_index_list=`echo $ret | awk '{print $NF}'`
