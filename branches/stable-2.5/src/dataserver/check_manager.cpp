@@ -156,7 +156,7 @@ namespace tfs
       rsp_msg.set_server_id(info.information_.id_);
       check_block(param, rsp_msg.get_result());
 
-      TBSYS_LOG(DEBUG, "report check status to %s, senqo: %"PRI64_PREFIX"d",
+      TBSYS_LOG(INFO, "report check status to %s, senqo: %"PRI64_PREFIX"d",
           tbsys::CNetUtil::addrToString(param.cs_id_).c_str(), param.seqno_);
 
       NewClient* client = NewClientManager::get_instance().create_client();

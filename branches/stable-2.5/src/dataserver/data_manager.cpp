@@ -39,6 +39,11 @@ namespace tfs
     {
     }
 
+    void DataManager::initialize()
+    {
+      return lease_manager_.initialize();
+    }
+
     inline BlockManager& DataManager::get_block_manager()
     {
       return service_.get_block_manager();

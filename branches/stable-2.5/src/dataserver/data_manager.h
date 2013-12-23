@@ -34,6 +34,7 @@ namespace tfs
       public:
         explicit DataManager(DataService& service);
         ~DataManager();
+        void initialize();
 
       public:
         /** lease management */

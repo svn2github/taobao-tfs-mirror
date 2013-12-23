@@ -131,6 +131,7 @@ namespace tfs
     public:
       LeaseManager();
       virtual ~LeaseManager();
+      void initialize();
 
       void generation(LeaseId& lease_id, const int64_t now_us, const int8_t type, const common::VUINT64& servers);
       int get(const LeaseId& lease_id, const int64_t now_us, Lease*& lease) const;

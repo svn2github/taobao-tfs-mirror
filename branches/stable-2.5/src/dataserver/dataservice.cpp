@@ -295,6 +295,13 @@ namespace tfs
         ret = heart_manager_->initialize();
       }
 
+      // init data_manager/lease_manager
+      // lease manager need global info, should init after heart manager
+      if (TFS_SUCCESS == ret)
+      {
+        data_manager_.initialize();
+      }
+
       if (TFS_SUCCESS == ret)
       {
         task_thread_      = new (std::nothrow)RunTaskThreadHelper(*this);

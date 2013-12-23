@@ -196,7 +196,11 @@ namespace tfs
 
     }
 
-    LeaseManager::LeaseManager()
+    LeaseManager::LeaseManager():base_lease_id_(0)
+    {
+    }
+
+    void LeaseManager::initialize()
     {
       uint64_t self_id = DsRuntimeGlobalInformation::instance().information_.id_;
       uint32_t ip = self_id & 0xFFFFFFFF;
