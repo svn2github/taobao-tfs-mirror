@@ -5,7 +5,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -lsnappy
 
-bin_PROGRAMS = calc_ip_addr transfer split_item_tool block_tool_v2
+bin_PROGRAMS = calc_ip_addr transfer split_item_tool block_toolv2
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
   $(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
@@ -17,10 +17,10 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(TBLIB_ROOT)/lib/libtbnet.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a
 
-transfer_SOURCES =  transfer.cpp transfer.h
+transfer_SOURCES=transfer.cpp transfer.h
 
-split_item_tool_SOURCES = split_item_tool.cpp 
+split_item_tool_SOURCES=split_item_tool.cpp 
 
-block_toolv2_SOURCES = block_tool_v2.cpp
+block_toolv2_SOURCES=block_tool_v2.cpp
 
-calc_ip_addr_SOURCES= calc_ip_addr.cpp
+calc_ip_addr_SOURCES=calc_ip_addr.cpp
