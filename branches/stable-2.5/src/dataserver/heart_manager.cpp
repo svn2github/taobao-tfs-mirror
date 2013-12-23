@@ -156,6 +156,8 @@ namespace tfs
               heart_interval = resp_hb_msg->get_heart_interval();
               info.max_mr_network_bandwidth_mb_ = resp_hb_msg->get_max_mr_network_bandwith_mb();
               info.max_rw_network_bandwidth_mb_ = resp_hb_msg->get_max_rw_network_bandwith_mb();
+              info.enable_old_interface_ = resp_hb_msg->get_enable_old_interface();
+              info.enable_version_conflict_ = resp_hb_msg->get_enable_version_conflict();
               int32_t status = resp_hb_msg->get_status();
               if (HEART_MESSAGE_OK != status)
               {

@@ -1052,7 +1052,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[50];
+    extern const char* dynamic_parameter_str[53];
 
     #pragma pack (1)
     struct FileInfoV2//30
@@ -1275,6 +1275,18 @@ namespace tfs
       SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_NONE = 0,
       SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_SWITCH,
       SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_IMMEDIATELY
+    };
+
+    enum EnableOldInterfaceFlag
+    {
+      ENABLE_OLD_INTERFACE_FLAG_NO = 0,
+      ENABLE_OLD_INTERFACE_FLAG_YES = 1
+    };
+
+    enum EnableVersionconflictFlag
+    {
+      ENABLE_VERSION_CONFLICT_FLAG_NO = 0,
+      ENABLE_VERSION_CONFLICT_FLAG_YES = 1
     };
 
     // defined type typedef

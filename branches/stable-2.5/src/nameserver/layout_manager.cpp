@@ -526,7 +526,10 @@ namespace tfs
           &SYSPARAM_NAMESERVER.compact_family_member_ratio_,
           &SYSPARAM_NAMESERVER.max_single_machine_network_bandwith_,
           &SYSPARAM_NAMESERVER.write_file_check_copies_complete_,
-          &SYSPARAM_NAMESERVER.choose_target_server_retry_max_nums_
+          &SYSPARAM_NAMESERVER.choose_target_server_retry_max_nums_,
+          &SYSPARAM_NAMESERVER.max_marshalling_num_,
+          &SYSPARAM_NAMESERVER.enable_old_interface_,
+          &SYSPARAM_NAMESERVER.enable_version_conflict_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
@@ -598,7 +601,7 @@ namespace tfs
       int32_t loop = 0, sleep_time = 0;
       uint64_t block_start = 0;
       time_t  now = 0, current = 0;
-      int64_t need = 0, family_start = 0, max_compact_task_count = 0;
+      int64_t need = 0, family_start = 0, max_compact_task_count = 0, max_marshalling_num = SYSPARAM_NAMESERVER.max_marshalling_num_;
       const int32_t MAX_QUERY_FAMILY_NUMS = 32;
       const int32_t MAX_QUERY_BLOCK_NUMS = 4096 * 4;
       const int32_t MIN_SLEEP_TIME_US= 5000;
@@ -636,6 +639,7 @@ namespace tfs
 
           need = SYSPARAM_NAMESERVER.max_replication_ > 1 ? need / SYSPARAM_NAMESERVER.max_replication_ : need / 2;
           max_compact_task_count = need > 0 ? (need * SYSPARAM_NAMESERVER.compact_task_ratio_) / 100 : 0;
+          max_marshalling_num = SYSPARAM_NAMESERVER.max_marshalling_num_;
 
           query_helper.clear();
           if (need > 0)
@@ -669,9 +673,11 @@ namespace tfs
               family_start = 0;
           }
 
-          if (need > 0 && reinsate_or_dissolve_queue_size <= 0 && replicate_queue_size <= 0)
+          if (need > 0 && reinsate_or_dissolve_queue_size <= 0 && replicate_queue_size <= 0 && max_marshalling_num > 0)
           {
-            build_marshalling_(need, now);
+            int32_t rt = build_marshalling_(need, now);
+            if (TFS_SUCCESS == rt)
+              --max_marshalling_num;
           }
 
           if (loop >= MAX_LOOP_NUMS)

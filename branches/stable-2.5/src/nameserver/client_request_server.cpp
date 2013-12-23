@@ -747,14 +747,25 @@ namespace tfs
         ret = manager_.get_oplog_sync_mgr().del_family(info.value3_);
         if (TFS_SUCCESS == ret)
         {
-          std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
-          common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
-          ret = manager_.get_family_manager().get_members(helper, info.value3_);
+          int32_t family_aid_info = 0;
+          std::pair<uint64_t, uint64_t> members[MAX_MARSHALLING_NUM];
+          common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MAX_MARSHALLING_NUM, members);
+          ret = manager_.get_family_manager().get_members(helper, family_aid_info, info.value3_);
           if (TFS_SUCCESS == ret)
           {
-            for (int i = 0; i < helper.get_array_index(); i++)
+            int32_t index = 0;
+            const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info);
+            const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family_aid_info);
+            const int32_t MEMBER_NUM = DATA_MEMBER_NUM + CHECK_MEMBER_NUM;
+            for (index = 0; index < MEMBER_NUM; ++index)
             {
-              manager_.get_block_manager().update_family_id(helper.at(i)->first, INVALID_FAMILY_ID);
+              std::pair<uint64_t, uint64_t>* item = helper.at(index);
+              assert(NULL != item);
+              manager_.get_block_manager().update_family_id(item->first, INVALID_FAMILY_ID);
+              if (index >= DATA_MEMBER_NUM)
+              {
+                manager_.get_block_manager().push_to_delete_queue(item->first, item->second);
+              }
             }
 
             GCObject* object = NULL;

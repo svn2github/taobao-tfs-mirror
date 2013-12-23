@@ -38,11 +38,17 @@ namespace tfs
         inline int32_t get_max_mr_network_bandwith_mb() const { return max_mr_network_bandwith_mb_;}
         inline void set_max_rw_network_bandwith_mb(const int32_t capacity) { max_rw_network_bandwith_mb_ = capacity;}
         inline int32_t get_max_rw_network_bandwith_mb() const { return max_rw_network_bandwith_mb_;}
+        inline int8_t get_enable_old_interface() const { return enable_old_interface_;}
+        inline void set_enable_old_interface(const int8_t flag) { enable_old_interface_ = flag;}
+        inline int8_t get_enable_version_conflict() const { return enable_version_conflict_;}
+        inline void set_enable_version_conflict(const int8_t flag) { enable_version_conflict_ = flag;}
       protected:
         int32_t status_;
         int32_t heart_interval_;
         int32_t max_mr_network_bandwith_mb_;
         int32_t max_rw_network_bandwith_mb_;
+        int8_t  enable_old_interface_;
+        int8_t  enable_version_conflict_;
     };
 
 #pragma pack(4)

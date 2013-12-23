@@ -68,6 +68,7 @@ namespace tfs
       int32_t max_data_member_num_;
       int32_t max_check_member_num_;
       int32_t max_marshalling_queue_timeout_;
+      int32_t max_marshalling_num_;
       int32_t move_task_expired_time_;
       int32_t compact_task_expired_time_;
       int32_t marshalling_task_expired_time_;
@@ -80,6 +81,8 @@ namespace tfs
       int32_t adjust_copies_location_time_lower_;
       int32_t adjust_copies_location_time_upper_;
       int32_t write_file_check_copies_complete_;
+      int32_t enable_old_interface_;
+      int32_t enable_version_conflict_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;
