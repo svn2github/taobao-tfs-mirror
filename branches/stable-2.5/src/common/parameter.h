@@ -237,6 +237,8 @@ namespace tfs
       int32_t check_flag_;
       int32_t check_reserve_time_;
       int32_t force_check_all_;
+      int32_t start_time_hour_;
+      int32_t start_time_min_;
 
       int initialize(const std::string& config_file);
 

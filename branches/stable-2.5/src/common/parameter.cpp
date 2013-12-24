@@ -528,6 +528,34 @@ namespace tfs
         force_check_all_ = config.getInt(CONF_SN_CHECKSERVER, CONF_FORCE_CHECK_ALL, 0);
       }
 
+      // start_time like 01:30
+      if (TFS_SUCCESS == ret)
+      {
+        start_time_hour_ = -1;
+        start_time_min_ = -1;
+        const char* start_time = config.getString(CONF_SN_CHECKSERVER, CONF_START_TIME, NULL);
+        if (NULL != start_time)
+        {
+          std::vector<std::string> time_parts;
+          common::Func::split_string(start_time, ':', time_parts);
+          if (2 == time_parts.size())
+          {
+            start_time_hour_ = atoi(time_parts[0].c_str());
+            start_time_min_ = atoi(time_parts[1].c_str());
+            if (start_time_hour_ >= 24 || start_time_min_ >= 59)
+            {
+              TBSYS_LOG(ERROR, "start time config invalid");
+              ret = TFS_ERROR;
+            }
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "start time config invalid");
+            ret = TFS_ERROR;
+          }
+        }
+      }
+
       if (TFS_SUCCESS == ret)
       {
         const char* self_ip = config.getString(CONF_SN_PUBLIC, CONF_IP_ADDR);
@@ -538,7 +566,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(DEBUG, "ip_addr or port config item not found");
+          TBSYS_LOG(ERROR, "ip_addr or port config item not found");
           ret = TFS_ERROR;
         }
       }

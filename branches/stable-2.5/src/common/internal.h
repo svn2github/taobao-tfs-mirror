@@ -1016,6 +1016,12 @@ namespace tfs
       SWITCH_BLOCK_YES
     };
 
+    enum UnlockFlag
+    {
+      UNLOCK_BLOCK_NO = 0,
+      UNLOCK_BLOCK_YES
+    };
+
     struct BlockMeta
     {
       uint64_t block_id_;

@@ -203,6 +203,7 @@ namespace tfs
 #define CONF_CHECK_FLAG                               "check_flag"
 #define CONF_CHECK_RESERVE_TIME                      "check_reserve_time"
 #define CONF_FORCE_CHECK_ALL                          "force_check_all"
+#define CONF_START_TIME                               "start_time"
 
 //kv meta server
 #define CONF_KV_DB_CONN                             "kv_db_conn"
