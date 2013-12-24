@@ -56,6 +56,11 @@ namespace tfs
       return service_.get_data_helper();
     }
 
+    inline TaskManager& ClientRequestServer::get_task_manager()
+    {
+      return service_.get_task_manager();
+    }
+
     int ClientRequestServer::handle(tbnet::Packet* packet)
     {
       int ret = (NULL == packet) ? EXIT_POINTER_NULL : TFS_SUCCESS;
@@ -1315,9 +1320,42 @@ namespace tfs
       return ret;
     }
 
+    // if lock_time larger than 0, lock block for lock_time
+    int ClientRequestServer::query_ec_meta(const uint64_t block_id,
+        ECMeta& ec_meta, const int32_t lock_time)
+    {
+      int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        if (lock_time > 0)
+        {
+          ret = get_task_manager().add_block(block_id, lock_time) ?
+            TFS_SUCCESS: EXIT_BLOCK_IN_TASK_QUEUE;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_manager().get_family_id(ec_meta.family_id_, block_id);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_manager().get_used_offset(ec_meta.used_offset_, block_id);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
+      }
+
+      return ret;
+    }
+
     int ClientRequestServer::query_ec_meta(message::QueryEcMetaMessage* message)
     {
       uint64_t block_id = message->get_block_id();
+      int32_t lock_time = message->get_lock_time();
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
@@ -1327,17 +1365,7 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          ret = get_block_manager().get_family_id(ec_meta.family_id_, block_id);
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          ret = get_block_manager().get_used_offset(ec_meta.used_offset_, block_id);
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          ret = get_block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
+          ret = query_ec_meta(block_id, ec_meta, lock_time);
         }
 
         if (TFS_SUCCESS != ret)
@@ -1355,12 +1383,9 @@ namespace tfs
       return ret;
     }
 
-    int ClientRequestServer::commit_ec_meta(message::CommitEcMetaMessage* message)
+    int ClientRequestServer::commit_ec_meta(const uint64_t block_id,
+        const ECMeta& ec_meta, const int8_t switch_flag, const int8_t unlock_flag)
     {
-      uint64_t block_id = message->get_block_id();
-      ECMeta& ec_meta = message->get_ec_meta();
-      int8_t switch_flag = message->get_switch_flag();
-
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
@@ -1406,6 +1431,25 @@ namespace tfs
           ret = get_block_manager().flush(block_id, false);
         }
 
+        if (unlock_flag)
+        {
+          get_task_manager().remove_block(block_id);
+        }
+      }
+      return ret;
+    }
+
+    int ClientRequestServer::commit_ec_meta(message::CommitEcMetaMessage* message)
+    {
+      uint64_t block_id = message->get_block_id();
+      ECMeta& ec_meta = message->get_ec_meta();
+      int8_t switch_flag = message->get_switch_flag();
+      int8_t unlock_flag = message->get_unlock_flag();
+
+      int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = commit_ec_meta(block_id, ec_meta, switch_flag, unlock_flag);
         if (TFS_SUCCESS == ret)
         {
           ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));

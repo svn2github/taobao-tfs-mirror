@@ -950,10 +950,18 @@ namespace tfs
       ECMeta ec_metas[data_num];
 
       int ret = TFS_SUCCESS;
+      bool need_unlock[data_num];
+      for (int i = 0; i < data_num; i++)
+      {
+        need_unlock[i] = false;
+      }
+
       for (int i = 0; (TFS_SUCCESS == ret) && (i < data_num); i++)
       {
+        // marshalling will lock all data blocks on query
         ret = get_data_helper().query_ec_meta(family_members_[i].server_,
-            family_members_[i].block_, ec_metas[i]);
+            family_members_[i].block_, ec_metas[i], expire_time_);
+        need_unlock[i] = (TFS_SUCCESS == ret);
       }
 
       // create parity block
@@ -982,9 +990,10 @@ namespace tfs
         {
           ec_metas[i].family_id_ = family_id_;
           // set used_offset as marshalling_offset for data node
+          // marshalling will unlock all data blocks on commit
           ec_metas[i].mars_offset_ = ec_metas[i].used_offset_;
           ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
-            family_members_[i].block_, ec_metas[i]);
+            family_members_[i].block_, ec_metas[i], SWITCH_BLOCK_NO, UNLOCK_BLOCK_YES);
         }
 
         ECMeta ec_meta;
@@ -994,6 +1003,21 @@ namespace tfs
         {
           ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
+        }
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        // just unlock all data blocks, ignore return value
+        // if fail, blocks will be expired by background thread
+        ECMeta zero;
+        for (int i = 0; i < data_num; i++)
+        {
+          if (need_unlock[i])
+          {
+            get_data_helper().commit_ec_meta(family_members_[i].server_,
+              family_members_[i].block_, zero, SWITCH_BLOCK_NO, UNLOCK_BLOCK_YES);
+          }
         }
       }
 
@@ -1048,12 +1072,19 @@ namespace tfs
       int ret = TFS_SUCCESS;
       bool lost_data = false;
       bool lost_check = false;
+      bool need_unlock[member_num];
+      for (int i = 0; i < member_num; i++)
+      {
+        need_unlock[i] = false;
+      }
       for (int i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
       {
         if (ErasureCode::NODE_ALIVE == family_members_[i].status_)
         {
+          // reinstate will lock all alive blocks used for decode
           ret = get_data_helper().query_ec_meta(family_members_[i].server_,
-              family_members_[i].block_, ec_metas[i]);
+              family_members_[i].block_, ec_metas[i], expire_time_);
+          need_unlock[i] = (TFS_SUCCESS == ret);
         }
         else if (ErasureCode::NODE_DEAD == family_members_[i].status_)
         {
@@ -1104,6 +1135,17 @@ namespace tfs
       if ((TFS_SUCCESS == ret) && lost_check)
       {
         ret = recover_check_index(ec_metas, marshalling_len);
+      }
+
+      // unlock all alive blocks used for decode
+      ECMeta zero;
+      for (int32_t i = 0; i < member_num; i++)
+      {
+        if (ErasureCode::NODE_ALIVE == erased_[i] && need_unlock[i])
+        {
+          get_data_helper().commit_ec_meta(family_members_[i].server_,
+              family_members_[i].block_, zero, SWITCH_BLOCK_NO, UNLOCK_BLOCK_YES);
+        }
       }
 
       return ret;

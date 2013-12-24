@@ -44,6 +44,7 @@ namespace tfs
         inline DataManager& get_data_manager();
         inline DataHelper& get_data_helper();
         inline TrafficControl& get_traffic_control();
+        inline TaskManager& get_task_manager();
 
         /** main entrance, dispatch task */
         int handle(tbnet::Packet* packet);
@@ -78,6 +79,12 @@ namespace tfs
         int write_index(message::WriteIndexMessageV2* message);
         int query_ec_meta(message::QueryEcMetaMessage* message);
         int commit_ec_meta(message::CommitEcMetaMessage* message);
+
+      public:
+        int query_ec_meta(const uint64_t block_id,
+            common::ECMeta& ec_meta, const int32_t lock_time);
+        int commit_ec_meta(const uint64_t block_id,
+            const common::ECMeta& ec_meta, const int8_t switch_flag, const int8_t unlock_flag);
 
         /** tool support interface */
       private:

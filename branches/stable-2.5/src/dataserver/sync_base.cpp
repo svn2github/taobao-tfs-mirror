@@ -56,8 +56,8 @@ namespace tfs
         assert(NULL != fail_file_queue_);
         if (type == SYNC_TO_TFS_MIRROR)
         {
-          // backup_ = new TfsMirrorBackup(*this, src_addr, dest_addr);    // sync to new version
-          backup_ = new TfsOldMirrorBackup(*this, src_addr, dest_addr); // sync to old version
+          backup_ = new TfsMirrorBackup(*this, src_addr, dest_addr);    // sync to new version
+          // backup_ = new TfsOldMirrorBackup(*this, src_addr, dest_addr); // sync to old version
         }
         TBSYS_LOG(INFO, "backup type: %d, construct result: %d", type, backup_ ? 1 : 0);
       }

@@ -95,6 +95,11 @@ namespace tfs
           return now >= start_time_ + expire_time_;
         }
 
+        int32_t get_expire_time() const
+        {
+          return expire_time_;
+        }
+
         /**
         * @brief translate error code to PlanStus
         *

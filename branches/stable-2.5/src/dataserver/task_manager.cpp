@@ -490,6 +490,8 @@ namespace tfs
        get_block_manager().get_gc_manager().add(*it);
      }
 
+     expire_block();
+
      TBSYS_LOG(DEBUG, "task manager expire task, old: %u, new: %u", old_size, new_size);
     }
 
@@ -665,7 +667,7 @@ namespace tfs
         {
           for (int32_t index = 0; index < helper.get_array_index(); index++)
           {
-            std::set<uint64_t>::iterator iter = running_blocks_.find(*helper.at(index));
+            std::map<uint64_t, int64_t>::iterator iter = running_blocks_.find(*helper.at(index));
             if (iter != running_blocks_.end())
             {
               // block already in task queue
@@ -677,9 +679,11 @@ namespace tfs
 
         if (ok) // all blocks are not in task queue
         {
+          int64_t now = Func::get_monotonic_time();
           for (int32_t index = 0; index < helper.get_array_index(); index++)
           {
-            running_blocks_.insert(*helper.at(index));
+            running_blocks_.insert(std::make_pair(*helper.at(index),
+                now + task->get_expire_time()));
           }
         }
       }
@@ -702,10 +706,47 @@ namespace tfs
       }
     }
 
+    bool TaskManager::add_block(const uint64_t block_id, const int32_t expire_time)
+    {
+      Mutex::Lock lock(running_blocks_mutex_);
+      std::map<uint64_t, int64_t>::iterator iter = running_blocks_.find(block_id);
+      bool ok = (iter == running_blocks_.end());
+      if (ok)
+      {
+        running_blocks_.insert(std::make_pair(block_id,
+              Func::get_monotonic_time() + expire_time));
+      }
+      return ok;
+    }
+
+    void TaskManager::remove_block(const uint64_t block_id)
+    {
+      Mutex::Lock lock(running_blocks_mutex_);
+      running_blocks_.erase(block_id);
+    }
+
     bool TaskManager::exist_block(const uint64_t block_id) const
     {
       Mutex::Lock lock(running_blocks_mutex_);
       return running_blocks_.find(block_id) != running_blocks_.end();
+    }
+
+    void TaskManager::expire_block()
+    {
+      int64_t now = Func::get_monotonic_time();
+      Mutex::Lock lock(running_blocks_mutex_);
+      std::map<uint64_t, int64_t>::iterator iter = running_blocks_.begin();
+      for ( ; iter != running_blocks_.end(); )
+      {
+        if (now > iter->second)
+        {
+          running_blocks_.erase(iter++);
+        }
+        else
+        {
+          iter++;
+        }
+      }
     }
 
   }

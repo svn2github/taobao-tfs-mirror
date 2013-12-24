@@ -109,6 +109,7 @@ namespace tfs
       inline TaskManager&  get_task_manager() { return task_manager_;}
       inline TrafficControl& get_traffic_control() { return traffic_control_;}
       inline std::vector<SyncBase*>& get_sync_mirror() { return sync_mirror_; }
+      inline ClientRequestServer& get_client_request_server() { return client_request_server_; }
 
       protected:
       virtual const char* get_log_file_path();
