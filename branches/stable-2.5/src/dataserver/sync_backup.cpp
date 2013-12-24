@@ -441,7 +441,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        int32_t dest_fd = tfs_client_->open(block_id, file_id, dest_addr_, T_WRITE|T_NEWBLK);
+        int32_t dest_fd = tfs_client_->open(block_id, file_id, dest_addr_, T_UNLINK|T_NEWBLK);
         ret = dest_fd > 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == ret)
         {
