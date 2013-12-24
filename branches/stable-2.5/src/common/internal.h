@@ -207,6 +207,8 @@ namespace tfs
     static const int32_t MAX_SINGLE_FILE_SIZE = 16 * 1024 * 1024;//16MB
     static const int32_t MAX_TRANSFER_FILE_SIZE = 4 * 1024 * 1024;
 
+    static const int32_t VERSION_DIFF = 1;
+
     enum VersionStep
     {
       VERSION_INC_STEP_NONE = 0,

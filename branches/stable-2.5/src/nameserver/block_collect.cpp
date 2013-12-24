@@ -171,8 +171,11 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          if (info.version_ == info_.version_)//version argeed
+          int32_t diff = __gnu_cxx::abs(info.version_ - info_.version_);
+          if (diff <= VERSION_DIFF)
           {
+            if (info.version_ > info_.version_)
+              info_ = info;
             if (server_size_ >= SYSPARAM_NAMESERVER.max_replication_)
             {
               uint64_t servers[SYSPARAM_NAMESERVER.max_replication_ + 1];
@@ -190,31 +193,28 @@ namespace tfs
             }
           }
 
-          if (info.version_ > info_.version_)
+          if (diff > VERSION_DIFF)
           {
-            int32_t old_version = info_.version_;
-            info_ = info;
-            if (!isnew)//release dataserver
+            ret = server_size_ <= 0 ? TFS_SUCCESS : info.version_ > info_.version_ ? TFS_SUCCESS : EXIT_EXPIRE_SELF_ERROR;
+            if (TFS_SUCCESS == ret)
             {
-              cleanup(expires);
-              update_last_time(now);
-							std::string str;
-							print_int64(expires, str);
-              TBSYS_LOG(INFO, "block: %"PRI64_PREFIX"u in dataserver: %s version error %d:%d,replace nameserver version, release dataservers: %s",
-                  info.block_id_, tbsys::CNetUtil::addrToString(server).c_str(),
-                  old_version, info.version_, str.c_str());
-              if (!GFactory::get_runtime_info().is_master())
+              int32_t old_version = info_.version_;
+              info_ = info;
+              if (!isnew && server_size_ > 0)//release dataserver
               {
-								expires.clear();
+                cleanup(expires);
+                update_last_time(now);
+                std::string str;
+                print_int64(expires, str);
+                TBSYS_LOG(INFO, "block: %"PRI64_PREFIX"u in dataserver: %s version error %d:%d,replace nameserver version, release dataservers: %s",
+                    info.block_id_, tbsys::CNetUtil::addrToString(server).c_str(),
+                    old_version, info.version_, str.c_str());
+                if (!GFactory::get_runtime_info().is_master())
+                {
+                  expires.clear();
+                }
               }
             }
-          }
-
-          if (info.version_ < info_.version_)
-          {
-            ret = server_size_ <= 0 ? TFS_SUCCESS : EXIT_EXPIRE_SELF_ERROR;
-            if (TFS_SUCCESS == ret)
-              info_ = info;
           }
         }
       }
