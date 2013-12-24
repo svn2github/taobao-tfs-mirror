@@ -136,6 +136,7 @@ namespace tfs
       fail = 0;
       for (int index = 0; index < MAX_BLOCK_CHUNK_NUMS; index++)
       {
+        tbutil::Mutex::Lock lock(all_blocks_[index].mutex_);
         total += all_blocks_[index].blocks_.size();
         succ += all_blocks_[index].succ_count_;
         fail += all_blocks_[index].fail_count_;
@@ -422,6 +423,30 @@ namespace tfs
 
     void CheckManager::run_check()
     {
+      // checkserver start immediately default
+      if (SYSPARAM_CHECKSERVER.start_time_hour_ >= 0 &&
+        SYSPARAM_CHECKSERVER.start_time_min_ >= 0)
+      {
+        time_t now = time(NULL);
+        struct tm now_tm;
+        localtime_r(&now, &now_tm);
+        now_tm.tm_hour = SYSPARAM_CHECKSERVER.start_time_hour_;
+        now_tm.tm_min = SYSPARAM_CHECKSERVER.start_time_min_;
+        time_t wait_time = mktime(&now_tm) - now;
+        if (wait_time < 0)
+        {
+          wait_time += 86400;
+        }
+        TBSYS_LOG(INFO, "check will start at %02d:%02d after %zd seconds",
+            SYSPARAM_CHECKSERVER.start_time_hour_,
+            SYSPARAM_CHECKSERVER.start_time_min_,
+            wait_time);
+        for (int index = 0; index < wait_time && !stop_; index++)
+        {
+          sleep(1);  // check if stoped every seconds, may receive stop signal
+        }
+      }
+
       while (!stop_)
       {
         TIMER_START();

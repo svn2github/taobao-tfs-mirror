@@ -242,8 +242,8 @@ namespace tfs
     {
       BLOCK_MAP blocks_;
       tbutil::Mutex mutex_;
-      int32_t succ_count_;
-      int32_t fail_count_;
+      volatile int32_t succ_count_;
+      volatile int32_t fail_count_;
 
       BlockSlot()
       {
