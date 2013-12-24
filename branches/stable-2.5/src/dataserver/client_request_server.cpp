@@ -14,6 +14,7 @@
 
 #include "ds_define.h"
 #include "dataservice.h"
+#include "clientv2/fsname.h"
 #include "client_request_server.h"
 
 namespace tfs
@@ -1007,9 +1008,10 @@ namespace tfs
         // after close, remove lease
         get_data_manager().remove_lease(attach_block_id, file_id, lease_id);
 
-        TBSYS_LOG(INFO, "CLOSE file %s, ret: %d. blockid: %"PRI64_PREFIX"u, "
+        clientv2::FSName fsname(attach_block_id, file_id);
+        TBSYS_LOG(INFO, "FINISH CLOSE file %s, ret: %d. filename: %s, blockid: %"PRI64_PREFIX"u, "
             "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d",
-            TFS_SUCCESS == ret ? "success" : "fail", ret, attach_block_id, file_id, lease_id,
+            TFS_SUCCESS == ret ? "success" : "fail", ret, fsname.get_name(), attach_block_id, file_id, lease_id,
             tbsys::CNetUtil::addrToString(peer_id).c_str(), req_cost_time);
       }
 
@@ -1134,9 +1136,10 @@ namespace tfs
         // after unlink, remove lease
         get_data_manager().remove_lease(attach_block_id, file_id, lease_id);
 
-        TBSYS_LOG(INFO, "UNLINK file %s, ret: %d. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
+        clientv2::FSName fsname(attach_block_id, file_id);
+        TBSYS_LOG(INFO, "FINISH UNLINK file %s, ret: %d. filename: %s, blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, "
             "leaseid: %"PRI64_PREFIX"u, action: %d, peer ip: %s, cost: %"PRI64_PREFIX"d",
-          TFS_SUCCESS == ret ? "success" : "fail", ret, attach_block_id, file_id, lease_id, action,
+          TFS_SUCCESS == ret ? "success" : "fail", ret, fsname.get_name(), attach_block_id, file_id, lease_id, action,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), req_cost_time);
       }
 

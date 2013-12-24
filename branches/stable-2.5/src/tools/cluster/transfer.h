@@ -41,6 +41,7 @@ namespace tfs
         virtual ~SyncByBlockWorker(){}
 
         virtual int process(std::string& line);
+        virtual void destroy();
       private:
         int transfer_block_by_raw(const uint64_t block, const uint64_t server);
         int transfer_block_by_file(const uint64_t block);

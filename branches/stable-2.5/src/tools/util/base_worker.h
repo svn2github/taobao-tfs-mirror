@@ -37,7 +37,7 @@ namespace tfs
         {
         }
 
-        void destroy()
+        virtual void destroy()
         {
           stop_ = true;
         }
@@ -157,7 +157,7 @@ namespace tfs
 
         void run()
         {
-          while (!input_.empty())
+          while (!input_.empty() && !stop_)
           {
             QueueItem item = input_.front();
             input_.pop();

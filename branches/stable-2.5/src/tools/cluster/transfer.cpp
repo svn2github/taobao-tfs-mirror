@@ -63,6 +63,12 @@ namespace tfs
         Func::time_to_str(left.create_time_).c_str(), Func::time_to_str(right.create_time_).c_str());
     }
 
+    void SyncByBlockWorker::destroy()
+    {
+      BaseWorker::destroy();
+      TfsClientImplV2::Instance()->destroy();
+    }
+
     int SyncByBlockWorker::process(string& line)
     {
       assert(!line.empty());
