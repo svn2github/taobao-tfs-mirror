@@ -1392,7 +1392,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[50] = {
+    const char* dynamic_parameter_str[53] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1442,7 +1442,10 @@ namespace tfs
         "compact_family_member_ratio",
         "max_single_machine_network_bandwith",
         "write_file_check_copies_complete",
-        "choose_target_server_retry_max_nums"
+        "choose_target_server_retry_max_nums",
+        "max_marshalling_num",
+        "enable_old_interface",
+        "enable_version_conflict"
     };
 
     const char* planstr[PLAN_TYPE_EC_MARSHALLING+1] =
