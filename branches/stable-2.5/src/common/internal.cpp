@@ -1445,7 +1445,7 @@ namespace tfs
         "choose_target_server_retry_max_nums",
         "max_marshalling_num",
         "enable_old_interface",
-        "enable_version_conflict"
+        "enable_version_check"
     };
 
     const char* planstr[PLAN_TYPE_EC_MARSHALLING+1] =

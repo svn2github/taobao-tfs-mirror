@@ -82,7 +82,7 @@ namespace tfs
       int32_t adjust_copies_location_time_upper_;
       int32_t write_file_check_copies_complete_;
       int32_t enable_old_interface_;
-      int32_t enable_version_conflict_;
+      int32_t enable_version_check_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

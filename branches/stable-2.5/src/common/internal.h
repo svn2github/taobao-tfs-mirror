@@ -1293,8 +1293,15 @@ namespace tfs
 
     enum EnableVersionconflictFlag
     {
-      ENABLE_VERSION_CONFLICT_FLAG_NO = 0,
-      ENABLE_VERSION_CONFLICT_FLAG_YES = 1
+      ENABLE_VERSION_CHECK_FLAG_NO = 0,
+      ENABLE_VERSION_CHECK_FLAG_YES = 1
+    };
+
+    enum NsRole
+    {
+      NS_ROLE_NONE = 0x00,
+      NS_ROLE_MASTER,
+      NS_ROLE_SLAVE
     };
 
     // defined type typedef

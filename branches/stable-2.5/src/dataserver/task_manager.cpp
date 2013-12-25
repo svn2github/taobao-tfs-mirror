@@ -684,6 +684,7 @@ namespace tfs
           {
             running_blocks_.insert(std::make_pair(*helper.at(index),
                 now + task->get_expire_time()));
+            TBSYS_LOG(DEBUG, "add block %"PRI64_PREFIX"u", *helper.at(index));
           }
         }
       }
@@ -702,6 +703,7 @@ namespace tfs
         for (int32_t index = 0; index < helper.get_array_index(); index++)
         {
           running_blocks_.erase(*helper.at(index));
+          TBSYS_LOG(DEBUG, "remove block %"PRI64_PREFIX"u", *helper.at(index));
         }
       }
     }
@@ -715,6 +717,7 @@ namespace tfs
       {
         running_blocks_.insert(std::make_pair(block_id,
               Func::get_monotonic_time() + expire_time));
+        TBSYS_LOG(DEBUG, "add block %"PRI64_PREFIX"u", block_id);
       }
       return ok;
     }
@@ -723,6 +726,7 @@ namespace tfs
     {
       Mutex::Lock lock(running_blocks_mutex_);
       running_blocks_.erase(block_id);
+      TBSYS_LOG(DEBUG, "remove block %"PRI64_PREFIX"u", block_id);
     }
 
     bool TaskManager::exist_block(const uint64_t block_id) const
@@ -740,6 +744,7 @@ namespace tfs
       {
         if (now > iter->second)
         {
+          TBSYS_LOG(DEBUG, "remove block %"PRI64_PREFIX"u", iter->first);
           running_blocks_.erase(iter++);
         }
         else

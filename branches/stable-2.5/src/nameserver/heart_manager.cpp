@@ -225,6 +225,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         tbutil::Time begin = tbutil::Time::now();
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (packet);
         assert(SET_DATASERVER_MESSAGE == packet->getPCode());
         RespHeartMessage *result_msg = new RespHeartMessage();
@@ -236,8 +237,9 @@ namespace tfs
         result_msg->set_heart_interval(SYSPARAM_NAMESERVER.heart_interval_);
         result_msg->set_max_mr_network_bandwith_mb(max_mr_network_bandwith);
         result_msg->set_max_rw_network_bandwith_mb(max_rw_network_bandwith);
+        result_msg->set_ns_role(ngi.owner_role_);
         result_msg->set_enable_old_interface(SYSPARAM_NAMESERVER.enable_old_interface_);
-        result_msg->set_enable_version_conflict(SYSPARAM_NAMESERVER.enable_version_conflict_);
+        result_msg->set_enable_version_check(SYSPARAM_NAMESERVER.enable_version_check_);
         ret = manager_.get_layout_manager().get_client_request_server().keepalive(ds_info, now);
         result_msg->set_status(TFS_SUCCESS == ret ? HEART_MESSAGE_OK : HEART_MESSAGE_FAILED);
         if (TFS_SUCCESS == ret

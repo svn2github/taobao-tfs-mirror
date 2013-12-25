@@ -23,6 +23,8 @@
 #include "common/parameter.h"
 #include "server_collect.h"
 
+using namespace tfs::common;
+
 namespace tfs
 {
   namespace nameserver

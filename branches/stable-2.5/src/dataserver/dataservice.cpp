@@ -882,6 +882,15 @@ namespace tfs
 
     int DataService::create_file_number(CreateFilenameMessage* message)
     {
+      DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
+      if (ENABLE_OLD_INTERFACE_FLAG_NO == info.enable_old_interface_)
+      {
+        uint64_t peer_id = message->get_connection()->getPeerId();
+        TBSYS_LOG(WARN, "received old write request from %s",
+             tbsys::CNetUtil::addrToString(peer_id).c_str());
+        return EXIT_NOT_SUPPORT_ERROR;
+      }
+
       TIMER_START();
       uint32_t block_id = message->get_block_id();
       uint64_t file_id = message->get_file_id();
@@ -927,6 +936,15 @@ namespace tfs
 
     int DataService::write_data(WriteDataMessage* message)
     {
+      DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
+      if (ENABLE_OLD_INTERFACE_FLAG_NO == info.enable_old_interface_)
+      {
+        uint64_t peer_id = message->get_connection()->getPeerId();
+        TBSYS_LOG(WARN, "received old write request from %s",
+             tbsys::CNetUtil::addrToString(peer_id).c_str());
+        return EXIT_NOT_SUPPORT_ERROR;
+      }
+
       TIMER_START();
       WriteDataInfo write_info = message->get_write_info();
       int32_t lease_id = message->get_lease_id();
@@ -1020,6 +1038,15 @@ namespace tfs
 
     int DataService::close_write_file(CloseFileMessage* message)
     {
+      DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
+      if (ENABLE_OLD_INTERFACE_FLAG_NO == info.enable_old_interface_)
+      {
+        uint64_t peer_id = message->get_connection()->getPeerId();
+        TBSYS_LOG(WARN, "received old write request from %s",
+            tbsys::CNetUtil::addrToString(peer_id).c_str());
+        return EXIT_NOT_SUPPORT_ERROR;
+      }
+
       TIMER_START();
       CloseFileInfo close_file_info = message->get_close_file_info();
       int32_t lease_id = message->get_lease_id();

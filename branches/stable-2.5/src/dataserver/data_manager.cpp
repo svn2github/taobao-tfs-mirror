@@ -240,13 +240,17 @@ namespace tfs
 
       if ((TFS_SUCCESS == ret) && (remote_version >= 0))
       {
-        ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
-        if (TFS_SUCCESS != ret)
+        DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
+        if (ENABLE_VERSION_CHECK_FLAG_YES == info.enable_version_check_)
         {
-          TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
-              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
-              "remote version: %d, local version: %d, ret: %d",
-              block_id, file_id, lease_id, remote_version, local.version_, ret);
+          ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(WARN, "write check block version conflict. blockid: %"PRI64_PREFIX"u, "
+                "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, "
+                "remote version: %d, local version: %d, ret: %d",
+                block_id, file_id, lease_id, remote_version, local.version_, ret);
+          }
         }
       }
 

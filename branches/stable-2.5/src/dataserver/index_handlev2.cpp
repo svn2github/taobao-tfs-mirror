@@ -106,8 +106,12 @@ namespace tfs
       {
         IndexHeaderV2* header = get_index_header_();
         assert(NULL != header);
+        int32_t diff =  __gnu_cxx::abs(remote_version - info.version_);
+        if (diff > VERSION_DIFF)
+        {
+          ret = EXIT_BLOCK_VERSION_CONFLICT_ERROR;
+        }
         info = header->info_;
-        ret = (remote_version == info.version_) ? TFS_SUCCESS : EXIT_BLOCK_VERSION_CONFLICT_ERROR;
       }
       return ret;
     }
@@ -1385,8 +1389,12 @@ namespace tfs
         {
           IndexHeaderV2* header = reinterpret_cast<IndexHeaderV2*>(data);
           assert(NULL != data);
+          int32_t diff =  __gnu_cxx::abs(remote_version - info.version_);
+          if (diff > VERSION_DIFF)
+          {
+            ret = EXIT_BLOCK_VERSION_CONFLICT_ERROR;
+          }
           info = header->info_;
-          ret = (remote_version == info.version_) ? TFS_SUCCESS : EXIT_BLOCK_VERSION_CONFLICT_ERROR;
         }
         if (NULL != data)
           free_index_mem_(data, inner_index, false);
@@ -1504,3 +1512,4 @@ namespace tfs
     }
   }/** end namespace dataserver **/
 }/** end namespace tfs **/
+
