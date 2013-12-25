@@ -872,7 +872,9 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != block_id &&  !members.empty()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        BlockCollect* block = manager_.get_block_manager().get(block_id);
+        BlockManager& block_manager = manager_.get_block_manager();
+        ServerManager& server_manager = manager_.get_server_manager();
+        BlockCollect* block = block_manager.get(block_id);
         ret = (NULL != block) ? TFS_SUCCESS : EXIT_NO_BLOCK;
         if (TFS_SUCCESS == ret)
         {
@@ -887,32 +889,39 @@ namespace tfs
           for (index = 0; index < members.get_array_index(); ++index)
           {
             std::pair<uint64_t, common::BlockInfoV2>* item = members.at(index);
-            TBSYS_LOG(INFO, "resolve block version conflict: current block: %"PRI64_PREFIX"u, server: %s, version: %d",
-              block->id(), tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
-            if (item->second.version_ >= info.version_)
+            if (item->second.version_ >= info.version_
+              && block_manager.exist(block, server))
             {
-              server = manager_.get_server_manager().get(item->first);
-              bool exist = manager_.get_block_manager().exist(block, server);
-              if (item->second.version_ > info.version_ && exist)
-                helper.clear();
-              if (exist)
-              {
-                info = item->second;
-                helper.push_back(item->first);
-              }
+              info = item->second;
             }
           }
           for (index = 0; index < members.get_array_index(); ++index)
           {
             std::pair<uint64_t, common::BlockInfoV2>* item = members.at(index);
+            TBSYS_LOG(INFO, "resolve block version conflict: current block: %"PRI64_PREFIX"u, server: %s, version: %d",
+              block->id(), tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
+            int32_t diff = __gnu_cxx::abs(item->second.version_ - info.version_);
+            if (diff <= VERSION_DIFF)
+            {
+              server = server_manager.get(item->first);
+              if (NULL != server && block_manager.exist(block, server))
+              {
+                helper.push_back(item->first);
+              }
+            }
+          }
+
+          for (index = 0; index < members.get_array_index(); ++index)
+          {
+            std::pair<uint64_t, common::BlockInfoV2>* item = members.at(index);
             if (!helper.exist(item->first)
-                && manager_.get_block_manager().get_servers_size(block_id) > 1)
+                && block_manager.get_servers_size(block_id) > 1)
             {
               //解除关系失败可以暂时不管
               update_last_time = true;
-              server = manager_.get_server_manager().get(item->first);
+              server = server_manager.get(item->first);
               manager_.relieve_relation(block, server, now);
-              manager_.get_block_manager().push_to_delete_queue(block_id, item->first);
+              block_manager.push_to_delete_queue(block_id, item->first);
               TBSYS_LOG(INFO, "resolve block version conflict: relieve relation block: %"PRI64_PREFIX"u, server: %s, version: %d",
                 block_id, tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
             }
