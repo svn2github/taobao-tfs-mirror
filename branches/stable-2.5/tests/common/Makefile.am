@@ -18,7 +18,7 @@ LDADD=$(top_builddir)/src/common/mysql_cluster/libkvengine_mysql.a \
 #test: check
 #.PHONY: test
 
-noinst_PROGRAMS= test_base_service test_mysql_helper
+noinst_PROGRAMS= test_base_service test_mysql_helper test_http_agent
 
 #noinst_PROGRAMS= test_serialization   test_base_service 
 #test_serialization_SOURCES= test_serialization.cpp
@@ -35,6 +35,9 @@ test_base_service_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
 
 test_mysql_helper_SOURCES=test_mysql_helper.cpp
 test_mysql_helper_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest  $(MYSQL_LDFLAGS)
+
+test_http_agent_SOURCES=test_http_agent.cpp
+test_http_agent_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest  $(MYSQL_LDFLAGS)
 
 #test_base_service_client_SOURCE=test_base_service_client.cpp
 #test_base_service_client_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest

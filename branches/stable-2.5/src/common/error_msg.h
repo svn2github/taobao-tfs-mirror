@@ -293,6 +293,13 @@ namespace tfs
     const int32_t EXIT_SYNC_FILE_PART_SUCCESSFUL = -20000;
     const int32_t EXIT_FILE_COUNT_CONFLICT_ERROR = -20001;
     const int32_t EXIT_SYNC_FILE_NOTHING = -20002;
+
+    //http packet
+    const int32_t EXIT_NO_HTTP_HEADER = -21000;
+    const int32_t EXIT_NO_HTTP_REQUEST_LINE = -21001;
+    const int32_t EXIT_NO_HTTP_REQUEST_HEADER = -21002;
+    const int32_t EXIT_WRONG_HTTP_PROTOCOL = -21003;
+    const int32_t EXIT_SEND_HTTP_ERROR = -21004;
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

@@ -375,6 +375,9 @@ namespace tfs
       REQ_RC_REQ_STAT_MESSAGE = 394,
       RSP_RC_REQ_STAT_MESSAGE = 395,
 
+      HTTP_REQUEST_MESSAGE = 450,
+      HTTP_RESPONSE_MESSAGE = 451,
+
       LOCAL_PACKET = 500
     };
 
@@ -406,8 +409,8 @@ namespace tfs
       BasePacket();
       virtual ~BasePacket();
       virtual bool copy(BasePacket* src, const int32_t version, const bool deserialize);
-      bool encode(tbnet::DataBuffer* output);
-      bool decode(tbnet::DataBuffer* input, tbnet::PacketHeader* header);
+      virtual bool encode(tbnet::DataBuffer* output);
+      virtual bool decode(tbnet::DataBuffer* input, tbnet::PacketHeader* header);
 
       virtual int serialize(Stream& output) const = 0;
       virtual int deserialize(Stream& input) = 0;
@@ -435,6 +438,7 @@ namespace tfs
       inline uint32_t get_crc() const { return crc_;}
       inline void set_id(const uint64_t id) { id_ = id;}
       inline uint64_t get_id() const { return id_;}
+      //inline Stream& get_stream() {return stream_;}
 
       static bool parse_special_ds(std::vector<uint64_t>& value, int32_t& version, uint32_t& lease);
 

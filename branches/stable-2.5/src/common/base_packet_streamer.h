@@ -28,6 +28,11 @@ namespace tfs
       explicit BasePacketStreamer(tbnet::IPacketFactory* factory);
       virtual ~BasePacketStreamer();
       void set_packet_factory(tbnet::IPacketFactory* factory);
+
+      tbnet::IPacketFactory* get_packet_factory() const
+      {
+        return _factory;
+      }
     #ifdef TFS_GTEST
     public:
     #else

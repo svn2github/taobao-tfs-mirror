@@ -230,13 +230,12 @@ namespace tfs
         return iret;
       }
 
-
-    private:
       void expand(const int64_t length);
+      void clear();
+    private:
 
       DISALLOW_COPY_AND_ASSIGN(Stream);
       Buffer buffer_;
-      void clear();
     };
   }//end namespace comon
 }//end namespace tfs
