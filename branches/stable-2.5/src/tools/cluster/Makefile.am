@@ -5,7 +5,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -lsnappy
 
-bin_PROGRAMS = calc_ip_addr transfer split_item_tool block_toolv2
+bin_PROGRAMS = transfer split_item_tool block_toolv2
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
   $(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
