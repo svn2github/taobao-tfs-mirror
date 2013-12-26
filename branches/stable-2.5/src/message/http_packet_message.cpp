@@ -11,7 +11,7 @@ namespace tfs
     using namespace common;
     HttpRequestMessage::HttpRequestMessage()
     {
-      //_packetHeader._pcode = HTTP_REQUEST_MESSAGE;
+      _packetHeader._pcode = HTTP_REQUEST_MESSAGE;
     }
     HttpRequestMessage::~HttpRequestMessage()
     {
@@ -71,7 +71,7 @@ namespace tfs
 
     HttpResponseMessage::HttpResponseMessage()
     {
-      //_packetHeader._pcode = HTTP_RESPONSE_MESSAGE;
+      _packetHeader._pcode = HTTP_RESPONSE_MESSAGE;
     }
     HttpResponseMessage::~HttpResponseMessage()
     {

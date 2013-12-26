@@ -33,6 +33,10 @@ namespace tfs
       {
         return _factory;
       }
+
+      void setNoPacketHeader() {
+        _existPacketHeader = false;
+      }
     #ifdef TFS_GTEST
     public:
     #else
