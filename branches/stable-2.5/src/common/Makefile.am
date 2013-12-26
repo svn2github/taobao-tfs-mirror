@@ -14,10 +14,10 @@ libtfscommon_a_SOURCES = internal.cpp parameter.cpp func.cpp file_queue.cpp \
 			 file_queue_thread.cpp lock.cpp directory_op.cpp base_packet.cpp http_packet.cpp version.cpp\
 			 base_main.cpp base_service.cpp new_client.cpp client_manager.cpp meta_define.cpp\
        http_packet_streamer.cpp base_packet_streamer.cpp base_packet_factory.cpp  \
-			 meta_server_define.cpp session_util.cpp \
+			 meta_server_define.cpp session_util.cpp\
 			 stream.cpp status_message.cpp rc_define.cpp mmap_file.cpp rts_define.cpp expire_define.cpp meta_hash_helper.cpp \
 			 tfs_vector.ipp file_opv2.cpp mmap_file_op.cpp file_op.cpp kv_meta_define.cpp kv_rts_define.cpp ${tair_kv_source}\
-       file_opv2.h file_op.h meta_server_define.h  tfs_vector.h version.h\
+       file_opv2.h file_op.h meta_server_define.h  tfs_vector.h version.h \
 			 atomic.h base_main.h http_packet_streamer.h base_packet_factory.h base_packet.h http_packet.h base_packet_streamer.h \
 			 base_service.h buffer.h cdefine.h client_manager.h config_item.h define.h\
        directory_op.h error_msg.h file_queue.h file_queue_thread.h func.h \
