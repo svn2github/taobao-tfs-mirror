@@ -310,6 +310,11 @@ namespace tfs
         }
       }
 
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "Run task %s, ret: %d", dump().c_str(), ret);
+      }
+
       return ret;
     }
 
@@ -524,7 +529,7 @@ namespace tfs
     int ReplicateTask::report_to_ns(const int status)
     {
       ReplicateBlockMessage req_rb_msg;
-      int ret = TFS_ERROR;
+      int ret = TFS_SUCCESS;
 
       req_rb_msg.set_seqno(seqno_);
       req_rb_msg.set_repl_block(&repl_info_);
@@ -534,7 +539,7 @@ namespace tfs
       NewClient* client = NewClientManager::get_instance().create_client();
       if (NULL == client)
       {
-        ret = TFS_ERROR;
+        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       }
       else
       {
@@ -557,12 +562,12 @@ namespace tfs
             }
             else
             {
-              ret = TFS_ERROR;
+              ret = sm->get_status();
             }
           }
           else
           {
-            ret = TFS_ERROR;
+            ret = EXIT_UNKNOWN_MSGTYPE;
           }
         }
         NewClientManager::get_instance().destroy_client(client);
@@ -716,6 +721,11 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = get_data_helper().commit_ec_meta(dest_id, block_id, ec_meta, SWITCH_BLOCK_YES);
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "Run task %s, ret: %d", dump().c_str(), ret);
       }
 
       return ret;
@@ -1021,6 +1031,11 @@ namespace tfs
         }
       }
 
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "Run task %s, ret: %d", dump().c_str(), ret);
+      }
+
       return ret;
     }
 
@@ -1146,6 +1161,11 @@ namespace tfs
           get_data_helper().commit_ec_meta(family_members_[i].server_,
               family_members_[i].block_, zero, SWITCH_BLOCK_NO, UNLOCK_BLOCK_YES);
         }
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "Run task %s, ret: %d", dump().c_str(), ret);
       }
 
       return ret;
@@ -1490,7 +1510,12 @@ namespace tfs
 
     int DissolveTask::do_dissolve()
     {
-      return replicate_data_blocks();
+      int ret = replicate_data_blocks();
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "Run task %s, ret: %d", dump().c_str(), ret);
+      }
+      return ret;
     }
 
     int DissolveTask::handle_complete(BasePacket* packet)
