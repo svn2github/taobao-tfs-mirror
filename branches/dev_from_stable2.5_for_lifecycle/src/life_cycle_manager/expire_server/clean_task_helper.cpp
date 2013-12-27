@@ -19,6 +19,7 @@
 #include <malloc.h>
 #include "common/func.h"
 #include "common/tairengine_helper.h"
+#include "common/atomic.h"
 
 using namespace std;
 namespace tfs
@@ -44,6 +45,7 @@ namespace tfs
     {
       kv_engine_helper_ = NULL;
       tair_lifecycle_area_ = 0;
+      running_task_count_ = 0;
     }
 
     CleanTaskHelper::~CleanTaskHelper()
@@ -73,7 +75,7 @@ namespace tfs
 
       tair_lifecycle_area_ = SYSPARAM_EXPIRESERVER.lifecycle_area_;
 
-      clean_task_state_ = 0;
+      running_task_count_ = 0;
 
       if (TFS_SUCCESS ==  ret)
       {
@@ -89,13 +91,14 @@ namespace tfs
       return ret;
     }
 
-    int32_t CleanTaskHelper::get_task_state()
+    int32_t CleanTaskHelper::get_running_threads_count()
     {
-      return clean_task_state_;
+      return running_task_count_;
     }
 
 
-    int CleanTaskHelper::take_note(const uint64_t local_ipport, const int32_t num_es,
+    //record stat to kv store
+    int CleanTaskHelper::stat_to_kvstore(const uint64_t local_ipport, const int32_t num_es,
                                    const int32_t task_time, const int32_t hash_bucket_num,
                                    const int64_t sum_file_num)
     {
@@ -147,7 +150,7 @@ namespace tfs
     }
 
 
-    int CleanTaskHelper::clean_task(const uint64_t local_ipport, const int32_t total_es, const int32_t num_es,
+    int CleanTaskHelper::do_clean_task(const uint64_t local_ipport, const int32_t total_es, const int32_t num_es,
                                     const int32_t note_interval, const int32_t task_time)
     {
       int32_t ret;
@@ -172,7 +175,7 @@ namespace tfs
 
       int32_t expire_file_count = 0;
 
-      clean_task_state_ = 1;
+      atomic_inc(&running_task_count_);
 
       ret = ExpireDefine::transfer_time(task_time, &days_secs, &hours_secs);
 
@@ -293,7 +296,7 @@ namespace tfs
                     if ((int32_t)(second - first) >= note_interval)
                     {
                        first = second;
-                       take_note(local_ipport, num_es, task_time, hash_mod, sum_file_num);
+                       stat_to_kvstore(local_ipport, num_es, task_time, hash_mod, sum_file_num);
                     }
 
                     uint32_t file_len = t_file_name.length();
@@ -393,7 +396,7 @@ namespace tfs
 
       TBSYS_LOG(INFO, "time: %d task use %d us, scan use %d us, unlink %d file", task_time, timeuse,
           g_scan_time, expire_file_count);
-      clean_task_state_ = 0;
+      atomic_dec(&running_task_count_);
       return ret;
     }//end for clean task
 

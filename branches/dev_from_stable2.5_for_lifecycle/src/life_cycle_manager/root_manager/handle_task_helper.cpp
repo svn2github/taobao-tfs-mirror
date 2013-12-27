@@ -16,6 +16,7 @@
 
 
 #include "handle_task_helper.h"
+
 #include <malloc.h>
 #include "common/func.h"
 #include "common/tairengine_helper.h"
@@ -92,171 +93,27 @@ namespace tfs
       return ret;
     }
 
-    int HandleTaskHelper::query_progress(const uint64_t es_id, const int32_t num_es, const int32_t task_time,
-        const int32_t hash_bucket_num, const ExpireTaskType type,
-        int64_t *sum_file_num, int32_t *current_percent)
+    int HandleTaskHelper::handle_finish_task(const uint64_t es_id, const common::ExpireTaskInfo& task)
     {
-      int ret = TFS_SUCCESS;
-
-      ret = (NULL == sum_file_num || NULL == current_percent
-          || num_es < 0 || type < 0 || type > MAX_TYPE ) ? TFS_ERROR : TFS_SUCCESS;
-
-      //if assign num_es = 0, we should find num_es for query
-      int32_t actual_num_es = num_es;
-      //total_hash_bucket_num means every es should have xxx hash_bucket_nums
-      int32_t total_hash_bucket_num = 0;
-
-      if (TFS_SUCCESS == ret)
+      mutex_running_.lock();
+      map<uint64_t, set<common::ExpireTaskInfo> >::iterator it;
+      it = m_s_running_tasks_.find(es_id);
+      if (it != m_s_running_tasks_.end())
       {
-        if (num_es == 0)
+        if(it->second.erase(task) < 1)
         {
-          mutex_task_.lock();
-          TASK_INFO_ITER iter = m_task_info_.find(es_id);
-          if (iter != m_task_info_.end())
-          {
-            actual_num_es = (iter->second).assign_no_;
-            total_hash_bucket_num = ExpireDefine::HASH_BUCKET_NUM/(iter->second).alive_total_;
-          }
-          else
-          {
-            TBSYS_LOG(WARN, "%s maybe have finish the task", tbsys::CNetUtil::addrToString(es_id).c_str());
-          }
-          mutex_task_.unlock();
+        TBSYS_LOG(ERROR, "can not find task");
         }
-      }
-
-      char *start_key_buff = (char*)malloc(KEY_BUFF_SIZE);
-      char *end_key_buff = (char*)malloc(KEY_BUFF_SIZE);
-
-      if (NULL == start_key_buff || NULL == end_key_buff)
-      {
-        ret = TFS_ERROR;
-      }
-
-      KvKey start_key;
-      KvKey end_key;
-
-      if (TFS_SUCCESS == ret)
-      {
-        //has assign hash_bucket_num
-        ret = ExpireDefine::serialize_es_stat_key(es_id, actual_num_es,
-            task_time, hash_bucket_num > 0 ? hash_bucket_num : 0,
-            0, &start_key,
-            start_key_buff, KEY_BUFF_SIZE);
-
-        if (TFS_SUCCESS == ret)
-        {
-          ret = ExpireDefine::serialize_es_stat_key(es_id, actual_num_es, task_time,
-              hash_bucket_num > 0 ? hash_bucket_num : ExpireDefine::HASH_BUCKET_NUM - 1,
-              INT64_INFI, &end_key,
-              end_key_buff, KEY_BUFF_SIZE);
-        }
-      }
-
-      uint64_t last_id = 0;
-      int32_t last_num_es = 0;
-      int32_t last_task_time = 0;
-      int32_t last_hash_bucket_num = 0;
-      int64_t last_sum_file_num = 0;
-
-      //op value
-      vector<KvValue*> kv_value_keys;
-      vector<KvValue*> kv_value_values;
-      int32_t offset = 0;
-      int32_t limit = 1000;
-      int32_t res_size = 0;
-
-      while (TFS_SUCCESS == ret)
-      {
-        bool loop = true;
-        ret = kv_engine_helper_->scan_keys(lifecycle_area_, start_key, end_key, limit, offset, &kv_value_keys, &kv_value_values, &res_size, CMD_RANGE_ALL);
-
-        if (TFS_SUCCESS != ret && EXIT_KV_RETURN_HAS_MORE_DATA != ret)
-        {
-          TBSYS_LOG(ERROR, "get_range_fail, ret: %d", ret);
-        }
-        else if (EXIT_KV_RETURN_HAS_MORE_DATA == ret && res_size > 0)
-        {
-          ret = TFS_SUCCESS;
-          start_key.key_ = kv_value_keys[res_size -1]->get_data();
-          start_key.key_size_ = kv_value_keys[res_size -1]->get_size();
-          offset = 1;
-        }
-        else if (TFS_SUCCESS == ret)
-        {
-          if (res_size > 0)
-          {
-            ExpireDefine::deserialize_es_stat_key(kv_value_keys[res_size -1]->get_data(), kv_value_keys[res_size -1]->get_size(), &last_id, &last_num_es, &last_task_time, &last_hash_bucket_num, &last_sum_file_num);
-          }
-          if (res_size == limit)
-          {
-            ret = ExpireDefine::serialize_es_stat_key(es_id, actual_num_es, task_time, last_hash_bucket_num,
-                                                     INT64_INFI, &start_key,
-                                                     start_key_buff, KEY_BUFF_SIZE);
-          }
-          else if (res_size < limit)
-          {
-            //TBSYS_LOG(INFO, "res_size: %d", res_size);
-            loop = false;
-          }
-        }
-
-        for (int i = 0; i < res_size; ++i)//free kv
-        {
-          kv_value_values[i]->free();
-        }
-        kv_value_values.clear();
-
-        if (!loop)
-        {
-          break;
-        }
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        if (hash_bucket_num == 0 && total_hash_bucket_num > 0)
-        {
-          *current_percent = (last_hash_bucket_num - total_hash_bucket_num * actual_num_es) * 100 / total_hash_bucket_num;
-        }
-        else
-        {
-          *sum_file_num = last_sum_file_num;
-        }
-      }
-
-      if (NULL != start_key_buff)
-      {
-        free(start_key_buff);
-        start_key_buff = NULL;
-      }
-
-      if (NULL != end_key_buff)
-      {
-        free(end_key_buff);
-        end_key_buff = NULL;
-      }
-
-      return ret;
-    }
-
-    int HandleTaskHelper::handle_finish_task(const uint64_t es_id)
-    {
-      mutex_task_.lock();
-      TASK_INFO_ITER iter = m_task_info_.find(es_id);
-      if (iter != m_task_info_.end())
-      {
-        m_task_info_.erase(iter);
       }
       else
       {
-        TBSYS_LOG(ERROR, "fatal error, rts has no %s assign task", tbsys::CNetUtil::addrToString(es_id).c_str());
+        TBSYS_LOG(ERROR, "fatal error, rts has no %s task", tbsys::CNetUtil::addrToString(es_id).c_str());
       }
-      mutex_task_.unlock();
+      mutex_running_.unlock();
       return TFS_SUCCESS;
     }
 
-    int HandleTaskHelper::assign(const uint64_t es_id, const ExpireDeleteTask &del_task)
+    int HandleTaskHelper::assign(const uint64_t es_id, const ExpireTaskInfo &del_task)
     {
       NewClient* client = NULL;
       int32_t retry_count = 0;
@@ -264,11 +121,7 @@ namespace tfs
       tbnet::Packet* rsp = NULL;
 
       message::ReqCleanTaskFromRtsMessage msg;
-      msg.set_total_es(del_task.alive_total_);
-      msg.set_num_es(del_task.assign_no_);
-      msg.set_task_time(del_task.spec_time_);
-      msg.set_task_type(del_task.type_);
-      msg.set_note_interval(del_task.note_interval_);
+      msg.set_task(del_task);
 
       do
       {
@@ -309,122 +162,67 @@ namespace tfs
       return iret;
     }
 
-    int HandleTaskHelper::assign_task()
+    void HandleTaskHelper::assign_task()
     {
       int ret = TFS_SUCCESS;
 
       while (!destroy_)
       {
-        ExpTable exp_table;
-        ret = manager_.get_table(exp_table);
-
+        common::VUINT64 v_avaliable_servers;
+        manager_.get_available_expire_server(v_avaliable_servers);
         tbutil::Time now = tbutil::Time::now(tbutil::Time::Realtime);
 
-        //check arrive clock
+        vector<ServerExpireTask> out_tasks;
+        size_t available_index = 0;
+        //deal with waiting tasks
+        mutex_waitint_.lock();
+        for (; available_index < v_avaliable_servers.size(); available_index++)
+        {
+          if (dq_waiting_tasks_.empty())
+          {
+            break;
+          }
+          ExpireTaskInfo del_task = dq_waiting_tasks_.front();
+          dq_waiting_tasks_.pop_front();
+          out_tasks.push_back(ServerExpireTask(v_avaliable_servers[available_index], del_task));
+        }
+        mutex_waitint_.unlock();
+
+
+        //dela with new tasks
         if (now.toSeconds() % task_period_ == 0)
         {
-          mutex_task_wait_.lock();
-          if (task_wait_.empty())
+          int sum_num = v_avaliable_servers.size() - available_index;
+          for (int i =0; i + available_index < v_avaliable_servers.size(); i++)
           {
-            mutex_task_wait_.unlock();
-            uint32_t num = exp_table.v_exp_table_.size();
+            ExpireTaskInfo::ExpireTaskType type = ExpireTaskInfo::TASK_TYPE_DELETE;
+            int32_t note_interval = note_interval_;
+            ExpireTaskInfo del_task(sum_num, i, now.toSeconds(), 0, note_interval, type);
+            out_tasks.push_back(ServerExpireTask(v_avaliable_servers[i + available_index], del_task));
+          }
+        }
 
-            for (uint32_t i = 0; i < num; i++)
-            {
-              // if es has handled in note_interval second, should record in tair
-              ExpireTaskType type = RAW;
-              int32_t note_interval = note_interval_;
-              ExpireDeleteTask del_task(num, i, now.toSeconds(), 0, note_interval, type);
-              mutex_task_wait_.lock();
-              task_wait_.push_back(del_task);
-              mutex_task_wait_.unlock();
-            }
+        for (size_t i=0; i < out_tasks.size(); i++)
+        {
+          ret = assign(out_tasks[i].server_id_, out_tasks[i].task_);
+          if (TFS_SUCCESS == ret)
+          {
+            mutex_running_.lock();
+            m_s_running_tasks_[out_tasks[i].server_id_].insert(out_tasks[i].task_);
+            mutex_running_.unlock();
           }
           else
           {
-            mutex_task_wait_.unlock();
-            TBSYS_LOG(INFO, "still have %lu task wait to assign", task_wait_.size());
+            mutex_waitint_.lock();
+            dq_waiting_tasks_.push_back(out_tasks[i].task_);
+            mutex_waitint_.unlock();
           }
         }
 
-        mutex_task_wait_.lock();
-        if (!exp_table.v_idle_table_.empty() && !task_wait_.empty())
-        {
-          mutex_task_wait_.unlock();
-          for (uint32_t i = 0; i < exp_table.v_idle_table_.size(); i++)
-          {
-            mutex_task_wait_.lock();
-            ExpireDeleteTask del_task = task_wait_.front();
-            task_wait_.pop_front();
-            mutex_task_wait_.unlock();
-
-            mutex_task_.lock();
-            TASK_INFO_ITER iter = m_task_info_.find(exp_table.v_idle_table_[i]);
-            if (iter == m_task_info_.end())
-            {
-              TBSYS_LOG(INFO, "begin to assign msg to %s", tbsys::CNetUtil::addrToString(exp_table.v_idle_table_[i]).c_str());
-              ret = assign(exp_table.v_idle_table_[i], del_task);
-            }
-            else
-            {
-              ret = TFS_ERROR;
-            }
-            mutex_task_.unlock();
-
-            if (TFS_SUCCESS != ret)
-            {
-              mutex_task_wait_.lock();
-              task_wait_.push_back(del_task);
-              mutex_task_wait_.unlock();
-            }
-            else
-            {
-              mutex_task_.lock();
-              TASK_INFO_ITER iter = m_task_info_.find(exp_table.v_idle_table_[i]);
-              if (iter == m_task_info_.end())
-              {
-                m_task_info_[exp_table.v_idle_table_[i]] = del_task;
-              }
-              else
-              {
-                TBSYS_LOG(ERROR, "%s has task, should not assign task",
-                    tbsys::CNetUtil::addrToString(iter->first).c_str());
-              }
-              mutex_task_.unlock();
-            }
-          }
-        }
-        else
-        {
-          mutex_task_wait_.unlock();
-        }
-
-        sleep(1);
+        sleep(SYSPARAM_EXPIREROOTSERVER.es_rts_lease_expired_time_);
       }
 
-      return ret;
-    }
-
-    //for unit test
-    void HandleTaskHelper::get_task_info(map<uint64_t, ExpireDeleteTask> &m_task_info)
-    {
-      mutex_task_.lock();
-      m_task_info = m_task_info_;
-      mutex_task_.unlock();
-    }
-
-    void HandleTaskHelper::put_task_info(const map<uint64_t, ExpireDeleteTask> &m_task_info)
-    {
-      mutex_task_.lock();
-      m_task_info_ = m_task_info;
-      mutex_task_.unlock();
-    }
-
-    void HandleTaskHelper::get_task_wait(deque<ExpireDeleteTask> &task_wait)
-    {
-      mutex_task_wait_.lock();
-      task_wait = task_wait_;
-      mutex_task_wait_.unlock();
+      return ;
     }
 
     void HandleTaskHelper::AssignTaskThreadHelper::run()
@@ -434,24 +232,32 @@ namespace tfs
 
     int HandleTaskHelper::handle_fail_servers(const common::VUINT64 &down_servers)
     {
+      vector<common::ExpireTaskInfo> retry_tasks;
+
+      mutex_running_.lock();
+      std::map<uint64_t, set<common::ExpireTaskInfo> >::iterator it;
+      set<common::ExpireTaskInfo>::iterator set_it;
       for (uint32_t i = 0; i < down_servers.size(); i++)
       {
-        TASK_INFO_ITER iter;
-        mutex_task_.lock();
-        if ((iter = m_task_info_.find(down_servers[i])) != m_task_info_.end())
+        it = m_s_running_tasks_.find(down_servers[i]);
+        if (it != m_s_running_tasks_.end())
         {
-          ExpireDeleteTask del_task = iter->second;
-          m_task_info_.erase(iter);
-          mutex_task_.unlock();
-          mutex_task_wait_.lock();
-          task_wait_.push_back(del_task);
-          mutex_task_wait_.unlock();
-        }
-        else
-        {
-          mutex_task_.unlock();
+          for(set_it= it->second.begin(); set_it != it->second.end(); set_it++)
+          {
+            retry_tasks.push_back(*set_it);
+          }
+          m_s_running_tasks_.erase(it);
         }
       }
+      mutex_running_.unlock();
+      mutex_waitint_.lock();
+      for (size_t i = 0; i <retry_tasks.size(); i++)
+      {
+        dq_waiting_tasks_.push_back(retry_tasks[i]);
+      }
+      mutex_waitint_.unlock();
+
+
       return TFS_SUCCESS;
     }
   }// end for exprootserver

@@ -31,62 +31,17 @@ namespace tfs
         virtual int serialize(common::Stream& output) const;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-
-        int32_t get_task_type() const
+        common::ExpireTaskInfo get_task() const
         {
-          return task_type_;
+          return task_;
+        }
+        void set_task(const common::ExpireTaskInfo& task)
+        {
+          task_ = task;
         }
 
-        int32_t get_total_es() const
-        {
-          return total_es_;
-        }
-
-        int32_t get_num_es() const
-        {
-          return num_es_;
-        }
-
-        int32_t get_note_interval() const
-        {
-          return note_interval_;
-        }
-
-        int32_t get_task_time() const
-        {
-          return task_time_;
-        }
-
-        void set_task_type(const int32_t task_type)
-        {
-          task_type_ = task_type;
-        }
-
-        void set_total_es(const int32_t total_es)
-        {
-          total_es_ = total_es;
-        }
-
-        void set_num_es(const int32_t num_es)
-        {
-          num_es_ = num_es;
-        }
-
-        void set_note_interval(const int32_t note_interval)
-        {
-          note_interval_ = note_interval;
-        }
-
-        void set_task_time(const int32_t task_time)
-        {
-          task_time_ = task_time;
-        }
       private:
-        int32_t task_type_;
-        int32_t total_es_;
-        int32_t num_es_;
-        int32_t note_interval_;
-        int32_t task_time_;
+        common::ExpireTaskInfo task_;
     };
 
     class ReqFinishTaskFromEsMessage : public common::BasePacket
@@ -98,16 +53,6 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        int32_t get_reserve() const
-        {
-          return reserve_;
-        }
-
-        void set_reserve(const int32_t reserve)
-        {
-          reserve_ = reserve;
-        }
-
         uint64_t get_es_id() const
         {
           return es_id_;
@@ -117,10 +62,18 @@ namespace tfs
         {
           es_id_ = es_id;
         }
+        void set_task(const common::ExpireTaskInfo& rh)
+        {
+          task_ = rh;
+        }
+        common::ExpireTaskInfo get_task() const
+        {
+          return task_;
+        }
 
       private:
         uint64_t es_id_;
-        int32_t reserve_;
+        common::ExpireTaskInfo task_;
     };
 
     class ReqRtsEsHeartMessage: public common::BasePacket
@@ -176,15 +129,15 @@ namespace tfs
         inline int32_t get_hash_bucket_id() const {return hash_bucket_id_;}
         inline void set_hash_bucket_id(const int32_t hash_bucket_id) {hash_bucket_id_ = hash_bucket_id;}
 
-        inline common::ExpireTaskType get_expire_task_type() const {return type_;}
-        inline void set_expire_task_type(common::ExpireTaskType &type){type_ = type;}
+        inline common::ExpireTaskInfo::ExpireTaskType get_expire_task_type() const {return type_;}
+        inline void set_expire_task_type(common::ExpireTaskInfo::ExpireTaskType &type){type_ = type;}
 
       private:
         uint64_t es_id_;
         int32_t es_num_;
         int32_t task_time_;
         int32_t hash_bucket_id_;
-        common::ExpireTaskType type_;
+        common::ExpireTaskInfo::ExpireTaskType type_;
     };
 
     class RspQueryProgressMessage: public common::BasePacket

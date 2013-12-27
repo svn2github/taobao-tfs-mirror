@@ -35,52 +35,24 @@ namespace tfs
 
     int ReqCleanTaskFromRtsMessage::serialize(Stream& output) const
     {
-      int32_t iret = output.set_int32(task_type_);
-
+      int64_t pos = 0;
+      int32_t iret = task_.serialize(output.get_free(), output.get_free_length(), pos);
       if (TFS_SUCCESS == iret)
       {
-        iret = output.set_int32(total_es_);
+        iret = output.pour(task_.length());
       }
 
-      if (TFS_SUCCESS == iret)
-      {
-        iret = output.set_int32(num_es_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = output.set_int32(note_interval_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = output.set_int32(task_time_);
-      }
       return iret;
     }
 
     int ReqCleanTaskFromRtsMessage::deserialize(Stream& input)
     {
-      int32_t iret = input.get_int32(&task_type_);
+      int64_t pos = 0;
+      int32_t iret = task_.deserialize(input.get_data(), input.get_data_length(), pos);
 
       if (TFS_SUCCESS == iret)
       {
-        iret = input.get_int32(&total_es_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_int32(&num_es_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_int32(&note_interval_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_int32(&task_time_);
+        input.drain(task_.length());
       }
 
       return iret;
@@ -88,7 +60,7 @@ namespace tfs
 
     int64_t ReqCleanTaskFromRtsMessage::length() const
     {
-      return INT_SIZE * 5;
+      return task_.length();
     }
 
     /* finish task msg */
@@ -101,29 +73,48 @@ namespace tfs
 
     int ReqFinishTaskFromEsMessage::serialize(Stream& output) const
     {
-      int32_t iret = output.set_int32(reserve_);
+      int iret = common::TFS_SUCCESS;
+      int64_t pos = 0;
 
       if (common::TFS_SUCCESS == iret)
       {
         iret = output.set_int64(es_id_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = task_.serialize(output.get_free(), output.get_free_length(), pos);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.pour(task_.length());
       }
       return iret;
     }
 
     int ReqFinishTaskFromEsMessage::deserialize(Stream& input)
     {
-      int32_t iret = input.get_int32(&reserve_);
+      int32_t iret = TFS_SUCCESS;
+      int64_t pos = 0;
 
       if (TFS_SUCCESS == iret)
       {
         iret = input.get_int64(reinterpret_cast<int64_t*>(&es_id_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = task_.deserialize(input.get_data(), input.get_data_length(), pos);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        input.drain(task_.length());
       }
       return iret;
     }
 
     int64_t ReqFinishTaskFromEsMessage::length() const
     {
-      return INT_SIZE;
+      return INT_SIZE + task_.length();
     }
 
     //heart msg
