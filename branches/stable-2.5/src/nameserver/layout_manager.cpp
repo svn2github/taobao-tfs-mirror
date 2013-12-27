@@ -875,6 +875,8 @@ namespace tfs
                   block->set_family_id(family_id);
                 }
                 ret = get_family_manager().insert(family_id, (*iter).family_aid_info_, helper, now);
+                if (EXIT_ELEMENT_EXIST == ret)
+                  ret = TFS_SUCCESS;
                 if (TFS_SUCCESS != ret)
                   TBSYS_LOG(WARN, "load family information error,family id: %"PRI64_PREFIX"d, ret: %d", family_id, ret);
               }
