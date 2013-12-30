@@ -62,6 +62,12 @@
 #define GET_OVERRIDE_FLAG(x) (((x) >> 4) & 0x7)
 #define TEST_OVERRIDE_FLAG(x) ((x) > REVEAL) // TODO, change to (x) & OVERRIDE
 
+// info log on success, warn log on fail
+#define TBSYS_LOG_IW(ret, _fmt_, args...) (TFS_SUCCESS == (ret) ? TBSYS_LOG(INFO, _fmt_, ##args) : TBSYS_LOG(WARN, _fmt_, ##args))
+
+// debug log on success, warn log on fail
+#define TBSYS_LOG_DW(ret, _fmt_, args...) (TFS_SUCCESS == (ret) ? TBSYS_LOG(DEBUG, _fmt_, ##args) : TBSYS_LOG(WARN, _fmt_, ##args))
+
 #if __WORDSIZE == 32
 namespace __gnu_cxx
 {
@@ -996,13 +1002,6 @@ namespace tfs
       REPORT_BLOCK_TYPE_PART,
       REPORT_BLOCK_TYPE_RELIEVE
     }ReportBlockType;*/
-
-    typedef enum NodeStatus
-    {
-      NODE_ALIVE = 0,
-      NODE_DEAD = 1,
-      NODE_UNUSED = -1
-    };
 
     enum RepairType
     {

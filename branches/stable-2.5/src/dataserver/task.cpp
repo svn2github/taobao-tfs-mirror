@@ -1094,14 +1094,14 @@ namespace tfs
       }
       for (int i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
       {
-        if (ErasureCode::NODE_ALIVE == family_members_[i].status_)
+        if (ErasureCode::NODE_ALIVE == erased_[i])
         {
           // reinstate will lock all alive blocks used for decode
           ret = get_data_helper().query_ec_meta(family_members_[i].server_,
               family_members_[i].block_, ec_metas[i], expire_time_);
           need_unlock[i] = (TFS_SUCCESS == ret);
         }
-        else if (ErasureCode::NODE_DEAD == family_members_[i].status_)
+        else if (ErasureCode::NODE_DEAD == erased_[i])
         {
           if (i < data_num)
           {
@@ -1117,7 +1117,7 @@ namespace tfs
       // create lost block
       for (int i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
       {
-        if (ErasureCode::NODE_DEAD != family_members_[i].status_)
+        if (ErasureCode::NODE_DEAD != erased_[i])
         {
           continue;  // only query dead nodes
         }

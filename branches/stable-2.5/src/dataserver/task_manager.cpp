@@ -617,6 +617,8 @@ namespace tfs
             }
             // got here, erased[unused]  mustbe NODE_ALIVE
             erased[unused] = ErasureCode::NODE_UNUSED;
+            TBSYS_LOG(DEBUG, "block %"PRI64_PREFIX"u will not used in reinstate",
+              family_members[unused].block_);
           }
         }
 

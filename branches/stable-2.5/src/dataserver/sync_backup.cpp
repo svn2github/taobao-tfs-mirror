@@ -462,7 +462,7 @@ namespace tfs
         ret = TFS_SUCCESS;
       }
 
-      TBSYS_LOG(INFO, "tfs mirror remove file %s %s, ret: %d, block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u ,dest addr: %s, action: %d",
+      TBSYS_LOG(DEBUG, "tfs mirror remove file %s %s, ret: %d, block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u ,dest addr: %s, action: %d",
           fsname.get_name(), (TFS_SUCCESS == ret) ? "successful" : "fail", ret, block_id, file_id, dest_addr_, action);
       return ret;
     }

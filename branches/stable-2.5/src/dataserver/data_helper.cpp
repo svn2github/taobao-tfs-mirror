@@ -1181,7 +1181,7 @@ namespace tfs
         const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
         for (int index = 0; (index < data_num + check_num) && (TFS_SUCCESS == ret); index++)
         {
-          if (erased[index] != NODE_ALIVE)
+          if (erased[index] != ErasureCode::NODE_ALIVE)
           {
             continue; // read data from alive nodes
           }
@@ -1258,7 +1258,7 @@ namespace tfs
         const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
         for (int index = 0; (index < data_num + check_num) && (TFS_SUCCESS == ret); index++)
         {
-          if (erased[index] != NODE_ALIVE)
+          if (erased[index] != ErasureCode::NODE_ALIVE)
           {
             continue; // qeury meta from alive nodes
           }

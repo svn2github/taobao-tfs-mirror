@@ -311,7 +311,7 @@ namespace tfs
         if (crc != data_file.crc())
         {
           TBSYS_LOG(WARN, "check crc fail. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
-              "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, crc: %u:%u",
+              "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, client crc: %u, datafile crc: %u",
               block_id, attach_block_id, file_id, lease_id, crc, data_file.crc());
           ret = EXIT_CHECK_CRC_ERROR;
         }
