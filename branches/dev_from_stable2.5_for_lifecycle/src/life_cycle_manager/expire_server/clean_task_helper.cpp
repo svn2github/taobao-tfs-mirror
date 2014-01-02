@@ -153,6 +153,7 @@ namespace tfs
     int CleanTaskHelper::do_clean_task(const uint64_t local_ipport, const int32_t total_es, const int32_t num_es,
                                     const int32_t note_interval, const int32_t task_time)
     {
+      UNUSED(local_ipport);
       int32_t ret;
       int32_t days_secs;
       int32_t hours_secs;
@@ -296,7 +297,7 @@ namespace tfs
                     if ((int32_t)(second - first) >= note_interval)
                     {
                        first = second;
-                       stat_to_kvstore(local_ipport, num_es, task_time, hash_mod, sum_file_num);
+                       //stat_to_kvstore(local_ipport, num_es, task_time, hash_mod, sum_file_num);
                     }
 
                     uint32_t file_len = t_file_name.length();

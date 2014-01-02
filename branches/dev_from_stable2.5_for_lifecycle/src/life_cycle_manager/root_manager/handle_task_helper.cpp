@@ -165,6 +165,7 @@ namespace tfs
     void HandleTaskHelper::assign_task()
     {
       int ret = TFS_SUCCESS;
+      int32_t sleep_time = SYSPARAM_EXPIREROOTSERVER.es_rts_lease_expired_time_;
 
       while (!destroy_)
       {
@@ -190,7 +191,7 @@ namespace tfs
 
 
         //dela with new tasks
-        if (now.toSeconds() % task_period_ == 0)
+        if (now.toSeconds() % task_period_ < sleep_time)
         {
           int sum_num = v_avaliable_servers.size() - available_index;
           for (int i =0; i + available_index < v_avaliable_servers.size(); i++)
@@ -219,7 +220,7 @@ namespace tfs
           }
         }
 
-        sleep(SYSPARAM_EXPIREROOTSERVER.es_rts_lease_expired_time_);
+        sleep(sleep_time);
       }
 
       return ;
