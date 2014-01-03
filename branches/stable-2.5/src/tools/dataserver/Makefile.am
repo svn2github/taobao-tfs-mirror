@@ -14,8 +14,9 @@ bin_PROGRAMS = clear_file_system\
                reload_config\
                reverse_name\
                tfsping\
-							 recover_disk_data_to_clusterv2\
-               check_super_block
+							 check_down_disk_data\
+               check_super_block\
+							 get_all_filename
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
@@ -27,6 +28,8 @@ LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
         $(top_builddir)/src/common/libtfscommon.a\
         $(TBLIB_ROOT)/lib/libtbnet.a\
         $(TBLIB_ROOT)/lib/libtbsys.a
+
+get_all_filename_SOURCES = get_all_filename.cpp
 
 clear_file_system_SOURCES = clear_file_system.cpp
 
@@ -52,7 +55,8 @@ read_index_tool_SOURCES = read_index_tool.cpp
 
 #view_local_key_SOURCES = view_local_key.cpp
 
-recover_disk_data_to_clusterv2_SOURCES = recover_disk_data_to_cluster_v2.cpp
+check_down_disk_data_SOURCES = check_down_disk_data.cpp
+#recover_disk_data_to_clusterv2_SOURCES = recover_disk_data_to_cluster_v2.cpp
 #recover_disk_data_to_cluster_SOURCES = recover_disk_data_to_cluster.cpp
 
 #recover_sync_file_queue_SOURCES = recover_sync_file_queue.cpp

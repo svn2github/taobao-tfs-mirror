@@ -15,6 +15,7 @@ endif
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/dataserver/libdataserver.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
+	$(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
@@ -24,18 +25,15 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a\
 	-lz
 
-showsyncoplog_SOURCES = showsyncoplog.cpp
-
 tfstool_SOURCES =  tfstool.cpp
 
 ssm_SOURCES = main.cpp show.cpp show_factory.cpp metacmp.cpp cmp_factory.cpp common.cpp\
 							show.h  show_factory.h metacmp.h cmp_factory.h common.h
 
-rmsyncoplog_SOURCES=rmsyncoplog.cpp
-read_syncoplog_header_SOURCES=read_syncoplog_header.cpp
+#read_syncoplog_header_SOURCES=read_syncoplog_header.cpp
 
 admintool_SOURCES = admintool.cpp
-performance_SOURCES = performance.cpp
+#performance_SOURCES = performance.cpp
 syncbyfile_SOURCES=sync_by_file.cpp
 #repair_block_info_SOURCES=repair_block_info.cpp
 if WITH_TAIR_CACHE
