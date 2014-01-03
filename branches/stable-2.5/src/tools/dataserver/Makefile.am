@@ -15,8 +15,7 @@ bin_PROGRAMS = clear_file_system\
                reverse_name\
                tfsping\
 							 check_down_disk_data\
-               check_super_block\
-							 get_all_filename
+               check_super_block
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
