@@ -12,6 +12,7 @@
 #include "common/new_client.h"
 #include "common/func.h"
 #include "common/version.h"
+#include "requester/ns_requester.h"
 #include "common.h"
 
 using namespace std;
@@ -19,8 +20,6 @@ using namespace tfs::tools;
 using namespace tfs::message;
 using namespace tfs::common;
 
-typedef map<uint64_t, vector<ServerBase*> > BLOCK_TO_DATASERVER_MAP;
-typedef map<uint64_t, vector<ServerBase*> >::iterator BLOCK_TO_DATASERVER_MAP_ITER;
 static bool g_interrupt = false;
 
 static void sign_handler(int32_t sig)
@@ -111,64 +110,6 @@ int fetch_blocks(const uint64_t ns_id, list<BlockBase>& block_list, const int32_
   return ret;
 }
 
-int fetch_dataservers(const uint64_t ns_id, vector<ServerBase>& servers)
-{
-  ShowServerInformationMessage msg;
-  SSMScanParameter& param = msg.get_param();
-  param.type_ = SSM_TYPE_SERVER;
-  param.child_type_ = SSM_CHILD_SERVER_TYPE_INFO;
-  param.start_next_position_ = 0x0;
-  param.should_actual_count_= (100 << 16);  // get 100 ds every turn
-  param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
-
-  MessageFactory packet_factory;
-  BasePacketStreamer packet_streamer(&packet_factory);
-  int ret = NewClientManager::get_instance().initialize(&packet_factory, &packet_streamer);
-  if (TFS_SUCCESS != ret)
-  {
-    TBSYS_LOG(ERROR, "NewClientManager initialize fail, ret: %d", ret);
-    return ret;
-  }
-  while (!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES) && !g_interrupt)
-  {
-    param.data_.clear();
-    tbnet::Packet* ret_msg = NULL;
-    NewClient* client = NewClientManager::get_instance().create_client();
-    ret = send_msg_to_server(ns_id, client, &msg, ret_msg);
-    if (TFS_SUCCESS != ret || ret_msg == NULL)
-    {
-      TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
-      NewClientManager::get_instance().destroy_client(client);
-      return TFS_ERROR;
-    }
-    if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
-    {
-      TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
-      NewClientManager::get_instance().destroy_client(client);
-      return TFS_ERROR;
-    }
-    ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
-    SSMScanParameter& ret_param = message->get_param();
-
-    int32_t data_len = ret_param.data_.getDataLen();
-    int32_t offset = 0;
-    while (data_len > offset)
-    {
-      ServerBase server;
-      if (TFS_SUCCESS == server.deserialize(ret_param.data_, data_len, offset, param.child_type_))
-      {
-        servers.push_back(server);
-        //std::string ip_port = Func::addr_to_str(server.id_, true);
-      }
-    }
-    param.addition_param1_ = ret_param.addition_param1_;
-    param.addition_param2_ = ret_param.addition_param2_;
-    param.end_flag_ = ret_param.end_flag_;
-    NewClientManager::get_instance().destroy_client(client);
-  }
-  NewClientManager::get_instance().destroy();
-  return TFS_SUCCESS;
-}
 
 void arrange_block_order(list<BlockBase>& block_list, const int ds_size, const double rato, vector<uint64_t>& order_list)
 {
@@ -191,9 +132,15 @@ void arrange_block_order(list<BlockBase>& block_list, const int ds_size, const d
       else
       {
         // can not find any block to compact in idle dataservers, start next round loop
-        printf("scan over block list and can't find any block, although used servers count only: %zd( < %d ), will loop again!\n", server_set.size(), ds_size_limit);
+        printf("scan over block list but can't arrage any block more, although used servers count only: %zd( < %d ), left block count: %zd\n",
+            server_set.size(), ds_size_limit, block_list.size());
         server_set.clear();
         ++slice_count;
+        ds_size_limit = (int)(0.95 * ds_size_limit);// relax
+        if (0 == ds_size_limit)
+        {
+          ds_size_limit = 1;
+        }
       }
     }
 
@@ -213,7 +160,7 @@ void arrange_block_order(list<BlockBase>& block_list, const int ds_size, const d
       order_list.push_back(it->info_.block_id_);
       server_set.insert(it->server_list_.begin(), it->server_list_.end());
       block_list.erase(it++);
-      if ((int)server_set.size() >= ds_size_limit)// to used rato limit, again arrage next batch block
+      if ((int)server_set.size() >= ds_size_limit)// reach to used rato limit, then arrage next batch block
       {
         server_set.clear();
         ++slice_count;
@@ -295,16 +242,16 @@ int main(int argc, char* argv[])
   }
   printf("block count: %zd\n", block_list.size());
 
-  vector<ServerBase> servers;
-  ret = fetch_dataservers(ns_id, servers);
+  tfs::common::VUINT64 ds_list;
+  ret = tfs::requester::NsRequester::get_ds_list(ns_id, ds_list);
   if (tfs::common::TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(ERROR, "fetch blocks fail, ret:%d", ret);
+    TBSYS_LOG(ERROR, "get all ds list fail, ret:%d", ret);
     return ret;
   }
   double rato = 1.0 * percent / 100;
   vector<uint64_t> order_list;
-  arrange_block_order(block_list, servers.size(), rato, order_list);
+  arrange_block_order(block_list, ds_list.size(), rato, order_list);
 
   FILE* fp = fopen(file_name.c_str(), "w+");
   if (NULL == fp)
