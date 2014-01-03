@@ -23,4 +23,4 @@ split_item_tool_SOURCES=split_item_tool.cpp
 
 block_toolv2_SOURCES=block_tool_v2.cpp
 
-calc_ip_addr_SOURCES=calc_ip_addr.cpp
+# calc_ip_addr_SOURCES=calc_ip_addr.cpp

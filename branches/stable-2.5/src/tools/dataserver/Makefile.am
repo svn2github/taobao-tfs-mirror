@@ -28,8 +28,6 @@ LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
         $(TBLIB_ROOT)/lib/libtbnet.a\
         $(TBLIB_ROOT)/lib/libtbsys.a
 
-get_all_filename_SOURCES = get_all_filename.cpp
-
 clear_file_system_SOURCES = clear_file_system.cpp
 
 read_super_block_SOURCES = read_super_block.cpp

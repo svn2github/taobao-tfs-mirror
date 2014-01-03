@@ -269,7 +269,6 @@ AC_CONFIG_FILES([Makefile
                  src/tools/cluster/Makefile
                  src/tools/workers/Makefile
                  src/checkserver/Makefile
-                 tests/common/Makefile
                  src/tools/metaserver/Makefile])
                  #tests/Makefile
                  #tests/batch/Makefile
