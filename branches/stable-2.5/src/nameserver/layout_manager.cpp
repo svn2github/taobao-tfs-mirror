@@ -604,7 +604,7 @@ namespace tfs
       int64_t need = 0, family_start = 0, max_compact_task_count = 0, max_marshalling_num = SYSPARAM_NAMESERVER.max_marshalling_num_;
       const int32_t MAX_QUERY_FAMILY_NUMS = 32;
       const int32_t MAX_QUERY_BLOCK_NUMS = 4096 * 4;
-      const int32_t MIN_SLEEP_TIME_US= 5000;
+      const int32_t MIN_SLEEP_TIME_US= 1000000;//1s
       const int32_t MAX_SLEEP_TIME_US = 1000000;//1s
       const int32_t MAX_LOOP_NUMS = 1000000 / MIN_SLEEP_TIME_US;
       BlockCollect* blocks[MAX_QUERY_BLOCK_NUMS];
