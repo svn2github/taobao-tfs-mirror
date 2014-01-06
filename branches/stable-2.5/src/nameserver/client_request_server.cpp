@@ -889,6 +889,7 @@ namespace tfs
           for (index = 0; index < members.get_array_index(); ++index)
           {
             std::pair<uint64_t, common::BlockInfoV2>* item = members.at(index);
+            server = server_manager.get(item->first);
             if (item->second.version_ >= info.version_
               && block_manager.exist(block, server))
             {
