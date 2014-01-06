@@ -17,13 +17,13 @@ BuildRequires: tair-devel = 2.3.2.3
 BuildRequires: boost-devel >= 1.3 
 BuildRequires: readline-devel
 BuildRequires: ncurses-devel
-BuildRequires: google-perftools >= 1.7
+BuildRequires: google-perftools = 1.7
 BuildRequires: jemalloc-devel >= 2.2
 BuildRequires: snappy >= 1.1.2
 BuildRequires: libunwind
 Requires: jemalloc-devel >= 2.2
 Requires: snappy >= 1.1.2
-Requires: google-perftools >= 1.7
+Requires: google-perftools = 1.7
 Requires: libunwind
 Requires: readline-devel
 Requires: ncurses-devel
