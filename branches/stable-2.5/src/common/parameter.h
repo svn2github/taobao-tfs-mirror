@@ -65,6 +65,7 @@ namespace tfs
       int32_t marshalling_time_lower_;
       int32_t marshalling_time_upper_;
       int32_t marshalling_type_;
+      int32_t marshalling_visit_time_;
       int32_t max_data_member_num_;
       int32_t max_check_member_num_;
       int32_t max_marshalling_queue_timeout_;
@@ -162,10 +163,12 @@ namespace tfs
       std::string db_info_;
       std::string db_user_;
       std::string db_pwd_;
+      std::vector<std::string> ops_db_info_;
       int64_t monitor_interval_;
       int64_t stat_interval_;
       int64_t update_interval_;
       int64_t count_interval_;
+      int64_t monitor_key_interval_;
 
       static RcServerParameter rc_parameter_;
       static RcServerParameter& instance()

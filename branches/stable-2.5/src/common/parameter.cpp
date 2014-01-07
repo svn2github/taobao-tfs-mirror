@@ -74,6 +74,7 @@ namespace tfs
       adjust_copies_location_time_lower_   = 6;
       adjust_copies_location_time_upper_   = 12;
       max_marshalling_num_ = 1;
+      marshalling_visit_time_ = 1 * 30 * 86400;//one month
       enable_old_interface_ = ENABLE_OLD_INTERFACE_FLAG_NO;
       enable_version_check_ = ENABLE_VERSION_CHECK_FLAG_YES;
       write_file_check_copies_complete_ = WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_NO;
@@ -148,7 +149,7 @@ namespace tfs
       compact_update_ratio_  = std::min(compact_update_ratio_, 100);
       const char* compact_time_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_COMPACT_HOUR_RANGE, "2~6");
       set_hour_range(compact_time_str, compact_time_lower_, compact_time_upper_);
-      compact_task_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_TASK_RATIO, 25);
+      compact_task_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_TASK_RATIO, 1);
 
       object_dead_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_DEAD_MAX_TIME, 300);
       if (object_dead_max_time_ <=  300)
@@ -373,11 +374,14 @@ namespace tfs
       db_info_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_INFO, "");
       db_user_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_USER, "");
       db_pwd_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_PWD, "");
+      std::string ops_db_info = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_OPS_DB_INFO, "");
+      Func::split_string(ops_db_info.c_str(), ';', ops_db_info_);
 
       monitor_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_MONITOR_INTERVAL, 60);
       stat_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_STAT_INTERVAL, 120);
       update_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_UPDATE_INTERVAL, 30);
       count_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_COUNT_INTERVAL, 10);
+      monitor_key_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_MONITOR_KEY_INTERVAL, 600);
       return TFS_SUCCESS;
     }
 

@@ -163,6 +163,8 @@ namespace tfs
 #define CONF_RC_DB_INFO                               "rc_db_info"
 #define CONF_RC_DB_USER                               "rc_db_user"
 #define CONF_RC_DB_PWD                                "rc_db_pwd"
+#define CONF_RC_MONITOR_KEY_INTERVAL                  "rc_monitor_key_interval"
+#define CONF_RC_OPS_DB_INFO                           "rc_ops_db_info"
 
 //name_meta_server
 #define CONF_MAX_SPOOL_SIZE                            "max_spool_size"

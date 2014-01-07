@@ -296,7 +296,7 @@ namespace tfs
         ret = (new_size >= 0  && NULL != header) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
         if (TFS_SUCCESS == ret && !rollback)
         {
-          if (OPER_DELETE != oper_type && OPER_UNDELETE != oper_type)
+          if (OPER_DELETE != oper_type && OPER_UNDELETE != oper_type && OPER_READ != oper_type)
             header->info_.version_ += VERSION_INC_STEP_DEFAULT;
         }
         if (TFS_SUCCESS == ret)
@@ -341,6 +341,12 @@ namespace tfs
             header->throughput_.write_bytes_ += real_new_size;
             header->throughput_.update_bytes_ += real_new_size;
             header->throughput_.update_visit_count_ += file_count;
+          }
+
+          if (OPER_READ == oper_type)
+          {
+            header->throughput_.read_bytes_ += real_new_size;
+            header->throughput_.read_visit_count_ += file_count;
           }
         }
       }
@@ -741,7 +747,7 @@ namespace tfs
           IndexHeaderV2* pheader = get_index_header_();
           assert(NULL != pheader);
           pheader->info_ = header.info_;
-          pheader->info_.last_update_time_ = time(NULL);
+          //pheader->info_.last_update_time_ = time(NULL);
           pheader->throughput_ = header.throughput_;
           pheader->marshalling_offset_ = header.marshalling_offset_;
           pheader->seq_no_ = header.seq_no_;
@@ -774,7 +780,7 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             pheader->info_ = header.info_;
-            pheader->info_.last_update_time_ = time(NULL);
+            //pheader->info_.last_update_time_ = time(NULL);
             pheader->seq_no_ = header.seq_no_;
             pheader->marshalling_offset_ = header.marshalling_offset_;
             pheader->used_file_info_bucket_size_ = 0;
@@ -987,7 +993,7 @@ namespace tfs
         if (reset)
         {
           memset(&header->throughput_, 0, sizeof(header->throughput_));
-          header->info_.last_update_time_ = time(NULL);
+          //header->info_.last_update_time_ = time(NULL);
           header->throughput_.last_statistics_time_ = header->info_.last_update_time_;
         }
       }

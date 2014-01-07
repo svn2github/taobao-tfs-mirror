@@ -64,6 +64,3 @@ check_down_disk_data_SOURCES = check_down_disk_data.cpp
 #read_block_prefix_SOURCES = read_block_prefix.cpp
 
 #verify_block_to_dataserver_SOURCES = verify_block_to_dataserver.cpp
-
-
-#test_load_SOURCES = test_load.cpp

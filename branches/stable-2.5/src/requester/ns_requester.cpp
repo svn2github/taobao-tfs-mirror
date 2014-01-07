@@ -619,7 +619,8 @@ namespace tfs
                 TBSYS_LOG(WARN, "ignore filename: %s althought it is not exist in %s, its status is 'DELETE' in %s , unlink is set 'false', ret: %d",
                     filename.c_str(), daddr.c_str(), saddr.c_str(), ret);
             }
-            if (dfinfo.status_ != sfinfo.status_)
+            if (dfinfo.status_ != sfinfo.status_
+              && common::INVALID_FILE_ID != dfinfo.id_)
             {
               TBSYS_LOG(WARN, "%s status conflict! size: %d <> %d , crc %u <> %u , status: %d <> %d , create_time: %s <> %s , modify_time: %s <> %s",
                   filename.c_str(), sfinfo.size_, dfinfo.size_, sfinfo.crc_, dfinfo.crc_, sfinfo.status_, dfinfo.status_,

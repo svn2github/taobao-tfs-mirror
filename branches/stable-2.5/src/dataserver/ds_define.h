@@ -166,7 +166,8 @@ namespace tfs
       OPER_INSERT = 1,
       OPER_DELETE = 2,
       OPER_UNDELETE = 3,
-      OPER_UPDATE = 4
+      OPER_UPDATE = 4,
+      OPER_READ   = 5 //read && stat
     }OperType;
 
     class GCObject

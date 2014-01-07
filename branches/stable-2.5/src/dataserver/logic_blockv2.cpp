@@ -699,6 +699,22 @@ namespace tfs
       return TFS_SUCCESS == ret ? datafile.length() : ret;
     }
 
+    int LogicBlock::read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,
+          const int8_t flag, const uint64_t logic_block_id)
+    {
+      int32_t ret = (NULL != buf && nbytes > 0 && offset >= 0 && INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = BaseLogicBlock::read(buf, nbytes, offset, fileid, flag, logic_block_id);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_index_handle_()->update_block_statistic_info(OPER_READ, nbytes, nbytes, false);
+      }
+      return ret;
+    }
+
     int LogicBlock::unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id)
     {
       size = 0;

@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
     const int32_t TOTAL = output_files.size();
     while (NULL != fgets(buf, BUF_LEN, input_item))
     {
-      fprintf(output_files[index], "%s\n", buf);
+      fprintf(output_files[index], "%s", buf);
       if (++index >= TOTAL)
         index = 0;
     }

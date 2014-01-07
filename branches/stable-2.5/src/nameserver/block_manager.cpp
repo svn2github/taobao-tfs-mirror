@@ -424,6 +424,7 @@ namespace tfs
         {
           helper.clear();
           int8_t all_server_size = 0;
+          int32_t old_version    = -1;
           int64_t family_id = INVALID_FAMILY_ID;
           bool writable = false, master = false;
           BlockInfoV2& info = (*blocks.at(i));
@@ -442,6 +443,7 @@ namespace tfs
           ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
           if (TFS_SUCCESS == ret)
           {
+            old_version = block->version();
             family_id = block->get_family_id();
             if (INVALID_FAMILY_ID == family_id)
             {
@@ -463,6 +465,7 @@ namespace tfs
             }
             else
             {
+              old_version = block->version();
               ret =  (info.family_id_ == family_id) ? TFS_SUCCESS : EXIT_EXPIRE_SELF_ERROR ;
               if (TFS_SUCCESS == ret)
               {
@@ -515,9 +518,13 @@ namespace tfs
               push_to_delete_queue(info.block_id_, id);
           }
 
+          //if (EXIT_EXPIRE_SELF_ERROR == ret && ngi.is_master() && all_server_size > 0)
           if (EXIT_EXPIRE_SELF_ERROR == ret && ngi.is_master())
           {
-            push_to_delete_queue(info.block_id_, server->id());
+            TBSYS_LOG(INFO, "expire self: %s, %"PRI64_PREFIX"u, version: %d: %d",
+              tbsys::CNetUtil::addrToString(server->id()).c_str(), info.block_id_, info.version_, old_version);
+            if (all_server_size > 0)
+              push_to_delete_queue(info.block_id_, server->id());
           }
           if (EXIT_EXPIRE_SELF_ERROR == ret)
           {

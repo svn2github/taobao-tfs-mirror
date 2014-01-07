@@ -300,8 +300,10 @@ namespace tfs
         {
           int32_t delete_file_num_ratio = get_delete_file_num_ratio();
           int32_t delete_size_ratio = get_delete_file_size_ratio();
+          //int32_t marshalling_visit_time = time(NULL) - info_.last_update_time_;
           ret = (delete_file_num_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_
                 && delete_size_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_);
+                //&& marshalling_visit_time >= SYSPARAM_NAMESERVER.marshalling_visit_time_);
         }
       }
       return ret;
