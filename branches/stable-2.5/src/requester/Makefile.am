@@ -13,7 +13,9 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a\
 
 noinst_LIBRARIES = libtfsrequester.a
 
-libtfsrequester_a_SOURCES=ns_requester.cpp ds_requester.cpp misc_requester.cpp \
-												ns_requester.h ds_requester.h misc_requester.h monitor_key_rule_manager.h\
-												monitor_key_rule_manager.cpp
+#libtfsrequester_a_SOURCES=ns_requester.cpp ds_requester.cpp misc_requester.cpp \
+#												ns_requester.h ds_requester.h misc_requester.h monitor_key_rule_manager.h\
+#												monitor_key_rule_manager.cpp
 
+libtfsrequester_a_SOURCES=ns_requester.cpp ds_requester.cpp misc_requester.cpp \
+												ns_requester.h ds_requester.h misc_requester.h 
