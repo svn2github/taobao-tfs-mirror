@@ -215,6 +215,11 @@ namespace tfs
 
     static const int32_t VERSION_DIFF = 1;
 
+    //http
+    static const char* const HTTP_PROTOCOL = "HTTP/1.1";
+    static const int32_t HTTP_PROTOCOL_LENGTH = 8;
+    static const int32_t HTTP_BLANK_LENGTH = 1;
+
     enum VersionStep
     {
       VERSION_INC_STEP_NONE = 0,
@@ -1059,7 +1064,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[53];
+    extern const char* dynamic_parameter_str[54];
 
     #pragma pack (1)
     struct FileInfoV2//30

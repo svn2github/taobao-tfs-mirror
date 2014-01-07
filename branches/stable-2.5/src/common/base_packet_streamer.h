@@ -14,12 +14,12 @@
  *
  */
 #ifndef TFS_COMMON_BASE_PACKET_STREAMER_H_
-#define TFS_COMMON_BASE_PACKET_STREAMER_H_ 
+#define TFS_COMMON_BASE_PACKET_STREAMER_H_
 #include <tbsys.h>
 #include <tbnet.h>
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     class BasePacketStreamer: public tbnet::IPacketStreamer
     {
@@ -29,14 +29,6 @@ namespace tfs
       virtual ~BasePacketStreamer();
       void set_packet_factory(tbnet::IPacketFactory* factory);
 
-      tbnet::IPacketFactory* get_packet_factory() const
-      {
-        return _factory;
-      }
-
-      void setNoPacketHeader() {
-        _existPacketHeader = false;
-      }
     #ifdef TFS_GTEST
     public:
     #else

@@ -1,6 +1,20 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id: base_packet.cpp 213 2011-04-22 16:22:51Z duanfei@taobao.com $
+ *
+ * Authors:
+ *   duanfei <duanfei@taobao.com>
+ *      - initial release
+ *
+ */
 
 #include "http_packet.h"
-
 namespace tfs
 {
   namespace common
@@ -16,22 +30,17 @@ namespace tfs
     bool HttpPacket::encode(tbnet::DataBuffer *output)
     {
       bool bret = NULL != output;
-
       if (bret)
       {
         stream_.clear();
         stream_.expand(length());
-        int32_t iret = serialize(stream_);
-        bret = TFS_SUCCESS == iret;
-      }
-      if (bret)
-      {
-        if (stream_.get_data_length() > 0)
+        int32_t ret = serialize(stream_);
+        bret = TFS_SUCCESS == ret;
+        if (bret && stream_.get_data_length() > 0)
         {
           output->writeBytes(stream_.get_data(), stream_.get_data_length());
         }
       }
-
       return bret;
     }
 
@@ -66,5 +75,5 @@ namespace tfs
       }
       return bret;
     }
-  }
-}
+  }/** end namespace common **/
+}/** end namespace tfs **/

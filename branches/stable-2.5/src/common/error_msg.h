@@ -21,6 +21,9 @@ namespace tfs
 {
   namespace common
   {
+    //http error code
+    const int32_t HTTP_RESPONSE_OK = 200;
+
     const int32_t EXIT_GENERAL_ERROR = -1000;
     const int32_t EXIT_CONFIG_ERROR = -1001;
     const int32_t EXIT_UNKNOWN_MSGTYPE = -1002;
