@@ -244,6 +244,31 @@ namespace tfs
       int64_t last_report_time_;
     };
 
+    struct MonitorKeyAidKey
+    {
+      std::string service_type_;
+      std::string app_version_;
+      bool operator < (const MonitorKeyAidKey& key) const
+      {
+        return ( 0 == app_version_.compare(key.app_version_) && 0 == service_type_.compare(key.service_type_));
+      }
+    };
+
+    struct MonitorKeyInfo
+    {
+      std::string key_;
+      int32_t key_flag_;
+      int32_t key_repeat_report_;
+      int32_t key_internal_time_report_;
+      int32_t key_threshold_report_;
+      int64_t last_report_time_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+    };
+
+
     typedef std::map<std::string, KeepAliveInfo> SessionCollectMap;
     typedef SessionCollectMap::const_iterator SessionCollectMapConstIter;
     typedef SessionCollectMap::iterator SessionCollectMapIter;
@@ -259,6 +284,10 @@ namespace tfs
     typedef std::multimap<OperType, AppOperInfo> AppOperInfoMap;
     typedef AppOperInfoMap ::const_iterator AppOperInfoMapConstIter;
     typedef AppOperInfoMap ::iterator AppOperInfoMapIter;
+
+    typedef std::map<MonitorKeyAidKey, std::vector<MonitorKeyInfo> > MonitorKeyMap;
+    typedef MonitorKeyMap::const_iterator CONST_MONITOR_KEY_MAP_ITER;
+    typedef MonitorKeyMap::iterator MONITOR_KEY_MAP_ITER;
   }
 }
 #endif //TFS_RC_DEFINE_H_
