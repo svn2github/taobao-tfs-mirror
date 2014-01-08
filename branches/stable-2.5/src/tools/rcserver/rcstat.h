@@ -26,11 +26,12 @@ namespace tfs
         static inline std::string& trim_space(std::string &s);
         int show_rcs_stat();
 
-        std::vector<string> rc_ips_vec;
-        int32_t   app_id;
-        int32_t   oper_type;
-        int32_t   order_by;
-        std::multimap<int64_t, AppOperInfo> appoper_result_map;
+        std::vector<string> rc_ips_vec_;
+        int32_t   app_id_;
+        int32_t   oper_type_;
+        int32_t   order_by_;
+        bool      is_json_;
+        std::multimap<int64_t, AppOperInfo> appoper_result_map_;
     };
   }
 }

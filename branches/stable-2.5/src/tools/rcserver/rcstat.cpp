@@ -9,6 +9,35 @@
 
 namespace tfs
 {
+  namespace
+  {
+    void fill_nodata_col(bool* have_done_oper)
+    {
+      for (int i=0; i < 3; i++)
+      {
+        if (!have_done_oper[i])
+        {
+          switch (i+1)
+          {
+            case 1:
+              fprintf(stdout, ",\"read_times\":0, \"read_bytes\":0, \"read_rt\":0");
+              have_done_oper[0] = true;
+              break;
+            case 2:
+              fprintf(stdout, ",\"write_times\":0, \"write_bytes\":0, \"write_rt\":0");
+              have_done_oper[1] = true;
+              break;
+            case 3:
+              fprintf(stdout, ",\"rm_times\":0, \"rm_bytes\":0, \"rm_rt\":0");
+              have_done_oper[2] = true;
+              break;
+            default:
+              break;
+          }
+        }
+      }
+    }
+  }
   namespace tools
   {
     static int32_t server_update_interval = 10;
@@ -17,7 +46,7 @@ namespace tfs
     static tfs::common::BasePacketStreamer gstreamer;
 
     RcStat::RcStat()
-      :app_id(0), oper_type(0), order_by(0)
+      :app_id_(0), oper_type_(0), order_by_(0), is_json_(false)
     {
       gstreamer.set_packet_factory(&gfactory);
       NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
@@ -73,7 +102,7 @@ namespace tfs
 
       string str_rc_ips;
 
-      while ((i = getopt(argc, argv,"r:a:t:o:i")) != EOF)
+      while ((i = getopt(argc, argv,"r:a:t:o:ij")) != EOF)
       {
         switch (i)
         {
@@ -83,10 +112,10 @@ namespace tfs
             break;
             /* app_id */
           case 'a':
-            app_id = atoi(optarg);
+            app_id_ = atoi(optarg);
             break;
           case 'o':
-            order_by = atoi(optarg);
+            order_by_ = atoi(optarg);
             break;
           case 'i':
             server_update_interval = atoi(optarg);
@@ -97,7 +126,10 @@ namespace tfs
             break;
             /* type  */
           case 't':
-            oper_type = atoi(optarg);
+            oper_type_ = atoi(optarg);
+            break;
+          case 'j':
+            is_json_ = true;
             break;
           default:
             fprintf(stderr, "Usage: %s -a 127.0.0.1:6202 -a 0\n", argv[0]);
@@ -111,7 +143,7 @@ namespace tfs
       }
       else
       {
-        split_string_to_vector(str_rc_ips, ",",rc_ips_vec);
+        split_string_to_vector(str_rc_ips, ",",rc_ips_vec_);
       }
 
       return TFS_SUCCESS;
@@ -130,10 +162,10 @@ namespace tfs
         {
           key = mit->second.oper_app_id_ << 16 | mit->second.oper_type_;
 
-          std::map<int64_t, AppOperInfo>::iterator it = appoper_result_map.find(key);
-          if (it == appoper_result_map.end())
+          std::map<int64_t, AppOperInfo>::iterator it = appoper_result_map_.find(key);
+          if (it == appoper_result_map_.end())
           {
-            appoper_result_map.insert(make_pair(key, mit->second));
+            appoper_result_map_.insert(make_pair(key, mit->second));
           }
           else
           {
@@ -158,9 +190,13 @@ namespace tfs
     {
       int32_t ret = TFS_SUCCESS;
       std::multimap<int64_t, AppOperInfo> order_appoper_result_map;
-      std::multimap<int64_t, AppOperInfo>::iterator it = appoper_result_map.begin();
+      std::multimap<int64_t, AppOperInfo>::iterator it = appoper_result_map_.begin();
       int64_t count_per_sec, succ_count_per_sec;
-      for (; it != appoper_result_map.end(); ++it)
+      if (is_json_)
+      {
+        order_by_ = 0; //use json format, order is no matter
+      }
+      for (; it != appoper_result_map_.end(); ++it)
       {
         count_per_sec = it->second.oper_times_ /server_update_interval + 1;
         succ_count_per_sec = it->second.oper_succ_ /server_update_interval + 1;
@@ -169,35 +205,85 @@ namespace tfs
         it->second.oper_times_ = count_per_sec;
         it->second.oper_succ_ = succ_count_per_sec;
 
-        if (order_by == 1)
+        if (order_by_ == 1)
         {
           order_appoper_result_map.insert(make_pair(it->second.oper_times_, it->second));
         }
-        else if (order_by == 2)
+        else if (order_by_ == 2)
         {
           order_appoper_result_map.insert(make_pair(it->second.oper_size_, it->second));
         }
-        else if (order_by == 3)
+        else if (order_by_ == 3)
         {
           order_appoper_result_map.insert(make_pair(it->second.oper_rt_, it->second));
         }
       }
 
       std::multimap<int64_t, AppOperInfo> *tmp_appoper_result_map = NULL;
-      if (order_by == 1 || order_by == 2 || order_by == 3)
+      if (order_by_ == 1 || order_by_ == 2 || order_by_ == 3)
       {
         tmp_appoper_result_map = &order_appoper_result_map;
       }
       else
       {
-        tmp_appoper_result_map = &appoper_result_map;
+        tmp_appoper_result_map = &appoper_result_map_;
       }
 
       it = tmp_appoper_result_map->begin();
-      for (; it != tmp_appoper_result_map->end(); ++it)
+      if (is_json_)
       {
-        fprintf(stdout, "%d,%d,%ld,%ld,%ld,%ld\n", it->second.oper_app_id_, it->second.oper_type_, \
-            it->second.oper_times_, it->second.oper_size_, it->second.oper_rt_, succ_count_per_sec);
+        int last_app_id = -1;
+        bool have_done_oper[3];
+        have_done_oper[0] = have_done_oper[1] = have_done_oper[2] = true;
+        fprintf(stdout, "{\n");
+        for (; it != tmp_appoper_result_map->end(); ++it)
+        {
+          if (it->second.oper_app_id_ <= 0 ) continue;
+          bool first_line_in_app = last_app_id != it->second.oper_app_id_;
+          if (first_line_in_app)
+          {
+            if (last_app_id != -1)
+            {
+              fill_nodata_col(have_done_oper);
+              fprintf(stdout, "\n},\n");
+              fprintf(stdout, "{\n");
+            }
+            last_app_id = it->second.oper_app_id_;
+            fprintf(stdout, "\"app_id\":\"%d\"", last_app_id);
+            have_done_oper[0] = have_done_oper[1] = have_done_oper[2] = false;
+          }
+
+          switch (it->second.oper_type_)
+          {
+            case 1:
+              fprintf(stdout, ",\"read_times\":%ld, \"read_bytes\":%ld, \"read_rt\":%ld",
+                  it->second.oper_times_, it->second.oper_size_, it->second.oper_rt_);
+              have_done_oper[0] = true;
+              break;
+            case 2:
+              fprintf(stdout, ",\"write_times\":%ld, \"write_bytes\":%ld, \"write_rt\":%ld",
+                  it->second.oper_times_, it->second.oper_size_, it->second.oper_rt_);
+              have_done_oper[1] = true;
+              break;
+            case 3:
+              fprintf(stdout, ",\"rm_times\":%ld, \"rm_bytes\":%ld, \"rm_rt\":%ld",
+                  it->second.oper_times_, it->second.oper_size_, it->second.oper_rt_);
+              have_done_oper[2] = true;
+              break;
+            default:
+              break;
+          }
+        }
+        fill_nodata_col(have_done_oper);
+        fprintf(stdout, "\n}\n");
+      }
+      else
+      {
+        for (; it != tmp_appoper_result_map->end(); ++it)
+        {
+          fprintf(stdout, "%d,%d,%ld,%ld,%ld,%ld\n", it->second.oper_app_id_, it->second.oper_type_, \
+              it->second.oper_times_, it->second.oper_size_, it->second.oper_rt_, succ_count_per_sec);
+        }
       }
 
       return ret;
@@ -208,8 +294,8 @@ namespace tfs
       int ret = TFS_SUCCESS;
       uint64_t server_id = 0;
 
-      std::vector<string>::const_iterator iter = rc_ips_vec.begin();
-      for (; iter != rc_ips_vec.end(); ++iter)
+      std::vector<string>::const_iterator iter = rc_ips_vec_.begin();
+      for (; iter != rc_ips_vec_.end(); ++iter)
       {
         string rc_ip = *iter;
         server_id = Func::get_host_ip(rc_ip.c_str());
@@ -218,8 +304,8 @@ namespace tfs
         ReqRcStatMessage req_rcstat_msg;
         NewClient* client = NewClientManager::get_instance().create_client();
 
-        req_rcstat_msg.set_app_id(app_id);
-        req_rcstat_msg.set_oper_type(oper_type);
+        req_rcstat_msg.set_app_id(app_id_);
+        req_rcstat_msg.set_oper_type(oper_type_);
 
         if ((ret = send_msg_to_server(server_id, client, &req_rcstat_msg, ret_msg)) == TFS_SUCCESS)
         {
