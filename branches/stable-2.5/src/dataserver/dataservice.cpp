@@ -432,8 +432,8 @@ namespace tfs
 
     void DataService::dump_stat_(time_t now)
     {
-      // dump every minute
-      if (now % 60 == 0)
+      int32_t interval = std::max(SYSPARAM_DATASERVER.dump_vs_interval_, 60);
+      if (now % interval == 0)
       {
         static int64_t last_write_bytes[2] = {0};
         static int64_t last_write_file_count[2] = {0};

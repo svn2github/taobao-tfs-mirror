@@ -138,7 +138,7 @@ namespace tfs
       tbutil::Mutex::Lock lock(mutex_);
       for (int32_t index = 0; index < server_size_; ++index)
       {
-        desp << " server: " << tbsys::CNetUtil::addrToString(members_[index].server_) <<
+        desp << "block: " << lease_id_.block_ << " server: " << tbsys::CNetUtil::addrToString(members_[index].server_) <<
           " status: " << members_[index].status_;
       }
     }

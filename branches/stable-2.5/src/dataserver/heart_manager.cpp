@@ -153,9 +153,9 @@ namespace tfs
             {
               DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
               RespHeartMessage* resp_hb_msg = dynamic_cast<RespHeartMessage*>(message);
+              heart_interval = resp_hb_msg->get_heart_interval();
               if (NS_ROLE_MASTER == resp_hb_msg->get_ns_role())
               {
-                heart_interval = resp_hb_msg->get_heart_interval();
                 info.max_mr_network_bandwidth_mb_ = resp_hb_msg->get_max_mr_network_bandwith_mb();
                 info.max_rw_network_bandwidth_mb_ = resp_hb_msg->get_max_rw_network_bandwith_mb();
                 info.enable_old_interface_ = resp_hb_msg->get_enable_old_interface();

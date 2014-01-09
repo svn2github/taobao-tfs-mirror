@@ -383,7 +383,7 @@ namespace tfs
       set<FileInfoV2, FileInfoCompare>::iterator it = files.begin();
       for ( ; it != files.end(); it++)
       {
-        if (!(iter->status_ & FI_DELETED))
+        if (!(it->status_ & FI_DELETED))
         {
           less.push_back(*it);
         }
