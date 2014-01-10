@@ -157,7 +157,7 @@ namespace tfs
             }
           }
 
-          TBSYS_LOG(INFO, "add task result: seqno: %ld, %d", task->seqno_, ret);
+          TBSYS_LOG(DEBUG, "add task result: seqno: %ld, %d", task->seqno_, ret);
 
           if (TFS_SUCCESS != ret)
           {

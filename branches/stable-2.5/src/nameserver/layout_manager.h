@@ -84,7 +84,7 @@ namespace tfs
       int update_relation(std::vector<uint64_t>& expires, ServerCollect* server,
           const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now);
       int build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set = false);
-      bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now);
+      bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool print = true);
       bool relieve_relation(BlockCollect* block, const uint64_t server, const time_t now);
       bool relieve_relation(const uint64_t block, ServerCollect* server, const time_t now);
       bool relieve_relation(const uint64_t block, const uint64_t server, const time_t now);

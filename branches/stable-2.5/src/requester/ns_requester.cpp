@@ -651,21 +651,21 @@ namespace tfs
     }
 
     int NsRequester::cmp_and_sync_file(const std::string& src_ns_addr, const std::string& dest_ns_addr, const std::string& file_name,
-        const int64_t timestamp, const bool force, common::FileInfoV2& left, common::FileInfoV2& right)
+        const int64_t timestamp, const bool force, common::FileInfoV2& left, common::FileInfoV2& right, const bool confirm)
     {
-      memset(&left, 0, sizeof(left));
-      memset(&right, 0, sizeof(right));
       int32_t ret = (!src_ns_addr.empty() && !dest_ns_addr.empty() && !file_name.empty()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && confirm)
       {
+        memset(&left, 0, sizeof(left));
         ret =read_file_info_v2(src_ns_addr, file_name, left);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "read %s file info fail from %s, ret: %d", file_name.c_str(), src_ns_addr.c_str(), ret);
         }
       }
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && confirm)
       {
+        memset(&right, 0, sizeof(right));
         ret =read_file_info_v2(dest_ns_addr, file_name, right);
         if (EXIT_BLOCK_NOT_FOUND == ret || EXIT_NO_DATASERVER == ret || EXIT_META_NOT_FOUND_ERROR == ret)
         {

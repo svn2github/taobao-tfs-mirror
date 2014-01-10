@@ -78,7 +78,7 @@ namespace tfs
         static int write_file(const std::string& ns_addr, const std::string& filename, const char* data, const int32_t size, const int32_t status);
         static int copy_file(const std::string& src_ns_addr, const std::string& dest_ns_addr, const std::string& file_name, const int32_t status);
         static int cmp_and_sync_file(const std::string& src_ns_addr, const std::string& dest_ns_addr, const std::string& file_name,
-        const int64_t timestamp, const bool force, common::FileInfoV2& left, common::FileInfoV2& right);
+        const int64_t timestamp, const bool force, common::FileInfoV2& left, common::FileInfoV2& right, const bool confirm = true);
         static int sync_file(const std::string& saddr, const std::string& daddr, const std::string& filename,
             const common::FileInfoV2& sfinfo, const common::FileInfoV2& dfinfo, const int64_t timestamp, const bool force);
         static int remove_block(const uint64_t block, const std::string& addr, const int32_t flag);

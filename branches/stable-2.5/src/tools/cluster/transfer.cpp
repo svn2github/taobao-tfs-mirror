@@ -314,7 +314,7 @@ namespace tfs
             retry = 2;
             do
             {
-              ret = NsRequester::cmp_and_sync_file(get_src_addr(), get_dest_addr(), filename, get_timestamp(), force, left, right);
+              ret = NsRequester::cmp_and_sync_file(get_src_addr(), get_dest_addr(), filename, get_timestamp(), force, left, right, false);
               if (EXIT_SYNC_FILE_NOTHING == ret)
                 ret = TFS_SUCCESS;
             }

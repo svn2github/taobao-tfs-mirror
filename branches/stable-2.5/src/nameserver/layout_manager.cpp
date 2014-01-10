@@ -194,7 +194,7 @@ namespace tfs
       return ret;
     }
 
-    bool LayoutManager::relieve_relation(BlockCollect* block, ServerCollect* server, time_t now)
+    bool LayoutManager::relieve_relation(BlockCollect* block, ServerCollect* server, time_t now, const bool print)
     {
       int32_t result = TFS_ERROR;
       int32_t ret = ((NULL != block) && (NULL != server)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -202,13 +202,13 @@ namespace tfs
       {
         //release relation between block and dataserver
         ret = get_block_manager().relieve_relation(block, server->id(), now);
-        if (TFS_SUCCESS != ret)
+        if (TFS_SUCCESS != ret && print)
         {
           TBSYS_LOG(INFO, "failed when relieve between block: %"PRI64_PREFIX"u and dataserver: %s, ret: %d",
               block->id(), CNetUtil::addrToString(server->id()).c_str(), ret);
         }
         result = get_server_manager().relieve_relation(server,block->id());
-        if (TFS_SUCCESS != result)
+        if (TFS_SUCCESS != result && print)
         {
           TBSYS_LOG(INFO, "failed when relieve between block: %"PRI64_PREFIX"u and dataserver: %s, ret: %d",
               block->id(), CNetUtil::addrToString(server->id()).c_str(), result);
@@ -1338,19 +1338,19 @@ namespace tfs
           helper.clear();
           reinstate = get_family_manager().check_need_reinstate(helper, family, now);
           dissolve  = get_family_manager().check_need_dissolve(family, helper, now);
-          ret = (reinstate && !dissolve);
-          if ((ret) && (ret = build_reinstate_task_(need, family, helper, now)))
+          if (!reinstate && !dissolve)
+            dissolve = get_family_manager().check_need_compact(family, now);
+          if (reinstate)
+            ret = build_reinstate_task_(need, family, helper, now);
+          if (dissolve)
+            ret = build_dissolve_task_(need, family, helper, now);
+          if (ret)
+          {
             --need;
-          if (!ret)
-          {
-            if (!dissolve)
-              dissolve = get_family_manager().check_need_compact(family, now);
-            if ((dissolve) && (ret = build_dissolve_task_(need, family, helper, now)))
-              --need;
           }
-          if (!ret)
+          else
           {
-            if (reinstate && !dissolve)
+            if (reinstate)
               get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_REINSTATE);
             if (dissolve)
               get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_DISSOLVE);
@@ -1684,7 +1684,7 @@ namespace tfs
         ret = ((NULL != block) && (NULL != server));
         if (ret)
         {
-          relieve_relation(block, server, now);//这里有可能误报，因为有一些地方会先解除关系后再加入到删除列表
+          relieve_relation(block, server, now, false);//这里有可能误报，因为有一些地方会先解除关系后再加入到删除列表
           ret = (TFS_SUCCESS == get_task_manager().remove_block_from_dataserver(server->id(), block->id(), now));
         }
       }
