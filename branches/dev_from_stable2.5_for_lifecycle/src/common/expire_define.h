@@ -146,6 +146,11 @@ namespace tfs
       ServerExpireTask():server_id_(0){}
       ServerExpireTask(const uint64_t id, const ExpireTaskInfo& t)
         :server_id_(id), task_(t){}
+
+      int64_t length() const;
+      int serialize(char *data, const int64_t data_len, int64_t &pos) const;
+      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
+
       uint64_t server_id_;
       ExpireTaskInfo task_;
     };

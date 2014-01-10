@@ -298,6 +298,7 @@ namespace tfs
                     {
                        first = second;
                        //stat_to_kvstore(local_ipport, num_es, task_time, hash_mod, sum_file_num);
+                       TBSYS_LOG(INFO, "task num:%d this tasktime:%d start_bucket_num:%d end_bucket_num:%d now hash_num:%d now deal file: %s", num_es, task_time, start_bucket_num, end_bucket_num, hash_mod, t_file_name.c_str());
                     }
 
                     uint32_t file_len = t_file_name.length();

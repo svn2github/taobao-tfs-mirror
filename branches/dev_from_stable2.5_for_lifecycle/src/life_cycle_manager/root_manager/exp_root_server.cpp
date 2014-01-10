@@ -179,9 +179,9 @@ namespace tfs
             case REQ_RT_FINISH_TASK_MESSAGE:
               iret = handle_finish_task(dynamic_cast<ReqFinishTaskFromEsMessage*>(msg));
               break;
-            //case REQ_QUERY_PROGRESS_MESSAGE:
-            //  iret = query_progress(dynamic_cast<ReqQueryProgressMessage*>(msg));
-            //  break;
+            case REQ_QUERY_TASK_MESSAGE:
+              iret = query_task(dynamic_cast<ReqQueryTaskMessage*>(msg));
+              break;
             default:
               iret = EXIT_UNKNOWN_MSGTYPE;
               TBSYS_LOG(ERROR, "unknown msg type: %d", pcode);
@@ -252,37 +252,29 @@ namespace tfs
       return iret;
     }
 
-    //int32_t ExpRootServer::query_progress(ReqQueryProgressMessage *msg)
-    //{
-    //  int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
-    //  if (TFS_SUCCESS == iret)
-    //  {
-    //    RspQueryProgressMessage* rsp = new RspQueryProgressMessage();
+    int32_t ExpRootServer::query_task(ReqQueryTaskMessage *msg)
+    {
+      int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        RspQueryTaskMessage* rsp = new(std::nothrow) RspQueryTaskMessage();
+        assert(NULL != rsp);
+        uint64_t es_id = msg->get_es_id();
+        std::vector<common::ServerExpireTask>* p_running_tasks = rsp->get_mutable_running_tasks_info();
 
-    //    uint64_t es_id = msg->get_es_id();
-    //    int32_t es_num = msg->get_es_num();
-    //    int32_t task_time = msg->get_task_time();
-    //    int32_t hash_bucket_id = msg->get_hash_bucket_id();
-    //    ExpireTaskType type = msg->get_expire_task_type();
-
-    //    int64_t sum_file_num;
-    //    int32_t current_percent;
-    //    iret = handle_task_helper_.query_progress(es_id, es_num, task_time, hash_bucket_id, type,
-    //        &sum_file_num, &current_percent);
-
-    //    if (TFS_SUCCESS == iret)
-    //    {
-    //      rsp->set_sum_file_num(sum_file_num);
-    //      rsp->set_current_percent(current_percent);
-    //      iret = msg->reply(rsp);
-    //    }
-    //    else
-    //    {
-    //      iret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), iret, "query progress task fail");
-    //    }
-    //  }
-    //  return iret;
-    //}
+        iret = handle_task_helper_.query_task(es_id, p_running_tasks);
+        if (TFS_SUCCESS == iret)
+        {
+          iret = msg->reply(rsp);
+        }
+        else
+        {
+          iret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), iret, "query task fail");
+          tbsys::gDelete(rsp);
+        }
+      }
+      return iret;
+    }
   } /** exprootserver **/
 }/** tfs **/
 

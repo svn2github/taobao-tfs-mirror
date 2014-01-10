@@ -39,6 +39,7 @@ namespace tfs
 
         int handle_finish_task(const uint64_t es_id, const common::ExpireTaskInfo&);
         int handle_fail_servers(const common::VUINT64 &down_servers);
+        int query_task(const uint64_t es_id, std::vector<common::ServerExpireTask>* p_running_tasks);
         int assign(const uint64_t es_id, const common::ExpireTaskInfo &del_task);
         void assign_task(void);
 

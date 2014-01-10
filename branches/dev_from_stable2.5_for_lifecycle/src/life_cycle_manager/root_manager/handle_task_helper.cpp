@@ -261,6 +261,44 @@ namespace tfs
 
       return TFS_SUCCESS;
     }
+
+    int HandleTaskHelper::query_task(const uint64_t es_id, std::vector<common::ServerExpireTask>* p_running_tasks)
+    {
+      map<uint64_t, set<common::ExpireTaskInfo> >::iterator it;
+      mutex_running_.lock();
+      if (es_id != 0)
+      {
+        it = m_s_running_tasks_.find(es_id);
+        if (it != m_s_running_tasks_.end())
+        {
+          set<common::ExpireTaskInfo>::iterator it_set;
+          for(it_set = it->second.begin(); it_set != it->second.end(); ++it_set)
+          {
+            common::ServerExpireTask one_task;
+            one_task.server_id_ = es_id;
+            one_task.task_ = *it_set;
+            p_running_tasks->push_back(one_task);
+          }
+        }
+      }
+      else
+      {
+        for (it = m_s_running_tasks_.begin(); it != m_s_running_tasks_.end(); ++it)
+        {
+          set<common::ExpireTaskInfo>::iterator it_set;
+          for(it_set = it->second.begin(); it_set != it->second.end(); ++it_set)
+          {
+            common::ServerExpireTask one_task;
+            one_task.server_id_ = it->first;
+            one_task.task_ = *it_set;
+            p_running_tasks->push_back(one_task);
+          }
+        }
+      }
+      mutex_running_.unlock();
+      return TFS_SUCCESS;
+    }
+
   }// end for exprootserver
 }// end for tfs
 

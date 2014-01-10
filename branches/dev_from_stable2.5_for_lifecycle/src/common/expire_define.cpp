@@ -621,6 +621,7 @@ namespace tfs
       }
       return iret;
     }
+
     bool ExpireTaskInfo::operator < (const ExpireTaskInfo& rh) const
     {
       if (type_ < rh.type_) return true;
@@ -651,6 +652,47 @@ namespace tfs
 
       return ret;
     }
+
+    //ServerExpireTask
+    //ServerExpireTask::ServerExpireTask():server_id_(0){}
+
+    //ServerExpireTask::ServerExpireTask(const uint64_t id, const ExpireTaskInfo& t)
+        //:server_id_(id), task_(t){}
+
+    int64_t ServerExpireTask::length() const
+    {
+      int64_t len = INT64_SIZE + task_.length();
+      return len;
+    }
+
+    int ServerExpireTask::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    {
+      int iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, server_id_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = task_.serialize(data, data_len, pos);
+      }
+      return iret;
+    }
+
+    int ServerExpireTask::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&server_id_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = task_.deserialize(data, data_len, pos);
+      }
+      return iret;
+    }
+
   }//common end
 }// tfs end
 
