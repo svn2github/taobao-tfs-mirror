@@ -282,6 +282,24 @@ namespace tfs
       return is_load_ ? TFS_SUCCESS : EXIT_INDEX_NOT_LOAD_ERROR;
     }
 
+    int BaseIndexHandle::statistic_visit(ThroughputV2& throughput, const bool reset)
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        memset(&throughput, 0, sizeof(throughput));
+        IndexHeaderV2* header = get_index_header_();
+        assert(NULL != header);
+        throughput = header->throughput_;
+        if (reset)
+        {
+          memset(&header->throughput_, 0, sizeof(header->throughput_));
+          header->throughput_.last_statistics_time_ = time(NULL);
+        }
+      }
+      return ret;
+    }
+
     IndexHeaderV2* BaseIndexHandle::get_index_header_() const
     {
       return TFS_SUCCESS == check_load() ? reinterpret_cast<IndexHeaderV2*>(file_op_.get_data()) : NULL;
@@ -301,7 +319,8 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          header->info_.last_update_time_  = time(NULL);
+          time_t now = time(NULL);
+          header->info_.last_access_time_ = now;
           int32_t file_count = rollback ? -1 : 1;
           int32_t real_new_size = rollback ? 0 - new_size : new_size;
           int32_t real_old_size = rollback ? 0 - old_size : old_size;
@@ -309,6 +328,7 @@ namespace tfs
           {
             header->info_.file_count_ += file_count;
             header->info_.size_       += real_new_size;
+            header->throughput_.last_update_time_  = now;
             header->throughput_.write_visit_count_ += file_count;
             header->throughput_.write_bytes_ += real_new_size;
           }
@@ -317,6 +337,7 @@ namespace tfs
           {
             header->info_.del_file_count_ += file_count;
             header->info_.del_size_       += real_old_size;
+            header->throughput_.last_update_time_  = now;
             header->throughput_.unlink_visit_count_ += file_count;
             header->throughput_.unlink_bytes_ += real_old_size;
           }
@@ -324,6 +345,7 @@ namespace tfs
           {
             header->info_.del_file_count_ -= file_count;
             header->info_.del_size_       -= real_old_size;
+            header->throughput_.last_update_time_  = now;
             header->throughput_.unlink_visit_count_ -= file_count;
             header->throughput_.unlink_bytes_ -= real_old_size;
           }
@@ -335,6 +357,7 @@ namespace tfs
             header->info_.size_           += real_new_size;
             header->info_.update_size_    += real_new_size;
             header->info_.update_file_count_ += file_count;
+            header->throughput_.last_update_time_  = now;
             header->throughput_.unlink_visit_count_ += file_count;
             header->throughput_.unlink_bytes_ += real_old_size;
             header->throughput_.write_visit_count_ += file_count;
@@ -597,8 +620,9 @@ namespace tfs
             memset(&header, 0, sizeof(header));
             header.info_.block_id_ = logic_block_id;
             header.info_.family_id_= INVALID_FAMILY_ID;
-            header.info_.last_update_time_ = time(NULL);
-            header.throughput_.last_statistics_time_ = header.info_.last_update_time_;
+            header.info_.last_access_time_ = time(NULL);
+            header.throughput_.last_statistics_time_ = header.info_.last_access_time_;
+            header.throughput_.last_update_time_ = header.info_.last_access_time_;
             header.file_info_bucket_size_ = max_bucket_size;
             file_size = INDEX_HEADER_V2_LENGTH + max_bucket_size * FILE_INFO_V2_LENGTH;
             char* data = new (std::nothrow)char[file_size];
@@ -747,7 +771,7 @@ namespace tfs
           IndexHeaderV2* pheader = get_index_header_();
           assert(NULL != pheader);
           pheader->info_ = header.info_;
-          //pheader->info_.last_update_time_ = time(NULL);
+          pheader->throughput_.last_update_time_ = time(NULL);
           pheader->throughput_ = header.throughput_;
           pheader->marshalling_offset_ = header.marshalling_offset_;
           pheader->seq_no_ = header.seq_no_;
@@ -780,8 +804,8 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             pheader->info_ = header.info_;
-            //pheader->info_.last_update_time_ = time(NULL);
             pheader->seq_no_ = header.seq_no_;
+            pheader->throughput_.last_update_time_ = time(NULL);
             pheader->marshalling_offset_ = header.marshalling_offset_;
             pheader->used_file_info_bucket_size_ = 0;
             pheader->throughput_ = header.throughput_;
@@ -981,25 +1005,6 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::statistic_visit(ThroughputV2& throughput, const bool reset)
-    {
-      memset(&throughput, 0, sizeof(throughput));
-      int32_t ret = check_load();
-      if (TFS_SUCCESS == ret)
-      {
-        IndexHeaderV2* header = get_index_header_();
-        assert(NULL != header);
-        throughput = header->throughput_;
-        if (reset)
-        {
-          memset(&header->throughput_, 0, sizeof(header->throughput_));
-          //header->info_.last_update_time_ = time(NULL);
-          header->throughput_.last_statistics_time_ = header->info_.last_update_time_;
-        }
-      }
-      return ret;
-    }
-
     int IndexHandle::remmap_(const double threshold, const int32_t max_hash_bucket,
         const int32_t advise_per_mmap_size) const
     {
@@ -1110,8 +1115,9 @@ namespace tfs
             header.info_.block_id_ = logic_block_id;
             header.seq_no_   = 0;
             header.info_.family_id_ = family_id;
-            header.info_.last_update_time_ = time(NULL);
-            header.throughput_.last_statistics_time_ = header.info_.last_update_time_;
+            header.info_.last_access_time_ = time(NULL);
+            header.throughput_.last_statistics_time_ = header.info_.last_access_time_;
+            header.throughput_.last_update_time_ = header.info_.last_access_time_;
             header.max_index_num_  = index_num;
             file_size = INDEX_HEADER_V2_LENGTH + header.max_index_num_ * sizeof(InnerIndex);
             char* data = new (std::nothrow)char[file_size];
@@ -1198,7 +1204,7 @@ namespace tfs
           assert(!partial);
           assert(!infos.empty());
           IndexHeaderV2* pheader = get_index_header_();
-          pheader->info_.last_update_time_ = time(NULL);
+          pheader->throughput_.last_update_time_ = time(NULL);
           InnerIndex* inner_index = get_inner_index_array_();
           assert(NULL != inner_index);
           InnerIndex* index = &inner_index[pheader->index_num_++];
@@ -1237,8 +1243,8 @@ namespace tfs
             IndexHeaderV2* pheader = reinterpret_cast<IndexHeaderV2*>(data);
             assert(NULL != pheader);
             pheader->info_ = header.info_;
-            pheader->info_.last_update_time_ = time(NULL);
             pheader->throughput_ = header.throughput_;
+            pheader->throughput_.last_update_time_ = time(NULL);
             pheader->marshalling_offset_ = header.marshalling_offset_;
             pheader->seq_no_ = header.seq_no_;
             if (!infos.empty())

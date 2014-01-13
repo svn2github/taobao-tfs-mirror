@@ -507,6 +507,9 @@ namespace tfs
           case common::RSP_QUERY_PROGRESS_MESSAGE:
             packet = new RspQueryProgressMessage();
             break;
+          case common::GET_BLOCK_STATISTIC_VISIT_INFO_MESSAGE:
+            packet = new BlockStatisticVisitInfoMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;

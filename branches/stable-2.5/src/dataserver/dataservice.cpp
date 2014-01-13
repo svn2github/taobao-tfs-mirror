@@ -1510,7 +1510,7 @@ namespace tfs
         BlockFileInfoMessage* resp_bfi_msg = new (std::nothrow) BlockFileInfoMessage();
         assert(NULL != resp_bfi_msg);
         FILE_INFO_LIST& fileinfos = resp_bfi_msg->get_fileinfo_list();
-        int ret = get_block_manager().traverse(fileinfos, block_id, attach_block_id);
+        ret = get_block_manager().traverse(fileinfos, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
         {
           tbsys::gDelete(resp_bfi_msg);
@@ -1531,7 +1531,7 @@ namespace tfs
         BlockFileInfoMessageV2* resp_bfi_msg = new (std::nothrow) BlockFileInfoMessageV2();
         assert(NULL != resp_bfi_msg);
         FILE_INFO_LIST_V2* fileinfos = resp_bfi_msg->get_fileinfo_list();
-        int ret = get_block_manager().traverse(header, *fileinfos, block_id, attach_block_id);
+        ret = get_block_manager().traverse(header, *fileinfos, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
         {
           tbsys::gDelete(resp_bfi_msg);
@@ -1547,7 +1547,22 @@ namespace tfs
       {
         // meta will be included in FileInfoV2
       }
-
+      else if (GSS_BLOCK_STATISTIC_VISIT_INFO == type)
+      {
+        bool reset = message->get_from_row();
+        BlockStatisticVisitInfoMessage* reply_msg = new (std::nothrow) BlockStatisticVisitInfoMessage();
+        assert(NULL != reply_msg);
+        ret = get_block_manager().get_all_block_statistic_visit_info(reply_msg->get_block_statistic_visit_maps(), reset);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(reply_msg);
+          ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,"GSS_BLOCK_STATISTIC_VISIT_INFO fail, ret: %d", ret);
+        }
+        else
+        {
+          ret = message->reply(reply_msg);
+        }
+      }
       return ret;
     }
 

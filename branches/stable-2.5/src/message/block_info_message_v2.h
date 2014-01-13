@@ -391,6 +391,21 @@ namespace tfs
         common::FILE_INFO_LIST_V2 fileinfo_list_;
     };
 
-  }
-}
+    class BlockStatisticVisitInfoMessage : public common::BasePacket
+    {
+      public:
+        BlockStatisticVisitInfoMessage();
+        virtual ~BlockStatisticVisitInfoMessage();
+        virtual int serialize(common::Stream& output)  const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        inline std::map<uint64_t, common::ThroughputV2>& get_block_statistic_visit_maps()
+        {
+          return block_statistic_visit_maps_;
+        }
+      protected:
+        std::map<uint64_t, common::ThroughputV2> block_statistic_visit_maps_;
+    };
+  }/** end namespace message **/
+}/** end namespace tfs **/
 #endif

@@ -1966,7 +1966,12 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int64(data, data_len, pos, last_statistics_time_);
+        ret = Serialization::set_int32(data, data_len, pos, last_statistics_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, last_update_time_);
       }
 
       return ret;
@@ -2013,7 +2018,12 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int64(data, data_len, pos, &last_statistics_time_);
+        ret = Serialization::get_int32(data, data_len, pos, &last_statistics_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &last_update_time_);
       }
 
       return ret;
@@ -2437,7 +2447,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, last_update_time_);
+        ret = Serialization::set_int32(data, data_len, pos, last_access_time_);
       }
 
       for (int i = 0; (TFS_SUCCESS == ret) && i < 2; i++)
@@ -2499,7 +2509,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &last_update_time_);
+        ret = Serialization::get_int32(data, data_len, pos, &last_access_time_);
       }
 
       for (int i = 0; (TFS_SUCCESS == ret) && i < 2; i++)

@@ -206,6 +206,13 @@ namespace tfs
       return logic_block_manager_.get_all_block_info(blocks, block_count);
     }
 
+    int BlockManager::get_all_block_statistic_visit_info(std::map<uint64_t, common::ThroughputV2> & infos, const bool reset) const
+    {
+      infos.clear();
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return logic_block_manager_.get_all_block_statistic_visit_info(infos, reset);
+    }
+
     int BlockManager::get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const
     {
       blocks.clear();

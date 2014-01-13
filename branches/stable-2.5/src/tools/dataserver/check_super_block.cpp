@@ -151,8 +151,8 @@ bool check_super_block(BlockManager& block_manager)
 bool check_data(BlockManager& block_manager, int32_t dirty_expire)
 {
   bool valid = true;
-  std::vector<BlockInfoV2> binfos;
-  int ret = block_manager.get_all_block_info(binfos);
+  std::map<uint64_t, ThroughputV2> binfos;
+  int ret = block_manager.get_all_block_statistic_visit_info(binfos, false);
   if (TFS_SUCCESS != ret)
   {
     valid = false;
@@ -162,21 +162,21 @@ bool check_data(BlockManager& block_manager, int32_t dirty_expire)
   {
     // find lastest update time
     int64_t latest = 0;
-    std::vector<BlockInfoV2>::iterator iter = binfos.begin();
+    std::map<uint64_t, ThroughputV2> ::const_iterator iter = binfos.begin();
     for ( ; iter != binfos.end(); iter++)
     {
-      if (iter->last_update_time_ > latest)
+      if (iter->second.last_update_time_ > latest)
       {
-        latest = iter->last_update_time_;
+        latest = iter->second.last_update_time_;
       }
     }
 
     // check possible dirty data, TODO: optimize total files need to check
     for (iter = binfos.begin() ; iter != binfos.end() && valid; iter++)
     {
-      if (iter->last_update_time_ + dirty_expire >= latest)
+      if (iter->second.last_update_time_ + dirty_expire >= latest)
       {
-        valid = check_block(block_manager, iter->block_id_);
+        valid = check_block(block_manager, iter->first);
       }
     }
   }

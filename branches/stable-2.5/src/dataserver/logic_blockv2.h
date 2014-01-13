@@ -80,6 +80,7 @@ namespace tfs
       int stat(common::FileInfoV2& info, const int8_t flag, const uint64_t logic_block_id) const;
       virtual int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
       virtual void callback();
+      int statistic_visit(common::ThroughputV2& throughput, const bool reset = false);
 
       BlockManager& get_block_manager_() { return *manager_;}
 
@@ -124,7 +125,6 @@ namespace tfs
         int inc_read_visit_count(const int32_t step = 1,  const int32_t nbytes = 0);
         int inc_update_visit_count(const int32_t step = 1,const int32_t nbytes = 0);
         int inc_unlink_visit_count(const int32_t step = 1,const int32_t nbytes = 0);
-        int statistic_visit(common::ThroughputV2& throughput, const bool reset = false);
       private:
         IndexHandle* get_index_handle_() const { return dynamic_cast<IndexHandle*>(index_handle_);}
 

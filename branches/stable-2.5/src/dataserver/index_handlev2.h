@@ -67,6 +67,8 @@ namespace tfs
         int rename_filename(const uint64_t logic_block_id);
         int remove_self(const uint64_t logic_block_id);
         int check_load() const;
+        int statistic_visit(common::ThroughputV2& throughput, const bool reset = false);
+
       protected:
         virtual int remmap_(const double threshold, const int32_t max_hash_bucket, const int32_t advise_per_mmap_size = 0) const = 0;
         virtual common::FileInfoV2*  get_file_infos_array_() const = 0;
@@ -124,7 +126,6 @@ namespace tfs
         int inc_read_visit_count(const int32_t step = 1,  const int32_t nbytes = 0);
         int inc_update_visit_count(const int32_t step = 1,const int32_t nbytes = 0);
         int inc_unlink_visit_count(const int32_t step = 1,const int32_t nbytes = 0);
-        int statistic_visit(common::ThroughputV2& throughput, const bool reset = false);
       protected:
         int remmap_(const double threshold, const int32_t max_hash_bucket, const int32_t advise_per_mmap_size = 0) const;
         common::FileInfoV2*  get_file_infos_array_() const;

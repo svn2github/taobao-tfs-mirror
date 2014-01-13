@@ -74,7 +74,7 @@ namespace tfs
       adjust_copies_location_time_lower_   = 6;
       adjust_copies_location_time_upper_   = 12;
       max_marshalling_num_ = 1;
-      marshalling_visit_time_ = 1 * 30 * 86400;//one month
+      marshalling_visit_time_ = 30;  //one month
       enable_old_interface_ = ENABLE_OLD_INTERFACE_FLAG_NO;
       enable_version_check_ = ENABLE_VERSION_CHECK_FLAG_YES;
       write_file_check_copies_complete_ = WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_NO;

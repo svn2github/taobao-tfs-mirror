@@ -424,6 +424,11 @@ namespace tfs
       remove_self_file();
     }
 
+    int BaseLogicBlock::statistic_visit(common::ThroughputV2& throughput, const bool reset)
+    {
+      return index_handle_->statistic_visit(throughput, reset);
+    }
+
     int BaseLogicBlock::transfer_file_status_(int32_t& oper_type, FileInfoV2& finfo, const int32_t action,
         const uint64_t logic_block_id, const uint64_t fileid) const
     {
@@ -788,11 +793,6 @@ namespace tfs
     int LogicBlock::inc_unlink_visit_count(const int32_t step,const int32_t nbytes)
     {
       return get_index_handle_()->inc_unlink_visit_count(step, nbytes);
-    }
-
-    int LogicBlock::statistic_visit(common::ThroughputV2& throughput, const bool reset)
-    {
-      return get_index_handle_()->statistic_visit(throughput, reset);
     }
 
     bool SortFileInfoByOffset(const common::FileInfoV2& left, const common::FileInfoV2& right)

@@ -289,7 +289,8 @@ namespace tfs
       GSS_BLOCK_FILE_INFO,
       GSS_BLOCK_RAW_META_INFO,
       GSS_CLIENT_ACCESS_INFO,
-      GSS_BLOCK_FILE_INFO_V2
+      GSS_BLOCK_FILE_INFO_V2,
+      GSS_BLOCK_STATISTIC_VISIT_INFO
     };
 
     enum CheckDsBlockType
@@ -1114,7 +1115,7 @@ namespace tfs
       int32_t del_file_count_;
       int32_t update_size_;
       int32_t update_file_count_;
-      int32_t last_update_time_;
+      int32_t last_access_time_;
       int32_t reserve_[2];
 
       BlockInfoV2()
@@ -1144,7 +1145,8 @@ namespace tfs
     	int64_t read_visit_count_;
     	int64_t update_visit_count_;
       int64_t unlink_visit_count_;
-      int64_t last_statistics_time_;
+      int32_t last_statistics_time_;
+      int32_t last_update_time_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
