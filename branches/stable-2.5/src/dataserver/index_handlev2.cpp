@@ -314,7 +314,7 @@ namespace tfs
         ret = (new_size >= 0  && NULL != header) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
         if (TFS_SUCCESS == ret && !rollback)
         {
-          if (OPER_DELETE != oper_type && OPER_UNDELETE != oper_type && OPER_READ != oper_type)
+          if (OPER_INSERT == oper_type || OPER_UPDATE == oper_type)
             header->info_.version_ += VERSION_INC_STEP_DEFAULT;
         }
         if (TFS_SUCCESS == ret)

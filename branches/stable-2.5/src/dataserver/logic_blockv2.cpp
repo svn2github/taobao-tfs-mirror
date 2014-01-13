@@ -447,17 +447,23 @@ namespace tfs
         case OVERRIDE:
           if ((finfo.status_ & FILE_STATUS_DELETE) != (status & FILE_STATUS_DELETE))
           {
-            oper_type = status & FILE_STATUS_DELETE ? OPER_DELETE : OPER_UNDELETE;
+            oper_type = (status & FILE_STATUS_DELETE) ? OPER_DELETE : OPER_UNDELETE;
           }
           finfo.status_ = status;
           break;
         case DELETE:
-          oper_type = OPER_DELETE;
-          finfo.status_ |= FILE_STATUS_DELETE;
+          if (!(finfo.status_ & FILE_STATUS_DELETE))
+          {
+            oper_type = OPER_DELETE;
+            finfo.status_ |= FILE_STATUS_DELETE;
+          }
           break;
         case UNDELETE:
-          oper_type = OPER_UNDELETE;
-          finfo.status_ &= (~FILE_STATUS_DELETE);
+          if (finfo.status_ & FILE_STATUS_DELETE)
+          {
+            oper_type = OPER_UNDELETE;
+            finfo.status_ &= (~FILE_STATUS_DELETE);
+          }
           break;
         case CONCEAL:
           ret = (0 != (finfo.status_ & FILE_STATUS_DELETE)) ? EXIT_FILE_STATUS_ERROR : TFS_SUCCESS;
