@@ -32,6 +32,7 @@
 #include "new_client/fsname.h"
 #include "new_client/tfs_client_api.h"
 #include "tools/util/tool_util.h"
+#include "common/version.h"
 
 using namespace std;
 using namespace tfs::client;
@@ -48,6 +49,7 @@ static bitset<MAX_BITS_SIZE> g_flag_;
 
 static void usage(const char* name)
 {
+  fprintf(stderr, "%s\n", Version::get_build_description());
   fprintf(stderr, "Usage: %s -s -d [-h]\n", name);
   fprintf(stderr, "       -s nameserver ip port\n");
   fprintf(stderr, "       -d dataserver ip port\n");
@@ -55,12 +57,13 @@ static void usage(const char* name)
   exit(TFS_ERROR);
 }
 
+
 int main(int argc, char* argv[])
 {
   int32_t i;
   std::string ns_ip = "", ds_ip = "";
   // analyze arguments
-  while ((i = getopt(argc, argv, "s:d:h")) != EOF)
+  while ((i = getopt(argc, argv, "s:d:hv")) != EOF)
   {
     switch (i)
     {
@@ -70,6 +73,7 @@ int main(int argc, char* argv[])
     case 'd':
       ds_ip = optarg;
       break;
+    case 'v':
     case 'h':
     default:
       usage(argv[0]);

@@ -14,6 +14,7 @@
  *
  */
 #include "sync_file_base.h"
+#include "common/version.h"
 
 using namespace std;
 using namespace tfs::common;
@@ -142,6 +143,7 @@ int init_log_file(const char* dir_path)
 
 static void usage(const char* name)
 {
+  fprintf(stderr, "%s\n", Version::get_build_description());
   fprintf(stderr, "Usage: %s -s src_addr -d dest_addr -f blk_list [-m modify_time] [-t thread_count] [-p log_path] [-e] [-u] [-l level] [-h]\n", name);
   fprintf(stderr, "       -s source ns ip port\n");
   fprintf(stderr, "       -d dest ns ip port\n");
@@ -155,6 +157,7 @@ static void usage(const char* name)
   fprintf(stderr, "    %s -s 168.192.1.1:3000 -d 168.192.1.2:3000 -f total_log -m 20121220 -p t1m -t 5\n",name);
   exit(TFS_ERROR);
 }
+
 
 static void interrupt_callback(int signal)
 {
@@ -207,7 +210,7 @@ int main(int argc, char* argv[])
   string level("info");
 
   // analyze arguments
-  while ((i = getopt(argc, argv, "s:d:f:m:t:p:l:eh")) != EOF)
+  while ((i = getopt(argc, argv, "s:d:f:m:t:p:l:ehv")) != EOF)
   {
     switch (i)
     {
@@ -235,6 +238,7 @@ int main(int argc, char* argv[])
       case 'l':
         level = optarg;
         break;
+      case 'v':
       case 'h':
       default:
         usage(argv[0]);

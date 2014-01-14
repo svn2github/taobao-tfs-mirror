@@ -44,7 +44,7 @@
 #include "new_client/tfs_meta_client_api_impl.h"
 #include "clientv2/tfs_client_impl_v2.h"
 #include "clientv2/fsname.h"
-
+#include "common/version.h"
 
 using namespace std;
 using namespace tfs::client;
@@ -187,8 +187,6 @@ MetaType g_meta_type = META_RAW;
 static tfs::common::BasePacketStreamer gstreamer;
 static tfs::message::MessageFactory gfactory;
 
-
-
 int main(int argc, char* argv[])
 {
   int32_t i;
@@ -197,7 +195,7 @@ int main(int argc, char* argv[])
   bool set_log_level = false;
 
   // analyze arguments
-  while ((i = getopt(argc, argv, "s:r:k:nih")) != EOF)
+  while ((i = getopt(argc, argv, "s:r:k:nihv")) != EOF)
   {
     switch (i)
     {
@@ -216,6 +214,7 @@ int main(int argc, char* argv[])
       case 'i':
         directly = true;
         break;
+      case 'v':
       case 'h':
       default:
         usage(argv[0]);
@@ -303,6 +302,7 @@ int main(int argc, char* argv[])
 
 static void usage(const char* name)
 {
+  fprintf(stderr, "%s\n", Version::get_build_description());
   fprintf(stderr,
           "Usage: a) %s -s nsip [-n] [-i] [-h] raw tfs client interface(without rc). \n"
           "       b) %s -r rcip [-n] [-i] [-h] name meta client interface(with rc). \n"

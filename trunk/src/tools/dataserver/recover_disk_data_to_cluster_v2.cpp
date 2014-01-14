@@ -380,8 +380,6 @@ int main(int argc,char* argv[])
         set_log_level = true;
         break;
       case 'v':
-        fprintf(stderr, "recover disk data to cluster tool, version: %s\n", Version::get_build_description());
-        return 0;
       case 'h':
       default:
         help_info = 1;
@@ -391,7 +389,8 @@ int main(int argc,char* argv[])
 
   if (NULL == conf_file || NULL == ns_slave_addr || 0 == server_index.size() || help_info)
   {
-    fprintf(stderr, "\nUsage: %s -f ds_conf -i index -s ns_slave_addr [-h] [-v]\n", argv[0]);
+    fprintf(stderr, "version: %s\n", Version::get_build_description());
+    fprintf(stderr, "Usage: %s -f ds_conf -i index -s ns_slave_addr [-h] [-v]\n", argv[0]);
     fprintf(stderr, "  -f dataserver configure file\n");
     fprintf(stderr, "  -s slave cluster addr\n");
     fprintf(stderr, "  -i server_index  dataserver index number\n");

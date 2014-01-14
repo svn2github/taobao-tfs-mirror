@@ -28,6 +28,7 @@
 #include "new_client/fsname.h"
 #include "tools/util/tool_util.h"
 #include "tools/util/util.h"
+#include "common/version.h"
 
 using namespace std;
 using namespace tfs::common;
@@ -365,6 +366,7 @@ static void interruptcallback(int signal)
 
 void usage(const char* name)
 {
+  fprintf(stderr, "%s\n", Version::get_build_description());
   fprintf(stderr,"Usage:\n%s -o old_ns_ip:port -n new_ns_ip:port -f input "
       "-m modify_time(20110315183500) -t thread_num -k type -s interval(ms)"
       "-r ouput_dir -l log_level -d(daemon) -c[-h]\n", name);
@@ -382,6 +384,7 @@ void usage(const char* name)
   exit(-1);
 }
 
+
 int main(int argc, char** argv)
 {
   int ret = TFS_SUCCESS;
@@ -391,7 +394,7 @@ int main(int argc, char** argv)
   int32_t op_type = OP_FILE;
   bool daemon_flag = false;
   std::string old_ns_addr(""), new_ns_addr(""), file_path(""), work_dir(""), log_level("info");
-  while ((i = getopt(argc, argv, "o:n:f:m:t:k:s:l:r:dch")) != EOF)
+  while ((i = getopt(argc, argv, "o:n:f:m:t:k:s:l:r:dchv")) != EOF)
   {
     switch (i)
     {
@@ -428,6 +431,7 @@ int main(int argc, char** argv)
       case 'r':
         work_dir = optarg;
         break;
+      case 'v':
       case 'h':
       default:
         usage(argv[0]);

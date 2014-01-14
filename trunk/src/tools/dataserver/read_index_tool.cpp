@@ -20,6 +20,7 @@
 #include "common/internal.h"
 #include "dataserver/ds_define.h"
 #include "common/file_opv2.h"
+#include "common/version.h"
 
 using namespace std;
 using namespace tfs::common;
@@ -136,6 +137,7 @@ int main(int argc, char* argv[])
 {
   if (argc != 2)
   {
+    cout << Version::get_build_description() << endl;
     cout << "Usage: " << argv[0] << " filename " << endl;
     return -1;
   }

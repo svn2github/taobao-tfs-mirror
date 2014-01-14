@@ -21,7 +21,7 @@
 #include "common/status_message.h"
 #include "message/message_factory.h"
 #include "message/admin_cmd_message.h"
-
+#include "common/version.h"
 #include "tools/util/tool_util.h"
 
 using namespace tfs::common;
@@ -261,10 +261,12 @@ static void sign_handler(int32_t sig)
 
 void usage(const char* name)
 {
+  fprintf(stderr, "%s\n", Version::get_build_description());
   fprintf(stderr, "Usage: %s -f server_list_file [-n] [-i] [-h]\n", name);
   fprintf(stderr, "       -f server_list_file specify server list file\n");
   fprintf(stderr, "       -n set log level\n");
   fprintf(stderr, "       -i directly execute the command\n");
+  fprintf(stderr, "       -v version\n");
   fprintf(stderr, "       -h help\n");
 }
 
@@ -329,7 +331,7 @@ int main(int argc, char* argv[])
   const char* conf_file = NULL;
 
   // analyze arguments
-  while ((i = getopt(argc, argv, "f:nih")) != EOF)
+  while ((i = getopt(argc, argv, "f:nihv")) != EOF)
   {
     switch (i)
     {
@@ -342,6 +344,7 @@ int main(int argc, char* argv[])
     case 'i':
       directly = true;
       break;
+    case 'v':
     case 'h':
     default:
       usage(argv[0]);

@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <Memory.hpp>
 
+#include "common/version.h"
 #include "common/parameter.h"
 #include "common/config_item.h"
 #include "common/client_manager.h"
@@ -52,6 +53,7 @@ enum CheckResultType
 
 int usage(const char* name)
 {
+  fprintf(stderr, "%s\n", Version::get_build_description());
   printf("-i: means input_file \n");
   printf("-o: means old_root_addr \n");
   printf("-n: means new_kv_meta_addr \n");
@@ -59,6 +61,8 @@ int usage(const char* name)
   printf("Usage: %s -i input_sync.txt -o old_root_ipport -n new_kvmeta_ipport -l ./log_file \n", name);
   return 0;
 }
+
+
 int stop = 0;
 void sign_handler(int32_t sig)
 {
@@ -362,7 +366,7 @@ int main(int argc, char *argv[])
   std::string date_time;
   std::string log_file_name;
   std::string input_file_name;
-  while ((i = getopt(argc, argv, "i:o:n:t:l:")) != EOF)
+  while ((i = getopt(argc, argv, "i:o:n:t:l:v")) != EOF)
   {
     switch (i)
     {
@@ -381,6 +385,7 @@ int main(int argc, char *argv[])
       case 'l':
         log_file_name = optarg;
         break;
+      case 'v':
       default:
         usage(argv[0]);
         return TFS_ERROR;

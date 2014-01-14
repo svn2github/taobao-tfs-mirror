@@ -23,6 +23,7 @@
 #include "Handle.h"
 #include "TbThread.h"
 
+#include "common/version.h"
 #include "common/func.h"
 #include "common/internal.h"
 #include "common/error_msg.h"
@@ -174,6 +175,7 @@ static void interruptcallback(int signal)
 
 void helper()
 {
+  fprintf(stderr, "%s\n", Version::get_build_description());
   std::string options=
     "Options:\n"
     "-s                 src ns ip:port\n"
@@ -238,7 +240,6 @@ int main(int argc, char* argv[])
         log_level = optarg;
         break;
       case 'v':
-        break;
       case 'h':
       default:
         help = true;

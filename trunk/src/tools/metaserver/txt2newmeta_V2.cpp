@@ -28,6 +28,7 @@
 #include "name_meta_server/meta_store_manager.h"
 #include "name_meta_server/meta_server_service.h"
 #include "new_client/tfs_kv_meta_helper.h"
+#include "common/version.h"
 
 using namespace std;
 using namespace __gnu_cxx;
@@ -68,10 +69,10 @@ void sign_handler(int32_t sig)
 }
 int usage (const char* n)
 {
+  fprintf(stderr, "%s\n", Version::get_build_description());
   printf("%s -f ource_file -d S3_server -t time_point(2362023593) -l log_file\n", n);
   return 0;
 }
-
 
 void* transfer(void* param)
 {
@@ -355,7 +356,7 @@ int main(int argc, char *argv[])
   std::string log_file_name;
   std::string date_time;
   uint32_t thread_num;
-  while ((i = getopt(argc, argv, "f:d:t:l:p:a:u:")) != EOF)
+  while ((i = getopt(argc, argv, "f:d:t:l:p:a:u:v")) != EOF)
   {
     switch (i)
     {
@@ -380,6 +381,7 @@ int main(int argc, char *argv[])
       case 'u':
         last_uid = atol(optarg);
         break;
+      case 'v':
       default:
         usage(argv[0]);
         return TFS_ERROR;
