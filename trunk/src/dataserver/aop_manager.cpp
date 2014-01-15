@@ -24,7 +24,7 @@
 #include "writable_block_manager.h"
 #include "lease_managerv2.h"
 #include "dataservice.h"
-#include "op_manager.h"
+#include "aop_manager.h"
 
 using namespace tfs::common;
 
@@ -48,6 +48,15 @@ namespace tfs
       {
         tbsys::gDelete(iter->second);
       }
+    }
+
+    void OpManager::initialize()
+    {
+      uint64_t self_id = DsRuntimeGlobalInformation::instance().information_.id_;
+      uint32_t ip = self_id & 0xFFFFFFFF;
+      uint32_t port = self_id >> 32;
+      base_op_id_ = ((ip & 0xFFFFFF00) | (port & 0xFF));
+      base_op_id_ = base_op_id_ << 32;
     }
 
     BlockManager& OpManager::get_block_manager()
@@ -90,7 +99,7 @@ namespace tfs
       // run till here, blockid shouldn't be invalid
       if (TFS_SUCCESS == ret)
       {
-        ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+        ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS : EXIT_NO_WRITABLE_BLOCK;
       }
 
       // transfor server if block in family
@@ -303,7 +312,7 @@ namespace tfs
     {
       bool all_finish = false;
       int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
-          (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+          (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_OP_META_ERROR;
 
       if (TFS_SUCCESS == ret)
       {
@@ -334,9 +343,9 @@ namespace tfs
     void OpManager::release_op(const uint64_t block_id, const uint64_t file_id, const uint64_t op_id,
         const int32_t status)
     {
-      int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
-          (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
+      if (INVALID_BLOCK_ID != block_id &&
+          INVALID_FILE_ID != file_id &&
+          INVALID_OP_ID != op_id)
       {
         get_lease_manager().free_writable_block(block_id);
         OpId oid(block_id, file_id, op_id);
@@ -346,7 +355,7 @@ namespace tfs
         if (TFS_SUCCESS != status)
         {
           get_lease_manager().expire_block(block_id);
-          TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because write error, ret: %d", block_id, ret);
+          TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because write error, ret: %d", block_id, status);
         }
       }
     }

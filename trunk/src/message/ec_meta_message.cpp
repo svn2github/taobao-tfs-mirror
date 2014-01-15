@@ -20,7 +20,8 @@ namespace tfs
 {
   namespace message
   {
-    QueryEcMetaMessage::QueryEcMetaMessage()
+    QueryEcMetaMessage::QueryEcMetaMessage():
+      block_id_(INVALID_BLOCK_ID), lock_time_(0)
     {
       _packetHeader._pcode = QUERY_EC_META_MESSAGE;
     }
@@ -31,17 +32,27 @@ namespace tfs
 
     int QueryEcMetaMessage::serialize(Stream& output) const
     {
-      return output.set_int64(block_id_);
+      int ret = output.set_int64(block_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(lock_time_);
+      }
+      return ret;
     }
 
     int QueryEcMetaMessage::deserialize(Stream& input)
     {
-      return input.get_int64(reinterpret_cast<int64_t* >(&block_id_));
+      int ret = input.get_int64(reinterpret_cast<int64_t* >(&block_id_));
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&lock_time_);
+      }
+      return ret;
     }
 
     int64_t QueryEcMetaMessage::length() const
     {
-      return INT64_SIZE;
+      return INT64_SIZE + INT_SIZE;
     }
 
     QueryEcMetaRespMessage::QueryEcMetaRespMessage()
@@ -80,7 +91,9 @@ namespace tfs
       return  ec_meta_.length();
     }
 
-    CommitEcMetaMessage::CommitEcMetaMessage()
+    CommitEcMetaMessage::CommitEcMetaMessage():
+      switch_flag_(SWITCH_BLOCK_NO),
+      unlock_flag_(UNLOCK_BLOCK_NO)
     {
       _packetHeader._pcode = COMMIT_EC_META_MESSAGE;
     }
@@ -105,6 +118,10 @@ namespace tfs
           output.pour(ec_meta_.length());
         }
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(unlock_flag_);
+      }
       return ret;
     }
 
@@ -124,12 +141,16 @@ namespace tfs
           input.drain(ec_meta_.length());
         }
       }
+      if (TFS_SUCCESS == ret && input.get_data_length() > 0)
+      {
+        ret = input.get_int8(&unlock_flag_);
+      }
       return ret;
     }
 
     int64_t CommitEcMetaMessage::length() const
     {
-      return INT64_SIZE + INT8_SIZE + ec_meta_.length();
+      return INT64_SIZE + INT8_SIZE * 2 + ec_meta_.length();
     }
 
   }

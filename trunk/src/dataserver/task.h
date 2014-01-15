@@ -43,7 +43,8 @@ namespace tfs
         inline DataHelper& get_data_helper();
         inline BlockManager& get_block_manager();
 
-        const char* get_type() const;
+        const char* get_type_str() const;
+        common::PlanType get_type() const { return type_; }
         void set_type(const common::PlanType type) { type_ = type; }
 
         int64_t get_seqno() const { return seqno_; }
@@ -92,6 +93,11 @@ namespace tfs
         bool is_expired(int64_t now)
         {
           return now >= start_time_ + expire_time_;
+        }
+
+        int32_t get_expire_time() const
+        {
+          return expire_time_;
         }
 
         /**
@@ -169,6 +175,15 @@ namespace tfs
          */
         virtual std::string dump() const ;
 
+        /**
+         * @brief get all blocks in task
+         */
+        virtual bool get_involved_blocks(common::ArrayHelper<uint64_t>& blocks)
+        {
+          blocks.clear();
+          return true;
+        }
+
       private:
         DISALLOW_COPY_AND_ASSIGN(Task);
 
@@ -207,6 +222,7 @@ namespace tfs
         virtual std::string dump() const ;
         virtual int report_to_ns(const int status);
         virtual int report_to_ds(const int status);
+        virtual bool get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const;
 
       private:
         DISALLOW_COPY_AND_ASSIGN(CompactTask);
@@ -243,6 +259,7 @@ namespace tfs
         virtual std::string dump() const;
         virtual int report_to_ns(const int status);
         virtual int report_to_ds(const int status);
+        virtual bool get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const;
 
       private:
         DISALLOW_COPY_AND_ASSIGN(ReplicateTask);
@@ -268,6 +285,7 @@ namespace tfs
         virtual int handle();
         virtual std::string dump() const;
         virtual int report_to_ns(const int status);
+        virtual bool get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const;
 
       private:
         DISALLOW_COPY_AND_ASSIGN(MarshallingTask);

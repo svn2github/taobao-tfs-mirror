@@ -159,13 +159,38 @@ namespace tfs
       return file_.cache_hit_ != CACHE_HIT_NONE;
     }
 
+    void TfsFile::transfer_mode(const int32_t mode)
+    {
+      file_.mode_ = mode;
+      if (mode & T_FORCE) // force read support
+      {
+        file_.opt_flag_ |= READ_DATA_OPTION_FLAG_FORCE;
+      }
+
+      if ((mode & T_READ) || (mode & T_STAT))
+      {
+        file_.mode_ = T_READ;
+      }
+      else if (mode & T_WRITE)
+      {
+        if ((mode & T_NEWBLK) == 0)
+        {
+          file_.mode_ |= T_CREATE;
+        }
+      }
+      else if (mode & T_UNLINK)
+      {
+        file_.mode_ |= T_WRITE;
+      }
+    }
+
     int TfsFile::open(const char* file_name, const char* suffix, const int32_t mode)
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
-      file_.mode_ = mode;
-      if ((file_.mode_ & T_READ) &&
-          ((NULL == file_name) || (file_name[0] == '\0')))
+      transfer_mode(mode);
+      if (((file_.mode_ & T_READ) || (file_.mode_ & T_UNLINK)) &&
+        ((NULL == file_name) || (file_name[0] == '\0')))
       {
         ret = EXIT_PARAMETER_ERROR;
       }
@@ -195,8 +220,8 @@ namespace tfs
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
-      file_.mode_ = mode;
-      if ((file_.mode_ & T_READ) &&
+      transfer_mode(mode);
+      if (((file_.mode_ & T_READ) || (file_.mode_ & T_UNLINK)) &&
         ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id)))
       {
         ret = EXIT_PARAMETER_ERROR;
@@ -489,7 +514,7 @@ namespace tfs
       file_.ds_.clear();
       file_.family_info_.family_id_ = INVALID_FAMILY_ID;
       uint64_t block_id = fsname_.get_block_id();
-      int ret = session_->get_block_info(block_id, file_);
+      int ret = session_->get_block_info(block_id, file_, file_.mode_);
       if (TFS_SUCCESS == ret)
       {
         // block id may allocated by ns, update it
@@ -730,8 +755,7 @@ namespace tfs
           file_.lease_id_ = response->get_lease_id();
           fsname_.set_block_id(response->get_block_id());
           fsname_.set_file_id(response->get_file_id());
-          TBSYS_LOG(DEBUG, "write file %s. blockid: %"PRI64_PREFIX"u, "
-              "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u",
+          TBSYS_LOG(DEBUG, "write file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u",
               fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(), file_.lease_id_);
         }
       }

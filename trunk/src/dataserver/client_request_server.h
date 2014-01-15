@@ -25,7 +25,7 @@
 #include "common/status_message.h"
 #include "message/message_factory.h"
 #include "common/client_manager.h"
-#include "op_manager.h"
+#include "aop_manager.h"
 #include "data_helper.h"
 
 
@@ -34,6 +34,7 @@ namespace tfs
   namespace dataserver
   {
     class DataService;
+    class TaskManager;
     class ClientRequestServer
     {
       public:
@@ -43,6 +44,7 @@ namespace tfs
         inline OpManager& get_op_manager();
         inline DataHelper& get_data_helper();
         inline TrafficControl& get_traffic_control();
+        inline TaskManager& get_task_manager();
 
         /** main entrance, dispatch task */
         int handle(tbnet::Packet* packet);
@@ -77,6 +79,12 @@ namespace tfs
         int query_ec_meta(message::QueryEcMetaMessage* message);
         int commit_ec_meta(message::CommitEcMetaMessage* message);
         int get_all_blocks_header(message::GetAllBlocksHeaderMessage* message);
+
+      public:
+        int query_ec_meta(const uint64_t block_id,
+            common::ECMeta& ec_meta, const int32_t lock_time);
+        int commit_ec_meta(const uint64_t block_id,
+            const common::ECMeta& ec_meta, const int8_t switch_flag, const int8_t unlock_flag);
 
         /** tool support interface */
       private:

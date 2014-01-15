@@ -30,14 +30,14 @@ namespace tfs
 
     }
     void MsRuntimeGlobalInformation::dump(const int32_t level, const char* file, const int32_t line,
-            const char* function, const pthread_t thid, const char* format, ...)
+        const char* function, const pthread_t thid, const char* format, ...)
     {
-        char msgstr[256] = {'\0'};/** include '\0'*/
-        va_list ap;
-        va_start(ap, format);
-        vsnprintf(msgstr, 256, NULL == format ? "" : format, ap);
-        va_end(ap);
-        TBSYS_LOGGER.logMessage(level, file, line, function, thid, "%s", msgstr);
+      char msgstr[256] = {'\0'};/** include '\0'*/
+      va_list ap;
+      va_start(ap, format);
+      vsnprintf(msgstr, 256, NULL == format ? "" : format, ap);
+      va_end(ap);
+      TBSYS_LOGGER.logMessage(level, file, line, function, thid, "%s", msgstr);
     }
 
     MsRuntimeGlobalInformation& MsRuntimeGlobalInformation::instance()

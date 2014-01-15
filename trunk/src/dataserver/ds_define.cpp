@@ -117,6 +117,8 @@ namespace tfs
           {
             common::NewClient* client = common::NewClientManager::get_instance().create_client();
             ret = common::TFS_SUCCESS == common::post_msg_to_server(targets, client, message, ds_async_callback) ? 1 : -1;
+            if (ret < 0)
+              common::NewClientManager::get_instance().destroy_client(client);
           }
         }
       }

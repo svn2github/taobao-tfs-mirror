@@ -35,7 +35,7 @@ namespace tfs
       int32_t replicate_wait_time_;
       int32_t compact_delete_ratio_;
       int32_t compact_update_ratio_;
-      int32_t compact_max_load_;
+      int32_t compact_task_ratio_;
       int32_t compact_time_lower_;
       int32_t compact_time_upper_;
       int32_t cluster_index_;
@@ -59,14 +59,17 @@ namespace tfs
       int32_t max_write_timeout_;
       int32_t cleanup_write_timeout_threshold_;
       int32_t choose_target_server_random_max_nums_;
+      int32_t choose_target_server_retry_max_nums_;
       int32_t keepalive_queue_size_;
       int32_t marshalling_delete_ratio_;
       int32_t marshalling_time_lower_;
       int32_t marshalling_time_upper_;
       int32_t marshalling_type_;
+      int32_t marshalling_visit_time_;
       int32_t max_data_member_num_;
       int32_t max_check_member_num_;
       int32_t max_marshalling_queue_timeout_;
+      int32_t max_marshalling_num_;
       int32_t move_task_expired_time_;
       int32_t compact_task_expired_time_;
       int32_t marshalling_task_expired_time_;
@@ -84,6 +87,8 @@ namespace tfs
       int32_t between_ns_and_ds_lease_retry_expire_time_;
       int32_t resolve_version_conflic_task_expired_time_;
       int32_t write_file_check_copies_complete_;
+      int32_t enable_old_interface_;
+      int32_t enable_version_check_;
       double  balance_percent_;
       static NameServerParameter ns_parameter_;
       static NameServerParameter& instance()
@@ -144,6 +149,7 @@ namespace tfs
       int32_t max_sync_retry_count_;
       int32_t max_sync_retry_interval_;
       int32_t sync_fail_retry_interval_;
+      int32_t max_bg_task_queue_size_;
       static std::string get_real_file_name(const std::string& src_file,
           const std::string& index, const std::string& suffix);
       static int get_real_ds_port(const int ds_port, const std::string& index);
@@ -161,9 +167,12 @@ namespace tfs
       std::string db_info_;
       std::string db_user_;
       std::string db_pwd_;
+      std::vector<std::string> ops_db_info_;
       int64_t monitor_interval_;
       int64_t stat_interval_;
       int64_t update_interval_;
+      int64_t count_interval_;
+      int64_t monitor_key_interval_;
 
       static RcServerParameter rc_parameter_;
       static RcServerParameter& instance()
@@ -224,14 +233,19 @@ namespace tfs
     {
       uint64_t self_id_;
       uint64_t ns_id_;
+      uint64_t peer_ns_id_;
       int32_t cluster_id_;
       int32_t check_interval_;
       int32_t check_span_;
       int32_t thread_count_;
       int32_t check_retry_turns_;
-      int32_t turn_interval_;
       int32_t block_check_interval_;            // mill seconds
       int32_t block_check_cost_;                // mill seoncds
+      int32_t check_flag_;
+      int32_t check_reserve_time_;
+      int32_t force_check_all_;
+      int32_t start_time_hour_;
+      int32_t start_time_min_;
 
       int initialize(const std::string& config_file);
 

@@ -141,6 +141,10 @@ int main(int argc, char* argv[])
           }
         }
       }
+      if (TFS_SUCCESS != ret)
+      {
+        fprintf(g_fp, "check error, ret: %d\n", ret);// 发生错误时至少输入一行错误（因为如果g_fp文件没有内容下盘脚本会直接kill下掉该ds）
+      }
       fclose(g_fp);
     }
     tfs_client->destroy();
@@ -295,7 +299,7 @@ int check_blocks_copy(const uint64_t ns_id, const uint64_t ds_id, vector<BlockMe
     if (iter->size_ == 0) // 至少应该存在本ds的copy
     {// 一般不发生，但是某一短暂可能发生, 只能重新再做检查
       ret = EXIT_TFS_ERROR;
-      fprintf(g_fp, "%"PRI64_PREFIX"u\n", iter->block_id_);// unkown block status
+      result_blocks.push_back(iter->block_id_);// unkown block status
       TBSYS_LOG(ERROR, "block no exist or ds list is empty in nameserver, blockid: %"PRI64_PREFIX"u.\n", iter->block_id_);
       break;
     }
@@ -305,7 +309,7 @@ int check_blocks_copy(const uint64_t ns_id, const uint64_t ds_id, vector<BlockMe
       if ((iter->size_ == 1) && (iter->ds_[0] == ds_id))// dangerous block
       {
         result_blocks.push_back(iter->block_id_);
-        TBSYS_LOG(WARN, "data block only left one copy in ds: %s, blockid: %"PRI64_PREFIX"u.\n", tbsys::CNetUtil::addrToString(ds_id).c_str(), iter->block_id_);
+        TBSYS_LOG(WARN, "data block only left one copy in ds: %s, blockid: %"PRI64_PREFIX"u", tbsys::CNetUtil::addrToString(ds_id).c_str(), iter->block_id_);
       }
     }
     else
@@ -322,7 +326,7 @@ int check_blocks_copy(const uint64_t ns_id, const uint64_t ds_id, vector<BlockMe
       }
       else
       {
-        fprintf(g_fp, "%"PRI64_PREFIX"u\n", iter->block_id_);
+        result_blocks.push_back(iter->block_id_);
         TBSYS_LOG(ERROR, "check family fail, familyid: %"PRI64_PREFIX"d, blockid:%"PRI64_PREFIX"u.", iter->family_info_.family_id_, iter->block_id_);
         break;
       }

@@ -91,7 +91,7 @@ namespace tfs
 
       bool get_range_servers(const uint64_t begin, common::ArrayHelper<ServerCollect*>& result) const;
 
-      void set_all_server_next_report_time(const time_t now = common::Func::get_monotonic_time());
+      void set_all_server_next_report_time(const int32_t flag , const time_t now = common::Func::get_monotonic_time());
 
       int build_relation(ServerCollect* server, const uint64_t block,
           const bool writable, const bool master);

@@ -95,7 +95,7 @@ namespace tfs
 #define CONF_COMPACT_HOUR_RANGE                       "compact_hour_range"
 #define CONF_COMPACT_DELETE_RATIO                     "compact_delete_ratio"
 #define CONF_COMPACT_UPDATE_RATIO                     "compact_update_ratio"
-#define CONF_COMPACT_MAX_LOAD                         "compact_max_load"
+#define CONF_COMPACT_TASK_RATIO                       "compact_task_ratio"
 #define CONF_REPLICATE_RATIO                          "replicate_ratio"
 #define CONF_REPL_WAIT_TIME                           "repl_wait_time"
 #define CONF_BALANCE_PERCENT                          "balance_percent"
@@ -111,6 +111,7 @@ namespace tfs
 #define CONF_DUMP_STAT_INFO_INTERVAL                  "dump_stat_info_interval"
 
 #define CONF_CHOOSE_TARGET_SERVER_RANDOM_MAX_NUM      "choose_target_server_random_max_num"
+#define CONF_CHOOSE_TARGET_SERVER_RETRY_MAX_NUM       "choose_target_server_retry_max_num"
 
 #define CONF_MARSHALLING_DELETE_RATIO                 "marshalling_delete_ratio"
 #define CONF_MARSHALLING_HOUR_RANGE                   "marshalling_hour_range"
@@ -157,6 +158,7 @@ namespace tfs
 #define CONF_SYNC_FAIL_RETRY_INTERVAL                 "sync_fail_retry_interval"
 #define CONF_MAX_INIT_INDEX_ELEMENT_NUMS              "max_init_index_element_nums"
 #define CONF_MAX_EXTEND_INDEX_ELEMENT_NUMS            "max_extend_index_element_nums"
+#define CONF_MAX_BG_TASK_QUEUE_SIZE                   "max_bg_task_queue_size"
 #define CONF_SYNC_FILE_ENTRY_QUEUE_LIMIT              "sync_file_entry_queue_limit"
 #define CONF_SYNC_FILE_ENTRY_QUEUE_WARN_RATIO         "sync_file_entry_queue_warn_ratio"
 #define CONF_SYNC_FILE_ENTRY_DEST_ADDR                "sync_file_entry_dest_addr"
@@ -166,9 +168,12 @@ namespace tfs
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"
 #define CONF_RC_STAT_INTERVAL                         "rc_stat_interval"
 #define CONF_RC_UPDATE_INTERVAL                       "rc_update_interval"
+#define CONF_RC_COUNT_INTERVAL                        "rc_count_interval"
 #define CONF_RC_DB_INFO                               "rc_db_info"
 #define CONF_RC_DB_USER                               "rc_db_user"
 #define CONF_RC_DB_PWD                                "rc_db_pwd"
+#define CONF_RC_MONITOR_KEY_INTERVAL                  "rc_monitor_key_interval"
+#define CONF_RC_OPS_DB_INFO                           "rc_ops_db_info"
 
 //name_meta_server
 #define CONF_MAX_SPOOL_SIZE                            "max_spool_size"
@@ -201,10 +206,15 @@ namespace tfs
 #define CONF_CHECK_INTERVAL                           "check_interval"
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_NS_IP                                    "ns_ip"
+#define CONF_PEER_NS_IP                               "peer_ns_ip"
 #define CONF_CHECK_RETRY_TURN                         "check_retry_turn"
 #define CONF_TURN_INTERVAL                            "turn_interval"
 #define CONF_BLOCK_CHECK_INTERVAL                     "block_check_interval"
 #define CONF_BLOCK_CHECK_COST                         "block_check_cost"
+#define CONF_CHECK_FLAG                               "check_flag"
+#define CONF_CHECK_RESERVE_TIME                      "check_reserve_time"
+#define CONF_FORCE_CHECK_ALL                          "force_check_all"
+#define CONF_START_TIME                               "start_time"
 
 //kv meta server
 #define CONF_KV_DB_CONN                             "kv_db_conn"

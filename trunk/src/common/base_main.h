@@ -31,7 +31,7 @@ namespace tfs
 
         int main(int argc, char* argv[]);
 
-        static BaseMain* instance();    
+        static BaseMain* instance();
 
         int handle_interrupt(int sig);
 
@@ -59,7 +59,7 @@ namespace tfs
 
         /** get log file path*/
         virtual const char* get_log_file_path(){return NULL;}
-  
+
         /** get pid file path*/
         virtual const char* get_pid_file_path(){return NULL;}
 
@@ -83,6 +83,7 @@ namespace tfs
         int initialize_work_dir(const char* app_name);
         int initialize_log_file(const char* app_name);
         int initialize_pid_file(const char* app_name);
+        void remove_pid_file(const char* app_name);
 
       private:
         tbutil::Monitor<tbutil::Mutex> monitor_;

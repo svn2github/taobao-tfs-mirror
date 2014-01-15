@@ -243,17 +243,17 @@ namespace tfs
     {
       blocks.clear();
       int32_t ret = TFS_SUCCESS;
-      BlockInfoV2 block_info;
+      IndexHeaderV2 header;
       LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
       for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter)
       {
-        ret = (*iter)->get_block_info(block_info);
-        if ((TFS_SUCCESS == ret) && !IS_VERFIFY_BLOCK(block_info.block_id_)
-            && static_cast<int>(block_info.block_id_ % group_count) == group_seq
-            && range.include(block_info.last_update_time_)
-            && block_info.file_count_ > 0)
+        ret = (*iter)->get_index_header(header);
+        if ((TFS_SUCCESS == ret) && !IS_VERFIFY_BLOCK(header.info_.block_id_)
+            && static_cast<int>(header.info_.block_id_ % group_count) == group_seq
+            && range.include(header.throughput_.last_update_time_)
+            && header.info_.file_count_ > 0)
         {
-          blocks.push_back(block_info.block_id_);
+          blocks.push_back(header.info_.block_id_);
         }
       }
       return TFS_SUCCESS;
@@ -339,6 +339,19 @@ namespace tfs
         }
       }
       return ret;
+    }
+
+    int LogicBlockManager::get_all_block_statistic_visit_info(std::map<uint64_t, common::ThroughputV2> & infos, const bool reset) const
+    {
+      infos.clear();
+      common::ThroughputV2 tp;
+      LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
+      for (; iter != logic_blocks_.end(); ++iter)
+      {
+        (*iter)->statistic_visit(tp, reset);
+        infos.insert(std::map<uint64_t, common::ThroughputV2>::value_type((*iter)->id(), tp));
+      }
+      return TFS_SUCCESS;
     }
 
     int LogicBlockManager::get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const

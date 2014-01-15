@@ -531,7 +531,7 @@ int main(int argc,char* argv[])
         for (uint32_t i = 0; i < file_info_list.size(); i++)
         {
           // skip deleted file
-          if ((file_info_list.at(i).flag_ & (FI_DELETED | FI_INVALID)) != 0)
+          if ((file_info_list.at(i).flag_ & FI_DELETED) != 0)
             continue;
           uint64_t file_id = file_info_list.at(i).id_;
           ret = copy_file(logic_block, block_id, file_id);
@@ -581,7 +581,7 @@ int main(int argc,char* argv[])
         BLOCK_FILE_INFO_VEC_ITER v_file_iter = v_file_info.begin();
         for (; v_file_iter != v_file_info.end(); v_file_iter++)
         {
-          if ((v_file_iter->file_info_.flag_ & (FI_DELETED | FI_INVALID)) != 0)
+          if ((v_file_iter->file_info_.flag_ & FI_DELETED) != 0)
             continue;
           uint64_t file_id = v_file_iter->file_info_.id_;
           ret = copy_file_from_slave_cluster(ns_slave_addr, ns_addr, block_id, file_id);

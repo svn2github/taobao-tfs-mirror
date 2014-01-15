@@ -57,6 +57,7 @@ int cmd_quit(const VSTRING&);
 int cmd_set_run_param(const VSTRING& param);
 int cmd_add_block(const VSTRING& param);
 int cmd_remove_block(const VSTRING& param);
+int cmd_remove_family(const VSTRING& param);
 int cmd_list_block(const VSTRING& param);
 int cmd_load_block(const VSTRING& param);
 int cmd_compact_block(const VSTRING& param);
@@ -71,6 +72,7 @@ int cmd_get_bpr(const VSTRING &param);
 int cmd_batch_file(const VSTRING& param);
 int cmd_batch_compact_file(const VSTRING& param);
 int cmd_clear_system_table(const VSTRING& param);
+int cmd_set_all_server_report_block(const VSTRING& param);
 
 template<class T> const char* get_str(T it)
 {
@@ -128,14 +130,10 @@ void init()
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
   g_cmd_map["param"] = CmdNode("param name [set value]", "get/set param value, default get.", 0, 4, cmd_set_run_param);
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block by blockid which not exist or expire in ns.", 1, 1, cmd_add_block);
-  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [flag | dsip:port]",
-      "remove block. "
-      "flag: 1--remove block from both ds and ns, "
-      "flag: 2--relieve block and all ds(hold the block) relations from ns, "
-      "flag: 4--remove block from ds holding the block and relieve their relations from ns but keep block alone in ns's block table, "
-      "dsip:port--just relieve relation between block and the dsip:port, "
-      "default is 1.",
+  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [flag|dsip:port]",
+      "remove block. flag: 1--remove block from both ds and ns, 2--just relieve relation from ns, default is 1.",
       1, 3, cmd_remove_block);
+  g_cmd_map["removefamily"] = CmdNode("removefamily family_id", "remove family", 1, 1, cmd_remove_family);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list.", 1, 1, cmd_list_block);
   //g_cmd_map["loadblk"] = CmdNode("loadblk blockid dsip:port", "build relationship between block and dataserver.", 2, 2, cmd_load_block);
   g_cmd_map["clearsystemtable"] = CmdNode("clearsystemtable", "clear system table 1--task, 2--last_write block, 4--report block server, 8--delete block queue.", 1, 1, cmd_clear_system_table);
@@ -160,6 +158,7 @@ void init()
   g_cmd_map["getbpr"] = CmdNode("getbpr", "get balance percent ratio, float value, ex: 1.000000 or 0.000005", 0, 0, cmd_get_bpr);
   g_cmd_map["batch"] = CmdNode("batch file", "batch run command in file", 1, 1, cmd_batch_file);
   g_cmd_map["batch_compact"] = CmdNode("batch_compact file num interval", "batch compact blockid in file, when send num line(blockid) continuously to ns, then sleep interval(s)", 3, 3, cmd_batch_compact_file);
+  g_cmd_map["set_all_server_report_block"] = CmdNode("set_all_server_report_block", "set_all_server_report_block", 0, 0, cmd_set_all_server_report_block);
 }
 
 void version()
@@ -440,6 +439,7 @@ int cmd_add_block(const VSTRING& param)
   ToolUtil::print_info(ret, "add block %"PRI64_PREFIX"u", block_id);
 
   return ret;
+
 }
 
 int cmd_remove_block(const VSTRING& param)
@@ -457,16 +457,16 @@ int cmd_remove_block(const VSTRING& param)
     return TFS_ERROR;
   }
   uint64_t server_id = 0;
-  if(param.size() == 1)
+  if (param.size() == 1)
   {
     flag = 1;//default
   }
-  else if(param.size() == 2)
+  else if (param.size() == 2)
   {
-    if(param[1].length() == 1)
+    if (param[1].length() == 1)
     {
       flag = atoi(param[1].c_str());
-      if(1 != flag && 2 != flag && 4 != flag)
+      if (1 != flag && 2 != flag && 4 != flag)
       {
         fprintf(stderr, "removeblock's flag parameter invalid\n");
         return TFS_ERROR;
@@ -498,7 +498,7 @@ int cmd_remove_block(const VSTRING& param)
   int32_t status = TFS_ERROR;
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
 
-  if(STATUS_MESSAGE_OK == status)
+  if (STATUS_MESSAGE_OK == status)
     status = TFS_SUCCESS;
   else
     status = TFS_ERROR;
@@ -507,6 +507,31 @@ int cmd_remove_block(const VSTRING& param)
     ToolUtil::print_info(status, "removeblock: %s", param[0].c_str());
   else//flag=8,ds_ip:port
     ToolUtil::print_info(status, "removeblock: %s from ds:%s", param[0].c_str(), param[1].c_str());
+  return status;
+}
+
+int cmd_remove_family(const VSTRING& param)
+{
+  if (param.empty())
+  {
+    fprintf(stderr, "invalid parameter, param.empty\n");
+    return TFS_ERROR;
+  }
+  int64_t family_id = strtoull(param[0].c_str(), NULL, 10);
+  if (family_id <= 0)
+  {
+    fprintf(stderr, "invalid familyid %s\n", param[0].c_str());
+    return TFS_ERROR;
+  }
+
+  ClientCmdMessage req_cc_msg;
+  req_cc_msg.set_cmd(CLIENT_CMD_DELETE_FAMILY);
+  req_cc_msg.set_value3(family_id);
+
+  int32_t status = TFS_ERROR;
+  send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
+
+  ToolUtil::print_info(status, "remove family %s, ret: %d", param[0].c_str(), status);
   return status;
 }
 
@@ -1502,6 +1527,19 @@ int cmd_clear_system_table(const VSTRING& param)
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
 
   ToolUtil::print_info(status, "clear system table %s",param[0].c_str());
+
+  return status;
+}
+
+int cmd_set_all_server_report_block(const VSTRING& param)
+{
+  ClientCmdMessage req_cc_msg;
+  req_cc_msg.set_cmd(CLIENT_CMD_CLEAR_SYSTEM_TABLE);
+  int status = TFS_ERROR;
+
+  int32_t ret = send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
+
+  ToolUtil::print_info(status, "clear system table %s, ret: %d",param[0].c_str(), ret);
 
   return status;
 }

@@ -21,6 +21,9 @@ namespace tfs
 {
   namespace common
   {
+    //http error code
+    const int32_t HTTP_RESPONSE_OK = 200;
+
     const int32_t EXIT_GENERAL_ERROR = -1000;
     const int32_t EXIT_CONFIG_ERROR = -1001;
     const int32_t EXIT_UNKNOWN_MSGTYPE = -1002;
@@ -153,11 +156,12 @@ namespace tfs
     const int32_t EXIT_BLOCK_CANNOT_REINSTATE = -5054;
     const int32_t EXIT_COMMIT_BLOCK_UPDATE_ERROR = -5055;
     const int32_t EXIT_INITIALIZE_TAIR_ERROR = -5056;
-    const int32_t EXIT_BLOCK_NOT_IN_CURRENT_GROUP = -5057;
-    const int32_t EXIT_BLOCK_COPIES_INCOMPLETE = -5058;
-    const int32_t EXIT_SEND_SYNC_FILE_ENTRY_MSG_ERROR = -5059;
-    const int32_t EXIT_CHOOSE_SOURCE_SERVER_ERROR = -5060;
-    const int32_t EXIT_CHOOSE_RACK_ERROR = -5061;
+    const int32_t EXIT_REPORT_BLOCK_ERROR = -5057;
+    const int32_t EXIT_BLOCK_NOT_IN_CURRENT_GROUP = -5058;
+    const int32_t EXIT_BLOCK_COPIES_INCOMPLETE = -5059;
+    const int32_t EXIT_SEND_SYNC_FILE_ENTRY_MSG_ERROR = -5060;
+    const int32_t EXIT_CHOOSE_SOURCE_SERVER_ERROR = -5061;
+    const int32_t EXIT_CHOOSE_RACK_ERROR = -5062;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error
@@ -235,11 +239,14 @@ namespace tfs
     const int32_t EXIT_NOT_ALL_SUCCESS = -8074;
     const int32_t EXIT_BLOCK_SIZE_OUT_OF_RANGE = -8075;
     const int32_t EXIT_BLOCK_VERSION_CONFLICT_ERROR = -8076;
-    const int32_t EXIT_OP_META_ERROR = -8077;
-    const int32_t EXIT_NO_WRITABLE_BLOCK = -8078;
-    const int32_t EXIT_BLOCK_HAS_WRITE = -8079;
-    const int32_t EXIT_MIGRATE_DS_HEARTBEAT_ERROR = -8080;
-    const int32_t EXIT_DATASERVER_READ_ONLY = -8081;//current dataserver read only
+    const int32_t EXIT_BLOCK_IN_TASK_QUEUE = -8077;
+    const int32_t EXIT_CHECK_QUEUE_FULL = -8078;
+    const int32_t EXIT_BG_TASK_QUEUE_FULL = -8079;
+    const int32_t EXIT_OP_META_ERROR = -8080;
+    const int32_t EXIT_NO_WRITABLE_BLOCK = -8081;
+    const int32_t EXIT_BLOCK_HAS_WRITE = -8082;
+    const int32_t EXIT_MIGRATE_DS_HEARTBEAT_ERROR = -8083;
+    const int32_t EXIT_DATASERVER_READ_ONLY = -8084;//current dataserver read only
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;
@@ -303,11 +310,24 @@ namespace tfs
     // life cycle manager related
     const int32_t EXIT_LIFE_CYCLE_INFO_EXIST = -18000;
 
+    //sync file
+    const int32_t EXIT_SYNC_FILE_PART_SUCCESSFUL = -20000;
+    const int32_t EXIT_FILE_COUNT_CONFLICT_ERROR = -20001;
+    const int32_t EXIT_SYNC_FILE_NOTHING = -20002;
+
+    //http packet
+    const int32_t EXIT_NO_HTTP_HEADER = -21000;
+    const int32_t EXIT_NO_HTTP_REQUEST_LINE = -21001;
+    const int32_t EXIT_NO_HTTP_REQUEST_HEADER = -21002;
+    const int32_t EXIT_WRONG_HTTP_PROTOCOL = -21003;
+    const int32_t EXIT_SEND_HTTP_ERROR = -21004;
+
     // migrate server error code
-    const int32_t EXIT_GET_ALL_BLOCK_HEADER_ERROR = -19000;
-    const int32_t EXIT_SEND_MIGRATE_MSG_ERROR = -19001;
+    const int32_t EXIT_GET_ALL_BLOCK_HEADER_ERROR = -22000;
+    const int32_t EXIT_SEND_MIGRATE_MSG_ERROR = -22001;
+
     // sync server error code
-    const int32_t EXIT_SOURCE_DS_SYNC_THREAD_NOT_FOUND = -20000;
+    const int32_t EXIT_SOURCE_DS_SYNC_THREAD_NOT_FOUND = -23000;
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

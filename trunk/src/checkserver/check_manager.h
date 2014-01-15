@@ -36,16 +36,25 @@ namespace tfs
       SERVER_STATUS_FAIL
     };
 
+    enum BlockStatus
+    {
+      BLOCK_STATUS_INIT,
+      BLOCK_STATUS_FAIL,
+      BLOCK_STATUS_SUCC
+    };
+
     class BlockObject
     {
       public:
         BlockObject():
-        block_id_(common::INVALID_BLOCK_ID), server_size_(0)
+        block_id_(common::INVALID_BLOCK_ID), server_size_(0),
+        status_(BLOCK_STATUS_INIT)
         {
         }
 
         explicit BlockObject(const uint64_t block_id):
-          block_id_(block_id), server_size_(0)
+          block_id_(block_id), server_size_(0),
+          status_(BLOCK_STATUS_INIT)
         {
         }
 
@@ -87,6 +96,30 @@ namespace tfs
           }
         }
 
+        void remove_server(const uint64_t server_id)
+        {
+          tbutil::Mutex::Lock lock(mutex_);
+          bool found = false;
+          int32_t index = 0;
+          for ( ; index < server_size_; index++)
+          {
+            if (servers_[index] == server_id)
+            {
+              found = true;
+              break;
+            }
+          }
+
+          if (found)
+          {
+            for ( ; index < server_size_ - 1; index++)
+            {
+              servers_[index] = servers_[index+1];
+            }
+            server_size_--;
+          }
+        }
+
         const uint64_t* get_servers() const
         {
           return servers_;
@@ -98,10 +131,21 @@ namespace tfs
           return server_size_;
         }
 
+        int8_t get_status() const
+        {
+          return status_;
+        }
+
+        void set_status(const int8_t status)
+        {
+          status_ = status;
+        }
+
       private:
         uint64_t block_id_;
         uint64_t servers_[common::MAX_REPLICATION_NUM];
-        int32_t server_size_;
+        int8_t server_size_;
+        int8_t status_;
         tbutil::Mutex mutex_;
     };
 
@@ -159,7 +203,7 @@ namespace tfs
           return blocks_;
         }
 
-        ServerStatus get_status()
+        ServerStatus get_status() const
         {
           return status_;
         }
@@ -194,15 +238,30 @@ namespace tfs
     typedef common::TfsSortedVector<ServerObject*, ServerIdCompare>::iterator SERVER_MAP_ITER;
     typedef common::TfsSortedVector<ServerObject*, ServerIdCompare>::iterator SERVER_MAP_CONST_ITER;
 
+    struct BlockSlot
+    {
+      BLOCK_MAP blocks_;
+      tbutil::Mutex mutex_;
+      volatile int32_t succ_count_;
+      volatile int32_t fail_count_;
+
+      BlockSlot()
+      {
+        succ_count_ = 0;
+        fail_count_ = 0;
+      }
+    };
+
+    class CheckServer;
     class CheckManager
     {
       public:
-        CheckManager(BaseServerHelper* server_helper);
+        CheckManager(CheckServer& server, BaseServerHelper* server_helper);
         ~CheckManager();
         int64_t get_seqno() const;
-        const BLOCK_MAP* get_blocks() const;
+        const BlockSlot* get_blocks() const;
         const SERVER_MAP* get_servers() const;
-        int64_t get_block_size() const;
+        void get_block_size(int64_t& total, int64_t& succ, int64_t& fail) const;
         int32_t get_server_size() const;
         int handle(tbnet::Packet* packet);
         void run_check();
@@ -215,8 +274,8 @@ namespace tfs
         int retry_get_all_ds(const uint64_t ns_id, common::VUINT64& servers);
         int retry_get_block_replicas(const uint64_t ns_id, const uint64_t block_id, common::VUINT64& servers);
         int retry_fetch_check_blocks(const uint64_t ds_id, const common::TimeRange& range, common::VUINT64& blocks);
-        int retry_dispatch_check_blocks(const uint64_t ds_id,
-            const int64_t seqno, const int32_t interval, const common::VUINT64& blocks);
+        int retry_dispatch_check_blocks(const uint64_t ds_id, const uint64_t peer_id_,
+            const int64_t seqno, const int32_t interval, const common::CheckFlag flag, const common::VUINT64& blocks);
 
       private:
         void clear();
@@ -226,7 +285,7 @@ namespace tfs
         int fetch_blocks(const common::TimeRange& time_range);
         int assign_blocks();
         int dispatch_task();
-        int update_task(message::ReportCheckBlockMessage* message);
+        int update_task(message::ReportCheckBlockResponseMessage* message);
         int check_blocks(const common::TimeRange& range);
 
       private:
@@ -317,14 +376,16 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN(CheckManager);
-        BLOCK_MAP* all_blocks_;
+        CheckServer& server_;
+        BlockSlot* all_blocks_;
         SERVER_MAP all_servers_;
-        tbutil::Mutex *bmutex_;
         BaseServerHelper* server_helper_;
+        FILE* result_fp_;
         int32_t group_count_;
         int32_t group_seq_;
         int64_t max_dispatch_num_;
         int64_t seqno_;  // every check has an unique seqno, use timestamp(us)
+        int32_t turn_;
         bool stop_;      // check thread stop flag
     };
   }

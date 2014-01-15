@@ -26,7 +26,10 @@ namespace tfs
       status_(0),
       heart_interval_(common::DEFAULT_HEART_INTERVAL),
       max_mr_network_bandwith_mb_(common::DEFAULT_MAX_MR_NETWORK_CAPACITY_MB),
-      max_rw_network_bandwith_mb_(common::DEFAULT_MAX_RW_NETWORK_CAPACITY_MB)
+      max_rw_network_bandwith_mb_(common::DEFAULT_MAX_RW_NETWORK_CAPACITY_MB),
+      ns_role_(common::NS_ROLE_NONE),
+      enable_old_interface_(common::ENABLE_OLD_INTERFACE_FLAG_NO),
+      enable_version_check_(common::ENABLE_VERSION_CHECK_FLAG_NO)
     {
       _packetHeader._pcode = common::RESP_HEART_MESSAGE;
     }
@@ -51,12 +54,24 @@ namespace tfs
       {
         ret = input.get_int32(&max_rw_network_bandwith_mb_);
       }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(&ns_role_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(&enable_old_interface_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(&enable_version_check_);
+      }
       return ret;
     }
 
     int64_t RespHeartMessage::length() const
     {
-      return common::INT_SIZE * 4;
+      return common::INT_SIZE * 4 + common::INT8_SIZE * 3;
     }
 
     int RespHeartMessage::serialize(common::Stream& output) const
@@ -73,6 +88,18 @@ namespace tfs
       if (common::TFS_SUCCESS == ret)
       {
         ret = output.set_int32(max_rw_network_bandwith_mb_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(ns_role_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(enable_old_interface_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(enable_version_check_);
       }
       return ret;
     }

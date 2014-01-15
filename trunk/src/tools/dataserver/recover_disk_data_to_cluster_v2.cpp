@@ -28,6 +28,7 @@
 #include "tools/util/ds_lib.h"
 #include "common/config_item.h"
 #include "message/block_info_message_v2.h"
+#include "nameserver/ns_define.h"
 
 using namespace tfs::dataserver;
 using namespace tfs::common;
@@ -113,7 +114,7 @@ int copy_file(BlockManager& block_manager, const uint64_t block_id, const FileIn
           ret = TfsClientImplV2::Instance()->close(dest_fd, NULL, 0, file_info.status_);//如隐藏文件状态附带过去
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(ERROR, "close dest tfsfile fail, blockid: %"PRI64_PREFIX"u, fileid :%" PRI64_PREFIX "u", block_id, file_id);
+            TBSYS_LOG(ERROR, "close dest tfsfile fail, blockid: %"PRI64_PREFIX"u, fileid :%" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
           }
         }
       }
@@ -122,6 +123,47 @@ int copy_file(BlockManager& block_manager, const uint64_t block_id, const FileIn
     }
     TBSYS_LOG(DEBUG, "copy file %s, blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, ret: %d", TFS_SUCCESS == ret ? "success" : "failed", block_id, file_id, ret);
   }
+  return ret;
+}
+
+int rm_no_replicate_block_from_ns(const char* ns_addr, const uint64_t block_id)
+{
+  int ret = TFS_SUCCESS;
+  ClientCmdMessage req_cc_msg;
+  req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
+  req_cc_msg.set_value3(block_id);
+  req_cc_msg.set_value4(tfs::nameserver::HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION);
+
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* rsp = NULL;
+  if((ret = send_msg_to_server(Func::get_host_ip(ns_addr), client, &req_cc_msg, rsp)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "send remove block from ns command failed. block_id: %"PRI64_PREFIX"u, ret: %d", block_id, ret);
+  }
+  else
+  {
+    assert(NULL != rsp);
+    if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+      if (STATUS_MESSAGE_OK == sm->get_status())
+      {
+        TBSYS_LOG(INFO, "remove block from ns success, ns_addr: %s, blockid: %"PRI64_PREFIX"u", ns_addr, block_id);
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "remove block from ns fail, ns_addr: %s, blockid: %"PRI64_PREFIX"u, ret: %d",
+            ns_addr, block_id, sm->get_status());
+        ret = sm->get_status();
+      }
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "remove block from ns: %s fail, blockid: %"PRI64_PREFIX"u, unkonw msg type", ns_addr, block_id);
+      ret = EXIT_UNKNOWN_MSGTYPE;
+    }
+  }
+  NewClientManager::get_instance().destroy_client(client);
   return ret;
 }
 
@@ -138,16 +180,20 @@ int copy_file_from_slave_cluster(const char* src_ns_addr, const char* dest_ns_ad
   string file_name = fsname.get_name();
 
   int source_fd = TfsClientImplV2::Instance()->open(file_name.c_str(), NULL, src_ns_addr, T_READ);
+  int dest_fd = -1;
   if (source_fd < 0)
   {
-    TBSYS_LOG(ERROR, "open source tfsfile fail when copy file, filename: %s", file_name.c_str());
     ret = source_fd;
+    TBSYS_LOG(ERROR, "open source tfsfile fail when copy file, filename: %s, ret: %d", file_name.c_str(), ret);
   }
-  int dest_fd = TfsClientImplV2::Instance()->open(file_name.c_str(), NULL, dest_ns_addr, T_WRITE | T_NEWBLK);
-  if (dest_fd < 0)
+  else
   {
-    TBSYS_LOG(ERROR, "open dest tfsfile fail when copy file, filename: %s", file_name.c_str());
-    ret = dest_fd;
+    dest_fd = TfsClientImplV2::Instance()->open(file_name.c_str(), NULL, dest_ns_addr, T_WRITE | T_NEWBLK);
+    if (dest_fd < 0)
+    {
+      ret = dest_fd;
+      TBSYS_LOG(ERROR, "open dest tfsfile fail when copy file, filename: %s, ret: %d", file_name.c_str(), ret);
+    }
   }
   if (TFS_SUCCESS == ret)
   {
@@ -214,11 +260,14 @@ int copy_file_from_slave_cluster(const char* src_ns_addr, const char* dest_ns_ad
   return ret;
 }
 
-void recover_block_from_disk_data(const char* ns_addr, const char* ns_slave_addr, BlockManager& block_manager, VUINT64& tmp_fail_block_list, VUINT64& no_need_recover_block_list, VUINT64& success_block_list, multimap<uint64_t, uint64_t>& fail_block_file_list)
+int recover_block_from_disk_data(const char* ns_addr, const char* ns_slave_addr, BlockManager& block_manager,
+    VUINT64& tmp_fail_block_list, VUINT64& no_need_recover_block_list, VUINT64& success_block_list,
+    multimap<uint64_t, uint64_t>& fail_block_file_list, VUINT64& fail_block_list)
 {
   int ret = TFS_SUCCESS;
   VUINT64 blocks;
   vector<FileInfoV2> finfos;
+  multimap<uint64_t, uint64_t> tmp_fail_block_file_list;
   uint64_t ns_id = Func::get_host_ip(ns_addr);
 
   //get all blocks from ds disk
@@ -226,8 +275,10 @@ void recover_block_from_disk_data(const char* ns_addr, const char* ns_slave_addr
 
   vector<BlockMeta> blocks_meta;
   ret = ToolUtil::get_all_blocks_meta(ns_id, blocks, blocks_meta, false);// no need get check block
+  TBSYS_LOG(DEBUG , "all logic blocks count: %zd, data block count: %zd", blocks.size(), blocks_meta.size());
   if (TFS_SUCCESS == ret)
   {
+    int32_t bret = TFS_SUCCESS;
     for (uint32_t block_index = 0; block_index < blocks_meta.size(); ++block_index)
     {
       BlockMeta blk_meta = blocks_meta.at(block_index);
@@ -240,62 +291,77 @@ void recover_block_from_disk_data(const char* ns_addr, const char* ns_slave_addr
       }
       else
       {
-        IndexHeaderV2 header;
-        finfos.clear();
-        ret = block_manager.traverse(header, finfos, block_id, block_id);
-
-        if (TFS_SUCCESS != ret)
+        bret = rm_no_replicate_block_from_ns(ns_addr, block_id);//now T_NEWBLK will can not remove empty ds_list's block
+        if (TFS_SUCCESS != bret)
         {
-          TBSYS_LOG(WARN , "block %"PRI64_PREFIX"u get local file infos failed.\n", block_id);
-          tmp_fail_block_list.push_back(block_id);//只有本磁盘读取block的文件index错误，才需要整个block尝试从辅集群恢复
+          fail_block_list.push_back(block_id);
+          TBSYS_LOG(WARN , "remove block %"PRI64_PREFIX"u from ns: %s failed, ret: %d", block_id, ns_addr, bret);
         }
         else
         {
-          bool all_success = true;
-          int32_t copy_file_succ_count = 0;
-          for (uint32_t file_index = 0; file_index < finfos.size(); ++file_index)
+          IndexHeaderV2 header;
+          finfos.clear();
+          bret = block_manager.traverse(header, finfos, block_id, block_id);
+          if (TFS_SUCCESS != bret)
           {
-            // skip deleted file
-            if ((finfos.at(file_index).status_ & (FI_DELETED | FI_INVALID)) != 0)
-              continue;
-
-            uint64_t file_id = finfos.at(file_index).id_;
-            ret = copy_file(block_manager, block_id, finfos.at(file_index));
-            if (TFS_SUCCESS == ret)
+            TBSYS_LOG(WARN , "block %"PRI64_PREFIX"u get local file infos failed, ret: %d", block_id, bret);
+            tmp_fail_block_list.push_back(block_id);//只有本磁盘读取block的文件index错误，才需要整个block尝试从辅集群恢复
+          }
+          else
+          {
+            bool all_success = true;
+            int32_t copy_file_succ_count = 0;
+            tmp_fail_block_file_list.clear();
+            for (uint32_t file_index = 0; file_index < finfos.size(); ++file_index)
             {
-              TBSYS_LOG(DEBUG, "recover block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u successful!\n", block_id, file_id);
-            }
-            else
-            {// 如果磁盘中该文件数据已经损坏(如crc出错)，则从对等集群(ns_slave_addr)拷贝数据复制
-              ret = copy_file_from_slave_cluster(ns_slave_addr, ns_addr, block_id, finfos.at(file_index));
-              if (TFS_SUCCESS == ret)
+              // skip deleted file
+              if ((finfos.at(file_index).status_ & FI_DELETED) != 0)
+                continue;
+
+              uint64_t file_id = finfos.at(file_index).id_;
+              bret = copy_file(block_manager, block_id, finfos.at(file_index));
+              if (TFS_SUCCESS == bret)
               {
-                TBSYS_LOG(DEBUG, "recover block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u successful from slave cluster!\n", block_id, file_id);
+                TBSYS_LOG(DEBUG, "recover block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u successful!", block_id, file_id);
               }
               else
+              {// 如果磁盘中该文件数据已经损坏(如crc出错)，则从对等集群(ns_slave_addr)拷贝数据复制
+                bret = copy_file_from_slave_cluster(ns_slave_addr, ns_addr, block_id, finfos.at(file_index));
+                if (TFS_SUCCESS == bret)
+                {
+                  TBSYS_LOG(DEBUG, "recover block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u successful from slave cluster!", block_id, file_id);
+                }
+                else
+                {
+                  TBSYS_LOG(WARN, "recover block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u failed from slave cluster, ret: %d!", block_id, file_id, bret);
+                  all_success = false;
+                  tmp_fail_block_file_list.insert(pair<uint64_t, uint64_t>(block_id, file_id));
+                }
+              }
+              if (TFS_SUCCESS == bret)
               {
-                TBSYS_LOG(WARN, "recover block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u failed from slave cluster!\n", block_id, file_id);
-                all_success = false;
-                fail_block_file_list.insert(pair<uint64_t, uint64_t>(block_id, file_id));
+                ++copy_file_succ_count;
               }
             }
-            if (TFS_SUCCESS == ret)
+
+            if (all_success)
             {
-              ++copy_file_succ_count;
+              success_block_list.push_back(block_id);
+              if (0 == copy_file_succ_count)
+              {
+                TBSYS_LOG(DEBUG, "recover block_id: %"PRI64_PREFIX"u need to do nothing,"
+                    " because the count of files who need to recover is ZERO except DELETE status files!", block_id);
+              }
             }
-          }
-          if (all_success)
-          {
-            success_block_list.push_back(block_id);
-            if (0 == copy_file_succ_count)
+            else if (0 == copy_file_succ_count)// all file(exclude DELETE) fail
             {
-              TBSYS_LOG(DEBUG, "recover block_id: %"PRI64_PREFIX"u need to do nothing, because the count of files who need to recover is ZERO except DELETE status files!\n", block_id);
+              TBSYS_LOG(WARN, "recover block_id: %"PRI64_PREFIX"u's files failed, copy_file_succ_count is Zero !", block_id);
+              fail_block_list.push_back(block_id);// for print fail block to out log file at end
             }
-          }
-          else if (0 == copy_file_succ_count)// all file(exclude DELETE) fail
-          {
-            TBSYS_LOG(WARN, "recover block_id: %"PRI64_PREFIX"u's files failed, copy_file_succ_count is Zero !\n", block_id);
-            tmp_fail_block_list.push_back(block_id);
+            else
+            {
+              fail_block_file_list.insert(tmp_fail_block_file_list.begin(), tmp_fail_block_file_list.end());
+            }
           }
         }
       }
@@ -305,14 +371,18 @@ void recover_block_from_disk_data(const char* ns_addr, const char* ns_slave_addr
   {
     TBSYS_LOG(WARN, "get blockis ds_list error, ret:%d", ret);
   }
-  TBSYS_LOG(INFO, "success_block_list size: %zd, tmp_fail_block_list size: %zd\n", success_block_list.size(), tmp_fail_block_list.size());
+  TBSYS_LOG(INFO, "success_block_list size: %zd, tmp_fail_block_list size: %zd, fail_block_list size: %zd",
+      success_block_list.size(), tmp_fail_block_list.size(), fail_block_list.size());
+  return ret;
 }
 
-void recover_block_from_slave_cluster(const char* ns_addr, const char* ns_slave_addr, const VUINT64& tmp_fail_block_list, VUINT64& success_block_list,
-  VUINT64& fail_block_list, multimap<uint64_t, uint64_t>& fail_block_file_list)
+void recover_block_from_slave_cluster(const char* ns_addr, const char* ns_slave_addr,
+    const VUINT64& tmp_fail_block_list, VUINT64& success_block_list,
+    VUINT64& fail_block_list, multimap<uint64_t, uint64_t>& fail_block_file_list)
 {
   int ret = TFS_SUCCESS;
   VUINT64::const_iterator vit = tmp_fail_block_list.begin();
+  multimap<uint64_t, uint64_t> tmp_fail_block_file_list;
   vector<FileInfoV2> finfos;
   for (; vit != tmp_fail_block_list.end(); vit++)
   {
@@ -322,28 +392,40 @@ void recover_block_from_slave_cluster(const char* ns_addr, const char* ns_slave_
     if (ret == TFS_SUCCESS)
     {
       bool all_success = true;
+      int32_t copy_file_succ_count = 0;
+      tmp_fail_block_file_list.clear();
       vector<FileInfoV2>::const_iterator v_file_iter = finfos.begin();
       for (; v_file_iter != finfos.end(); v_file_iter++)
       {
-        if ((v_file_iter->status_ & (FI_DELETED | FI_INVALID)) != 0)
+        if ((v_file_iter->status_ & FI_DELETED) != 0)
           continue;
 
         uint64_t file_id = v_file_iter->id_;
         ret = copy_file_from_slave_cluster(ns_slave_addr, ns_addr, block_id, (*v_file_iter));
         if (TFS_SUCCESS == ret)
         {
-          TBSYS_LOG(DEBUG, "recover block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u successful from slave cluster!\n", block_id, file_id);
+          ++copy_file_succ_count;
+          TBSYS_LOG(DEBUG, "recover block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u successful from slave cluster!", block_id, file_id);
         }
         else
         {
-          TBSYS_LOG(WARN, "recover block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u failed from slave cluster\n", block_id, file_id);
+          TBSYS_LOG(WARN, "recover block_id: %"PRI64_PREFIX"u, file_id: %"PRI64_PREFIX"u failed from slave cluster, ret: %d", block_id, file_id, ret);
           all_success = false;
-          fail_block_file_list.insert(pair<uint64_t, uint64_t>(block_id, file_id));
+          tmp_fail_block_file_list.insert(pair<uint64_t, uint64_t>(block_id, file_id));
         }
       }
+
       if (all_success)
       {
         success_block_list.push_back(block_id);
+      }
+      else if (0 == copy_file_succ_count)
+      {
+        fail_block_list.push_back(block_id);
+      }
+      else
+      {
+        fail_block_file_list.insert(tmp_fail_block_file_list.begin(), tmp_fail_block_file_list.end());
       }
     }
     else
@@ -401,6 +483,7 @@ int main(int argc,char* argv[])
     return -1;
   }
 
+  TBSYS_LOGGER.setFileName(log_file.c_str(), true);
   TBSYS_LOGGER.rotateLog(log_file.c_str());
   if (set_log_level)
   {
@@ -416,7 +499,7 @@ int main(int argc,char* argv[])
   TBSYS_CONFIG.load(conf_file);
   if (TFS_SUCCESS != (ret = SYSPARAM_FILESYSPARAM.initialize(server_index)))
   {
-    TBSYS_LOG(ERROR, "SysParam::loadFileSystemParam failed: %s\n", conf_file);
+    TBSYS_LOG(ERROR, "SysParam::loadFileSystemParam failed: %s", conf_file);
     return ret;
   }
   const char* ns_ip = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_IP_ADDR);
@@ -474,7 +557,7 @@ int main(int argc,char* argv[])
   ret = TfsClientImplV2::Instance()->initialize(ns_addr);
   if (TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(ERROR, "init TfsClientImplV2 client fail, ret: %d\n", ret);
+    TBSYS_LOG(ERROR, "init TfsClientImplV2 client fail, ret: %d", ret);
     return ret;
   }
 
@@ -482,12 +565,19 @@ int main(int argc,char* argv[])
   multimap<uint64_t, uint64_t> fail_block_file_list;
 
   // recover from dist firstly
-  recover_block_from_disk_data(ns_addr, ns_slave_addr, block_manager, tmp_fail_block_list, no_need_recover_block_list, success_block_list, fail_block_file_list);
+  ret = recover_block_from_disk_data(ns_addr, ns_slave_addr, block_manager, tmp_fail_block_list,
+      no_need_recover_block_list, success_block_list, fail_block_file_list, fail_block_list);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "recover_block_from_disk_data fail, ret: %d", ret);
+    return ret;
+  }
 
-  // copy the tmp failed block from slave cluster
+  // copy the read finfos failed block:tmp_fail_block_list from disk by slave cluster
   if (tmp_fail_block_list.size() > 0)
   {
-    recover_block_from_slave_cluster(ns_addr, ns_slave_addr, tmp_fail_block_list, success_block_list, fail_block_list, fail_block_file_list);
+    recover_block_from_slave_cluster(ns_addr, ns_slave_addr, tmp_fail_block_list,
+        success_block_list, fail_block_list, fail_block_file_list);
   }
 
   TfsClientImplV2::Instance()->destroy();

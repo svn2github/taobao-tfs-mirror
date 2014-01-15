@@ -37,7 +37,7 @@ namespace tfs
         int get_block_replicas(const uint64_t ns_id, const uint64_t block_id, common::VUINT64& servers);
         int fetch_check_blocks(const uint64_t ds_id, const common::TimeRange& range,
             const int32_t group_count, const int32_t group_seq, common::VUINT64& blocks);
-        int dispatch_check_blocks(const uint64_t ds_id, const int64_t seqno, const int32_t interval, const common::VUINT64& blocks);
+        int dispatch_check_blocks(const uint64_t ds_id, const common::CheckParam& param);
         int get_group_info(const uint64_t ns_id, int32_t& group_count, int32_t& group_seq);
       private:
         int get_param_from_ns(const uint64_t ns_id, const int32_t param_index, std::string& param_value);

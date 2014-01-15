@@ -101,6 +101,7 @@ namespace tfs
         return now >= next_report_block_time_ ? true : is_report_block_complete()
                     ? false : is_report_block_expired(now);
       }
+
       inline bool is_report_block_expired(const time_t now) const
       {
         return (now > rb_expired_time_ && rb_status_ == REPORT_BLOCK_STATUS_REPORTING);
@@ -110,7 +111,7 @@ namespace tfs
       {
         rb_expired_time_ = now + common::SYSPARAM_NAMESERVER.report_block_expired_time_;
       }
-      void set_next_report_block_time(const time_t now, const int64_t time_seed, const bool ns_switch);
+      void set_next_report_block_time(const time_t now, const int64_t time_seed, const int32_t flag);
       int choose_move_block_random(uint64_t& result) const;
       int expand_ratio(const float expand_ratio = 0.1);
 

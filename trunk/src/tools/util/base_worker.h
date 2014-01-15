@@ -37,12 +37,12 @@ namespace tfs
         {
         }
 
-        void destroy()
+        virtual void destroy()
         {
           stop_ = true;
         }
 
-        void reload(const int flag)
+        virtual void reload(const int flag)
         {
           if (flag == 1)
           {
@@ -55,7 +55,7 @@ namespace tfs
               interval_ms_ -= 1000;
             }
           }
-          TBSYS_LOG(INFO, "set interval to %d ms", interval_ms_);
+          TBSYS_LOG(INFO, "set interval to %d ms, flag: %d", interval_ms_, flag);
         }
 
         // argument passed by -s
@@ -92,12 +92,12 @@ namespace tfs
         }
 
         // argument passed by -m
-        uint32_t get_timestamp() const
+        int32_t get_timestamp() const
         {
           return timestamp_;
         }
 
-        void set_timestamp(const uint32_t timestamp)
+        void set_timestamp(const int32_t timestamp)
         {
           timestamp_ = timestamp;
         }
@@ -111,6 +111,17 @@ namespace tfs
         void set_interval_ms(const int32_t interval_ms)
         {
           interval_ms_ = interval_ms;
+        }
+
+        // argument passed by -c
+        int32_t get_retry_count() const
+        {
+          return retry_count_;
+        }
+
+        void set_retry_count(const int32_t retry_count)
+        {
+          retry_count_ = retry_count;
         }
 
         FILE* get_succ_fp()
@@ -135,7 +146,7 @@ namespace tfs
 
         void add(const std::string& line)
         {
-          input_.push_back(line);
+          input_.push(std::make_pair(line, 0));
         }
 
         virtual int process(std::string& line)
@@ -146,28 +157,40 @@ namespace tfs
 
         void run()
         {
-          std::vector<std::string>::iterator iter = input_.begin();
-          for ( ; iter != input_.end() && !stop_; iter++)
+          while (!input_.empty() && !stop_)
           {
-            int ret = process(*iter);
+            QueueItem item = input_.front();
+            input_.pop();
+            int ret = process(item.first);
+            item.second++;
             if (common::TFS_SUCCESS == ret)
             {
-              fprintf(succ_fp_, "%s\n", iter->c_str());
+              fprintf(succ_fp_, "%s\n", item.first.c_str());
             }
             else
             {
-              fprintf(fail_fp_, "%s\n", iter->c_str());
+              if (item.second >= retry_count_)
+              {
+                fprintf(fail_fp_, "%s\n", item.first.c_str());
+              }
+              else
+              {
+                input_.push(item);
+                TBSYS_LOG(DEBUG, "line %s fail, will retry", item.first.c_str());
+              }
             }
             usleep(interval_ms_ * 1000);
           }
         }
 
       protected:
-        std::vector<std::string> input_;
+        typedef std::pair<std::string, int32_t> QueueItem;
+        std::queue<QueueItem> input_;
         std::string src_addr_;
         std::string dest_addr_;
         std::string extra_arg_;
-        uint32_t timestamp_;
+        int32_t retry_count_;
+        int32_t timestamp_;
         int32_t interval_ms_;
         FILE* succ_fp_;
         FILE* fail_fp_;
@@ -210,8 +233,14 @@ namespace tfs
           return extra_arg_;
         }
 
+        // argment passed by -c
+        int32_t get_retry_count() const
+        {
+          return retry_count_;
+        }
+
         // argument passed by -m
-        uint32_t get_timestamp() const
+        int32_t get_timestamp() const
         {
           return timestamp_;
         }
@@ -220,6 +249,21 @@ namespace tfs
         int32_t get_interval_ms() const
         {
           return interval_ms_;
+        }
+
+        int32_t get_type() const
+        {
+          return type_;
+        }
+
+        bool get_force() const
+        {
+          return force_;
+        }
+
+        const std::string& get_dest_addr_path() const
+        {
+          return dest_addr_path_;
         }
 
         FILE* get_succ_fp()
@@ -239,8 +283,12 @@ namespace tfs
         std::string output_dir_;
         std::string extra_arg_;
         std::string log_level_;
-        uint32_t timestamp_;
+        std::string dest_addr_path_;
+        int32_t retry_count_;
+        int32_t timestamp_;
         int32_t interval_ms_;
+        int32_t type_;
+        bool force_;
         FILE* succ_fp_;
         FILE* fail_fp_;
 

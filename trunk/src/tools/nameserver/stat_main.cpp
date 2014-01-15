@@ -43,7 +43,7 @@ int32_t do_stat(const int32_t size, T& v_value_range)
 }
 
 int block_process(const uint64_t ns_id, StatInfo& file_stat_info,
-    V_BLOCK_SIZE_RANGE& v_block_size_range, V_DEL_BLOCK_RANGE& v_del_block_range, BLOCK_SIZE_SET& s_bigid_block, BLOCK_SIZE_SET& s_big_block, const int32_t top_num, BLOCK_SIZE_SET& s_topn_block)
+    V_BLOCK_SIZE_RANGE& v_block_size_range, V_DEL_BLOCK_RANGE& v_del_block_range, BLOCK_SIZE_SET& s_big_block, const int32_t top_num, BLOCK_SIZE_SET& s_topn_block)
 {
   const int32_t num = 1000;
   int32_t ret  = TFS_ERROR;
@@ -92,12 +92,6 @@ int block_process(const uint64_t ns_id, StatInfo& file_stat_info,
         //block.dump();
         // add to file stat
         file_stat_info.add(block);
-
-        // get block with big id
-        if (block.info_.block_id_ >= MAGIC_BLOCK_ID)
-        {
-          s_bigid_block.insert(BlockSize(block.info_.block_id_, block.info_.size_));
-        }
 
         // do range stat
         ret = do_stat(block.info_.size_ / M_UNITS, v_block_size_range);
@@ -222,7 +216,7 @@ int main(int argc,char** argv)
 
   if (! is_debug)
   {
-    TBSYS_LOGGER.setLogLevel("info");
+    TBSYS_LOGGER.setLogLevel("warn");
   }
 
   gstreamer.set_packet_factory(&gfactory);
@@ -231,7 +225,6 @@ int main(int argc,char** argv)
   StatInfo stat_info;
   V_BLOCK_SIZE_RANGE v_block_size_range;
   V_DEL_BLOCK_RANGE v_del_block_range;
-  set<BlockSize> s_bigid_block;
   set<BlockSize> s_big_block;
   set<BlockSize> s_topn_block;
 
@@ -250,7 +243,7 @@ int main(int argc,char** argv)
   }
 
   // do stat
-  block_process(ns_id, stat_info, v_block_size_range, v_del_block_range, s_bigid_block, s_big_block, top_num, s_topn_block);
+  block_process(ns_id, stat_info, v_block_size_range, v_del_block_range, s_big_block, top_num, s_topn_block);
 
   // print info to log file
   fprintf(fp, "--------------------------block file info-------------------------------\n");
@@ -266,12 +259,6 @@ int main(int argc,char** argv)
   for (; diter != v_del_block_range.end(); diter++)
   {
     diter->dump(fp);
-  }
-  fprintf(fp, "--------------------------big blockid list whose id is bigger than %d. num: %zd -------------------------------\n", MAGIC_BLOCK_ID, s_bigid_block.size());
-  set<BlockSize>::iterator biditer = s_bigid_block.begin();
-  for (; biditer != s_bigid_block.end(); biditer++)
-  {
-    fprintf(fp, "block_id: %"PRI64_PREFIX"u, size: %d\n", biditer->block_id_, biditer->file_size_);
   }
   fprintf(fp, "--------------------------block list whose size bigger is than %d. num: %zd -------------------------------\n", THRESHOLD, s_big_block.size());
   set<BlockSize>::reverse_iterator rbiter = s_big_block.rbegin();

@@ -172,7 +172,7 @@ namespace tfs
     bool ServerCollect::calc_regular_create_block_count(const double average_used_capacity,LayoutManager& manager, bool& promote, int32_t& count)
     {
       bool ret = ((is_report_block_complete() || promote) /*&& !is_full()*/
-                    && count > 0 && total_capacity_ > 0 && use_capacity_ >= 0);
+                    && count > 0 && total_capacity_ > 0 && use_capacity_ >= 0 && DATASERVER_DISK_TYPE_FULL == get_disk_type());
       if (!ret)
       {
         count = 0;
@@ -586,18 +586,25 @@ namespace tfs
       return left.get_array_index() + right.get_array_index();
     }
 
-    void ServerCollect::set_next_report_block_time(const time_t now, const int64_t time_seed, const bool ns_switch)
+    void ServerCollect::set_next_report_block_time(const time_t now, const int64_t time_seed, const int32_t flag)
     {
       int32_t hour = SYSPARAM_NAMESERVER.report_block_time_upper_ - SYSPARAM_NAMESERVER.report_block_time_lower_ ;
       time_t current = time(NULL);
       time_t next    = current;
-      if (ns_switch)
+      if (SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_SWITCH == flag)
       {
         next += (time_seed % (hour * 3600));
       }
-      else
+
+      if (SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_IMMEDIATELY == flag)
       {
         if (SYSPARAM_NAMESERVER.report_block_time_interval_ > 0)
+          next += (time_seed % 300);
+      }
+
+      if (SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_NONE == flag)
+      {
+        if (common::SYSPARAM_NAMESERVER.report_block_time_interval_ > 0)
         {
           next += (SYSPARAM_NAMESERVER.report_block_time_interval_ * 24 * 3600);
           struct tm lt;

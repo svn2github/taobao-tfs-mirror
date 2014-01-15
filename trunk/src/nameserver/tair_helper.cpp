@@ -173,6 +173,7 @@ namespace tfs
       data_entry tair_end_key(end_key, false);
       int32_t key_offset = 0;
       int32_t ret = TFS_SUCCESS, retry = 0;
+      tair_client_.set_timeout(5000);  // set get range timeout to 5s
       do
       {
         std::vector<data_entry*> values;
@@ -224,6 +225,8 @@ namespace tfs
           TBSYS_LOG(WARN, "scan family information error: %d, pkey: %s start_key: %s, end_key: %s", ret, pkey, start_key, end_key);
         }
       } while (TAIR_HAS_MORE_DATA == ret); // if has more data, continue get range
+
+      tair_client_.set_timeout(2000);  // change timeout to default 2000 after get_range
 
       return ret;
     };

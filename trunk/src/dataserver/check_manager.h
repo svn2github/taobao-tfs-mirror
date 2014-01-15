@@ -39,12 +39,13 @@ namespace tfs
       FRIEND_TEST(TestCheckManager, test_compare_block_fileinfos);
       #endif
 
+      typedef std::queue<common::CheckParam*> QUEUE;
+
       public:
         CheckManager(DataService& service);
         ~CheckManager();
         BlockManager& get_block_manager();
         DataHelper& get_data_helper();
-        std::vector<SyncBase*>& get_sync_mirror();
 
         void run_check();
         int handle(tbnet::Packet* packet);
@@ -52,17 +53,20 @@ namespace tfs
       private:
         int get_check_blocks(message::CheckBlockRequestMessage* message);
         int add_check_blocks(message::ReportCheckBlockMessage* message);
-        void add_check_blocks(const int64_t seqno,
-            const uint64_t check_server_id, const int32_t interval, const common::VUINT64& blocks);
-        int report_check_blocks();
-        int check_block(const uint64_t block_id);
+
+        void do_check(const common::CheckParam& param);
+        void check_block(const common::CheckParam& param, std::vector<common::CheckResult>& result);
+        void check_single_block(const uint64_t block_id,
+            const uint64_t peer_ip, const common::CheckFlag flag, common::CheckResult& result);
         int check_single_block(const uint64_t block_id,
-            std::vector<common::FileInfoV2>& finfos, const std::string& dest_addr);
-        int process_more_files(const uint64_t dest_ns_addr,
+          std::vector<common::FileInfoV2>& finfos, const uint64_t peer_ip,
+          common::CheckFlag flag, common::CheckResult& result);
+
+        int process_more_files(const uint64_t peer_ip,
             const uint64_t block_id, const std::vector<common::FileInfoV2>& more);
-        int process_diff_files(const uint64_t dest_ns_addr,
+        int process_diff_files(const uint64_t peer_ip,
             const uint64_t block_id, const std::vector<common::FileInfoV2>& diff);
-        int process_less_files(const uint64_t dest_ns_addr,
+        int process_less_files(const uint64_t peer_ip,
             const uint64_t block_id, const std::vector<common::FileInfoV2>& less);
         void compare_block_fileinfos(const uint64_t block_id,
             const std::vector<common::FileInfoV2>& left,
@@ -73,12 +77,8 @@ namespace tfs
 
      private:
         DataService& service_;
-        std::deque<uint64_t> pending_blocks_;
-        std::vector<uint64_t> success_blocks_;
+        QUEUE pending_;
         tbutil::Mutex mutex_;
-        int64_t seqno_;
-        int64_t check_server_id_;
-        int32_t interval_;  // check interval between block, ms
     };
   }
 }

@@ -11,8 +11,8 @@
  *      - initial release
  *
  */
-#ifndef TFS_DATASERVER_OP_MANAGER_H_
-#define TFS_DATASERVER_OP_MANAGER_H_
+#ifndef TFS_DATASERVER_AOP_MANAGER_H_
+#define TFS_DATASERVER_AOP_MANAGER_H_
 
 #include <Timer.h>
 #include <Mutex.h>
@@ -23,7 +23,7 @@
 #include "common/array_helper.h"
 #include "data_file.h"
 #include "ds_define.h"
-#include "op_meta.h"
+#include "aop_meta.h"
 
 namespace tfs
 {
@@ -45,6 +45,7 @@ namespace tfs
     public:
       OpManager(DataService& service);
       virtual ~OpManager();
+      void initialize();
 
       BlockManager& get_block_manager();
       LeaseManager& get_lease_manager();

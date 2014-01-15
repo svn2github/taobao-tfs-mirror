@@ -83,7 +83,7 @@ void SyncByFileManger::usage(const char* app_name)
 {
   char *options =
     "-s           source server ip:port\n"
-    "-d           dest server ip:port, optional\n"
+    "-d           dest server ip:port\n"
     "-f           input file name\n"
     "-m           timestamp eg: 20130610, optional, default next day 0'clock\n"
     "-i           sleep interval (ms), optional, default 0\n"
@@ -91,7 +91,7 @@ void SyncByFileManger::usage(const char* app_name)
     "-r           unlink flag, need sync unlink file to dest cluster, optional\n"
     "-t           thread count, optional, defaul 1\n"
     "-l           log level, optional, default info\n"
-    "-o           output directory, optional, default ./output\n"
+    "-p           output directory, optional, default ./logs\n"
     "-v           print version information\n"
     "-h           print help information\n"
     "signal       SIGUSR1 inc sleep interval 1000ms\n"

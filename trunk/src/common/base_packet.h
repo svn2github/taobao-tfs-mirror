@@ -336,26 +336,28 @@ namespace tfs
       COMMIT_EC_META_MESSAGE = 227,
       BLOCK_FILE_INFO_MESSAGE_V2 = 228,
       REPORT_CHECK_BLOCK_MESSAGE = 229,
-      DS_APPLY_LEASE_MESSAGE = 230,
-      DS_APPLY_LEASE_RESPONSE_MESSAGE = 231,
-      DS_RENEW_LEASE_MESSAGE = 232,
-      DS_RENEW_LEASE_RESPONSE_MESSAGE = 233,
-      DS_GIVEUP_LEASE_MESSAGE= 234,
-      DS_GIVEUP_LEASE_RESPONSE_MESSAGE = 235,
-      DS_APPLY_BLOCK_MESSAGE = 236,
-      DS_APPLY_BLOCK_RESPONSE_MESSAGE = 237,
-      DS_APPLY_BLOCK_FOR_UPDATE_MESSAGE = 238,
-      DS_APPLY_BLOCK_FOR_UPDATE_RESPONSE_MESSAGE = 239,
-      DS_GIVEUP_BLOCK_MESSAGE = 240,
-      DS_GIVEUP_BLOCK_RESPONSE_MESSAGE = 241,
-      NS_REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE = 242,
-      NS_RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE = 243,
-      GET_ALL_BLOCKS_HEADER_MESSAGE = 244,
-      GET_ALL_BLOCKS_HEADER_RESP_MESSAGE = 245,
-      REQ_SYNC_FILE_ENTRY_MESSAGE   = 246,
-      RSP_SYNC_FILE_ENTRY_MESSAGE   = 247,
-      REQ_MIGRATE_DS_HEARTBEAT_MESSAGE  = 248,
-      RSP_MIGRATE_DS_HEARTBEAT_MESSAGE  = 249,
+      REPORT_CHECK_BLOCK_RESPONSE_MESSAGE = 230,
+      GET_BLOCK_STATISTIC_VISIT_INFO_MESSAGE = 231,
+      DS_APPLY_LEASE_MESSAGE = 232,
+      DS_APPLY_LEASE_RESPONSE_MESSAGE = 233,
+      DS_RENEW_LEASE_MESSAGE = 234,
+      DS_RENEW_LEASE_RESPONSE_MESSAGE = 235,
+      DS_GIVEUP_LEASE_MESSAGE= 236,
+      DS_GIVEUP_LEASE_RESPONSE_MESSAGE = 237,
+      DS_APPLY_BLOCK_MESSAGE = 238,
+      DS_APPLY_BLOCK_RESPONSE_MESSAGE = 239,
+      DS_APPLY_BLOCK_FOR_UPDATE_MESSAGE = 240,
+      DS_APPLY_BLOCK_FOR_UPDATE_RESPONSE_MESSAGE = 241,
+      DS_GIVEUP_BLOCK_MESSAGE = 242,
+      DS_GIVEUP_BLOCK_RESPONSE_MESSAGE = 243,
+      NS_REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE = 244,
+      NS_RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE = 245,
+      GET_ALL_BLOCKS_HEADER_MESSAGE = 246,
+      GET_ALL_BLOCKS_HEADER_RESP_MESSAGE = 247,
+      REQ_SYNC_FILE_ENTRY_MESSAGE   = 248,
+      RSP_SYNC_FILE_ENTRY_MESSAGE   = 249,
+      REQ_MIGRATE_DS_HEARTBEAT_MESSAGE  = 250,
+      RSP_MIGRATE_DS_HEARTBEAT_MESSAGE  = 251,
 
       REQ_KVMETA_GET_OBJECT_MESSAGE = 300,
       RSP_KVMETA_GET_OBJECT_MESSAGE = 301,
@@ -391,6 +393,12 @@ namespace tfs
       REQ_QUERY_PROGRESS_MESSAGE = 392,
       RSP_QUERY_PROGRESS_MESSAGE = 393,
 
+      REQ_RC_REQ_STAT_MESSAGE = 394,
+      RSP_RC_REQ_STAT_MESSAGE = 395,
+
+      REQ_RC_KEEPALIVE_BY_MONITOR_KEY_CLIENT = 396,
+      RSP_RC_KEEPALIVE_BY_MONITOR_KEY_CLIENT = 397,
+
       LOCAL_PACKET = 500
     };
 
@@ -422,8 +430,8 @@ namespace tfs
       BasePacket();
       virtual ~BasePacket();
       virtual bool copy(BasePacket* src, const int32_t version, const bool deserialize);
-      bool encode(tbnet::DataBuffer* output);
-      bool decode(tbnet::DataBuffer* input, tbnet::PacketHeader* header);
+      virtual bool encode(tbnet::DataBuffer* output);
+      virtual bool decode(tbnet::DataBuffer* input, tbnet::PacketHeader* header);
 
       virtual int serialize(Stream& output) const = 0;
       virtual int deserialize(Stream& input) = 0;
@@ -451,6 +459,7 @@ namespace tfs
       inline uint32_t get_crc() const { return crc_;}
       inline void set_id(const uint64_t id) { id_ = id;}
       inline uint64_t get_id() const { return id_;}
+      //inline Stream& get_stream() {return stream_;}
 
       static bool parse_special_ds(std::vector<uint64_t>& value, int32_t& version, uint32_t& lease);
 

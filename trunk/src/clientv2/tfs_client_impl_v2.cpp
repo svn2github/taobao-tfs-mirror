@@ -700,13 +700,17 @@ namespace tfs
     }
 
     int TfsClientImplV2::unlink(int64_t& file_size, const char* file_name, const char* suffix,
-        const common::TfsUnlinkType action, const char* ns_addr)
+        const common::TfsUnlinkType action, const char* ns_addr, const int32_t flag)
     {
       int fd = open(file_name, suffix, ns_addr, T_UNLINK);
       int ret = fd < 0 ? fd : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        ret = unlink(file_size, fd, action);
+        ret = set_option_flag(fd, flag);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = unlink(file_size, fd, action);
+        }
         close(fd);
       }
       return ret;

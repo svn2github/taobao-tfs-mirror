@@ -115,8 +115,13 @@ namespace tfs
       ret = NULL == pserver ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        //update all relations of blocks belongs to it
-        ret = manager_.update_relation(expires, pserver, blocks, now);
+        ret = (REPORT_BLOCK_STATUS_REPORTING != pserver->get_report_block_status()) ? TFS_SUCCESS : EXIT_REPORT_BLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          //update all relations of blocks belongs to it
+          pserver->set_report_block_status(REPORT_BLOCK_STATUS_REPORTING);
+          ret = manager_.update_relation(expires, pserver, blocks, now);
+        }
         if (TFS_SUCCESS == ret)
         {
           pserver = manager_.get_server_manager().get(server);
@@ -310,6 +315,7 @@ namespace tfs
           {
             manager_.get_block_manager().remove(pobject, info.value3_);// just need to remove empty block object
             snprintf(buf, buf_length, " block: %"PRI64_PREFIX"u's dataserver not found, ret: %d", info.value3_, ret);
+            ret = TFS_SUCCESS; // block has no replica, remove success
           }
           else
           {
@@ -540,21 +546,30 @@ namespace tfs
     int ClientRequestServer::handle_control_delete_family(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
       int32_t ret = (info.value3_ <= 0) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-      if (TFS_SUCCESS != ret)
-        snprintf(buf, buf_length, "parameter is invalid, value3: %"PRI64_PREFIX"u", info.value3_);
       if (TFS_SUCCESS == ret)
       {
         ret = manager_.get_oplog_sync_mgr().del_family(info.value3_);
         if (TFS_SUCCESS == ret)
         {
-          std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
-          common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
-          ret = manager_.get_family_manager().get_members(helper, info.value3_);
+          int32_t family_aid_info = 0;
+          std::pair<uint64_t, uint64_t> members[MAX_MARSHALLING_NUM];
+          common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MAX_MARSHALLING_NUM, members);
+          ret = manager_.get_family_manager().get_members(helper, family_aid_info, info.value3_);
           if (TFS_SUCCESS == ret)
           {
-            for (int64_t index = 0; index < helper.get_array_index(); index++)
+            int32_t index = 0;
+            const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info);
+            const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family_aid_info);
+            const int32_t MEMBER_NUM = DATA_MEMBER_NUM + CHECK_MEMBER_NUM;
+            for (index = 0; index < MEMBER_NUM; ++index)
             {
-              manager_.get_block_manager().set_family_id(helper.at(index)->first, INVALID_FAMILY_ID);
+              std::pair<uint64_t, uint64_t>* item = helper.at(index);
+              assert(NULL != item);
+              manager_.get_block_manager().set_family_id(item->first, INVALID_FAMILY_ID);
+              if (index >= DATA_MEMBER_NUM)
+              {
+                manager_.get_block_manager().push_to_delete_queue(item->first, item->second);
+              }
             }
             FamilyCollect* family = NULL;
             manager_.get_family_manager().remove(family, info.value3_);
@@ -569,6 +584,15 @@ namespace tfs
       }
 
       return ret;
+    }
+
+    int ClientRequestServer::handle_control_set_all_server_report_block(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
+    {
+      UNUSED(info);
+      UNUSED(buf_length);
+      UNUSED(buf);
+      manager_.get_server_manager().set_all_server_next_report_time(SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_IMMEDIATELY, Func::get_monotonic_time());
+      return TFS_SUCCESS;
     }
 
     int ClientRequestServer::handle_control_cmd(const ClientCmdInformation& info, common::BasePacket* msg, const int64_t buf_length, char* buf)
@@ -610,6 +634,9 @@ namespace tfs
         case CLIENT_CMD_DELETE_FAMILY:
           ret = handle_control_delete_family(info, buf_length, buf);
           break;
+        case CLIENT_CMD_SET_ALL_SERVER_REPORT_BLOCK:
+          ret = handle_control_set_all_server_report_block(info, buf_length, buf);
+          break;
         default:
           snprintf(buf, buf_length, "unknow client cmd: %d", info.cmd_);
           ret = EXIT_UNKNOWN_MSGTYPE;
@@ -647,7 +674,9 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != block_id &&  !members.empty()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        BlockCollect* block = manager_.get_block_manager().get(block_id);
+        BlockManager& block_manager = manager_.get_block_manager();
+        ServerManager& server_manager = manager_.get_server_manager();
+        BlockCollect* block = block_manager.get(block_id);
         ret = (NULL != block) ? TFS_SUCCESS : EXIT_NO_BLOCK;
         if (TFS_SUCCESS == ret)
         {
@@ -662,32 +691,40 @@ namespace tfs
           for (index = 0; index < members.get_array_index(); ++index)
           {
             std::pair<uint64_t, common::BlockInfoV2>* item = members.at(index);
-            TBSYS_LOG(INFO, "resolve block version conflict: current block: %"PRI64_PREFIX"u, server: %s, version: %d",
-              block->id(), tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
-            if (item->second.version_ >= info.version_)
+            server = server_manager.get(item->first);
+            if (item->second.version_ >= info.version_
+              && block_manager.exist(block, server))
             {
-              server = manager_.get_server_manager().get(item->first);
-              bool exist = manager_.get_block_manager().exist(block, server);
-              if (item->second.version_ > info.version_ && exist)
-                helper.clear();
-              if (exist)
-              {
-                info = item->second;
-                helper.push_back(item->first);
-              }
+              info = item->second;
             }
           }
           for (index = 0; index < members.get_array_index(); ++index)
           {
             std::pair<uint64_t, common::BlockInfoV2>* item = members.at(index);
+            TBSYS_LOG(INFO, "resolve block version conflict: current block: %"PRI64_PREFIX"u, server: %s, version: %d",
+              block->id(), tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
+            int32_t diff = __gnu_cxx::abs(item->second.version_ - info.version_);
+            if (diff <= VERSION_DIFF)
+            {
+              server = server_manager.get(item->first);
+              if (NULL != server && block_manager.exist(block, server))
+              {
+                helper.push_back(item->first);
+              }
+            }
+          }
+
+          for (index = 0; index < members.get_array_index(); ++index)
+          {
+            std::pair<uint64_t, common::BlockInfoV2>* item = members.at(index);
             if (!helper.exist(item->first)
-                && manager_.get_block_manager().get_servers_size(block_id) > 1)
+                && block_manager.get_servers_size(block_id) > 1)
             {
               //解除关系失败可以暂时不管
               update_last_time = true;
-              server = manager_.get_server_manager().get(item->first);
+              server = server_manager.get(item->first);
               manager_.relieve_relation(block, server, now);
-              manager_.get_block_manager().push_to_delete_queue(block_id, item->first);
+              block_manager.push_to_delete_queue(block_id, item->first);
               TBSYS_LOG(INFO, "resolve block version conflict: relieve relation block: %"PRI64_PREFIX"u, server: %s, version: %d",
                 block_id, tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
             }

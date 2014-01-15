@@ -92,7 +92,7 @@ namespace tfs
       return ret;
     }
 
-    int DefaultServerHelper::dispatch_check_blocks(const uint64_t ds_id, const int64_t seqno, const int32_t interval, const common::VUINT64& blocks)
+    int DefaultServerHelper::dispatch_check_blocks(const uint64_t ds_id, const common::CheckParam& param)
     {
       int ret = (INVALID_SERVER_ID != ds_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -102,10 +102,7 @@ namespace tfs
         if (NULL != client)
         {
           ReportCheckBlockMessage msg;
-          msg.set_seqno(seqno);
-          msg.set_interval(interval);
-          msg.set_blocks(blocks);
-          msg.set_server_id(SYSPARAM_CHECKSERVER.self_id_);
+          msg.set_param(param);
           ret = send_msg_to_server(ds_id, client, &msg, resp_msg);
           if (TFS_SUCCESS == ret)
           {

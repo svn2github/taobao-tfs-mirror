@@ -155,7 +155,7 @@ namespace tfs
             }
           }
 
-          TBSYS_LOG(INFO, "add task result: seqno: %ld, %d", task->seqno_, ret);
+          TBSYS_LOG(DEBUG, "add task result: seqno: %ld, %d", task->seqno_, ret);
 
           if (TFS_SUCCESS != ret)
           {
@@ -532,14 +532,13 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = task->handle_complete(msg);
+          task->dump(TBSYS_LOG_LEVEL(INFO), "handle message complete, show result: %d,", ret);
           if (master)
           {
-            task->dump(TBSYS_LOG_LEVEL(INFO), "handle message complete, show result: %d,", ret);
             remove(task);
           }
           else
           {
-            msg->dump();
             tbsys::gDelete(task);
           }
         }

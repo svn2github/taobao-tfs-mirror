@@ -55,6 +55,9 @@ namespace tfs
     static const int32_t TRAFFIC_BYTES_STAT_INTERVAL = 1 * 1000 * 1000;//1s
     static const int32_t BUSY_RETRY_TIMES = 3;
 
+    // checkserver param
+    static const int32_t MAX_CHECK_QUEUE_SIZE = 10;
+
     /*#define RW_COUNT_STAT "rw-count-stat"
     #define RW_COUNT_R_SUCCESS "rw-count-r-success"
     #define RW_COUNT_W_SUCCESS "rw-count-w-success"
@@ -63,10 +66,11 @@ namespace tfs
     #define RW_COUNT_W_FAILED  "rw-count-w-failed"
     #define RW_COUNT_U_FAILED  "rw-count-r-failed"*/
 
+    // 2 denotes file INVALID in stable-2.1 i
+    // but it's deprecated in stable-2.5, can be reused now
     enum FileinfoFlag
     {
       FI_DELETED = 1,
-      FI_INVALID = 2,
       FI_CONCEAL = 4
     };
 
@@ -161,6 +165,8 @@ namespace tfs
       int32_t max_block_size_;
       int32_t max_write_file_count_;
       common::DataServerLiveStatus status_;
+      int8_t enable_old_interface_;
+      int8_t enable_version_check_;
       DsRuntimeGlobalInformation();
       static DsRuntimeGlobalInformation& instance();
     };
@@ -171,7 +177,8 @@ namespace tfs
       OPER_INSERT = 1,
       OPER_DELETE = 2,
       OPER_UNDELETE = 3,
-      OPER_UPDATE = 4
+      OPER_UPDATE = 4,
+      OPER_READ   = 5 //read && stat
     }OperType;
 
     class GCObject

@@ -160,7 +160,7 @@ namespace tfs
     }
 
     WriteFileRespMessageV2::WriteFileRespMessageV2():
-      file_id_(0), lease_id_(INVALID_LEASE_ID)
+      file_id_(0), lease_id_(INVALID_LEASE_ID), block_id_(INVALID_BLOCK_ID)
     {
       _packetHeader._pcode = WRITE_FILE_RESP_MESSAGE_V2;
       memset(reserve_, 0, sizeof(reserve_));

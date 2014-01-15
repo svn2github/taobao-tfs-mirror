@@ -33,15 +33,6 @@ namespace tfs
 {
   namespace nameserver
   {
-    /*
-    enum NsRole
-    {
-      NS_ROLE_NONE = 0x00,
-      NS_ROLE_MASTER,
-      NS_ROLE_SLAVE
-    };
-    */
-
     enum NsStatus
     {
       NS_STATUS_NONE = -1,

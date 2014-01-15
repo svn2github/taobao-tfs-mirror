@@ -40,7 +40,7 @@ namespace tfs
   namespace checkserver
   {
     CheckServer::CheckServer():
-      check_manager_(new DefaultServerHelper())
+      check_manager_(*this, new DefaultServerHelper())
     {
 
     }
@@ -148,7 +148,7 @@ namespace tfs
           common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
           switch (pcode)
           {
-            case REPORT_CHECK_BLOCK_MESSAGE:
+            case REPORT_CHECK_BLOCK_RESPONSE_MESSAGE:
               iret = check_manager_.handle(packet);
               break;
             default:

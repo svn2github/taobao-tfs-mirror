@@ -59,11 +59,12 @@ class SyncByBlockWorker: public BaseWorker
     int get_src_one_ds(uint64_t& src_ds_id);
     int read_index(const uint64_t src_ds_id);
     int read_data(const uint64_t src_ds_id);
-    void write_block();
+    int write_block();
     int write_file(const string& file_name, char* data, int32_t size, int32_t status);
     SyncByBlockManger* manager_;
     uint64_t block_id_;
     FILE_INFO_LIST_V2 src_file_list_;
+    IndexHeaderV2 src_header_;
     tbnet::DataBuffer src_data_buf_;
 };
 
@@ -108,7 +109,7 @@ void SyncByBlockManger::usage(const char* app_name)
 {
   char *options =
     "-s           source server ip:port\n"
-    "-d           dest server ip:port, optional\n"
+    "-d           dest server ip:port\n"
     "-f           input block id\n"
     "-m           timestamp eg: 20130610, optional, default next day 0'clock\n"
     "-i           sleep interval (ms), optional, default 0\n"
@@ -118,7 +119,7 @@ void SyncByBlockManger::usage(const char* app_name)
     "-w           traffic threshold per thread, default 1024(kB/s)\n"
     "-t           thread count, optional, defaul 1\n"
     "-l           log level, optional, default info\n"
-    "-o           output directory, optional, default ./output\n"
+    "-p           output directory, optional, default ./logs\n"
     "-v           print version information\n"
     "-h           print help information\n"
     "signal       SIGUSR1 inc sleep interval 1000ms\n"
@@ -211,6 +212,7 @@ int SyncByBlockWorker::read_index(const uint64_t src_ds_id)
       {
         ReadIndexRespMessageV2* resp_msg = dynamic_cast<ReadIndexRespMessageV2* >(rsp);
         src_file_list_ = resp_msg->get_index_data().finfos_;
+        src_header_ = resp_msg->get_index_data().header_;
       }
       else if (STATUS_MESSAGE == rsp->getPCode())
       {
@@ -285,19 +287,20 @@ int SyncByBlockWorker::read_data(const uint64_t src_ds_id)
         {
           ReadRawdataRespMessageV2* rsp_rrd_msg = dynamic_cast<ReadRawdataRespMessageV2*>(rsp);
           int len = rsp_rrd_msg->get_length();
-          assert(len >= 0);
-          if (len < read_size || len == 0)
+          assert(len > 0);
+          src_data_buf_.writeBytes(rsp_rrd_msg->get_data(), len);
+          cur_offset += len;
+          if (len < read_size || cur_offset == src_header_.info_.size_)
           {
+            assert(cur_offset + len == src_header_.info_.size_);
             eof_flag = true;
             TBSYS_LOG(INFO, "read raw data from ds: %s finish, blockid: %"PRI64_PREFIX"u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, ret: %d, read_size:%ld, len: %d",
               tbsys::CNetUtil::addrToString(src_ds_id).c_str(), block_id_, cur_offset, remainder_retrys, ret, read_size, len);
           }
-          if (len > 0)
+          else
           {
             TBSYS_LOG(DEBUG, "read raw data from ds: %s succ, blockid: %"PRI64_PREFIX"u, offset: %d, len: %d, data: %p",
                 tbsys::CNetUtil::addrToString(src_ds_id).c_str(), block_id_, cur_offset, len, rsp_rrd_msg->get_data());
-            src_data_buf_.writeBytes(rsp_rrd_msg->get_data(), len);
-            cur_offset += len;
           }
         }
         else if (STATUS_MESSAGE == rsp->getPCode())
@@ -347,6 +350,7 @@ int SyncByBlockWorker::read_data(const uint64_t src_ds_id)
 int SyncByBlockWorker::write_file(const string& file_name, char* data, int32_t size, int32_t status)
 {
   int ret = TFS_SUCCESS;
+  //TODO: add crc check
   if (NULL == data)
   {
     TBSYS_LOG(ERROR, "input source data is null, filename: %s", file_name.c_str());
@@ -384,12 +388,13 @@ int SyncByBlockWorker::write_file(const string& file_name, char* data, int32_t s
   return ret;
 }
 
-void SyncByBlockWorker::write_block()
+int SyncByBlockWorker::write_block()
 {
   int ret = TFS_SUCCESS;
+  bool all_success = true;
   char* pstart = NULL;
   vector<FileInfoV2>::iterator it = src_file_list_.begin();
-  for ( ; it != src_file_list_.end(); ++it)
+  for ( ; it != src_file_list_.end() && !stop_ ; ++it)
   {
     SyncResult result = SYNC_NOTHING;
     FSName fsname(block_id_, it->id_);
@@ -402,7 +407,8 @@ void SyncByBlockWorker::write_block()
       if (TFS_SUCCESS != ret)
       {
         result = SYNC_FAILED;
-        TBSYS_LOG(WARN, "write file fail, filename: %s, blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"d, ret:%d", file_name.c_str(), block_id_, it->id_, ret);
+        all_success = false;
+        TBSYS_LOG(WARN, "write file fail, filename: %s, blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, ret:%d", file_name.c_str(), block_id_, it->id_, ret);
       }
       else
       {
@@ -411,11 +417,13 @@ void SyncByBlockWorker::write_block()
     }
     else
     {
-      TBSYS_LOG(DEBUG, "skip 'DELETE' file, blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"d", block_id_, it->id_);
+      TBSYS_LOG(DEBUG, "skip 'DELETE' file, blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u", block_id_, it->id_);
     }
     get_manager()->write_log_file(file_name, result);
   }
+  ret = all_success ? TFS_SUCCESS : EXIT_GENERAL_ERROR;// sync some file fail
   TBSYS_LOG(INFO, "write block %s, blockid: %"PRI64_PREFIX"u", TFS_SUCCESS == ret ? "success" : "fail", block_id_);
+  return ret;
 }
 
 int SyncByBlockWorker::sync_block_by_block()
@@ -440,7 +448,7 @@ int SyncByBlockWorker::sync_block_by_block()
     {
       break;
     }
-    write_block();
+    ret = write_block();
     break;
   }
   return ret;
@@ -572,7 +580,8 @@ int SyncByBlockWorker::process(string& line)
 
           if (TFS_SUCCESS == ret)
           {
-            ret = sync_block_by_block();
+          //  ret = sync_block_by_block();
+            ret = sync_block_by_file(src_finfos, dest_finfos);
             TBSYS_LOG(INFO, "blockid: %"PRI64_PREFIX"u is not exist in dest cluster, sync block %s by read raw data finally", block_id_, TFS_SUCCESS == ret ? "success":"fail");
           }
           else

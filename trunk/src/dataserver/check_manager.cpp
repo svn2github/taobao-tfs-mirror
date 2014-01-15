@@ -28,7 +28,7 @@ namespace tfs
     using namespace std;
 
     CheckManager::CheckManager(DataService& service):
-      service_(service), seqno_(0), check_server_id_(INVALID_SERVER_ID)
+      service_(service)
     {
     }
 
@@ -46,58 +46,25 @@ namespace tfs
       return service_.get_data_helper();
     }
 
-    std::vector<SyncBase*>& CheckManager::get_sync_mirror()
-    {
-      static std::vector<SyncBase*> sync_mirror;
-      return sync_mirror;
-    }
-
     void CheckManager::run_check()
     {
+      const int32_t SLEEP_TIME_S = 1;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       while (!ds_info.is_destroyed())
       {
-        bool need_report = false;
-        int64_t seqno = seqno_;
-        uint64_t block_id = INVALID_BLOCK_ID;
         mutex_.lock();
-        if (!pending_blocks_.empty())
+        if (!pending_.empty())
         {
-          block_id = pending_blocks_.front();
-          pending_blocks_.pop_front();
-
-          // this is the last block that needs to be checked
-          // after check finish, report to checkserver
-          if (pending_blocks_.empty() && (seqno != 0))
-          {
-            need_report = true;
-          }
+          CheckParam* param = pending_.front();
+          pending_.pop();
+          mutex_.unlock();
+          do_check(*param);
+          tbsys::gDelete(param);
         }
-        mutex_.unlock();
-
-        if (!ds_info.is_destroyed() && (INVALID_BLOCK_ID != block_id))
+        else
         {
-          if (TFS_SUCCESS == check_block(block_id))
-          {
-            mutex_.lock();
-            success_blocks_.push_back(block_id);
-            mutex_.unlock();
-          }
-        }
-
-        // during check the last block, a new task may already come
-        // the previous task will just need to be ignored
-        // so we check if seqno matches here to avoid lock
-        if (!ds_info.is_destroyed() && need_report && (seqno_ == seqno))
-        {
-          report_check_blocks();
-          seqno_ = 0;
-          need_report = false;
-        }
-
-        if (!ds_info.is_destroyed() && pending_blocks_.empty())
-        {
-          sleep(2);
+          mutex_.unlock();
+          sleep(SLEEP_TIME_S);
         }
       }
     }
@@ -145,93 +112,102 @@ namespace tfs
 
     int CheckManager::add_check_blocks(ReportCheckBlockMessage* message)
     {
-      int64_t seqno = message->get_seqno();
-      uint64_t check_server_id = message->get_server_id();
-      const VUINT64& blocks = message->get_blocks();
-      const int32_t interval = message->get_interval();
-      int ret = ((seqno > 0) && (INVALID_SERVER_ID != check_server_id)) ?
-        TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int ret = TFS_SUCCESS;
+      Mutex::Lock lock(mutex_);
+      if (pending_.size() >= static_cast<uint32_t>(MAX_CHECK_QUEUE_SIZE))
+      {
+        ret = EXIT_CHECK_QUEUE_FULL;
+      }
+
       if (TFS_SUCCESS == ret)
       {
-        add_check_blocks(seqno, check_server_id, interval, blocks);
+        CheckParam* param =  new (std::nothrow) CheckParam();
+        assert(NULL != param);
+        *param = message->get_param();
+        pending_.push(param);
         ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
+
       return ret;
     }
 
-    void CheckManager::add_check_blocks(const int64_t seqno,
-        const uint64_t check_server_id, const int32_t interval, const common::VUINT64& blocks)
-    {
-      Mutex::Lock lock(mutex_);
-      pending_blocks_.clear();
-      success_blocks_.clear();
-      seqno_ = seqno;
-      check_server_id_ = check_server_id;
-      interval_ = interval;
-      VUINT64::const_iterator iter = blocks.begin();
-      for ( ; iter != blocks.end(); iter++)
-      {
-        pending_blocks_.push_back(*iter);
-      }
-    }
-
-    int CheckManager::report_check_blocks()
+    void CheckManager::do_check(const CheckParam& param)
     {
       DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
-      ReportCheckBlockMessage rep_msg;
-      rep_msg.set_seqno(seqno_);
-      rep_msg.set_server_id(info.information_.id_);
-      VUINT64& blocks = rep_msg.get_blocks();
-      mutex_.lock();
-      VUINT64::iterator iter = success_blocks_.begin();
-      for ( ; iter != success_blocks_.end(); iter++)
-      {
-        blocks.push_back(*iter);
-      }
-      mutex_.unlock();
+      ReportCheckBlockResponseMessage rsp_msg;
+      rsp_msg.set_seqno(param.seqno_);
+      rsp_msg.set_server_id(info.information_.id_);
+      check_block(param, rsp_msg.get_result());
 
-      TBSYS_LOG(INFO, "report check status to %s", tbsys::CNetUtil::addrToString(check_server_id_).c_str());
+      TBSYS_LOG(INFO, "report check status to %s, senqo: %"PRI64_PREFIX"d",
+          tbsys::CNetUtil::addrToString(param.cs_id_).c_str(), param.seqno_);
 
       NewClient* client = NewClientManager::get_instance().create_client();
-      return post_msg_to_server(check_server_id_, client, &rep_msg, Task::ds_task_callback);
+      int ret = post_msg_to_server(param.cs_id_, client, &rsp_msg, Task::ds_task_callback);
+      if (TFS_SUCCESS != ret)
+      {
+        NewClientManager::get_instance().destroy_client(client);
+      }
     }
 
-    int CheckManager::check_block(const uint64_t block_id)
+    void CheckManager::check_block(const CheckParam& param, vector<CheckResult>& result)
+    {
+      vector<uint64_t>::const_iterator iter = param.blocks_.begin();
+      for ( ; iter != param.blocks_.end(); iter++)
+      {
+        CheckResult current;
+        check_single_block(*iter, param.peer_id_, param.flag_, current);
+        result.push_back(current);
+        if (param.interval_ > 0)
+        {
+          usleep(param.interval_ * 1000);
+        }
+      }
+    }
+
+    void CheckManager::check_single_block(const uint64_t block_id,
+        const uint64_t peer_ip, const CheckFlag flag, CheckResult& result)
     {
       TIMER_START();
       IndexHeaderV2 main_header;
       vector<FileInfoV2> main_finfos;
-      int ret = get_block_manager().traverse(main_header, main_finfos, block_id, block_id);
-      if (TFS_SUCCESS == ret && main_finfos.size() > 0) // ignore empty block
+      result.block_id_ = block_id;
+      result.status_ = get_block_manager().traverse(main_header, main_finfos, block_id, block_id);
+      if (TFS_SUCCESS == result.status_)
       {
-        std::string dest_addr;//TODO
-        ret = check_single_block(block_id, main_finfos, dest_addr);
-        /*//vector<SyncBase*>& sync_mirror = get_sync_mirror();
-        vector<SyncBase*> sync_mirror;//TODO
-        vector<SyncBase*>::iterator iter = sync_mirror.begin();
-        for ( ; (TFS_SUCCESS == ret) && (iter != sync_mirror.end()); iter++)
+        if (main_finfos.size() > 0)
         {
-          ret = check_single_block(block_id, main_finfos, **iter);
-        }*/
-        if (interval_ > 0)
+          result.status_ = check_single_block(block_id, main_finfos, peer_ip, flag, result);
+        }
+        else if (main_finfos.size() == 0)
         {
-          usleep(interval_ * 1000);
+          TBSYS_LOG(DEBUG, "ignore empty block, won't check");
+          result.more_ = 0;
+          result.diff_ = 0;
+          result.less_ = 0;
         }
       }
       TIMER_END();
-      TBSYS_LOG(INFO, "check block %"PRI64_PREFIX"u %s, file count: %zd, cost: %"PRI64_PREFIX"d",
-          block_id, (TFS_SUCCESS == ret) ? "success" : "fail", main_finfos.size(), TIMER_DURATION());
 
-      return ret;
+      if (TFS_SUCCESS != result.status_)
+      {
+        TBSYS_LOG(WARN, "check block %"PRI64_PREFIX"u fail, ret: %d", block_id, result.status_);
+      }
+      else
+      {
+        TBSYS_LOG(DEBUG, "check block %"PRI64_PREFIX"u success. "
+            "count: %zd, more: %d, diff: %d, less: %d, cost: %"PRI64_PREFIX"d",
+            block_id, main_finfos.size(), result.more_, result.diff_, result.less_,
+            TIMER_DURATION());
+      }
     }
 
     int CheckManager::check_single_block(const uint64_t block_id,
-        vector<FileInfoV2>& finfos, const std::string& dest_addr)
+        vector<FileInfoV2>& finfos, const uint64_t peer_ip, CheckFlag flag, CheckResult& result)
     {
-      uint64_t peer_ns = Func::get_host_ip(dest_addr.c_str());
       vector<uint64_t> replicas;
       IndexDataV2 peer_index;
-      int ret = get_data_helper().get_block_replicas(peer_ns, block_id, replicas);
+      int ret = get_data_helper().get_block_replicas(peer_ip, block_id, replicas);
       if (TFS_SUCCESS == ret)
       {
         vector<uint64_t>::iterator iter = replicas.begin();
@@ -252,7 +228,7 @@ namespace tfs
       else
       {
         TBSYS_LOG(WARN, "read block %"PRI64_PREFIX"u index fail, peer ns: %s, ret: %d",
-            block_id, tbsys::CNetUtil::addrToString(peer_ns).c_str(), ret);
+            block_id, tbsys::CNetUtil::addrToString(peer_ip).c_str(), ret);
       }
 
       if (TFS_SUCCESS == ret)
@@ -261,45 +237,51 @@ namespace tfs
         vector<FileInfoV2> diff;
         vector<FileInfoV2> less;
         compare_block_fileinfos(block_id, finfos, peer_index.finfos_, more, diff, less);
-        TBSYS_LOG(DEBUG, "compare block %"PRI64_PREFIX"u with %s more %zd diff %zd less %zd",
-            block_id, tbsys::CNetUtil::addrToString(peer_ns).c_str(),
-            more.size(), diff.size(), less.size());
 
-        ret = process_more_files(peer_ns, block_id, more);
-        if (TFS_SUCCESS == ret)
+        // if CHECK_FLAG_SYNC not set, just compare, don't sync
+        if (flag & CHECK_FLAG_SYNC)
         {
-          ret = process_diff_files(peer_ns, block_id, diff);
+          ret = process_more_files(peer_ip, block_id, more);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = process_diff_files(peer_ip, block_id, diff);
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            ret = process_less_files(peer_ip, block_id, less);
+          }
         }
+
         if (TFS_SUCCESS == ret)
         {
-          ret = process_less_files(peer_ns, block_id, less);
+          result.more_ = more.size();
+          result.diff_ = diff.size();
+          result.less_ = less.size();
         }
       }
 
       return ret;
     }
 
-    int CheckManager::process_more_files(const uint64_t dest_ns_addr,
+    int CheckManager::process_more_files(const uint64_t peer_ip,
         const uint64_t block_id, const vector<FileInfoV2>& more)
     {
       int ret = TFS_SUCCESS;
       vector<FileInfoV2>::const_iterator iter = more.begin();
       for ( ; (TFS_SUCCESS == ret) && (iter != more.end()); iter++)
       {
-        // ignore deleted and invalid files
-        if (!(iter->status_ & FI_DELETED) && !(iter->status_ & FI_INVALID))
+        SyncManager* manager = service_.get_sync_manager();
+        if (NULL != manager)
         {
-          SyncManager* manager = service_.get_sync_manager();
-          if (NULL != manager)
-          {
-            ret = manager->insert(dest_ns_addr, 0, block_id, iter->id_, OPLOG_INSERT);
-          }
+          ret =  manager->insert(peer_ip, 0, block_id, iter->id_, OPLOG_INSERT);
         }
+        TBSYS_LOG(DEBUG, "MORE file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+            tbsys::CNetUtil::addrToString(peer_ip).c_str(), block_id, iter->id_);
       }
       return ret;
     }
 
-    int CheckManager::process_diff_files(const uint64_t dest_ns_addr,
+    int CheckManager::process_diff_files(const uint64_t peer_ip,
         const uint64_t block_id, const vector<FileInfoV2>& diff)
     {
       int ret = TFS_SUCCESS;
@@ -309,23 +291,23 @@ namespace tfs
         SyncManager* manager = service_.get_sync_manager();
         if (NULL != manager)
         {
-          ret = manager->insert(dest_ns_addr, 0, block_id, iter->id_, OPLOG_REMOVE);
-          TBSYS_LOG(DEBUG, "DIFF file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
-              tbsys::CNetUtil::addrToString(dest_ns_addr).c_str(), block_id, iter->id_);
+          ret =  manager->insert(peer_ip, 0, block_id, iter->id_, OPLOG_REMOVE);
         }
+        TBSYS_LOG(DEBUG, "DIFF file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+            tbsys::CNetUtil::addrToString(peer_ip).c_str(), block_id, iter->id_);
       }
       return ret;
     }
 
-    int CheckManager::process_less_files(const uint64_t dest_ns_addr,
+    int CheckManager::process_less_files(const uint64_t peer_ip,
         const uint64_t block_id, const vector<FileInfoV2>& less)
     {
       vector<FileInfoV2>::const_iterator iter = less.begin();
       for ( ; iter != less.end(); iter++)
       {
         // TODO: process less file in master cluster
-        TBSYS_LOG(DEBUG, "LESS file in %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
-            tbsys::CNetUtil::addrToString(dest_ns_addr).c_str(), block_id, iter->id_);
+        TBSYS_LOG(DEBUG, "LESS file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
+            tbsys::CNetUtil::addrToString(peer_ip).c_str(), block_id, iter->id_);
       }
       return TFS_SUCCESS;
     }
@@ -347,7 +329,7 @@ namespace tfs
       for ( ; iter != left.end(); iter++)
       {
         // deleted or invalid, ignore
-        if (iter->status_ & (FI_DELETED | FI_INVALID))
+        if (iter->status_ & FI_DELETED)
         {
           TBSYS_LOG(DEBUG, "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u has been deleted.",
               block_id, iter->id_);
@@ -378,7 +360,10 @@ namespace tfs
       set<FileInfoV2, FileInfoCompare>::iterator it = files.begin();
       for ( ; it != files.end(); it++)
       {
-        less.push_back(*it);
+        if (!(it->status_ & FI_DELETED))
+        {
+          less.push_back(*it);
+        }
       }
     }
 

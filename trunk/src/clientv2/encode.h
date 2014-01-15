@@ -29,8 +29,6 @@ namespace tfs
     {
       static const char SMALL_TFS_FILE_KEY_CHAR = 'T';
       static const char LARGE_TFS_FILE_KEY_CHAR = 'L';
-      static const char SMALL_TFS_FILE_KEY_CHAR_V2 = 'S';
-      static const char LARGE_TFS_FILE_KEY_CHAR_V2 = 'M';
 
       static const char* KEY_MASK = "Taobao-inc";
       static const int32_t KEY_MASK_LEN = strlen(KEY_MASK);

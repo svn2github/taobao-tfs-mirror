@@ -66,7 +66,7 @@ namespace tfs
       return ret;
     }
 
-    int MMapFileOperation::mremap()
+    int MMapFileOperation::mremap(const int32_t advise_per_mmap_size)
     {
       int32_t fd = check_();
       int32_t ret =  fd >= 0 ? TFS_SUCCESS : fd;
@@ -75,7 +75,7 @@ namespace tfs
         ret = (NULL == map_file_) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          ret = map_file_->mremap();
+          ret = map_file_->mremap(advise_per_mmap_size);
         }
       }
       return ret;

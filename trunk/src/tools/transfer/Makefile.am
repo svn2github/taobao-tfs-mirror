@@ -5,10 +5,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl -luuid -lz
 
-bin_PROGRAMS = transfer_block split_block_tool compare_crc compare_same_cluster \
-transfer_same_cluster_block compare_same_cluster_ext  remove_block verify_file_same_cluster\
-transfer_ge_dirs transfer_logo_tool transfer_blockv2 compare_crcv2 
-
+bin_PROGRAMS = #split_block_tool transfer_blockv2 compare_crcv2
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
         $(top_builddir)/src/dataserver/libdataserver.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
@@ -22,15 +19,15 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a\
 	-lz
 
-transfer_block_SOURCES = transfer_block.cpp block_console.cpp block_console.h 
-split_block_tool_SOURCES = split_block_tool.cpp
-compare_crc_SOURCES=compare_crc.cpp 
-compare_same_cluster_SOURCES=compare_same_cluster.cpp
-compare_same_cluster_ext_SOURCES=compare_same_cluster_ext.cpp
-compare_crcv2_SOURCES=compare_crc_v2.cpp
-transfer_same_cluster_block_SOURCES=transfer_same_cluster_block.cpp
-remove_block_SOURCES=remove_block.cpp
-verify_file_same_cluster_SOURCES=verify_file_same_cluster.cpp
-transfer_logo_tool_SOURCES=transfer_logo_tool.cpp
-transfer_ge_dirs_SOURCES=transfer_ge_dirs.cpp
-transfer_blockv2_SOURCES = transfer_block_v2.cpp block_console_v2.cpp block_console_v2.h
+#transfer_block_SOURCES = transfer_block.cpp block_console.cpp block_console.h 
+#split_block_tool_SOURCES = split_block_tool.cpp
+#compare_crc_SOURCES=compare_crc.cpp 
+#compare_same_cluster_SOURCES=compare_same_cluster.cpp
+#compare_same_cluster_ext_SOURCES=compare_same_cluster_ext.cpp
+#compare_crcv2_SOURCES=compare_crc_v2.cpp
+#transfer_same_cluster_block_SOURCES=transfer_same_cluster_block.cpp
+#remove_block_SOURCES=remove_block.cpp
+#verify_file_same_cluster_SOURCES=verify_file_same_cluster.cpp
+#transfer_logo_tool_SOURCES=transfer_logo_tool.cpp
+#transfer_ge_dirs_SOURCES=transfer_ge_dirs.cpp
+#transfer_blockv2_SOURCES = transfer_block_v2.cpp block_console_v2.cpp block_console_v2.h

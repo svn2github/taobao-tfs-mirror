@@ -62,6 +62,12 @@
 #define GET_OVERRIDE_FLAG(x) (((x) >> 4) & 0x7)
 #define TEST_OVERRIDE_FLAG(x) ((x) > REVEAL) // TODO, change to (x) & OVERRIDE
 
+// info log on success, warn log on fail
+#define TBSYS_LOG_IW(ret, _fmt_, args...) (TFS_SUCCESS == (ret) ? TBSYS_LOG(INFO, _fmt_, ##args) : TBSYS_LOG(WARN, _fmt_, ##args))
+
+// debug log on success, warn log on fail
+#define TBSYS_LOG_DW(ret, _fmt_, args...) (TFS_SUCCESS == (ret) ? TBSYS_LOG(DEBUG, _fmt_, ##args) : TBSYS_LOG(WARN, _fmt_, ##args))
+
 #if __WORDSIZE == 32
 namespace __gnu_cxx
 {
@@ -210,8 +216,16 @@ namespace tfs
     static const int32_t MAX_SINGLE_FILE_SIZE = 16 * 1024 * 1024;//16MB
     static const int32_t MAX_SINGLE_DISK_BLOCK_COUNT = UINT16_MAX;
     static const int32_t MAX_WRITABLE_BLOCK_COUNT = 256;
+    static const int32_t MAX_TRANSFER_FILE_SIZE = 4 * 1024 * 1024;
+
+    static const int32_t VERSION_DIFF = 1;
 
     static const int32_t MAX_SYNC_FILE_ENTRY_COUNT = 32;
+
+    //http
+    static const char* const HTTP_PROTOCOL = "HTTP/1.1";
+    static const int32_t HTTP_PROTOCOL_LENGTH = 8;
+    static const int32_t HTTP_BLANK_LENGTH = 1;
 
     enum NsRole
     {
@@ -289,7 +303,8 @@ namespace tfs
       GSS_BLOCK_FILE_INFO,
       GSS_BLOCK_RAW_META_INFO,
       GSS_CLIENT_ACCESS_INFO,
-      GSS_BLOCK_FILE_INFO_V2
+      GSS_BLOCK_FILE_INFO_V2,
+      GSS_BLOCK_STATISTIC_VISIT_INFO
     };
 
     enum CheckDsBlockType
@@ -365,7 +380,8 @@ namespace tfs
       CLIENT_CMD_GET_BALANCE_PERCENT,
       CLIENT_CMD_SET_BALANCE_PERCENT,
       CLIENT_CMD_CLEAR_SYSTEM_TABLE,
-      CLIENT_CMD_DELETE_FAMILY
+      CLIENT_CMD_DELETE_FAMILY,
+      CLIENT_CMD_SET_ALL_SERVER_REPORT_BLOCK
     };
 
     enum PlanType
@@ -1010,13 +1026,6 @@ namespace tfs
       REPORT_BLOCK_TYPE_RELIEVE
       }ReportBlockType;*/
 
-    typedef enum NodeStatus
-    {
-      NODE_ALIVE = 0,
-      NODE_DEAD = 1,
-      NODE_UNUSED = -1
-    };
-
     enum RepairType
     {
       REAPIR_BLOCK_NOT_EXIST,
@@ -1027,6 +1036,12 @@ namespace tfs
     {
       SWITCH_BLOCK_NO = 0,
       SWITCH_BLOCK_YES
+    };
+
+    enum UnlockFlag
+    {
+      UNLOCK_BLOCK_NO = 0,
+      UNLOCK_BLOCK_YES
     };
 
     struct BlockMeta
@@ -1067,7 +1082,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[49];
+    extern const char* dynamic_parameter_str[54];
 
 #pragma pack (1)
     struct FileInfoV2//30
@@ -1117,7 +1132,7 @@ namespace tfs
       int32_t del_file_count_;
       int32_t update_size_;
       int32_t update_file_count_;
-      int32_t last_update_time_;
+      int32_t last_access_time_;
       int32_t reserve_[2];
 
       BlockInfoV2()
@@ -1147,7 +1162,8 @@ namespace tfs
       int64_t read_visit_count_;
       int64_t update_visit_count_;
       int64_t unlink_visit_count_;
-      int64_t last_statistics_time_;
+      int32_t last_statistics_time_;
+      int32_t last_update_time_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
@@ -1314,6 +1330,58 @@ namespace tfs
       WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_YES = 1,
     };
 
+    enum CheckFlag
+    {
+      CHECK_FLAG_NONE = 0,
+      CHECK_FLAG_SYNC
+    };
+
+    struct CheckParam
+    {
+      std::vector<uint64_t> blocks_;
+      int64_t seqno_;
+      uint64_t cs_id_;
+      uint64_t peer_id_;
+      int32_t interval_; // ms
+      CheckFlag flag_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+    };
+
+    struct CheckResult
+    {
+      uint64_t block_id_;
+      int32_t status_;
+      uint16_t more_;
+      uint16_t diff_;
+      uint16_t less_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+    };
+
+    enum SetServerNextRerportBlockTimeFlag
+    {
+      SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_NONE = 0,
+      SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_SWITCH,
+      SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_IMMEDIATELY
+    };
+
+    enum EnableOldInterfaceFlag
+    {
+      ENABLE_OLD_INTERFACE_FLAG_NO = 0,
+      ENABLE_OLD_INTERFACE_FLAG_YES = 1
+    };
+
+    enum EnableVersionconflictFlag
+    {
+      ENABLE_VERSION_CHECK_FLAG_NO = 0,
+      ENABLE_VERSION_CHECK_FLAG_YES = 1
+    };
+
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;
@@ -1335,6 +1403,9 @@ namespace tfs
     //static const int32_t RAW_META_SIZE = sizeof(RawMeta);
     static const int32_t INDEX_HEADER_V2_LENGTH = sizeof(IndexHeaderV2);
     static const int32_t FILE_INFO_V2_LENGTH    = sizeof(FileInfoV2);
+
+   extern void FileInfoV2ToFileStat(const FileInfoV2& info, TfsFileStat& buf);
+   extern void FileStatToFileInfoV2(const TfsFileStat& info, FileInfoV2& buf);
 
     enum identify_id
     {

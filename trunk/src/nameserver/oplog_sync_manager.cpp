@@ -483,7 +483,7 @@ namespace tfs
             {
               ServerCollect* server = manager_.get_server_manager().get(oplog.servers_[index]);
               BlockCollect*  block  = manager_.get_block_manager().get(oplog.info_.block_id_);
-              if (!manager_.relieve_relation(block, server, now))//id
+              if (!manager_.relieve_relation(block, server, now, false))//id
               {
                 TBSYS_LOG(INFO, "relieve relation between block: %"PRI64_PREFIX"u and server: %s failed",
                     oplog.info_.block_id_, CNetUtil::addrToString(oplog.servers_[index]).c_str());

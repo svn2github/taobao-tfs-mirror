@@ -1,5 +1,4 @@
 #include "serialization.h"
-#include "internal.h"
 #include "rc_define.h"
 #include <tbsys.h>
 
@@ -311,9 +310,10 @@ namespace tfs
     int AppOperInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, oper_type_);
+        ret = Serialization::set_int32(data, data_len, pos, ((oper_app_id_<<16)| oper_type_ ));
       }
       if (TFS_SUCCESS == ret)
       {
@@ -331,15 +331,19 @@ namespace tfs
       {
         ret = Serialization::set_int64(data, data_len, pos, oper_succ_);
       }
+
       return ret;
     }
 
     int AppOperInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&oper_type_));
+        oper_app_id_ = oper_type_ >> 16;
+        oper_type_ = (OperType)(oper_type_ & 0x0FFFF);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -358,11 +362,6 @@ namespace tfs
         ret = Serialization::get_int64(data, data_len, pos, &oper_succ_);
       }
       return ret;
-    }
-
-    int64_t AppOperInfo::length() const
-    {
-      return INT_SIZE + INT64_SIZE * 4;
     }
 
     void AppOperInfo::dump() const
@@ -418,11 +417,14 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        TBSYS_LOG(DEBUG, "len : %d", len);
         for (int32_t i = 0; i < len; ++i)
         {
           OperType oper_type;
           AppOperInfo app_oper;
           ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&oper_type));
+          TBSYS_LOG(DEBUG, "oper_type : %d", oper_type);
+
           if (TFS_SUCCESS == ret)
           {
             ret = app_oper.deserialize(data, data_len, pos);
@@ -441,6 +443,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::get_int64(data, data_len, pos, &cache_hit_ratio_);
+
       }
       return ret;
     }
@@ -514,6 +517,63 @@ namespace tfs
       s_base_info_.dump();
       s_stat_.dump();
       TBSYS_LOG(DEBUG, "last_report_time: %"PRI64_PREFIX"d", last_report_time_);
+    }
+
+    int MonitorKeyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_string(data, data_len, pos, key_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &key_flag_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &key_repeat_report_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &key_internal_time_report_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &key_threshold_report_);
+      }
+      return ret;
+    }
+
+    int MonitorKeyInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_string(data, data_len, pos, key_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, key_flag_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, key_repeat_report_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, key_internal_time_report_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, key_threshold_report_);
+      }
+      return ret;
+    }
+
+    int64_t MonitorKeyInfo::length() const
+    {
+      return Serialization::get_string_length(key_) + INT_SIZE * 4;
     }
   }
 }

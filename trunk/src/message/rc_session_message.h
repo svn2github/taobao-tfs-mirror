@@ -135,6 +135,50 @@ namespace tfs
       protected:
         common::ReloadType reload_type_;
     };
+
+    class RspRcStatMessage: public common::BasePacket
+    {
+      public:
+        RspRcStatMessage();
+        virtual ~RspRcStatMessage();
+        int64_t length() const;
+        int serialize(common::Stream& output) const;
+        int deserialize(common::Stream& input);
+        const common::AppOperInfoMap& get_stat_info() const;
+        void set_stat_info(const common::AppOperInfoMap& app_oper_info);
+        void set_app_id(const int32_t app_id);
+        const int32_t get_app_id() const;
+        void set_last_time(const int64_t last_time);
+        const int64_t get_last_time() const;
+        void set_oper_type(const int32_t oper_type);
+        const int32_t get_oper_type() const;
+
+      private:
+        int32_t req_app_id_;
+        int32_t req_oper_type_;
+        int64_t last_report_time_;
+
+        common::AppOperInfoMap app_oper_info_;
+    };
+
+    class ReqRcStatMessage: public common::BasePacket
+    {
+      public:
+        ReqRcStatMessage();
+        virtual ~ReqRcStatMessage();
+
+        int serialize(common::Stream& output) const;
+        int deserialize(common::Stream& input);
+        int64_t length() const;
+        void set_app_id(const int32_t app_id);
+        const int32_t get_app_id() const;
+        void set_oper_type(const int32_t oper_type);
+        const int32_t get_oper_type() const;
+
+      private:
+        int32_t app_id_;
+        int32_t oper_type_;
+    };
   }
 }
 #endif //TFS_MESSAGE_RCSESSION_MESSAGE_H_

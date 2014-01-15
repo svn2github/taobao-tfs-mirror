@@ -405,6 +405,209 @@ namespace tfs
       return INT_SIZE;
     }
 
+    ReqRcStatMessage::ReqRcStatMessage()
+      :app_id_(0)
+    {
+      _packetHeader._pcode = REQ_RC_REQ_STAT_MESSAGE;
+    }
+
+    ReqRcStatMessage::~ReqRcStatMessage()
+    {
+    }
+
+    void ReqRcStatMessage::set_app_id(const int32_t app_id)
+    {
+      app_id_ = app_id;
+    }
+
+    const int32_t ReqRcStatMessage::get_app_id() const
+    {
+      return app_id_;
+    }
+
+    void ReqRcStatMessage::set_oper_type(const int32_t oper_type)
+    {
+      oper_type_ = oper_type;
+    }
+
+    const int32_t ReqRcStatMessage::get_oper_type() const
+    {
+      return oper_type_;
+    }
+
+    int ReqRcStatMessage::serialize(common::Stream& output) const
+    {
+      int ret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(app_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(oper_type_);
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "ReqRcStatMessage serialize error.");
+      }
+
+      return ret;
+    }
+
+    int ReqRcStatMessage::deserialize(common::Stream& input)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&app_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&oper_type_);
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "ReqRcStatMessage deserialize error.");
+      }
+
+      return ret;
+    }
+
+    int64_t ReqRcStatMessage::length() const
+    {
+      return INT_SIZE * 2 + INT64_SIZE;
+    }
+
+    RspRcStatMessage::RspRcStatMessage()
+      :req_app_id_(0), req_oper_type_(0), last_report_time_(0L)
+    {
+      _packetHeader._pcode = RSP_RC_REQ_STAT_MESSAGE;
+    }
+
+    RspRcStatMessage::~RspRcStatMessage()
+    {
+    }
+
+    const int64_t RspRcStatMessage::get_last_time() const
+    {
+      return last_report_time_;
+    }
+
+    void RspRcStatMessage::set_last_time(const int64_t last_time)
+    {
+      last_report_time_ = last_time;
+    }
+
+    const int32_t RspRcStatMessage::get_app_id() const
+    {
+      return req_app_id_;
+    }
+
+    void RspRcStatMessage::set_app_id(const int32_t app_id)
+    {
+      req_app_id_ = app_id;
+    }
+
+    const int32_t RspRcStatMessage::get_oper_type() const
+    {
+      return req_oper_type_;
+    }
+
+    void RspRcStatMessage::set_oper_type(const int32_t oper_type)
+    {
+      req_oper_type_ = oper_type;
+    }
+
+    int64_t RspRcStatMessage::length() const
+    {
+      //common::AppOperInfo app_oper_info;
+      int64_t tmp = app_oper_info_.size() * AppOperInfo::length();
+      return INT_SIZE + INT64_SIZE + tmp;
+    }
+
+    int RspRcStatMessage::serialize(common::Stream& output) const
+    {
+      int ret = TFS_SUCCESS;
+
+      if ( ret == TFS_SUCCESS)
+      {
+        ret = output.set_int64(last_report_time_);
+      }
+
+      if ( ret == TFS_SUCCESS)
+      {
+        ret = output.set_int32(app_oper_info_.size());
+      }
+
+      AppOperInfoMapConstIter cmit = app_oper_info_.begin();
+
+      for (; cmit != app_oper_info_.end(); ++cmit)
+      {
+        Buffer& buffer = output.get_buffer();
+        int64_t  pos = 0;
+        ret = cmit->second.serialize(output.get_free(), output.get_free_length(),pos);
+        if (ret == TFS_SUCCESS)
+        {
+          buffer.pour(cmit->second.length());
+        }
+      }
+
+      return ret;
+    }
+
+    int RspRcStatMessage::deserialize(common::Stream& input)
+    {
+      int i, ret = TFS_SUCCESS;
+
+      int32_t oper_key, length;
+
+      AppOperInfo app_oper_info;
+
+      if ( ret == TFS_SUCCESS)
+      {
+        ret = input.get_int64(&last_report_time_);
+      }
+
+      if ( ret == TFS_SUCCESS)
+      {
+        ret = input.get_int32(&length);
+      }
+
+      for (i = 0;i < length; ++i)
+      {
+        Buffer& buffer = input.get_buffer();
+        int64_t pos = 0;
+
+        ret = app_oper_info.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (ret == TFS_SUCCESS)
+        {
+          buffer.drain(app_oper_info.length());
+
+          oper_key = app_oper_info.oper_app_id_ | (app_oper_info.oper_type_ << 16);
+          app_oper_info_.insert(pair<OperType, AppOperInfo>((OperType)oper_key, app_oper_info));
+        }
+
+      }
+      return ret;
+    }
+
+    void RspRcStatMessage::set_stat_info(const common::AppOperInfoMap& app_oper_info)
+    {
+      app_oper_info_.clear();
+      AppOperInfoMapConstIter cmit = app_oper_info.begin();
+      for (; cmit != app_oper_info.end(); ++cmit)
+      {
+        app_oper_info_.insert(pair<OperType, AppOperInfo>(cmit->first, cmit->second));
+      }
+    }
+
+    const common::AppOperInfoMap& RspRcStatMessage::get_stat_info() const
+    {
+      return app_oper_info_;
+    }
+
     common::ReloadType ReqRcReloadMessage::get_reload_type() const
     {
       return reload_type_;

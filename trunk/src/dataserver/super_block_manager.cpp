@@ -217,7 +217,9 @@ namespace tfs
 
     int SuperBlockManager::flush()
     {
-      return file_op_.flush();
+      // must flush to disk, flush use msync MS_ASYNC flag
+      // return file_op_.flush();
+      return file_op_.fsync();
     }
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

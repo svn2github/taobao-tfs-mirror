@@ -61,6 +61,7 @@ namespace tfs
         int get_all_block_info(std::vector<common::BlockInfoV2>& blocks) const;
         int get_all_block_info(common::BlockInfoV2*& blocks, int32_t& block_count) const;
         int get_all_block_header(std::vector<common::IndexHeaderV2>& headers) const;
+        int get_all_block_statistic_visit_info(std::map<uint64_t, common::ThroughputV2> & infos, const bool reset) const;
         int get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const;
         int32_t get_all_logic_block_count() const;
         int get_space(int64_t& total_space, int64_t& used_space) const;
@@ -77,6 +78,8 @@ namespace tfs
 
         int get_index_header(common::IndexHeaderV2& header, const uint64_t logic_block_id) const;
         int set_index_header(const common::IndexHeaderV2& header, const uint64_t logic_block_id, const bool tmp = false);
+
+        int flush(const uint64_t logic_block_id, const bool tmp = false);
 
         int check_block_version(common::BlockInfoV2& info, const int32_t remote_version,
               const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const;

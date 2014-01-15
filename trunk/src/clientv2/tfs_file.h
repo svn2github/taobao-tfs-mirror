@@ -64,6 +64,7 @@ namespace tfs
         TfsFile();
         ~TfsFile();
 
+        void transfer_mode(const int32_t mode);
         int open(const char* file_name, const char* suffix, const int32_t mode);
         int open(const uint64_t block_id, const uint64_t file_id, const int32_t mode);
         int64_t lseek(const int64_t offset, const int whence);

@@ -73,7 +73,7 @@ namespace tfs
         int inc_unlink_visit_count(const int32_t step = 1,const int32_t nbytes = 0);
         int statistic_visit(common::ThroughputV2& throughput, const bool reset = false);
       protected:
-        virtual int remmap_(const double threshold, const int32_t max_hash_bucket) const = 0;
+        virtual int remmap_(const double threshold, const int32_t max_hash_bucket, const int32_t advise_per_mmap_size = 0) const = 0;
         virtual common::FileInfoV2*  get_file_infos_array_() const = 0;
         common::IndexHeaderV2* get_index_header_() const;
         int update_block_statistic_info_(common::IndexHeaderV2* header, const int32_t oper_type,
@@ -126,7 +126,7 @@ namespace tfs
         iterator begin();
         iterator end();
       protected:
-        int remmap_(const double threshold, const int32_t max_hash_bucket) const;
+        int remmap_(const double threshold, const int32_t max_hash_bucket, const int32_t advise_per_mmap_size = 0) const;
         common::FileInfoV2*  get_file_infos_array_() const;
       private:
         DISALLOW_COPY_AND_ASSIGN(IndexHandle);
@@ -177,7 +177,7 @@ namespace tfs
       int malloc_index_mem_(char*& data, InnerIndex& index) const;
       int free_index_mem_(const char* data, InnerIndex& index, const bool write_back) const;
 
-      int remmap_(const double threshold, const int32_t max_hash_bucket) const { UNUSED(max_hash_bucket);UNUSED(threshold);return common::TFS_SUCCESS;}
+      int remmap_(const double threshold, const int32_t max_hash_bucket, const int32_t advise_per_mmap_size = 0) const { UNUSED(max_hash_bucket);UNUSED(threshold);UNUSED(advise_per_mmap_size);return common::TFS_SUCCESS;}
       common::FileInfoV2*  get_file_infos_array_() const { return NULL;}
     };
   }/** end namespace dataserver **/

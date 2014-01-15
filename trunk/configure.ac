@@ -239,13 +239,14 @@ AC_CONFIG_FILES([Makefile
                  sql/Makefile
                  sql/ms/Makefile
                  sql/rcs/Makefile
+                 sql/kv_ms/Makefile
                  scripts/Makefile
                  scripts/ha/Makefile
                  src/Makefile
                  src/new_client/Makefile
                  src/clientv2/Makefile
-                 src/common/Makefile
                  src/requester/Makefile
+                 src/common/Makefile
                  src/common/mysql_cluster/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
@@ -264,8 +265,6 @@ AC_CONFIG_FILES([Makefile
                  src/tools/util/Makefile
                  src/tools/dataserver/Makefile
                  src/tools/nameserver/Makefile
-                 src/tools/adminserver/Makefile
-                 src/tools/transfer/Makefile
                  src/tools/cluster/Makefile
                  src/tools/workers/Makefile])
                  #tests/Makefile

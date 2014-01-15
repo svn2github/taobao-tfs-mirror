@@ -17,10 +17,13 @@
 #include "common/base_packet.h"
 #include "common/status_message.h"
 #include "message/message_factory.h"
+#include "clientv2/tfs_client_impl_v2.h"
+#include "clientv2/fsname.h"
 #include "ns_requester.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
+using namespace tfs::clientv2;
 using namespace std;
 
 namespace tfs
@@ -34,41 +37,25 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         replicas.clear();
-        GetBlockInfoMessageV2 gbi_message;
-        gbi_message.set_block_id(block_id);
-        gbi_message.set_mode(T_READ);
-
-        tbnet::Packet* rsp = NULL;
-        NewClient* client = NewClientManager::get_instance().create_client();
-        ret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        BlockMeta meta;
+        ret = get_block_replicas_ex(ns_id, block_id, F_FAMILY_INFO_NONE, meta);
         if (TFS_SUCCESS == ret)
         {
-          ret = send_msg_to_server(ns_id, client, &gbi_message, rsp);
+          for (int32_t index = 0; index < meta.size_; ++index)
+            replicas.push_back(meta.ds_[index]);
         }
+      }
+      return ret;
+    }
 
-        if (TFS_SUCCESS == ret)
-        {
-          if (rsp->getPCode() == GET_BLOCK_INFO_RESP_MESSAGE_V2)
-          {
-
-            GetBlockInfoRespMessageV2* msg = dynamic_cast<GetBlockInfoRespMessageV2* >(rsp);
-            BlockMeta& block_meta = msg->get_block_meta();
-            for (int i = 0; i < block_meta.size_; i++)
-            {
-              replicas.push_back(block_meta.ds_[i]);
-            }
-          }
-          else if (rsp->getPCode() == STATUS_MESSAGE)
-          {
-            ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
-          }
-          else
-          {
-            ret = EXIT_UNKNOWN_MSGTYPE;
-          }
-        }
-
-        NewClientManager::get_instance().destroy_client(client);
+    int NsRequester::get_block_replicas(const uint64_t ns_id,
+            const uint64_t block_id, common::BlockMeta& meta)
+    {
+      int ret = INVALID_SERVER_ID != ns_id && INVALID_BLOCK_ID != block_id ?
+        TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_replicas_ex(ns_id, block_id, F_FAMILY_INFO, meta);
       }
       return ret;
     }
@@ -264,6 +251,166 @@ namespace tfs
         NewClientManager::get_instance().destroy_client(client);
       }
 
+      return ret;
+    }
+
+    int NsRequester::read_file_infos(const std::string& ns_addr, const uint64_t block, std::set<FileInfo, CompareFileInfoByFileId>& files, const int32_t version)
+    {
+      int32_t ret = (INVALID_BLOCK_ID == block) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        std::vector<uint64_t> servers;
+        get_block_replicas(Func::get_host_ip(ns_addr.c_str()), block, servers);
+        ret = servers.empty() ? EXIT_DATASERVER_NOT_FOUND : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t index = random() % servers.size();
+          uint64_t server = servers[index];
+          GetServerStatusMessage req_msg;
+          if (0 == version)
+          {
+            req_msg.set_status_type(GSS_BLOCK_FILE_INFO);
+          }
+          else if (1 == version)
+          {
+            req_msg.set_status_type(GSS_BLOCK_FILE_INFO_V2);
+          }
+          req_msg.set_return_row(block);
+          req_msg.set_from_row(block);
+          tbnet::Packet* ret_msg= NULL;
+          NewClient* client = NewClientManager::get_instance().create_client();
+          ret = send_msg_to_server(server, client, &req_msg, ret_msg, 5000);
+          if (TFS_SUCCESS == ret)
+          {
+            if (0 == version)
+              ret = ret_msg->getPCode() == BLOCK_FILE_INFO_MESSAGE ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
+            else if (1 == version)
+              ret = ret_msg->getPCode() == BLOCK_FILE_INFO_MESSAGE_V2 ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
+            else
+              ret = EXIT_UNKNOWN_MSGTYPE;
+            if (TFS_SUCCESS != ret)
+            {
+              ret = ret_msg->getPCode() == STATUS_MESSAGE ? EXIT_FILE_INFO_ERROR : EXIT_UNKNOWN_MSGTYPE;
+              if (EXIT_FILE_INFO_ERROR == ret)
+              {
+                StatusMessage* st = dynamic_cast<StatusMessage*>(ret_msg);
+                TBSYS_LOG(WARN, "read file infos error: %s", st->get_error());
+              }
+            }
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            if (0 == version)
+            {
+              BlockFileInfoMessage* bfm = dynamic_cast<BlockFileInfoMessage*>(ret_msg);
+              assert(NULL != bfm);
+              std::vector<FileInfo>::iterator iter = bfm->get_fileinfo_list().begin();
+              for (; iter != bfm->get_fileinfo_list().end(); ++iter)
+                files.insert((*iter));
+            }
+            else if (1 == version)
+            {
+              BlockFileInfoMessageV2* bfm = dynamic_cast<BlockFileInfoMessageV2*>(ret_msg);
+              assert(NULL != bfm);
+              std::vector<FileInfoV2>::iterator iter = bfm->get_fileinfo_list()->begin();
+              for (; iter != bfm->get_fileinfo_list()->end(); ++iter)
+              {
+                FileInfo info;
+                info.id_ = (*iter).id_;
+                info.offset_ = (*iter).offset_;
+                info.size_= (*iter).size_;
+                info.modify_time_= (*iter).modify_time_;
+                info.create_time_= (*iter).create_time_;
+                info.flag_ = (*iter).status_;
+                info.crc_  = (*iter).crc_;
+                files.insert(info);
+              }
+            }
+          }
+          NewClientManager::get_instance().destroy_client(client);
+        }
+      }
+      return ret;
+    }
+
+    int NsRequester::remove_block(const uint64_t block, const std::string& addr, const int32_t flag)
+    {
+      ClientCmdMessage req;
+      req.set_cmd(CLIENT_CMD_EXPBLK);
+      req.set_value3(block);
+      req.set_value4(flag);
+
+      tbnet::Packet* rsp = NULL;
+      NewClient* client = NewClientManager::get_instance().create_client();
+      int32_t ret = send_msg_to_server(Func::get_host_ip(addr.c_str()), client, &req, rsp);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(INFO, "send remove block: %"PRI64_PREFIX"u command to %s failed,ret: %d", block, addr.c_str(), ret);
+      }
+      else
+      {
+        assert(NULL != rsp);
+        if (STATUS_MESSAGE == rsp->getPCode())
+        {
+          StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+          if (STATUS_MESSAGE_OK == sm->get_status())
+          {
+            TBSYS_LOG(INFO, "remove block: %"PRI64_PREFIX"u from %s successful", block, addr.c_str());
+          }
+          else
+          {
+            ret = sm->get_status();
+            TBSYS_LOG(INFO, "remove block: %"PRI64_PREFIX"u from %s fail, ret: %d", block, addr.c_str(), ret);
+          }
+        }
+        else
+        {
+          ret = EXIT_UNKNOWN_MSGTYPE;
+          TBSYS_LOG(INFO, "remove block: %"PRI64_PREFIX"u from %s fail, ret: %d", block, addr.c_str(), ret);
+        }
+      }
+      NewClientManager::get_instance().destroy_client(client);
+      return ret;
+    }
+
+    int NsRequester::get_block_replicas_ex(const uint64_t ns_id,
+            const uint64_t block_id, const int32_t flag, common::BlockMeta& meta)
+    {
+      int ret = INVALID_SERVER_ID != ns_id && INVALID_BLOCK_ID != block_id ?
+        TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        GetBlockInfoMessageV2 gbi_message;
+        gbi_message.set_block_id(block_id);
+        gbi_message.set_mode(T_READ);
+        gbi_message.set_flag(flag);
+
+        tbnet::Packet* rsp = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        ret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = send_msg_to_server(ns_id, client, &gbi_message, rsp);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          if (rsp->getPCode() == GET_BLOCK_INFO_RESP_MESSAGE_V2)
+          {
+            GetBlockInfoRespMessageV2* msg = dynamic_cast<GetBlockInfoRespMessageV2* >(rsp);
+            meta = msg->get_block_meta();
+          }
+          else if (rsp->getPCode() == STATUS_MESSAGE)
+          {
+            ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
+          }
+          else
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+          }
+        }
+        NewClientManager::get_instance().destroy_client(client);
+      }
       return ret;
     }
   }

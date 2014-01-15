@@ -658,7 +658,7 @@ namespace tfs
       uint64_t server_id = ds_task.server_id_;
       uint64_t block_id = ds_task.block_id_;
       uint64_t file_id = ds_task.new_file_id_;
-      uint64_t lease_id;
+      uint64_t lease_id = INVALID_LEASE_ID;
       uint32_t crc = 0;
 
       int fd = open(ds_task.local_file_, O_RDONLY);
@@ -1144,7 +1144,7 @@ namespace tfs
       msg.set_file_id(file_id);
       msg.set_offset(offset);
       msg.set_length(length);
-      msg.set_lease_id(INVALID_LEASE_ID);
+      msg.set_lease_id(lease_id);
       msg.set_master_id(server_ip);
       msg.set_version(-1);//版本号为负数则不进行版本检查
       msg.set_ds(ds_list);

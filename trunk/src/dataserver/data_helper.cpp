@@ -47,6 +47,11 @@ namespace tfs
       return service_.get_traffic_control();
     }
 
+    inline ClientRequestServer& DataHelper::get_client_request_server()
+    {
+      return service_.get_client_request_server();
+    }
+
     int DataHelper::send_simple_request(uint64_t server_id, common::BasePacket* message, const int32_t timeout)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (NULL == message)) ?
@@ -256,14 +261,14 @@ namespace tfs
     }
 
     int DataHelper::query_ec_meta(const uint64_t server_id, const uint64_t block_id,
-        common::ECMeta& ec_meta)
+        common::ECMeta& ec_meta, const int32_t lock_time)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id)) ?
           EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
        if (TFS_SUCCESS == ret)
        {
-         ret = query_ec_meta_ex(server_id, block_id, ec_meta);
+         ret = query_ec_meta_ex(server_id, block_id, ec_meta, lock_time);
          if (TFS_SUCCESS != ret)
          {
            TBSYS_LOG(WARN, "query ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u, ret: %d",
@@ -274,14 +279,14 @@ namespace tfs
     }
 
     int DataHelper::commit_ec_meta(const uint64_t server_id, const uint64_t block_id,
-        const common::ECMeta& ec_meta, const int8_t switch_flag)
+        const common::ECMeta& ec_meta, const int8_t switch_flag, const int8_t unlock_flag)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id)) ?
           EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
        if (TFS_SUCCESS == ret)
        {
-         ret = commit_ec_meta_ex(server_id, block_id, ec_meta, switch_flag);
+         ret = commit_ec_meta_ex(server_id, block_id, ec_meta, switch_flag, unlock_flag);
          if (TFS_SUCCESS != ret)
          {
            TBSYS_LOG(WARN, "commit ec meta fail. server: %s, blockid: %"PRI64_PREFIX"u, "
@@ -364,13 +369,14 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = close_file_ex(server_id, block_id, attach_block_id, file_id, lease_id, status, tmp);
+        uint32_t crc = Func::crc(0, data, len);
+        ret = close_file_ex(server_id, block_id, attach_block_id, file_id, lease_id, crc, status, tmp);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "close file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
-              "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, ret: %d",
+              "attach blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, crc: %u, ret: %d",
               tbsys::CNetUtil::addrToString(server_id).c_str(),
-              block_id, attach_block_id, file_id, ret);
+              block_id, attach_block_id, file_id, crc, ret);
         }
       }
 
@@ -657,32 +663,21 @@ namespace tfs
     }
 
     int DataHelper::query_ec_meta_ex(const uint64_t server_id, const uint64_t block_id,
-        common::ECMeta& ec_meta)
+        common::ECMeta& ec_meta, int32_t lock_time)
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       if (server_id == ds_info.information_.id_)
       {
-        if (TFS_SUCCESS == ret)
-        {
-          ret = get_block_manager().get_family_id(ec_meta.family_id_, block_id);
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          ret = get_block_manager().get_used_offset(ec_meta.used_offset_, block_id);
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          ret = get_block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
-        }
+        ret = get_client_request_server().query_ec_meta(block_id,
+            ec_meta, lock_time);
       }
       else
       {
         QueryEcMetaMessage req_msg;
         tbnet::Packet* ret_msg = NULL;
         req_msg.set_block_id(block_id);
+        req_msg.set_lock_time(lock_time);
         NewClient* new_client = NewClientManager::get_instance().create_client();
         if (NULL == new_client)
         {
@@ -716,47 +711,14 @@ namespace tfs
     }
 
     int DataHelper::commit_ec_meta_ex(const uint64_t server_id, const uint64_t block_id,
-        const common::ECMeta& ec_meta, const int8_t switch_flag)
+        const common::ECMeta& ec_meta, const int8_t switch_flag, const int8_t unlock_flag)
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       if (server_id == ds_info.information_.id_)
       {
-        BaseLogicBlock* logic_block = get_block_manager().get(block_id, switch_flag);
-        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
-
-        // commit family id
-        if ((TFS_SUCCESS == ret) && (ec_meta.family_id_ >= 0))
-        {
-          ret = logic_block->set_family_id(ec_meta.family_id_);
-        }
-
-        // commit marshalling length
-        if ((TFS_SUCCESS == ret) && (ec_meta.mars_offset_ > 0))
-        {
-          ret = logic_block->set_marshalling_offset(ec_meta.mars_offset_);
-        }
-
-        // update block version
-        if ((TFS_SUCCESS == ret) && (ec_meta.version_step_ > 0))
-        {
-          ret = logic_block->update_block_version(ec_meta.version_step_);
-        }
-
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(WARN, "commit ec meta fail. blockid: %"PRI64_PREFIX"u, switch flag: %d, ret: %d",
-              block_id, switch_flag, ret);
-        }
-        else if (switch_flag) // if need, switch block
-        {
-          ret = get_block_manager().switch_logic_block(block_id, true);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(WARN, "switch logic block fail. blockid: %"PRI64_PREFIX"u, "
-                "ret: %d", block_id, ret);
-          }
-        }
+        ret = get_client_request_server().commit_ec_meta(block_id,
+            ec_meta, switch_flag, unlock_flag);
       }
       else
       {
@@ -764,6 +726,7 @@ namespace tfs
         req_msg.set_block_id(block_id);
         req_msg.set_ec_meta(ec_meta);
         req_msg.set_switch_flag(switch_flag);
+        req_msg.set_unlock_flag(unlock_flag);
         ret = send_simple_request(server_id, &req_msg);
       }
       return ret;
@@ -932,7 +895,7 @@ namespace tfs
 
     int DataHelper::close_file_ex(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, const uint64_t file_id, const uint64_t lease_id,
-        const int32_t status, const bool tmp)
+        const uint32_t crc, const int32_t status, const bool tmp)
     {
       vector<uint64_t> dslist;
       dslist.push_back(server_id);
@@ -945,6 +908,7 @@ namespace tfs
       req_msg.set_master_id(server_id);
       req_msg.set_status(status);
       req_msg.set_tmp_flag(tmp);
+      req_msg.set_crc(crc);
       return send_simple_request(server_id, &req_msg);
     }
 
@@ -1343,7 +1307,7 @@ namespace tfs
         const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
         for (int index = 0; (index < data_num + check_num) && (TFS_SUCCESS == ret); index++)
         {
-          if (erased[index] != NODE_ALIVE)
+          if (erased[index] != ErasureCode::NODE_ALIVE)
           {
             continue; // read data from alive nodes
           }
@@ -1420,7 +1384,7 @@ namespace tfs
         const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
         for (int index = 0; (index < data_num + check_num) && (TFS_SUCCESS == ret); index++)
         {
-          if (erased[index] != NODE_ALIVE)
+          if (erased[index] != ErasureCode::NODE_ALIVE)
           {
             continue; // qeury meta from alive nodes
           }

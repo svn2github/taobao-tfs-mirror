@@ -199,6 +199,7 @@ static const char _g_build_description[] = "unknown";
             wait_for_shutdown();
           }
           destroy();
+          remove_pid_file(argv[0]);
           TBSYS_LOG(INFO, "%s destroyed successful", argv[0]);
         }
       }
@@ -435,6 +436,17 @@ static const char _g_build_description[] = "unknown";
       }
       return iret;
     }
+
+    void BaseMain::remove_pid_file(const char* app_name)
+    {
+      UNUSED(app_name);
+      const char* const pid_path = get_pid_file_path();
+      if (NULL != pid_path && strlen(pid_path) > 0)
+      {
+        unlink(pid_path);
+      }
+    }
+
   }/** common **/
 }/** tfs **/
 

@@ -281,6 +281,26 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        srandom(time(NULL));
+      }
+
+      // init heartbeat
+      //if (TFS_SUCCESS == ret)
+      //{
+      //  heart_manager_    = new (std::nothrow)DataServerHeartManager(*this, ns_ip_port);
+      //  assert(NULL != heart_manager_);
+      //  ret = heart_manager_->initialize();
+      //}
+
+      // init data_manager/lease_manager
+      // lease manager need global info, should init after heart manager
+      if (TFS_SUCCESS == ret)
+      {
+        op_manager_.initialize();
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         task_thread_      = new (std::nothrow)RunTaskThreadHelper(*this);
         assert(0 != task_thread_);
         timeout_thread_  = new (std::nothrow)TimeoutThreadHelper(*this);
@@ -448,8 +468,8 @@ namespace tfs
 
     void DataService::dump_stat_(time_t now)
     {
-      // dump every minute
-      if (now % 60 == 0)
+      int32_t interval = std::max(SYSPARAM_DATASERVER.dump_vs_interval_, 60);
+      if (now % interval == 0)
       {
         static int64_t last_write_bytes[2] = {0};
         static int64_t last_write_file_count[2] = {0};
@@ -575,6 +595,10 @@ namespace tfs
           {
             ret = writable_block_manager_.callback(client);
           }
+          else if (REPORT_CHECK_BLOCK_RESPONSE_MESSAGE == pcode)
+          {
+            TBSYS_LOG(INFO, "report check result succuss");
+          }
           else
           {
             TBSYS_LOG(ERROR, "callback handle error message pcode: %d", pcode);
@@ -614,7 +638,7 @@ namespace tfs
               hret = tbnet::IPacketHandler::KEEP_CHANNEL;
             else
             {
-              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "%s, task message beyond max queue size, discard", get_ip_addr());
+              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "peer: %s, local: %s. task message beyond max queue size, discard", tbsys::CNetUtil::addrToString(bpacket->get_connection()->getPeerId()).c_str(), get_ip_addr());
               bpacket->free();
             }
           }
@@ -770,7 +794,7 @@ namespace tfs
         BlockFileInfoMessage* resp_bfi_msg = new (std::nothrow) BlockFileInfoMessage();
         assert(NULL != resp_bfi_msg);
         FILE_INFO_LIST& fileinfos = resp_bfi_msg->get_fileinfo_list();
-        int ret = get_block_manager().traverse(fileinfos, block_id, attach_block_id);
+        ret = get_block_manager().traverse(fileinfos, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
         {
           tbsys::gDelete(resp_bfi_msg);
@@ -791,7 +815,7 @@ namespace tfs
         BlockFileInfoMessageV2* resp_bfi_msg = new (std::nothrow) BlockFileInfoMessageV2();
         assert(NULL != resp_bfi_msg);
         FILE_INFO_LIST_V2* fileinfos = resp_bfi_msg->get_fileinfo_list();
-        int ret = get_block_manager().traverse(header, *fileinfos, block_id, attach_block_id);
+        ret = get_block_manager().traverse(header, *fileinfos, block_id, attach_block_id);
         if (TFS_SUCCESS != ret)
         {
           tbsys::gDelete(resp_bfi_msg);
@@ -807,7 +831,22 @@ namespace tfs
       {
         // meta will be included in FileInfoV2
       }
-
+      else if (GSS_BLOCK_STATISTIC_VISIT_INFO == type)
+      {
+        bool reset = message->get_from_row();
+        BlockStatisticVisitInfoMessage* reply_msg = new (std::nothrow) BlockStatisticVisitInfoMessage();
+        assert(NULL != reply_msg);
+        ret = get_block_manager().get_all_block_statistic_visit_info(reply_msg->get_block_statistic_visit_maps(), reset);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(reply_msg);
+          ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,"GSS_BLOCK_STATISTIC_VISIT_INFO fail, ret: %d", ret);
+        }
+        else
+        {
+          ret = message->reply(reply_msg);
+        }
+      }
       return ret;
     }
 

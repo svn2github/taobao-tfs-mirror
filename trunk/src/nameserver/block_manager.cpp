@@ -180,7 +180,7 @@ namespace tfs
       bool ret = ((NULL != block) && (!block->in_replicate_queue()));
       if (ret)
       {
-        TBSYS_LOG(DEBUG, "block %"PRI64_PREFIX"u mybe lack of backup, we'll replicate", block->id());
+        TBSYS_LOG(DEBUG, "block %"PRI64_PREFIX"u maybe lack of backup, we'll replicate", block->id());
         block->set_in_replicate_queue(BLOCK_IN_REPLICATE_QUEUE_YES);
         emergency_replicate_queue_.push_back(block->id());
       }
@@ -327,6 +327,17 @@ namespace tfs
       return (NULL != pblock) ? pblock->get_servers_size() : 0;
     }
 
+    int BlockManager::get_servers_size(const BlockCollect* const pblock) const
+    {
+      int32_t size = 0;
+      if (NULL != pblock)
+      {
+        RWLock::Lock lock(get_mutex_(pblock->id()), READ_LOCKER);
+        size = pblock->get_servers_size();
+      }
+      return size;
+    }
+
     uint64_t BlockManager::get_server(const uint64_t block, const int8_t index) const
     {
       RWLock::Lock lock(get_mutex_(block), READ_LOCKER);
@@ -399,6 +410,7 @@ namespace tfs
         {
           helper.clear();
           int8_t all_server_size = 0;
+          int32_t old_version    = -1;
           int64_t family_id = INVALID_FAMILY_ID;
           bool writable = false, master = false, isnew= false, update = false;
           BlockInfoV2* info = *blocks.at(i);
@@ -416,6 +428,7 @@ namespace tfs
           ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
           if (TFS_SUCCESS == ret)
           {
+            old_version = block->version();
             family_id = block->get_family_id();
             bool exist = block->exist(server->id());
             all_server_size = block->get_servers_size();
@@ -452,7 +465,7 @@ namespace tfs
                   else
                   {
                     ret = block->check_version(manager_, helper, server->id(), isnew, *info, now);
-                    if (TFS_SUCCESS == ret && (change || isnew))//build relation
+                    if ((TFS_SUCCESS == ret || EXIT_SERVER_EXISTED) && (change || isnew))//build relation
                       ret = build_relation_(block, writable, master, server->id(),now);
                   }
                 }
@@ -466,6 +479,7 @@ namespace tfs
             }
             else
             {
+              old_version = block->version();
               ret =  (info->family_id_ == family_id) ? TFS_SUCCESS : EXIT_EXPIRE_SELF_ERROR ;
               if (TFS_SUCCESS == ret)
               {
@@ -504,6 +518,9 @@ namespace tfs
           }
           get_mutex_(block_id).unlock();
 
+          if (EXIT_SERVER_EXISTED == ret)
+            ret = TFS_SUCCESS;
+
           if (TFS_SUCCESS == ret && (update || change))
           {
             manager_.get_server_manager().build_relation(server, block->id(), writable, master);
@@ -517,10 +534,10 @@ namespace tfs
               push_to_delete_queue(block_id, id);
           }
 
-          if (EXIT_EXPIRE_SELF_ERROR == ret && ngi.is_master())
+          if (EXIT_EXPIRE_SELF_ERROR == ret && ngi.is_master() && all_server_size > 0)
           {
             ret = TFS_SUCCESS;
-            push_to_delete_queue(block_id, server->id());
+            push_to_delete_queue(info->block_id_, server->id());
           }
         }
       }
@@ -569,7 +586,9 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = block->add(writable, master, server, now);
-        if (set && (TFS_SUCCESS == ret || EXIT_SERVER_EXISTED == ret))
+        if (EXIT_SERVER_EXISTED == ret)
+          ret = TFS_SUCCESS;
+        if (set && TFS_SUCCESS == ret)
           block->set_create_flag(BLOCK_CREATE_FLAG_NO);
       }
       return ret;

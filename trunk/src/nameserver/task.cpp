@@ -149,7 +149,7 @@ namespace tfs
         }
         block.destination_id_ = servers_[1];
         block.start_time_ = Func::get_monotonic_time();
-        block.is_move_ = PLAN_TYPE_MOVE  == type_;
+        block.is_move_ = PLAN_TYPE_MOVE  == type_ ? REPLICATE_BLOCK_MOVE_FLAG_YES : REPLICATE_BLOCK_MOVE_FLAG_NO;
         block.source_num_ = (server_num_ - 1);
         msg.set_repl_block(&block);
         msg.set_status(PLAN_STATUS_BEGIN);
@@ -334,36 +334,55 @@ namespace tfs
               ++count;
           }
           status_ = result.size() == count ? PLAN_STATUS_END : count > 0 ? PLAN_STATUS_PART_END : PLAN_STATUS_FAILURE;
-          if (PLAN_STATUS_FAILURE == status_)
-          {
-            dump(TBSYS_LOG_LEVEL(INFO), "compact block all failure");
-          }
-          else
+          if (PLAN_STATUS_FAILURE != status_)
           {
             block->update(info);
             time_t now = Func::get_monotonic_time();
+            uint64_t array[result.size()];
+            common::ArrayHelper<uint64_t> helper(result.size(), array);
             for (iter = result.begin(); iter != result.end(); ++iter)
             {
-              ServerCollect* server = manager_.get_manager().get_server_manager().get(iter->first);
-              ret = (NULL != server) ? TFS_SUCCESS : EXIT_NO_DATASERVER;
+              ServerCollect* pserver = manager_.get_manager().get_server_manager().get(iter->first);
+              ret = (NULL != pserver) ? TFS_SUCCESS : EXIT_NO_DATASERVER;
               if (TFS_SUCCESS == ret)
               {
                 if (PLAN_STATUS_END == iter->second)
                 {
-                  server->add_writable(block->id(), block->is_full());
+                  pserver->add_writable(block->id(), block->is_full());
                 }
                 else
                 {
-                  if (!manager_.get_manager().relieve_relation(block, server, now))
+                  helper.push_back(iter->first);
+                }
+              }
+            }
+
+            for (int64_t index = 0; index < helper.get_array_index(); ++index)
+            {
+              uint64_t server = *helper.at(index);
+              bool result = manager_.get_manager().relieve_relation(block, server, now);
+              if (result)
+              {
+                int32_t size = manager_.get_manager().get_block_manager().get_servers_size(block);
+                if (size > 0 && GFactory::get_runtime_info().is_master())
+                {
+                  manager_.get_manager().get_block_manager().push_to_delete_queue(info.block_id_, server);
+                }
+                if (size <= 0)
+                {
+                  ServerCollect* pserver = manager_.get_manager().get_server_manager().get(server);
+                  int32_t rt = manager_.get_manager().build_relation(block, pserver, now);
+                  if (TFS_SUCCESS != rt)
                   {
-                    TBSYS_LOG(INFO, "we'll get failed when relive relation between block: %"PRI64_PREFIX"u and server: %s",
-                        info.block_id_, tbsys::CNetUtil::addrToString(iter->first).c_str());
-                  }
-                  if ( GFactory::get_runtime_info().is_master())
-                  {
-                    manager_.get_manager().get_block_manager().push_to_delete_queue(info.block_id_, iter->first);
+                    TBSYS_LOG(INFO, "build relation error, ret: %d, block: %"PRI64_PREFIX"u, dataserver: %s",
+                        rt, info.block_id_, tbsys::CNetUtil::addrToString(server).c_str());
                   }
                 }
+              }
+              else
+              {
+                TBSYS_LOG(INFO, "relieve relation error, block: %"PRI64_PREFIX"u, dataserver: %s",
+                    info.block_id_, tbsys::CNetUtil::addrToString(server).c_str());
               }
             }
 
@@ -375,7 +394,7 @@ namespace tfs
               {
                 result = manager_.get_manager().get_oplog_sync_mgr().log(
                       OPLOG_TYPE_COMPACT_MSG, stream.get_data(), stream.get_data_length(), now);
-                if (TFS_SUCCESS != ret)
+                if (TFS_SUCCESS != result)
                   dump(TBSYS_LOG_LEVEL(INFO), "write compact oplog failed, result: %d", result);
               }
             }

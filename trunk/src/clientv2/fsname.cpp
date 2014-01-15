@@ -27,6 +27,7 @@ namespace tfs
 {
   namespace clientv2
   {
+    static const char TFS_FILE_VERSION_CHAR_V2 = 'B';
     static const TfsFileNameVersion CURRENT_TFS_FILE_NAME_VERSION = TFS_FILE_NAME_V1;
 
     static int32_t hash(const char *str)
@@ -97,7 +98,7 @@ namespace tfs
           else
           {
             file_name_len = FILE_NAME_LEN_V2;
-            decode(file_name + 2, (char*) &filev2_, file_name_len - 2);
+            decode(file_name + 3, (char*) &filev2_, file_name_len - 3);
           }
 
           if (NULL == suffix)
@@ -126,32 +127,27 @@ namespace tfs
         else
         {
           file_name_len = FILE_NAME_LEN_V2;
-          encode((char*) &filev2_, file_name_ + 2, sizeof(FileBitsV2));
+          encode((char*) &filev2_, file_name_ + 3, sizeof(FileBitsV2));
         }
 
         if (large_flag)
         {
-          if (TFS_FILE_NAME_V1 == version_)
-          {
-            file_name_[0] = LARGE_TFS_FILE_KEY_CHAR;
-          }
-          else
-          {
-            file_name_[0] = LARGE_TFS_FILE_KEY_CHAR_V2;
-          }
+          file_name_[0] = LARGE_TFS_FILE_KEY_CHAR;
         }
         else
         {
-          if (TFS_FILE_NAME_V1 == version_)
-          {
-            file_name_[0] = SMALL_TFS_FILE_KEY_CHAR;
-          }
-          else
-          {
-            file_name_[0] = SMALL_TFS_FILE_KEY_CHAR_V2;
-          }
+          file_name_[0] = SMALL_TFS_FILE_KEY_CHAR;
         }
-        file_name_[1] = static_cast<char> ('0' + cluster_id_);
+
+        if (TFS_FILE_NAME_V2 == version_)
+        {
+          file_name_[1] = TFS_FILE_VERSION_CHAR_V2;
+          file_name_[2] = static_cast<char> ('0' + cluster_id_);
+        }
+        else
+        {
+          file_name_[1] = static_cast<char> ('0' + cluster_id_);
+        }
         file_name_[file_name_len] = '\0';
       }
 
@@ -190,15 +186,18 @@ namespace tfs
       if (NULL != tfs_name &&
           static_cast<int32_t>(strlen(tfs_name)) >= FILE_NAME_LEN)
       {
+        if (TFS_FILE_VERSION_CHAR_V2 == tfs_name[1])
+        {
+          version_ = TFS_FILE_NAME_V2;
+        }
+        else
+        {
+          version_ = TFS_FILE_NAME_V1;
+        }
+
         if (SMALL_TFS_FILE_KEY_CHAR == tfs_name[0])
         {
           file_type = SMALL_TFS_FILE_TYPE;
-          version_ = TFS_FILE_NAME_V1;
-        }
-        else if (SMALL_TFS_FILE_KEY_CHAR_V2 == tfs_name[0])
-        {
-          file_type = SMALL_TFS_FILE_TYPE_V2;
-          version_ = TFS_FILE_NAME_V2;
         }
         else
         {

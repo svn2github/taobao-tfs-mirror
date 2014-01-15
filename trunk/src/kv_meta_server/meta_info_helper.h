@@ -119,6 +119,10 @@ namespace tfs
             std::vector<common::ObjectMetaInfo> *v_object_meta_info, common::VSTRING *v_object_name,
             std::set<std::string> *s_common_prefix, int8_t *is_truncated);
 
+        int scan_pre_record(const std::string &bucket_name,
+        const std::string& file_name, const common::KvKey& start_key,
+        common::ObjectInfo *object_info, int32_t& valid_result);
+
 
       protected:
         common::KvEngineHelper* kv_engine_helper_;

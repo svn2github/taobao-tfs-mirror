@@ -385,12 +385,44 @@ namespace tfs
 
     int TaskManager::add_task_queue(Task* task)
     {
-      TBSYS_LOG(DEBUG, "Add task %s", task->dump().c_str());
-      task_monitor_.lock();
-      task_queue_.push_back(task);
-      task_monitor_.notify();
-      task_monitor_.unlock();
-      return TFS_SUCCESS;
+      int ret = task_queue_.size() < static_cast<uint32_t>(SYSPARAM_DATASERVER.max_bg_task_queue_size_) ?
+        TFS_SUCCESS : EXIT_BG_TASK_QUEUE_FULL;
+
+      if (TFS_SUCCESS == ret)
+      {
+        bool need_add_block = false;
+        if (PLAN_TYPE_COMPACT == task->get_type())
+        {
+          if (task->task_from_ds())
+          {
+            need_add_block = true;
+          }
+        }
+        else if (PLAN_TYPE_REPLICATE == task->get_type())
+        {
+          need_add_block = true;
+        }
+        else
+        {
+          // TODO: marshalling, reinstate, dissolve control
+        }
+
+        if (need_add_block)
+        {
+          ret = add_block(task) ? TFS_SUCCESS : EXIT_BLOCK_IN_TASK_QUEUE;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        task_monitor_.lock();
+        task_queue_.push_back(task);
+        task_monitor_.notify();
+        task_monitor_.unlock();
+      }
+
+      TBSYS_LOG(INFO, "Add task %s, ret: %d", task->dump().c_str(), ret);
+      return ret;
     }
 
     void TaskManager::run_task()
@@ -415,8 +447,8 @@ namespace tfs
         task_queue_.pop_front();
         task_monitor_.unlock();
 
-        TBSYS_LOG(INFO, "start task, seqno: %"PRI64_PREFIX"d, type: %s, %s",
-            task->get_seqno(), task->get_type(), task->dump().c_str());
+        TBSYS_LOG(DEBUG, "Start task, seqno: %"PRI64_PREFIX"d, type: %s, %s",
+            task->get_seqno(), task->get_type_str(), task->dump().c_str());
 
         int ret = TFS_SUCCESS;
         int64_t start_time = Func::get_monotonic_time_us();
@@ -426,8 +458,8 @@ namespace tfs
 
         int64_t end_time = Func::get_monotonic_time_us();
 
-        TBSYS_LOG(INFO, "finish task, seqno: %"PRI64_PREFIX"d, type: %s, cost time: %"PRI64_PREFIX"d, ret: %d",
-          task->get_seqno(), task->get_type(), end_time - start_time, ret);
+        TBSYS_LOG(INFO, "Finish task, seqno: %"PRI64_PREFIX"d, type: %s, cost time: %"PRI64_PREFIX"d",
+          task->get_seqno(), task->get_type_str(), end_time - start_time);
 
         if (task->is_completed())
         {
@@ -479,9 +511,18 @@ namespace tfs
      list<Task*>::iterator it = expire_tasks.begin();
      for ( ; it != expire_tasks.end(); it++)
      {
-       (*it)->report_to_ns(PLAN_STATUS_TIMEOUT);
+       if ((*it)->task_from_ds())
+       {
+         (*it)->report_to_ds(PLAN_STATUS_TIMEOUT);
+       }
+       else
+       {
+         (*it)->report_to_ns(PLAN_STATUS_TIMEOUT);
+       }
        get_block_manager().get_gc_manager().add(*it);
      }
+
+     expire_block();
 
      TBSYS_LOG(DEBUG, "task manager expire task, old: %u, new: %u", old_size, new_size);
     }
@@ -608,6 +649,8 @@ namespace tfs
             }
             // got here, erased[unused]  mustbe NODE_ALIVE
             erased[unused] = ErasureCode::NODE_UNUSED;
+            TBSYS_LOG(DEBUG, "block %"PRI64_PREFIX"u will not used in reinstate",
+              family_members[unused].block_);
           }
         }
 
@@ -644,5 +687,106 @@ namespace tfs
       }
       return ret;
     }
+
+    bool TaskManager::add_block(Task* task)
+    {
+      Mutex::Lock lock(running_blocks_mutex_);
+      bool ok = (NULL != task);
+      if (ok)
+      {
+        uint64_t blocks[MAX_MARSHALLING_NUM];
+        ArrayHelper<uint64_t> helper(MAX_MARSHALLING_NUM, blocks);
+        ok = task->get_involved_blocks(helper);
+        if (ok)
+        {
+          for (int32_t index = 0; index < helper.get_array_index(); index++)
+          {
+            std::map<uint64_t, int64_t>::iterator iter = running_blocks_.find(*helper.at(index));
+            if (iter != running_blocks_.end())
+            {
+              // block already in task queue
+              ok = false;
+              break;
+            }
+          }
+        }
+
+        if (ok) // all blocks are not in task queue
+        {
+          int64_t now = Func::get_monotonic_time();
+          for (int32_t index = 0; index < helper.get_array_index(); index++)
+          {
+            running_blocks_.insert(std::make_pair(*helper.at(index),
+                now + task->get_expire_time()));
+            TBSYS_LOG(DEBUG, "add block %"PRI64_PREFIX"u", *helper.at(index));
+          }
+        }
+      }
+
+      return ok;
+    }
+
+    void TaskManager::remove_block(Task* task)
+    {
+      Mutex::Lock lock(running_blocks_mutex_);
+      if (NULL != task)
+      {
+        uint64_t blocks[MAX_MARSHALLING_NUM];
+        ArrayHelper<uint64_t> helper(MAX_MARSHALLING_NUM, blocks);
+        task->get_involved_blocks(helper);
+        for (int32_t index = 0; index < helper.get_array_index(); index++)
+        {
+          running_blocks_.erase(*helper.at(index));
+          TBSYS_LOG(DEBUG, "remove block %"PRI64_PREFIX"u", *helper.at(index));
+        }
+      }
+    }
+
+    bool TaskManager::add_block(const uint64_t block_id, const int32_t expire_time)
+    {
+      Mutex::Lock lock(running_blocks_mutex_);
+      std::map<uint64_t, int64_t>::iterator iter = running_blocks_.find(block_id);
+      bool ok = (iter == running_blocks_.end());
+      if (ok)
+      {
+        running_blocks_.insert(std::make_pair(block_id,
+              Func::get_monotonic_time() + expire_time));
+        TBSYS_LOG(DEBUG, "add block %"PRI64_PREFIX"u", block_id);
+      }
+      return ok;
+    }
+
+    void TaskManager::remove_block(const uint64_t block_id)
+    {
+      Mutex::Lock lock(running_blocks_mutex_);
+      running_blocks_.erase(block_id);
+      TBSYS_LOG(DEBUG, "remove block %"PRI64_PREFIX"u", block_id);
+    }
+
+    bool TaskManager::exist_block(const uint64_t block_id) const
+    {
+      Mutex::Lock lock(running_blocks_mutex_);
+      return running_blocks_.find(block_id) != running_blocks_.end();
+    }
+
+    void TaskManager::expire_block()
+    {
+      int64_t now = Func::get_monotonic_time();
+      Mutex::Lock lock(running_blocks_mutex_);
+      std::map<uint64_t, int64_t>::iterator iter = running_blocks_.begin();
+      for ( ; iter != running_blocks_.end(); )
+      {
+        if (now > iter->second)
+        {
+          TBSYS_LOG(DEBUG, "remove block %"PRI64_PREFIX"u", iter->first);
+          running_blocks_.erase(iter++);
+        }
+        else
+        {
+          iter++;
+        }
+      }
+    }
+
   }
 }

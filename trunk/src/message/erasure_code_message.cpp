@@ -171,6 +171,7 @@ namespace tfs
     ECReinstateCommitMessage::ECReinstateCommitMessage()
     {
       _packetHeader._pcode = common::REQ_EC_REINSTATE_COMMIT_MESSAGE;
+      reinstate_num_ = 0;
     }
 
     ECReinstateCommitMessage::~ECReinstateCommitMessage()

@@ -80,48 +80,85 @@ namespace tfs
 
     int ReportCheckBlockMessage::serialize(common::Stream& output) const
     {
-      int ret = output.set_int64(seqno_);
+      int64_t pos = 0;
+      int ret = param_.serialize(output.get_free(), output.get_free_length(), pos);
       if (TFS_SUCCESS == ret)
       {
-        ret = output.set_int64(server_id_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_vint64(blocks_);
-      }
-      if(TFS_SUCCESS == ret)
-      {
-        ret = output.set_int32(interval_);
+        output.pour(param_.length());
       }
       return ret;
-
     }
 
     int ReportCheckBlockMessage::deserialize(common::Stream& input)
     {
-      int ret = input.get_int64(&seqno_);
+      int64_t pos = 0;
+      int ret = param_.deserialize(input.get_data(), input.get_data_length(), pos);
       if (TFS_SUCCESS == ret)
       {
-        ret = input.get_int64(reinterpret_cast<int64_t*>(&server_id_));
+        ret = input.drain(param_.length());
       }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_vint64(blocks_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_int32(&interval_);
-      }
-
       return ret;
     }
 
     int64_t ReportCheckBlockMessage::length() const
     {
-      return 2 * INT64_SIZE + Serialization::get_vint64_length(blocks_) + INT_SIZE;
+      return param_.length();
     }
 
- }/** end namespace message **/
+    int ReportCheckBlockResponseMessage::serialize(common::Stream& output) const
+    {
+      int ret = output.set_int64(server_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(seqno_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(result_.size());
+      }
+      for (uint32_t index = 0; index < result_.size() && TFS_SUCCESS == ret; index++)
+      {
+        int64_t pos = 0;
+        ret = result_[index].serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == ret)
+        {
+          output.pour(result_[index].length());
+        }
+      }
+      return ret;
+    }
+
+    int ReportCheckBlockResponseMessage::deserialize(common::Stream& input)
+    {
+      int ret = input.get_int64(reinterpret_cast<int64_t*>(&server_id_));
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&seqno_);
+      }
+      int32_t size = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&size);
+      }
+      for (int32_t index = 0; index < size && TFS_SUCCESS == ret; index++)
+      {
+        CheckResult item;
+        int64_t pos = 0;
+        ret = item.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == ret)
+        {
+          input.drain(result_[index].length());
+          result_.push_back(item);
+        }
+      }
+      return ret;
+    }
+
+    int64_t ReportCheckBlockResponseMessage::length() const
+    {
+      CheckResult result;
+      return INT_SIZE + result_.size() * result.length() + 2 * INT64_SIZE;
+    }
+
+  }/** end namespace message **/
 }/** end namespace tfs **/

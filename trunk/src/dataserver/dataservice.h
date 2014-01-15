@@ -32,7 +32,7 @@
 #include "sync_manager.h"
 #include "gc.h"
 #include "client_request_server.h"
-#include "op_manager.h"
+#include "aop_manager.h"
 #include "lease_managerv2.h"
 #include "data_helper.h"
 #include "task_manager.h"
@@ -109,6 +109,7 @@ namespace tfs
       inline TrafficControl& get_traffic_control() { return traffic_control_;}
       inline SyncManager* get_sync_manager() { return sync_manager_;}
       inline WritableBlockManager& get_writable_block_manager() { return writable_block_manager_; }
+      inline ClientRequestServer& get_client_request_server() { return client_request_server_; }
 
       protected:
       virtual const char* get_log_file_path();

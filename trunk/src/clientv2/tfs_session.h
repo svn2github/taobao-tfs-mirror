@@ -92,7 +92,7 @@ namespace tfs
         void update_stat(const StatType type, bool success);
 
         // global cache control
-        int get_block_info(uint64_t& block_id, File& file);
+        int get_block_info(uint64_t& block_id, File& file, const int32_t mode);
         void expire_block_cache(const uint64_t block_id,
             const CacheHitStatus cache_hit, const int ret);
 

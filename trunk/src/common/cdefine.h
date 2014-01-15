@@ -43,7 +43,7 @@ static const int32_t FILE_NAME_EXCEPT_SUFFIX_LEN = 12;
 static const int32_t MAX_FILE_NAME_LEN = 128;
 static const int32_t MAX_SUFFIX_LEN = MAX_FILE_NAME_LEN - TFS_FILE_LEN;
 static const int32_t STANDARD_SUFFIX_LEN = 4;
-static const int32_t FILE_NAME_LEN_V2 = 26;
+static const int32_t FILE_NAME_LEN_V2 = 27;
 static const int32_t TFS_FILE_LEN_V2 = FILE_NAME_LEN_V2 + 1;
 static const int32_t FILE_NAME_EXCEPT_SUFFIX_LEN_V2 = 18;
 
@@ -102,6 +102,7 @@ typedef enum
 
 typedef enum
 {
+  F_FAMILY_INFO_NONE = 0,
   F_FAMILY_INFO = 1
 } OpenFlag;
 

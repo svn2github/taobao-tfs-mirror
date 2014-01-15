@@ -125,7 +125,9 @@ class SaveFileWorkerManager : public BaseWorkerManager
       result_fp = fopen(result_path.c_str(), "a");
       assert(NULL != result_fp);
 
-      return tfs_client->initialize(NULL, 1800, 0, true);
+      int ret = tfs_client->initialize(NULL, 1800, 0, true);
+      assert(TFS_SUCCESS == ret);
+      return ret;
     }
 
     void end()

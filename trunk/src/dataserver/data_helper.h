@@ -22,6 +22,7 @@ namespace tfs
 {
   namespace dataserver
   {
+    class ClientRequestServer;
     class TrafficControl;
     class BlockManager;
     class DataService;
@@ -33,6 +34,7 @@ namespace tfs
 
         inline BlockManager& get_block_manager();
         inline TrafficControl& get_traffic_control();
+        inline ClientRequestServer& get_client_request_server();
 
         /**
         * @brief send a request whose response is a StatusMessage
@@ -60,9 +62,10 @@ namespace tfs
             const bool tmp, const bool partial = false);
 
         int query_ec_meta(const uint64_t server_id, const uint64_t block_id,
-            common::ECMeta& ec_meta);
+            common::ECMeta& ec_meta, const int32_t lock_time = 0);
         int commit_ec_meta(const uint64_t server_id, const uint64_t block_id,
-            const common::ECMeta& ec_meta, const int8_t switch_flag = common::SWITCH_BLOCK_NO);
+            const common::ECMeta& ec_meta, const int8_t switch_flag = common::SWITCH_BLOCK_NO,
+            const int8_t unlock_flag = common::UNLOCK_BLOCK_NO);
 
         // we should know file's real length first
         int read_file(const uint64_t server_id, const uint64_t block_id,
@@ -104,9 +107,10 @@ namespace tfs
             const bool tmp, const bool partial = false);
 
         int query_ec_meta_ex(const uint64_t server_id, const uint64_t block_id,
-            common::ECMeta& ec_meta);
+            common::ECMeta& ec_meta, const int32_t lock_time = 0);
         int commit_ec_meta_ex(const uint64_t server_id, const uint64_t block_id,
-            const common::ECMeta& ec_meta, const int8_t switch_flag = common::SWITCH_BLOCK_NO);
+            const common::ECMeta& ec_meta, const int8_t switch_flag = common::SWITCH_BLOCK_NO,
+            const int8_t unlock_flag = common::UNLOCK_BLOCK_NO);
 
         int stat_file_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id, const int8_t flag,
@@ -119,7 +123,7 @@ namespace tfs
             const char* data, const int32_t length, const int32_t offset, uint64_t& lease_id);
         int close_file_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id, const uint64_t lease_id,
-            const int32_t status, const bool tmp);
+            const uint32_t crc, const int32_t status, const bool tmp);
         int unlink_file_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id,
             const int32_t status);

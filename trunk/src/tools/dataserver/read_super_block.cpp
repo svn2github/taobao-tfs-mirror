@@ -163,7 +163,7 @@ int main(int argc, char* argv[])
     dump_block_index_header();
 
     vector<BlockIndex> index_vecs;
-    for (int i = 1; i < info->max_block_index_element_count_; i++)
+    for (int i = 1; i <= info->max_block_index_element_count_; i++)
     {
       BlockIndex index;
       block_manager.get_super_block_manager().get_block_index(index, i);
@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
     }
 
     sort(index_vecs.begin(), index_vecs.end(), compare_by_logic_id);
-    for (unsigned i = 1; i < index_vecs.size(); i++)
+    for (unsigned i = 0; i < index_vecs.size(); i++)
     {
       dump_block_index(index_vecs[i]);
     }

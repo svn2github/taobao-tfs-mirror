@@ -479,12 +479,8 @@ namespace tfs
 
     int64_t BlockFileInfoMessageV2::length() const
     {
-      int len = common::INT_SIZE + common::INT64_SIZE;
-      for (uint32_t i = 0; i < fileinfo_list_.size(); i++)
-      {
-        len += fileinfo_list_[i].length();
-      }
-      return len;
+      common::BlockInfoV2 info;
+      return common::INT_SIZE + common::INT64_SIZE + fileinfo_list_.size() * info.length();
     }
 
     int BlockFileInfoMessageV2::serialize(common::Stream& output)  const
@@ -514,5 +510,69 @@ namespace tfs
       return ret;
     }
 
-  }
-}
+    BlockStatisticVisitInfoMessage::BlockStatisticVisitInfoMessage()
+    {
+      _packetHeader._pcode = common::GET_BLOCK_STATISTIC_VISIT_INFO_MESSAGE;
+    }
+
+    BlockStatisticVisitInfoMessage::~BlockStatisticVisitInfoMessage()
+    {
+
+    }
+
+    int BlockStatisticVisitInfoMessage::serialize(common::Stream& output) const
+    {
+      int32_t ret = output.set_int32(block_statistic_visit_maps_.size());
+      if (common::TFS_SUCCESS == ret)
+      {
+        std::map<uint64_t, common::ThroughputV2>::const_iterator iter = block_statistic_visit_maps_.begin();
+        for (; iter != block_statistic_visit_maps_.end() && common::TFS_SUCCESS == ret; ++iter)
+        {
+          ret = output.set_int64(iter->first);
+          if (common::TFS_SUCCESS == ret)
+          {
+            int64_t pos = 0;
+            ret = iter->second.serialize(output.get_free(), output.get_free_length(), pos);
+            if (common::TFS_SUCCESS == ret)
+            {
+              output.pour(iter->second.length());
+            }
+          }
+        }
+      }
+      return ret;
+    }
+
+    int BlockStatisticVisitInfoMessage::deserialize(common::Stream& input)
+    {
+      int32_t size = 0;
+      int32_t ret = input.get_int32(&size);
+      if (common::TFS_SUCCESS == ret)
+      {
+        common::ThroughputV2 tp;
+        uint64_t block = common::INVALID_BLOCK_ID;
+        for (int32_t index = 0; index < size && common::TFS_SUCCESS == ret; ++index)
+        {
+          ret = input.get_int64(reinterpret_cast<int64_t*>(&block));
+          if (common::TFS_SUCCESS == ret)
+          {
+            int64_t pos = 0;
+            ret = tp.deserialize(input.get_data(), input.get_data_length(), pos);
+            if (common::TFS_SUCCESS == ret)
+            {
+              input.drain(tp.length());
+              block_statistic_visit_maps_.insert(std::map<uint64_t, common::ThroughputV2>::value_type(block, tp));
+            }
+          }
+        }
+      }
+      return ret;
+    }
+
+    int64_t BlockStatisticVisitInfoMessage::length() const
+    {
+      common::ThroughputV2 tp;
+      return common::INT_SIZE + block_statistic_visit_maps_.size() * (tp.length() + common::INT64_SIZE);
+    }
+  }/** end namespace message **/
+}/** end namespace tfs **/

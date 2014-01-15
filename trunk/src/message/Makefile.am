@@ -23,6 +23,7 @@ HEADER=dump_plan_message.h client_cmd_message.h heart_message.h\
 			 read_file_message_v2.h unlink_file_message_v2.h read_data_message_v2.h read_data_message_v2.h\
 			 write_data_message_v2.h read_index_message_v2.h write_index_message_v2.h ec_meta_message.h\
 			 ds_lease_message.h get_dataserver_all_blocks_header.h sync_file_entry_message.h expire_message.h
+			 expire_message.h 
 libtfsmessage_a_SOURCES = dump_plan_message.cpp client_cmd_message.cpp heart_message.cpp\
 													oplog_sync_message.cpp crc_error_message.cpp reload_message.cpp\
 													unlink_file_message.cpp file_info_message.cpp rollback_message.cpp\

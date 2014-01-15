@@ -561,6 +561,60 @@ namespace tfs
 
       return ret;
     }
+    int MetaInfoHelper::scan_pre_record(const std::string &bucket_name,
+        const std::string& file_name, const KvKey& start_key,
+        common::ObjectInfo *object_info, int32_t& valid_result)
+    {
+      int ret = TFS_SUCCESS;
+      //we should find pre record
+      vector<KvValue*> kv_value_keys;
+      vector<KvValue*> kv_value_values;
+      int32_t result_size = 0;
+      KvKey rend_key;
+      char *rend_key_buff = NULL;
+      rend_key_buff = (char*) malloc(KEY_BUFF_SIZE);
+      assert(NULL != rend_key_buff);
+
+      ret = serialize_key(bucket_name, file_name, 0,
+          &rend_key, rend_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = kv_engine_helper_->scan_keys(meta_info_name_area_,
+            start_key, rend_key, -1, true,
+            &kv_value_keys, &kv_value_values, &result_size, CMD_RANGE_VALUE_ONLY);
+      }
+      free(rend_key_buff);
+      if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret ||TFS_SUCCESS == ret )
+      {
+        if (TFS_SUCCESS == ret)
+        {
+          for(int i = result_size -1 ; i >= 0; i--)
+          {
+            common::ObjectInfo tmp_object_info;
+            //value get
+            int64_t pos = 0;
+            tmp_object_info.deserialize(kv_value_values[i]->get_data(),
+                kv_value_values[i]->get_size(), pos);
+            if (tmp_object_info.v_tfs_file_info_.size() > 0)
+            {
+              object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[0]);
+              valid_result++;
+            }
+            kv_value_values[i]->free();
+            kv_value_keys[i]->free();
+          }
+        }
+        ret = TFS_SUCCESS;
+
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "metainfo exist but data not exist");
+        ret = TFS_SUCCESS;
+      }
+      return ret;
+
+    }
 
     int MetaInfoHelper::get_object(const std::string &bucket_name,
         const std::string &file_name, const int64_t offset,
@@ -667,9 +721,9 @@ namespace tfs
             ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_key, end_key, SCAN_LIMIT, scan_offset,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
             if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
-            {//metainfo exist but data not exist
-              TBSYS_LOG(ERROR, "metainfo exist but data not exist");
-              ret = TFS_SUCCESS;
+            {
+              //we should find pre record
+              ret = scan_pre_record(bucket_name, file_name, start_key, object_info, valid_result);
             }
             for(i = 0; i < result_size; ++i)
             {
@@ -686,52 +740,7 @@ namespace tfs
                   if (tmp_object_info.v_tfs_file_info_[0].offset_ > offset)
                   {
                     //we should find pre record
-                    vector<KvValue*> kv_value_keys;
-                    vector<KvValue*> kv_value_values;
-                    int32_t result_size = 0;
-                    KvKey rend_key;
-                    char *rend_key_buff = NULL;
-                    rend_key_buff = (char*) malloc(KEY_BUFF_SIZE);
-                    assert(NULL != rend_key_buff);
-
-                    ret = serialize_key(bucket_name, file_name, 0,
-                        &rend_key, rend_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
-                    if (TFS_SUCCESS == ret)
-                    {
-                      ret = kv_engine_helper_->scan_keys(meta_info_name_area_,
-                          start_key, rend_key, -1, true,
-                          &kv_value_keys, &kv_value_values, &result_size, scan_type);
-                    }
-                    free(rend_key_buff);
-                    if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret ||TFS_SUCCESS == ret )
-                    {
-                      if (TFS_SUCCESS == ret)
-                      {
-                        for(int i = result_size -1 ; i >= 0; i--)
-                        {
-                          common::ObjectInfo tmp_object_info;
-                          //value get
-                          int64_t pos = 0;
-                          tmp_object_info.deserialize(kv_value_values[i]->get_data(),
-                              kv_value_values[i]->get_size(), pos);
-                          if (tmp_object_info.v_tfs_file_info_.size() > 0)
-                          {
-                            object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[0]);
-                            valid_result++;
-                          }
-                          kv_value_values[i]->free();
-                          kv_value_keys[i]->free();
-                        }
-                      }
-                      ret = TFS_SUCCESS;
-
-                    }
-                    else
-                    {
-                      go_on=false;
-                    }
-
-
+                    ret = scan_pre_record(bucket_name, file_name, start_key, object_info, valid_result);
                   }//end deal pre record
                 }
                 if (tmp_object_info.v_tfs_file_info_[0].offset_ + tmp_object_info.v_tfs_file_info_[0].file_size_ <= offset)
@@ -846,7 +855,7 @@ namespace tfs
         TBSYS_LOG(DEBUG, "del object, bucekt_name: %s, object_name: %s, "
             "scan ret: %d, limit: %d, result size: %d",
             bucket_name.c_str(), file_name.c_str(), ret, limit + 1, result_size);
-        if (TFS_SUCCESS == ret && result_size == 0)
+        if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret && result_size == 0)
         {
           ret = EXIT_OBJECT_NOT_EXIST;
         }

@@ -41,8 +41,19 @@ namespace tfs
           return block_id_;
         }
 
+        void set_lock_time(const int32_t lock_time)
+        {
+          lock_time_ = lock_time;
+        }
+
+        int32_t get_lock_time() const
+        {
+          return lock_time_;
+        }
+
       private:
         uint64_t block_id_;
+        int32_t lock_time_;
     };
 
     class QueryEcMetaRespMessage: public common::BasePacket
@@ -107,10 +118,21 @@ namespace tfs
           return switch_flag_;
         }
 
+        void set_unlock_flag(const int8_t unlock_flag)
+        {
+          unlock_flag_ = unlock_flag;
+        }
+
+        int8_t get_unlock_flag() const
+        {
+          return unlock_flag_;
+        }
+
       private:
         common::ECMeta ec_meta_;
         uint64_t block_id_;
         int8_t switch_flag_;
+        int8_t unlock_flag_;
     };
 
   }

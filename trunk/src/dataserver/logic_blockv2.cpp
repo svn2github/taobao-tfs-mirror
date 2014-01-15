@@ -184,6 +184,12 @@ namespace tfs
       return index_handle_->set_index_header(header);
     }
 
+    int BaseLogicBlock::flush()
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      return index_handle_->flush();
+    }
+
     int BaseLogicBlock::load_index(const common::MMapOption mmap_option)
     {
       int32_t ret = (mmap_option.check()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -369,8 +375,8 @@ namespace tfs
         {
           if (offset + nbytes > inner_offset)
             nbytes = inner_offset - offset;
-          ret = (nbytes > 0) ? TFS_SUCCESS : EXIT_READ_OFFSET_ERROR;
-          if (TFS_SUCCESS == ret)
+          ret = (nbytes >= 0) ? TFS_SUCCESS : EXIT_READ_OFFSET_ERROR;
+          if (TFS_SUCCESS == ret && nbytes > 0)
           {
             ret = data_handle_.pread(buf, nbytes, offset);
           }
@@ -426,6 +432,11 @@ namespace tfs
       remove_self_file();
     }
 
+    int BaseLogicBlock::statistic_visit(common::ThroughputV2& throughput, const bool reset)
+    {
+      return index_handle_->statistic_visit(throughput, reset);
+    }
+
     int BaseLogicBlock::transfer_file_status_(int32_t& oper_type, FileInfoV2& finfo, const int32_t action,
         const uint64_t logic_block_id, const uint64_t fileid) const
     {
@@ -444,17 +455,23 @@ namespace tfs
         case OVERRIDE:
           if ((finfo.status_ & FILE_STATUS_DELETE) != (status & FILE_STATUS_DELETE))
           {
-            oper_type = status & FILE_STATUS_DELETE ? OPER_DELETE : OPER_UNDELETE;
+            oper_type = (status & FILE_STATUS_DELETE) ? OPER_DELETE : OPER_UNDELETE;
           }
           finfo.status_ = status;
           break;
         case DELETE:
-          oper_type = OPER_DELETE;
-          finfo.status_ |= FILE_STATUS_DELETE;
+          if (!(finfo.status_ & FILE_STATUS_DELETE))
+          {
+            oper_type = OPER_DELETE;
+            finfo.status_ |= FILE_STATUS_DELETE;
+          }
           break;
         case UNDELETE:
-          oper_type = OPER_UNDELETE;
-          finfo.status_ &= (~FILE_STATUS_DELETE);
+          if (finfo.status_ & FILE_STATUS_DELETE)
+          {
+            oper_type = OPER_UNDELETE;
+            finfo.status_ &= (~FILE_STATUS_DELETE);
+          }
           break;
         case CONCEAL:
           ret = (0 != (finfo.status_ & FILE_STATUS_DELETE)) ? EXIT_FILE_STATUS_ERROR : TFS_SUCCESS;
@@ -681,19 +698,17 @@ namespace tfs
                 {
                   TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
                       ret, id(), fileid);
-                  ret = get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
+                  get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
+                }
+                else
+                {
+                  fileid = new_finfo.id_;
+                  ret = index_handle_->flush();
                   if (TFS_SUCCESS != ret)
                   {
-                    TBSYS_LOG(ERROR, "write file info failed, we'll rollback failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
+                    TBSYS_LOG(INFO, "write file, flush index to disk failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
                         ret, id(), fileid);
                   }
-                }
-                fileid = new_finfo.id_;
-                ret = index_handle_->flush();
-                if (TFS_SUCCESS != ret)
-                {
-                  TBSYS_LOG(INFO, "write file, flush index to disk failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
-                      ret, id(), fileid);
                 }
               }
             }
@@ -701,6 +716,22 @@ namespace tfs
         }
       }
       return TFS_SUCCESS == ret ? datafile.length() : ret;
+    }
+
+    int LogicBlock::read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,
+          const int8_t flag, const uint64_t logic_block_id)
+    {
+      int32_t ret = (NULL != buf && nbytes > 0 && offset >= 0 && INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = BaseLogicBlock::read(buf, nbytes, offset, fileid, flag, logic_block_id);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_index_handle_()->update_block_statistic_info(OPER_READ, nbytes, nbytes, false);
+      }
+      return ret;
     }
 
     int LogicBlock::unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id)
@@ -732,7 +763,7 @@ namespace tfs
                 ret = get_index_handle_()->write_file_info(finfo, sbinfo->max_use_hash_bucket_ratio_,
                       sbinfo->max_hash_bucket_count_, id(), true);
                 if (TFS_SUCCESS != ret)
-                  ret = get_index_handle_()->update_block_statistic_info(oper_type, 0, finfo.size_, true);
+                  get_index_handle_()->update_block_statistic_info(oper_type, 0, finfo.size_, true);
                 else
                   ret = index_handle_->flush();
               }
@@ -776,11 +807,6 @@ namespace tfs
     int LogicBlock::inc_unlink_visit_count(const int32_t step,const int32_t nbytes)
     {
       return get_index_handle_()->inc_unlink_visit_count(step, nbytes);
-    }
-
-    int LogicBlock::statistic_visit(common::ThroughputV2& throughput, const bool reset)
-    {
-      return get_index_handle_()->statistic_visit(throughput, reset);
     }
 
     bool SortFileInfoByOffset(const common::FileInfoV2& left, const common::FileInfoV2& right)
@@ -941,12 +967,7 @@ namespace tfs
                 {
                   TBSYS_LOG(INFO, "write file info failed, we'll rollback, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
                       ret, logic_block_id, fileid);
-                  ret = get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
-                  if (TFS_SUCCESS != ret)
-                  {
-                    TBSYS_LOG(ERROR, "write file info failed, we'll rollback failed, ret: %d, block id: %"PRI64_PREFIX"u, fileid:%"PRI64_PREFIX"u",
-                        ret, logic_block_id, fileid);
-                  }
+                  get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
                 }
               }
             }

@@ -69,16 +69,17 @@ namespace tfs
         int resolve_block_version_conflict(const uint64_t block, const common::ArrayHelper<std::pair<uint64_t, common::BlockInfoV2> >& info);
 
       private:
-        int  handle_control_load_block(const time_t now, const common::ClientCmdInformation& info, common::BasePacket* message, const int64_t buf_length, char* error_buf);
-        int  handle_control_delete_block(const time_t now, const common::ClientCmdInformation& info,const int64_t buf_length, char* error_buf);
-        int  handle_control_compact_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
-        int  handle_control_immediately_replicate_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
-        int  handle_control_rotate_log(void);
-        int  handle_control_set_runtime_param(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
-        int  handle_control_get_balance_percent(const int64_t buf_length, char* error_buf);
-        int  handle_control_set_balance_percent(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
-        int  handle_control_clear_system_table(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
+        int handle_control_load_block(const time_t now, const common::ClientCmdInformation& info, common::BasePacket* message, const int64_t buf_length, char* error_buf);
+        int handle_control_delete_block(const time_t now, const common::ClientCmdInformation& info,const int64_t buf_length, char* error_buf);
+        int handle_control_compact_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
+        int handle_control_immediately_replicate_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
+        int handle_control_rotate_log(void);
+        int handle_control_set_runtime_param(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
+        int handle_control_get_balance_percent(const int64_t buf_length, char* error_buf);
+        int handle_control_set_balance_percent(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
+        int handle_control_clear_system_table(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
         int handle_control_delete_family(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf);
+        int handle_control_set_all_server_report_block(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf);
 
         bool is_discard(void);
 

@@ -1318,7 +1318,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[49] = {
+    const char* dynamic_parameter_str[54] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1332,7 +1332,7 @@ namespace tfs
         "replicate_ratio",
         "replicate_wait_time",
         "compact_delete_ratio",
-        "compact_max_load",
+        "compact_task_ratio",
         "compact_time_lower",
         "compact_time_upper",
         "max_task_in_machine_nums",
@@ -1367,7 +1367,12 @@ namespace tfs
         "max_rw_network_bandwith_ratio",
         "compact_family_member_ratio",
         "max_single_machine_network_bandwith",
-        "write_file_check_copies_complete"
+        "write_file_check_copies_complete",
+        "choose_target_server_retry_max_nums",
+        "max_marshalling_num",
+        "enable_old_interface",
+        "enable_version_check",
+        "marshalling_visit_time",
     };
 
     const char* planstr[PLAN_TYPE_EC_MARSHALLING+1] =
@@ -1887,7 +1892,12 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int64(data, data_len, pos, last_statistics_time_);
+        ret = Serialization::set_int32(data, data_len, pos, last_statistics_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, last_update_time_);
       }
 
       return ret;
@@ -1934,7 +1944,12 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int64(data, data_len, pos, &last_statistics_time_);
+        ret = Serialization::get_int32(data, data_len, pos, &last_statistics_time_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &last_update_time_);
       }
 
       return ret;
@@ -2358,7 +2373,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, last_update_time_);
+        ret = Serialization::set_int32(data, data_len, pos, last_access_time_);
       }
 
       for (int i = 0; (TFS_SUCCESS == ret) && i < 2; i++)
@@ -2420,7 +2435,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &last_update_time_);
+        ret = Serialization::get_int32(data, data_len, pos, &last_access_time_);
       }
 
       for (int i = 0; (TFS_SUCCESS == ret) && i < 2; i++)
@@ -2784,5 +2799,150 @@ namespace tfs
             tbsys::CNetUtil::addrToString(source_ns_addr_).c_str(), type_, last_sync_time_, sync_fail_count_);
       }
     }
+
+    int CheckParam::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_vint64(data, data_len, pos, blocks_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int64(data, data_len, pos, seqno_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int64(data, data_len, pos, cs_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int64(data, data_len, pos, peer_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int32(data, data_len, pos, interval_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int32(data, data_len, pos, flag_);
+      }
+      return ret;
+    }
+
+    int CheckParam::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_vint64(data, data_len, pos, blocks_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int64(data, data_len, pos, &seqno_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&cs_id_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&peer_id_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int32(data, data_len, pos, &interval_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&flag_));
+      }
+      return ret;
+    }
+
+    int64_t CheckParam::length() const
+    {
+      return Serialization::get_vint64_length(blocks_) +
+        INT64_SIZE * 3 + INT_SIZE * 2;
+    }
+
+    int CheckResult::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int64(data, data_len, pos, block_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int32(data, data_len, pos, status_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int16(data, data_len, pos, more_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int16(data, data_len, pos, diff_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int16(data, data_len, pos, less_);
+      }
+      return ret;
+    }
+    int CheckResult::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&block_id_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int32(data, data_len, pos, &status_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int16(data, data_len, pos, reinterpret_cast<int16_t*>(&more_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int16(data, data_len, pos, reinterpret_cast<int16_t*>(&diff_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int16(data, data_len, pos, reinterpret_cast<int16_t*>(&less_));
+      }
+      return ret;
+
+    }
+    int64_t CheckResult::length() const
+    {
+      return INT64_SIZE + INT_SIZE + INT16_SIZE * 3;
+    }
+
+   void FileInfoV2ToFileStat(const FileInfoV2& info, TfsFileStat& buf)
+   {
+      buf.file_id_ = info.id_;
+      buf.offset_ = info.offset_;
+      buf.size_ = info.size_ - FILEINFO_EXT_SIZE;//通过blockid从ds批量拉取fileinfo会比数据实际大小多这4个字节
+      buf.usize_ = buf.size_;
+      buf.modify_time_ = info.modify_time_;
+      buf.create_time_ = info.create_time_;
+      buf.flag_ = info.status_;
+      buf.crc_ = info.crc_;
+   }
+
+   void FileStatToFileInfoV2(const TfsFileStat& info, FileInfoV2& buf)
+   {
+      buf.id_ = info.file_id_;
+      buf.offset_ = info.offset_;
+      buf.size_ = info.size_ + FILEINFO_EXT_SIZE;
+      buf.modify_time_ = info.modify_time_;
+      buf.create_time_ = info.create_time_;
+      buf.status_ = info.flag_;
+      buf.crc_    = info.crc_;
+   }
   } /** nameserver **/
 }/** tfs **/

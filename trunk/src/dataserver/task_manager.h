@@ -30,7 +30,7 @@ namespace tfs
   {
     using namespace message;
 
-    class BlockMnager;
+    class BlockManager;
     class DataService;
     class TaskManager
     {
@@ -46,6 +46,13 @@ namespace tfs
         void expire_task();
 
         BlockManager& get_block_manager();
+
+        bool add_block(Task* task);
+        void remove_block(Task* task);
+        bool exist_block(const uint64_t block_id) const;
+        bool add_block(const uint64_t block_id, const int32_t expire_time);
+        void remove_block(const uint64_t block_id);
+        void expire_block();
 
       private:
         DISALLOW_COPY_AND_ASSIGN(TaskManager);
@@ -76,6 +83,10 @@ namespace tfs
 
         std::map<int64_t, Task*> running_task_;
         tbutil::Mutex running_task_mutex_;
+
+        // block ==> expire_time (monotonic)
+        std::map<uint64_t, int64_t> running_blocks_;
+        tbutil::Mutex running_blocks_mutex_;
     };
   }
 }

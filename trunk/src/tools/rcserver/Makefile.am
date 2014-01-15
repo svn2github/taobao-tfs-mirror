@@ -6,7 +6,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid
 
-bin_PROGRAMS = parse gene
+bin_PROGRAMS = parse gene rcstat
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/dataserver/libdataserver.a\
@@ -22,4 +22,6 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 
 parse_SOURCES = parse_session_id.cpp
 gene_SOURCES = gene_session_id.cpp
+rcstat_SOURCES = rcstat.cpp rcstat.h
+#test_http_agent_SOURCES = test_http_agent.cpp http_agent.cpp
 

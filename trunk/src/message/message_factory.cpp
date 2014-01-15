@@ -195,6 +195,12 @@ namespace tfs
           case common::REQ_RC_LOGIN_MESSAGE:
             packet = new (std::nothrow)ReqRcLoginMessage();
             break;
+          case common::REQ_RC_REQ_STAT_MESSAGE:
+            packet = new ReqRcStatMessage();
+            break;
+          case common::RSP_RC_REQ_STAT_MESSAGE:
+            packet = new RspRcStatMessage();
+            break;
           case common::RSP_RC_LOGIN_MESSAGE:
             packet = new (std::nothrow)RspRcLoginMessage();
             break;
@@ -537,6 +543,9 @@ namespace tfs
           case common::RSP_MIGRATE_DS_HEARTBEAT_MESSAGE:
             packet = new (std::nothrow)MigrateDsHeartResponseMessage();
             break;
+          case common::REPORT_CHECK_BLOCK_RESPONSE_MESSAGE:
+            packet = new ReportCheckBlockResponseMessage();
+            break;
           case common::REQ_EXPIRE_CLEAN_TASK_MESSAGE:
             packet = new ReqCleanTaskFromRtsMessage();
             break;
@@ -554,6 +563,9 @@ namespace tfs
             break;
           case common::RSP_QUERY_PROGRESS_MESSAGE:
             packet = new RspQueryProgressMessage();
+            break;
+          case common::GET_BLOCK_STATISTIC_VISIT_INFO_MESSAGE:
+            packet = new BlockStatisticVisitInfoMessage();
             break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);

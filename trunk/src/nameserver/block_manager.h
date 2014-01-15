@@ -84,6 +84,7 @@ namespace tfs
         int get_servers(common::ArrayHelper<uint64_t>& server, const uint64_t block) const;
         int get_servers(common::ArrayHelper<uint64_t>& server, const BlockCollect* block) const;
         int get_servers_size(const uint64_t block) const;
+        int get_servers_size(const BlockCollect* const pblock) const;
         uint64_t get_server(const uint64_t block, const int8_t index = 0) const;
         bool exist(const BlockCollect* block, const ServerCollect* server) const;
 

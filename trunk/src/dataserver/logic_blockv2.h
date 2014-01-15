@@ -58,6 +58,7 @@ namespace tfs
       int get_block_info(common::BlockInfoV2& info) const;
       int get_index_header(common::IndexHeaderV2& header) const;
       int set_index_header(const common::IndexHeaderV2& header);
+      int flush();
       virtual int check_block_intact() { return common::TFS_SUCCESS;}
       int load_index(const common::MMapOption mmap_option);
       int traverse(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id) const;
@@ -72,13 +73,14 @@ namespace tfs
       int set_marshalling_offset(const int32_t size);
       int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, const bool partial = false);
       virtual int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id, const bool tmp);
-      int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,
+      virtual int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,
           const int8_t flag, const uint64_t logic_block_id);
       int pwrite(const char* buf, const int32_t nbytes, const int32_t offset, const bool tmp);
       int pread(char* buf, int32_t& nbytes, const int32_t offset);
       int stat(common::FileInfoV2& info, const int8_t flag, const uint64_t logic_block_id) const;
       virtual int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
       virtual void callback();
+      int statistic_visit(common::ThroughputV2& throughput, const bool reset = false);
 
       BlockManager& get_block_manager_() { return *manager_;}
 
@@ -114,6 +116,8 @@ namespace tfs
         int create_index(const int32_t bucket_size, const common::MMapOption mmap_option);
         int generation_file_id(uint64_t& fileid);
         int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id, const bool tmp);
+        int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,
+          const int8_t flag, const uint64_t logic_block_id);
         int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
         int traverse(std::vector<common::FileInfo>& finfos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int check_block_intact();
@@ -121,7 +125,6 @@ namespace tfs
         int inc_read_visit_count(const int32_t step = 1,  const int32_t nbytes = 0);
         int inc_update_visit_count(const int32_t step = 1,const int32_t nbytes = 0);
         int inc_unlink_visit_count(const int32_t step = 1,const int32_t nbytes = 0);
-        int statistic_visit(common::ThroughputV2& throughput, const bool reset = false);
       private:
         IndexHandle* get_index_handle_() const { return dynamic_cast<IndexHandle*>(index_handle_);}
 

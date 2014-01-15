@@ -323,7 +323,7 @@ namespace tfs
     }
 #endif
 
-    int TfsSession::get_block_info(uint64_t& block_id, File& file)
+    int TfsSession::get_block_info(uint64_t& block_id, File& file, const int32_t mode)
     {
       int ret = TFS_SUCCESS;
       int32_t& version = file.version_;
@@ -342,7 +342,7 @@ namespace tfs
           ds.push_back(server);
         }
       }
-      else
+      else if (mode & T_READ)
       {
         if ((ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL) &&
             (last_cache_hit < CACHE_HIT_LOCAL) &&
@@ -411,6 +411,10 @@ namespace tfs
 #endif
           }
         }
+      }
+      else
+      {
+        ret = get_block_info_ex(T_READ | file.mode_, block_id, version, ds, info);
       }
 
       return ret;

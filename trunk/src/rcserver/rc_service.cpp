@@ -78,6 +78,9 @@ namespace tfs
             case REQ_RC_LOGOUT_MESSAGE:
               ret = req_logout(base_packet);
               break;
+            case REQ_RC_REQ_STAT_MESSAGE:
+              ret = req_stat(base_packet);
+              break;
             default:
               ret = EXIT_UNKNOWN_MSGTYPE;
               TBSYS_LOG(ERROR, "unknown msg type: %d", base_packet->getPCode());
@@ -167,10 +170,10 @@ namespace tfs
         TBSYS_LOG(DEBUG, "call RspRcLoginMessage::login start. app_key: %s, app_ip: %"PRI64_PREFIX"d, ret: %d",
             req_login_msg->get_app_key(), req_login_msg->get_app_ip(), ret);
         if ((ret = session_manager_->login(req_login_msg->get_app_key(),
-                req_login_msg->get_app_ip(), session_id, base_info)) != TFS_SUCCESS)
+            req_login_msg->get_app_ip(), session_id, base_info)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "call SessionManager::login fail. app_key: %s, app_ip: %"PRI64_PREFIX"d, ret: %d",
-            req_login_msg->get_app_key(), req_login_msg->get_app_ip(), ret);
+              req_login_msg->get_app_key(), req_login_msg->get_app_ip(), ret);
         }
         else
         {
@@ -200,6 +203,7 @@ namespace tfs
     int RcService::req_keep_alive(common::BasePacket* packet)
     {
       int ret = TFS_SUCCESS;
+
       if (NULL == packet)
       {
         ret = EXIT_INVALID_ARGU;
@@ -208,10 +212,12 @@ namespace tfs
       else
       {
         ReqRcKeepAliveMessage* req_ka_msg = dynamic_cast<ReqRcKeepAliveMessage*>(packet);
+        TBSYS_LOG(DEBUG, "RcService::receive req_keep_alive id:%ld.", req_ka_msg->get_id());
+
         const KeepAliveInfo& ka_info = req_ka_msg->get_ka_info();
         bool update_flag = false;
 
-        //map<OperType, AppOperInfo>::const_iterator it = ka_info.s_stat_.app_oper_info_.find(OPER_READ);
+        //map<OperType, AppOperInfo>::const_iterator it = ka_info.s_stat_.app_oper_info_.find(OPER_READ);*/
         //if (it != ka_info.s_stat_.app_oper_info_.end())
         //{
         //TBSYS_LOG(INFO, "===================== times %d", it->second.oper_times_);
@@ -290,7 +296,7 @@ namespace tfs
           TBSYS_LOG(ERROR, "call RcService::req_reload fail. reload type: %d, ret: %d", reload_type, ret);
         }
 
-         req_reload_msg->reply(new StatusMessage(ret));
+        req_reload_msg->reply(new StatusMessage(ret));
       }
       return TFS_SUCCESS;
     }
@@ -349,6 +355,52 @@ namespace tfs
               --retry_times;
             }
           }
+        }
+      }
+
+      return ret;
+    }
+
+    int RcService::req_stat(common::BasePacket *packet)
+    {
+      int ret = TFS_SUCCESS;
+      int32_t  app_id, oper_type;
+
+      if (NULL == packet)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR,"RcService::req_stat fail. input packet invalid. ret: %d", ret);
+      }
+      else
+      {
+        if (packet->getPCode() == REQ_RC_REQ_STAT_MESSAGE)
+        {
+          ReqRcStatMessage *req_stat_msg = dynamic_cast<ReqRcStatMessage*>(packet);
+
+          AppOperInfoMap cond_map;
+          app_id = req_stat_msg->get_app_id();
+          oper_type = req_stat_msg->get_oper_type();
+
+          cond_map.clear();
+          if ((ret = session_manager_->stat(app_id, oper_type, cond_map)) != TFS_SUCCESS)
+          {
+            TBSYS_LOG(ERROR, "call SessionManager::stat fail. app_id: %d, app_oper_type: %d, interval: %ld",
+                req_stat_msg->get_app_id(), req_stat_msg->get_oper_type(), SYSPARAM_RCSERVER.count_interval_);
+          }
+          else
+          {
+            RspRcStatMessage *rsp_stat_msg = new (std::nothrow) RspRcStatMessage();
+
+            rsp_stat_msg->set_app_id(app_id);
+            rsp_stat_msg->set_oper_type(oper_type);
+            rsp_stat_msg->set_stat_info(cond_map);
+
+            req_stat_msg->reply(rsp_stat_msg);
+          }
+        }
+        else
+        {
+          ret = TFS_ERROR;
         }
       }
 

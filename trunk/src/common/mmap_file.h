@@ -41,7 +41,7 @@ namespace tfs
 
         int mmap(const bool write = false);
         int munmap();
-        int mremap();
+        int mremap(const int32_t advise_per_mmap_size = 0);
         int msync();
 
       private:
