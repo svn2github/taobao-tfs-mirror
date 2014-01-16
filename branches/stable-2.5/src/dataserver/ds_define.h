@@ -154,6 +154,7 @@ namespace tfs
       uint64_t ns_vip_port_;
       int32_t max_mr_network_bandwidth_mb_;
       int32_t max_rw_network_bandwidth_mb_;
+      int32_t verify_index_reserved_space_ratio_;
       int8_t enable_old_interface_;
       int8_t enable_version_check_;
       DsRuntimeGlobalInformation();

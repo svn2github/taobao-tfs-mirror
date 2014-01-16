@@ -447,7 +447,7 @@ namespace tfs
             family_id = block->get_family_id();
             if (INVALID_FAMILY_ID == family_id)
             {
-              if (INVALID_FAMILY_ID != info.family_id_)
+              if (INVALID_FAMILY_ID != info.family_id_ && ngi.is_master())
                 cleanup_family_id_array.push_back(info.block_id_);
               info.family_id_ = INVALID_FAMILY_ID;
               ret = IS_VERFIFY_BLOCK(info.block_id_) ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;

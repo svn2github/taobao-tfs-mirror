@@ -220,6 +220,8 @@ namespace tfs
     static const int32_t HTTP_PROTOCOL_LENGTH = 8;
     static const int32_t HTTP_BLANK_LENGTH = 1;
 
+    static const int32_t VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO = 2;
+
     enum VersionStep
     {
       VERSION_INC_STEP_NONE = 0,
@@ -1065,7 +1067,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[54];
+    extern const char* dynamic_parameter_str[55];
 
     #pragma pack (1)
     struct FileInfoV2//30

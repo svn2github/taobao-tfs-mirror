@@ -575,9 +575,8 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       if (server_id == ds_info.information_.id_)
       {
-        UNUSED(partial);
         ret = get_block_manager().write_file_infos(index_data.header_, index_data.finfos_,
-            block_id, attach_block_id, tmp, partial);
+            block_id, attach_block_id, tmp, partial,ds_info.verify_index_reserved_space_ratio_);
       }
       else
       {

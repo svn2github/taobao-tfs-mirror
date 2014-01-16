@@ -1392,7 +1392,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[54] = {
+    const char* dynamic_parameter_str[55] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1447,6 +1447,7 @@ namespace tfs
         "enable_old_interface",
         "enable_version_check",
         "marshalling_visit_time",
+        "verify_index_reserved_space_ratio"
     };
 
     const char* planstr[PLAN_TYPE_EC_MARSHALLING+1] =

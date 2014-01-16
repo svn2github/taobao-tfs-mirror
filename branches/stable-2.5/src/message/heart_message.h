@@ -44,12 +44,15 @@ namespace tfs
         inline void set_enable_version_check(const int8_t flag) { enable_version_check_ = flag;}
         inline int8_t get_ns_role() const { return ns_role_;}
         inline void set_ns_role(const int8_t ns_role) { ns_role_ = ns_role;}
+        inline int32_t get_verify_index_reserved_space_ratio() const { return verify_index_reserved_space_ratio_;}
+        inline void set_verify_index_reserved_space_ratio(const int32_t ratio) { verify_index_reserved_space_ratio_ = ratio;}
 
       protected:
         int32_t status_;
         int32_t heart_interval_;
         int32_t max_mr_network_bandwith_mb_;
         int32_t max_rw_network_bandwith_mb_;
+        int32_t verify_index_reserved_space_ratio_;
         int8_t  ns_role_;
         int8_t  enable_old_interface_;
         int8_t  enable_version_check_;

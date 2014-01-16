@@ -758,9 +758,10 @@ namespace tfs
     }
 
     int IndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos,
-        const double threshold, const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial)
+        const double threshold, const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial, const int32_t reserved_space_ratio)
     {
       UNUSED(logic_block_id);
+      UNUSED(reserved_space_ratio);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
@@ -1191,13 +1192,14 @@ namespace tfs
     }
 
     int VerifyIndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold,
-        const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial)
+        const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial, const int32_t reserved_space_ratio)
     {
       UNUSED(threshold);
       UNUSED(max_hash_bucket);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
+        int32_t ratio = reserved_space_ratio >= 1 ? reserved_space_ratio : common:: VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO;
         InnerIndex* index = get_inner_index_(header.info_.block_id_);
         if (NULL == index)
         {
@@ -1211,6 +1213,8 @@ namespace tfs
           InnerIndex* last_index = (1 == pheader->index_num_) ? &inner_index[0] : &inner_index[pheader->index_num_ - 2];
           index->logic_block_id_ = logic_block_id;
           index->offset_ = (1 == pheader->index_num_) ? INDEX_DATA_START_OFFSET : last_index->offset_ + last_index->size_;
+          header.file_info_bucket_size_ *= ratio;
+          header.file_info_bucket_size_ = std::min(static_cast<uint16_t>(common::MAX_SINGLE_BLOCK_FILE_COUNT), header.file_info_bucket_size_);
           index->size_ = INDEX_HEADER_V2_LENGTH + (header.file_info_bucket_size_ * FILE_INFO_V2_LENGTH);
           header.used_file_info_bucket_size_ = 0;
           char* data  = new (std::nothrow) char[index->size_];

@@ -240,6 +240,7 @@ namespace tfs
         result_msg->set_ns_role(ngi.owner_role_);
         result_msg->set_enable_old_interface(SYSPARAM_NAMESERVER.enable_old_interface_);
         result_msg->set_enable_version_check(SYSPARAM_NAMESERVER.enable_version_check_);
+        result_msg->set_verify_index_reserved_space_ratio(SYSPARAM_NAMESERVER.verify_index_reserved_space_ratio_);
         ret = manager_.get_layout_manager().get_client_request_server().keepalive(ds_info, now);
         result_msg->set_status(TFS_SUCCESS == ret ? HEART_MESSAGE_OK : HEART_MESSAGE_FAILED);
         if (TFS_SUCCESS == ret
