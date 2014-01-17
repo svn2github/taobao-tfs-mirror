@@ -185,7 +185,7 @@ namespace tfs
     static const int32_t MAX_DATA_MEMBER_NUM = 8;
     static const int32_t MAX_CHECK_MEMBER_NUM = 4;
     static const int32_t MAX_MARSHALLING_NUM = MAX_DATA_MEMBER_NUM + MAX_CHECK_MEMBER_NUM;
-    static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 128 * 1024 * 1024;
+    static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 76 * 1024 * 1024;
 
     static const int32_t USE_INDEX_FLAG_MASK = 0x08000000; // 27th bit
     static const int32_t FILE_UNLINK_MASK = 0x70000000;    // 28-30th bit
