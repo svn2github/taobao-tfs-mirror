@@ -441,33 +441,31 @@ namespace tfs
               ret = IS_VERFIFY_BLOCK(block_id) ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;
               if (TFS_SUCCESS == ret)
               {
-                if (block->has_version_conflict())
+                if (block->has_valid_lease(now))
                 {
-                  if (!exist && all_server_size < SYSPARAM_NAMESERVER.max_replication_)
-                    ret = build_relation_(block, writable, master, server->id(),now);
-                }
-                else
-                {
-                  if (block->has_valid_lease(now))
+                  if (exist)
                   {
-                    if (exist)
-                    {
-                      if (info->version_ >= block->version())
-                        block->update(*info);
-                    }
-                    else
-                    {
-                      block->set_has_version_conflict(BLOCK_HAS_VERSION_CONFLICT_FLAG_YES);
-                     if (all_server_size < SYSPARAM_NAMESERVER.max_replication_)
-                        ret = build_relation_(block, writable, master, server->id(),now);
-                    }
+                    if (info->version_ >= block->version())
+                      block->update(*info);
                   }
                   else
                   {
-                    ret = block->check_version(manager_, helper, server->id(), isnew, *info, now);
-                    if ((TFS_SUCCESS == ret || EXIT_SERVER_EXISTED) && (change || isnew))//build relation
+                    if (all_server_size < SYSPARAM_NAMESERVER.max_replication_)
+                    {
+                      block->set_has_version_conflict(BLOCK_HAS_VERSION_CONFLICT_FLAG_YES);
                       ret = build_relation_(block, writable, master, server->id(),now);
+                    }
+                    else
+                    {
+                      ret = EXIT_EXPIRE_SELF_ERROR;
+                    }
                   }
+                }
+                else
+                {
+                  ret = block->check_version(manager_, helper, server->id(), isnew, *info, now);
+                  if (TFS_SUCCESS == ret && (change || isnew))//build relation
+                    ret = build_relation_(block, writable, master, server->id(),now);
                 }
                 all_server_size = block->get_servers_size();
               }
@@ -483,34 +481,32 @@ namespace tfs
               ret =  (info->family_id_ == family_id) ? TFS_SUCCESS : EXIT_EXPIRE_SELF_ERROR ;
               if (TFS_SUCCESS == ret)
               {
-                if (block->has_version_conflict())
+                if (block->has_valid_lease(now))
                 {
-                  if (!exist && all_server_size < SYSPARAM_NAMESERVER.max_replication_)
-                    ret = build_relation_(block, writable, master, server->id(),now);
-                }
-                else
-                {
-                  if (block->has_valid_lease(now))
+                  if (exist)
                   {
-                    if (exist)
-                    {
-                      if (info->version_ >= block->version())
-                        block->update(*info);
-                    }
-                    else
-                    {
-                      block->set_has_version_conflict(BLOCK_HAS_VERSION_CONFLICT_FLAG_YES);
-                     if (all_server_size < SYSPARAM_NAMESERVER.max_replication_)
-                        ret = build_relation_(block, writable, master, server->id(),now);
-                    }
+                    if (info->version_ >= block->version())
+                      block->update(*info);
                   }
                   else
                   {
-                    ret = block->check_version(helper, *info, server->id());
-                    update = (TFS_SUCCESS == ret);
-                    if (TFS_SUCCESS == ret)
+                    if (all_server_size < SYSPARAM_NAMESERVER.max_replication_)
+                    {
+                      block->set_has_version_conflict(BLOCK_HAS_VERSION_CONFLICT_FLAG_YES);
                       ret = build_relation_(block, writable, master, server->id(),now);
+                    }
+                    else
+                    {
+                      ret = EXIT_EXPIRE_SELF_ERROR;
+                    }
                   }
+                }
+                else
+                {
+                  ret = block->check_version(helper, *info, server->id());
+                  update = (TFS_SUCCESS == ret);
+                  if (TFS_SUCCESS == ret)
+                    ret = build_relation_(block, writable, master, server->id(),now);
                 }
               }
               all_server_size = block->get_servers_size();
@@ -536,8 +532,12 @@ namespace tfs
 
           if (EXIT_EXPIRE_SELF_ERROR == ret && ngi.is_master() && all_server_size > 0)
           {
-            ret = TFS_SUCCESS;
             push_to_delete_queue(info->block_id_, server->id());
+          }
+
+          if (EXIT_EXPIRE_SELF_ERROR == ret || EXIT_SERVER_EXISTED == ret)
+          {
+            ret = TFS_SUCCESS;
           }
         }
       }

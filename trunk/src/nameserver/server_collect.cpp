@@ -180,7 +180,7 @@ namespace tfs
       else
       {
         mutex_.rdlock();
-        int32_t current = writable_->size();
+        int32_t current = issued_leases_->size();
         mutex_.unlock();
         TBSYS_LOG(DEBUG, "%s calc regular create block count, current : %d", CNetUtil::addrToString(id()).c_str(), current);
         count = current >= SYSPARAM_NAMESERVER.max_write_file_count_ ? 0 :
@@ -312,7 +312,7 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-            ret = pblock->check_copies_complete() && is_equal_group(entry->block_id_) && pblock->is_master(id()) ? TFS_SUCCESS : EXIT_BLOCK_NOT_IN_CURRENT_GROUP;
+            ret = pblock->check_copies_complete() && is_equal_group(entry->block_id_) && pblock->is_master(id()) ? TFS_SUCCESS : EXIT_CANNOT_APPLY_LEASE;
         }
         if (TFS_SUCCESS == ret)
         {
@@ -332,10 +332,16 @@ namespace tfs
           ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, entry->servers_);
           block_manager.get_servers(servers, pblock);
           entry->size_ = servers.get_array_index();
+          int32_t expect_size = pblock->is_in_family() ? 1 : common::SYSPARAM_NAMESERVER.max_replication_;
+          if (entry->size_ != expect_size)
+          {
+            ret = EXIT_BLOCK_COPIES_INCOMPLETE;
+          }
         }
-        else
+
+        if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "%s apply update block %"PRI64_PREFIX"u ret %d",
+          TBSYS_LOG(WARN, "%s apply update block %"PRI64_PREFIX"u fail, ret %d",
               CNetUtil::addrToString(id()).c_str(), entry->block_id_, ret);
         }
       }

@@ -773,7 +773,7 @@ namespace tfs
         const int32_t MAX_COUNT = 1;
         BlockLease lease[MAX_COUNT];
         lease[0].block_id_ = ab_msg->get_block_id();
-        ArrayHelper<BlockLease> output(MAX_COUNT, lease);
+        ArrayHelper<BlockLease> output(MAX_COUNT, lease, MAX_COUNT);
         ret = layout_manager_.get_client_request_server().apply_block_for_update(server,output);
         if (TFS_SUCCESS == ret)
         {

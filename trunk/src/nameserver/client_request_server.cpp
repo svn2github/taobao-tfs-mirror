@@ -737,6 +737,7 @@ namespace tfs
           {
             block->set(now, 0);
           }
+          block->set_has_version_conflict(BLOCK_HAS_VERSION_CONFLICT_FLAG_NO);
         }
       }
       return ret;
