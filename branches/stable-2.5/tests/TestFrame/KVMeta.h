@@ -17,26 +17,37 @@
 #define KV_META_H_
 
 #include <iostream>
+#include "tfs_client_api.h"
 #include "tfs_rc_client_api.h"
 
 using namespace std;
+using namespace tfs::common;
 using namespace tfs::client;
 
 class KVMeta
 {
   public:
-  KVMeta(const char * kms_addr, const char * rc_addr, const char * app_key)
+  KVMeta(const char *kms_addr, const char *rc_addr, const char *nginx_rs_addr, const char *app_key)
   {
-    int Ret ;
-    client.set_kv_rs_addr(kms_addr);
-    Ret = client.initialize(rc_addr,app_key);
-    if(Ret<0)
-      cout<<"Client initalize fail!"<<endl;
+    int ret = -1;
+    rc_client_.set_kv_rs_addr(kms_addr);
+    ret = rc_client_.initialize(rc_addr, app_key);
+    if (TFS_SUCCESS != ret)
+    {
+      cout << "Client initalize fail!" << endl;
+    }
     else
-      cout<<"Client initalize success!"<<endl;
+    {
+      ret = rest_client_.initialize(nginx_rs_addr, app_key);
+      if (TFS_SUCCESS == ret)
+      {
+        cout << "Client initalize success!" << endl;
+      }
+    }
   }
-  public:
-    RcClient client;
 
+  public:
+    RcClient rc_client_;
+    RestClient rest_client_;
 };
 #endif

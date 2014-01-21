@@ -22,12 +22,13 @@
 #include "tbsys.h"
 #include "Parameter.h"
 #include "KVMeta.h"
-#include "PutBucketThread.h"
+
+/*#include "PutBucketThread.h"
 #include "GetBucketThread.h"
 #include "PutObjectThread.h"
-#include "GetObjectThread.h"
+#include "GetObjectThread.h"*/
 
-using namespace std;
+#include "SetLifecycleThread.h"
 
 pthread_mutex_t mutex;
 pthread_cond_t  cond;
@@ -62,26 +63,31 @@ void*AllStart(void*)
 
 void * run(void*s)
 {
- ((PutBucketThread*)(s))->run();
+  //((PutBucketThread*)(s))->run();
+  ((SetLifecycleThread*)(s))->run();
 }
 
 int main(int argc, char*argv[] )
 {
-
   int ch;
-  char*conf_file;
+  char *conf_file = NULL;
   Parameter Para;
 
-  if(argc == 1)
+  if (argc == 1)
   {
-    cout<<"Need enter correct conf file: ./PerfMain -p conf_file"<<endl;
+    cout << "Need enter correct conf file: ./PerfMain -p conf_file" << endl;
     exit(0);
   }
-  while((ch = getopt(argc,argv,"p:")) != -1)
-  switch(ch)
+
+  while ((ch = getopt(argc,argv,"p:")) != -1)
   {
-    case 'p': conf_file = (char*)optarg; break;
-    default:  cout<<"Need enter correct conf file: ./PerfMain -p conf_file"<<endl; exit(0);
+    switch(ch)
+    {
+      case 'p':
+        conf_file = (char*)optarg;
+        break;
+      default:  cout<<"Need enter correct conf file: ./PerfMain -p conf_file"<<endl; exit(0);
+    }
   }
 
   TBSYS_CONFIG.load(conf_file);
@@ -91,30 +97,32 @@ int main(int argc, char*argv[] )
   Para.kms_addr = TBSYS_CONFIG.getString("public","kms_addr","");
   Para.thread_num = TBSYS_CONFIG.getInt("public","thread_num");
   Para.interior_loop = TBSYS_CONFIG.getInt("public","interior_loop");
-  Para.File = TBSYS_CONFIG.getString("public","File");
+  Para.local_file = TBSYS_CONFIG.getString("public", "local_file");
+  Para.rs_addr = TBSYS_CONFIG.getString("public", "rs_addr");
 
-  KVMeta*client = new KVMeta(Para.kms_addr,Para.rc_addr,Para.app_key);
+  KVMeta *client = new KVMeta(Para.kms_addr, Para.rc_addr, Para.rs_addr, Para.app_key);
 
   pthread_mutex_init(&mutex,NULL);
   pthread_mutex_init(&cond_mutex,NULL);
   pthread_cond_init(&cond,NULL);
   AllCount = 0;
 
-  int i = 0 ;
   pthread_t id;
-  char * bucket_name = "PutObjectThread";
-  char * rcv_name = "Temp";
   Thread *p[Para.thread_num];
-  for(i=0;i<Para.thread_num;i++)
+
+  for (int i = 0; i < Para.thread_num; i++)
   {
-  //  p[i] = new PutBucketThread(client, Para.interior_loop, i);
-  //  p[i] = new GetBucketThread(client, Para.interior_loop, i);
-  //  p[i] = new PutObjectThread(client, Para.File, bucket_name, Para.interior_loop, i);
-      p[i] = new GetObjectThread(client, rcv_name, bucket_name, Para.interior_loop, i);
-    pthread_create(&id,NULL,run,(void*)(p[i]));
+    /*p[i] = new PutBucketThread(client, Para.interior_loop, i);
+    p[i] = new GetBucketThread(client, Para.interior_loop, i);
+    p[i] = new PutObjectThread(client, Para.File, bucket_name, Para.interior_loop, i);
+    p[i] = new GetObjectThread(client, rcv_name, bucket_name, Para.interior_loop, i);*/
+    p[i] = new SetLifecycleThread(client, Para.interior_loop, i, Para.local_file);
+    pthread_create(&id, NULL, run, (void*)(p[i]));
   }
 
-  pthread_create(&id,NULL,AllStart,NULL);
+  //free(tfs_name);
+
+  pthread_create(&id, NULL, AllStart, NULL);
   pthread_join(id,NULL);
 
   return 0;

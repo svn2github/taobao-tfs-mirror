@@ -23,6 +23,7 @@
 #include "fsname.h"
 #include "tfs_meta_client_api.h"
 #include "tfs_kv_meta_client_impl.h"
+#include "tfs_lifecycle_root_client_impl.h"
 #include "tfs_cluster_manager.h"
 
 #define RC_CLIENT_VERSION "rc_1.0.0_c++"
@@ -126,7 +127,7 @@ namespace tfs
       :need_use_unique_(false), local_addr_(0),
       init_stat_(INIT_INVALID), active_rc_ip_(0), next_rc_index_(0),
       ignore_rc_remote_cache_info_(false), name_meta_client_(NULL),
-      kv_meta_client_(NULL), tfs_cluster_manager_(NULL), app_id_(0), my_fd_(1)
+      kv_meta_client_(NULL), lifecycle_root_client_(NULL), tfs_cluster_manager_(NULL), app_id_(0), my_fd_(1)
     {
     }
 
@@ -194,6 +195,7 @@ namespace tfs
         keepalive_timer_ = new tbutil::Timer();
         name_meta_client_ = new NameMetaClient();
         kv_meta_client_ = new KvMetaClientImpl();
+        lifecycle_root_client_ = new LifeCycleClientImpl();
         tfs_cluster_manager_ = new TfsClusterManager();
         if (TFS_SUCCESS == ret)
         {
@@ -237,6 +239,7 @@ namespace tfs
           // TODO: set kv_rs_addr before here
           kv_meta_client_->set_tfs_cluster_manager(tfs_cluster_manager_);
           kv_meta_client_->initialize(kv_rs_addr_);
+          lifecycle_root_client_->initialize(lifecycle_rs_addr_);
 #ifdef WITH_TAIR_CACHE
           std::vector<std::string> ns_cache_info;
           common::Func::split_string(base_info_.ns_cache_info_.c_str(), ';', ns_cache_info);
@@ -1496,6 +1499,24 @@ namespace tfs
         }
         return fd;
       }
+      // for lifecycle root
+
+      void RcClientImpl::set_lifecycle_rs_addr(const char *rs_addr)
+      {
+        strncpy(lifecycle_rs_addr_, rs_addr, 128);
+      }
+
+      TfsRetType RcClientImpl::query_task(const uint64_t es_id,
+                               std::vector<common::ServerExpireTask>* p_res_task)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = lifecycle_root_client_->query_task(es_id, p_res_task);
+        }
+        return ret;
+      }
+
 
       // for kv meta
       void RcClientImpl::set_kv_rs_addr(const char *rs_addr)

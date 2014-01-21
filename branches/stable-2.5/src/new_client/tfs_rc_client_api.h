@@ -19,6 +19,7 @@
 #include "common/define.h"
 #include "common/meta_server_define.h"
 #include "common/kv_meta_define.h"
+#include "common/expire_define.h"
 
 namespace tfs
 {
@@ -97,6 +98,10 @@ namespace tfs
                        const char* file_name, const char* suffix = NULL);
         int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix = NULL);
+        // for lifecycle root
+        void set_lifecycle_rs_addr(const char *rs_addr);
+        TfsRetType query_task(const uint64_t es_id,
+                              std::vector<common::ServerExpireTask>* p_res_task);
         // for kv meta
         void set_kv_rs_addr(const char *rs_addr); // tmp use
 

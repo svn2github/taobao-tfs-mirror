@@ -95,7 +95,7 @@ namespace tfs
     private:
       int rt_es_keepalive(common::BasePacket* packet);
       int32_t handle_finish_task(message::ReqFinishTaskFromEsMessage *msg);
-      int32_t query_progress(message::ReqQueryProgressMessage *msg);
+      int32_t query_task(message::ReqQueryTaskMessage *msg);
 
     private:
       tbnet::PacketQueueThread rt_es_heartbeat_workers_;

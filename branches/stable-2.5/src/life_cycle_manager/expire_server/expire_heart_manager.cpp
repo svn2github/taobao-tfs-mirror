@@ -37,6 +37,7 @@ namespace tfs
       heart_thread_(0),
       destroy_(false),
       heart_inter_(2),
+      available_thread_count_(1),
       ref_clean_helper_(cleantask)
     {
     }
@@ -46,11 +47,13 @@ namespace tfs
 
     }
 
-    int ExpireHeartManager::initialize(uint64_t ers_ipport_id, uint64_t es_ipport_id, int64_t start_time)
+    int ExpireHeartManager::initialize(const uint64_t ers_ipport_id,
+        const uint64_t es_ipport_id, const int64_t start_time, const int64_t available_thread_count)
     {
       ers_ipport_id_ = ers_ipport_id;
       es_ipport_id_ = es_ipport_id;
       start_time_ = start_time;
+      available_thread_count_ = available_thread_count;
       heart_thread_ = new ESHeartBeatThreadHelper(*this);
       heart_thread_->start();
       return TFS_SUCCESS;
@@ -86,7 +89,8 @@ namespace tfs
       common::ExpServerBaseInformation base_info;
       base_info.id_ = es_ipport_id_;
       base_info.start_time_ = start_time_;
-      base_info.task_status_ = ref_clean_helper_.get_task_state();
+      base_info.task_status_ =
+        available_thread_count_ - ref_clean_helper_.get_running_threads_count();
       ReqRtsEsHeartMessage msg;
       msg.set_es(base_info);
 

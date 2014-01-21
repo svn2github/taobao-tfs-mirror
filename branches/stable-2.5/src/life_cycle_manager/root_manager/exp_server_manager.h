@@ -43,41 +43,38 @@ namespace tfs
         void destroy();
         int keepalive(common::ExpServerBaseInformation& base_info);
         int check_ms_lease_expired(void);
-        int get_table(common::ExpTable& exp_table);
+        void get_available_expire_server(common::VUINT64& v_available_servers);
         int64_t get_start_time(){return root_start_time_;}
 
       private:
         uint64_t new_lease_id(void);
-        void check_es_lease_expired_helper(const tbutil::Time& now);
-        void move_table(void);
+        void check_es_lease(const tbutil::Time& now);
 
       private:
         class CheckExpServerLeaseThreadHelper: public tbutil::Thread
       {
         public:
-          explicit CheckExpServerLeaseThreadHelper(ExpServerManager& manager) : manager_(manager){start();}
+          explicit CheckExpServerLeaseThreadHelper(ExpServerManager& manager)
+            :server_manager_(manager){start();}
           virtual ~CheckExpServerLeaseThreadHelper(){}
           void run();
         private:
-          ExpServerManager& manager_;
+          ExpServerManager& server_manager_;
           DISALLOW_COPY_AND_ASSIGN(CheckExpServerLeaseThreadHelper);
       };
         typedef tbutil::Handle<CheckExpServerLeaseThreadHelper> CheckExpServerLeaseThreadHelperPtr;
 
       private:
         common::EXP_SERVER_MAPS servers_;
-        common::ExpTable exp_table_;
         volatile uint64_t lease_id_factory_;
 
         CheckExpServerLeaseThreadHelperPtr check_es_lease_thread_;
 
         bool initialize_;
         bool destroy_;
-        bool need_move_;
-        int32_t wait_time_check_;
+        int wait_time_check_;
         int64_t root_start_time_;
         tbutil::Mutex mutex_; //lock for servers_
-        tbutil::Mutex mutex_for_get_; //lock for exp_table_
         HandleTaskHelper &handle_task_helper_;
       private:
         DISALLOW_COPY_AND_ASSIGN(ExpServerManager);

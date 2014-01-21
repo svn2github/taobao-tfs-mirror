@@ -15,6 +15,7 @@
  */
 
 #include "exp_server_manager.h"
+
 #include <Time.h>
 #include "common/define.h"
 #include "common/func.h"
@@ -52,7 +53,6 @@ namespace tfs
       int32_t iret = !initialize_ ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        need_move_ = false;
         wait_time_check_ = SYSPARAM_EXPIREROOTSERVER.es_rts_check_lease_interval_;
         if (wait_time_check_ < 0 || wait_time_check_ > max_check_interval)
         {
@@ -72,8 +72,6 @@ namespace tfs
       initialize_ = false;
       destroy_ = true;
       servers_.clear();
-      exp_table_.v_exp_table_.clear();
-      exp_table_.v_idle_table_.clear();
       if (0 != check_es_lease_thread_ )
       {
         check_es_lease_thread_ ->join();
@@ -98,13 +96,29 @@ namespace tfs
         {
           sleep(SYSPARAM_KVRTSERVER.safe_mode_time_);
         }
-        check_es_lease_expired_helper(now);
+        check_es_lease(now);
         usleep(check_interval_);
       }
       return TFS_SUCCESS;
     }
+    void ExpServerManager::get_available_expire_server(common::VUINT64& v_available_servers)
+    {
+      v_available_servers.clear();
+      mutex_.lock();
+      EXP_SERVER_MAPS_ITER iter = servers_.begin();
+      for (; iter != servers_.end(); iter++)
+      {
+        for (int i =0; i < iter->second.base_info_.task_status_; i++)
+        {
+          //task_status is the avaliable thread
+          v_available_servers.push_back(iter->first);
+        }
+      }
+      mutex_.unlock();
+      return;
+    }
 
-    void ExpServerManager::check_es_lease_expired_helper(const tbutil::Time& now)
+    void ExpServerManager::check_es_lease(const tbutil::Time& now)
     {
       //TBSYS_LOG(INFO, "check_ms_lease_expired_helper start");
       VUINT64 down_servers;
@@ -121,7 +135,6 @@ namespace tfs
           TBSYS_LOG(INFO, "%s lease expired, must be delete", tbsys::CNetUtil::addrToString(iter->first).c_str());
           down_servers.push_back(iter->first);
           servers_.erase(iter++);
-          need_move_ = true;
         }
         else
         {
@@ -129,12 +142,6 @@ namespace tfs
         }
       }
       mutex_.unlock();
-      if (need_move_)
-      {
-        handle_task_helper_.handle_fail_servers(down_servers);
-      }
-
-      move_table();
       return;
     }
 
@@ -161,57 +168,27 @@ namespace tfs
               tbsys::CNetUtil::addrToString(iter->first).c_str(), (int64_t)now.toSeconds(),
               iter->second.lease_.lease_id_, iter->second.lease_.lease_expired_time_);
           delete pserver;
-          need_move_ = true;
         }
         else
         {
           pserver = &iter->second;
           pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_EXPIREROOTSERVER.es_rts_lease_expired_time_ ;
           pserver->base_info_.last_update_time_ = now.toSeconds();
-          pserver->base_info_.task_status_ = base_info.task_status_;
+          if (pserver->base_info_.task_status_ ^ base_info.task_status_)
+          {
+            pserver->base_info_.task_status_ = base_info.task_status_;
+          }
+          TBSYS_LOG(INFO, "now time: %ld, status: %d", (int64_t)now.toSeconds(), pserver->base_info_.task_status_);
         }
       }
 
       return iret;
     }
 
-    void ExpServerManager::move_table()
-    {
-      mutex_.lock();
-      mutex_for_get_.lock();
-      exp_table_.v_exp_table_.clear();
-      exp_table_.v_idle_table_.clear();
-      EXP_SERVER_MAPS::iterator iter = servers_.begin();
-      for(; iter != servers_.end(); ++iter)
-      {
-        exp_table_.v_exp_table_.push_back(iter->first);
-        if ((iter->second).base_info_.task_status_ == 0)
-        {
-          exp_table_.v_idle_table_.push_back(iter->first);
-        }
-      }
-      mutex_for_get_.unlock();
-      mutex_.unlock();
-
-      need_move_ = false;
-    }
-
-    int ExpServerManager::get_table(ExpTable &exp_table)
-    {
-      int32_t iret = TFS_SUCCESS;
-
-      if (TFS_SUCCESS == iret)
-      {
-        tbutil::Mutex::Lock lock(mutex_for_get_);
-        exp_table.v_exp_table_ = exp_table_.v_exp_table_;
-        exp_table.v_idle_table_ = exp_table_.v_idle_table_;
-      }
-      return iret;
-    }
 
     void ExpServerManager::CheckExpServerLeaseThreadHelper::run()
     {
-      manager_.check_ms_lease_expired();
+      server_manager_.check_ms_lease_expired();
     }
   } /**exp root server **/
 }/** tfs **/

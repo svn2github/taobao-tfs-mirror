@@ -517,7 +517,7 @@ int KvMetaHelper::do_set_life_cycle(const uint64_t server_id,
   {
     ret = EXIT_INVALID_KV_META_SERVER;
   }
-  else if (NULL == file_name)
+  else if (NULL == file_name || NULL == app_key)
   {
     ret = EXIT_INVALID_FILE_NAME;
   }
@@ -568,7 +568,7 @@ int KvMetaHelper::do_get_life_cycle(const uint64_t server_id, const int32_t file
   {
     ret = EXIT_INVALID_KV_META_SERVER;
   }
-  else if (NULL == file_name)
+  else if (NULL == file_name || NULL == invalid_time_s)
   {
     ret = EXIT_INVALID_FILE_NAME;
   }

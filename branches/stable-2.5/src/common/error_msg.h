@@ -290,6 +290,7 @@ namespace tfs
 
     // life cycle manager related
     const int32_t EXIT_LIFE_CYCLE_INFO_EXIST = -18000;
+    const int32_t EXIT_INVALID_LIFECYCLE_ROOT_SERVER = -18001;
 
 
     //sync file

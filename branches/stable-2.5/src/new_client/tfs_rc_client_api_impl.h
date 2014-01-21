@@ -32,6 +32,7 @@ namespace tfs
     class RcClientImpl;
     class NameMetaClient;
     class KvMetaClientImpl;
+    class LifeCycleClientImpl;
     class TfsClusterManager;
     class StatUpdateTask : public tbutil::TimerTask
     {
@@ -106,6 +107,11 @@ namespace tfs
 #ifdef WITH_TAIR_CACHE
         bool is_hit_remote_cache(const char* tfs_name);
 #endif
+        // for lifecycle root
+        void set_lifecycle_rs_addr(const char *rs_addr);
+
+        TfsRetType query_task(const uint64_t es_id,
+            std::vector<common::ServerExpireTask>* p_res_task);
 
         // for kv meta
         void set_kv_rs_addr(const char *rs_addr); // tmp use
@@ -302,9 +308,11 @@ namespace tfs
         mutable tbsys::CThreadMutex fd_info_mutex_;
         NameMetaClient *name_meta_client_;
         KvMetaClientImpl *kv_meta_client_;
+        LifeCycleClientImpl *lifecycle_root_client_;
         TfsClusterManager *tfs_cluster_manager_;
         int64_t app_id_;
         char kv_rs_addr_[128];
+        char lifecycle_rs_addr_[128];
         int my_fd_;
       private:
         bool have_permission(const char* file_name, const RcClient::RC_MODE mode);

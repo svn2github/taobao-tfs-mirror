@@ -24,6 +24,8 @@
 #include "common/func.h"
 #include "common/error_msg.h"
 
+#include "common/expire_define.h"
+
 using namespace std;
 namespace tfs
 {
@@ -113,8 +115,6 @@ namespace tfs
             "(meta_key, meta_value, version) values "
             "('", area);
 
-
-
         tbutil::Mutex::Lock lock(mutex_);
 retry:
         if (!is_connected_)
@@ -123,27 +123,37 @@ retry:
         }
         if (is_connected_)
         {
-          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-              key.key_, key.key_size_);
-          pos += sprintf(sql_str_ + pos, "%s", "','");
-          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-              value.get_data(), value.get_size());
-          pos += sprintf(sql_str_ + pos, "%s", "', 1)");
+          if (retry_time == 0)
+          {
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                key.key_, key.key_size_);
+            pos += sprintf(sql_str_ + pos, "%s", "','");
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                value.get_data(), value.get_size());
+            pos += sprintf(sql_str_ + pos, "%s", "', 1)");
+          }
 
           ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
+
+          TBSYS_LOG(DEBUG, "query str: %s", sql_str_);
+
           if (0 != ret)
           {
-            TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
             ret = mysql_errno(&mysql_.mysql);
             if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_)
             {
               TBSYS_LOG(ERROR, "CR_SERVER_GONE_ERROR error");
+              close();
               goto retry;
             }
             if (ER_DUP_ENTRY == ret)
             {
               mysql_proc_ret = EXIT_KV_RETURN_VERSION_ERROR;
               ret = TFS_SUCCESS;
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
             }
           }
         }
@@ -184,23 +194,31 @@ retry:
         }
         if (is_connected_)
         {
-          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-              key.key_, key.key_size_);
-          pos += sprintf(sql_str_ + pos, "%s", "','");
-          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-              value.get_data(), value.get_size());
-          pos += sprintf(sql_str_ + pos, "%s", "', 1)  on duplicate key "
-              "update meta_value='");
-          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-              value.get_data(), value.get_size());
-          pos += sprintf(sql_str_ + pos, "%s", "',  version=mod(version,1024)+1");
+          if (retry_time == 0)
+          {
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                key.key_, key.key_size_);
+            pos += sprintf(sql_str_ + pos, "%s", "','");
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                value.get_data(), value.get_size());
+            pos += sprintf(sql_str_ + pos, "%s", "', 1)  on duplicate key "
+                "update meta_value='");
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                value.get_data(), value.get_size());
+            pos += sprintf(sql_str_ + pos, "%s", "',  version=mod(version,1024)+1");
+          }
 
           ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
           if (0 != ret)
           {
             TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
             ret = mysql_errno(&mysql_.mysql);
-            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_)
+            {
+              TBSYS_LOG(ERROR, "CR_SERVER_GONE_ERROR error");
+              close();
+              goto retry;
+            }
             //if (ER_DUP_ENTRY == ret)
             //{
             //  mysql_proc_ret = EXIT_KV_RETURN_VERSION_ERROR;
@@ -239,19 +257,27 @@ retry:
         }
         if (is_connected_)
         {
-          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-              value.get_data(), value.get_size());
+          if (retry_time == 0)
+          {
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                value.get_data(), value.get_size());
 
-          pos += sprintf(sql_str_ + pos, "%s", "', version=mod(version,1024)+1 where meta_key='");
-          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-              key.key_, key.key_size_);
-          pos += sprintf(sql_str_ + pos, "' and version = %d", version);
+            pos += sprintf(sql_str_ + pos, "%s", "', version=mod(version,1024)+1 where meta_key='");
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                key.key_, key.key_size_);
+            pos += sprintf(sql_str_ + pos, "' and version = %d", version);
+          }
           ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
           if (0 != ret)
           {
             TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
             ret = mysql_errno(&mysql_.mysql);
-            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_)
+            {
+              TBSYS_LOG(ERROR, "CR_SERVER_GONE_ERROR error");
+              close();
+              goto retry;
+            }
           }
           else
           {
@@ -292,16 +318,24 @@ retry:
         }
         if (is_connected_)
         {
-          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-              key.key_, key.key_size_);
-          pos += sprintf(sql_str_ + pos, "%s", "'");
+          if (retry_time == 0)
+          {
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                key.key_, key.key_size_);
+            pos += sprintf(sql_str_ + pos, "%s", "'");
+          }
 
           ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
           if (0 != ret)
           {
             TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
             ret = mysql_errno(&mysql_.mysql);
-            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_)
+            {
+              TBSYS_LOG(ERROR, "CR_SERVER_GONE_ERROR error");
+              close();
+              goto retry;
+            }
           }
         }
         if (TFS_SUCCESS != ret)
@@ -337,15 +371,27 @@ retry:
         }
         if (is_connected_)
         {
-          pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-              key.key_, key.key_size_);
-          pos += sprintf(sql_str_ + pos, "%s", "'");
+          if (retry_time == 0)
+          {
+            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                key.key_, key.key_size_);
+            pos += sprintf(sql_str_ + pos, "%s", "'");
+          }
           ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
+
+          TBSYS_LOG(DEBUG, "query str %s", sql_str_);
+
           if (0 != ret)
           {
             TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
             ret = mysql_errno(&mysql_.mysql);
-            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_)
+            {
+              TBSYS_LOG(ERROR, "CR_SERVER_GONE_ERROR error");
+              close();
+              goto retry;
+            }
+            TBSYS_LOG(INFO, "RET: %d", ret);
           }
           else
           {
@@ -381,8 +427,6 @@ retry:
               mysql_free_result(mysql_ret);
             }
           }
-
-
         }
         if (TFS_SUCCESS != ret)
         {
@@ -405,6 +449,22 @@ retry:
     {
       int ret = TFS_SUCCESS;
       int get_count = 0;
+
+      //todo: for debug
+      /*int32_t t_days_secs;
+      int32_t t_hours_secs;
+      int32_t t_hash_num;
+      int32_t t_file_type;
+      string t_file_name;
+      ExpireDefine::deserialize_exptime_app_key(start_key.key_, start_key.key_size_,
+          &t_days_secs, &t_hours_secs, &t_hash_num, &t_file_type, &t_file_name);
+
+      TBSYS_LOG(INFO, "start, t_hash_num: %d, t_days_secs: %d, t_hours_secs: %d, file_type: %d, file_name: %s", t_hash_num, t_days_secs, t_hours_secs, t_file_type, t_file_name.c_str());
+
+      ExpireDefine::deserialize_exptime_app_key(end_key.key_, end_key.key_size_,
+          &t_days_secs, &t_hours_secs, &t_hash_num, &t_file_type, &t_file_name);
+
+      TBSYS_LOG(INFO, "end, t_hash_num: %d, t_days_secs: %d, t_hours_secs: %d, file_type: %d, file_name: %s", t_hash_num, t_days_secs, t_hours_secs, t_file_type, t_file_name.c_str());*/
 
       if (start_key.key_size_ > MAX_KEY_VAR_SIZE ||
           end_key.key_size_ > MAX_KEY_VAR_SIZE ||
@@ -429,50 +489,59 @@ retry:
         }
         if (is_connected_)
         {
-          if (limit < 0)
+          if (retry_time == 0)
           {
-            limit_ = -limit;
-            if (skip_first)
+            if (limit < 0)
             {
-              pos += sprintf(sql_str_ + pos, "%s", "meta_key<'");
+              limit_ = -limit;
+              if (skip_first)
+              {
+                pos += sprintf(sql_str_ + pos, "%s", "meta_key<'");
+              }
+              else
+              {
+                pos += sprintf(sql_str_ + pos, "%s", "meta_key<='");
+              }
+              pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                  start_key.key_, start_key.key_size_);
+              pos += sprintf(sql_str_ + pos, "' and meta_key >= '");
+              pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                  end_key.key_, end_key.key_size_);
+              pos += sprintf(sql_str_ + pos, "' order by meta_key desc limit %d ", limit_);
             }
             else
             {
-              pos += sprintf(sql_str_ + pos, "%s", "meta_key<='");
+              if (skip_first)
+              {
+                pos += sprintf(sql_str_ + pos, "%s", "meta_key>'");
+              }
+              else
+              {
+                pos += sprintf(sql_str_ + pos, "%s", "meta_key>='");
+              }
+              pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                  start_key.key_, start_key.key_size_);
+              pos += sprintf(sql_str_ + pos, "' and meta_key <= '");
+              pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
+                  end_key.key_, end_key.key_size_);
+              pos += sprintf(sql_str_ + pos, "' order by meta_key asc limit %d ", limit_);
             }
-            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-                start_key.key_, start_key.key_size_);
-            pos += sprintf(sql_str_ + pos, "' and meta_key >= '");
-            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-                end_key.key_, end_key.key_size_);
-            pos += sprintf(sql_str_ + pos, "' order by meta_key desc limit %d ", limit_);
-          }
-          else
-          {
-            if (skip_first)
-            {
-              pos += sprintf(sql_str_ + pos, "%s", "meta_key>'");
-            }
-            else
-            {
-              pos += sprintf(sql_str_ + pos, "%s", "meta_key>='");
-            }
-            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-                start_key.key_, start_key.key_size_);
-            pos += sprintf(sql_str_ + pos, "' and meta_key <= '");
-            pos += mysql_real_escape_string(&mysql_.mysql, sql_str_ + pos,
-                end_key.key_, end_key.key_size_);
-            pos += sprintf(sql_str_ + pos, "' order by meta_key asc limit %d ", limit_);
           }
           ret= mysql_real_query(&mysql_.mysql, sql_str_, pos);
           if (0 != ret)
           {
             TBSYS_LOG(ERROR, "mysql_real_query error %d", ret);
             ret = mysql_errno(&mysql_.mysql);
-            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_) goto retry;
+            if (CR_SERVER_GONE_ERROR == ret && retry_time++ < retry_count_)
+            {
+              TBSYS_LOG(ERROR, "CR_SERVER_GONE_ERROR error");
+              close();
+              goto retry;
+            }
           }
           else
           {
+            //TBSYS_LOG(INFO, "mysql_real_query str %s", sql_str_);
             MYSQL_ROW row;
             MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
             if (mysql_ret == NULL)
@@ -510,12 +579,17 @@ retry:
 
                 get_count++;
 
+                /*int32_t size = 0;
+                  char key[p_key->get_size() * 2 + 1];
+                  size = mysql_real_escape_string(&mysql_.mysql, key, p_key->get_data(), p_key->get_size());
+                  TBSYS_LOG(INFO, "find key: %s", key);
+                  ExpireDefine::deserialize_exptime_app_key(p_key->get_data(), p_key->get_size(),
+                  &t_days_secs, &t_hours_secs, &t_hash_num, &t_file_type, &t_file_name);
+                  TBSYS_LOG(INFO, "find, t_hash_num: %d, t_days_secs: %d, t_hours_secs: %d, file_type: %d, file_name: %s", t_hash_num, t_days_secs, t_hours_secs, t_file_type, t_file_name.c_str());*/
               }
               mysql_free_result(mysql_ret);
             }
           }
-
-
         }
         if (TFS_SUCCESS != ret)
         {

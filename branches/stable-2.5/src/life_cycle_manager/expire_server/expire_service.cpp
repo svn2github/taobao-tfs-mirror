@@ -131,7 +131,8 @@ namespace tfs
           local_ipport_id_ = SYSPARAM_EXPIRESERVER.es_ip_port_;
           expireroot_ipport_id_ = SYSPARAM_EXPIRESERVER.ers_ip_port_;
           server_start_time_ = time(NULL);
-          ret = heart_manager_.initialize(expireroot_ipport_id_, local_ipport_id_, server_start_time_);
+          ret = heart_manager_.initialize(expireroot_ipport_id_, local_ipport_id_,
+              server_start_time_, get_work_thread_count() - 1);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(ERROR, "init expire heart_manager error");
@@ -168,7 +169,7 @@ namespace tfs
         switch (base_packet->getPCode())
         {
           case REQ_EXPIRE_CLEAN_TASK_MESSAGE:
-            ret = clean_task(dynamic_cast<ReqCleanTaskFromRtsMessage*>(base_packet));
+            ret = do_clean_task(dynamic_cast<ReqCleanTaskFromRtsMessage*>(base_packet));
             break;
           default:
             ret = EXIT_UNKNOWN_MSGTYPE;
@@ -186,8 +187,10 @@ namespace tfs
       return true;
     }
 
-    int ExpireService::clean_task(ReqCleanTaskFromRtsMessage* req_clean_task_msg)
+    int ExpireService::do_clean_task(ReqCleanTaskFromRtsMessage* req_clean_task_msg)
     {
+      //we will give a resp to rootserver first,
+      //then execute the clean task and report task result to rootserver
       int ret = TFS_SUCCESS;
       int rspret = TFS_SUCCESS;
       if (NULL == req_clean_task_msg)
@@ -196,20 +199,22 @@ namespace tfs
         TBSYS_LOG(ERROR, "ExpireService::req_clean_task fail, ret: %d", ret);
       }
 
-      int32_t task_type;
+      ExpireTaskInfo::ExpireTaskType task_type;
       int32_t total_es;
       int32_t num_es;
       int32_t note_interval;
       int32_t task_time;
+      ExpireTaskInfo task;
 
       if (TFS_SUCCESS == ret)
       {
-        task_type = req_clean_task_msg->get_task_type();
-        total_es = req_clean_task_msg->get_total_es();
-        num_es =  req_clean_task_msg->get_num_es();
-        note_interval = req_clean_task_msg->get_note_interval();
-        task_time = req_clean_task_msg->get_task_time();
-        if ((task_type == 1 || task_type == 2) &&
+        task = req_clean_task_msg->get_task();
+        task_type = task.type_;
+        total_es = task.alive_total_;
+        num_es =  task.assign_no_;
+        note_interval = task.note_interval_;
+        task_time = task.spec_time_;
+        if ((task_type == ExpireTaskInfo::TASK_TYPE_DELETE) &&
             (total_es > 0 && num_es >= 0 && note_interval >= 0) &&
             (num_es < total_es) && task_time > 0)
         {
@@ -235,9 +240,9 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         //tbutil::Time start = tbutil::Time::now();
-        if (1 == task_type)
+        if (ExpireTaskInfo::TASK_TYPE_DELETE == task_type)
         {
-          ret = clean_task_helper_.clean_task(local_ipport_id_, total_es, num_es, note_interval, task_time);
+          ret = clean_task_helper_.do_clean_task(local_ipport_id_, total_es, num_es, note_interval, task_time);
         }
         //tbutil::Time end = tbutil::Time::now();
         //TBSYS_LOG(INFO, "put_object cost: %"PRI64_PREFIX"d", (int64_t)(end - start).toMilliSeconds());
@@ -246,6 +251,7 @@ namespace tfs
         ReqFinishTaskFromEsMessage req_finish_task_msg;
         //req_finish_task_msg.set_reserve(0);
         req_finish_task_msg.set_es_id(local_ipport_id_);
+        req_finish_task_msg.set_task(task);
 
         NewClient* client = NULL;
         int32_t retry_count = 0;

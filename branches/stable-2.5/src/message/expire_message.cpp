@@ -35,52 +35,24 @@ namespace tfs
 
     int ReqCleanTaskFromRtsMessage::serialize(Stream& output) const
     {
-      int32_t iret = output.set_int32(task_type_);
-
+      int64_t pos = 0;
+      int32_t iret = task_.serialize(output.get_free(), output.get_free_length(), pos);
       if (TFS_SUCCESS == iret)
       {
-        iret = output.set_int32(total_es_);
+        iret = output.pour(task_.length());
       }
 
-      if (TFS_SUCCESS == iret)
-      {
-        iret = output.set_int32(num_es_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = output.set_int32(note_interval_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = output.set_int32(task_time_);
-      }
       return iret;
     }
 
     int ReqCleanTaskFromRtsMessage::deserialize(Stream& input)
     {
-      int32_t iret = input.get_int32(&task_type_);
+      int64_t pos = 0;
+      int32_t iret = task_.deserialize(input.get_data(), input.get_data_length(), pos);
 
       if (TFS_SUCCESS == iret)
       {
-        iret = input.get_int32(&total_es_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_int32(&num_es_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_int32(&note_interval_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_int32(&task_time_);
+        input.drain(task_.length());
       }
 
       return iret;
@@ -88,7 +60,7 @@ namespace tfs
 
     int64_t ReqCleanTaskFromRtsMessage::length() const
     {
-      return INT_SIZE * 5;
+      return task_.length();
     }
 
     /* finish task msg */
@@ -101,29 +73,48 @@ namespace tfs
 
     int ReqFinishTaskFromEsMessage::serialize(Stream& output) const
     {
-      int32_t iret = output.set_int32(reserve_);
+      int iret = common::TFS_SUCCESS;
+      int64_t pos = 0;
 
       if (common::TFS_SUCCESS == iret)
       {
         iret = output.set_int64(es_id_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = task_.serialize(output.get_free(), output.get_free_length(), pos);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.pour(task_.length());
       }
       return iret;
     }
 
     int ReqFinishTaskFromEsMessage::deserialize(Stream& input)
     {
-      int32_t iret = input.get_int32(&reserve_);
+      int32_t iret = TFS_SUCCESS;
+      int64_t pos = 0;
 
       if (TFS_SUCCESS == iret)
       {
         iret = input.get_int64(reinterpret_cast<int64_t*>(&es_id_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = task_.deserialize(input.get_data(), input.get_data_length(), pos);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        input.drain(task_.length());
       }
       return iret;
     }
 
     int64_t ReqFinishTaskFromEsMessage::length() const
     {
-      return INT_SIZE;
+      return INT_SIZE + task_.length();
     }
 
     //heart msg
@@ -191,110 +182,99 @@ namespace tfs
       return INT_SIZE;
     }
 
-    //req query progress
+    //req query task
 
-    ReqQueryProgressMessage::ReqQueryProgressMessage()
+    ReqQueryTaskMessage::ReqQueryTaskMessage()
     {
-      _packetHeader._pcode = common::REQ_QUERY_PROGRESS_MESSAGE;
+      _packetHeader._pcode = common::REQ_QUERY_TASK_MESSAGE;
     }
 
-    ReqQueryProgressMessage::~ReqQueryProgressMessage(){}
+    ReqQueryTaskMessage::~ReqQueryTaskMessage(){}
 
-    int ReqQueryProgressMessage::serialize(common::Stream &output) const
+    int ReqQueryTaskMessage::serialize(common::Stream &output) const
     {
       int32_t iret = output.set_int64(es_id_);
 
-      if (common::TFS_SUCCESS == iret)
-      {
-        iret = output.set_int32(es_num_);
-      }
-
-      if (common::TFS_SUCCESS == iret)
-      {
-        iret = output.set_int32(task_time_);
-      }
-
-      if (common::TFS_SUCCESS == iret)
-      {
-        iret = output.set_int32(hash_bucket_id_);
-      }
-
-      if (common::TFS_SUCCESS == iret)
-      {
-        iret = output.set_int32(type_);
-      }
-
       return iret;
     }
 
-    int ReqQueryProgressMessage::deserialize(common::Stream &input)
+    int ReqQueryTaskMessage::deserialize(common::Stream &input)
     {
       int32_t iret = input.get_int64((int64_t*)(&es_id_));
 
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_int32(&es_num_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_int32(&task_time_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_int32(&hash_bucket_id_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_int32(reinterpret_cast<int32_t*>(&type_));
-      }
-
       return iret;
     }
 
-    int64_t ReqQueryProgressMessage::length() const
+    int64_t ReqQueryTaskMessage::length() const
     {
-      return 4 * INT_SIZE + INT64_SIZE;
+      return INT64_SIZE;
     }
 
-    //rsp query progress
+    //rsp query task
 
-    RspQueryProgressMessage::RspQueryProgressMessage()
+    RspQueryTaskMessage::RspQueryTaskMessage()
     {
-      _packetHeader._pcode = common::RSP_QUERY_PROGRESS_MESSAGE;
+      _packetHeader._pcode = common::RSP_QUERY_TASK_MESSAGE;
     }
 
-    RspQueryProgressMessage::~RspQueryProgressMessage(){}
+    RspQueryTaskMessage::~RspQueryTaskMessage(){}
 
-    int RspQueryProgressMessage::serialize(common::Stream &output) const
+    int RspQueryTaskMessage::serialize(common::Stream &output) const
     {
-      int32_t iret = output.set_int32(sum_file_num_);
+      int32_t res_running_tasks_count = static_cast<int32_t>(res_running_tasks_.size());
+      int32_t iret = output.set_int32(res_running_tasks_count);
+      if (common::TFS_SUCCESS == iret)
+      {
+        for (int32_t i = 0; common::TFS_SUCCESS == iret && i < res_running_tasks_count; i++)
+        {
+          int64_t pos = 0;
+          iret = res_running_tasks_[i].serialize(output.get_free(), output.get_free_length(), pos);
+          if (common::TFS_SUCCESS == iret)
+          {
+            output.pour(res_running_tasks_[i].length());
+          }
+        }
+      }
+      return iret;
+    }
+
+    int RspQueryTaskMessage::deserialize(common::Stream &input)
+    {
+      int32_t res_running_tasks_count = -1;
+      int32_t iret = common::TFS_SUCCESS;
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&res_running_tasks_count);
+      }
 
       if (common::TFS_SUCCESS == iret)
       {
-        iret = output.set_int32(current_percent_);
+        ServerExpireTask one_tasks_;
+        for (int i = 0; common::TFS_SUCCESS == iret && i < res_running_tasks_count; i++)
+        {
+          int64_t pos = 0;
+          iret = one_tasks_.deserialize(input.get_data(), input.get_data_length(), pos);
+          if (common::TFS_SUCCESS == iret)
+          {
+            res_running_tasks_.push_back(one_tasks_);
+            input.drain(one_tasks_.length());
+          }
+        }
       }
 
       return iret;
     }
 
-    int RspQueryProgressMessage::deserialize(common::Stream &input)
+    int64_t RspQueryTaskMessage::length() const
     {
-      int32_t iret = input.get_int32(&sum_file_num_);
+      int64_t len = 0;
+      len = common::INT_SIZE;
 
-      if (common::TFS_SUCCESS == iret)
+      for (size_t i = 0; i < res_running_tasks_.size(); i++)
       {
-        iret = input.get_int32(&current_percent_);
+        len +=  res_running_tasks_[i].length();
       }
-
-      return iret;
-    }
-
-    int64_t RspQueryProgressMessage::length() const
-    {
-      return 2 * INT_SIZE;
+      return len;
     }
 
 

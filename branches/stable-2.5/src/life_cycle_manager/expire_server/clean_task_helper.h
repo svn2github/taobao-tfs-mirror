@@ -25,6 +25,7 @@
 #include "message/message_factory.h"
 #include "tfs_client_api.h"
 
+
 namespace tfs
 {
   namespace expireserver
@@ -36,21 +37,22 @@ namespace tfs
         virtual ~CleanTaskHelper();
         int init(tfs::common::KvEngineHelper* kv_engine_helper);
 
-        int clean_task(const uint64_t local_ipport, const int32_t total_es, const int32_t num_es,
+        int do_clean_task(const uint64_t local_ipport, const int32_t total_es, const int32_t num_es,
                        const int32_t note_interval, const int32_t task_time);
 
-        int32_t get_task_state();
+        int32_t get_running_threads_count();
 
       private:
-        int take_note(const uint64_t local_ipport, const int32_t num_es, const int32_t task_time,
-                      const int32_t hash_bucket_num, const int64_t sum_file_num);
+        int stat_to_kvstore(const uint64_t local_ipport, const int32_t num_es,
+            const int32_t task_time,
+            const int32_t hash_bucket_num, const int64_t sum_file_num);
 
       protected:
         common::KvEngineHelper* kv_engine_helper_;
         int32_t tair_lifecycle_area_;
 
       private:
-        int32_t clean_task_state_;
+        volatile uint64_t running_task_count_;
         client::RestClient restful_client_;
         DISALLOW_COPY_AND_ASSIGN(CleanTaskHelper);
     };

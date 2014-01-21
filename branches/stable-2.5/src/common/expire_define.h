@@ -99,9 +99,9 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
-      uint64_t id_; /** MetaServer id(IP + PORT) **/
-      int64_t start_time_; /** MetaServer start time (ms)**/
-      int64_t last_update_time_;/** MetaServer last update time (ms)**/
+      uint64_t id_; /** expire server id(IP + PORT) **/
+      int64_t start_time_; /** expire server start time (ms)**/
+      int64_t last_update_time_;/** expire server last update time (ms)**/
       int32_t task_status_;           //show whether has task in running
     };
 
@@ -118,33 +118,17 @@ namespace tfs
     typedef EXP_SERVER_MAPS::iterator EXP_SERVER_MAPS_ITER;
     typedef EXP_SERVER_MAPS::const_iterator EXP_SERVER_MAPS_CONST_ITER;
 
-    struct ExpTable
+
+    struct ExpireTaskInfo
     {
-      ExpTable();
-
-      int64_t length() const;
-      int serialize(char *data, const int64_t data_len, int64_t &pos) const ;
-      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
-
-      common::VUINT64 v_exp_table_;
-      common::VUINT64 v_idle_table_;
-      common::VUINT64 v_active_table_;
-
-      void dump();
-    };
-
-    enum ExpireTaskType
-    {
-      RAW = 1,
-      META = 2,
-      BUCKET = 3
-    };
-
-    struct ExpireDeleteTask
-    {
-      ExpireDeleteTask();
-      ExpireDeleteTask(int32_t alive_total, int32_t assign_no,
+      enum ExpireTaskType
+      {
+        TASK_TYPE_DELETE = 1
+      };
+      ExpireTaskInfo();
+      ExpireTaskInfo(int32_t alive_total, int32_t assign_no,
           int32_t spec_time, int32_t status, int32_t note_interval, ExpireTaskType type);
+      bool operator < (const ExpireTaskInfo& rh) const;
 
       int64_t length() const;
       int serialize(char *data, const int64_t data_len, int64_t &pos) const;
@@ -156,6 +140,19 @@ namespace tfs
       int32_t status_;
       int32_t note_interval_;
       ExpireTaskType type_;
+    };
+    struct ServerExpireTask
+    {
+      ServerExpireTask():server_id_(0){}
+      ServerExpireTask(const uint64_t id, const ExpireTaskInfo& t)
+        :server_id_(id), task_(t){}
+
+      int64_t length() const;
+      int serialize(char *data, const int64_t data_len, int64_t &pos) const;
+      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
+
+      uint64_t server_id_;
+      ExpireTaskInfo task_;
     };
   }
 }

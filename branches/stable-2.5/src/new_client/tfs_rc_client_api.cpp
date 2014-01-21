@@ -171,6 +171,18 @@ namespace tfs
       return impl_->fetch_buf(ret_count, buf, count, file_name, suffix);
     }
 
+    // for lifecycle root
+    void RcClient::set_lifecycle_rs_addr(const char *rs_addr)
+    {
+      impl_->set_lifecycle_rs_addr(rs_addr);
+    }
+
+    TfsRetType RcClient::query_task(const uint64_t es_id,
+        std::vector<common::ServerExpireTask>* p_res_task)
+    {
+      return impl_->query_task(es_id, p_res_task);
+    }
+
     // for kv meta
     void RcClient::set_kv_rs_addr(const char *rs_addr)
     {
