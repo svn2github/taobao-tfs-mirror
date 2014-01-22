@@ -28,27 +28,67 @@ using namespace tfs::tools;
 using namespace tfs::clientv2;
 using namespace std;
 
-int get_and_check_all_blocks_copy(const uint64_t ns_id, VUINT64& blocks, VUINT64& no_copy_blocks, const uint64_t ds_id = INVALID_SERVER_ID)
+// if parameter: ds_id != INVALID_SERVER_ID, check from current cluster, need exclude repliates in this ds;
+// if parameter: ds_id == INVALID_SERVER_ID, check from slave cluster
+int get_and_check_all_blocks_copy(const uint64_t ns_id, const VUINT64& blocks, VUINT64& no_copy_blocks, const uint64_t ds_id = INVALID_SERVER_ID)
 {
   no_copy_blocks.clear();
   vector<BlockMeta> blocks_meta;
-  int ret = ToolUtil::get_all_blocks_meta(ns_id, blocks, blocks_meta, false);// no need get check block
+  int ret = ToolUtil::get_all_blocks_meta(ns_id, blocks, blocks_meta, true);
   if (TFS_SUCCESS == ret)
   {
+    VUINT64 lost_in_family;
     for (uint32_t block_index = 0; block_index < blocks_meta.size(); ++block_index)
     {
+      // blk_meta.result_ just be used in trunk(stable2.7)
       BlockMeta blk_meta = blocks_meta.at(block_index);
       uint64_t block_id = blk_meta.block_id_;
-      // not consider whether can reinstall
-      if (blk_meta.size_ == 0)
+      FamilyInfoExt family_info = blk_meta.family_info_;
+      if (INVALID_FAMILY_ID == family_info.family_id_)
       {
-        // maybe not exist the block
-        no_copy_blocks.push_back(block_id);
+        // if family can't reinstall, family_id here is also invalid
+        if (INVALID_BLOCK_ID == block_id || IS_VERFIFY_BLOCK(block_id))
+          continue;
+        // else family data block regard as normal block
+
+        if (0 == blk_meta.size_)
+        {
+          // maybe not exist the block
+          no_copy_blocks.push_back(block_id);
+        }
+        else if (INVALID_SERVER_ID != ds_id && 1 == blk_meta.size_ && ds_id == blk_meta.ds_[0])
+        {
+          // only exist one copy and be positioned in this ds
+          no_copy_blocks.push_back(block_id);
+        }
       }
-      else if (ds_id != INVALID_SERVER_ID && 1 == blk_meta.size_ && ds_id == blk_meta.ds_[0])
+      else // block is marshalling
       {
-        // only exist one copy and be positioned in this ds
-        no_copy_blocks.push_back(block_id);
+        int data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+        int member_num = data_num + GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+        int32_t alive_num = 0;
+        lost_in_family.clear();
+        for (int i = 0; i < member_num; ++i)
+        {
+          // pair is <blockid, ds_id>
+          pair<uint64_t, uint64_t>& item = family_info.members_[i];
+          if (INVALID_SERVER_ID != item.second && item.second != ds_id) // exclude current ds
+          {
+            ++alive_num;
+          }
+          else
+          {
+            // keep all lost(and will lost) data blockid
+            if (!IS_VERFIFY_BLOCK(item.first) && INVALID_BLOCK_ID != item.first)
+            {
+              lost_in_family.push_back(item.first);
+            }
+          }
+        }
+        if (alive_num < data_num) // can't reinstate
+        {
+          no_copy_blocks.insert(no_copy_blocks.end(), lost_in_family.begin(), lost_in_family.end());
+        }
       }
     }
   }
@@ -61,8 +101,9 @@ int get_and_check_all_blocks_copy(const uint64_t ns_id, VUINT64& blocks, VUINT64
   return ret;
 }
 
+
 int check_all_block_in_disk(const char* ns_addr, const char* ns_slave_addr, const uint64_t ds_id,
-    VUINT64& blocks, VUINT64& need_sync_block_list, VUINT64& lost_block_list)
+    const VUINT64& blocks, VUINT64& need_sync_block_list, VUINT64& lost_block_list)
 {
   int ret = TFS_SUCCESS;
   uint64_t ns_id = Func::get_host_ip(ns_addr);
@@ -70,10 +111,23 @@ int check_all_block_in_disk(const char* ns_addr, const char* ns_slave_addr, cons
   need_sync_block_list.clear();
   lost_block_list.clear();
 
+  // check current cluster's block in blocks array
   ret = get_and_check_all_blocks_copy(ns_id, blocks, need_sync_block_list, ds_id);
-  if (need_sync_block_list.size() > 0)
+  if (TFS_SUCCESS == ret && need_sync_block_list.size() > 0)
   {
-    ret = get_and_check_all_blocks_copy(slave_ns_id, need_sync_block_list, lost_block_list);
+    // check slave cluster's block in need_sync_block_list array
+    VUINT64 raw_lost_blocks;
+    ret = get_and_check_all_blocks_copy(slave_ns_id, need_sync_block_list, raw_lost_blocks);
+
+    // raw_lost_blocks need unique, then remove all blocks which not in need_sync_block_list
+    set<uint64_t> need_sync_block_set, lost_block_set;
+    need_sync_block_set.insert(need_sync_block_list.begin(), need_sync_block_list.end()); // to sort
+    lost_block_set.insert(raw_lost_blocks.begin(), raw_lost_blocks.end()); // to sort & unique
+
+    lost_block_list.resize(raw_lost_blocks.size());
+    VUINT64::iterator it = set_intersection(raw_lost_blocks.begin(), raw_lost_blocks.end(),
+        need_sync_block_list.begin(), need_sync_block_list.end(), lost_block_list.begin());
+    lost_block_list.resize(it - lost_block_list.begin());// set real size
   }
   return ret;
 }
@@ -101,7 +155,7 @@ void print_result(const VUINT64& need_sync_block_list, const VUINT64& lost_block
       uint64_t block_id = need_sync_block_list.at(i);
       if (lost_block_set.find(block_id) == lost_block_set.end())
       {
-        fprintf(stdout, "%"PRI64_PREFIX"u\n", block_id);
+        fprintf(stdout, "%"PRI64_PREFIX"u\n", block_id);// can sync from slave cluster
       }
     }
   }
