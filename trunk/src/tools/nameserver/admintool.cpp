@@ -12,12 +12,11 @@
 #include "common/client_manager.h"
 #include "common/config_item.h"
 #include "common/status_message.h"
-#include "common/new_client.h"
 #include "message/server_status_message.h"
 #include "message/client_cmd_message.h"
 #include "message/message_factory.h"
-#include "new_client/fsname.h"
-#include "new_client/tfs_client_api.h"
+#include "clientv2/fsname.h"
+#include "clientv2/tfs_client_api_v2.h"
 #include "tools/util/tool_util.h"
 #ifdef _WITH_READ_LINE
 #include "readline/readline.h"
@@ -25,7 +24,7 @@
 
 using namespace tfs::common;
 using namespace tfs::message;
-using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace tfs::tools;
 using namespace std;
 
@@ -35,7 +34,7 @@ static const char g_build_description[] = "Taobao file system(TFS), Version: " V
 static const char _g_build_description[] = "unknown";
 #endif
 
-static TfsClient* g_tfs_client = NULL;
+static TfsClientV2* g_tfs_client = NULL;
 static STR_FUNC_MAP g_cmd_map;
 static const int32_t CMD_MAX_LEN = 4096;
 
@@ -1165,8 +1164,8 @@ int main(int argc,char** argv)
     TBSYS_LOGGER.setLogLevel("ERROR");
   }
 
-  g_tfs_client = TfsClient::Instance();
-  int ret = g_tfs_client->initialize(ns_ip, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
+  g_tfs_client = TfsClientV2::Instance();
+  int ret = g_tfs_client->initialize(ns_ip, DEFAULT_BLOCK_CACHE_TIME, 1000);
   if (ret != TFS_SUCCESS)
   {
     fprintf(stderr, "init tfs client fail. ret: %d\n", ret);

@@ -26,14 +26,14 @@
 #include "message/message_factory.h"
 #include "tools/util/tool_util.h"
 #include "tools/util/ds_lib.h"
-#include "new_client/tfs_client_impl.h"
-#include "new_client/fsname.h"
+#include "clientv2/tfs_client_impl_v2.h"
+#include "clientv2/fsname.h"
 #include "dataserver/ds_define.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::tools;
-using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace tfs::dataserver;
 using namespace std;
 
@@ -197,14 +197,12 @@ class WorkThread: public tbutil::Thread
      int ret = TFS_SUCCESS;
      if (!(finfo.flag_ & FI_DELETED))
      {
-       char tfs_name[TFS_FILE_LEN];
        char* data = new (std::nothrow) char[finfo.size_];
        assert(NULL != data);
        ret = read_file_data(server_id, block_id, finfo, data);
        if (TFS_SUCCESS == ret)
        {
-         int64_t save_size = TfsClientImpl::Instance()->save_buf_ex(tfs_name,
-             TFS_FILE_LEN, data, finfo.size_, T_WRITE, name.c_str(), NULL, ns_addr_.c_str());
+         int64_t save_size = TfsClientImplV2::Instance()->save_buf_update(data, finfo.size_, T_WRITE, name.c_str(), NULL, ns_addr_.c_str());
          ret = (save_size == finfo.size_) ? TFS_SUCCESS : TFS_ERROR;
        }
        tbsys::gDelete(data);
@@ -213,7 +211,7 @@ class WorkThread: public tbutil::Thread
        if ((TFS_SUCCESS == ret) && (finfo.flag_ & FI_CONCEAL))
        {
          int64_t file_size = 0;
-         TfsClientImpl::Instance()->unlink(file_size, tfs_name, NULL, ns_addr_.c_str(), CONCEAL);
+         TfsClientImplV2::Instance()->unlink(file_size, name.c_str(), NULL, CONCEAL, ns_addr_.c_str());
        }
      }
      return ret;
@@ -327,8 +325,8 @@ int main(int argc, char* argv[])
   ret = NewClientManager::get_instance().initialize(factory, streamer);
   if (TFS_SUCCESS == ret)
   {
-    ret = TfsClientImpl::Instance()->initialize(NULL,
-        DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false);
+    ret = TfsClientImplV2::Instance()->initialize(NULL,
+        DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS);
   }
 
   if (TFS_SUCCESS == ret)

@@ -14,14 +14,14 @@
 
 #include "common/internal.h"
 #include "common/func.h"
-#include "new_client/fsname.h"
+#include "clientv2/fsname.h"
 #include "dataserver/ds_define.h"
 #include "tools/util/tool_util.h"
 #include "tools/util/base_worker.h"
 
 using namespace std;
 using namespace tfs::common;
-using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace tfs::dataserver;
 using namespace tfs::tools;
 

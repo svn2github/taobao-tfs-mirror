@@ -22,13 +22,6 @@ namespace tfs
 {
   namespace clientv2
   {
-    enum UseCacheFlag
-    {
-      USE_CACHE_FLAG_NO = 0x00,
-      USE_CACHE_FLAG_LOCAL = 0x01,
-      USE_CACHE_FLAG_REMOTE = 0x02
-    };
-
     struct StatItem
     {
       static std::string client_access_stat_;

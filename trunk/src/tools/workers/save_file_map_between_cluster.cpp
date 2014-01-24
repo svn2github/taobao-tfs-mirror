@@ -14,17 +14,17 @@
 
 #include "common/internal.h"
 #include "common/func.h"
-#include "new_client/fsname.h"
-#include "new_client/tfs_client_impl.h"
+#include "clientv2/fsname.h"
+#include "clientv2/tfs_client_impl_v2.h"
 #include "tools/util/tool_util.h"
 #include "tools/util/base_worker.h"
 
 using namespace std;
 using namespace tfs::common;
-using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace tfs::tools;
 
-#define tfs_client TfsClientImpl::Instance()
+#define tfs_client TfsClientImplV2::Instance()
 
 FILE* result_fp = NULL;
 
@@ -56,7 +56,7 @@ class SaveFileWorker : public BaseWorker
 
       if (TFS_SUCCESS == ret)
       {
-        dest_fd = tfs_client->open(NULL, NULL, dest_ns, T_CREATE | T_WRITE);
+        dest_fd = tfs_client->open(static_cast<char*>(NULL), static_cast<char*>(NULL), dest_ns, T_CREATE | T_WRITE);
         ret = (dest_fd >= 0) ? TFS_SUCCESS : dest_fd;
       }
 
@@ -125,7 +125,7 @@ class SaveFileWorkerManager : public BaseWorkerManager
       result_fp = fopen(result_path.c_str(), "a");
       assert(NULL != result_fp);
 
-      int ret = tfs_client->initialize(NULL, 1800, 0, true);
+      int ret = tfs_client->initialize(NULL, 1800, 0);
       assert(TFS_SUCCESS == ret);
       return ret;
     }

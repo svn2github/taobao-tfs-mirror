@@ -960,6 +960,7 @@ namespace tfs
       GetServerStatusMessage req_gss_msg;
       req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO_V2);
       req_gss_msg.set_return_row(ds_task.block_id_);
+      req_gss_msg.set_from_row(ds_task.attach_block_id_);
 
       tbnet::Packet* rsp = NULL;
       NewClient* client = NewClientManager::get_instance().create_client();

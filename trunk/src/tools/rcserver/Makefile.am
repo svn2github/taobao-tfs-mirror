@@ -10,7 +10,6 @@ bin_PROGRAMS = parse gene rcstat
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/dataserver/libdataserver.a\
-	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(UNIQUE_STORE_LDFLAGS)\

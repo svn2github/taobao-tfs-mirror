@@ -14,14 +14,15 @@
  *
  */
 
+#include <Memory.hpp>
 #include "tfs_cluster_manager.h"
 
-#include "tfs_client_impl.h"
+#include "tfs_client_impl_v2.h"
 #include "fsname.h"
 
 namespace tfs
 {
-  namespace client
+  namespace clientv2
   {
     using namespace tfs::common;
     using namespace std;
@@ -280,7 +281,7 @@ namespace tfs
         std::vector<GroupInfo*>::iterator iter = need_update_group_info_list.begin();
         for (; need_update_group_info_list.end() != iter; iter++)
         {
-          int cluster_group_count = TfsClientImpl::Instance()->get_cluster_group_count((*iter)->ns_addr_.c_str());
+          int cluster_group_count = TfsClientImplV2::Instance()->get_cluster_group_count((*iter)->ns_addr_.c_str());
           if (cluster_group_count > 0)
           {
             bRet = true;
@@ -306,7 +307,7 @@ namespace tfs
             }
             else
             {
-              int cluster_group_seq = TfsClientImpl::Instance()->get_cluster_group_seq((*iter)->ns_addr_.c_str());
+              int cluster_group_seq = TfsClientImplV2::Instance()->get_cluster_group_seq((*iter)->ns_addr_.c_str());
               if (cluster_group_seq >= 0)
               {
                 cluster_group_info->insert_group_info(cluster_group_seq, (*iter)->ns_addr_, (*iter)->is_master_);

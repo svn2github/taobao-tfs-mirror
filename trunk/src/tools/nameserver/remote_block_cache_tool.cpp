@@ -28,14 +28,16 @@
 #include "common/client_manager.h"
 #include "common/status_message.h"
 #include "tools/util/tool_util.h"
-#include "new_client/tfs_client_impl.h"
+#include "clientv2/tfs_session.h"
+#include "clientv2/client_config.h"
+#include "Timer.h"
 
 using namespace std;
-using namespace tfs::client;
 using namespace tfs::common;
 using namespace tfs::tools;
+using namespace tfs::clientv2;
 
-static TfsClientImpl* g_tfs_client = NULL;
+static TfsSession* g_session = NULL;
 static STR_FUNC_MAP g_cmd_map;
 
 
@@ -154,20 +156,24 @@ int main(int argc, char* argv[])
 
   init();
 
-  // init tfs client
-  g_tfs_client = TfsClientImpl::Instance();
-  ret = g_tfs_client->initialize(g_ns_addr, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false);
+  // init tfs session
+  tbutil::Timer* timer = new tbutil::Timer();
+  g_session = new TfsSession(timer, string(g_ns_addr), DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS);
+  ret = g_session->initialize();
   if (TFS_SUCCESS != ret)
   {
-    fprintf(stderr, "init tfs client fail, ret: %d\n", ret);
+    fprintf(stderr, "init tfs session fail, ret: %d\n", ret);
     return ret;
   }
 
   // set remote cache info
-  g_tfs_client->set_remote_cache_info(g_tair_master_addr, g_tair_slave_addr,
-                                      g_tair_group_name, g_tair_area);
-  g_tfs_client->set_use_local_cache();
-  g_tfs_client->set_use_remote_cache();
+  ClientConfig::remote_cache_master_addr_ = g_tair_master_addr;
+  ClientConfig::remote_cache_slave_addr_ = g_tair_slave_addr;
+  ClientConfig::remote_cache_group_name_ = g_tair_group_name;
+  ClientConfig::remote_cache_area_ = g_tair_area;
+
+  ClientConfig::use_cache_ |= USE_CACHE_FLAG_LOCAL;
+  ClientConfig::use_cache_ |= USE_CACHE_FLAG_REMOTE;
 
   if (optind >= argc)
   {
@@ -196,9 +202,10 @@ int main(int argc, char* argv[])
       }
     }
   }
-  if (g_tfs_client != NULL)
+  if (g_session != NULL)
   {
-    g_tfs_client->destroy();
+    g_session->destroy();
+    timer->destroy();
   }
   return TFS_SUCCESS;
 }
@@ -387,7 +394,10 @@ int cmd_insert_block_cache(const VSTRING& param)
   {
     return TFS_ERROR;
   }
-  g_tfs_client->insert_remote_block_cache(NULL, block_id, ds_list);
+
+  //TODO: FamilyInfoExt not be set finished yet, leave for mingyan
+  FamilyInfoExt info;
+  g_session->insert_remote_block_cache(block_id, ds_list, info);
   return TFS_SUCCESS;
 }
 
@@ -395,7 +405,9 @@ int cmd_lookup_block_cache(const VSTRING& param)
 {
   uint32_t block_id = atoi(param[0].c_str());
   VUINT64 ds_list;
-  int ret = g_tfs_client->query_remote_block_cache(NULL, block_id, ds_list);
+  //TODO: FamilyInfoExt not be set finished yet, leave for mingyan
+  FamilyInfoExt info;
+  int ret = g_session->query_remote_block_cache(block_id, ds_list, info);
   ToolUtil::print_info(ret, "lookup block cache");
   for (size_t i = 0; i < ds_list.size(); i++)
   {
@@ -407,7 +419,7 @@ int cmd_lookup_block_cache(const VSTRING& param)
 int cmd_remove_block_cache(const VSTRING& param)
 {
   int32_t block_id = atoi(param[0].c_str());
-  g_tfs_client->remove_remote_block_cache(NULL, block_id);
+  g_session->remove_remote_block_cache(block_id);
   return TFS_SUCCESS;
 }
 

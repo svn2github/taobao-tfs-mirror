@@ -75,9 +75,9 @@ namespace tfs
       return TfsClientImplV2::Instance()->get_server_id();
     }
 
-    int32_t TfsClientV2::get_cluster_id()
+    int32_t TfsClientV2::get_cluster_id(const char* ns_addr)
     {
-      return TfsClientImplV2::Instance()->get_cluster_id();
+      return TfsClientImplV2::Instance()->get_cluster_id(ns_addr);
     }
   }
 }

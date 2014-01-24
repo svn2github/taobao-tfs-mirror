@@ -9,7 +9,6 @@
 #include "message/message_factory.h"
 #include "common/internal.h"
 #include "common/client_manager.h"
-#include "common/new_client.h"
 #include "common/func.h"
 #include "common/version.h"
 #include "requester/ns_requester.h"

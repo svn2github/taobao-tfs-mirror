@@ -13,8 +13,6 @@ bin_PROGRAMS += remote_block_cache_tool
 endif
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
-	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
-	$(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
 	$(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/message/libtfsmessage.a\

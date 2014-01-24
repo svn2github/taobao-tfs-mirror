@@ -133,7 +133,7 @@ namespace tfs
        *
        * @return default cluster id
        */
-      int32_t get_cluster_id();
+      int32_t get_cluster_id(const char* ns_addr = NULL);
 
     private:
       TfsClientV2();

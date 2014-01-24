@@ -22,7 +22,7 @@
 
 namespace tfs
 {
-  namespace client
+  namespace clientv2
   {
     typedef int TfsRetType;
     class KvMetaClientImpl;

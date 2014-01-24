@@ -35,8 +35,6 @@ namespace tfs
     ns_addr_(0), cluster_id_(0), packet_factory_(NULL), packet_streamer_(NULL),
     default_session_(NULL)
     {
-      timer_ = new tbutil::Timer();
-      session_pool_ = new TfsSessionPool(timer_);
       packet_factory_ = new MessageFactory();
       packet_streamer_ = new BasePacketStreamer(packet_factory_);
     }
@@ -73,6 +71,8 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        timer_ = new tbutil::Timer();
+        session_pool_ = new TfsSessionPool(timer_);
         if (NULL != ns_addr)
         {
           TfsSession* session = session_pool_->get(ns_addr, cache_time, cache_items);
@@ -726,14 +726,83 @@ namespace tfs
       return server_id;
     }
 
-    int32_t TfsClientImplV2::get_cluster_id()
+    int32_t TfsClientImplV2::get_cluster_id(const char* ns_addr)
     {
-      uint32_t cluster_id = 0;
-      if (NULL != default_session_)
+      int32_t cluster_id = 0;
+      if (NULL != ns_addr)
       {
-        cluster_id = default_session_->get_cluster_id();
+        TfsSession* tfs_session = NULL;
+        if (TFS_SUCCESS != get_session(ns_addr, tfs_session))
+        {
+          TBSYS_LOG(ERROR, "can not get tfs session: %s.", NULL == ns_addr ? "default" : ns_addr);
+        }
+        else
+        {
+          cluster_id = tfs_session->get_cluster_id();
+        }
       }
-      return cluster_id_;
+      else
+      {
+        if (NULL != default_session_)
+        {
+          cluster_id = default_session_->get_cluster_id();
+        }
+      }
+      return cluster_id;
+    }
+
+    int32_t TfsClientImplV2::get_cluster_group_count(const char* ns_addr)
+    {
+      int32_t cluster_group_count = -1;
+      if  (NULL != ns_addr)
+      {
+        TfsSession* tfs_session = NULL;
+        if (TFS_SUCCESS != (get_session(ns_addr, tfs_session)))
+        {
+          TBSYS_LOG(ERROR, "can not get tfs session: %s.", NULL == ns_addr ? "default" : ns_addr);
+        }
+        else
+        {
+          cluster_group_count = tfs_session->get_cluster_group_count_from_ns();
+        }
+      }
+      else
+      {
+        if (NULL != default_session_)
+        {
+          cluster_group_count = default_session_->get_cluster_group_count_from_ns();
+        }
+      }
+      return cluster_group_count;
+    }
+
+    int32_t TfsClientImplV2::get_cluster_group_seq(const char* ns_addr)
+    {
+      int32_t cluster_group_seq = -1;
+      if  (ns_addr != NULL)
+      {
+        TfsSession* tfs_session = NULL;
+        if (!is_init_)
+        {
+          TBSYS_LOG(ERROR, "tfs client not init");
+        }
+        else if (TFS_SUCCESS != (get_session(ns_addr, tfs_session)))
+        {
+          TBSYS_LOG(ERROR, "can not get tfs session: %s.", NULL == ns_addr ? "default" : ns_addr);
+        }
+        else
+        {
+          cluster_group_seq = tfs_session->get_cluster_group_seq_from_ns();
+        }
+      }
+      else
+      {
+        if (default_session_ != NULL)
+        {
+          cluster_group_seq = default_session_->get_cluster_group_seq_from_ns();
+        }
+      }
+      return cluster_group_seq;
     }
 
     void TfsClientImplV2::set_use_local_cache(const bool enable)

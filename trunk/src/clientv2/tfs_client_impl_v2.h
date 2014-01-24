@@ -84,7 +84,9 @@ namespace tfs
           const char* ns_addr = NULL, const int32_t flag = common::TFS_FILE_DEFAULT_OPTION);
 
       uint64_t get_server_id();  // get default session's server id
-      int32_t get_cluster_id(); // get default session's cluster id
+      int32_t get_cluster_id(const char* ns_addr = NULL); // get session's cluster id
+      int32_t get_cluster_group_count(const char* ns_addr);
+      int32_t get_cluster_group_seq(const char* ns_addr = NULL);
       void set_use_local_cache(const bool enable = true);
       void set_use_remote_cache(const bool enable = true);
 

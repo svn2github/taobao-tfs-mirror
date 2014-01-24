@@ -146,7 +146,11 @@ namespace tfs
 
     void TfsFile::set_session(TfsSession* session)
     {
-      session_ = session;
+      if (NULL != session)
+      {
+        session_ = session;
+        fsname_.set_cluster_id(session->get_cluster_id());
+      }
     }
 
     TfsSession* TfsFile::get_session()

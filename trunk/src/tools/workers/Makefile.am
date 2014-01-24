@@ -9,7 +9,8 @@ bin_PROGRAMS = get_all_files_in_block save_file_map_between_cluster
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
         $(top_builddir)/src/dataserver/libdataserver.a\
-	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
+	$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
+	$(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(UNIQUE_STORE_LDFLAGS)\

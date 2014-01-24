@@ -18,11 +18,11 @@
 
 #include <string>
 #include "common/meta_server_define.h"
-#include "tfs_client_impl.h"
+#include "tfs_client_impl_v2.h"
 
 namespace tfs
 {
-  namespace client
+  namespace clientv2
   {
     const int64_t MAX_WRITE_DATA_IO = 1 << 19;
     class TfsMetaManager

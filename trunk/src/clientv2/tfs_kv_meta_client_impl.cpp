@@ -18,13 +18,13 @@
 #include "fsname.h"
 #include "common/client_manager.h"
 #include "message/message_factory.h"
-#include "tfs_client_api.h"
+#include "tfs_client_api_v2.h"
 #include "tfs_kv_meta_helper.h"
 
 
 namespace tfs
 {
-  namespace client
+  namespace clientv2
   {
     using namespace tfs::common;
     using namespace std;
@@ -397,7 +397,7 @@ namespace tfs
           continue;
         }
         FSName fsname(iter->block_id_, iter->file_id_, 0);
-        if ((tmp_ret = TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, ns_addr.c_str())) != TFS_SUCCESS)
+        if ((tmp_ret = TfsClientV2::Instance()->unlink(file_size, fsname.get_name(), NULL, DELETE, ns_addr.c_str())) != TFS_SUCCESS)
         {
           ret = TFS_ERROR;
           TBSYS_LOG(ERROR, "unlink tfs file failed, file: %s, ret: %d", fsname.get_name(), tmp_ret);

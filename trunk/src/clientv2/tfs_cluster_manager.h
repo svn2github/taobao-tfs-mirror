@@ -23,7 +23,7 @@
 
 namespace tfs
 {
-  namespace client
+  namespace clientv2
   {
     class TfsClusterManager
     {

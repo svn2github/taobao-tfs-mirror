@@ -22,7 +22,7 @@
 #include "message/rc_session_message.h"
 #include "client_config.h"
 
-using namespace tfs::client;
+using namespace tfs::clientv2;
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace std;
