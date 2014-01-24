@@ -99,6 +99,7 @@ namespace tfs
         time_t last_startup_time_;
         time_t consume_time_;
         int32_t index_;
+        std::set<int64_t> family_set_;
 
     };
 
@@ -130,6 +131,7 @@ namespace tfs
         common::Throughput last_tp_;
         int32_t current_load_;
         int32_t block_count_;
+        std::set<int64_t> family_set_;
         time_t last_update_time_;
         int64_t file_count_;
         int64_t block_size_;

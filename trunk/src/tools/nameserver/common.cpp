@@ -14,6 +14,7 @@
  *
  */
 #include "common.h"
+#include "requester/ds_requester.h"
 using namespace tfs::common;
 
 namespace tfs
@@ -96,6 +97,21 @@ namespace tfs
         offset += (len - input.getDataLen());
       }
       return TFS_SUCCESS;
+    }
+
+    int ServerBase::fetch_family_set()
+    {
+      const uint64_t ds_id = id_;
+      std::vector<BlockInfoV2> block_infos;
+      int ret = requester::DsRequester::list_block(ds_id, block_infos);
+      for (uint32_t i = 0; i < block_infos.size(); ++i)
+      {
+        if (INVALID_FAMILY_ID != block_infos[i].family_id_)
+        {
+          family_set_.insert(block_infos[i].family_id_);
+        }
+      }
+      return ret;
     }
 
     void ServerBase::dump() const

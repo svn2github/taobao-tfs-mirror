@@ -137,7 +137,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int ShowInfo::show_server(const int8_t type, const int32_t num, const string& server_ip_port, int32_t count, const int32_t interval, const string& filename)
+    int ShowInfo::show_server(const int8_t type, const int32_t num, const string& server_ip_port, int32_t count, const int32_t interval, const bool need_family, const string& filename)
     {
       FILE* fp = NULL;
       if (TFS_ERROR == get_file_handle(filename, &fp))
@@ -230,6 +230,15 @@ namespace tfs
             ServerShow server, old_server;
             if (TFS_SUCCESS == server.ServerBase::deserialize(ret_param.data_, data_len, offset, type))
             {
+              if (need_family)
+              {
+                ret = server.fetch_family_set();
+                if (TFS_SUCCESS != ret)
+                {
+                  TBSYS_LOG(WARN, "server(%s) fetch family list fail, ret: %d",
+                      tbsys::CNetUtil::addrToString(server.id_).c_str(), ret);
+                }
+              }
               server.ServerBase::dump();
               if (once && ((tbsys::CNetUtil::addrToString(server.id_)) != server_ip_port))
               {
@@ -275,7 +284,8 @@ namespace tfs
       if (fp != stdout) fclose(fp);
       return TFS_SUCCESS;
     }
-    int ShowInfo::show_machine(const int8_t type, const int32_t num, int32_t count, const int32_t interval, const string& filename)
+
+    int ShowInfo::show_machine(const int8_t type, const int32_t num, int32_t count, const int32_t interval, const bool need_family, const string& filename)
     {
       FILE* fp = NULL;
       if (TFS_ERROR == get_file_handle(filename, &fp))
@@ -345,6 +355,15 @@ namespace tfs
                 }
               }
               last_server_map_[server.id_] = server;
+              if (need_family)
+              {
+                ret = server.fetch_family_set();
+                if (TFS_SUCCESS != ret)
+                {
+                  TBSYS_LOG(WARN, "server(%s) fetch family list fail, ret: %d",
+                      tbsys::CNetUtil::addrToString(server.id_).c_str(), ret);
+                }
+              }
               uint64_t machine_id = get_machine_id(server.id_);
               map<uint64_t, MachineShow>::iterator iter = machine_map_.find(machine_id);
               if (iter != machine_map_.end())

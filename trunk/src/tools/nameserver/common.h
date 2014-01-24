@@ -19,7 +19,6 @@
 #include <vector>
 #include <tbnet.h>
 #include <Handle.h>
-#include "common/new_client.h"
 #include "common/client_manager.h"
 #include "message/message_factory.h"
 #include "common/config_item.h"
@@ -58,6 +57,7 @@ namespace tfs
       CMD_ALL,
       CMD_PART,
       CMD_FOR_MONITOR,
+      CMD_NEED_FAMILY,
       CMD_COUNT,
       CMD_INTERVAL,
       CMD_REDIRECT,
@@ -130,10 +130,12 @@ namespace tfs
     struct ParamInfo
     {
       ParamInfo() :
-        type_(CMD_NOP), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), id_(0), server_ip_port_(""), rack_ip_mask_("")
+        type_(CMD_NOP), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""),
+        need_family_(false), id_(0), server_ip_port_(""), rack_ip_mask_("")
       {}
       ParamInfo(const int8_t type) :
-        type_(type), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), id_(0), server_ip_port_(""), rack_ip_mask_("")
+        type_(type), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""),
+        need_family_(false), id_(0), server_ip_port_(""), rack_ip_mask_("")
       {}
       ~ParamInfo(){}
       int8_t type_;
@@ -141,6 +143,7 @@ namespace tfs
       uint64_t count_;
       uint64_t interval_;
       std::string filename_;
+      bool need_family_;
       union
       {
         uint64_t block_id_;
@@ -157,6 +160,7 @@ namespace tfs
         ServerBase();
         virtual ~ServerBase();
         int deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const int8_t type);
+        int fetch_family_set();
         void dump() const;
 
 #ifdef TFS_NS_DEBUG
@@ -176,6 +180,7 @@ namespace tfs
         std::set<uint64_t> hold_;
         std::set<uint64_t> writable_;
         std::set<uint64_t> master_;
+        std::set<int64_t> family_set_;
     };
 
     struct ServerInfo

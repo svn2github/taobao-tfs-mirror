@@ -34,9 +34,9 @@ namespace tfs
         int set_ns_ip(const std::string& ns_ip_port);
         void clean_last_file();
         int show_server(const int8_t flag, const int32_t num, const std::string& server_ip_port,
-            int32_t count, const int32_t interval, const std::string& filename);
+            int32_t count, const int32_t interval, const bool need_family, const std::string& filename);
         int show_machine(const int8_t flag, const int32_t num,
-            int32_t count, const int32_t interval, const std::string& filename);
+            int32_t count, const int32_t interval, const bool need_family, const std::string& filename);
         int show_block(const int8_t flag, const int32_t num, const uint64_t block_id, int32_t count, const int32_t interval, const std::string& filename);
         int show_block_distribution(const int8_t flag, std::string& rack_ip_mask, const int32_t num, const uint64_t block_id, int32_t count, const int32_t interval, const std::string& filename);
         int show_rack_block(const int8_t type, std::string& rack_ip_mask, std::string& rack_ip_group, const int32_t num, int32_t count, const int32_t interval,

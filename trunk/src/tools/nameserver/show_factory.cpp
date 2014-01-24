@@ -62,7 +62,7 @@ namespace tfs
       {
         if (type & SERVER_TYPE_SERVER_INFO)
         {
-          fprintf(fp, "    SERVER_ADDR       UCAP  / TCAP =  UR     BLKCNT LOAD  TOTAL_WRITE  TOTAL_READ   LAST_WRITE   LAST_READ   STARTUP_TIME\n");
+          fprintf(fp, "    SERVER_ADDR       UCAP  / TCAP =  UR     BLKCNT FAMILYCNT  LOAD  TOTAL_WRITE  TOTAL_READ   LAST_WRITE   LAST_READ   STARTUP_TIME\n");
         }
         if (type & SERVER_TYPE_BLOCK_LIST)
         {
@@ -93,13 +93,13 @@ namespace tfs
       {
         if (type & MACHINE_TYPE_ALL)
         {
-          fprintf(fp, "  SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT  LOAD TOTAL_WRITE  TOTAL_READ  LAST_WRITE  LAST_READ  MAX_WRITE   MAX_READ\n");
+          fprintf(fp, "  SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT FAMILYCNT  LOAD TOTAL_WRITE  TOTAL_READ  LAST_WRITE  LAST_READ  MAX_WRITE   MAX_READ\n");
           fprintf(fp,
-              "--------------- ---- ------------------ -------- ---- -----------  ----------  ----------  ---------  --------  ---------\n");
+              "--------------- ---- ------------------ -------- --------- ---- -----------  ----------  ----------  ---------  --------  ---------\n");
         }
         if (type & MACHINE_TYPE_PART)
         {
-          fprintf(fp, "  SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT  LOAD LAST_WRITE  LAST_READ  MAX_WRITE  MAX_READ STARTUP_TIME\n");
+          fprintf(fp, "  SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT FAMILYCNT  LOAD LAST_WRITE  LAST_READ  MAX_WRITE  MAX_READ STARTUP_TIME\n");
           fprintf(fp,
               "--------------- ---- ------------------ -------- ---- ----------  ---------  ---------  -------- ------------\n");
         }
@@ -224,12 +224,13 @@ namespace tfs
       if (fp == NULL) { return; }
       if (type & SERVER_TYPE_SERVER_INFO)
       {
-        fprintf(fp, "%17s %7s %7s %4d%% %7d %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %-18s\n",
+        fprintf(fp, "%17s %7s %7s %4d%% %7d %9zd %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %-18s\n",
             tbsys::CNetUtil::addrToString(id_).c_str(),
             Func::format_size(use_capacity_).c_str(),
             Func::format_size(total_capacity_).c_str(),
             total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_) : 0,
             block_count_,
+            family_set_.size(),
             current_load_,
             Func::format_size(total_tp_.write_byte_).c_str(),
             total_tp_.write_file_count_ / FILE_COUNT_PRECISION_ADJUST,
@@ -580,9 +581,11 @@ namespace tfs
       time = server.current_time_ - server.startup_time_;
       compute_tp(&server.total_tp_, time);
       add_tp(&total_tp_, &server.total_tp_, &total_tp_, ADD_OP);
+      // add up family id
+      family_set_.insert(server.family_set_.begin(), server.family_set_.end());
       return TFS_SUCCESS;
-
     }
+
     int MachineShow::calculate()
     {
       // then div
@@ -598,13 +601,14 @@ namespace tfs
       if (fp == NULL) { return; }
       if (flag & MACHINE_TYPE_ALL)
       {
-        fprintf(fp, "  %-12s  %4d %5s %7s  %2d%%  %6d  %2d %6s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d\n",
+        fprintf(fp, "  %-12s  %4d %5s %7s  %2d%%  %4d %6zd  %5d %6s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d\n",
             tbsys::CNetUtil::addrToString(machine_id_).c_str(),
             index_,
             Func::format_size(use_capacity_).c_str(),
             Func::format_size(total_capacity_).c_str(),
             total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_) : 0,
             block_count_,
+            family_set_.size(),
             index_ > 0 ? (current_load_ / index_) : current_load_,
             Func::format_size(total_tp_.write_byte_).c_str(),
             total_tp_.write_file_count_ / FILE_COUNT_PRECISION_ADJUST,
@@ -622,13 +626,14 @@ namespace tfs
       }
       else if (flag & MACHINE_TYPE_PART)
       {
-        fprintf(fp, "  %-12s  %4d %6s %7s  %2d%%  %6d  %2d %5s %4"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %-19s\n",
+        fprintf(fp, "  %-12s  %4d %6s %7s  %2d%%  %6d  %6zd  %5d %5s %4"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %-19s\n",
             tbsys::CNetUtil::addrToString(machine_id_).c_str(),
             index_,
             Func::format_size(use_capacity_).c_str(),
             Func::format_size(total_capacity_).c_str(),
             total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_) : 0,
             block_count_,
+            family_set_.size(),
             index_ > 0 ? current_load_ / index_ : current_load_,
             Func::format_size(last_tp_.write_byte_).c_str(),
             last_tp_.write_file_count_ / FILE_COUNT_PRECISION_ADJUST,
@@ -708,6 +713,8 @@ namespace tfs
 
       add_tp(&total_tp_, &server.total_tp_, &total_tp_, ADD_OP);
       add_tp(&last_tp_, &server.last_tp_, &last_tp_, ADD_OP);
+
+      family_set_.insert(server.family_set_.begin(), server.family_set_.end());
       return TFS_SUCCESS;
     }
     int StatStruct::add(MachineShow& machine)
@@ -721,6 +728,8 @@ namespace tfs
 
       add_tp(&total_tp_, &machine.total_tp_, &total_tp_, ADD_OP);
       add_tp(&last_tp_, &machine.last_tp_, &last_tp_, ADD_OP);
+
+      family_set_.insert(machine.family_set_.begin(), machine.family_set_.end());
       return TFS_SUCCESS;
     }
     int StatStruct::add(BlockShow& block)
@@ -740,13 +749,14 @@ namespace tfs
       {
         if (sub_type & SERVER_TYPE_SERVER_INFO)
         {
-          fprintf(fp, "TOTAL: %5d %5s %7s %7s %4d%% %7d %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d\n\n",
+          fprintf(fp, "TOTAL: %5d %5s %7s %7s %4d%% %7d %9zd %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d\n\n",
               server_count_,
               "",
               Func::format_size(use_capacity_).c_str(),
               Func::format_size(total_capacity_).c_str(),
               total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_):0,
               block_count_,
+              family_set_.size(),
               server_count_ > 0 ? static_cast<int32_t> (current_load_/server_count_) : 0,
               Func::format_size(total_tp_.write_byte_).c_str(),
               total_tp_.write_file_count_ / FILE_COUNT_PRECISION_ADJUST,
@@ -779,13 +789,14 @@ namespace tfs
       {
         if (sub_type & MACHINE_TYPE_ALL)
         {
-          fprintf(fp, "Total : %-10d %-1d %3s %7s  %2d%%  %6d  %2u %6s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d\n\n",
+          fprintf(fp, "Total : %-10d %2d %3s %7s  %2d%%  %4d %6zd  %5d %6s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d\n\n",
               machine_count_,
               server_count_,
               Func::format_size(use_capacity_).c_str(),
               Func::format_size(total_capacity_).c_str(),
               total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_) : 0,
               block_count_,
+              family_set_.size(),
               server_count_ > 0 ? static_cast<int32_t> (current_load_/server_count_) : 0,
               Func::format_size(total_tp_.write_byte_).c_str(),
               total_tp_.write_file_count_ / FILE_COUNT_PRECISION_ADJUST,
@@ -799,13 +810,14 @@ namespace tfs
         }
         if (sub_type & MACHINE_TYPE_PART)
         {
-          fprintf(fp, "Total : %-10d %-d %2s %7s  %2d%%  %6d  %2u %6s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d\n\n",
+          fprintf(fp, "Total : %-10d %2d %2s %7s  %2d%%  %4d %6zd  %5d %6s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d\n\n",
               machine_count_,
               server_count_,
               Func::format_size(use_capacity_).c_str(),
               Func::format_size(total_capacity_).c_str(),
               total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_) : 0,
               block_count_,
+              family_set_.size(),
               server_count_ > 0 ? static_cast<int32_t> (current_load_/server_count_) : 0,
               Func::format_size(last_tp_.write_byte_).c_str(),
               last_tp_.write_file_count_ / FILE_COUNT_PRECISION_ADJUST,
