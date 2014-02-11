@@ -585,7 +585,7 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, const uint64_t attach_logic_block_id,
+    int BlockManager::write_file_infos(const common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, const uint64_t attach_logic_block_id,
         const bool tmp, const bool partial, const int32_t reserved_space_ratio)
     {
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id && INVALID_BLOCK_ID != attach_logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;

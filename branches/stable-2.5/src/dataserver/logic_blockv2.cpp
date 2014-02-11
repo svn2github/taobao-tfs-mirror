@@ -267,7 +267,7 @@ namespace tfs
       return index_handle_->set_marshalling_offset(size);
     }
 
-    int BaseLogicBlock::write_file_infos(common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const uint64_t logic_block_id, const bool partial, const int32_t reserved_space_ratio)
+    int BaseLogicBlock::write_file_infos(const common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const uint64_t logic_block_id, const bool partial, const int32_t reserved_space_ratio)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       SuperBlockInfo* sbinfo = NULL;
