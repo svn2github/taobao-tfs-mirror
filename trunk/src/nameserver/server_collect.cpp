@@ -75,7 +75,7 @@ namespace tfs
       write_index_(0),
       status_(SERVICE_STATUS_ONLINE),
       disk_type_(info.type_),
-      rb_status_(REPORT_BLOCK_STATUS_REPORTING)
+      rb_status_(REPORT_BLOCK_STATUS_WAIT)
     {
         float   expand_ratio = 0.0;
         int32_t block_nums = 0, min_expand_size = 0;

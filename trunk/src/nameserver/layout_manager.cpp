@@ -909,6 +909,7 @@ namespace tfs
           if (TFS_SUCCESS != ret)
             NewClientManager::get_instance().destroy_client(client);
           now = Func::get_monotonic_time();
+          pserver->set_report_block_status(REPORT_BLOCK_STATUS_WAIT);
           pserver->set_report_block_expire_time(now);
         }
         if (all_over)

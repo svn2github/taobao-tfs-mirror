@@ -104,7 +104,7 @@ namespace tfs
 
       inline bool is_report_block_expired(const time_t now) const
       {
-        return (now > rb_expired_time_ && rb_status_ == REPORT_BLOCK_STATUS_REPORTING);
+        return (now > rb_expired_time_ && rb_status_ == REPORT_BLOCK_STATUS_WAIT);
       }
       inline bool is_report_block_complete(void) const { return rb_status_ == REPORT_BLOCK_STATUS_COMPLETE;}
       inline void set_report_block_expire_time(const time_t now)

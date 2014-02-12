@@ -48,7 +48,8 @@ namespace tfs
 
     enum ReportBlockStatus
     {
-      REPORT_BLOCK_STATUS_REPORTING = 0x00,
+      REPORT_BLOCK_STATUS_WAIT = 0x00,
+      REPORT_BLOCK_STATUS_REPORTING,
       REPORT_BLOCK_STATUS_COMPLETE
     };
 

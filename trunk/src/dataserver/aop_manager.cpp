@@ -69,7 +69,7 @@ namespace tfs
       return service_.get_lease_manager();
     }
 
-    // prepare_op is called in write/prepare unlink stage
+    // prepare_op is called in write stage
     // a client request directly send to ds when direct flag is set
     int OpManager::prepare_op(uint64_t& block_id, uint64_t& file_id, uint64_t& op_id,
         const OpType type, const bool is_master, const FamilyInfoExt& family_info, VUINT64& servers)
@@ -141,7 +141,8 @@ namespace tfs
         // op meta doesn't exist, create
         if (TFS_SUCCESS != ret)
         {
-          if (!out_of_limit())
+          ret = out_of_limit() ? EXIT_DATAFILE_OVERLOAD : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
           {
             add(oid, servers, type);
             ret = get(oid, op_meta);
@@ -151,6 +152,11 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           op_meta->set_members(servers);
+        }
+        else
+        {
+          // writable block must be freed if prepare lease failed
+          get_lease_manager().free_writable_block(block_id);
         }
 
         put(op_meta);
@@ -245,6 +251,7 @@ namespace tfs
         ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
         if (TFS_SUCCESS != ret)
         {
+          NewClientManager::get_instance().destroy_client(client);
           TBSYS_LOG(WARN, "forward request to slave fail, ret : %d", ret);
         }
       }
@@ -312,8 +319,7 @@ namespace tfs
     {
       bool all_finish = false;
       int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
-          (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_OP_META_ERROR;
-
+          (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         OpId oid(block_id, file_id, op_id);
@@ -332,7 +338,7 @@ namespace tfs
       {
         all_finish = true;
         stat.status_ = ret;
-        stat.error_ << "prepare fail or meta expired";
+        stat.error_ << "prepare async op failed";
         stat.size_ = 0;
         stat.cost_ = 0;
       }

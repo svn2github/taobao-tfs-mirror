@@ -14,6 +14,7 @@
 
 #include "ds_define.h"
 #include "dataservice.h"
+#include "clientv2/fsname.h"
 #include "client_request_server.h"
 
 namespace tfs
@@ -206,7 +207,6 @@ namespace tfs
 
       get_traffic_control().rw_stat(RW_STAT_TYPE_STAT, ret, true, 0);
 
-      // access log
       TBSYS_LOG_DW(ret, "STAT file %s, ret: %d. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d",
           (TFS_SUCCESS == ret) ? "success" : "fail", ret, block_id, attach_block_id, file_id,
@@ -271,9 +271,20 @@ namespace tfs
               assert(NULL != buffer);
               if (INVALID_FAMILY_ID == family_info.family_id_)
               {
+                TimeStat timer;
+                timer.start();
                 ret = get_block_manager().read(buffer,
                     length, offset, file_id, flag, block_id, attach_block_id);
+                timer.end();
                 ret = (ret < 0) ? ret: TFS_SUCCESS;
+
+                // log slow read request
+                if (TFS_SUCCESS == ret && timer.duration() > SYSPARAM_DATASERVER.max_io_warn_time_)
+                {
+                  TBSYS_LOG(WARN, "slow read request. blockid: %"PRI64_PREFIX"u, "
+                      "attach_blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, cost: %"PRI64_PREFIX"d",
+                      attach_block_id, block_id, file_id, timer.duration());
+                }
               }
               else
               {
@@ -308,7 +319,6 @@ namespace tfs
 
       get_traffic_control().rw_stat(RW_STAT_TYPE_READ, ret, offset <= FILEINFO_EXT_SIZE, length);
 
-      // access log
       TBSYS_LOG(INFO, "READ file %s, ret: %d. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, length: %d, offset: %d, peer ip: %s, "
           "cost: %"PRI64_PREFIX"d, degrade: %s",
@@ -345,6 +355,7 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
 
+      bool prepare_ok = false;
       int ret = TFS_SUCCESS;
       if ((NULL == data) || (offset < 0) || (length <= 0))
       {
@@ -386,6 +397,9 @@ namespace tfs
           // not the first wirte, just reset operation
           ret = get_op_manager().reset_op(attach_block_id, file_id, lease_id, servers);
         }
+
+        // async op prepare work finished
+        prepare_ok = (TFS_SUCCESS == ret);
       }
 
       // post request to slaves
@@ -407,7 +421,14 @@ namespace tfs
       // slave response to master
       if (is_master)
       {
-        write_file_callback(message);
+        if (prepare_ok)
+        {
+          write_file_callback(message);
+        }
+        else
+        {
+          message->reply(new StatusMessage(ret, "master prepare op fail"));
+        }
       }
       else
       {
@@ -455,6 +476,7 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
 
+      bool prepare_ok = false;
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
           (INVALID_BLOCK_ID == attach_block_id) ||
@@ -467,6 +489,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = get_op_manager().reset_op(attach_block_id, file_id, lease_id, servers);
+        prepare_ok = (TFS_SUCCESS == ret);
       }
 
       // post request to slaves
@@ -479,8 +502,18 @@ namespace tfs
       BlockInfoV2 local;
       if (TFS_SUCCESS == ret)
       {
+        TimeStat timer;
+        timer.start();
         ret = get_op_manager().close_file(block_id,
             attach_block_id, file_id, lease_id, crc, status, tmp, local);
+        timer.end();
+
+        // log slow write request
+        if (TFS_SUCCESS == ret && timer.duration() > SYSPARAM_DATASERVER.max_io_warn_time_)
+        {
+          TBSYS_LOG(WARN, "slow write request. blockid: %"PRI64_PREFIX"u, "                                                "attach_blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, cost: %"PRI64_PREFIX"d",
+              block_id, attach_block_id, file_id, timer.duration());
+        }
         get_op_manager().update_op(attach_block_id, file_id, lease_id, ret, local);
       }
 
@@ -488,7 +521,14 @@ namespace tfs
       // slave response to master
       if (is_master)
       {
-        close_file_callback(message);
+        if (prepare_ok)
+        {
+          close_file_callback(message);
+        }
+        else
+        {
+          message->reply(new StatusMessage(ret, "master prepare op fail"));
+        }
       }
       else
       {
@@ -503,7 +543,6 @@ namespace tfs
 
      TIMER_END();
 
-     // access log
      TBSYS_LOG_DW(ret, "close file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
          "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, crc: %u, role: %s, "
          "peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
@@ -531,6 +570,7 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
 
+      bool prepare_ok = false;
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
           (INVALID_BLOCK_ID == attach_block_id) ||
@@ -545,6 +585,7 @@ namespace tfs
             file_id, lease_id, OP_TYPE_UNLINK, is_master, family_info, servers);
         if (TFS_SUCCESS == ret)
         {
+          prepare_ok = true;
           // callback & slave will use
           message->set_lease_id(lease_id);
         }
@@ -568,7 +609,14 @@ namespace tfs
       // slave response to master
       if (is_master)
       {
-        unlink_file_callback(message);
+        if (prepare_ok)
+        {
+          unlink_file_callback(message);
+        }
+        else
+        {
+          message->reply(new StatusMessage(ret, "master prepare op fail"));
+        }
       }
       else
       {
@@ -584,13 +632,13 @@ namespace tfs
 
       TIMER_END();
 
-      // access log
-      TBSYS_LOG(DEBUG, "unlink file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG_DW(ret, "unlink file %s. blockid: %"PRI64_PREFIX"u, attach_blockid: %"PRI64_PREFIX"u, "
           "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, action: %d, version: %d, role: %s, "
           "peer ip: %s, cost: %"PRI64_PREFIX"d, ret: %d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id,
           attach_block_id, file_id, lease_id, action, version,
-          is_master ? "master" : "slave", tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(), ret);
+          is_master ? "master" : "slave", tbsys::CNetUtil::addrToString(peer_id).c_str(),
+          TIMER_DURATION(), ret);
 
       return TFS_SUCCESS;
     }
@@ -806,10 +854,11 @@ namespace tfs
         // after close, release op
         get_op_manager().release_op(attach_block_id, file_id, lease_id, ret);
 
-        TBSYS_LOG_IW(ret, "CLOSE file %s, ret: %d. blockid: %"PRI64_PREFIX"u, "
+        clientv2::FSName fsname(attach_block_id, file_id);
+        TBSYS_LOG_IW(ret, "FINISH CLOSE file %s, ret: %d. filename: %s, blockid: %"PRI64_PREFIX"u, "
             "fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, peer ip: %s, cost: %"PRI64_PREFIX"d",
-            TFS_SUCCESS == ret ? "success" : "fail", ret, attach_block_id, file_id, lease_id,
-            tbsys::CNetUtil::addrToString(peer_id).c_str(), op_stat.cost_);
+            TFS_SUCCESS == ret ? "success" : "fail", ret, fsname.get_name(), attach_block_id,
+            file_id, lease_id, tbsys::CNetUtil::addrToString(peer_id).c_str(), op_stat.cost_);
       }
 
       return TFS_SUCCESS;

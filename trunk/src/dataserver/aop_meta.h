@@ -47,6 +47,11 @@ namespace tfs
       int64_t size_;            // op file size
       int32_t status_;          // op status
       std::stringstream error_; // set only error occurs
+
+      OpStat(): cost_(0), size_(0),
+        status_(common::TFS_SUCCESS)
+      {
+      }
     };
 
     struct OpId

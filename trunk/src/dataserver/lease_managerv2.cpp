@@ -32,6 +32,7 @@ namespace tfs
         const std::vector<uint64_t>& ns_ip_port):
       service_(service)
     {
+      memset(ns_ip_port_, 0, sizeof(ns_ip_port_));
       memset(lease_meta_, 0, sizeof(lease_meta_));
       memset(lease_status_, 0, sizeof(lease_status_));
       memset(last_renew_time_, 0, sizeof(last_renew_time_));
@@ -54,7 +55,6 @@ namespace tfs
 
     int LeaseManager::initialize()
     {
-
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       ds_info.startup();
       DataServerStatInfo& info = ds_info.information_;
@@ -401,13 +401,16 @@ namespace tfs
             usleep(100000);
           }
 
-          // apply writable block
-          int32_t need = ds_info.max_write_file_count_ -
-            get_writable_block_manager().size(BLOCK_WRITABLE);
-          if (need > 0)
+          // apply writable block, system disk won't do apply
+          if (ds_info.information_.type_ == DATASERVER_DISK_TYPE_FULL)
           {
-            ret = get_writable_block_manager().apply_writable_block(need);
-            TBSYS_LOG(DEBUG, "apply writable block, count: %d, ret: %d", need, ret);
+            int32_t need = ds_info.max_write_file_count_ -
+              get_writable_block_manager().size(BLOCK_WRITABLE);
+            if (need > 0)
+            {
+              ret = get_writable_block_manager().apply_writable_block(need);
+              TBSYS_LOG(DEBUG, "apply writable block, count: %d, ret: %d", need, ret);
+            }
           }
         }
 
@@ -417,11 +420,13 @@ namespace tfs
 
     int LeaseManager::timeout(const time_t now)
     {
-      //if (is_expired(now))
-      //{
-      //  get_writable_block_manager().expire_all_blocks();
-      //}
-      UNUSED(now);
+      for (int32_t who = 0; who < MAX_SINGLE_CLUSTER_NS_NUM; who++)
+      {
+        if (is_expired(now, who) && is_master(who))
+        {
+          get_writable_block_manager().expire_all_blocks();
+        }
+      }
       return TFS_SUCCESS;
     }
 

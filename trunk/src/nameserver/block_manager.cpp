@@ -452,7 +452,8 @@ namespace tfs
                   {
                     if (all_server_size < SYSPARAM_NAMESERVER.max_replication_)
                     {
-                      block->set_has_version_conflict(BLOCK_HAS_VERSION_CONFLICT_FLAG_YES);
+                      if (all_server_size > 0)
+                        block->set_has_version_conflict(BLOCK_HAS_VERSION_CONFLICT_FLAG_YES);
                       ret = build_relation_(block, writable, master, server->id(),now);
                     }
                     else
@@ -492,7 +493,8 @@ namespace tfs
                   {
                     if (all_server_size < SYSPARAM_NAMESERVER.max_replication_)
                     {
-                      block->set_has_version_conflict(BLOCK_HAS_VERSION_CONFLICT_FLAG_YES);
+                      if (all_server_size > 0)
+                        block->set_has_version_conflict(BLOCK_HAS_VERSION_CONFLICT_FLAG_YES);
                       ret = build_relation_(block, writable, master, server->id(),now);
                     }
                     else
