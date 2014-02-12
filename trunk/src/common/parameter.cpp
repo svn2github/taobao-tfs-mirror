@@ -274,7 +274,7 @@ namespace tfs
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }*/
       //config_log_file_ = config.getString(CONF_SN_DATASERVER, CONF_LOG_FILE);
-      max_datafile_nums_ = config.getInt(CONF_SN_DATASERVER, CONF_DATA_FILE_NUMS, 50);
+      max_datafile_nums_ = config.getInt(CONF_SN_DATASERVER, CONF_DATA_FILE_NUMS, 100);
       max_crc_error_nums_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_CRCERROR_NUMS, 4);
       max_eio_error_nums_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_EIOERROR_NUMS, 6);
       expire_check_block_time_

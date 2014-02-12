@@ -162,6 +162,7 @@ namespace tfs
     const int32_t EXIT_SEND_SYNC_FILE_ENTRY_MSG_ERROR = -5060;
     const int32_t EXIT_CHOOSE_SOURCE_SERVER_ERROR = -5061;
     const int32_t EXIT_CHOOSE_RACK_ERROR = -5062;
+    const int32_t EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR = -5063;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

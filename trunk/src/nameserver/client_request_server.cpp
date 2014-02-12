@@ -145,7 +145,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID == block_id) ? EXIT_BLOCK_ID_INVALID_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        ret = (mode & T_NEWBLK || mode & T_READ) ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
+        ret = (mode & T_NEWBLK || mode & T_READ || mode & T_UPDATE || mode & T_UNLINK) ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
       }
       if (TFS_SUCCESS == ret)
       {
@@ -153,7 +153,8 @@ namespace tfs
         ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
       }
 
-      if (EXIT_BLOCK_NOT_FOUND == ret && mode & T_NEWBLK)
+      if (EXIT_BLOCK_NOT_FOUND == ret && (mode & T_NEWBLK)
+         && !(mode & T_READ) && !(mode & T_UNLINK))
       {
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         ret = ngi.in_discard_newblk_safe_mode_time(now) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
@@ -185,7 +186,7 @@ namespace tfs
         }
       }
       bool read_family_info = (mode & T_READ) ? ((NULL != block) && (TFS_SUCCESS != ret || flag & F_FAMILY_INFO))
-                                    : (mode & T_NEWBLK) ? (NULL != block) : false;
+                                    : ((mode & T_UPDATE) || (mode & T_UNLINK )) ?  (NULL != block) : false;
       if (read_family_info)
       {
         int64_t family_id = block->get_family_id();
@@ -772,7 +773,7 @@ namespace tfs
     void ClientRequestServer::calc_lease_expire_time_(int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout) const
     {
       renew_retry_timeout = SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_;
-      renew_retry_times = SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_;
+      renew_retry_times = SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_times_;
       expire_time = SYSPARAM_NAMESERVER.between_ns_and_ds_lease_expire_time_ - SYSPARAM_NAMESERVER.between_ns_and_ds_lease_safe_time_;
       next_renew_time = expire_time - SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_times_ * SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_;
     }

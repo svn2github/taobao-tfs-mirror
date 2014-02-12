@@ -103,6 +103,7 @@ namespace tfs
         startup_time_ = now;
         switch_time_  = now + common::SYSPARAM_NAMESERVER.safe_mode_time_;
         discard_newblk_safe_mode_time_ =  now + common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
+        apply_block_safe_mode_time_  = now;
         peer_role_ = NS_ROLE_SLAVE;
         owner_role_ = common::Func::is_local_addr(vip_) == true ? NS_ROLE_MASTER : NS_ROLE_SLAVE;
         TBSYS_LOG(INFO, "i %s the master server", owner_role_ == NS_ROLE_MASTER ? "am" : "am not");
@@ -111,6 +112,7 @@ namespace tfs
       {
         owner_role_ = owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
         peer_role_ = owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
+        apply_block_safe_mode_time_ = now + common::SYSPARAM_NAMESERVER.between_ns_and_ds_lease_expire_time_;
         if (now - common::SYSPARAM_NAMESERVER.safe_mode_time_ > startup_time_)
         {
           switch_time_  = now + (common::SYSPARAM_NAMESERVER.safe_mode_time_ / 2);
@@ -131,6 +133,11 @@ namespace tfs
     bool NsRuntimeGlobalInformation::in_discard_newblk_safe_mode_time(const int64_t now) const
     {
       return now < discard_newblk_safe_mode_time_;
+    }
+
+    bool NsRuntimeGlobalInformation::in_apply_block_safe_mode_time(const int64_t now) const
+    {
+      return now < apply_block_safe_mode_time_;
     }
 
     int NsRuntimeGlobalInformation::keepalive(int64_t& lease_id, const uint64_t server,

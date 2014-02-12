@@ -1,14 +1,12 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
-	    -I$(TBLIB_ROOT)/include/tbnet\
-			-DUSE_NEW_CLIENT
+	    -I$(TBLIB_ROOT)/include/tbnet
 
 AM_LDFLAGS=-lrt -lpthread -ldl -luuid -lz
 
 bin_PROGRAMS = get_all_files_in_block save_file_map_between_cluster
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
-        $(top_builddir)/src/dataserver/libdataserver.a\
 	$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
 	$(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
@@ -20,4 +18,5 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	-lz
 
 get_all_files_in_block_SOURCES = get_all_files_in_block.cpp
+
 save_file_map_between_cluster_SOURCES = save_file_map_between_cluster.cpp

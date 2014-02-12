@@ -93,7 +93,7 @@ typedef enum
   T_WRITE = 2,
   T_CREATE = 4,
   T_NEWBLK = 8,
-  T_NOLEASE = 16,
+  T_UPDATE = 16,
   T_STAT = 32,
   T_LARGE = 64,
   T_UNLINK = 128,

@@ -123,6 +123,7 @@ namespace tfs
       int64_t lease_id_;
       int64_t lease_expired_time_;
       int64_t startup_time_;
+      int64_t apply_block_safe_mode_time_;
       uint32_t vip_;
       bool destroy_flag_;
       int8_t owner_role_;
@@ -133,6 +134,7 @@ namespace tfs
       bool is_destroyed() const;
       bool in_safe_mode_time(const int64_t now) const;
       bool in_discard_newblk_safe_mode_time(const int64_t now) const;
+      bool in_apply_block_safe_mode_time(const int64_t now) const;
       int8_t get_role() const;
       bool is_master() const;
       bool peer_is_master() const;

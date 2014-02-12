@@ -266,6 +266,12 @@ namespace tfs
       int32_t ret = (INVALID_SERVER_ID == server) ? EXIT_SERVER_ID_INVALID_ERROR: TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
+        int64_t now = Func::get_monotonic_time();
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        ret = ngi.in_apply_block_safe_mode_time(now) ? EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR : TFS_SUCCESS;
+      }
+      if (TFS_SUCCESS == ret)
+      {
         ServerCollect* pserver = get(server);
         ret = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
         if (TFS_SUCCESS == ret)
@@ -283,6 +289,12 @@ namespace tfs
     int ServerManager::apply_block_for_update(const uint64_t server, common::ArrayHelper<common::BlockLease>& output)
     {
       int32_t ret = (INVALID_SERVER_ID == server) ? EXIT_SERVER_ID_INVALID_ERROR: TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t now = Func::get_monotonic_time();
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        ret = ngi.in_apply_block_safe_mode_time(now) ? EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR : TFS_SUCCESS;
+      }
       if (TFS_SUCCESS == ret)
       {
         ServerCollect* pserver = get(server);
