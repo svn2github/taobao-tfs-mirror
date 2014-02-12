@@ -163,7 +163,7 @@ namespace tfs
       return file_.cache_hit_ != CACHE_HIT_NONE;
     }
 
-    void TfsFile::transfer_mode(const int32_t mode)
+    void TfsFile::transfer_mode(const int32_t mode, const bool create)
     {
       file_.mode_ = mode;
       if (mode & T_FORCE) // force read support
@@ -175,16 +175,9 @@ namespace tfs
       {
         file_.mode_ = T_READ;
       }
-      else if (mode & T_WRITE)
+      else if ((mode & T_WRITE) && !create)
       {
-        if ((mode & T_NEWBLK) == 0)
-        {
-          file_.mode_ |= T_CREATE;
-        }
-      }
-      else if (mode & T_UNLINK)
-      {
-        file_.mode_ |= T_WRITE;
+        file_.mode_ |= T_UPDATE;
       }
     }
 
@@ -192,7 +185,7 @@ namespace tfs
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
-      transfer_mode(mode);
+      transfer_mode(mode, NULL == file_name);
       if (((file_.mode_ & T_READ) || (file_.mode_ & T_UNLINK)) &&
         ((NULL == file_name) || (file_name[0] == '\0')))
       {
@@ -224,7 +217,7 @@ namespace tfs
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
-      transfer_mode(mode);
+      transfer_mode(mode, INVALID_BLOCK_ID == block_id);
       if (((file_.mode_ & T_READ) || (file_.mode_ & T_UNLINK)) &&
         ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id)))
       {
@@ -244,7 +237,7 @@ namespace tfs
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
-      if (0 == (file_.mode_ & (T_READ | T_WRITE)))
+      if (0 == (file_.mode_ & T_READ))
       {
         ret = EXIT_NOT_PERM_OPER;
       }

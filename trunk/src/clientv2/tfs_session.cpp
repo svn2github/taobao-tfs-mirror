@@ -392,9 +392,7 @@ namespace tfs
         // get block info from ns
         if (CACHE_HIT_NONE == cache_hit)
         {
-          ret = get_block_info_ex(T_READ | file.mode_, block_id, version, ds, info);
-          TBSYS_LOG(DEBUG, "query block from ns %s, blockid: %"PRI64_PREFIX"u",
-              ns_addr_.c_str(), block_id);
+          ret = get_block_info_ex(file.mode_, block_id, version, ds, info);
           if (TFS_SUCCESS == ret)
           {
             // update cache
@@ -414,7 +412,7 @@ namespace tfs
       }
       else
       {
-        ret = get_block_info_ex(T_READ | file.mode_, block_id, version, ds, info);
+        ret = get_block_info_ex(file.mode_, block_id, version, ds, info);
       }
 
       return ret;
@@ -503,6 +501,8 @@ namespace tfs
      int TfsSession::get_block_info_ex(const int32_t flag, uint64_t& block_id,
         int32_t& version, VUINT64& ds, FamilyInfoExt& info)
      {
+       TBSYS_LOG(DEBUG, "query block from ns %s, blockid: %"PRI64_PREFIX"u",
+           ns_addr_.c_str(), block_id);
        int ret = TFS_SUCCESS;
        GetBlockInfoMessageV2 gbi_message;
        gbi_message.set_block_id(block_id);
