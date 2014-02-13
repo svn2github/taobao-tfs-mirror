@@ -115,11 +115,11 @@ namespace tfs
       ret = NULL == pserver ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        ret = (REPORT_BLOCK_STATUS_REPORTING != pserver->get_report_block_status()) ? TFS_SUCCESS : EXIT_REPORT_BLOCK_ERROR;
+        ret = (REPORT_BLOCK_FLAG_YES == pserver->get_report_block_status()) ? TFS_SUCCESS : EXIT_REPORT_BLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {
+          pserver->set_report_block_status(REPORT_BLOCK_FLAG_NO);
           //update all relations of blocks belongs to it
-          pserver->set_report_block_status(REPORT_BLOCK_STATUS_REPORTING);
           ret = manager_.update_relation(expires, pserver, blocks, now);
         }
         if (TFS_SUCCESS == ret)
@@ -128,7 +128,6 @@ namespace tfs
           ret = (NULL == pserver) ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
-            pserver->set_report_block_status(REPORT_BLOCK_STATUS_COMPLETE);
             pserver->set_next_report_block_time(now, random() % 0xFFFFFFF, false);
           }
         }

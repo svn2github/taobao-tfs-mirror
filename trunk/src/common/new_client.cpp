@@ -376,6 +376,27 @@ namespace tfs
       return iret;
     }
 
+    int post_msg_to_server(uint64_t server, tbnet::Packet* msg, NewClient::callback_func func, bool save_source_msg)
+    {
+      int32_t ret = INVALID_SERVER_ID != server && NULL != msg  && NULL != func? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        NewClient* new_client = NewClientManager::get_instance().create_client();
+        ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          std::vector<uint64_t> tmp;
+          tmp.push_back(server);
+          ret = new_client->async_post_request(tmp, msg, func, save_source_msg);
+          if (TFS_SUCCESS != ret)
+          {
+            NewClientManager::get_instance().destroy_client(new_client);
+          }
+        }
+      }
+      return ret;
+    }
+
     // test whether the DataServerStatInfo is still alive.
     int test_server_alive(const uint64_t server_id, const int64_t)
     {

@@ -93,37 +93,6 @@ namespace tfs
       UNUSED(function);
       UNUSED(format);
     }
-    static int send_msg_to_server_helper(const uint64_t server, std::vector<uint64_t>& servers)
-    {
-      std::vector<uint64_t>::iterator iter = std::find(servers.begin(), servers.end(), server);
-      if (iter != servers.end())
-      {
-        servers.erase(iter);
-      }
-      return common::TFS_SUCCESS;
-    }
-
-    int post_message_to_server(common::BasePacket* message, const std::vector<uint64_t>& servers)
-    {
-      int32_t ret = (!servers.empty() && NULL != message) ? 0 : -1;
-      if (0 == ret)
-      {
-        DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
-        std::vector<uint64_t> targets(servers);
-        ret = (common::TFS_SUCCESS == send_msg_to_server_helper(info.information_.id_, targets)) ?  0 : -1;
-        if (0 == ret)
-        {
-          if (!targets.empty())
-          {
-            common::NewClient* client = common::NewClientManager::get_instance().create_client();
-            ret = common::TFS_SUCCESS == common::post_msg_to_server(targets, client, message, ds_async_callback) ? 1 : -1;
-            if (ret < 0)
-              common::NewClientManager::get_instance().destroy_client(client);
-          }
-        }
-      }
-      return ret;
-    }
   }/** end namespace dataserver **/
 }/** end namespace tfs **/
 

@@ -95,20 +95,16 @@ namespace tfs
       inline bool is_full() const { return use_capacity_ >= total_capacity_ * common::SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;}
       inline int32_t block_count() const { return block_count_;}
       inline void set_report_block_status(const int8_t status) { rb_status_ = status;}
-      inline int8_t get_report_block_status() const { return rb_status_;}
       inline bool is_report_block(const time_t now) const
       {
-        return now >= next_report_block_time_ ? true : is_report_block_complete()
-                    ? false : is_report_block_expired(now);
+        return (now >= next_report_block_time_
+                && now > rb_expired_time_
+                && rb_status_ != REPORT_BLOCK_FLAG_YES);
       }
-
-      inline bool is_report_block_expired(const time_t now) const
-      {
-        return (now > rb_expired_time_ && rb_status_ == REPORT_BLOCK_STATUS_WAIT);
-      }
-      inline bool is_report_block_complete(void) const { return rb_status_ == REPORT_BLOCK_STATUS_COMPLETE;}
+      inline int8_t get_report_block_status() const { return rb_status_;}
       inline void set_report_block_expire_time(const time_t now)
       {
+        rb_status_ = REPORT_BLOCK_FLAG_YES;
         rb_expired_time_ = now + common::SYSPARAM_NAMESERVER.report_block_expired_time_;
       }
       void set_next_report_block_time(const time_t now, const int64_t time_seed, const int32_t flag);

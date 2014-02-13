@@ -331,17 +331,7 @@ namespace tfs
       DsApplyBlockMessage req_msg;
       req_msg.set_count(count);
       req_msg.set_server_id(ds_info.information_.id_);
-
-      NewClient* new_client = NewClientManager::get_instance().create_client();
-      ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = post_msg_to_server(ds_info.ns_vip_port_, new_client, &req_msg, ds_async_callback);
-        if (TFS_SUCCESS != ret)
-        {
-          NewClientManager::get_instance().destroy_client(new_client);
-        }
-      }
+      ret = post_msg_to_server(ds_info.ns_vip_port_,&req_msg, ds_async_callback);
       return ret;
     }
 
@@ -395,16 +385,7 @@ namespace tfs
       get_blocks(blocks, BLOCK_EXPIRED);
       req_msg.set_size(blocks.get_array_index());
 
-      NewClient* new_client = NewClientManager::get_instance().create_client();
-      ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = post_msg_to_server(ds_info.ns_vip_port_, new_client, &req_msg, ds_async_callback);
-        if (TFS_SUCCESS != ret)
-        {
-          NewClientManager::get_instance().destroy_client(new_client);
-        }
-      }
+      ret = post_msg_to_server(ds_info.ns_vip_port_, &req_msg, ds_async_callback);
       return ret;
     }
 

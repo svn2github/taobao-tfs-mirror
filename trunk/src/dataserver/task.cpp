@@ -241,12 +241,8 @@ namespace tfs
       }
 
       // post repsonse to master ds, won't care result
-      NewClient* client = NewClientManager::get_instance().create_client();
-      int ret = post_msg_to_server(source_id_, client, &resp_cpt_msg, Task::ds_task_callback);
-      if (TFS_SUCCESS != ret)
-      {
-        NewClientManager::get_instance().destroy_client(client);
-      }
+      //int32_t rret = post_msg_to_server(source_id_, &resp_cpt_msg, Task::ds_task_callback);
+      post_msg_to_server(source_id_, &resp_cpt_msg, Task::ds_task_callback);
 
       service_.get_task_manager().remove_block(this);
 
@@ -601,12 +597,8 @@ namespace tfs
           "blockid: %"PRI64_PREFIX"u, status: %d, source: %s",
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
 
-      NewClient* client = NewClientManager::get_instance().create_client();
-      int ret = post_msg_to_server(source_id_, client, &resp_repl_msg, Task::ds_task_callback);
-      if (TFS_SUCCESS != ret)
-      {
-        NewClientManager::get_instance().destroy_client(client);
-      }
+      //int32_t ret = post_msg_to_server(source_id_,  &resp_repl_msg, Task::ds_task_callback);
+      post_msg_to_server(source_id_,  &resp_repl_msg, Task::ds_task_callback);
 
       service_.get_task_manager().remove_block(this);
       return TFS_SUCCESS;

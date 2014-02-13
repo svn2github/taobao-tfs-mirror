@@ -46,11 +46,10 @@ namespace tfs
       NS_SWITCH_FLAG_YES
     };
 
-    enum ReportBlockStatus
+    enum ReportBlockFlag
     {
-      REPORT_BLOCK_STATUS_WAIT = 0x00,
-      REPORT_BLOCK_STATUS_REPORTING,
-      REPORT_BLOCK_STATUS_COMPLETE
+      REPORT_BLOCK_FLAG_NO = 0x00,
+      REPORT_BLOCK_FLAG_YES
     };
 
     enum HandleDeleteBlockFlag

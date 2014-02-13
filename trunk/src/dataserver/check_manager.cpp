@@ -141,13 +141,7 @@ namespace tfs
 
       TBSYS_LOG(INFO, "report check status to %s, senqo: %"PRI64_PREFIX"d",
           tbsys::CNetUtil::addrToString(param.cs_id_).c_str(), param.seqno_);
-
-      NewClient* client = NewClientManager::get_instance().create_client();
-      int ret = post_msg_to_server(param.cs_id_, client, &rsp_msg, Task::ds_task_callback);
-      if (TFS_SUCCESS != ret)
-      {
-        NewClientManager::get_instance().destroy_client(client);
-      }
+      post_msg_to_server(param.cs_id_, &rsp_msg, Task::ds_task_callback);
     }
 
     void CheckManager::check_block(const CheckParam& param, vector<CheckResult>& result)

@@ -420,15 +420,7 @@ namespace tfs
       manager_.block_oplog_write_helper(OPLOG_RELIEVE_RELATION, info, helper, now);
       std::vector<uint64_t> targets;
       targets.push_back(server);
-
-      NewClient* client = NewClientManager::get_instance().create_client();
-      int32_t ret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = client->async_post_request(targets, &rbmsg, ns_async_callback);
-        if (TFS_SUCCESS != ret)
-          NewClientManager::get_instance().destroy_client(client);
-      }
+      int32_t ret = post_msg_to_server(server, &rbmsg, ns_async_callback);
       return ret;
     }
 

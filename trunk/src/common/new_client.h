@@ -25,7 +25,7 @@
 
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     struct WaitId
     {
@@ -33,7 +33,7 @@ namespace tfs
       uint8_t  send_id_;
     };
     class NewClientManager;
-    class NewClient 
+    class NewClient
     {
       friend class NewClientManager;
       friend class LocalPacket;
@@ -80,14 +80,15 @@ namespace tfs
 
         bool async_wait();
     };
-    int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status, 
+    int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status,
                           const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
     int send_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, tbnet::Packet*& output/*not free*/,
                           const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
     int post_msg_to_server(const std::vector<uint64_t>& servers, NewClient* client, tbnet::Packet* message, NewClient::callback_func func,
                           bool save_source_msg = true);
-    int post_msg_to_server(uint64_t servers, NewClient* client, tbnet::Packet* message, NewClient::callback_func func,
+    int post_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* message, NewClient::callback_func func,
                           bool save_source_msg = true);
+    int post_msg_to_server(uint64_t server, tbnet::Packet* message, NewClient::callback_func func, bool save_source_msg = true);
     int test_server_alive(const uint64_t server_id, const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
   } /* message */
 } /* tfs */

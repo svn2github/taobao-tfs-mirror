@@ -871,7 +871,6 @@ namespace tfs
     void LayoutManager::check_all_server_lease_timeout_()
     {
       bool all_over = false;
-      int32_t ret = TFS_SUCCESS;
       uint64_t last_traverse_server = INVALID_SERVER_ID;
       const int32_t SLEEP_TIME_US = 2000000;  // 2 seconds
       NsGlobalStatisticsInfo stat_info;
@@ -903,13 +902,8 @@ namespace tfs
           now = Func::get_monotonic_time();
           CallDsReportBlockRequestMessage req;
           req.set_server(ngi.heart_ip_port_);
-          NewClient* client = NewClientManager::get_instance().create_client();
-          if (NULL != client)
-            ret = post_msg_to_server(pserver->id(), client, &req, ns_async_callback);
-          if (TFS_SUCCESS != ret)
-            NewClientManager::get_instance().destroy_client(client);
+          post_msg_to_server(pserver->id(), &req, ns_async_callback);
           now = Func::get_monotonic_time();
-          pserver->set_report_block_status(REPORT_BLOCK_STATUS_WAIT);
           pserver->set_report_block_expire_time(now);
         }
         if (all_over)

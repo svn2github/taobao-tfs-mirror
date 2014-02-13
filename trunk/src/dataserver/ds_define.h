@@ -223,7 +223,6 @@ namespace tfs
     };
 
     int ds_async_callback(common::NewClient* client);
-    int post_message_to_server(common::BasePacket* message, const std::vector<uint64_t>& servers);
   }/** end namespace dataserver **/
 }/** end namespace tfs **/
 

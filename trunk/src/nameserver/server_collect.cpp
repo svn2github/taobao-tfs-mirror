@@ -75,7 +75,7 @@ namespace tfs
       write_index_(0),
       status_(SERVICE_STATUS_ONLINE),
       disk_type_(info.type_),
-      rb_status_(REPORT_BLOCK_STATUS_WAIT)
+      rb_status_(REPORT_BLOCK_FLAG_NO)
     {
         float   expand_ratio = 0.0;
         int32_t block_nums = 0, min_expand_size = 0;
@@ -171,7 +171,7 @@ namespace tfs
 
     bool ServerCollect::calc_regular_create_block_count(const double average_used_capacity,LayoutManager& manager, bool& promote, int32_t& count)
     {
-      bool ret = ((is_report_block_complete() || promote) /*&& !is_full()*/
+      bool ret = ((next_report_block_time_ > 0 || promote) /*&& !is_full()*/
                     && count > 0 && total_capacity_ > 0 && use_capacity_ >= 0 && DATASERVER_DISK_TYPE_FULL == get_disk_type());
       if (!ret)
       {
@@ -528,9 +528,9 @@ namespace tfs
       callback(reinterpret_cast<void*>(&args), manager);
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       rb_expired_time_ = 0;
-      next_report_block_time_ = 0xFFFFFFFF;
+      next_report_block_time_ = 0;
       scan_writable_block_id_ = 0;
-      rb_status_ = REPORT_BLOCK_STATUS_REPORTING;
+      rb_status_ = REPORT_BLOCK_FLAG_NO;
       use_capacity_ = info.use_capacity_;
       total_capacity_ = info.total_capacity_;
       total_network_bandwith_ = info.total_network_bandwith_;
