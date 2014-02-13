@@ -7,6 +7,7 @@ CLEAR_BIN=${BIN_DIR}/clear_file_system
 FORMAT_BIN=${BIN_DIR}/format_file_system
 DS_CMD="${BIN_DIR}/dataserver -f ${TFS_CONF} -d -i"
 WAIT_TIME=5
+MIN_DS_DISK_SIZE=1073741824 # 1073741824k=1T
 
 warn_echo()
 {
@@ -79,6 +80,63 @@ get_index()
     fi
 }
 
+# key=value
+get_value_from_file_by_key()
+{
+  key=$1
+  file=$2
+  cat $file | egrep "^ *$key *=" | tail -1 | sed 's/[^=]*= *\([^ ]*\).*/\1/g'
+}
+
+
+# just check index:0
+check_index()
+{
+  local index=$1
+  if [ $index -eq 0 ]
+  then
+    local mount_name=`get_value_from_file_by_key "mount_name" $TFS_CONF`
+    local dev_size=""
+    if [ -n "$mount_name" ]
+    then
+      local ds_mount_dir=$mount_name$index
+      local num=0
+      num=`df | grep "$ds_mount_dir" | wc -l`
+      if [ $num -eq 1 ]
+      then
+        dev_size=`df | grep "$ds_mount_dir" | awk '{printf $2}'`
+      else
+        echo "dir: $ds_mount_dir not exist as disk mount point"
+        return 1
+      fi
+    fi
+    local common_size=`get_value_from_file_by_key "mount_maxsize" $TFS_CONF`
+    if [ -z "$dev_size" ]
+    then
+      echo "mount_name not exist in $TFS_CONF, or mount_point not exist for index 0"
+    elif [ $dev_size -ge $MIN_DS_DISK_SIZE ] && [ $dev_size -lt $common_size ]
+    then
+      local extra_size=`get_value_from_file_by_key "extra_mount_maxsize" $TFS_CONF`
+      if [ -z "$extra_size" ]
+      then
+        echo "extra_mount_maxsize not exist in $TFS_CONF"
+      elif [ $extra_size -le 0 ] || [ $extra_size -ge $dev_size ]
+      then
+        echo "extra_mount_maxsize: $extra_size not in(0, $dev_size) for index 0"
+      else
+        echo "SUCCESS"
+      fi
+    else
+      echo "$ds_mount_dir available size:$dev_size not in [$MIN_DS_DISK_SIZE, $common_size]"
+    fi
+  elif [ $index -gt 0 ]
+  then
+    echo "SUCCESS"
+  else
+    echo "index: $index invalid"
+  fi
+}
+
 do_ds()
 {
     case "$1" in
@@ -98,54 +156,61 @@ do_ds()
     local ds_index="`get_index "$2"`"
     if [ -z "$ds_index" ]
     then
-	warn_echo "invalid range"
-	print_usage
-	exit 1
+	      warn_echo "invalid range"
+	      print_usage
+	      exit 1
     fi
 
     local run_index=""
     local ready_index=""
     for i in $ds_index
     do
-	ret_pid=`check_run ds $i`
-	if [ $ret_pid -gt 0 ]
-	then
-	    kill -15 $ret_pid
-	    warn_echo "dataserver $i is running, kill first ... "
-	    run_index="$run_index $i"
-	elif [ $ret_pid -eq 0 ]
-	then
-	    ready_index="$ready_index $i"
-	else
-	    fail_echo "more than one same dataserver $i is running"
-	fi
+	      ret_pid=`check_run ds $i`
+        if [ $ret_pid -gt 0 ]
+        then
+            kill -15 $ret_pid
+            warn_echo "dataserver $i is running, kill first ... "
+            run_index="$run_index $i"
+        elif [ $ret_pid -eq 0 ]
+        then
+            ready_index="$ready_index $i"
+        else
+            fail_echo "more than one same dataserver $i is running"
+        fi
     done
 
     if [ "$run_index" ]
     then
-	sleep ${WAIT_TIME}
-	for i in $run_index
-	do
-	    ret_pid=`check_run "ds" $i`
-	    if [ $ret_pid -gt 0 ]
-	    then
-		fail_echo "dataserver $i is still RUNNING, FAIL to $name $i"
-	    else
-		ready_index="$ready_index $i"
-	    fi
-	done
+        sleep ${WAIT_TIME}
+   	    for i in $run_index
+   	    do
+   	        ret_pid=`check_run "ds" $i`
+   	   	    if [ $ret_pid -gt 0 ]
+   	   	    then
+   	   		      fail_echo "dataserver $i is still RUNNING, FAIL to $name $i"
+   	   	    else
+   	   		      ready_index="$ready_index $i"
+   	   	    fi
+   	   	done
     fi
 
     for i in $ready_index
     do
-	ret=`$cmd $i 2>&1`
-	if [ $? -eq 0 ] && [ -z "`echo $ret | egrep -i ERROR`" ]
-	then
-	    succ_echo "$name $i SUCCESSFULLY"
-	else
-	    fail_echo "$name $i FAIL"
-	fi
-	warn_echo "$ret"
+        ret_check_index=`check_index $i`
+        if [ "$ret_check_index" != "SUCCESS" ]
+        then
+            echo "FAIL, $ret_check_index"
+            fail_echo "$name $i FAIL, please check index and conf: $TFS_CONF"
+        else
+            ret=`$cmd $i 2>&1`
+       	    if [ $? -eq 0 ] && [ -z "`echo $ret | egrep -i ERROR`" ]
+       	    then
+       	        succ_echo "$name $i SUCCESSFULLY"
+       	    else
+       	        fail_echo "$name $i FAIL"
+       	    fi
+       	    warn_echo "$ret"
+        fi
     done
 
     exit 0

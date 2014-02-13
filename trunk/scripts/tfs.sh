@@ -436,13 +436,19 @@ stop_admin()
 
 start_ds_all()
 {
-  host=`hostname -i`
-  ds_index_list=`get_index_from_db $host`
-  if ! [ -n "$ds_index_list" ]
+  ret=`check_all_disks`
+  if [ "$ret" = "ok" ]
   then
-      fail_echo "No ds index info found"
+    host=`hostname -i`
+    ds_index_list=`get_index_from_db $host`
+    if ! [ -n "$ds_index_list" ]
+    then
+        fail_echo "No ds index info found"
+    else
+        do_start "ds" "`get_index $ds_index_list`"
+    fi
   else
-      do_start "ds" "`get_index $ds_index_list`"
+    fail_echo "exist disk not be formated"
   fi
 }
 
@@ -504,6 +510,20 @@ check_ds()
     then
         succ_echo "dataserver [ "$uniq_run_index" ] is running"
     fi
+}
+
+check_all_disks()
+{
+  use_percents=`df |egrep "disk[0-9]{1,2}"|awk '{print $5}'|egrep -o "[0-9]{1,2}"|sort|uniq`
+  for per in $use_percents
+  do
+    if [ $per -lt 95 ] # use ratio should 95%, or the disk format fail
+    then
+      echo "fail"
+      return
+    fi
+  done
+  echo "ok"
 }
 
 check_admin()
