@@ -71,7 +71,7 @@ namespace tfs
 
         int32_t get_cluster_id() const
         {
-          return cluster_id_;
+          return config_.cluster_id_;
         }
 
         const std::string& get_ns_addr() const
@@ -125,7 +125,7 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(TfsSession);
 
         // random select a server from table
-        uint64_t select_server_from_dst() const;
+        uint64_t select_server_from_dstable() const;
 
         // get block info from nameserver
         int get_block_info_ex(const int32_t flag, uint64_t& block_id,
@@ -135,23 +135,25 @@ namespace tfs
         int get_cluster_id_from_ns();
 
         // if need update dataserver table
-        bool need_update_dst();
+        bool need_update_dstable();
 
         // update dataserver table from ns
-        int update_dst();
+        int update_dstable();
 
       private:
         tbutil::TimerPtr timer_;
         tbutil::Mutex mutex_;
         std::string ns_addr_;
         uint64_t ns_id_;
-        int32_t cluster_id_;
         const int64_t block_cache_time_;
         const int64_t block_cache_items_;
         BLOCK_CACHE_MAP block_cache_map_;
         common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
         std::vector<uint64_t> ds_table_;
         tbutil::Mutex table_mutex_;
+        time_t last_update_time_;
+        int32_t update_interval_;
+        common::ClusterConfig config_;
     };
   }
 }

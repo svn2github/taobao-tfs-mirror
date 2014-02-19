@@ -23,6 +23,7 @@
 #include "message/block_info_message_v2.h"
 #include "message/client_cmd_message.h"
 #include "message/server_status_message.h"
+#include "message/client_ns_keepalive_message.h"
 #include "requester/ns_requester.h"
 
 #include "tfs_file.h"
@@ -37,6 +38,7 @@ namespace tfs
 {
   namespace clientv2
   {
+
 #ifdef WITH_TAIR_CACHE
     TairCacheHelper* TfsSession::remote_cache_helper_ = NULL;
 #endif
@@ -46,7 +48,9 @@ namespace tfs
       timer_(timer),
       ns_addr_(ns_addr),
       block_cache_time_(cache_time),
-      block_cache_items_(cache_items)
+      block_cache_items_(cache_items),
+      last_update_time_(0),
+      update_interval_(0)
     {
       if (cache_items <= 0)
       {
@@ -74,10 +78,6 @@ namespace tfs
       {
         ns_id_ = Func::get_host_ip(ns_addr_.c_str());
         ret = (0 != ns_id_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-        if (TFS_SUCCESS == ret)
-        {
-          ret = get_cluster_id_from_ns();
-        }
       }
       else
       {
@@ -87,7 +87,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = update_dst();
+        ret = update_dstable();
       }
 
       if (TFS_SUCCESS == ret)
@@ -127,23 +127,33 @@ namespace tfs
       return ret;
     }
 
-    bool TfsSession::need_update_dst()
+    bool TfsSession::need_update_dstable()
     {
-      uint32_t success_ops =
-        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::read_success_) +
-        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::write_success_) +
-        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::stat_success_) +
-        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::unlink_success_);
+      bool need_update = false;
+      time_t now = Func::get_monotonic_time();
+      if (now > last_update_time_ + update_interval_)
+      {
+        need_update = true;
+      }
+      else
+      {
+        uint32_t success_ops =
+          stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::read_success_) +
+          stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::write_success_) +
+          stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::stat_success_) +
+          stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::unlink_success_);
 
-      uint64_t fail_ops =
-        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::read_fail_) +
-        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::write_fail_) +
-        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::stat_fail_) +
-        stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::unlink_fail_);
+        uint64_t fail_ops =
+          stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::read_fail_) +
+          stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::write_fail_) +
+          stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::stat_fail_) +
+          stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::unlink_fail_);
 
-      uint64_t total_ops = success_ops + fail_ops;
-      return  (total_ops % ClientConfig::update_dst_interval_count_ == 0) ||
-        (fail_ops % ClientConfig::update_dst_fail_count_ == 0);
+        uint64_t total_ops = success_ops + fail_ops;
+        need_update =  (total_ops % ClientConfig::update_dst_interval_count_ == 0) ||
+          (fail_ops % ClientConfig::update_dst_fail_count_ == 0);
+      }
+      return need_update;
     }
 
     void TfsSession::update_stat(const StatType type, bool success)
@@ -192,9 +202,9 @@ namespace tfs
           break; // do nothing
       }
 
-      if (need_update_dst())
+      if (need_update_dstable())
       {
-        update_dst();
+        update_dstable();
       }
     }
 
@@ -335,7 +345,7 @@ namespace tfs
 
       if (INVALID_BLOCK_ID == block_id)
       {
-        uint64_t server = select_server_from_dst();
+        uint64_t server = select_server_from_dstable();
         ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_DS_TABLE_EMPTY;
         if (TFS_SUCCESS == ret)
         {
@@ -486,7 +496,7 @@ namespace tfs
        }
      }
 
-     uint64_t TfsSession::select_server_from_dst() const
+     uint64_t TfsSession::select_server_from_dstable() const
      {
        tbutil::Mutex::Lock lock(table_mutex_);
        uint64_t server = INVALID_SERVER_ID;
@@ -544,32 +554,69 @@ namespace tfs
 
     int TfsSession::get_cluster_id_from_ns()
     {
-      return NsRequester::get_cluster_id(ns_id_, cluster_id_);
+      return config_.cluster_id_;
     }
 
     int TfsSession::get_cluster_group_count_from_ns()
     {
-      int32_t group_count = DEFAULT_CLUSTER_GROUP_COUNT;
-      NsRequester::get_group_count(ns_id_, group_count);
-      return group_count;
+      return config_.group_count_;
     }
 
     int TfsSession::get_cluster_group_seq_from_ns()
     {
-      int32_t group_seq = DEFAULT_CLUSTER_GROUP_COUNT;
-      NsRequester::get_group_seq(ns_id_, group_seq);
-      return group_seq;
+      return config_.group_seq_;
     }
 
-    int TfsSession::update_dst()
+    int TfsSession::update_dstable()
     {
       VUINT64 tmp_table;
-      int ret = NsRequester::get_ds_list(ns_id_, tmp_table);
+      ClusterConfig config;
+      int32_t update_interval = 0;
+      NewClient* new_client = NewClientManager::get_instance().create_client();
+      int ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ClientNsKeepaliveMessage req_msg;
+        req_msg.set_flag(DATASERVER_TYPE_FULL);
+
+        tbnet::Packet* ret_msg = NULL;
+        ret = send_msg_to_server(ns_id_, new_client, &req_msg, ret_msg);
+        if (TFS_SUCCESS == ret)
+        {
+          if (CLIENT_NS_KEEPALIVE_RESPONSE_MESSAGE == ret_msg->getPCode())
+          {
+            ClientNsKeepaliveResponseMessage* msg =
+              dynamic_cast<ClientNsKeepaliveResponseMessage*>(ret_msg);
+            update_interval = msg->get_interval();
+            config = msg->get_cluster_config();
+            tbnet::DataBuffer& data = msg->get_data();
+            while (data.getDataLen() > 0)
+            {
+              tmp_table.push_back(data.readInt64());
+            }
+          }
+          else
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+          }
+        }
+        NewClientManager::get_instance().destroy_client(new_client);
+      }
+
       if (TFS_SUCCESS == ret)
       {
         tbutil::Mutex::Lock lock(table_mutex_);
-        ds_table_ = tmp_table;
+        last_update_time_  = Func::get_monotonic_time();
+        config_ = config;
+        update_interval_ = update_interval;
+        if (tmp_table.size() > 0)
+        {
+          ds_table_ = tmp_table;
+        }
+        TBSYS_LOG(DEBUG, "update dstable. cluster_id: %d, group_seq: %d, group_count: %d, replica_num: %d, interval: %d, server_count: %zd",
+            config.cluster_id_, config.group_seq_, config.group_count_, config.replica_num_, update_interval, tmp_table.size());
       }
+
       return ret;
     }
 

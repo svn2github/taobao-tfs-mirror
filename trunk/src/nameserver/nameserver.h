@@ -96,6 +96,7 @@ namespace tfs
       int resolve_block_version_conflict(common::BasePacket* msg);
       int ping(common::BasePacket* msg);
       int dump_plan(common::BasePacket* msg);
+      int client_keepalive(common::BasePacket* msg);
       int client_control_cmd(common::BasePacket* msg);
       int do_master_msg_helper(common::BasePacket* packet);
       int do_slave_msg_helper(common::BasePacket* packet);

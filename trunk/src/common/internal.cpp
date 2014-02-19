@@ -1318,7 +1318,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[54] = {
+    const char* dynamic_parameter_str[55] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1373,6 +1373,7 @@ namespace tfs
         "enable_old_interface",
         "enable_version_check",
         "marshalling_visit_time",
+        "client_keepalive_interval"
     };
 
     const char* planstr[PLAN_TYPE_EC_MARSHALLING+1] =
@@ -2920,6 +2921,69 @@ namespace tfs
     int64_t CheckResult::length() const
     {
       return INT64_SIZE + INT_SIZE + INT16_SIZE * 3;
+    }
+
+    int ClusterConfig::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int32(data, data_len, pos, cluster_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int32(data, data_len, pos, group_seq_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int32(data, data_len, pos, group_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::set_int32(data, data_len, pos, replica_num_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; i < 4; i++)
+        {
+          Serialization::set_int32(data, data_len, pos, reserve_[i]);
+        }
+      }
+      return ret;
+    }
+
+    int ClusterConfig::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int32(data, data_len, pos, &cluster_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int32(data, data_len, pos, &group_seq_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int32(data, data_len, pos, &group_count_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        Serialization::get_int32(data, data_len, pos, &replica_num_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; i < 4; i++)
+        {
+          Serialization::get_int32(data, data_len, pos, &reserve_[i]);
+        }
+      }
+      return ret;
+    }
+
+    int64_t ClusterConfig::length() const
+    {
+      return INT_SIZE * 8;
     }
 
    void FileInfoV2ToFileStat(const FileInfoV2& info, TfsFileStat& buf)

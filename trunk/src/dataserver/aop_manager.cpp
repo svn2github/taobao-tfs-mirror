@@ -332,17 +332,6 @@ namespace tfs
         put(op_meta);
       }
 
-      // parameter invalid, or lease expired, etc
-      // request is finished, just return error to client
-      if (TFS_SUCCESS != ret)
-      {
-        all_finish = true;
-        stat.status_ = ret;
-        stat.error_ << "prepare async op failed";
-        stat.size_ = 0;
-        stat.cost_ = 0;
-      }
-
       return all_finish;
     }
 
@@ -358,7 +347,10 @@ namespace tfs
         remove(oid);
 
         // write error, this block no longer writable, expire it
-        if (TFS_SUCCESS != status)
+        if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == status ||
+            EXIT_NO_LOGICBLOCK_ERROR == status ||
+            EXIT_DATASERVER_READ_ONLY == status ||
+            EXIT_BLOCK_SIZE_OUT_OF_RANGE == status)
         {
           get_lease_manager().expire_block(block_id);
           TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because write error, ret: %d", block_id, status);

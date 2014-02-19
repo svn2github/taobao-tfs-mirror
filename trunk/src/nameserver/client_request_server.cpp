@@ -755,6 +755,19 @@ namespace tfs
       return manager_.get_task_manager().dump(output);
     }
 
+    void ClientRequestServer::client_keepalive(const int32_t flag, tbnet::DataBuffer& output, ClusterConfig& config, int32_t& interval)
+    {
+      config.cluster_id_ = SYSPARAM_NAMESERVER.cluster_index_ - '0';
+      config.group_seq_ = SYSPARAM_NAMESERVER.group_seq_;
+      config.group_count_ = SYSPARAM_NAMESERVER.group_count_;
+      config.replica_num_ = SYSPARAM_NAMESERVER.max_replication_;
+      interval = SYSPARAM_NAMESERVER.client_keepalive_interval_;
+      if (flag != DATASERVER_TYPE_NONE)
+      {
+        manager_.get_server_manager().scan(flag, output);
+      }
+    }
+
     bool ClientRequestServer::is_discard(void)
     {
       bool ret = SYSPARAM_NAMESERVER.discard_max_count_ > 0;

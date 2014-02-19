@@ -296,6 +296,9 @@ namespace tfs
             case DUMP_PLAN_MESSAGE:
               ret = dump_plan(msg);
               break;
+            case CLIENT_NS_KEEPALIVE_MESSAGE:
+              ret = client_keepalive(msg);
+              break;
             case CLIENT_CMD_MESSAGE:
               ret = client_control_cmd(msg);
               break;
@@ -530,6 +533,19 @@ namespace tfs
         DumpPlanResponseMessage* rmsg = new DumpPlanResponseMessage();
         layout_manager_.get_client_request_server().dump_plan(rmsg->get_data());
         ret = msg->reply(rmsg);
+      }
+      return ret;
+    }
+
+    int NameServer::client_keepalive(common::BasePacket* msg)
+    {
+      int32_t ret = ((NULL != msg) && (msg->getPCode() == CLIENT_NS_KEEPALIVE_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ClientNsKeepaliveMessage* req_msg = dynamic_cast<ClientNsKeepaliveMessage*>(msg);
+        ClientNsKeepaliveResponseMessage* rsp_msg = new ClientNsKeepaliveResponseMessage();
+        layout_manager_.get_client_request_server().client_keepalive(req_msg->get_flag(), rsp_msg->get_data(), rsp_msg->get_cluster_config(), rsp_msg->get_interval());
+        ret = msg->reply(rsp_msg);
       }
       return ret;
     }

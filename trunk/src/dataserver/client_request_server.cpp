@@ -344,7 +344,6 @@ namespace tfs
       uint64_t lease_id = message->get_lease_id();
       int32_t offset = message->get_offset();
       int32_t length = message->get_length();
-      int32_t version = message->get_version();
       VUINT64 servers = message->get_ds(); // will copy vector
       const char* data = message->get_data();
       uint64_t master_id = message->get_master_id();
@@ -354,6 +353,7 @@ namespace tfs
       int64_t family_id = family_info.family_id_;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
+      int32_t version = is_master ? -1 : message->get_version();  // master won't check version
 
       bool prepare_ok = false;
       int ret = TFS_SUCCESS;
@@ -563,12 +563,12 @@ namespace tfs
       int32_t action = message->get_action();
       uint64_t peer_id = message->get_connection()->getPeerId();
       VUINT64 servers = message->get_ds(); // will copy vector
-      int32_t version = message->get_version();
       uint64_t master_id = message->get_master_id();
       const FamilyInfoExt& family_info = message->get_family_info();
       int64_t family_id = family_info.family_id_;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
+      int32_t version = is_master ? -1 : message->get_version();  // master won't check version1
 
       bool prepare_ok = false;
       int ret = TFS_SUCCESS;

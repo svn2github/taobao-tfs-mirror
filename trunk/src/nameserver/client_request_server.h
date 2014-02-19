@@ -61,6 +61,7 @@ namespace tfs
         int batch_open(const int32_t mode, const int32_t flag, common::ArrayHelper<common::BlockMeta>& out);
 
         void dump_plan(tbnet::DataBuffer& output);
+        void client_keepalive(const int32_t flag, tbnet::DataBuffer& output, common::ClusterConfig& replica_num, int32_t& interval);
 
         int handle_control_cmd(const common::ClientCmdInformation& info, common::BasePacket* msg, const int64_t buf_length, char* buf);
 

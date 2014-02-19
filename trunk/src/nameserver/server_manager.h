@@ -87,6 +87,7 @@ namespace tfs
       int renew_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input, common::ArrayHelper<common::BlockLease>& output);
       int giveup_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input, common::ArrayHelper<common::BlockLease>& output);
 
+      void scan(const int32_t flag, tbnet::DataBuffer& output);
       int scan(common::SSMScanParameter& param, int32_t& should, int32_t& start, int32_t& next, bool& all_over) const;
 
       bool get_range_servers(const uint64_t begin, common::ArrayHelper<ServerCollect*>& result) const;

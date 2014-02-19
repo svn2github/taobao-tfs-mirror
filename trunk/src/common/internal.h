@@ -495,6 +495,14 @@ namespace tfs
       DATASERVER_DISK_TYPE_SYSTEM = 1//system disk
     };
 
+    enum DataServerType
+    {
+      DATASERVER_TYPE_ALL = 0,
+      DATASERVER_TYPE_FULL = 1,
+      DATASERVER_TYPE_SYSTEM = 2,
+      DATASERVER_TYPE_NONE = 3
+    };
+
     struct SSMScanParameter
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -1082,7 +1090,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[54];
+    extern const char* dynamic_parameter_str[55];
 
 #pragma pack (1)
     struct FileInfoV2//30
@@ -1380,6 +1388,23 @@ namespace tfs
     {
       ENABLE_VERSION_CHECK_FLAG_NO = 0,
       ENABLE_VERSION_CHECK_FLAG_YES = 1
+    };
+
+    struct ClusterConfig
+    {
+      int32_t cluster_id_;
+      int32_t group_seq_;
+      int32_t group_count_;
+      int32_t replica_num_;
+      int32_t reserve_[4];
+
+      ClusterConfig():cluster_id_(0), group_seq_(0), group_count_(1), replica_num_(0)
+      {
+      }
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
     };
 
     // defined type typedef

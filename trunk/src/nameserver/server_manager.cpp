@@ -337,6 +337,26 @@ namespace tfs
       return ret;
     }
 
+    void ServerManager::scan(const int32_t flag, tbnet::DataBuffer& output)
+    {
+      RWLock::Lock lock(rwmutex_, READ_LOCKER);
+      SERVER_TABLE_ITER iter = servers_.begin();
+      for ( ; iter != servers_.end(); iter++)
+      {
+        if (flag & DATASERVER_TYPE_FULL)
+        {
+          if (DATASERVER_DISK_TYPE_FULL !=  (*iter)->get_disk_type())
+            continue;
+        }
+        else if (flag & DATASERVER_TYPE_SYSTEM)
+        {
+          if (DATASERVER_DISK_TYPE_SYSTEM !=  (*iter)->get_disk_type())
+            continue;
+        }
+        output.writeInt64((*iter)->id());
+      }
+    }
+
     int ServerManager::scan(common::SSMScanParameter& param, int32_t& should, int32_t& start, int32_t& next, bool& all_over) const
     {
       int32_t actual= 0;

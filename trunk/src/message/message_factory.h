@@ -67,6 +67,7 @@
 #include "sync_file_entry_message.h"
 #include "migrate_ds_heart_message.h"
 #include "expire_message.h"
+#include "client_ns_keepalive_message.h"
 
 namespace tfs
 {

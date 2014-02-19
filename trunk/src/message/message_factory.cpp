@@ -567,6 +567,12 @@ namespace tfs
           case common::GET_BLOCK_STATISTIC_VISIT_INFO_MESSAGE:
             packet = new BlockStatisticVisitInfoMessage();
             break;
+          case common::CLIENT_NS_KEEPALIVE_MESSAGE:
+            packet = new ClientNsKeepaliveMessage();
+            break;
+          case common::CLIENT_NS_KEEPALIVE_RESPONSE_MESSAGE:
+            packet = new ClientNsKeepaliveResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;
