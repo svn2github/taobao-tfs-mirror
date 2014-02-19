@@ -433,7 +433,7 @@ int cmd_add_block(const VSTRING& param)
 
   VUINT64 ds_list;//这里定义这个变量只是为了让get_block_ds_list_v2函数与cmd_list_block功能兼容
 
-  int ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list, T_WRITE|T_NEWBLK|T_NOLEASE);
+  int ret = ToolUtil::get_block_ds_list_v2(g_tfs_client->get_server_id(), block_id, ds_list, T_WRITE|T_NEWBLK);
 
   ToolUtil::print_info(ret, "add block %"PRI64_PREFIX"u", block_id);
 
