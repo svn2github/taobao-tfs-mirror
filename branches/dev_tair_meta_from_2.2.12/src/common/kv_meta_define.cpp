@@ -546,7 +546,8 @@ namespace tfs
 
     int64_t BucketMetaInfo::length() const
     {
-      int64_t len = INT64_SIZE * 2 + INT_SIZE * 4 + INT8_SIZE;
+      int64_t len = INT64_SIZE * 2 + INT_SIZE * 3;
+      //int64_t len = INT64_SIZE * 2 + INT_SIZE * 4 + INT8_SIZE;
 
       if (has_tag_info_)
       {
@@ -560,6 +561,7 @@ namespace tfs
       }
 
       //add bucket acl map
+      /*
       len += INT_SIZE * 2;
       MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
       for (; iter != bucket_acl_map_.end(); iter++)
@@ -567,13 +569,14 @@ namespace tfs
         len += INT64_SIZE;
         len += INT_SIZE;
       }
-
+      */
       //add bucket logging
+      /*
       len += INT_SIZE * 3; //tag
       len += INT8_SIZE;
       len += common::Serialization::get_string_length(target_bucket_name_);
       len += common::Serialization::get_string_length(target_prefix_);
-
+      */
       return len;
     }
 

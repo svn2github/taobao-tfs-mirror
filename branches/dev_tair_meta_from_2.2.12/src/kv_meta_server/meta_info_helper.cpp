@@ -62,6 +62,7 @@ namespace tfs
       MAP_INT64_INT_ITER iter = bucket_acl_map.find(user_id);
       if (iter != bucket_acl_map.end())
       {
+        TBSYS_LOG(DEBUG, "userid found is %"PRI64_PREFIX"d owner ,sec is %d", user_id,iter->second);
         if (!(iter->second & per))
         {
           flag = false;
@@ -87,8 +88,6 @@ namespace tfs
         TBSYS_LOG(ERROR, "user_id: %"PRI64_PREFIX"d get bucket have no %d acl", user_id, per);
       }
 
-      //TODO fix trick
-      //ret = TFS_SUCCESS;
       return ret;
     }
 
@@ -1881,7 +1880,7 @@ namespace tfs
       key.key_type_ = KvKey::KEY_TYPE_BUCKET;
 
       char *kv_value_bucket_info_buff = NULL;
-      int64_t kv_value_buff_size = bucket_meta_info.length();
+      int64_t kv_value_buff_size = 1024*1024;//bucket_meta_info.length();
       kv_value_bucket_info_buff = (char*) malloc(kv_value_buff_size);
       if (NULL == kv_value_bucket_info_buff)
       {
