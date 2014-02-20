@@ -72,8 +72,8 @@ namespace tfs
       plan_run_flag_ |= PLAN_RUN_FLAG_COMPACT;
       plan_run_flag_ |= PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION;
       //plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;//TODO
-      //plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
-      //plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
+      plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
+      plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
     }
 
 
@@ -555,7 +555,7 @@ namespace tfs
     void LayoutManager::switch_role(time_t now)
     {
       get_task_manager().clear();
-      GFactory::get_runtime_info().switch_role(now);
+      GFactory::get_runtime_info().switch_role(false, now);
       get_server_manager().set_all_server_next_report_time(SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_SWITCH, now);
       oplog_sync_mgr_.switch_role();
     }
@@ -604,7 +604,7 @@ namespace tfs
       uint64_t block_start = 0;
       time_t  now = 0, current = 0;
       int64_t need = 0, family_start = 0, max_compact_task_count = 0, max_marshalling_num = SYSPARAM_NAMESERVER.max_marshalling_num_;
-      const int32_t MAX_QUERY_FAMILY_NUMS = 32;
+      const int32_t MAX_QUERY_FAMILY_NUMS = 4096;
       const int32_t MAX_QUERY_BLOCK_NUMS = 4096 * 4;
       const int32_t MIN_SLEEP_TIME_US= 1000000;//1s
       const int32_t MAX_SLEEP_TIME_US = 1000000;//1s
@@ -736,6 +736,8 @@ namespace tfs
 
           while ((!(plan_run_flag_ & PLAN_TYPE_MOVE)) && (!ngi.is_destroyed()))
             usleep(100000);
+
+          need = SYSPARAM_NAMESERVER.max_replication_ > 1 ? need / SYSPARAM_NAMESERVER.max_replication_ : need / 2;
 
           total_capacity = 0, total_use_capacity = 0, alive_server_nums = 0, sleep_nums = 0;
           get_server_manager().move_statistic_all_server_info(total_capacity,
