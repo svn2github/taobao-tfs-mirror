@@ -268,7 +268,7 @@ namespace tfs
         else  // move to expired list
         {
           get_writable_block_manager().expire_one_block(lease.block_id_);
-          TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because renew fail, ret: %d",
+          TBSYS_LOG(INFO, "expire block %"PRI64_PREFIX"u because renew fail, ret: %d",
               lease.block_id_, lease.result_);
         }
         TBSYS_LOG(DEBUG, "renew block %"PRI64_PREFIX"u, replica: %d, ret: %d",
@@ -333,7 +333,7 @@ namespace tfs
           {
             lease_status_[who] = LEASE_RENEW;
           }
-          TBSYS_LOG(INFO, "apply lease from %s, who: %d, result: %d",
+          TBSYS_LOG(INFO, "apply lease from %s, who: %d, ret: %d",
               tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str(), who, ret);
         }
 
@@ -360,7 +360,7 @@ namespace tfs
             lease_status_[who] = LEASE_APPLY;
             get_writable_block_manager().expire_all_blocks();  // lease expired
           }
-          TBSYS_LOG(INFO, "renew lease from %s, who: %d, result: %d",
+          TBSYS_LOG(INFO, "renew lease from %s, who: %d, ret: %d",
               tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str(), who, ret);
         }
 
@@ -368,7 +368,7 @@ namespace tfs
       }
 
       ret = giveup(who);
-      TBSYS_LOG(INFO, "giveup lease from %s, who: %d, result: %d",
+      TBSYS_LOG(INFO, "giveup lease from %s, who: %d, ret: %d",
           tbsys::CNetUtil::addrToString(ns_ip_port_[who]).c_str(), who, ret);
     }
 
@@ -382,17 +382,21 @@ namespace tfs
         int64_t now = Func::get_monotonic_time();
         if (has_valid_lease(now))
         {
-          TBSYS_LOG(INFO, "writable block info, writable: %d, update: %d, expired: %d",
-              get_writable_block_manager().size(BLOCK_WRITABLE),
-              get_writable_block_manager().size(BLOCK_UPDATE),
-              get_writable_block_manager().size(BLOCK_EXPIRED));
+          // dump writable block info every minute
+          if (now % 60 == 0)
+          {
+            TBSYS_LOG(INFO, "writable block info, writable: %d, update: %d, expired: %d",
+                get_writable_block_manager().size(BLOCK_WRITABLE),
+                get_writable_block_manager().size(BLOCK_UPDATE),
+                get_writable_block_manager().size(BLOCK_EXPIRED));
+          }
 
           // giveup expired block first
           int32_t expired = get_writable_block_manager().size(BLOCK_EXPIRED);
           if (expired > 0)
           {
             ret = get_writable_block_manager().giveup_writable_block();
-            TBSYS_LOG(DEBUG, "giveup writable block, count: %d, ret: %d", expired, ret);
+            TBSYS_LOG_DW(ret, "giveup writable block, count: %d, ret: %d", expired, ret);
           }
 
           // sleep 100ms between giveup and apply, wait for giveup finish
@@ -409,7 +413,7 @@ namespace tfs
             if (need > 0)
             {
               ret = get_writable_block_manager().apply_writable_block(need);
-              TBSYS_LOG(DEBUG, "apply writable block, count: %d, ret: %d", need, ret);
+              TBSYS_LOG_DW(ret, "apply writable block, count: %d, ret: %d", need, ret);
             }
           }
         }

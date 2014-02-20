@@ -353,7 +353,7 @@ namespace tfs
             EXIT_BLOCK_SIZE_OUT_OF_RANGE == status)
         {
           get_lease_manager().expire_block(block_id);
-          TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because write error, ret: %d", block_id, status);
+          TBSYS_LOG(INFO, "expire block %"PRI64_PREFIX"u because write error, ret: %d", block_id, status);
         }
       }
     }

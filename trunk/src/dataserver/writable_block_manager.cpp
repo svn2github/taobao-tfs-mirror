@@ -66,7 +66,7 @@ namespace tfs
         if ((*iter)->get_type() == BLOCK_UPDATE)
         {
           expire_one_block_(*iter);
-          TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because update",
+          TBSYS_LOG(INFO, "expire block %"PRI64_PREFIX"u because update",
               (*iter)->get_block_id());
         }
       }
@@ -247,12 +247,20 @@ namespace tfs
         for ( ;iter != expires.end(); iter++)
         {
           expire_one_block(*iter);
-          TBSYS_LOG(DEBUG, "expire block %"PRI64_PREFIX"u because block full", *iter);
+          TBSYS_LOG(INFO, "expire block %"PRI64_PREFIX"u because block full", *iter);
         }
       }
 
-      TBSYS_LOG(DEBUG, "alloc writable block %"PRI64_PREFIX"u",
-          (NULL != block) ? block->get_block_id() : 0);
+      if (NULL == block)
+      {
+        TBSYS_LOG(WARN, "alloc writable block failed. writable: %d, update: %d, expired: %d",
+            writable_size_, update_size_, expired_size_);
+      }
+      else
+      {
+        TBSYS_LOG(DEBUG, "alloc writable block %"PRI64_PREFIX"u",
+            block->get_block_id());
+      }
 
       return (NULL != block) ? TFS_SUCCESS : EXIT_NO_WRITABLE_BLOCK;
     }
@@ -303,7 +311,7 @@ namespace tfs
         target->set_use_flag(true);
       }
 
-      TBSYS_LOG(DEBUG, "alloc update block ret: %d", ret);
+      TBSYS_LOG_DW(ret, "alloc update block failed, ret: %d", ret);
 
       return ret;
     }
@@ -318,7 +326,6 @@ namespace tfs
         {
           block->set_use_flag(false);
         }
-
         TBSYS_LOG(DEBUG, "free writable block %"PRI64_PREFIX"u", block_id);
       }
     }
@@ -370,6 +377,9 @@ namespace tfs
         }
         NewClientManager::get_instance().destroy_client(new_client);
       }
+
+      TBSYS_LOG_DW(ret, "apply update block %"PRI64_PREFIX"u, ret: %d",
+          block_id, ret);
 
       return ret;
     }
@@ -502,16 +512,13 @@ namespace tfs
       int32_t size = response->get_size();
       for (int index = 0; index < size; index++)
       {
-        if (TFS_SUCCESS == block_lease[index].result_)
+        uint64_t block_id = block_lease[index].block_id_;
+        WritableBlock* block = remove(block_id);
+        if (NULL != block)
         {
-          uint64_t block_id = block_lease[index].block_id_;
-          WritableBlock* block = remove(block_id);
-          if (NULL != block)
-          {
 #ifndef TFS_GTEST
-            get_block_manager().get_gc_manager().add(block);
+          get_block_manager().get_gc_manager().add(block);
 #endif
-          }
         }
         TBSYS_LOG(DEBUG, "giveup writable block %"PRI64_PREFIX"u ret %d",
             block_lease[index].block_id_, block_lease[index].result_);

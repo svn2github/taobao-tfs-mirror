@@ -120,7 +120,7 @@ namespace tfs
     {
       tbutil::Mutex::Lock lock(mutex_);
       bool all_finish = false;
-      TBSYS_LOG(DEBUG, "op done server size: %d", done_server_size_);
+      // TBSYS_LOG(DEBUG, "op done server size: %d", done_server_size_);
       if (done_server_size_ >= server_size_)
       {
         all_finish = true;
@@ -155,6 +155,7 @@ namespace tfs
 
     void OpMeta::strerror(std::stringstream& error)
     {
+      error << "block: " << oid_.block_id_;
       for (int32_t index = 0; index < server_size_; index++)
       {
         error << " server: " << tbsys::CNetUtil::addrToString(members_[index].server_) <<
