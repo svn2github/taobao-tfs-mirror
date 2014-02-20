@@ -161,6 +161,135 @@ namespace tfs
       return ret;
     }
 
+
+    int DsRequester::stat_file(const uint64_t ds_id, const uint64_t block_id, const uint64_t attach_block_id,
+        uint64_t file_id, TfsFileStat& file_stat, const int32_t flag)
+    {
+      int32_t ret = TFS_SUCCESS;
+      StatFileMessageV2 sf_msg;
+      sf_msg.set_block_id(block_id);
+      sf_msg.set_attach_block_id(attach_block_id);
+      sf_msg.set_file_id(file_id);
+      sf_msg.set_flag(flag);
+
+      tbnet::Packet* ret_msg = NULL;
+      NewClient* new_client = NewClientManager::get_instance().create_client();
+      ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = send_msg_to_server(ds_id, new_client, &sf_msg, ret_msg);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (STAT_FILE_RESP_MESSAGE_V2 == ret_msg->getPCode())
+        {
+          StatFileRespMessageV2* resp_msg = dynamic_cast<StatFileRespMessageV2*>(ret_msg);
+          const FileInfoV2& file_info = resp_msg->get_file_info();
+          FileInfoV2ToFileStat(file_info, file_stat);
+        }
+        else if (STATUS_MESSAGE == ret_msg->getPCode())
+        {
+          StatusMessage* resp_msg = dynamic_cast<StatusMessage*>(ret_msg);
+          ret = resp_msg->get_status();
+        }
+        else
+        {
+          ret = EXIT_UNKNOWN_MSGTYPE;
+        }
+      }
+      if (NULL != new_client)
+      {
+        NewClientManager::get_instance().destroy_client(new_client);
+      }
+      return ret;
+    }
+
+    int DsRequester::read_file(const uint64_t ds_id, const uint64_t block_id, const uint64_t attach_block_id,
+        const uint64_t file_id, char* data, const int32_t offset, const int32_t length, const int32_t flag)
+    {
+      int32_t ret = TFS_SUCCESS;
+      ReadFileMessageV2 rd_msg;
+      rd_msg.set_block_id(block_id);
+      rd_msg.set_attach_block_id(attach_block_id);
+      rd_msg.set_file_id(file_id);
+      rd_msg.set_offset(offset);
+      rd_msg.set_length(length);
+      rd_msg.set_flag(flag);
+
+      tbnet::Packet* ret_msg = NULL;
+      NewClient* new_client = NewClientManager::get_instance().create_client();
+      ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = send_msg_to_server(ds_id, new_client, &rd_msg, ret_msg);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (READ_FILE_RESP_MESSAGE_V2 == ret_msg->getPCode())
+        {
+          ReadFileRespMessageV2* resp_msg = dynamic_cast<ReadFileRespMessageV2*>(ret_msg);
+          ret = resp_msg->get_length();// return real size when read success
+          assert(ret >= 0);
+          memcpy(data, resp_msg->get_data(), resp_msg->get_length());
+        }
+        else if (STATUS_MESSAGE == ret_msg->getPCode())
+        {
+          StatusMessage* resp_msg = dynamic_cast<StatusMessage*>(ret_msg);
+          ret = resp_msg->get_status();
+        }
+        else
+        {
+          ret = EXIT_UNKNOWN_MSGTYPE;
+        }
+      }
+      if (NULL != new_client)
+      {
+        NewClientManager::get_instance().destroy_client(new_client);
+      }
+
+      return ret;
+    }
+
+    int DsRequester::list_block(const uint64_t ds_id, vector<BlockInfoV2>& block_infos)
+    {
+      int ret = TFS_SUCCESS;
+      ListBlockMessage req_lb_msg;
+      req_lb_msg.set_block_type(LB_INFOS);
+
+      NewClient* client = NewClientManager::get_instance().create_client();
+      if (NULL != client)
+      {
+        tbnet::Packet* ret_msg= NULL;
+        ret = send_msg_to_server(ds_id, client, &req_lb_msg, ret_msg);
+        if (TFS_SUCCESS == ret)
+        {
+          if (ret_msg->getPCode() == RESP_LIST_BLOCK_MESSAGE)
+          {
+            RespListBlockMessage* resp_lb_msg = dynamic_cast<RespListBlockMessage*> (ret_msg);
+//            block_vec = *(resp_lb_msg->get_blocks());
+            block_infos = *(resp_lb_msg->get_infos());
+          }
+          else
+          {
+            ret = EXIT_RECVMSG_ERROR;
+            TBSYS_LOG(ERROR, "get block list reply msg fail, pcode: %d, ds: %s", ret_msg->getPCode(), tbsys::CNetUtil::addrToString(ds_id).c_str());
+          }
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "list block message fail, ds: %s, ret: %d", tbsys::CNetUtil::addrToString(ds_id).c_str(), ret);
+        }
+        NewClientManager::get_instance().destroy_client(client);
+      }
+      else
+      {
+        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+      }
+      return ret;
+    }
+
     int DsRequester::recombine_raw_data(const common::IndexDataV2& sindex, tbnet::DataBuffer& sbuf,
         common::IndexDataV2& dindex, tbnet::DataBuffer& dbuf, std::vector<FileInfoV2>& nosync_files)
     {
