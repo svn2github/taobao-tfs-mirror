@@ -193,6 +193,14 @@ namespace tfs
           if (TFS_SUCCESS == do_sync(&item->data_[0], item->length_))
           {
             file_queue_->finish(0);
+            SyncData* sf = reinterpret_cast<SyncData*>(&item->data_[0]);
+            LogUniqueKey key;
+            key.cmd_ = sf->cmd_;
+            key.block_id_ = sf->block_id_;
+            key.file_id_  = sf->file_id_;
+            fail_queue_mutex_.lock();
+            unique_key_.erase(key);
+            fail_queue_mutex_.unlock();
           }
           else
           {
@@ -238,6 +246,14 @@ namespace tfs
               if (TFS_SUCCESS == do_sync(&item->data_[0], item->length_))
               {
                 fail_file_queue_->finish(0);
+                SyncData* sf = reinterpret_cast<SyncData*>(&item->data_[0]);
+                LogUniqueKey key;
+                key.cmd_ = sf->cmd_;
+                key.block_id_ = sf->block_id_;
+                key.file_id_  = sf->file_id_;
+                fail_queue_mutex_.lock();
+                unique_key_.erase(key);
+                fail_queue_mutex_.unlock();
               }
               else
               {
@@ -276,16 +292,27 @@ namespace tfs
         }
         else
         {
-          SyncData data;
-          data.cmd_ = cmd;
-          data.block_id_ = block_id;
-          data.file_id_ = file_id;
-          data.old_file_id_ = old_file_id;
-          data.retry_time_ = time(NULL);
-
+          LogUniqueKey key;
+          key.cmd_ = cmd;
+          key.block_id_ = block_id;
+          key.file_id_  = file_id;
           tbutil::Monitor<tbutil::Mutex>::Lock lock(sync_mirror_monitor_);
-          ret = file_queue_->push(reinterpret_cast<void*>(&data), sizeof(SyncData));
-          sync_mirror_monitor_.notify();
+          std::set<LogUniqueKey>::const_iterator iter = unique_key_.find(key);
+          if (iter == unique_key_.end())
+          {
+            SyncData data;
+            data.cmd_ = cmd;
+            data.block_id_ = block_id;
+            data.file_id_ = file_id;
+            data.old_file_id_ = old_file_id;
+            data.retry_time_ = time(NULL);
+            ret = file_queue_->push(reinterpret_cast<void*>(&data), sizeof(SyncData));
+            if (TFS_SUCCESS == ret)
+            {
+              unique_key_.insert(key);
+            }
+            sync_mirror_monitor_.notify();
+          }
         }
       }
       return ret;

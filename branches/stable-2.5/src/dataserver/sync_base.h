@@ -38,6 +38,24 @@ namespace tfs
     class DataService;
     class SyncBase
     {
+        struct LogUniqueKey
+        {
+          uint64_t block_id_;
+          uint64_t file_id_;
+          int32_t cmd_;
+          bool operator < (const LogUniqueKey& key) const
+          {
+            if (block_id_ < key.block_id_)
+              return true;
+            if (block_id_ > key.block_id_)
+              return false;
+            if (file_id_ < key.file_id_)
+              return true;
+            if (file_id_ > key.file_id_)
+              return false;
+            return cmd_ < key.cmd_;
+          }
+        };
       public:
         SyncBase(DataService& service, const int32_t type, const int32_t index, const char* src_addr, const char* dest_addr);
         ~SyncBase();
@@ -69,6 +87,7 @@ namespace tfs
         int32_t need_sleep_;
         tbutil::Monitor<tbutil::Mutex> sync_mirror_monitor_;
         tbutil::Mutex fail_queue_mutex_;
+        std::set<LogUniqueKey> unique_key_;
 #if defined(TFS_GTEST)
       public:
 #else
