@@ -720,7 +720,7 @@ namespace tfs
             int64_t last_offset = 0;
             ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_key, end_key, SCAN_LIMIT, scan_offset,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
-            if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
+            if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret && offset < object_info_zero.meta_info_.big_file_size_)
             {
               //we should find pre record
               ret = scan_pre_record(bucket_name, file_name, start_key, object_info, valid_result);
