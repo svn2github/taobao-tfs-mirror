@@ -35,6 +35,7 @@ namespace tfs
   {
     class BlockCollect;
     class LayoutManager;
+    class ServerManager;
     class ServerCollect : public common::BaseObject<LayoutManager>
     {
       struct BlockIdCompareExt
@@ -77,6 +78,7 @@ namespace tfs
       int apply_block(LayoutManager& manager, common::ArrayHelper<common::BlockLease>& result);
       int renew_block(const common::ArrayHelper<common::BlockInfoV2>& input, LayoutManager& manager, common::ArrayHelper<common::BlockLease>& output);
       int giveup_block(const common::ArrayHelper<common::BlockInfoV2>& input,LayoutManager& manager, common::ArrayHelper<common::BlockLease>& result);
+      int giveup_block(const uint64_t block, LayoutManager& manager);
       bool has_valid_lease(const int64_t now) const;
       bool renew(const common::DataServerStatInfo& info, const int64_t now, const int32_t times);
       int reset(const common::DataServerStatInfo& info, const int64_t now, LayoutManager& manager);
@@ -120,7 +122,7 @@ namespace tfs
       int remove_(const uint64_t block, BLOCK_TABLE& table);
       int for_each_(const uint64_t begin, const BLOCK_TABLE& table, common::ArrayHelper<uint64_t>& blocks) const;
       bool exist_(const uint64_t block, const BLOCK_TABLE& table) const;
-      bool cleanup_invalid_block_(BlockCollect* block);
+      bool cleanup_invalid_block_(BlockCollect* block, const int64_t now);
 
       private:
       mutable common::RWLock mutex_;

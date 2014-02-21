@@ -200,11 +200,12 @@ namespace tfs
           double max_average_use_capacity_ratio = average_used_capacity * AVERAGE_USED_CAPACITY_MULTIPLE;
           for (index = 0; index < helper.get_array_index() && actual < count; ++index)
           {
+            int64_t now = Func::get_monotonic_time();
             scan_writable_block_id_ = *helper.at(index);
             assert(INVALID_BLOCK_ID != scan_writable_block_id_);
             block = manager.get_block_manager().get(scan_writable_block_id_);
             assert(NULL != block);
-            if (cleanup_invalid_block_(block))
+            if (cleanup_invalid_block_(block, now))
               continue;
             RWLock::Lock lock(mutex_, READ_LOCKER);
             if (!exist_(scan_writable_block_id_, *issued_leases_))
@@ -449,7 +450,7 @@ namespace tfs
         }
         else
         {
-          cleanup_invalid_block_(pblock);
+          cleanup_invalid_block_(pblock, now);
         }
       }
       return TFS_SUCCESS;
@@ -486,10 +487,38 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          cleanup_invalid_block_(pblock);
+          cleanup_invalid_block_(pblock, now);
         }
       }
       return TFS_SUCCESS;
+    }
+
+    int ServerCollect::giveup_block(const uint64_t block, LayoutManager& manager)
+    {
+      BlockManager& block_manager = manager.get_block_manager();
+      int64_t now = Func::get_monotonic_time();
+      BlockCollect* pblock = block_manager.get(block);
+      int32_t ret = (pblock != NULL) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+      if (TFS_SUCCESS == ret)
+      {
+        uint64_t server = pblock->get_server(0);
+        ret = (id() == server) ? TFS_SUCCESS : EXIT_CANNOT_GIVEUP_LEASE;
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "%s cannot giveup lease, %s has lease, real %s ,block: %"PRI64_PREFIX"u",
+              CNetUtil::addrToString(id()).c_str(), CNetUtil::addrToString(id()).c_str(),
+              CNetUtil::addrToString(server).c_str(), block);
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = block_manager.giveup_lease(block, id(), now, NULL);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        cleanup_invalid_block_(pblock, now);
+      }
+      return ret;
     }
 
     bool ServerCollect::has_valid_lease(const int64_t now) const
@@ -746,13 +775,13 @@ namespace tfs
       return ret;
     }
 
-    bool ServerCollect::cleanup_invalid_block_(BlockCollect* block)
+    bool ServerCollect::cleanup_invalid_block_(BlockCollect* block, const int64_t now)
     {
       bool ret = false;
       if (NULL != block)
       {
         RWLock::Lock lock(mutex_, WRITE_LOCKER);
-        if (!block->is_writable() || !block->is_master(id()))
+        if (!block->is_writable() || !block->is_master(id()) || !block->has_valid_lease(now))
         {
           ret = true;
           remove_(block->id(), *issued_leases_);
@@ -765,5 +794,6 @@ namespace tfs
       }
       return ret;
     }
+
   } /** nameserver **/
 }/** tfs **/

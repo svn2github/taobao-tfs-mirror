@@ -86,6 +86,7 @@ namespace tfs
       int apply_block_for_update(const uint64_t server, common::ArrayHelper<common::BlockLease>& output);
       int renew_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input, common::ArrayHelper<common::BlockLease>& output);
       int giveup_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input, common::ArrayHelper<common::BlockLease>& output);
+      int giveup_block(const uint64_t server, const uint64_t block);
 
       void scan(const int32_t flag, tbnet::DataBuffer& output);
       int scan(common::SSMScanParameter& param, int32_t& should, int32_t& start, int32_t& next, bool& all_over) const;

@@ -337,6 +337,21 @@ namespace tfs
       return ret;
     }
 
+    int ServerManager::giveup_block(const uint64_t server, const uint64_t block)
+    {
+      int32_t ret = (INVALID_SERVER_ID == server) ? EXIT_SERVER_ID_INVALID_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        ServerCollect* pserver = get(server);
+        ret = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = pserver->giveup_block(block, manager_);
+        }
+      }
+      return ret;
+    }
+
     void ServerManager::scan(const int32_t flag, tbnet::DataBuffer& output)
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
@@ -900,6 +915,7 @@ namespace tfs
       }
       return servers.get_array_index() < servers.get_array_size();
     }
+
 #ifdef TFS_GTEST
     void ServerManager::clear_()
     {

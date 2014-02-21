@@ -961,7 +961,7 @@ namespace tfs
     void BlockManager::timeout(const time_t now)
     {
       BlockCollect* pblock = NULL;
-      const int32_t MAX_QUERY_BLOCK_NUMS = 2048;
+      const int32_t MAX_QUERY_BLOCK_NUMS = 40960;
       BlockCollect* blocks[MAX_QUERY_BLOCK_NUMS];
       ArrayHelper<BlockCollect*> results(MAX_QUERY_BLOCK_NUMS, blocks);
       bool over = scan(results, last_traverse_block_, MAX_QUERY_BLOCK_NUMS);
@@ -972,7 +972,7 @@ namespace tfs
         last_traverse_block_ = pblock->id();
         if (pblock->has_lease() && !pblock->has_valid_lease(now))
         {
-          giveup_lease(last_traverse_block_, pblock->get_server(), now, NULL);//TODO
+          manager_.get_server_manager().giveup_block(pblock->get_server(0), last_traverse_block_);
         }
       }
       if (over)
