@@ -27,6 +27,7 @@ api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session
 									tfs_meta_helper.cpp tfs_meta_manager.cpp tfs_meta_client_api_impl.cpp \
 								 	tfs_meta_client_api.cpp tfs_kv_meta_client_impl.cpp tfs_kv_meta_client_api.cpp\
                   tfs_kv_meta_helper.cpp tfs_cluster_manager.cpp \
+									tfs_lifecycle_root_client_impl.cpp tfs_lifecycle_root_client_api.cpp tfs_lifecycle_root_helper.cpp \
 								 	encode.h\
 									bg_task.h client_config.h fsname.h gc_file.h gc_worker.h local_key.h\
 									lru.h md5.h segment_container.h tfs_client_api.h tfs_client_capi.h\
@@ -34,6 +35,7 @@ api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session
 									tfs_rc_client_api.h tfs_rc_client_api_impl.h tfs_rc_helper.h tfs_session.h \
 									tfs_meta_client_api.h tfs_meta_client_api_impl.h tfs_meta_helper.h tfs_meta_manager.h \
                   tfs_kv_meta_client_impl.h tfs_kv_meta_client_api.h tfs_kv_meta_helper.h \
+									tfs_lifecycle_root_client_impl.h tfs_lifecycle_root_client_api.h tfs_lifecycle_root_helper.h \
 									tfs_session_pool.h tfs_small_file.h tfs_cluster_manager.h ${unique_store_source} \
                   ${tair_cache_source}
 
@@ -48,7 +50,8 @@ libtfsclient_c_la_SOURCES = ${api_source_list} tfs_client_capi.cpp tfs_client_ca
 libtfsclient_c_la_LIBADD = ${ld_fg}
 
 
-include_HEADERS = #tfs_client_api.h tfs_client_capi.h tfs_rc_client_api.h tfs_meta_client_api.h tfs_kv_meta_client_api.h
+include_HEADERS = tfs_client_api.h tfs_client_capi.h tfs_rc_client_api.h tfs_meta_client_api.h tfs_kv_meta_client_api.h \
+									tfs_lifecycle_root_client_api.h
 
 # hardcode to extract static library in destinate static library
 # consider libtool compatibility,do change in destinate directory

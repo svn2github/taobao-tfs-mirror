@@ -38,7 +38,7 @@ namespace tfs
         MysqlClusterTest(){}
         virtual ~MysqlClusterTest(){}
         virtual void SetUp(){
-          assert(database_pool_.init_pool(5, "10.232.64.176:5300:tfsmeta", "tfsmeta", "tfsmeta"));
+          assert(database_pool_.init_pool(5, "10.232.137.34:8808:tfsmeta", "tfsmeta", "tfsmeta"));
         }
         virtual void TearDown(){}
         DataBasePool database_pool_;

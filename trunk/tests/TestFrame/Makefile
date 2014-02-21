@@ -1,19 +1,20 @@
 OUT_DIR=./out
-TFS_SRC=/home/xueya.yy/tfs-client-cpp-restful
-TBLIB_ROOT=/home/xueya.yy/lib
+TFS_SRC=/home/xueya.yy/tfs-client-cpp-restful/src
+TFS_BIN=/home/xueya.yy/tfs_bin
+TBLIB_ROOT=/opt/csr/common
 SRC_DIR=.
 
 #complie option
 CPP=g++
 
-CFLAGS=-Wall -g -I$(TFS_SRC) -I$(TBLIB_ROOT)/include/tbnet -I$(TBLIB_ROOT)/include/tbsys 
+CFLAGS=-Wall -g -I$(TFS_BIN)/include -I$(TFS_SRC) -I$(TBLIB_ROOT)/include/tbnet -I$(TBLIB_ROOT)/include/tbsys 
 
 LIBFLAGS=-L${TFS_SRC} 
 
-LIBS= $(TFS_SRC)/libcpp_restful_client.a $(TBLIB_ROOT)/lib/libtbnet.a $(TBLIB_ROOT)/lib/libtbsys.a -lpthread -lpthread -lrt -luuid -lz -lcurl -ljson
+LIBS= $(TFS_SRC)/libtfs_cpp_restful_client.a $(TFS_BIN)/lib/libtfsclient.a $(TBLIB_ROOT)/lib/libtbsys.a $(TBLIB_ROOT)/lib/libtbnet.a -lpthread -lrt -luuid -lz -lcurl -ljson
 
 
-obj=PerfRestMain
+obj=PerfMain
 
 
 .PHONY: clean all  tear
@@ -35,6 +36,6 @@ clean:
 tear:
 		@rm  -rf *.o
 
-move:
+move: $(obj)
 		@mv ${SRC_DIR}/$(obj)  ${OUT_DIR}
 

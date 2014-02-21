@@ -804,6 +804,8 @@ namespace tfs
       user_name_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_USER, "");
       pass_wd_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_PASS, "");
       lifecycle_area_ = config.getInt(CONF_SN_EXPIREROOTSERVER, CONF_LIFECYCLE_AREA, -1);
+      task_period_ = config.getInt(CONF_SN_EXPIREROOTSERVER, CONF_TASK_PERIOD, 0);
+      note_interval_ = config.getInt(CONF_SN_EXPIREROOTSERVER, CONF_NOTE_INTERVAL, 0);
 
 
       es_rts_check_lease_interval_ =

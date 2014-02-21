@@ -47,10 +47,10 @@ namespace tfs
       virtual int destroy_service();
 
       //clean task
-      int clean_task(message::ReqCleanTaskFromRtsMessage* req_clean_task_msg);
 
     private:
       DISALLOW_COPY_AND_ASSIGN(ExpireService);
+      int do_clean_task(message::ReqCleanTaskFromRtsMessage* req_clean_task_msg);
 
       uint64_t expireroot_ipport_id_;
       uint64_t local_ipport_id_;

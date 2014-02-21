@@ -558,11 +558,11 @@ namespace tfs
           case common::RSP_RT_ES_KEEPALIVE_MESSAGE:
             packet = new RspRtsEsHeartMessage();
             break;
-          case common::REQ_QUERY_PROGRESS_MESSAGE:
-            packet = new ReqQueryProgressMessage();
+          case common::REQ_QUERY_TASK_MESSAGE:
+            packet = new ReqQueryTaskMessage();
             break;
-          case common::RSP_QUERY_PROGRESS_MESSAGE:
-            packet = new RspQueryProgressMessage();
+          case common::RSP_QUERY_TASK_MESSAGE:
+            packet = new RspQueryTaskMessage();
             break;
           case common::GET_BLOCK_STATISTIC_VISIT_INFO_MESSAGE:
             packet = new BlockStatisticVisitInfoMessage();

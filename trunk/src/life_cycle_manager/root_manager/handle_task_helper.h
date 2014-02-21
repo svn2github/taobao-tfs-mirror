@@ -16,7 +16,7 @@
 
 #ifndef TFS_LIFECYCLE_ROOTMANAGER_EXPROOTSERVER_HANDLE_TASK_HELPER_H_
 #define TFS_LIFECYCLE_ROOTMANAGER_EXPROOTSERVER_HANDLE_TASK_HELPER_H_
-
+#include <set>
 #include "common/parameter.h"
 #include "common/base_service.h"
 #include "common/status_message.h"
@@ -37,18 +37,11 @@ namespace tfs
         int init(tfs::common::KvEngineHelper* kv_engine_helper);
         int destroy();
 
-        int query_progress(const uint64_t es_id, const int32_t num_es, const int32_t task_time,
-            const int32_t hash_bucket_id, const common::ExpireTaskType type,
-            int64_t *sum_file_num, int32_t *current_percent);
-
-        int handle_finish_task(const uint64_t es_id);
+        int handle_finish_task(const uint64_t es_id, const common::ExpireTaskInfo&);
         int handle_fail_servers(const common::VUINT64 &down_servers);
-        int assign(const uint64_t es_id, const common::ExpireDeleteTask &del_task);
-        int assign_task(void);
-
-        void get_task_info(std::map<uint64_t, common::ExpireDeleteTask> &m_task_info);
-        void put_task_info(const std::map<uint64_t, common::ExpireDeleteTask> &m_task_info);
-        void get_task_wait(std::deque<common::ExpireDeleteTask> &task_wait);
+        int query_task(const uint64_t es_id, std::vector<common::ServerExpireTask>* p_running_tasks);
+        int assign(const uint64_t es_id, const common::ExpireTaskInfo &del_task);
+        void assign_task(void);
 
       protected:
         common::KvEngineHelper* kv_engine_helper_;
@@ -71,16 +64,18 @@ namespace tfs
       private:
         AssignTaskThreadHelperPtr assign_task_thread_;
 
-        tbutil::Mutex mutex_task_; //lock for m_task_info_
+        tbutil::Mutex mutex_running_;
 
-        tbutil::Mutex mutex_task_wait_;   //lock for task_wait_
+        tbutil::Mutex mutex_waitint_;
 
-        std::map<uint64_t, common::ExpireDeleteTask> m_task_info_;
-        typedef std::map<uint64_t, common::ExpireDeleteTask>::iterator TASK_INFO_ITER;
+        std::map<uint64_t, std::set<common::ExpireTaskInfo> > m_s_running_tasks_;
+        std::deque<common::ExpireTaskInfo> dq_waiting_tasks_;
 
-        std::deque<common::ExpireDeleteTask> task_wait_;
+        int32_t task_period_;
+        int32_t note_interval_;
 
       private:
+        bool destroy_;
         ExpServerManager &manager_;
         DISALLOW_COPY_AND_ASSIGN(HandleTaskHelper);
     };

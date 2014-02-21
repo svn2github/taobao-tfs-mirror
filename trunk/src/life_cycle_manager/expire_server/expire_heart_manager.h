@@ -35,7 +35,9 @@ namespace tfs
         ExpireHeartManager(CleanTaskHelper &cleantask);
         virtual ~ExpireHeartManager();
 
-        int initialize(uint64_t rs_ipport_id, uint64_t ms_ipport_id, int64_t start_time);
+        int initialize(const uint64_t rs_ipport_id,
+            const uint64_t ms_ipport_id, const int64_t start_time,
+            const int64_t available_thread_count);
         void destroy();
 
       private:
@@ -64,6 +66,7 @@ namespace tfs
         uint64_t es_ipport_id_;
         int64_t start_time_;
         int64_t heart_inter_;
+        int64_t available_thread_count_;
         CleanTaskHelper &ref_clean_helper_;
 
     };

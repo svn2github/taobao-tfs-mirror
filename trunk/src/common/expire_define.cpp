@@ -547,81 +547,22 @@ namespace tfs
     }
 
     // ExpTask
-    ExpTable::ExpTable()
-    {
-    }
-    int64_t ExpTable::length() const
-    {
-      int64_t len = 0;
-      len += INT64_SIZE * v_exp_table_.size() + INT_SIZE;
-      len += INT64_SIZE * v_idle_table_.size() + INT_SIZE;
-      len += INT64_SIZE * v_active_table_.size() + INT_SIZE;
-      return len;
-    }
 
-    int ExpTable::serialize(char *data, const int64_t data_len, int64_t &pos) const
-    {
-      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_vint64(data, data_len, pos, v_exp_table_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_vint64(data, data_len, pos, v_idle_table_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_vint64(data, data_len, pos, v_active_table_);
-      }
-      return ret;
-    }
-
-    int ExpTable::deserialize(const char *data, const int64_t data_len, int64_t &pos)
-    {
-      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_vint64(data, data_len, pos, v_exp_table_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_vint64(data, data_len, pos, v_idle_table_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::get_vint64(data, data_len, pos, v_active_table_);
-      }
-
-      return ret;
-    }
-
-    void ExpTable::dump()
-    {
-      VUINT64::iterator iter = v_exp_table_.begin();
-      for (; iter != v_exp_table_.end(); iter++)
-      {
-        TBSYS_LOG(DEBUG, "exp server addr: %s", tbsys::CNetUtil::addrToString(*iter).c_str());
-      }
-    }
-
-    ExpireDeleteTask::ExpireDeleteTask()
+    ExpireTaskInfo::ExpireTaskInfo()
     {}
 
-    ExpireDeleteTask::ExpireDeleteTask(int32_t alive_total, int32_t assign_no,
+    ExpireTaskInfo::ExpireTaskInfo(int32_t alive_total, int32_t assign_no,
           int32_t spec_time, int32_t status, int32_t note_interval, ExpireTaskType type)
       :alive_total_(alive_total), assign_no_(assign_no), spec_time_(spec_time),
       status_(status), note_interval_(note_interval), type_(type){}
 
-    int64_t ExpireDeleteTask::length() const
+    int64_t ExpireTaskInfo::length() const
     {
       int64_t len = INT_SIZE * 6;
       return len;
     }
 
-    int ExpireDeleteTask::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    int ExpireTaskInfo::serialize(char *data, const int64_t data_len, int64_t &pos) const
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
@@ -651,7 +592,7 @@ namespace tfs
       return ret;
     }
 
-    int ExpireDeleteTask::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    int ExpireTaskInfo::deserialize(const char *data, const int64_t data_len, int64_t &pos)
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -681,6 +622,20 @@ namespace tfs
       return iret;
     }
 
+    bool ExpireTaskInfo::operator < (const ExpireTaskInfo& rh) const
+    {
+      if (type_ < rh.type_) return true;
+      if (type_ > rh.type_) return false;
+      if (spec_time_ < rh.spec_time_) return true;
+      if (spec_time_ > rh.spec_time_) return  false;
+      if (assign_no_ < rh.assign_no_) return true;
+      if (assign_no_ > rh.assign_no_) return false;
+      if (alive_total_ < rh.alive_total_) return true;
+      if (alive_total_ > rh.alive_total_) return false;
+      return false;
+    }
+
+
     int ExpireDefine::transfer_time(const int32_t time, int32_t *p_days_secs, int32_t *p_hours_secs)
     {
       int ret = TFS_SUCCESS;
@@ -697,6 +652,47 @@ namespace tfs
 
       return ret;
     }
+
+    //ServerExpireTask
+    //ServerExpireTask::ServerExpireTask():server_id_(0){}
+
+    //ServerExpireTask::ServerExpireTask(const uint64_t id, const ExpireTaskInfo& t)
+        //:server_id_(id), task_(t){}
+
+    int64_t ServerExpireTask::length() const
+    {
+      int64_t len = INT64_SIZE + task_.length();
+      return len;
+    }
+
+    int ServerExpireTask::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    {
+      int iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, server_id_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = task_.serialize(data, data_len, pos);
+      }
+      return iret;
+    }
+
+    int ServerExpireTask::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&server_id_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = task_.deserialize(data, data_len, pos);
+      }
+      return iret;
+    }
+
   }//common end
 }// tfs end
 

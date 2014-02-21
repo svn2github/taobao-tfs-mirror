@@ -251,6 +251,8 @@ namespace tfs
 #define CONF_ES_RTS_LEASE_CHECK_TIME                 "es_rts_lease_check_time" //(s)
 #define CONF_ES_RTS_LEASE_EXPIRED_TIME               "es_rts_lease_expired_time" //(s)
 #define CONF_ES_RTS_HEART_INTERVAL                   "es_rts_heart_interval" //(s)
+#define CONF_TASK_PERIOD                             "task_period"           //(s)
+#define CONF_NOTE_INTERVAL                           "note_interval"         //(s)
 
   }
 }

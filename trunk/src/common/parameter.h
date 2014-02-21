@@ -326,6 +326,8 @@ namespace tfs
       int32_t es_rts_check_lease_interval_;  //1s
       int32_t es_rts_heart_interval_;       //2s
       int32_t safe_mode_time_;
+      int32_t task_period_;
+      int32_t note_interval_;
 
       int initialize(const std::string &config_file);
 

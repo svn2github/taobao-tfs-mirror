@@ -32,6 +32,7 @@
 #include "common/meta_server_define.h"
 #include "common/kv_meta_define.h"
 #include "common/kv_rts_define.h"
+#include "common/expire_define.h"
 #include "message/server_status_message.h"
 #include "message/client_cmd_message.h"
 #include "message/message_factory.h"
@@ -62,6 +63,7 @@ typedef enum {
   META_RAW = 0,
   META_NAME,
   META_KV,
+  META_LIFECYCLE
 } MetaType;
 
 #ifdef _WITH_READ_LINE
@@ -155,9 +157,13 @@ int cmd_set_life_cycle(const VSTRING& param);
 int cmd_get_life_cycle(const VSTRING& param);
 int cmd_del_life_cycle(const VSTRING& param);
 
+/* for lifecycle root */
+int cmd_query_task(const VSTRING& param);
+
 const char* rc_addr = NULL;
 const char* nsip = NULL;
 const char* krs_addr = NULL;
+const char* lrs_addr = NULL;
 MetaType g_meta_type = META_RAW;
 
 static tfs::common::BasePacketStreamer gstreamer;
@@ -171,7 +177,7 @@ int main(int argc, char* argv[])
   bool set_log_level = false;
 
   // analyze arguments
-  while ((i = getopt(argc, argv, "s:r:k:nihv")) != EOF)
+  while ((i = getopt(argc, argv, "s:r:k:l:nihv")) != EOF)
   {
     switch (i)
     {
@@ -187,6 +193,8 @@ int main(int argc, char* argv[])
       case 'k':
         krs_addr = optarg;
         break;
+      case 'l':
+        lrs_addr = optarg;
       case 'i':
         directly = true;
         break;
@@ -203,7 +211,7 @@ int main(int argc, char* argv[])
     TBSYS_LOGGER.setLogLevel("ERROR");
   }
 
-  if (NULL == nsip && NULL == rc_addr & NULL == krs_addr)
+  if (NULL == nsip && NULL == rc_addr & NULL == krs_addr && NULL == lrs_addr)
   {
     usage(argv[0]);
     return TFS_ERROR;
@@ -212,7 +220,7 @@ int main(int argc, char* argv[])
   gstreamer.set_packet_factory(&gfactory);
   NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
 
-  if (krs_addr != NULL)
+  if (lrs_addr != NULL)
   {
     if (rc_addr == NULL)
     {
@@ -220,6 +228,16 @@ int main(int argc, char* argv[])
       return TFS_ERROR;
     }
     // kv meta use RcClientImpl client
+    strcpy(app_key, default_app_key);
+    g_meta_type = META_LIFECYCLE;
+  }
+  else if (krs_addr != NULL)
+  {
+    if (rc_addr == NULL)
+    {
+      usage(argv[0]);
+      return TFS_ERROR;
+    }
     strcpy(app_key, default_app_key);
     g_meta_type = META_KV;
   }
@@ -284,13 +302,14 @@ static void usage(const char* name)
           "Usage: a) %s -s nsip [-n] [-i] [-h] raw tfs client interface(without rc). \n"
           "       b) %s -r rcip [-n] [-i] [-h] raw tfs client interface(with rc). \n"
           "       c) %s -k krsip -r rcip [-n] [-i] [-h] kv meta client interface. \n"
+          "       D) %s -l lrsip -r rcip [-n] [-i] [-h] lifecycle root client interface. \n"
           "       -s nameserver ip port\n"
           "       -r rcserver ip port\n"
           "       -k kvrootserver ip port\n"
           "       -n set log level\n"
           "       -i directly execute the command\n"
           "       -h help\n",
-          name, name, name);
+          name, name, name, name);
 }
 
 static void sign_handler(const int32_t sig)
@@ -349,6 +368,10 @@ void init()
     g_cmd_map["set_life_cycle"] = CmdNode("set_life_cycle file_type file_name invalid_time_s app_key", "set a expire time for file", 4, 4, cmd_set_life_cycle);
     g_cmd_map["get_life_cycle"] = CmdNode("get_life_cycle file_type file_name", "get a expire time for a file", 2, 2, cmd_get_life_cycle);
     g_cmd_map["del_life_cycle"] = CmdNode("del_life_cycle file_type file_name", "delete a expire time for a file", 2, 2, cmd_del_life_cycle);
+    break;
+
+  case META_LIFECYCLE:
+    g_cmd_map["query_task"] = CmdNode("query_task expire_server", "query lifecycle root task", 1, 1, cmd_query_task);
     break;
   }
 }
@@ -1570,6 +1593,48 @@ int cmd_del_life_cycle(const VSTRING& param)
   {
     ToolUtil::print_info(ret, "del life cycle file %s success", file_name);
   }
+  return ret;
+}
+
+int cmd_query_task(const VSTRING& param)
+{
+  int ret = TFS_SUCCESS;
+
+  const char *es_ip = NULL;
+  uint64_t es_id;
+  es_ip = param[0].c_str();
+  es_id = Func::get_host_ip(es_ip);
+  /*
+  char appkey[257];
+  strcpy(appkey, app_key);
+
+  vector<ServerExpireTask> res_task;
+
+  RcClientImpl impl;
+  impl.set_lifecycle_rs_addr(lrs_addr);
+  ret = impl.initialize(rc_addr, appkey, app_ip);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.query_task(es_id, &res_task);
+  }
+  if (TFS_SUCCESS == ret)
+  {
+    vector<ServerExpireTask>::iterator iter = res_task.begin();
+    for (; iter != res_task.end(); ++iter)
+    {
+      cout << "expire_server : " << Func::addr_to_str(iter->server_id_, true) << " "
+           << "alive_task_total : " << iter->task_.alive_total_ << " "
+           << "this task num : " << iter->task_.assign_no_ << " "
+           << "root start task_time : " << iter->task_.spec_time_ << " "
+           << "task status : " << iter->task_.status_ << endl;
+    }
+  }
+  ToolUtil::print_info(ret, "query task success");
+*/
   return ret;
 }
 
