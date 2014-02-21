@@ -60,6 +60,7 @@ namespace tfs
 
         BlockManager& get_block_manager();
 
+        void size(int32_t& all, int32_t& writable, int32_t& update, int32_t& expired);
         int32_t size(const BlockType type);
 
         // expire all blocks, move to expired list
@@ -72,7 +73,7 @@ namespace tfs
 
         WritableBlock* insert(const uint64_t block_id,
             const common::ArrayHelper<uint64_t>& servers, const BlockType type);
-        WritableBlock* remove(const uint64_t block_id);
+        void remove(const uint64_t block_id, const BlockType type);
         WritableBlock* get(const uint64_t block_id);
 
         // alloc a writable block
@@ -97,7 +98,7 @@ namespace tfs
         void expire_one_block_(WritableBlock* block);
         WritableBlock* insert_(const uint64_t block_id,
             const common::ArrayHelper<uint64_t>& servers, const BlockType type);
-        WritableBlock* remove_(const uint64_t block_id);
+        void remove_(const uint64_t block_id, const BlockType type);
         WritableBlock* get_(const uint64_t block_id);
         void apply_block_callback(message::DsApplyBlockResponseMessage* response);
         void giveup_block_callback(message::DsGiveupBlockResponseMessage* response);

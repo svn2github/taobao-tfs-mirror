@@ -385,10 +385,14 @@ namespace tfs
           // dump writable block info every minute
           if (now % 60 == 0)
           {
-            TBSYS_LOG(INFO, "writable block info, writable: %d, update: %d, expired: %d",
-                get_writable_block_manager().size(BLOCK_WRITABLE),
-                get_writable_block_manager().size(BLOCK_UPDATE),
-                get_writable_block_manager().size(BLOCK_EXPIRED));
+            int32_t all = 0;
+            int32_t writable = 0;
+            int32_t update = 0;
+            int32_t expired = 0;
+            get_writable_block_manager().size(all, writable, update, expired);
+            TBSYS_LOG(INFO, "writable block info, all: %d, writable: %d, update: %d, expired: %d",
+                all, writable, update, expired);
+            assert(all == writable + update + expired);  // self bug check
           }
 
           // giveup expired block first
