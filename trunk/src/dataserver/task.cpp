@@ -421,7 +421,8 @@ namespace tfs
         header.info_.version_ = old_header.info_.version_;
         header.seq_no_ = old_header.seq_no_;
         dest->get_marshalling_offset(header.marshalling_offset_);
-        ret = dest->write_file_infos(header, finfos_vec, block_id_);
+        DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+        ret = dest->write_file_infos(header, finfos_vec, block_id_, false, ds_info.verify_index_reserved_space_ratio_);
         if (TFS_SUCCESS == ret)
         {
           dest->update_block_version(VERSION_INC_STEP_COMPACT);

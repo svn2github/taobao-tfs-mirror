@@ -188,7 +188,7 @@ namespace tfs
     static const int32_t MAX_DATA_MEMBER_NUM = 8;
     static const int32_t MAX_CHECK_MEMBER_NUM = 4;
     static const int32_t MAX_MARSHALLING_NUM = MAX_DATA_MEMBER_NUM + MAX_CHECK_MEMBER_NUM;
-    static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 128 * 1024 * 1024;
+    static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 76 * 1024 * 1024;
 
     static const int32_t USE_INDEX_FLAG_MASK = 0x08000000; // 27th bit
     static const int32_t FILE_UNLINK_MASK = 0x70000000;    // 28-30th bit
@@ -226,6 +226,8 @@ namespace tfs
     static const char* const HTTP_PROTOCOL = "HTTP/1.1";
     static const int32_t HTTP_PROTOCOL_LENGTH = 8;
     static const int32_t HTTP_BLANK_LENGTH = 1;
+
+    static const int32_t VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO = 2;
 
     enum NsRole
     {
@@ -1301,6 +1303,9 @@ namespace tfs
       int32_t ns_role_;
       int32_t max_block_size_;
       int32_t max_write_file_count_;
+			int32_t verify_index_reserved_space_ratio_;
+			int32_t enable_old_interface_;
+			int32_t enable_version_check_;
       int32_t reserve_[4];
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);

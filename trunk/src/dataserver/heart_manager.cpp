@@ -160,6 +160,7 @@ namespace tfs
                 info.max_rw_network_bandwidth_mb_ = resp_hb_msg->get_max_rw_network_bandwith_mb();
                 info.enable_old_interface_ = resp_hb_msg->get_enable_old_interface();
                 info.enable_version_check_ = resp_hb_msg->get_enable_version_check();
+                info.verify_index_reserved_space_ratio_ = resp_hb_msg->get_verify_index_reserved_space_ratio();
               }
               int32_t status = resp_hb_msg->get_status();
               if (HEART_MESSAGE_OK != status)

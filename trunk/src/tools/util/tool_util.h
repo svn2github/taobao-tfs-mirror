@@ -66,7 +66,7 @@ namespace tfs
       static int list_file(const uint64_t server_id, const uint64_t block_id, std::vector<common::FileInfo>& finfos);
       static int list_file_v2(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, std::vector<common::FileInfoV2>& finfos);
-      static int get_all_blocks_meta(const uint64_t ns_id, common::VUINT64& blocks, std::vector<common::BlockMeta>& blocks_meta, const bool need_check_block);
+      static int get_all_blocks_meta(const uint64_t ns_id, const common::VUINT64& blocks, std::vector<common::BlockMeta>& blocks_meta, const bool need_check_block);
       static int show_help(const STR_FUNC_MAP& cmd_map);
       static void print_info(const int status, const char* fmt, ...);
     };

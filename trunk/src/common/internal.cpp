@@ -1374,6 +1374,7 @@ namespace tfs
         "enable_version_check",
         "marshalling_visit_time",
         "client_keepalive_interval"
+        "verify_index_reserved_space_ratio"
     };
 
     const char* planstr[PLAN_TYPE_EC_MARSHALLING+1] =
@@ -2603,6 +2604,20 @@ namespace tfs
         ret = Serialization::get_int32(data, data_len, pos, &max_write_file_count_);
       }
 
+			if (TFS_SUCCESS == ret)
+			{
+				ret = Serialization::get_int32(data, data_len, pos,&verify_index_reserved_space_ratio_)
+			}
+			if (TFS_SUCCESS == ret)
+			{
+				ret = Serialization::get_int32(data, data_len, pos,&enable_old_interface_)
+			}
+
+			if (TFS_SUCCESS == ret)
+			{
+				ret = Serialization::get_int32(data, data_len, pos,&enable_version_check_)
+			}
+
       if (TFS_SUCCESS == ret)
       {
         for (int index = 0; index < 4 && TFS_SUCCESS == ret; index++)
@@ -2667,6 +2682,20 @@ namespace tfs
         ret = Serialization::set_int32(data, data_len, pos, max_write_file_count_);
       }
 
+			if (TFS_SUCCESS == ret)
+			{
+				ret = Serialization::set_int32(data, data_len, pos,verify_index_reserved_space_ratio_)
+			}
+			if (TFS_SUCCESS == ret)
+			{
+				ret = Serialization::set_int32(data, data_len, pos,enable_old_interface_)
+			}
+
+			if (TFS_SUCCESS == ret)
+			{
+				ret = Serialization::set_int32(data, data_len, pos,enable_version_check_)
+			}
+
       if (TFS_SUCCESS == ret)
       {
         for (int index = 0; index < 4 && TFS_SUCCESS == ret; index++)
@@ -2680,7 +2709,7 @@ namespace tfs
 
     int64_t LeaseMeta::length() const
     {
-      return INT64_SIZE + 13 * INT_SIZE;
+      return INT64_SIZE + 16 * INT_SIZE;
     }
 
     int SyncFileEntry::deserialize(const char* data, const int64_t data_len, int64_t& pos)

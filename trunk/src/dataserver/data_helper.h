@@ -58,7 +58,7 @@ namespace tfs
         int read_index(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data);
         int write_index(const uint64_t server_id, const uint64_t block_id,
-            const uint64_t attach_block_id, common::IndexDataV2& index_data,
+            const uint64_t attach_block_id, const common::IndexDataV2& index_data,
             const bool tmp, const bool partial = false);
 
         int query_ec_meta(const uint64_t server_id, const uint64_t block_id,
@@ -103,7 +103,7 @@ namespace tfs
         int read_index_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, common::IndexDataV2& index_data);
         int write_index_ex(const uint64_t server_id, const uint64_t block_id,
-            const uint64_t attach_block_id, common::IndexDataV2& index_data,
+            const uint64_t attach_block_id, const common::IndexDataV2& index_data,
             const bool tmp, const bool partial = false);
 
         int query_ec_meta_ex(const uint64_t server_id, const uint64_t block_id,

@@ -71,7 +71,8 @@ namespace tfs
       int get_avail_offset(int32_t& size) const;
       int get_marshalling_offset(int32_t& offset) const;
       int set_marshalling_offset(const int32_t size);
-      int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, const bool partial = false);
+      int write_file_infos(const common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos,
+          const uint64_t logic_block_id, const bool partial, const int32_t reserved_space_ratio);
       virtual int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id, const bool tmp);
       virtual int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,
           const int8_t flag, const uint64_t logic_block_id);

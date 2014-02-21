@@ -237,7 +237,7 @@ namespace tfs
     }
 
     int DataHelper::write_index(const uint64_t server_id, const uint64_t block_id,
-        const uint64_t attach_block_id, common::IndexDataV2& index_data,
+        const uint64_t attach_block_id, const common::IndexDataV2& index_data,
         const bool tmp, const bool partial)
     {
       TBSYS_LOG(DEBUG, "write index. block_id: %"PRI64_PREFIX"u, finfos size: %zd",
@@ -637,16 +637,15 @@ namespace tfs
     }
 
     int DataHelper::write_index_ex(const uint64_t server_id, const uint64_t block_id,
-        const uint64_t attach_block_id, common::IndexDataV2& index_data,
+        const uint64_t attach_block_id, const common::IndexDataV2& index_data,
         const bool tmp, const bool partial)
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       if (server_id == ds_info.information_.id_)
       {
-        UNUSED(partial);
-        ret = get_block_manager().write_file_infos(index_data.header_, index_data.finfos_,
-            block_id, attach_block_id, tmp, partial);
+        ret = get_block_manager().write_file_infos(index_data.header_, const_cast<IndexDataV2&>(index_data).finfos_,
+            block_id, attach_block_id, tmp, partial,ds_info.verify_index_reserved_space_ratio_);
       }
       else
       {

@@ -145,7 +145,7 @@ namespace tfs
 
       bool scan_block_(common::ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, int64_t& max_compact_task_count,
           const int32_t max_query_block_num, const time_t now, const bool compact_time,
-          const bool marshalling_time, const bool adjust_copies_location_time);
+          const bool marshalling_time, const bool adjust_copies_location_time, const bool report_time);
 
       bool scan_family_(common::ArrayHelper<FamilyCollect*>& results, int64_t& need, int64_t& start,
           const int32_t max_query_family_num, const time_t now, const bool compact_time);

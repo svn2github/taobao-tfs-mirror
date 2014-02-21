@@ -374,7 +374,7 @@ namespace tfs
       return ret;
     }
 
-    int ToolUtil::get_all_blocks_meta(const uint64_t ns_id, VUINT64& blocks, std::vector<BlockMeta>& blocks_meta, const bool need_check_block)
+    int ToolUtil::get_all_blocks_meta(const uint64_t ns_id, const VUINT64& blocks, std::vector<BlockMeta>& blocks_meta, const bool need_check_block)
     {
       int ret = TFS_SUCCESS;
       BatchGetBlockInfoMessageV2 bgbi_message;

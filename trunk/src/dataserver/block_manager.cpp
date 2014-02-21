@@ -592,7 +592,8 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, const uint64_t attach_logic_block_id, const bool tmp, const bool partial)
+    int BlockManager::write_file_infos(const common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id, const uint64_t attach_logic_block_id,
+        const bool tmp, const bool partial, const int32_t reserved_space_ratio)
     {
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id && INVALID_BLOCK_ID != attach_logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -601,7 +602,7 @@ namespace tfs
         ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          ret = logic_block->write_file_infos(header, infos, attach_logic_block_id, partial);
+          ret = logic_block->write_file_infos(header, infos, attach_logic_block_id, partial, reserved_space_ratio);
         }
       }
       return ret;
@@ -928,7 +929,7 @@ namespace tfs
           else
             info.mmap_option_.max_mmap_size_ = max_count * pagesize;
           info.max_hash_bucket_count_ = MAX_INDEX_ELEMENT_NUM;
-          //info.mmap_option_.max_mmap_size_ = std::max(MAX_MMAP_SIZE, info.mmap_option_.max_mmap_size_);
+          info.mmap_option_.max_mmap_size_ = std::max(MAX_MMAP_SIZE, info.mmap_option_.max_mmap_size_);
           const int32_t INDEXFILE_SAFE_MULT = 4;
           const int32_t avg_index_file_size = (avg_file_count + 1) * INDEXFILE_SAFE_MULT * FILE_INFO_V2_LENGTH + INDEX_HEADER_V2_LENGTH;
 

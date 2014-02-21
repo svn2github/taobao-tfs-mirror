@@ -90,6 +90,7 @@ namespace tfs
       int32_t enable_old_interface_;
       int32_t enable_version_check_;
       int32_t client_keepalive_interval_;
+      int32_t verify_index_reserved_space_ratio_;
       double  balance_percent_;
       static NameServerParameter ns_parameter_;
       static NameServerParameter& instance()

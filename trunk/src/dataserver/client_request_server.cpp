@@ -1035,6 +1035,7 @@ namespace tfs
       bool tmp = message->get_tmp_flag();
       bool partial = message->get_partial_flag();
       bool is_cluster = message->get_cluster_flag();
+      const int32_t verify_index_reserved_space_ratio = DsRuntimeGlobalInformation::instance().verify_index_reserved_space_ratio_;
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_BLOCK_ID == attach_block_id)) ?
         EXIT_PARAMETER_ERROR : TFS_SUCCESS;
@@ -1042,7 +1043,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = get_block_manager().write_file_infos(index_data.header_,
-            index_data.finfos_, block_id, attach_block_id, tmp, partial);
+            index_data.finfos_, block_id, attach_block_id, tmp, partial, verify_index_reserved_space_ratio);
         if (TFS_SUCCESS == ret)
         {
           if (is_cluster) // only happened when replicate between cluster

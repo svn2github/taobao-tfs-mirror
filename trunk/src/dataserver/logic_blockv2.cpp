@@ -267,7 +267,7 @@ namespace tfs
       return index_handle_->set_marshalling_offset(size);
     }
 
-    int BaseLogicBlock::write_file_infos(common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const uint64_t logic_block_id, const bool partial)
+    int BaseLogicBlock::write_file_infos(const common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const uint64_t logic_block_id, const bool partial, const int32_t reserved_space_ratio)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       SuperBlockInfo* sbinfo = NULL;
@@ -276,7 +276,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = index_handle_->write_file_infos(header, infos,
-            sbinfo->max_use_hash_bucket_ratio_, sbinfo->max_hash_bucket_count_, logic_block_id, partial);
+            sbinfo->max_use_hash_bucket_ratio_, sbinfo->max_hash_bucket_count_, logic_block_id, partial, reserved_space_ratio);
       }
       return ret;
     }

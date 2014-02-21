@@ -30,6 +30,15 @@ namespace tfs
 {
   namespace nameserver
   {
+    bool in_hour_range(const int64_t now, int32_t& min, int32_t& max)
+    {
+      struct tm lt;
+      localtime_r(&now, &lt);
+      if (min > max)
+        std::swap(min, max);
+      return (lt.tm_hour >= min && lt.tm_hour < max);
+    }
+
     void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function , const pthread_t thid) const
     {
       TBSYS_LOGGER.logMessage(level, file, line, function, thid,
@@ -138,6 +147,13 @@ namespace tfs
     bool NsRuntimeGlobalInformation::in_apply_block_safe_mode_time(const int64_t now) const
     {
       return now < apply_block_safe_mode_time_;
+    }
+
+    bool NsRuntimeGlobalInformation::in_report_block_time(const int64_t now) const
+    {
+      const int32_t REPORT_TIME = (SYSPARAM_NAMESERVER.report_block_time_upper_ - SYSPARAM_NAMESERVER.report_block_time_lower_) * 3600;
+      bool report_time = in_hour_range(time(NULL), SYSPARAM_NAMESERVER.report_block_time_lower_, SYSPARAM_NAMESERVER.report_block_time_upper_);
+      return ((report_time) || ((switch_time_ + REPORT_TIME) < now));
     }
 
     int NsRuntimeGlobalInformation::keepalive(int64_t& lease_id, const uint64_t server,

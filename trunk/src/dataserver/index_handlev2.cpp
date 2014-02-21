@@ -758,10 +758,11 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos,
-        const double threshold, const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial)
+    int IndexHandle::write_file_infos(const common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos,
+        const double threshold, const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial, const int32_t reserved_space_ratio)
     {
       UNUSED(logic_block_id);
+      UNUSED(reserved_space_ratio);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
@@ -781,10 +782,13 @@ namespace tfs
         {
           IndexHeaderV2* pheader = get_index_header_();
           assert(NULL != pheader);
-          if (header.file_info_bucket_size_ > pheader->file_info_bucket_size_)
+          int32_t need_bucket_slot = static_cast<int32_t>(header.used_file_info_bucket_size_ / threshold) +
+            getpagesize() / FILE_INFO_V2_LENGTH;
+          need_bucket_slot = std::min(need_bucket_slot, MAX_SINGLE_BLOCK_FILE_COUNT);
+          if (need_bucket_slot > pheader->file_info_bucket_size_)
           {
             int32_t need_length = INDEX_HEADER_V2_LENGTH +
-              FILE_INFO_V2_LENGTH * header.file_info_bucket_size_;
+              FILE_INFO_V2_LENGTH * need_bucket_slot;
             int32_t pagesize = getpagesize();
             int32_t advise_per_mmap_size = need_length - file_op_.length();
             if (advise_per_mmap_size > 0)
@@ -813,8 +817,7 @@ namespace tfs
             std::vector<common::FileInfoV2>::iterator iter = infos.begin();
             for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
             {
-              FileInfoV2& finfo = (*iter);
-              ret = insert_file_info_(finfo, threshold, max_hash_bucket, false);
+              ret = insert_file_info_(*iter, threshold, max_hash_bucket, false);
             }
           }
         }
@@ -1191,14 +1194,17 @@ namespace tfs
       return ret;
     }
 
-    int VerifyIndexHandle::write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold,
-        const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial)
+    int VerifyIndexHandle::write_file_infos(const common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold,
+        const int32_t max_hash_bucket,const uint64_t logic_block_id, const bool partial, const int32_t reserved_space_ratio)
     {
       UNUSED(threshold);
       UNUSED(max_hash_bucket);
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
+        IndexHeaderV2 real_header = header;
+        int32_t ratio = reserved_space_ratio >= 1 ? reserved_space_ratio : common:: VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO;
+        ratio = std::min(ratio, 10);
         InnerIndex* index = get_inner_index_(header.info_.block_id_);
         if (NULL == index)
         {
@@ -1212,16 +1218,17 @@ namespace tfs
           InnerIndex* last_index = (1 == pheader->index_num_) ? &inner_index[0] : &inner_index[pheader->index_num_ - 2];
           index->logic_block_id_ = logic_block_id;
           index->offset_ = (1 == pheader->index_num_) ? INDEX_DATA_START_OFFSET : last_index->offset_ + last_index->size_;
-          index->size_ = INDEX_HEADER_V2_LENGTH + (header.file_info_bucket_size_ * FILE_INFO_V2_LENGTH);
-          header.used_file_info_bucket_size_ = 0;
+          int32_t bucket_size = header.file_info_bucket_size_ * ratio;
+          real_header.file_info_bucket_size_ = std::min(bucket_size, MAX_SINGLE_BLOCK_FILE_COUNT);
+          index->size_ = INDEX_HEADER_V2_LENGTH + (real_header.file_info_bucket_size_ * FILE_INFO_V2_LENGTH);
+          real_header.used_file_info_bucket_size_ = 0;
           char* data  = new (std::nothrow) char[index->size_];
           memset(data , 0, index->size_);
-          memcpy(data, &header, INDEX_HEADER_V2_LENGTH);
+          memcpy(data, &real_header, INDEX_HEADER_V2_LENGTH);
           std::vector<common::FileInfoV2>::iterator iter = infos.begin();
           for (; iter != infos.end() && TFS_SUCCESS == ret; ++iter)
           {
-            FileInfoV2& info = (*iter);
-            ret = insert_file_info_(info, data, index->size_, false);
+            ret = insert_file_info_(*iter, data, index->size_, false);
           }
           if (TFS_SUCCESS == ret)
           {

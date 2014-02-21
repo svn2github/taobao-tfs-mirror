@@ -52,7 +52,13 @@ namespace tfs
 
     }
 
-    DsRuntimeGlobalInformation::DsRuntimeGlobalInformation():ns_vip_port_(0)
+    DsRuntimeGlobalInformation::DsRuntimeGlobalInformation():
+      ns_vip_port_(0),
+      max_mr_network_bandwidth_mb_(common::DEFAULT_MAX_MR_NETWORK_CAPACITY_MB),
+      max_rw_network_bandwidth_mb_(common::DEFAULT_MAX_RW_NETWORK_CAPACITY_MB),
+      verify_index_reserved_space_ratio_(common::VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO),
+      enable_old_interface_(common::ENABLE_OLD_INTERFACE_FLAG_NO),
+      enable_version_check_(common::ENABLE_VERSION_CHECK_FLAG_YES)
     {
       memset(&information_, 0, sizeof(information_));
       max_mr_network_bandwidth_mb_ = 0;
