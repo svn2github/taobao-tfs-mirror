@@ -41,7 +41,7 @@ libtfsclientv2_la_LIDADD = ${ld_fg}
 #bin_PROGRAMS = test_tfs_client
 #test_tfs_client_SOURCES  = test_tfs_client.cpp ${api_source_list}
 
-include_HEADERS = tfs_client_api_v2.h
+include_HEADERS = tfs_client_api_v2.h tfs_rc_client_api.h tfs_kv_meta_client_api.h
 
 # hardcode to extract static library in destinate static library
 # consider libtool compatibility,do change in destinate directory
