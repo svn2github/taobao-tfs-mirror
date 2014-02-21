@@ -151,6 +151,7 @@ namespace tfs
       bool is_destroyed() const;
       bool in_safe_mode_time(const int64_t now) const;
       bool in_discard_newblk_safe_mode_time(const int64_t now) const;
+      bool in_report_block_time(const int64_t now) const;
       bool is_master() const;
       bool peer_is_master() const;
       int keepalive(int64_t& lease_id, const uint64_t server,
@@ -196,6 +197,7 @@ namespace tfs
     extern int ns_async_callback(common::NewClient* client);
     extern void print_int64(const common::ArrayHelper<uint64_t>&servers, std::string& result);
     extern void print_int64(const std::vector<uint64_t>& servers, std::string& result);
+    extern bool in_hour_range(const int64_t now, int32_t& min, int32_t& max);
  }/** nameserver **/
 }/** tfs **/
 

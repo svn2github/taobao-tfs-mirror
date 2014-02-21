@@ -588,15 +588,6 @@ namespace tfs
       return get_alive_block_id_(verify);
     }
 
-    static bool in_hour_range(const time_t now, int32_t& min, int32_t& max)
-    {
-      struct tm lt;
-      localtime_r(&now, &lt);
-      if (min > max)
-        std::swap(min, max);
-      return (lt.tm_hour >= min && lt.tm_hour < max);
-    }
-
     void LayoutManager::build_()
     {
       bool over = false;
@@ -658,13 +649,14 @@ namespace tfs
 
           results.clear();
           const int64_t reinsate_or_dissolve_queue_size = get_family_manager().get_reinstate_or_dissolve_queue_size();
-          bool compact_time     = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
-          bool marshalling_time = in_hour_range(current, SYSPARAM_NAMESERVER.marshalling_time_lower_, SYSPARAM_NAMESERVER.marshalling_time_upper_);
-          bool adjust_copies_location_time = in_hour_range(current, SYSPARAM_NAMESERVER.adjust_copies_location_time_lower_, SYSPARAM_NAMESERVER.adjust_copies_location_time_upper_);
+          const bool report_time      = ngi.in_report_block_time(current);
+          const bool compact_time     = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
+          const bool marshalling_time = in_hour_range(current, SYSPARAM_NAMESERVER.marshalling_time_lower_, SYSPARAM_NAMESERVER.marshalling_time_upper_);
+          const bool adjust_copies_location_time = in_hour_range(current, SYSPARAM_NAMESERVER.adjust_copies_location_time_lower_, SYSPARAM_NAMESERVER.adjust_copies_location_time_upper_);
           if (need > 0)
           {
             now = Func::get_monotonic_time();
-            over = scan_block_(results, need, block_start, max_compact_task_count, MAX_QUERY_BLOCK_NUMS, now, compact_time, marshalling_time, adjust_copies_location_time);
+            over = scan_block_(results, need, block_start, max_compact_task_count, MAX_QUERY_BLOCK_NUMS, now, compact_time, marshalling_time, adjust_copies_location_time, report_time);
             if (over)
               block_start = 0;
           }
@@ -675,7 +667,7 @@ namespace tfs
               family_start = 0;
           }
 
-          if (need > 0 && reinsate_or_dissolve_queue_size <= 0 && replicate_queue_size <= 0 && max_marshalling_num > 0)
+          if (need > 0 && !report_time && reinsate_or_dissolve_queue_size <= 0 && replicate_queue_size <= 0 && max_marshalling_num > 0)
           {
             int32_t rt = build_marshalling_(need, now);
             if (TFS_SUCCESS == rt)
@@ -693,9 +685,6 @@ namespace tfs
           }
         }
         ++loop;
-        //sleep_time = (get_block_manager().has_emergency_replicate_in_queue()
-        //              || get_family_manager().reinstate_or_dissolve_queue_empty()) ? MAX_SLEEP_TIME_US : MIN_SLEEP_TIME_US;
-
         sleep_time = has_space_in_task_queue_() <= 0 ? MAX_SLEEP_TIME_US : MIN_SLEEP_TIME_US;
         usleep(sleep_time);
       }
@@ -823,19 +812,18 @@ namespace tfs
 
     void LayoutManager::redundant_()
     {
-      int64_t need = 0;
-      time_t now = 0;
-      const int32_t MAX_REDUNDNAT_NUMS = 128;
+      const int32_t MAX_REDUNDNAT_NUMS = 256;
       const int32_t MAX_SLEEP_TIME_US  = 500000;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
-        now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now))
-          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ * 4, ngi.destroy_flag_);
-        need = MAX_REDUNDNAT_NUMS;
+        while ((!ngi.in_report_block_time(Func::get_monotonic_time()) && !ngi.is_destroyed()))
+          Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
+
         while ((get_block_manager().delete_queue_empty() && !ngi.is_destroyed()))
           Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
+
+        int64_t need = MAX_REDUNDNAT_NUMS;
         build_redundant_(need, 0);
         usleep(MAX_SLEEP_TIME_US);
       }
@@ -1674,14 +1662,9 @@ namespace tfs
     {
       UNUSED(now);
       bool ret = false;
-      const int32_t MAX_DELETE_NUMS = 10;
-      if (need > MAX_DELETE_NUMS)
-        need = MAX_DELETE_NUMS;
-      int32_t count = need * 2;
       std::pair<uint64_t, uint64_t> output;
-      while (count > 0 && get_block_manager().pop_from_delete_queue(output))
+      while (need-- > 0 && get_block_manager().pop_from_delete_queue(output))
       {
-        --count;
         BlockCollect* block = get_block_manager().get(output.second);
         ServerCollect* server = get_server_manager().get(output.first);
         ret = ((NULL != block) && (NULL != server));
@@ -1816,7 +1799,7 @@ namespace tfs
     }
 
     bool LayoutManager::scan_block_(ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, int64_t& max_compact_task_count, const int32_t max_query_block_num,
-          const time_t now, const bool compact_time, const bool marshalling_time, const bool adjust_copies_location_time)
+          const time_t now, const bool compact_time, const bool marshalling_time, const bool adjust_copies_location_time, const bool report_time)
     {
       results.clear();
       bool ret  = false;
@@ -1842,7 +1825,7 @@ namespace tfs
           --need;
           --max_compact_task_count;
         }
-        ret = (!ret && marshalling_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
+        ret = (!ret && marshalling_time && !report_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
             && get_block_manager().need_marshalling(block, now));
         if (ret)
           ret = get_family_manager().push_block_to_marshalling_queues(block, now);
