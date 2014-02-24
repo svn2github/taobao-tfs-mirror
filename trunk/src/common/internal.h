@@ -1099,7 +1099,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[56];
+    extern const char* dynamic_parameter_str[57];
 
 #pragma pack (1)
     struct FileInfoV2//30
