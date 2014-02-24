@@ -931,5 +931,23 @@ namespace tfs
       return ret;
     }
 
+    void TfsClientImplV2::set_wait_timeout(const int64_t timeout_ms)
+    {
+      if (timeout_ms > 0)
+      {
+        ClientConfig::wait_timeout_ = timeout_ms;
+        TBSYS_LOG(INFO, "set wait timeout: %" PRI64_PREFIX "d ms", ClientConfig::wait_timeout_);
+      }
+      else
+      {
+        TBSYS_LOG(WARN, "set wait timeout %"PRI64_PREFIX"d <= 0", timeout_ms);
+      }
+    }
+
+    int64_t TfsClientImplV2::get_wait_timeout() const
+    {
+      return ClientConfig::wait_timeout_;
+    }
+
   }
 }

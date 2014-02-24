@@ -135,6 +135,9 @@ namespace tfs
        */
       int32_t get_cluster_id(const char* ns_addr = NULL);
 
+      void set_wait_timeout(const int64_t timeout_ms);
+      int64_t get_wait_timeout() const;
+
     private:
       TfsClientV2();
       DISALLOW_COPY_AND_ASSIGN(TfsClientV2);

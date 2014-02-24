@@ -29,7 +29,7 @@ ld_fg = $(AM_LDFLAGS) \
         $(top_srcdir)/src/common/libtfscommon.a
 
 libtfsclientv2_la_SOURCES = ${api_source_list}
-libtfsclientv2_la_LIDADD = ${ld_fg}
+libtfsclientv2_la_LIBADD = ${ld_fg}
 
 
 # needed by test_tfs_client

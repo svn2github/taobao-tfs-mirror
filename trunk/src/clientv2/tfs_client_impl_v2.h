@@ -90,6 +90,9 @@ namespace tfs
       void set_use_local_cache(const bool enable = true);
       void set_use_remote_cache(const bool enable = true);
 
+      void set_wait_timeout(const int64_t timeout_ms);
+      int64_t get_wait_timeout() const;
+
 #ifdef WITH_TAIR_CACHE
       void set_remote_cache_info(const char* remote_cache_master_addr,
           const char* remote_cache_slave_addr,

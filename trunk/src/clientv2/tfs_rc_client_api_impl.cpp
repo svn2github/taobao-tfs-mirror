@@ -295,6 +295,11 @@ namespace tfs
       TBSYS_LOGGER.setFileName(log_file);
     }
 
+    void RcClientImpl::set_wait_timeout(const int64_t timeout_ms)
+    {
+      TfsClientImplV2::Instance()->set_wait_timeout(timeout_ms);
+    }
+
     int RcClientImpl::open(const char* file_name, const char* suffix, const RcClient::RC_MODE mode)
     {
       int fd = -1;

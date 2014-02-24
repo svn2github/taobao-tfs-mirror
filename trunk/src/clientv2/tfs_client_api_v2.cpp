@@ -79,5 +79,15 @@ namespace tfs
     {
       return TfsClientImplV2::Instance()->get_cluster_id(ns_addr);
     }
+
+    void TfsClientV2::set_wait_timeout(const int64_t timeout_ms)
+    {
+      return TfsClientImplV2::Instance()->set_wait_timeout(timeout_ms);
+    }
+
+    int64_t TfsClientV2::get_wait_timeout() const
+    {
+      return TfsClientImplV2::Instance()->get_wait_timeout();
+    }
   }
 }
