@@ -638,7 +638,7 @@ namespace tfs
 
           results.clear();
           const int64_t reinsate_or_dissolve_queue_size = get_family_manager().get_reinstate_or_dissolve_queue_size();
-          const bool report_time      = ngi.in_report_block_time(current);
+          const bool report_time      = ngi.in_report_block_time(now);
           const bool compact_time     = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
           const bool marshalling_time = in_hour_range(current, SYSPARAM_NAMESERVER.marshalling_time_lower_, SYSPARAM_NAMESERVER.marshalling_time_upper_);
           const bool adjust_copies_location_time = in_hour_range(current, SYSPARAM_NAMESERVER.adjust_copies_location_time_lower_, SYSPARAM_NAMESERVER.adjust_copies_location_time_upper_);

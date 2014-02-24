@@ -153,7 +153,7 @@ namespace tfs
     {
       const int32_t REPORT_TIME = (SYSPARAM_NAMESERVER.report_block_time_upper_ - SYSPARAM_NAMESERVER.report_block_time_lower_) * 3600;
       bool report_time = in_hour_range(time(NULL), SYSPARAM_NAMESERVER.report_block_time_lower_, SYSPARAM_NAMESERVER.report_block_time_upper_);
-      return ((report_time) || ((switch_time_ + REPORT_TIME) < now));
+      return ((report_time) || ((switch_time_ + REPORT_TIME) > now));
     }
 
     int NsRuntimeGlobalInformation::keepalive(int64_t& lease_id, const uint64_t server,
