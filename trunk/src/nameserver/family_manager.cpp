@@ -840,6 +840,17 @@ namespace tfs
       }
     }
 
+    void FamilyManager::clear_marshalling_queue()
+    {
+      RWLock::Lock lock(marshallin_queue_mutex_, WRITE_LOCKER);
+      MARSHALLING_MAP_ITER it = marshalling_queue_.begin();
+      for (; it != marshalling_queue_.end(); ++it)
+      {
+        tbsys::gDelete((*it));
+      }
+      marshalling_queue_.clear();
+    }
+
     FamilyCollect* FamilyManager::get_(const int64_t family_id) const
     {
       FamilyCollect* family = NULL;

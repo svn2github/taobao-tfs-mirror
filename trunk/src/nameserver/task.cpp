@@ -660,8 +660,8 @@ namespace tfs
               << " check_member_num: " <<  GET_CHECK_MEMBER_NUM(family_aid_info_);
       for (int32_t index =  0; index < MEMBER_NUM ; ++index)
       {
-        stream << " server: " << tbsys::CNetUtil::addrToString(family_members_[index].server_) << " block: " << family_members_[index].block_
-               << " version: " << family_members_[index].version_ << " status: " << family_members_[index].status_;
+        stream << "| server: " << tbsys::CNetUtil::addrToString(family_members_[index].server_) << " block: " << family_members_[index].block_
+               << " version: " << family_members_[index].version_ << " status: " << family_members_[index].status_ ;
       }
     }
 

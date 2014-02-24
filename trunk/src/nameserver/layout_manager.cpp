@@ -801,7 +801,7 @@ namespace tfs
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
-        while ((!ngi.in_report_block_time(Func::get_monotonic_time()) && !ngi.is_destroyed()))
+        while ((ngi.in_report_block_time(Func::get_monotonic_time()) && !ngi.is_destroyed()))
           Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
 
         while ((get_block_manager().delete_queue_empty() && !ngi.is_destroyed()))

@@ -907,7 +907,8 @@ namespace tfs
       CLEAR_SYSTEM_TABLE_FLAG_TASK = 1,
       CLEAR_SYSTEM_TABLE_FLAG_WRITE_BLOCK = 1 << 1,
       CLEAR_SYSTEM_TABLE_FLAG_REPORT_SERVER = 1 << 2,
-      CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE  = 1 << 3
+      CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE  = 1 << 3,
+      CLEAR_SYSTEM_TABLE_FLAG_MARSHALLING_QUEUE = 1 << 4
     }ClearSystemTableFlag;
     typedef enum _FamilyMemberStatus
     {
