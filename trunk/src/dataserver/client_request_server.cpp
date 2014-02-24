@@ -776,13 +776,7 @@ namespace tfs
           // req ns resolve version conflict
           if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == ret)
           {
-            int32_t tmp_ret = get_op_manager().resolve_block_version_conflict(attach_block_id, file_id, lease_id);
-            if (TFS_SUCCESS != ret)
-            {
-              TBSYS_LOG(WARN, "resolve block version conflict fail. "
-                  "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d, tmp_ret: %d",
-                  attach_block_id, file_id, lease_id, ret, tmp_ret);
-            }
+            get_op_manager().resolve_block_version_conflict(attach_block_id, file_id, lease_id);
           }
           message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, op_stat.error_.str().c_str());
 

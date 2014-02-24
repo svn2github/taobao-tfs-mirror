@@ -567,6 +567,10 @@ namespace tfs
         }
       }
 
+      TBSYS_LOG_DW(ret, "resolve block version conflict."
+          "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u, ret: %d",
+          block_id, file_id, op_id, ret);
+
       return ret;
     }
 

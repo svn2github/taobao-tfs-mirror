@@ -25,9 +25,6 @@ namespace tfs
     WritableBlockManager::WritableBlockManager(DataService& service):
       service_(service),
       writable_(MAX_WRITABLE_BLOCK_COUNT, 1024, 0.1),
-      writable_size_(0),
-      update_size_(0),
-      expired_size_(0),
       write_index_(0)
     {
     }
@@ -90,34 +87,27 @@ namespace tfs
       return BLOCK_RESERVER_LENGTH + block_size >= ds_info.max_block_size_;
     }
 
-    void  WritableBlockManager::size(int32_t& all, int32_t& writable, int32_t& update, int32_t& expired)
+    void  WritableBlockManager::size(int32_t& writable, int32_t& update, int32_t& expired)
     {
+      writable = 0;
+      update = 0;
+      expired = 0;
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      all = writable_.size();
-      writable = writable_size_;
-      update = update_size_;
-      expired = expired_size_;
-    }
-
-    int32_t WritableBlockManager::size(const BlockType type)
-    {
-      RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      return select_size(type);
-    }
-
-    int32_t& WritableBlockManager::select_size(const BlockType type)
-    {
-      if (type == BLOCK_WRITABLE)
+      BLOCK_TABLE_ITER iter = writable_.begin();
+      for ( ; iter != writable_.end(); iter++)
       {
-        return writable_size_;
-      }
-      else if (type == BLOCK_UPDATE)
-      {
-        return update_size_;
-      }
-      else
-      {
-        return expired_size_;
+        if (BLOCK_WRITABLE == (*iter)->get_type())
+        {
+          writable++;
+        }
+        else if (BLOCK_UPDATE == (*iter)->get_type())
+        {
+          update++;
+        }
+        else if (BLOCK_EXPIRED == (*iter)->get_type())
+        {
+          expired++;
+        }
       }
     }
 
@@ -144,10 +134,7 @@ namespace tfs
     {
       if (NULL != block)
       {
-        int32_t& old_size = select_size(block->get_type());
         block->set_type(BLOCK_EXPIRED);
-        old_size--;
-        expired_size_++;
       }
     }
 
@@ -168,16 +155,7 @@ namespace tfs
           {
             assert(NULL != result);
             result->update_last_time(Func::get_monotonic_time());
-            int32_t& old_size = select_size(result->get_type());
-            int32_t& new_size = select_size(type);
-            old_size--;
-            new_size++;
           }
-        }
-        else
-        {
-          int32_t& old_size = select_size(type);
-          old_size++;
         }
 
         if (NULL != result)
@@ -203,8 +181,6 @@ namespace tfs
             WritableBlock* result = writable_.erase(&query);
             if (NULL != result)
             {
-              int32_t& old_size = select_size(result->get_type());
-              old_size--;
 #ifndef TFS_GTEST
               get_block_manager().get_gc_manager().add(result);
 #endif
@@ -280,8 +256,7 @@ namespace tfs
 
       if (NULL == block)
       {
-        TBSYS_LOG(WARN, "alloc writable block failed. writable: %d, update: %d, expired: %d",
-            writable_size_, update_size_, expired_size_);
+        TBSYS_LOG(WARN, "alloc writable block failed.");
       }
       else
       {

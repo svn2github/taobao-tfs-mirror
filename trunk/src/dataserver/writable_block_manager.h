@@ -60,8 +60,7 @@ namespace tfs
 
         BlockManager& get_block_manager();
 
-        void size(int32_t& all, int32_t& writable, int32_t& update, int32_t& expired);
-        int32_t size(const BlockType type);
+        void size(int32_t& writable, int32_t& update, int32_t& expired);
 
         // expire all blocks, move to expired list
         void expire_one_block(const uint64_t block_id);
@@ -94,7 +93,6 @@ namespace tfs
 
       private:
         bool is_full(const uint64_t block_id);
-        int32_t& select_size(const BlockType type);
         void expire_one_block_(WritableBlock* block);
         WritableBlock* insert_(const uint64_t block_id,
             const common::ArrayHelper<uint64_t>& servers, const BlockType type);
@@ -107,9 +105,6 @@ namespace tfs
       private:
         DataService& service_;
         BLOCK_TABLE writable_;
-        int32_t writable_size_;
-        int32_t update_size_;
-        int32_t expired_size_;
         int32_t write_index_;
         mutable common::RWLock rwmutex_;
 

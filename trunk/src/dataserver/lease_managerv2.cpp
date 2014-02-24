@@ -382,21 +382,21 @@ namespace tfs
         int64_t now = Func::get_monotonic_time();
         if (has_valid_lease(now))
         {
+          int32_t writable = 0;
+          int32_t update = 0;
+          int32_t expired = 0;
+
+          // traverse writable list, TODO: optimize
+          get_writable_block_manager().size(writable, update, expired);
+
           // dump writable block info every minute
           if (now % 60 == 0)
           {
-            int32_t all = 0;
-            int32_t writable = 0;
-            int32_t update = 0;
-            int32_t expired = 0;
-            get_writable_block_manager().size(all, writable, update, expired);
-            TBSYS_LOG(INFO, "writable block info, all: %d, writable: %d, update: %d, expired: %d",
-                all, writable, update, expired);
-            assert(all == writable + update + expired);  // self bug check
+            TBSYS_LOG(INFO, "writable block info, writable: %d, update: %d, expired: %d",
+                writable, update, expired);
           }
 
           // giveup expired block first
-          int32_t expired = get_writable_block_manager().size(BLOCK_EXPIRED);
           if (expired > 0)
           {
             ret = get_writable_block_manager().giveup_writable_block();
@@ -412,8 +412,7 @@ namespace tfs
           // apply writable block, system disk won't do apply
           if (ds_info.information_.type_ == DATASERVER_DISK_TYPE_FULL)
           {
-            int32_t need = ds_info.max_write_file_count_ -
-              get_writable_block_manager().size(BLOCK_WRITABLE);
+            int32_t need = ds_info.max_write_file_count_ - writable;
             if (need > 0)
             {
               ret = get_writable_block_manager().apply_writable_block(need);
