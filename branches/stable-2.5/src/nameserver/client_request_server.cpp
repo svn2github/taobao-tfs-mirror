@@ -733,6 +733,8 @@ namespace tfs
             manager_.get_server_manager().clear_report_block_server_table();
         if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE)
             manager_.get_block_manager().clear_delete_queue();
+        if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_MARSHALLING_QUEUE)
+            manager_.get_family_manager().clear_marshalling_queue();
       }
       return ret;
     }
