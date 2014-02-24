@@ -2606,16 +2606,16 @@ namespace tfs
 
 			if (TFS_SUCCESS == ret)
 			{
-				ret = Serialization::get_int32(data, data_len, pos,&verify_index_reserved_space_ratio_)
+				ret = Serialization::get_int32(data, data_len, pos,&verify_index_reserved_space_ratio_);
 			}
 			if (TFS_SUCCESS == ret)
 			{
-				ret = Serialization::get_int32(data, data_len, pos,&enable_old_interface_)
+				ret = Serialization::get_int32(data, data_len, pos,&enable_old_interface_);
 			}
 
 			if (TFS_SUCCESS == ret)
 			{
-				ret = Serialization::get_int32(data, data_len, pos,&enable_version_check_)
+				ret = Serialization::get_int32(data, data_len, pos,&enable_version_check_);
 			}
 
       if (TFS_SUCCESS == ret)
@@ -2682,19 +2682,19 @@ namespace tfs
         ret = Serialization::set_int32(data, data_len, pos, max_write_file_count_);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos,verify_index_reserved_space_ratio_);
+      }
 			if (TFS_SUCCESS == ret)
 			{
-				ret = Serialization::set_int32(data, data_len, pos,verify_index_reserved_space_ratio_)
-			}
-			if (TFS_SUCCESS == ret)
-			{
-				ret = Serialization::set_int32(data, data_len, pos,enable_old_interface_)
-			}
+        ret = Serialization::set_int32(data, data_len, pos,enable_old_interface_);
+      }
 
-			if (TFS_SUCCESS == ret)
-			{
-				ret = Serialization::set_int32(data, data_len, pos,enable_version_check_)
-			}
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos,enable_version_check_);
+      }
 
       if (TFS_SUCCESS == ret)
       {

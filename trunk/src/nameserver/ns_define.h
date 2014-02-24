@@ -180,11 +180,8 @@ namespace tfs
     extern int ns_async_callback(common::NewClient* client);
     extern void print_int64(const common::ArrayHelper<uint64_t>&servers, std::string& result);
     extern void print_int64(const std::vector<uint64_t>& servers, std::string& result);
-<<<<<<< .working
     extern bool is_equal_group(const uint64_t id);
-=======
     extern bool in_hour_range(const int64_t now, int32_t& min, int32_t& max);
->>>>>>> .merge-right.r2812
  }/** nameserver **/
 }/** tfs **/
 

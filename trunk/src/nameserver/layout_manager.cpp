@@ -522,7 +522,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.enable_old_interface_,
           &SYSPARAM_NAMESERVER.enable_version_check_,
           &SYSPARAM_NAMESERVER.marshalling_visit_time_,
-          &SYSPARAM_NAMESERVER.client_keepalive_interval_
+          &SYSPARAM_NAMESERVER.client_keepalive_interval_,
           &SYSPARAM_NAMESERVER.verify_index_reserved_space_ratio_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
