@@ -136,6 +136,7 @@ namespace tfs
 #define CONF_SLAVE_NSPORT                             "slave_nsport"
 #define CONF_MOUNT_POINT_NAME                         "mount_name"             //mount point name
 #define CONF_MOUNT_MAX_USESIZE                        "mount_maxsize"
+#define CONF_EXTRA_MOUNT_MAX_USESIZE                  "extra_mount_maxsize"   //mount size for index 0 (system disk)
 #define CONF_BASE_FS_TYPE                             "base_filesystem_type"
 #define CONF_AVG_SEGMENT_SIZE                         "avg_file_size"
 #define CONF_SUPERBLOCK_START                         "superblock_reserve"     //"0"
@@ -162,7 +163,12 @@ namespace tfs
 #define CONF_SYNC_FILE_ENTRY_QUEUE_LIMIT              "sync_file_entry_queue_limit"
 #define CONF_SYNC_FILE_ENTRY_QUEUE_WARN_RATIO         "sync_file_entry_queue_warn_ratio"
 #define CONF_SYNC_FILE_ENTRY_DEST_ADDR                "sync_file_entry_dest_addr"
+
+//migrate server
 #define CONF_MIGRATE_SERVER_ADDR                      "migrate_server_addr"
+#define CONF_HOT_TIME_RANGE                           "hot_time_range"
+#define CONF_FULL_DISK_ACCESS_RATIO                   "system_disk_access_ratio"
+#define CONF_SYSTEM_DISK_ACCESS_RATIO                 "full_disk_access_ratio"
 
 //rc
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"

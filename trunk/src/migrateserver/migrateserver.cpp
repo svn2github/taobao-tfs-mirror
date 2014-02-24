@@ -54,9 +54,32 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        uint64_t ns_vip_port = tbsys::CNetUtil::strToAddr(ipaddr, port);
-        manager_ = new (std::nothrow)MigrateManager(ns_vip_port);
-        assert(NULL != manager_);
+        const uint64_t ns_vip_port = tbsys::CNetUtil::strToAddr(ipaddr, port);
+        const char* percent = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_BALANCE_PERCENT, "0.05");
+        const double balance_percent = strtod(percent, NULL);
+        const int32_t TWO_MONTH = 2 * 31 * 86400;
+        const int64_t hot_time_range = TBSYS_CONFIG.getInt(CONF_SN_MIGRATESERVER, CONF_HOT_TIME_RANGE, TWO_MONTH);
+        const char* str_system_disk_access_ratio = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_SYSTEM_DISK_ACCESS_RATIO, "");
+        const char* str_full_disk_access_ratio = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_FULL_DISK_ACCESS_RATIO, "");
+        std::vector<string> ratios[2];
+        Func::split_string(str_full_disk_access_ratio, ':', ratios[0]);
+        Func::split_string(str_system_disk_access_ratio, ':', ratios[1]);
+        int32_t ret = (5U == ratios[0].size() && 5U == ratios[1].size()) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          AccessRatio ar[2];
+          for (int32_t i = 0; i < 2; ++i)
+          {
+            ar[i].last_access_time_ratio = atoi(ratios[i][0].c_str());
+            ar[i].read_ratio = atoi(ratios[i][1].c_str());
+            ar[i].write_ratio = atoi(ratios[i][2].c_str());
+            ar[i].update_ratio = atoi(ratios[i][3].c_str());
+            ar[i].unlink_ratio = atoi(ratios[i][4].c_str());
+          }
+          manager_ = new (std::nothrow)MigrateManager(ns_vip_port, balance_percent, hot_time_range, ar[0], ar[1]);
+          assert(NULL != manager_);
+          manager_->initialize();
+        }
       }
       if (TFS_SUCCESS == ret)
       {
@@ -245,6 +268,7 @@ namespace tfs
           switch (pcode)
           {
             case REQ_MIGRATE_DS_HEARTBEAT_MESSAGE:
+              ret = keepalive_(dynamic_cast<common::BasePacket*>(packet));
               break;
             default:
               ret = EXIT_UNKNOWN_MSGTYPE;

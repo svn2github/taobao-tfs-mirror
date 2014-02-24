@@ -329,6 +329,12 @@ namespace tfs
       REPLICATE_BLOCK_MOVE_FLAG_YES
     };
 
+    enum MoveBlockNoCheckRackFlag
+    {
+      MOVE_BLOCK_NO_CHECK_RACK_FLAG_NO = 0x00,
+      MOVE_BLOCK_NO_CHECK_RACK_FLAG_YES
+    };
+
     enum WriteCompleteStatus
     {
       WRITE_COMPLETE_STATUS_YES = 0x00,
@@ -762,6 +768,7 @@ namespace tfs
       int64_t value2_;
       int64_t value3_;
       int64_t value4_;
+      int64_t value5_;
       int32_t  cmd_;
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -1092,7 +1099,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[55];
+    extern const char* dynamic_parameter_str[56];
 
 #pragma pack (1)
     struct FileInfoV2//30

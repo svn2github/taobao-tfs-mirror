@@ -444,7 +444,7 @@ namespace tfs
           if (TFS_SUCCESS != ret)
           {
             snprintf(buf, buf_length, "immediately %s block: %"PRI64_PREFIX"u fail, cannot found source dataserver",
-                info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", info.value3_);
+                info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move" , info.value3_);
           }
           if (TFS_SUCCESS == ret)
           {
@@ -458,10 +458,10 @@ namespace tfs
             if (TFS_SUCCESS != ret)
             {
               snprintf(buf, buf_length, "immediately %s block: %"PRI64_PREFIX"u fail, cannot found target dataserver",
-                  info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", info.value3_);
+                  info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move" , info.value3_);
             }
           }
-          if (TFS_SUCCESS == ret)//NULL != source && NULL != target
+          if (TFS_SUCCESS == ret && MOVE_BLOCK_NO_CHECK_RACK_FLAG_NO == info.value5_)//NULL != source && NULL != target
           {
             uint32_t lan = Func::get_lan(source->id(), SYSPARAM_NAMESERVER.group_mask_);
             uint32_t lan2= Func::get_lan(target->id(), SYSPARAM_NAMESERVER.group_mask_);
@@ -469,7 +469,7 @@ namespace tfs
             if (TFS_SUCCESS != ret)
             {
               snprintf(buf, buf_length, "immediately %s block: %"PRI64_PREFIX"u fail, choose rack error: %u == %u",
-                  info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", info.value3_, lan, lan2);
+                  info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move" , info.value3_, lan, lan2);
             }
           }
           if (TFS_SUCCESS == ret)
@@ -477,12 +477,12 @@ namespace tfs
             helper.clear();
             helper.push_back(source->id());
             helper.push_back(target->id());
-            PlanType type = (info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO) ? PLAN_TYPE_REPLICATE : PLAN_TYPE_MOVE;
+            PlanType type = (info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO) ? PLAN_TYPE_REPLICATE : PLAN_TYPE_MOVE ;
             ret = manager_.get_task_manager().add(info.value3_, helper, type, now);
             if (TFS_SUCCESS != ret)
             {
               snprintf(buf, buf_length, "add task(%s) failed, block: %"PRI64_PREFIX"u",
-                  info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", info.value3_);
+                  info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",  info.value3_);
             }
           }
           BlockCollect* pobject = NULL;

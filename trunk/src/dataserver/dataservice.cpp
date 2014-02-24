@@ -324,7 +324,7 @@ namespace tfs
           ret = vec.size() == 2U ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            dest_addr = tbsys::CNetUtil::strToAddr(vec[0].c_str(), atoi(vec[0].c_str()));
+            dest_addr = tbsys::CNetUtil::strToAddr(vec[0].c_str(), atoi(vec[1].c_str()));
           }
         }
         if (TFS_SUCCESS == ret && INVALID_SERVER_ID != dest_addr)
@@ -332,6 +332,7 @@ namespace tfs
           DsRuntimeGlobalInformation& instance = DsRuntimeGlobalInformation::instance();
           sync_manager_ = new (std::nothrow)SyncManager(dest_addr, instance.information_.id_, instance.ns_vip_port_, limit, warn_ratio);
           assert(NULL != sync_manager_);
+          ret = sync_manager_->initialize();
         }
         if (INVALID_SERVER_ID != dest_addr)
         {
@@ -352,7 +353,7 @@ namespace tfs
           ret = vec.size() == 2U ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            migrate_addr = tbsys::CNetUtil::strToAddr(vec[0].c_str(), atoi(vec[0].c_str()));
+            migrate_addr = tbsys::CNetUtil::strToAddr(vec[0].c_str(), atoi(vec[1].c_str()));
           }
         }
         if (TFS_SUCCESS == ret && INVALID_SERVER_ID != migrate_addr)

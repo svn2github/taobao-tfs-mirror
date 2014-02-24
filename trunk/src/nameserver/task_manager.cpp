@@ -501,8 +501,8 @@ namespace tfs
           }
           else if (msg->getPCode() == REPLICATE_BLOCK_MESSAGE)
           {
-            PlanType type = dynamic_cast<ReplicateBlockMessage*>(msg)->get_move_flag() == REPLICATE_BLOCK_MOVE_FLAG_NO ?
-              PLAN_TYPE_REPLICATE : PLAN_TYPE_MOVE;
+            PlanType type = (dynamic_cast<ReplicateBlockMessage*>(msg)->get_move_flag() == REPLICATE_BLOCK_MOVE_FLAG_NO) ?
+              PLAN_TYPE_REPLICATE : PLAN_TYPE_MOVE ;
             task = type == PLAN_TYPE_MOVE ? new (std::nothrow)MoveTask(*this, block, MAX_NUM, server) :
                  new (std::nothrow)ReplicateTask(*this, block, MAX_NUM, server, type);
           }

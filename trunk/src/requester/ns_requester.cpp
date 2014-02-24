@@ -93,6 +93,17 @@ namespace tfs
       return ret;
     }
 
+    int NsRequester::get_max_block_size(const uint64_t ns_id, int32_t& max_block_size)
+    {
+      std::string value;
+      int ret = get_ns_param(ns_id, "max_block_size", value);
+      if (TFS_SUCCESS == ret)
+      {
+        max_block_size = atoi(value.c_str());
+      }
+      return ret;
+    }
+
     int NsRequester::get_ns_param(const uint64_t ns_id, const std::string& key, std::string& value)
     {
       int ret = (INVALID_SERVER_ID != ns_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;

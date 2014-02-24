@@ -62,6 +62,14 @@ namespace tfs
       {
         return info_.value4_;
       }
+      inline void set_value5(const int64_t value)
+      {
+        info_.value5_ = value;
+      }
+      inline int64_t get_value5() const
+      {
+        return info_.value5_;
+      }
       inline void set_cmd(const int32_t cmd)
       {
         info_.cmd_ = cmd;

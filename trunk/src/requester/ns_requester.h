@@ -56,6 +56,9 @@ namespace tfs
         // get a cluster's group seq from nameserver
         static int get_group_seq(const uint64_t ns_id, int32_t& group_seq);
 
+        // get max block size from nameserver
+        static int get_max_block_size(const uint64_t ns_id, int32_t& max_block_size);
+
         // get nameserver's config parameter value
         static int get_ns_param(const uint64_t ns_id, const std::string& key, std::string& value);
 

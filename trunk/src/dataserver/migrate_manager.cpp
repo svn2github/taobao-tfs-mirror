@@ -63,6 +63,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         tbnet::Packet* result = NULL;
+        DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
+        req_msg.set_dataserver_information(info);
         ret = send_msg_to_server(dest_addr_, client, &req_msg, result, timeout_ms);
         if (TFS_SUCCESS == ret)
         {
@@ -86,9 +88,9 @@ namespace tfs
       DsRuntimeGlobalInformation& rgi = DsRuntimeGlobalInformation::instance();
       while (!rgi.is_destroyed())
       {
-        int32_t ret = TFS_SUCCESS;
+        int32_t ret = EXIT_TFS_ERROR;
         int32_t index = 0;
-        for (index = 0; index < MAX_RETRY_TIMES && TFS_SUCCESS == ret; ++index)
+        for (index = 0; index < MAX_RETRY_TIMES && TFS_SUCCESS != ret; ++index)
         {
           ret = do_migrate_heartbeat_(MAX_TIMEOUT_MS);
           if (TFS_SUCCESS != ret && EXIT_TIMEOUT_ERROR != ret)

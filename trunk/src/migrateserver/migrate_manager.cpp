@@ -16,10 +16,12 @@
 #include "migrate_manager.h"
 #include "common/error_msg.h"
 #include "common/array_helper.h"
+#include "common/config_item.h"
 #include "common/client_manager.h"
 #include "common/status_message.h"
 #include "message/client_cmd_message.h"
 #include "message/get_dataserver_all_blocks_header.h"
+#include "requester/ns_requester.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
@@ -27,11 +29,16 @@ namespace tfs
 {
   namespace migrateserver
   {
-    MigrateManager::MigrateManager(const uint64_t ns_vip_port) :
+    MigrateManager::MigrateManager(const uint64_t ns_vip_port, const double balance_percent,
+        const int64_t hot_time_range, AccessRatio& full_disk_ratio, AccessRatio& system_disk_ratio) :
       work_thread_(0),
-      ns_vip_port_(ns_vip_port)
+      ns_vip_port_(ns_vip_port),
+      balance_percent_(balance_percent),
+      hot_time_range_(hot_time_range),
+      max_block_size_(0),
+      full_disk_access_ratio_(full_disk_ratio),
+      system_disk_access_ratio_(system_disk_ratio)
     {
-
     }
 
     MigrateManager::~MigrateManager()
@@ -41,9 +48,17 @@ namespace tfs
 
     int MigrateManager::initialize()
     {
-      work_thread_ = new (std::nothrow) WorkThreadHelper(*this);
-      assert(work_thread_!= 0);
-      return TFS_SUCCESS;
+      int32_t ret = requester::NsRequester::get_max_block_size(ns_vip_port_, max_block_size_);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "get max block size from ns fail, ret: %d", ret);
+      }
+      else
+      {
+        work_thread_ = new (std::nothrow) WorkThreadHelper(*this);
+        assert(work_thread_!= 0);
+      }
+      return ret;
     }
 
     int MigrateManager::destroy()
@@ -55,6 +70,7 @@ namespace tfs
       }
       return TFS_SUCCESS;
     }
+
 
     int MigrateManager::keepalive(const common::DataServerStatInfo& server)
     {
@@ -70,7 +86,9 @@ namespace tfs
         }
         else
         {
-          servers_.insert(SERVER_MAP::value_type(server.id_, server));
+          std::pair<SERVER_MAP_ITER, bool> res =
+              servers_.insert(SERVER_MAP::value_type(server.id_, server));
+          res.first->second.last_update_time_ = Func::get_monotonic_time();
         }
       }
       return ret;
@@ -85,6 +103,8 @@ namespace tfs
       {
         if (now - iter->second.last_update_time_ > MAX_TIMEOUT_TIME)
         {
+          TBSYS_LOG(DEBUG, "dataserver %s heart beat timeout, will remove it",
+              tbsys::CNetUtil::addrToString(iter->first).c_str());
           servers_.erase(iter++);
         }
         else
@@ -165,34 +185,32 @@ namespace tfs
               for (; iter != blocks.end(); ++iter)
               {
                 int64_t weights = calc_block_weight_((*iter), type);
-                blocks_[index].insert(BLOCK_MAP::value_type(weights, std::make_pair(server,(*iter).info_.block_id_)));
+                if (weights >= 0)
+                {
+                  blocks_[index].insert(BLOCK_MAP::value_type(weights, std::make_pair(server, iter->info_.block_id_)));
+                }
               }
             }
+            NewClientManager::get_instance().destroy_client(client);
           }
-          NewClientManager::get_instance().destroy_client(client);
-        }
-        while (retry_times-- > 0 && TFS_SUCCESS != ret);
+        } while (retry_times-- > 0 && TFS_SUCCESS != ret);
       }
       return ret;
     }
 
     int64_t MigrateManager::calc_block_weight_(const common::IndexHeaderV2& info, const int32_t type) const
     {
-      int64_t weights = 0;
-      const int32_t TWO_MONTH = 2 * 31 * 86400;
-      const int32_t LAST_ACCESS_TIME_RATIO = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 50 : 50;
-      const int32_t READ_RATIO   = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 20 : 10;
-      const int32_t WRITE_RATIO  = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 20 : 30;
-      const int32_t UPDATE_RATIO = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 5  : 5;
-      const int32_t UNLINK_RATIO = common::DATASERVER_DISK_TYPE_SYSTEM == type ? 5  : 5;
-      const ThroughputV2& th = info.throughput_;
+      int64_t weights = -1;
       const int64_t now = time(NULL);
-      bool calc = common::DATASERVER_DISK_TYPE_SYSTEM == type ? true : th.last_statistics_time_+ TWO_MONTH < now;
+      const AccessRatio &ar = DATASERVER_DISK_TYPE_SYSTEM == type ? system_disk_access_ratio_ : full_disk_access_ratio_;
+      const ThroughputV2 &th = info.throughput_;
+      bool calc = common::DATASERVER_DISK_TYPE_SYSTEM == type ? true :
+          (th.last_statistics_time_ + hot_time_range_ < now && is_full(info.info_));
       if (calc)
       {
-        weights = th.last_statistics_time_ * LAST_ACCESS_TIME_RATIO+ th.read_visit_count_ * READ_RATIO
-          + th.write_visit_count_ * WRITE_RATIO + th.update_visit_count_ * UPDATE_RATIO
-          + th.unlink_visit_count_* UNLINK_RATIO;
+        weights = th.last_statistics_time_ * ar.last_access_time_ratio +
+            th.read_visit_count_ * ar.read_ratio + th.write_visit_count_ * ar.write_ratio +
+            th.update_visit_count_ * ar.update_ratio + th.unlink_visit_count_* ar.unlink_ratio;
       }
       return weights;
     }
@@ -213,26 +231,26 @@ namespace tfs
     void MigrateManager::calc_system_disk_migrate_info_(MigrateEntry& entry) const
     {
       memset(&entry, 0, sizeof(entry));
-      const double balance_percent = 0.05;
       int64_t total_capacity = 0, use_capacity = 0;
       statistic_all_server_info_(total_capacity, use_capacity);
       if (total_capacity > 0 && use_capacity > 0)
       {
+        double avg_ratio = static_cast<double>(use_capacity)/static_cast<double>(total_capacity);
         tbutil::Mutex::Lock lock(mutex_);
         CONST_SERVER_MAP_ITER iter = servers_.begin();
         for (; iter != servers_.end(); ++iter)
         {
           const common::DataServerStatInfo& info = iter->second;
-          if (INVALID_SERVER_ID != info.id_ && common::DATASERVER_DISK_TYPE_SYSTEM == info.type_)
+          if (INVALID_SERVER_ID != info.id_ && common::DATASERVER_DISK_TYPE_SYSTEM == info.type_
+              && info.total_capacity_ > 0)
           {
-            double avg_ratio = static_cast<double>(use_capacity)/static_cast<double>(total_capacity);
-            double curr_ratio= static_cast<double>(info.use_capacity_) / static_cast<double>(info.total_capacity_);
+            double curr_ratio = static_cast<double>(info.use_capacity_) / static_cast<double>(info.total_capacity_);
 
-            if (curr_ratio < avg_ratio - balance_percent)
+            if (curr_ratio < avg_ratio - balance_percent_)
             {
               entry.dest_addr_ = info.id_;
             }
-            else if ((curr_ratio > (avg_ratio + balance_percent))
+            else if ((curr_ratio > (avg_ratio + balance_percent_))
                 || curr_ratio >= 1.0)
             {
               entry.source_addr_ = info.id_;
@@ -248,12 +266,25 @@ namespace tfs
           || entry.source_addr_ != INVALID_SERVER_ID) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        // full disk -> system disk (entry.dest_addr_ != INVALID_SERVER_ID)
+        // system disk -> full disk (entry.dest_addr_ == INVALID_SERVER_ID)
         bool target = entry.dest_addr_ != INVALID_SERVER_ID;
         int32_t index = target ? 1 : 0;
-        CONST_BLOCK_MAP_REVERSE_ITER iter = blocks_[index].rbegin();
-        entry.block_id_    = (*iter).second.second;
-        ret = choose_move_server_(target ? entry.dest_addr_: entry.source_addr_,
-            target ? entry.source_addr_ : entry.dest_addr_) ? TFS_SUCCESS : EXIT_CHOOSE_SOURCE_SERVER_ERROR;
+        if (!blocks_[index].empty())
+        {
+          if (target)
+          {
+            CONST_BLOCK_MAP_ITER iter = blocks_[index].begin();
+            entry.block_id_ = (*iter).second.second;
+            entry.source_addr_ = (*iter).second.first;
+          }
+          else
+          {
+            CONST_BLOCK_MAP_REVERSE_ITER iter = blocks_[index].rbegin();
+            entry.block_id_ = (*iter).second.second;
+            ret = choose_move_dest_server_(entry.source_addr_, entry.dest_addr_) ? TFS_SUCCESS : EXIT_CHOOSE_MIGRATE_DEST_SERVER_ERROR;
+          }
+        }
       }
       return ret;
     }
@@ -271,6 +302,7 @@ namespace tfs
         req_msg.set_value2(current.dest_addr_);
         req_msg.set_value3(current.block_id_);
         req_msg.set_value4(REPLICATE_BLOCK_MOVE_FLAG_YES);
+        req_msg.set_value5(MOVE_BLOCK_NO_CHECK_RACK_FLAG_YES);
         req_msg.set_cmd(CLIENT_CMD_IMMEDIATELY_REPL);
         int32_t retry_times = 3;
         const int32_t TIMEOUT_MS = 2000;
@@ -299,28 +331,33 @@ namespace tfs
         }
         while (retry_times-- > 0 && TFS_SUCCESS != ret);
       }
-      TBSYS_LOG(INFO, "send migrate message %s, ret: %d,error msg: %s block: %"PRI64_PREFIX"u, source: %s, dest: %s , ns_vip: %s",
+      TBSYS_LOG(INFO, "send migrate message %s, ret: %d, error msg: %s block: %"PRI64_PREFIX"u, source: %s, dest: %s , ns_vip: %s",
           TFS_SUCCESS == ret ? "successful" : "failed", ret, msg, current.block_id_, tbsys::CNetUtil::addrToString(current.source_addr_).c_str(),
           tbsys::CNetUtil::addrToString(current.dest_addr_).c_str(), tbsys::CNetUtil::addrToString(ns_vip_port_).c_str());
       return ret;
     }
 
-    bool MigrateManager::choose_move_server_(const uint64_t source_addr, uint64_t& dest_addr) const
+    bool MigrateManager::choose_move_dest_server_(const uint64_t source_addr, uint64_t& dest_addr) const
     {
       dest_addr = INVALID_SERVER_ID;
       tbutil::Mutex::Lock lock(mutex_);
+      VUINT64 server_ids;
+      CONST_SERVER_MAP_ITER iter = servers_.begin();
+      for (; iter != servers_.end(); ++iter)
+      {
+        server_ids.push_back(iter->second.id_);
+      }
+
       int32_t random_index = -1, retry_times = servers_.size();
       while (retry_times-- > 0 && INVALID_SERVER_ID == dest_addr)
       {
-        random_index = random() % servers_.size();
-        CONST_SERVER_MAP_ITER iter = servers_.begin();
-        for (; iter != servers_.end(); ++iter)
+        random_index = random() % server_ids.size();
+        if (source_addr != server_ids[random_index]) // not same with source
         {
-          if (source_addr != iter->second.id_)
-            dest_addr = iter->second.id_;
+          dest_addr = server_ids[random_index];
         }
       }
-      return dest_addr == INVALID_SERVER_ID;
+      return dest_addr != INVALID_SERVER_ID;
     }
 
     void MigrateManager::statistic_all_server_info_(int64_t& total_capacity, int64_t& use_capacity) const

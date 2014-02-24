@@ -327,7 +327,9 @@ namespace tfs
     // migrate server error code
     const int32_t EXIT_GET_ALL_BLOCK_HEADER_ERROR = -22000;
     const int32_t EXIT_SEND_MIGRATE_MSG_ERROR = -22001;
+    const int32_t EXIT_CHOOSE_MIGRATE_DEST_SERVER_ERROR = -22002;
 
+    const int32_t EXIT_NO_BLOCK_NEED_MIGRATE_ERROR = -19002;
     // sync server error code
     const int32_t EXIT_SOURCE_DS_SYNC_THREAD_NOT_FOUND = -23000;
   }

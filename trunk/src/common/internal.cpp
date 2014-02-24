@@ -959,6 +959,10 @@ namespace tfs
       {
         ret = common::Serialization::set_int64(data, data_len, pos, value2_);
       }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::set_int64(data, data_len, pos, value5_);
+      }
       return ret;
     }
 
@@ -987,12 +991,16 @@ namespace tfs
       {
         ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value2_));
       }
+      if (common::TFS_SUCCESS == ret && data_len > pos)
+      {
+        ret = common::Serialization::get_int64(data, data_len, pos, &value5_);
+      }
       return ret;
     }
 
     int64_t ClientCmdInformation::length() const
     {
-      return common::INT_SIZE + common::INT64_SIZE * 4;
+      return common::INT_SIZE + common::INT64_SIZE * 5;
     }
 
     int ToolsClientCmdInformation::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -1318,7 +1326,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[55] = {
+    const char* dynamic_parameter_str[56] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1373,7 +1381,8 @@ namespace tfs
         "enable_old_interface",
         "enable_version_check",
         "marshalling_visit_time",
-        "client_keepalive_interval"
+        "client_keepalive_interval",
+        "max_block_size"
         "verify_index_reserved_space_ratio"
     };
 

@@ -508,7 +508,7 @@ namespace tfs
         tmp_stream << tbsys::CNetUtil::addrToString(repl_info_.source_id_[i]) << " ";
       }
       tmp_stream << "dest id: " << tbsys::CNetUtil::addrToString(repl_info_.destination_id_) << delim;
-      tmp_stream << "move flag: " << (0 == repl_info_.is_move_? "no": "yes");
+      tmp_stream << "move flag: " << (REPLICATE_BLOCK_MOVE_FLAG_NO == repl_info_.is_move_ ? "no": "yes");
       return tmp_stream.str();
     }
 
@@ -1607,7 +1607,7 @@ namespace tfs
         repl_block.source_id_[0] = family_members_[i].server_;
         repl_block.source_num_ = 1;  // when dissolve happens, there will be only one source
         repl_block.destination_id_ = family_members_[i+total_num].server_;
-        repl_block.is_move_ = 0;
+        repl_block.is_move_ = REPLICATE_BLOCK_MOVE_FLAG_NO;
 
         repl_msg.set_seqno(seqno_);
         repl_msg.set_expire_time(expire_time_);
