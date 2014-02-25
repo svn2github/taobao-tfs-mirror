@@ -1,9 +1,7 @@
 #ifndef KV_META_TEST_INIT_H_
 #define KV_META_TEST_INIT_H_
-
-#include "tfs_rc_client_api.h"
-#include "tfs_client_api.h"
-#include "kv_meta_define.h"
+#include <tfs_rc_client_api.h>
+#include <kv_meta_define.h>
 #include "func.h"
 #include <gtest/gtest.h>
 #include <stdio.h>
@@ -14,26 +12,26 @@
 #include "tfs_rc_client_api_impl.h"
 
 using namespace std;
-using namespace tfs::client;
+using namespace tfs::clientv2;
 class TMP
 {
   public:
     TMP()
     {
-      TfsClient* tt = tfs::client::TfsClient::Instance();
-      tt->get_cache_items();
+     // TfsClient* tt = tfs::clientv2::TfsClient::Instance();
+     // tt->get_cache_items();
     }
 };
 static TMP tmp; //this is make tfsclient init first
 static RcClient kv_meta_client ;
 //static RcClientImpl kv_meta_client ;
 
-#define RC_2M    "/home/admin/workspace/diqing/resource/2m"
-#define RC_100M  "/home/admin/workspace/diqing/resource/100m"
-#define RC_5M    "/home/admin/workspace/diqing/resource/5m"
-#define RC_2K    "/home/admin/workspace/diqing/resource/2k"
-#define RC_00    "/home/admin/workspace/diqing/resource/empty"
-#define RC_20M   "/home/admin/workspace/diqing/resource/20m"
+#define RC_2M    "../../resource/2m.jpg"
+#define RC_100M  "../../resource/100m.jpg"
+#define RC_5M    "../../resource/5m.jpg"
+#define RC_2K    "../../resource/2k.jpg"
+#define RC_00    "../../resource/empty.jpg"
+#define RC_20M   "../../resource/20m.jpg"
 
 class TFS_Init : public testing::Test
 {
@@ -43,7 +41,7 @@ class TFS_Init : public testing::Test
     {
       const char*kv_root_server_addr="10.232.4.12:4567";
       // const char*kv_root_server_addr="10.232.35.40:5977";
-      const char*rc_addr="10.232.4.12:7269";
+      const char*rc_addr="10.232.4.7:6267";
       //const char*rc_addr="10.232.36.200:5755";
       const char*app_key="tappkey";
       int Ret ;
@@ -78,7 +76,7 @@ class TFS_Init_Data : public testing::Test
     static void SetUpTestCase()
     {
       const char*kv_root_server_addr="10.232.4.12:4567";
-      const char*rc_addr="10.232.4.12:7269";
+      const char*rc_addr="10.232.4.7:6267";
       const char*app_key="tappkey";
 
        tfs::common::UserInfo user_info;
