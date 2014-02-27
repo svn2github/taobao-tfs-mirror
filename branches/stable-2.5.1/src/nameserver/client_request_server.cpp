@@ -660,6 +660,7 @@ namespace tfs
           case REQ_EC_MARSHALLING_COMMIT_MESSAGE:
           case REQ_EC_REINSTATE_COMMIT_MESSAGE:
           case REQ_EC_DISSOLVE_COMMIT_MESSAGE:
+          case REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
             ret = manager_.handle_task_complete(msg);
             break;
           default:

@@ -146,10 +146,10 @@ namespace tfs
       int32_t total_network_bandwith_;
       mutable int32_t write_index_;
       int8_t  reserve_[3];
-      int8_t  status_:1;
-      int8_t  disk_type_:1;
-      int8_t  wait_free_phase_:3;
-      int8_t  rb_status_:3;//report block complete status
+      uint8_t  status_:1;
+      uint8_t  disk_type_:1;
+      uint8_t  wait_free_phase_:3;
+      uint8_t  rb_status_:3;//report block complete status
    };
   }/** nameserver **/
 }/** tfs **/

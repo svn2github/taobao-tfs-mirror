@@ -126,7 +126,7 @@ namespace tfs
             for (index = 0; index < servers.get_array_index() && TFS_SUCCESS == ret; ++index)
             {
               server = *servers.at(index);
-              if (task->type_ != PLAN_TYPE_COMPACT && index < 2)
+              if (task->type_ != PLAN_TYPE_COMPACT && task->type_ != PLAN_TYPE_RESOLVE_VERSION_CONFLICT && index < 2)
               {
                 std::pair<MACHINE_TO_TASK_ITER, bool> mrs;
                 uint64_t machine_ip = (server & 0xFFFFFFFF);
@@ -149,7 +149,7 @@ namespace tfs
               for (index = 0; index < helper.get_array_index(); ++index)
               {
                 std::pair<uint64_t, bool>* item = helper.at(index);
-                if (task->type_ != PLAN_TYPE_COMPACT)
+                if (task->type_ != PLAN_TYPE_COMPACT && task->type_ != PLAN_TYPE_RESOLVE_VERSION_CONFLICT)
                   remove_(item->first, item->second);
               }
             }
@@ -518,6 +518,10 @@ namespace tfs
           {
             task = new (std::nothrow)ECDissolveTask(*this, family_id, family_aid_info, MAX_NUM, info);
           }
+          else if (msg->getPCode() == REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE)
+          {
+            task = new (std::nothrow)ResolveBlockVersionConflictTask(*this, block, MAX_NUM, server);
+          }
           assert(NULL != task);
         }
         ret = (NULL != task) ? TFS_SUCCESS : EXIT_TASK_NO_EXIST_ERROR;
@@ -575,13 +579,14 @@ namespace tfs
         const PlanType type = task->type_;
         if ((PLAN_TYPE_REPLICATE == type)
             || (PLAN_TYPE_MOVE == type)
-            || (PLAN_TYPE_COMPACT == type))
+            || (PLAN_TYPE_COMPACT == type)
+            || (PLAN_TYPE_RESOLVE_VERSION_CONFLICT == type))
         {
           ReplicateTask* ptask = dynamic_cast<ReplicateTask*>(task);
           block_to_tasks_.erase(ptask->block_);
           for (int8_t index = 0; index < ptask->server_num_ && index < 2; ++index)
           {
-            if (PLAN_TYPE_COMPACT != type)
+            if (PLAN_TYPE_COMPACT != type && PLAN_TYPE_RESOLVE_VERSION_CONFLICT != type)
               remove_(ptask->servers_[index], is_target(index));
           }
         }

@@ -39,9 +39,9 @@ namespace tfs
 
     typedef enum ObjectWaitFreePhase_
     {
-      OBJECT_WAIT_FREE_PHASE_NONE  = -1,
-      OBJECT_WAIT_FREE_PHASE_CLEAR = 0,
-      OBJECT_WAIT_FREE_PHASE_FREE  = 1
+      OBJECT_WAIT_FREE_PHASE_NONE  = 0,
+      OBJECT_WAIT_FREE_PHASE_CLEAR = 1,
+      OBJECT_WAIT_FREE_PHASE_FREE  = 2
     }ObjectWaitFreePhase;
 
     template <typename T>
@@ -57,7 +57,7 @@ namespace tfs
           inline int64_t get() const { return expire_time_;}
           inline bool expire(const int64_t now) const  { return now >= expire_time_;}
         protected:
-          int64_t  expire_time_;/** object expire time or lease expire time(ms)**/
+          int64_t  expire_time_;/** object expire time or lease expire time(s)**/
         private:
           DISALLOW_COPY_AND_ASSIGN(BaseObject<T>);
       };
@@ -142,7 +142,7 @@ namespace tfs
           typedef TfsSortedVector<Entry*,EntryCompare> LEASE_ENTRY_SET;
           typedef typename LEASE_ENTRY_SET::iterator LEASE_ENTRY_SET_ITER;
         public:
-          LeaseManager(T1& manager, const int32_t max_init_entry_num, const int32_t wait_free_wait_time_ms, const int32_t wait_clear_wait_time_ms);
+          LeaseManager(T1& manager, const int32_t max_init_entry_num, const int32_t wait_free_wait_time_s, const int32_t wait_clear_wait_time_s);
           virtual ~LeaseManager();
 
           int apply(const T2& info, const int64_t now, const int32_t times);
@@ -169,18 +169,18 @@ namespace tfs
           LEASE_ENTRY_SET leases_;
           LEASE_ENTRY_SET wait_free_leases_;
           uint64_t last_traverse_lease_id_;
-          int32_t wait_free_wait_time_ms_;
-          int32_t wait_clear_wait_time_ms_;
+          int32_t wait_free_wait_time_;
+          int32_t wait_clear_wait_time_;
       };
 
     template <typename T1, typename T2, template <typename X1, typename X2> class LeaseEntry>
-      LeaseManager<T1, T2, LeaseEntry>::LeaseManager(T1& manager, const int32_t max_init_entry_num, const int32_t wait_free_wait_time_ms, const int32_t wait_clear_wait_time_ms):
+      LeaseManager<T1, T2, LeaseEntry>::LeaseManager(T1& manager, const int32_t max_init_entry_num, const int32_t wait_free_wait_time_s, const int32_t wait_clear_wait_time_s):
         manager_(manager),
         leases_(max_init_entry_num, 256, 0.1),
         wait_free_leases_(max_init_entry_num, 256, 0.1),
         last_traverse_lease_id_(0),
-        wait_free_wait_time_ms_(wait_free_wait_time_ms),
-        wait_clear_wait_time_ms_(wait_clear_wait_time_ms)
+        wait_free_wait_time_(wait_free_wait_time_s),
+        wait_clear_wait_time_(wait_clear_wait_time_s)
     {
 
     }
@@ -272,7 +272,7 @@ namespace tfs
         {
           lease->set_status(SERVICE_STATUS_OFFLINE);
           lease->set_wait_free_phase(OBJECT_WAIT_FREE_PHASE_CLEAR);
-          lease->set(now, wait_clear_wait_time_ms_);
+          lease->set(now, wait_clear_wait_time_);
           lease->callback(NULL, manager_);
         }
         return ret;
@@ -386,7 +386,7 @@ namespace tfs
           {
             lease->callback(NULL, manager_);
             lease->set_wait_free_phase(OBJECT_WAIT_FREE_PHASE_FREE);
-            lease->set(now, wait_free_wait_time_ms_);
+            lease->set(now, wait_free_wait_time_);
           }
           else
           {
@@ -437,11 +437,17 @@ namespace tfs
         typedef std::list<Entry<T1>* > ENTRY_LIST;
         typedef typename ENTRY_LIST::iterator ENTRY_LIST_ITER;
         public:
-        GCObjectManager(T1& manager, const int32_t wait_free_wait_time_ms, const int32_t wait_clear_wait_time_ms):
+        GCObjectManager(T1& manager):
           manager_(manager),
           wait_free_list_size_(0),
-          wait_free_wait_time_ms_(wait_free_wait_time_ms),
-          wait_clear_wait_time_ms_(wait_clear_wait_time_ms) {}
+          wait_free_wait_time_(0),
+          wait_clear_wait_time_(0)
+          {}
+        void initialize(const int32_t wait_free_wait_time, const int32_t wait_clear_wait_time)
+        {
+          wait_free_wait_time_ = wait_free_wait_time;
+          wait_clear_wait_time_ = wait_clear_wait_time;
+        }
         int insert(Entry<T1>* entry, const int64_t now);
         int gc(const int64_t now);
         int64_t size() const;
@@ -452,8 +458,8 @@ namespace tfs
         ENTRY_LIST wait_free_list_;
         tbutil::Mutex mutex_;
         int64_t wait_free_list_size_;
-        int32_t wait_free_wait_time_ms_;
-        int32_t wait_clear_wait_time_ms_;
+        int32_t wait_free_wait_time_;
+        int32_t wait_clear_wait_time_;
       };
 
     template <typename T1, template <typename X1> class Entry>
@@ -489,7 +495,7 @@ namespace tfs
           if (!res.second)
             TBSYS_LOG(WARN, "object %p is exist", entry);
           else
-            entry->set(now, wait_clear_wait_time_ms_);
+            entry->set(now, wait_clear_wait_time_);
         }
         return ret;
       }
@@ -547,7 +553,7 @@ namespace tfs
           assert(NULL != entry);
           entry->callback(NULL, manager_);
           mutex_.lock();
-          entry->set(now, wait_free_wait_time_ms_);
+          entry->set(now, wait_free_wait_time_);
           wait_free_list_.push_back(entry);
           mutex_.unlock();
         }

@@ -158,13 +158,13 @@ namespace tfs
       set_hour_range(compact_time_str, compact_time_lower_, compact_time_upper_);
       compact_task_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_TASK_RATIO, 1);
 
-      object_wait_free_time_ms_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_WAIT_FREE_TIME_MS, 300);
-      if (object_wait_free_time_ms_ <=  300)
-        object_wait_free_time_ms_ = 300;
+      object_wait_free_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_WAIT_FREE_TIME_MS, 300);
+      if (object_wait_free_time_ <=  300)
+        object_wait_free_time_ = 300;
 
-      object_wait_clear_time_ms_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_WAIT_CLEAR_TIME_MS, 180);
-      if (object_wait_clear_time_ms_ <=  180)
-        object_wait_clear_time_ms_ = 180;
+      object_wait_clear_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_WAIT_CLEAR_TIME_MS, 180);
+      if (object_wait_clear_time_ <=  180)
+        object_wait_clear_time_ = 180;
 
       add_primary_block_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_ADD_PRIMARY_BLOCK_COUNT, 3);
       if (add_primary_block_count_ <= 0)
@@ -178,8 +178,8 @@ namespace tfs
       task_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_EXPIRED_TIME, 120);
       if (task_expired_time_ <= 0)
         task_expired_time_ = 120;
-      if (task_expired_time_ > object_wait_clear_time_ms_)
-        task_expired_time_ = object_wait_clear_time_ms_ - 5;
+      if (task_expired_time_ > object_wait_clear_time_)
+        task_expired_time_ = object_wait_clear_time_ - 5;
 
       dump_stat_info_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_DUMP_STAT_INFO_INTERVAL, 10000000);
       if (dump_stat_info_interval_ <= 60000000)

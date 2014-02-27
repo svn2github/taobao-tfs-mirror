@@ -30,8 +30,6 @@ namespace tfs
       wait_free_servers_(MAX_PROCESS_NUMS / 4, 128, 0.1),
       manager_(manager),
       last_traverse_server_(0),
-      wait_free_wait_time_(SYSPARAM_NAMESERVER.object_wait_free_time_ms_),
-      wait_clear_wait_time_(common::SYSPARAM_NAMESERVER.replicate_wait_time_),
       write_index_(0)
     {
       memset(&global_stat_info_, 0, sizeof(global_stat_info_));
@@ -98,12 +96,14 @@ namespace tfs
           pserver->reset(info, now, manager_);
         }
         pserver->set_status(SERVICE_STATUS_ONLINE);
+        TBSYS_LOG(INFO, "dataserver %s join", tbsys::CNetUtil::addrToString(pserver->id()).c_str());
       }
       return ret;
     }
 
     int ServerManager::giveup(const int64_t now, const uint64_t server)
     {
+      TBSYS_LOG(INFO, "dataserver %s exit", tbsys::CNetUtil::addrToString(server).c_str());
       rwmutex_.wrlock();
       ServerCollect* pserver = get_(server);
       int32_t ret = (NULL == pserver) ? EXIT_LEASE_NOT_EXIST : common::TFS_SUCCESS;
@@ -118,11 +118,11 @@ namespace tfs
       rwmutex_.unlock();
       if (common::TFS_SUCCESS == ret)
       {
-        int32_t args = CALL_BACK_FLAG_PUSH|CALL_BACK_FLAG_CLEAR;
+        int32_t args = CALL_BACK_FLAG_NONE;
         pserver->set_status(SERVICE_STATUS_OFFLINE);
-        pserver->set_wait_free_phase(OBJECT_WAIT_FREE_PHASE_CLEAR);
-        pserver->set(now, wait_clear_wait_time_);
         pserver->callback(reinterpret_cast<void*>(&args), manager_);
+        pserver->set_wait_free_phase(OBJECT_WAIT_FREE_PHASE_CLEAR);
+        pserver->set(now, common::SYSPARAM_NAMESERVER.replicate_wait_time_);
       }
       return ret;
     }
@@ -216,7 +216,7 @@ namespace tfs
       {
         pserver = (*iter);
         assert(NULL != pserver);
-        if (pserver->expire(now))
+        if (pserver->expire(now) && (OBJECT_WAIT_FREE_PHASE_NONE != pserver->get_wait_free_phase()))
           helper.push_back(pserver);
       }
       rwmutex_.unlock();
@@ -230,7 +230,7 @@ namespace tfs
           int32_t args = CALL_BACK_FLAG_PUSH|CALL_BACK_FLAG_CLEAR;
           pserver->callback(reinterpret_cast<void*>(&args), manager_);
           pserver->set_wait_free_phase(OBJECT_WAIT_FREE_PHASE_FREE);
-          pserver->set(now, wait_free_wait_time_);
+          pserver->set(now, SYSPARAM_NAMESERVER.object_wait_free_time_);
         }
         else
         {

@@ -90,9 +90,7 @@ namespace tfs
 
     const char* Task::transform_type_to_str() const
     {
-      return PLAN_TYPE_COMPACT == type_ ? "compact" : PLAN_TYPE_EC_REINSTATE == type_ ? "reinstate" :
-          PLAN_TYPE_EC_DISSOLVE == type_ ? "dissolve" :  PLAN_TYPE_EC_MARSHALLING == type_ ? "marshlling" :
-          PLAN_TYPE_REPLICATE  == type_ ? "replicate" : PLAN_TYPE_MOVE == type_ ? "move" : "unknown";
+      return plan_type_to_str(type_);
     }
 
     const char* Task::transform_status_to_str(const int8_t status) const
@@ -437,7 +435,7 @@ namespace tfs
         msg.set_size(server_num_);
         msg.set_expire_time(SYSPARAM_NAMESERVER.resolve_version_conflic_task_expired_time_ - MAX_TASK_RESERVE_TIME);
         for (int8_t index = 0; index < server_num_; ++index)
-          msg.get_members()[index] = servers_[0];
+          msg.get_members()[index] = servers_[index];
         ret = send_msg_to_server(servers_[0], &msg);
         status_ = PLAN_STATUS_BEGIN;
       }

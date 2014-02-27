@@ -60,22 +60,12 @@ namespace tfs
       return service_.get_block_manager();
     }
 
-    const char* Task::get_type_str() const
-    {
-      const char* typestr = NULL;
-      if (type_ <= PLAN_TYPE_EC_MARSHALLING)
-      {
-        typestr = planstr[type_];
-      }
-      return typestr;
-    }
-
     string Task::dump() const
     {
       std::stringstream tmp_stream;
       const char* delim = ", ";
 
-      tmp_stream << "dump " << get_type_str() << " task. ";
+      tmp_stream << "dump " << plan_type_to_str(type_) << " task. ";
       tmp_stream << "seqno: " << seqno_ << delim;
       tmp_stream << "task source: " << tbsys::CNetUtil::addrToString(source_id_) << delim;
       tmp_stream << "expire time: " << expire_time_ << delim;
@@ -1702,6 +1692,7 @@ namespace tfs
       UNUSED(status);
       ResolveBlockVersionConflictMessage req_msg;
       req_msg.set_seqno(get_seqno());
+      req_msg.set_block(block_id_);
       int ret = req_msg.set_members(members_, size_);
       if (TFS_SUCCESS == ret)
       {
@@ -1727,6 +1718,10 @@ namespace tfs
           }
         }
       }
+
+      TBSYS_LOG(INFO, "resolve_conflict report to ns. seqno: %"PRI64_PREFIX"d, "
+          "blockid: %"PRI64_PREFIX"u, status: %d, source: %s, ret: %d",
+          seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
 
       return ret;
     }

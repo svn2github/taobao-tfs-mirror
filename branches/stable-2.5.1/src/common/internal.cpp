@@ -1386,16 +1386,6 @@ namespace tfs
         "max_block_size"
     };
 
-    const char* planstr[PLAN_TYPE_EC_MARSHALLING+1] =
-    {
-      "replicate",
-      "reinstate",
-      "move",
-      "compact",
-      "dissolve",
-      "marshalling"
-    };
-
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
@@ -3046,5 +3036,39 @@ namespace tfs
       buf.status_ = info.flag_;
       buf.crc_    = info.crc_;
    }
+
+    const char* plan_type_to_str(const PlanType type)
+    {
+      const char* typestr = "unknown";
+      switch (type)
+      {
+        case PLAN_TYPE_REPLICATE:
+          typestr = "replicate";
+          break;
+        case PLAN_TYPE_EC_REINSTATE:
+          typestr = "reinstate";
+          break;
+        case PLAN_TYPE_RESOLVE_VERSION_CONFLICT:
+          typestr = "resolve_conflict";
+          break;
+        case PLAN_TYPE_MOVE:
+          typestr = "move";
+          break;
+        case PLAN_TYPE_COMPACT:
+          typestr = "compact";
+          break;
+        case PLAN_TYPE_EC_DISSOLVE:
+          typestr = "dissolve";
+          break;
+        case PLAN_TYPE_EC_MARSHALLING:
+          typestr = "marshalling";
+          break;
+        default:
+          break;
+      }
+      return typestr;
+    }
+
+
   } /** nameserver **/
 }/** tfs **/

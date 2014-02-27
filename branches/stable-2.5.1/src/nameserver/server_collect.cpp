@@ -75,6 +75,7 @@ namespace tfs
       write_index_(0),
       status_(SERVICE_STATUS_ONLINE),
       disk_type_(info.type_),
+      wait_free_phase_(OBJECT_WAIT_FREE_PHASE_NONE),
       rb_status_(REPORT_BLOCK_FLAG_NO)
     {
         float   expand_ratio = 0.0;
@@ -288,6 +289,7 @@ namespace tfs
     {
       assert(NULL != args);
       int32_t* flag = reinterpret_cast<int32_t*>(args);
+      TBSYS_LOG(DEBUG, "server %s callback, args: %d", CNetUtil::addrToString(id()).c_str(), *flag);
       clear_(*flag, manager);
     }
 
@@ -567,6 +569,7 @@ namespace tfs
       block_count_ = info.block_count_;
       startup_time_ = info.startup_time_;
       disk_type_   = info.type_;
+      wait_free_phase_ = OBJECT_WAIT_FREE_PHASE_NONE;
       for (int8_t index = 0; index < MAX_RW_STAT_PAIR_NUM; ++index)
       {
         write_bytes_[index] = info.write_bytes_[index];
@@ -711,7 +714,7 @@ namespace tfs
             ServerCollect* pserver = server_manager.get(id());
             if (pblock->exist(id()) && (NULL == pserver))
             {
-              block_manager.relieve_relation(pblock, start, now);
+              block_manager.relieve_relation(pblock, id(), now);
             }
             if ((CALL_BACK_FLAG_PUSH & args)
                && (NULL == pserver)
@@ -786,7 +789,7 @@ namespace tfs
           ret = true;
           remove_(block->id(), *issued_leases_);
         }
-        if (block->is_full() || !block->is_master(id()) || block->has_version_conflict())
+        if (block->is_full() || !block->is_master(id()) || block->has_version_conflict() || !is_equal_group(block->id()))
         {
           ret = true;
           remove_(block->id(), *writable_);

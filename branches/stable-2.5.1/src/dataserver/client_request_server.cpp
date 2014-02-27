@@ -427,7 +427,10 @@ namespace tfs
         }
         else
         {
-          message->reply(new StatusMessage(ret, "master prepare op fail"));
+          message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret,
+              "prepare op fail. attach_blockid: %"PRI64_PREFIX"u, "
+              "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u",
+              attach_block_id, block_id, file_id);
         }
       }
       else
@@ -527,7 +530,10 @@ namespace tfs
         }
         else
         {
-          message->reply(new StatusMessage(ret, "master prepare op fail"));
+          message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret,
+              "prepare op fail. attach_blockid: %"PRI64_PREFIX"u, "
+              "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u",
+              attach_block_id, block_id, file_id);
         }
       }
       else
@@ -615,7 +621,10 @@ namespace tfs
         }
         else
         {
-          message->reply(new StatusMessage(ret, "master prepare op fail"));
+          message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret,
+              "prepare op fail. attach_blockid: %"PRI64_PREFIX"u, "
+              "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u",
+              attach_block_id, block_id, file_id);
         }
       }
       else

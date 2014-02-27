@@ -42,8 +42,8 @@ namespace tfs
       int32_t add_primary_block_count_;
       int32_t safe_mode_time_;
       int32_t task_expired_time_;
-      int32_t object_wait_free_time_ms_;
-      int32_t object_wait_clear_time_ms_;
+      int32_t object_wait_free_time_;
+      int32_t object_wait_clear_time_;
       int32_t dump_stat_info_interval_;
       int32_t group_seq_;
       int32_t group_count_;

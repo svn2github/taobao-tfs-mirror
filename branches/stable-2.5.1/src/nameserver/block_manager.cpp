@@ -947,7 +947,6 @@ namespace tfs
         {
           if (NULL !=info)
             pblock->update(*info);
-          ret = pblock->is_master(server) ? TFS_SUCCESS : EXIT_CANNOT_GIVEUP_LEASE;
         }
         if (TFS_SUCCESS == ret)
         {

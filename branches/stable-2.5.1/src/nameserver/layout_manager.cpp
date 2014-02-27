@@ -60,7 +60,7 @@ namespace tfs
       task_manager_(*this),
       oplog_sync_mgr_(*this),
       client_request_server_(*this),
-      gc_manager_(*this, SYSPARAM_NAMESERVER.object_wait_free_time_ms_, SYSPARAM_NAMESERVER.object_wait_clear_time_ms_),
+      gc_manager_(*this),
       family_manager_(*this)
     {
       srandom(time(NULL));
@@ -69,6 +69,7 @@ namespace tfs
       last_rotate_log_time_ = 0;
       plan_run_flag_ |= PLAN_RUN_FLAG_MOVE;
       plan_run_flag_ |= PLAN_RUN_FLAG_COMPACT;
+      plan_run_flag_ |= PLAN_RUN_FLAG_RESLOVE_VERSION_CONFLICT;
       plan_run_flag_ |= PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION;
       //plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;//TODO
       plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
@@ -107,6 +108,12 @@ namespace tfs
         redundant_thread_= new RedundantThreadHelper(*this);
         load_family_info_thread_ = new LoadFamilyInfoThreadHelper(*this);
       }
+
+      if (TFS_SUCCESS == ret)
+      {
+        gc_manager_.initialize(SYSPARAM_NAMESERVER.object_wait_free_time_, SYSPARAM_NAMESERVER.object_wait_clear_time_);
+      }
+
       return ret;
     }
 
@@ -376,7 +383,8 @@ namespace tfs
           || msg->getPCode() == REPLICATE_BLOCK_MESSAGE
           || msg->getPCode() == REQ_EC_MARSHALLING_COMMIT_MESSAGE
           || msg->getPCode() == REQ_EC_REINSTATE_COMMIT_MESSAGE
-          || msg->getPCode() == REQ_EC_DISSOLVE_COMMIT_MESSAGE) ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
+          || msg->getPCode() == REQ_EC_DISSOLVE_COMMIT_MESSAGE
+          || msg->getPCode() == REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE) ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(INFO, "handle_task_complete unkonw message PCode = %d", msg->getPCode());
@@ -488,10 +496,10 @@ namespace tfs
           &SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_,
           &SYSPARAM_NAMESERVER.discard_max_count_,
           &SYSPARAM_NAMESERVER.cluster_index_,
-          &SYSPARAM_NAMESERVER.object_wait_free_time_ms_,
+          &SYSPARAM_NAMESERVER.object_wait_free_time_,
           &SYSPARAM_NAMESERVER.group_count_,
           &SYSPARAM_NAMESERVER.group_seq_,
-          &SYSPARAM_NAMESERVER.object_wait_clear_time_ms_,
+          &SYSPARAM_NAMESERVER.object_wait_clear_time_,
           &SYSPARAM_NAMESERVER.report_block_queue_size_,
           &SYSPARAM_NAMESERVER.report_block_time_lower_,
           &SYSPARAM_NAMESERVER.report_block_time_upper_,

@@ -396,15 +396,12 @@ namespace tfs
     {
       PLAN_TYPE_REPLICATE = 0,
       PLAN_TYPE_EC_REINSTATE,
+      PLAN_TYPE_RESOLVE_VERSION_CONFLICT,
       PLAN_TYPE_MOVE,
       PLAN_TYPE_COMPACT,
       PLAN_TYPE_EC_DISSOLVE,
-      PLAN_TYPE_EC_MARSHALLING,
-      PLAN_TYPE_RESOLVE_VERSION_CONFLICT
+      PLAN_TYPE_EC_MARSHALLING
     };
-
-    // order shoule be consistent with PlanType
-    extern const char* planstr[PLAN_TYPE_EC_MARSHALLING + 1];
 
     enum PlanStatus
     {
@@ -435,6 +432,8 @@ namespace tfs
       PLAN_RUN_FALG_REINSTATE = 1 << 6,
       PLAN_RUN_FALG_DISSOLVE  = 1 << 7
     };
+
+    const char* plan_type_to_str(const PlanType type);
 
     enum DeleteExcessBackupStrategy
     {

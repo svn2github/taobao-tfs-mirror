@@ -159,8 +159,6 @@ namespace tfs
       mutable common::RWLock rwmutex_;
       uint64_t last_traverse_server_;
       NsGlobalStatisticsInfo global_stat_info_;
-      int32_t wait_free_wait_time_;
-      int32_t wait_clear_wait_time_;
       int32_t write_index_;
     };
   }/** nameserver **/

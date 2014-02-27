@@ -98,7 +98,7 @@ namespace tfs
           break;
         case NS_REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
           ret = add_resolve_conflict_task(dynamic_cast<NsReqResolveBlockVersionConflictMessage*>(packet));
-          return ret;
+          break;
         case RESP_DS_REPLICATE_BLOCK_MESSAGE:
         case RESP_DS_COMPACT_BLOCK_MESSAGE:
           ret = handle_complete(packet);
@@ -402,6 +402,10 @@ namespace tfs
         {
           need_add_block = true;
         }
+        else if (PLAN_TYPE_RESOLVE_VERSION_CONFLICT == task->get_type())
+        {
+          need_add_block = true;
+        }
         else
         {
           // TODO: marshalling, reinstate, dissolve control
@@ -448,7 +452,7 @@ namespace tfs
         task_monitor_.unlock();
 
         TBSYS_LOG(DEBUG, "Start task, seqno: %"PRI64_PREFIX"d, type: %s, %s",
-            task->get_seqno(), task->get_type_str(), task->dump().c_str());
+            task->get_seqno(), plan_type_to_str(task->get_type()), task->dump().c_str());
 
         int ret = TFS_SUCCESS;
         int64_t start_time = Func::get_monotonic_time_us();
@@ -459,7 +463,7 @@ namespace tfs
         int64_t end_time = Func::get_monotonic_time_us();
 
         TBSYS_LOG(INFO, "Finish task, seqno: %"PRI64_PREFIX"d, type: %s, cost time: %"PRI64_PREFIX"d",
-          task->get_seqno(), task->get_type_str(), end_time - start_time);
+          task->get_seqno(), plan_type_to_str(task->get_type()), end_time - start_time);
 
         if (task->is_completed())
         {
