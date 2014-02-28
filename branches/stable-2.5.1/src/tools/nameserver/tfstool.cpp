@@ -60,9 +60,9 @@ static const char* default_app_key = "tfscom";
 char app_key[256];
 
 typedef enum {
-  META_RAW = 0,
-  META_NAME,
-  META_KV,
+  META_RAW = 0, // raw ns only
+  META_NAME,    // with rc
+  META_KV,      // kv + rc + lifecyle
   META_LIFECYCLE
 } MetaType;
 
@@ -116,29 +116,30 @@ int cmd_ls(const VSTRING& param);
 int cmd_pwd(const VSTRING& param);
 int cmd_show_help(const VSTRING& param);
 int cmd_quit(const VSTRING& param);
-int cmd_put_file(const VSTRING& param);
-int cmd_get_file(const VSTRING& param);
-int cmd_remove_file(const VSTRING& param);
-int cmd_uremove_file(const VSTRING& param);
-int cmd_undel_file(const VSTRING& param);
-int cmd_hide_file(const VSTRING& param);
-int cmd_stat_file(const VSTRING& param);
-int cmd_stat_blk(const VSTRING& param);
-int cmd_list_file_info(const VSTRING& param);
 int cmd_batch_file(const VSTRING& param);
-int cmd_check_file_info(const VSTRING& param);
-int cmd_list_block(const VSTRING& param);
-
 
 //the function of raw tfs
 int cmd_put_file_raw(const VSTRING& param);
 int cmd_get_file_raw(const VSTRING& param);
-int cmd_stat_file_raw(const VSTRING& param);
 int cmd_remove_file_raw(const VSTRING& param);
-int cmd_unremove_file_raw(const VSTRING& param);
+int cmd_undel_file_raw(const VSTRING& param);
 int cmd_hide_file_raw(const VSTRING& param);
+int cmd_stat_file_raw(const VSTRING& param);
+int cmd_stat_blk_raw(const VSTRING& param);
+int cmd_list_file_info(const VSTRING& param);
+int cmd_check_file_info(const VSTRING& param);
+int cmd_list_block(const VSTRING& param);
 
-int remove_file_raw_ex(const VSTRING& param, TfsUnlinkType type);
+
+//the function of tfs with rc
+int cmd_put_file(const VSTRING& param);
+int cmd_get_file(const VSTRING& param);
+int cmd_stat_file(const VSTRING& param);
+int cmd_remove_file(const VSTRING& param);
+int cmd_unremove_file(const VSTRING& param);
+int cmd_hide_file(const VSTRING& param);
+
+int remove_file_ex(const VSTRING& param, TfsUnlinkType type);
 
 
 // for kv meta server
@@ -330,30 +331,30 @@ void init()
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
   g_cmd_map["@"] = CmdNode("@ file", "batch run command in file", 1, 1, cmd_batch_file);
   g_cmd_map["batch"] = CmdNode("batch file", "batch run command in file", 1, 1, cmd_batch_file);
+  g_cmd_map["cd"] = CmdNode("cd [directory]", "change work directory", 0, 1, cmd_cd);
+  g_cmd_map["ls"] = CmdNode("ls [directory]", "list directory content", 0, 1, cmd_ls);
+  g_cmd_map["pwd"] = CmdNode("pwd", "print current directory", 0, 0, cmd_pwd);
   switch (g_meta_type)
   {
   case META_RAW:
-    g_cmd_map["cd"] = CmdNode("cd [directory]", "change work directory", 0, 1, cmd_cd);
-    g_cmd_map["ls"] = CmdNode("ls [directory]", "list directory content", 0, 1, cmd_ls);
-    g_cmd_map["pwd"] = CmdNode("pwd", "print current directory", 0, 0, cmd_pwd);
-    g_cmd_map["put"] = CmdNode("put localfile [tfsname [suffix] [force]]", "put file to tfs", 1, 4, cmd_put_file);
-    g_cmd_map["get"] = CmdNode("get tfsname localfile", "get file from tfs", 2, 2, cmd_get_file);
-    g_cmd_map["rm"] = CmdNode("rm tfsname", "remove tfs file", 1, 1, cmd_remove_file);
-    g_cmd_map["undel"] = CmdNode("undel tfsname", "undelete tfs file", 1, 1, cmd_undel_file);
-    g_cmd_map["hide"] = CmdNode("hide tfsname [action]", "hide tfs file", 1, 2, cmd_hide_file);
-    g_cmd_map["stat"] = CmdNode("stat tfsname", "stat tfs file", 1, 1, cmd_stat_file);
-    g_cmd_map["statblk"] = CmdNode("statblk blockid [serverip:port]", "stat a block", 1, 2, cmd_stat_blk);
+    g_cmd_map["put"] = CmdNode("put localfile [tfsname [suffix] [force]]", "put file to tfs", 1, 4, cmd_put_file_raw);
+    g_cmd_map["get"] = CmdNode("get tfsname localfile", "get file from tfs", 2, 2, cmd_get_file_raw);
+    g_cmd_map["rm"] = CmdNode("rm tfsname", "remove tfs file", 1, 1, cmd_remove_file_raw);
+    g_cmd_map["undel"] = CmdNode("undel tfsname", "undelete tfs file", 1, 1, cmd_undel_file_raw);
+    g_cmd_map["hide"] = CmdNode("hide tfsname [action]", "hide tfs file", 1, 2, cmd_hide_file_raw);
+    g_cmd_map["stat"] = CmdNode("stat tfsname", "stat tfs file", 1, 1, cmd_stat_file_raw);
+    g_cmd_map["statblk"] = CmdNode("statblk blockid [serverip:port]", "stat a block", 1, 2, cmd_stat_blk_raw);
     g_cmd_map["lsf"] = CmdNode("lsf blockid [attach_block_id] [detail] [serverip:port]" , "list file list in block", 1, 4, cmd_list_file_info);
     g_cmd_map["listblock"] = CmdNode("listblock blockid", "list block server list", 1, 1, cmd_list_block);
     g_cmd_map["cfi"] = CmdNode("cfi tfsname", "check file info", 1, 1, cmd_check_file_info);
     break;
   case META_NAME:
-    g_cmd_map["put"] = CmdNode("put localfile [suffix [app_key]]", "put raw file to tfs", 1, 3, cmd_put_file_raw);
-    g_cmd_map["get"] = CmdNode("get tfsname localfile [app_key]", "get raw file from tfs", 2, 3, cmd_get_file_raw);
-    g_cmd_map["stat"] = CmdNode("stat tfsname [app_key]", "stat raw tfs file", 1, 2, cmd_stat_file_raw);
-    g_cmd_map["rm"] = CmdNode("rm tfsname [app_key]", "remove raw tfs file", 1, 2, cmd_remove_file_raw);
-    g_cmd_map["undel"] = CmdNode("undel tfsname [app_key]", "undelete raw tfs file", 1, 2, cmd_unremove_file_raw);
-    g_cmd_map["hide"] = CmdNode("hide tfsname [action [app_key]]", "hide raw tfs file, param 4 for hide and 6 for unhide", 1, 3, cmd_hide_file_raw);
+    g_cmd_map["put"] = CmdNode("put localfile [suffix [app_key]]", "put raw file to tfs", 1, 3, cmd_put_file);
+    g_cmd_map["get"] = CmdNode("get tfsname localfile [app_key]", "get raw file from tfs", 2, 3, cmd_get_file);
+    g_cmd_map["stat"] = CmdNode("stat tfsname [app_key]", "stat raw tfs file", 1, 2, cmd_stat_file);
+    g_cmd_map["rm"] = CmdNode("rm tfsname [app_key]", "remove raw tfs file", 1, 2, cmd_remove_file);
+    g_cmd_map["undel"] = CmdNode("undel tfsname [app_key]", "undelete raw tfs file", 1, 2, cmd_unremove_file);
+    g_cmd_map["hide"] = CmdNode("hide tfsname [action [app_key]]", "hide raw tfs file, param 4 for hide and 6 for unhide", 1, 3, cmd_hide_file);
     break;
   case META_KV:
     g_cmd_map["put_bucket"] = CmdNode("put_bucket bucket_name owner_id [app_key]", "create a bucket", 2, 3, cmd_put_bucket);
@@ -569,7 +570,7 @@ int cmd_show_help(const VSTRING&)
   return ToolUtil::show_help(g_cmd_map);
 }
 
-int cmd_put_file(const VSTRING& param)
+int cmd_put_file_raw(const VSTRING& param)
 {
   int32_t size = param.size();
   const char* local_file = expand_path(const_cast<string&>(param[0]));
@@ -616,7 +617,7 @@ int cmd_put_file(const VSTRING& param)
   return ret;
 }
 
-int cmd_put_file_raw(const VSTRING& param)
+int cmd_put_file(const VSTRING& param)
 {
   int32_t size = param.size();
   const char* local_file = expand_path(const_cast<string&>(param[0]));
@@ -657,6 +658,7 @@ int cmd_put_file_raw(const VSTRING& param)
   {
     ret = impl.save_file(local_file, ret_tfs_name, TFS_FILE_LEN_V2, suffix) < 0 ? TFS_ERROR : TFS_SUCCESS;
   }
+  impl.destroy();
 
   //printf("tfs_name: %s, ret_tfs_name: %s\n", tfs_name, ret_tfs_name);
 
@@ -664,7 +666,7 @@ int cmd_put_file_raw(const VSTRING& param)
   return ret;
 }
 
-int cmd_get_file(const VSTRING& param)
+int cmd_get_file_raw(const VSTRING& param)
 {
   const char* tfs_name = canonical_param(param[0]);
   const char* local_file = expand_path(const_cast<string&>(param[1]));
@@ -676,7 +678,7 @@ int cmd_get_file(const VSTRING& param)
   return ret;
 }
 
-int cmd_get_file_raw(const VSTRING& param)
+int cmd_get_file(const VSTRING& param)
 {
   const char* tfs_name = canonical_param(param[0]);
   const char* local_file = expand_path(const_cast<string&>(param[1]));
@@ -704,6 +706,7 @@ int cmd_get_file_raw(const VSTRING& param)
   {
     ret = impl.fetch_file(local_file, tfs_name, NULL);
   }
+  impl.destroy();
 
   ToolUtil::print_info(ret, "fetch %s => %s", tfs_name, local_file);
 
@@ -711,7 +714,7 @@ int cmd_get_file_raw(const VSTRING& param)
 }
 
 
-int cmd_remove_file(const VSTRING& param)
+int cmd_remove_file_raw(const VSTRING& param)
 {
   const char* tfs_name = canonical_param(param[0]);
   int ret = TFS_SUCCESS;
@@ -722,7 +725,7 @@ int cmd_remove_file(const VSTRING& param)
   return ret;
 }
 
-int cmd_undel_file(const VSTRING& param)
+int cmd_undel_file_raw(const VSTRING& param)
 {
   const char* tfs_name = canonical_param(param[0]);
   int64_t file_size = 0;
@@ -733,17 +736,17 @@ int cmd_undel_file(const VSTRING& param)
   return TFS_SUCCESS;
 }
 
-int cmd_remove_file_raw(const VSTRING& param)
+int cmd_remove_file(const VSTRING& param)
 {
-  return remove_file_raw_ex(param, static_cast<TfsUnlinkType>(0));
+  return remove_file_ex(param, static_cast<TfsUnlinkType>(0));
 }
 
-int cmd_unremove_file_raw(const VSTRING& param)
+int cmd_unremove_file(const VSTRING& param)
 {
-  return remove_file_raw_ex(param, static_cast<TfsUnlinkType>(2));
+  return remove_file_ex(param, static_cast<TfsUnlinkType>(2));
 }
 
-int remove_file_raw_ex(const VSTRING& param, TfsUnlinkType type)
+int remove_file_ex(const VSTRING& param, TfsUnlinkType type)
 {
   const char* tfs_name = canonical_param(param[0]);
   char appkey[257];
@@ -773,6 +776,7 @@ int remove_file_raw_ex(const VSTRING& param, TfsUnlinkType type)
   {
     ret = impl.unlink(tfs_name, NULL, type);
   }
+  impl.destroy();
 
   if (type == DELETE)
   {
@@ -786,7 +790,7 @@ int remove_file_raw_ex(const VSTRING& param, TfsUnlinkType type)
   return ret;
 }
 
-int cmd_hide_file(const VSTRING& param)
+int cmd_hide_file_raw(const VSTRING& param)
 {
   const char* tfs_name = canonical_param(param[0]);
 
@@ -804,7 +808,7 @@ int cmd_hide_file(const VSTRING& param)
   return ret;
 }
 
-int cmd_hide_file_raw(const VSTRING& param)
+int cmd_hide_file(const VSTRING& param)
 {
   const char* tfs_name = canonical_param(param[0]);
   char appkey[257];
@@ -836,13 +840,14 @@ int cmd_hide_file_raw(const VSTRING& param)
   {
     ret = impl.unlink(tfs_name, NULL, unlink_type);
   }
+  impl.destroy();
 
   ToolUtil::print_info(ret, "hide %s %d", tfs_name, unlink_type);
 
   return ret;
 }
 
-int cmd_stat_file(const VSTRING& param)
+int cmd_stat_file_raw(const VSTRING& param)
 {
   const char* tfs_name = canonical_param(param[0]);
 
@@ -875,7 +880,7 @@ int cmd_stat_file(const VSTRING& param)
   return ret;
 }
 
-int cmd_stat_file_raw(const VSTRING& param)
+int cmd_stat_file(const VSTRING& param)
 {
   const char* tfs_name = canonical_param(param[0]);
   char appkey[257];
@@ -929,6 +934,7 @@ int cmd_stat_file_raw(const VSTRING& param)
       }
     }
   }
+  impl.destroy();
 
   ToolUtil::print_info(ret, "stat %s", tfs_name);
 
@@ -1000,7 +1006,7 @@ int cmd_batch_file(const VSTRING& param)
   return TFS_SUCCESS;
 }
 
-int cmd_stat_blk(const VSTRING& param)
+int cmd_stat_blk_raw(const VSTRING& param)
 {
   int ret = TFS_ERROR;
 
@@ -1189,6 +1195,7 @@ int cmd_put_bucket(const VSTRING& param)
   {
     ret = impl.put_bucket(bucket_name, user_info);
   }
+  impl.destroy();
   if (TFS_SUCCESS == ret)
   {
     ToolUtil::print_info(ret, "put bucket %s owner_id : %ld", bucket_name, owner_id);
@@ -1259,6 +1266,7 @@ int cmd_get_bucket(const VSTRING& param)
     ret = impl.get_bucket(bucket_name, prefix, start_key, delimiter, limit,
         &v_object_meta_info, &v_object_name, &s_common_prefix, &is_truncated, user_info);
   }
+  impl.destroy();
 
   if (TFS_SUCCESS == ret)
   {
@@ -1312,6 +1320,7 @@ int cmd_del_bucket(const VSTRING& param)
   {
     ret = impl.del_bucket(bucket_name, user_info);
   }
+  impl.destroy();
 
   ToolUtil::print_info(ret, "del bucket %s", bucket_name);
 
@@ -1348,6 +1357,7 @@ int cmd_head_bucket(const VSTRING& param)
   {
     ret = impl.head_bucket(bucket_name, &bucket_meta_info, user_info);
   }
+  impl.destroy();
 
   ToolUtil::print_info(ret, "head bucket %s", bucket_name);
 
@@ -1396,6 +1406,7 @@ int cmd_put_object(const VSTRING& param)
     ToolUtil::print_info(ret, "put object: %s, object: %s => %s owner_id: %"PRI64_PREFIX"d",
         bucket_name, object_name, local_file, owner_id);
   }
+  impl.destroy();
   return ret;
 }
 
@@ -1430,9 +1441,9 @@ int cmd_get_object(const VSTRING& param)
   {
     ret = impl.get_object(bucket_name, object_name, local_file, user_info);
   }
+  impl.destroy();
   ToolUtil::print_info(ret, "get object: %s, object: %s => %s",
       bucket_name, object_name, local_file);
-
   return ret;
 }
 
@@ -1466,6 +1477,7 @@ int cmd_del_object(const VSTRING& param)
   {
     ret = impl.del_object(bucket_name, object_name, user_info);
   }
+  impl.destroy();
   ToolUtil::print_info(ret, "del bucket: %s, object: %s", bucket_name, object_name);
 
   return ret;
@@ -1502,6 +1514,7 @@ int cmd_head_object(const VSTRING& param)
   {
     ret = impl.head_object(bucket_name, object_name, &object_info, user_info);
   }
+  impl.destroy();
 
   if (TFS_SUCCESS == ret)
   {
@@ -1534,6 +1547,7 @@ int cmd_set_life_cycle(const VSTRING& param)
     ret = impl.set_life_cycle(file_type, file_name, invalid_time_s, user_appkey);
     TBSYS_LOG(DEBUG, "set_life_cycle return ret: %d", ret);
   }
+  impl.destroy();
   if (TFS_SUCCESS == ret)
   {
     ToolUtil::print_info(ret, "set life cycle file %s invalid_time_s : %d", file_name, invalid_time_s);
@@ -1562,6 +1576,7 @@ int cmd_get_life_cycle(const VSTRING& param)
   {
     ret = impl.get_life_cycle(file_type, file_name, &invalid_time_s);
   }
+  impl.destroy();
   if (TFS_SUCCESS == ret)
   {
     ToolUtil::print_info(ret, "get life cycle file %s invalid_time_s : %d", file_name, invalid_time_s);
@@ -1589,6 +1604,7 @@ int cmd_del_life_cycle(const VSTRING& param)
   {
     ret = impl.rm_life_cycle(file_type, file_name);
   }
+  impl.destroy();
   if (TFS_SUCCESS == ret)
   {
     ToolUtil::print_info(ret, "del life cycle file %s success", file_name);
@@ -1621,6 +1637,7 @@ int cmd_query_task(const VSTRING& param)
   {
     ret = impl.query_task(es_id, &res_task);
   }
+  impl.destroy();
   if (TFS_SUCCESS == ret)
   {
     vector<ServerExpireTask>::iterator iter = res_task.begin();

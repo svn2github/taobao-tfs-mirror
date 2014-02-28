@@ -127,27 +127,32 @@ namespace tfs
     {
     }
 
-    void RcClientImpl::destory()
+    void RcClientImpl::destroy()// must explict call
     {
-      if (0 != keepalive_timer_)
-      {
-        keepalive_timer_->cancel(stat_update_task_);
-        keepalive_timer_->destroy();
-        stat_update_task_ = 0;
-        keepalive_timer_ = 0;
-      }
+      tbsys::CThreadGuard mutex_guard(&mutex_);
+      logout();
       if (NULL != tfs_cluster_manager_)
       {
         delete tfs_cluster_manager_;
         tfs_cluster_manager_ = NULL;
       }
+      if (NULL != kv_meta_client_)
+      {
+        delete kv_meta_client_;
+        kv_meta_client_ = NULL;
+      }
+      if (0 != keepalive_timer_)
+      {
+        keepalive_timer_->cancel(stat_update_task_);
+        keepalive_timer_->destroy();
+        stat_update_task_ = 0;
+        keepalive_timer_ = 0;// auto pointer free
+      }
+      TfsClientImplV2::Instance()->destroy();
     }
 
     RcClientImpl::~RcClientImpl()
     {
-      destory();
-      logout();
-      TfsClientImplV2::Instance()->destroy();
     }
     TfsRetType RcClientImpl::initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
         const int32_t cache_times, const int32_t cache_items, const char* dev_name)
@@ -181,7 +186,6 @@ namespace tfs
       tbsys::CThreadGuard mutex_guard(&mutex_);
       if (init_stat_ != INIT_LOGINED)
       {
-        destory();
         stat_update_task_ = new StatUpdateTask(*this);
         keepalive_timer_ = new tbutil::Timer();
         kv_meta_client_ = new KvMetaClientImpl();
@@ -215,7 +219,6 @@ namespace tfs
           session_base_info_.is_logout_ = false;
 
           active_rc_ip_ = rc_ip;
-          init_stat_ = INIT_LOGINED;
           // TODO: set kv_rs_addr before here
           kv_meta_client_->set_tfs_cluster_manager(tfs_cluster_manager_);
           kv_meta_client_->initialize(kv_rs_addr_);
@@ -247,7 +250,6 @@ namespace tfs
       int ret = TFS_ERROR;
       size_t retry = 0;
       uint64_t rc_ip = 0;
-      tbsys::CThreadGuard mutex_guard(&mutex_);
       ret = check_init_stat();
       if (TFS_SUCCESS == ret)
       {
@@ -306,45 +308,34 @@ namespace tfs
       int ret = check_init_stat();
       if (TFS_SUCCESS == ret)
       {
-        if ((RcClient::READ == mode) && NULL == file_name)
+        if (NULL == file_name && RcClient::READ == mode)
         {
-          ret = TFS_ERROR;
+          ret = EXIT_PARAMETER_ERROR;
         }
-        else if (RcClient::READ == mode)
+        if (NULL != file_name && *file_name == 'L')
         {
-          if (*file_name == 'L')
-          {
-            TBSYS_LOG(WARN, "not support largr tfs file");
-            ret = EXIT_PARAMETER_ERROR;
-          }
+          TBSYS_LOG(WARN, "not support largr tfs file");
+          ret = EXIT_PARAMETER_ERROR;
         }
       }
 
       if (TFS_SUCCESS == ret)
       {
         int flag = -1;
-        ret = (RcClient::CREATE == mode) ? TFS_ERROR : TFS_SUCCESS;
-        if (TFS_SUCCESS != ret)
+        //check mode
+        if (RcClient::CREATE == mode)
         {
-          TBSYS_LOG(ERROR, "should use save_file");
+          flag = common::T_WRITE;
         }
-        else//check mode
+        else if (RcClient::READ == mode)
         {
-          flag = -1;
-          if (RcClient::CREATE == mode)
-          {
-            flag = common::T_WRITE;
-          }
-          else if (RcClient::READ == mode)
-          {
-            flag = common::T_READ | common::T_STAT;
-          }
-          else if(RcClient::READ_FORCE == mode)
-          {
-            flag = common::T_READ | common::T_STAT | common::T_FORCE;
-          }
+          flag = common::T_READ | common::T_STAT;
+        }
+        else if(RcClient::READ_FORCE == mode)
+        {
+          flag = common::T_READ | common::T_STAT | common::T_FORCE;
+        }
 
-        }
         ret = flag != -1 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS != ret)
         {
@@ -366,7 +357,7 @@ namespace tfs
       return fd;
     }
 
-    TfsRetType RcClientImpl::close(const int fd, char* tfs_name_buff, const int32_t buff_len)
+    TfsRetType RcClientImpl::close(const int fd, char* tfs_name_buf, const int32_t buff_len)
     {
       int ret = check_init_stat();
       if (TFS_SUCCESS == ret)
@@ -375,7 +366,7 @@ namespace tfs
         remove_fdinfo(fd, fd_info);
         if (fd_info.raw_tfs_fd_ >= 0)
         {
-          ret = TfsClientImplV2::Instance()->close(fd_info.raw_tfs_fd_, tfs_name_buff, buff_len);
+          ret = TfsClientImplV2::Instance()->close(fd_info.raw_tfs_fd_, tfs_name_buf, buff_len);
         }
       }
       return ret;
@@ -740,13 +731,13 @@ namespace tfs
       return ret;
     }
 
-    int64_t RcClientImpl::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len, const char* suffix)
+    int64_t RcClientImpl::save_file(const char* local_file, char* tfs_name_buf, const int32_t buf_len, const char* suffix)
     {
       int ret = check_init_stat();
       int64_t saved_size = -1;
       if (TFS_SUCCESS == ret)
       {
-        FSName fs(tfs_name_buff);
+        FSName fs(tfs_name_buf);
         bool is_update = fs.get_block_id() > 0 ? true : false;
         int ns_get_index = 0;
         string ns_addr;
@@ -754,7 +745,9 @@ namespace tfs
         {
           if (is_update)
           {
-            ns_addr = tfs_cluster_manager_->get_unlink_ns_addr(tfs_name_buff, ns_get_index++);
+            // TODO: should use TfsClientImplV2::save_file_update,
+            // here not support update for rc client
+            ns_addr = tfs_cluster_manager_->get_unlink_ns_addr(tfs_name_buf, ns_get_index++);
           }
           else
           {
@@ -764,20 +757,20 @@ namespace tfs
           {
             break;
           }
-          saved_size = save_file(ns_addr.c_str(), local_file, tfs_name_buff, buff_len, suffix);
+          saved_size = save_file(ns_addr.c_str(), local_file, tfs_name_buf, buf_len, suffix);
         } while(saved_size < 0);
       }
       return saved_size;
     }
 
     int64_t RcClientImpl::save_buf(const char* source_data, const int32_t data_len,
-        char* tfs_name_buff, const int32_t buff_len, const char* suffix)
+        char* tfs_name_buf, const int32_t buff_len, const char* suffix)
     {
       int ret = check_init_stat();
       int64_t saved_size = -1;
       if (TFS_SUCCESS == ret)
       {
-        FSName fs(tfs_name_buff);
+        FSName fs(tfs_name_buf);
         bool is_update = fs.get_block_id() > 0 ? true : false;
         int ns_get_index = 0;
         string ns_addr;
@@ -785,7 +778,7 @@ namespace tfs
         {
           if (is_update)
           {
-            ns_addr = tfs_cluster_manager_->get_unlink_ns_addr(tfs_name_buff, ns_get_index++);
+            ns_addr = tfs_cluster_manager_->get_unlink_ns_addr(tfs_name_buf, ns_get_index++);
           }
           else
           {
@@ -796,7 +789,7 @@ namespace tfs
             break;
           }
           saved_size = save_buf(ns_addr.c_str(), source_data, data_len,
-              tfs_name_buff, buff_len, suffix);
+              tfs_name_buf, buff_len, suffix);
         } while(saved_size < 0);
       }
       return saved_size;
@@ -824,25 +817,47 @@ namespace tfs
       return ret;
     }
 
-    int64_t RcClientImpl::save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
-        const int32_t buff_len, const char* suffix)
+    int64_t RcClientImpl::save_file(const char* ns_addr, const char* local_file, char* ret_tfs_name_buf,
+        const int32_t buf_len, const char* suffix)
     {
       int flag = T_DEFAULT;
       int64_t saved_size = -1;
       int64_t start_time = tbsys::CTimeUtil::getTime();
-      saved_size = TfsClientImplV2::Instance()->save_file(tfs_name_buff, buff_len, local_file,
+      saved_size = TfsClientImplV2::Instance()->save_file(ret_tfs_name_buf, buf_len, local_file,
           flag, suffix, ns_addr);
       int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
       add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       return saved_size;
     }
 
+    int RcClientImpl::fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+        const char* file_name, const char* suffix)
+    {
+      int ret = check_init_stat();
+      if (TFS_SUCCESS == ret)
+      {
+        int ns_get_index = 0;
+        string ns_addr;
+        do
+        {
+          ns_addr = tfs_cluster_manager_->get_read_ns_addr(file_name, ns_get_index++);
+          if (ns_addr.empty())
+          {
+            ret = TFS_ERROR;
+            break;
+          }
+          ret = fetch_buf(ns_addr.c_str(), ret_count, buf, count, file_name, suffix);
+        } while(ret != TFS_SUCCESS);
+      }
+      return ret;
+    }
+
     int64_t RcClientImpl::save_buf(const char* ns_addr, const char* source_data, const int32_t data_len,
-        char* tfs_name_buff, const int32_t buff_len, const char* suffix)
+        char* ret_tfs_name_buf, const int32_t buf_len, const char* suffix)
     {
       int64_t saved_size = -1;
       int64_t start_time = tbsys::CTimeUtil::getTime();
-      saved_size = TfsClientImplV2::Instance()->save_buf(tfs_name_buff, buff_len, source_data, data_len,
+      saved_size = TfsClientImplV2::Instance()->save_buf(ret_tfs_name_buf, buf_len, source_data, data_len,
           T_DEFAULT, suffix, ns_addr);
       int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
       add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
@@ -863,6 +878,17 @@ namespace tfs
       return ret;
     }
 
+    int RcClientImpl::fetch_buf(const char* ns_addr, int64_t& ret_count, char* buf, const int64_t count,
+        const char* file_name, const char* suffix)
+    {
+      int ret = TFS_SUCCESS;
+      int64_t start_time = tbsys::CTimeUtil::getTime();
+      ret = TfsClientImplV2::Instance()->fetch_buf(ret_count, buf, count,
+          file_name, suffix, ns_addr);
+      int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
+      add_stat_info(OPER_READ, ret_count, response_time, TFS_SUCCESS == ret);
+      return ret;
+    }
 
     TfsRetType RcClientImpl::login(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip)
     {
@@ -876,6 +902,7 @@ namespace tfs
         int64_t session_ip = 0;
         common::SessionUtil::parse_session_id(session_base_info_.session_id_, app_id, session_ip);
         app_id_ = app_id;
+        init_stat_ = INIT_LOGINED;
       }
       return ret;
     }

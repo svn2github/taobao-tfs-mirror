@@ -76,6 +76,8 @@ namespace tfs
       int64_t save_buf_update(const char* buf, const int64_t buf_len, const int32_t mode,
         const char* tfs_name, const char* suffix, const char* ns_addr = NULL);
 
+      int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+                     const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL, const int flags = common::T_DEFAULT);
       int fetch_file(const char* local_file, const char* file_name, const char* suffix = NULL,
           const common::ReadDataOptionFlag read_flag = common::READ_DATA_OPTION_FLAG_NORMAL,
           const char* ns_addr = NULL);

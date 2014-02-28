@@ -31,7 +31,6 @@ namespace tfs
 
     NewClientManager::~NewClientManager()
     {
-      destroy();
       NEWCLIENT_MAP_ITER iter = new_clients_.begin();
       for (; iter != new_clients_.end(); ++iter)
       {

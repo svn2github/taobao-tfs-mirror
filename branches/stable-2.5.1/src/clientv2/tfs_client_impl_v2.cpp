@@ -47,7 +47,6 @@ namespace tfs
       }
       tfs_file_map_.clear();
 
-      tbsys::gDelete(session_pool_);
       tbsys::gDelete(packet_factory_);
       tbsys::gDelete(packet_streamer_);
     }
@@ -67,32 +66,32 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "initialize NewClientManager fail, must exit, ret: %d", ret);
         }
-      }
 
-      if (TFS_SUCCESS == ret)
-      {
-        timer_ = new tbutil::Timer();
-        session_pool_ = new TfsSessionPool(timer_);
-        if (NULL != ns_addr)
+        if (TFS_SUCCESS == ret)
         {
-          TfsSession* session = session_pool_->get(ns_addr, cache_time, cache_items);
-          if (NULL != session)
+          timer_ = new tbutil::Timer();
+          session_pool_ = new TfsSessionPool(timer_);
+          if (NULL != ns_addr)
           {
-            default_session_ = session;
-          }
-          else
-          {
-            // invalid ns addr
-            ret = EXIT_PARAMETER_ERROR;
+            TfsSession* session = session_pool_->get(ns_addr, cache_time, cache_items);
+            if (NULL != session)
+            {
+              default_session_ = session;
+            }
+            else
+            {
+              // invalid ns addr
+              ret = EXIT_PARAMETER_ERROR;
+            }
           }
         }
-      }
 
-      if (TFS_SUCCESS == ret)
-      {
-        is_init_ = true;
-        ClientConfig::cache_time_ = cache_time;
-        ClientConfig::cache_items_ = cache_items;
+        if (TFS_SUCCESS == ret)
+        {
+          is_init_ = true;
+          ClientConfig::cache_time_ = cache_time;
+          ClientConfig::cache_items_ = cache_items;
+        }
       }
 
       return ret;
@@ -101,9 +100,10 @@ namespace tfs
     int TfsClientImplV2::destroy()
     {
       tbutil::Mutex::Lock lock(mutex_);
-      timer_->destroy();
       if (is_init_)
       {
+        tbsys::gDelete(session_pool_);
+        timer_->destroy();
         NewClientManager::get_instance().destroy();
         is_init_ = false;
       }
@@ -390,7 +390,7 @@ namespace tfs
             if (ret_tfs_name_len < TFS_FILE_LEN_V2)
             {
               TBSYS_LOG(ERROR, "name buffer length less: %d < %d", ret_tfs_name_len, TFS_FILE_LEN_V2);
-              ret = TFS_ERROR;
+              ret = EXIT_PARAMETER_ERROR;
             }
             else
             {
@@ -467,7 +467,7 @@ namespace tfs
         const char* local_file, const int32_t mode, const char* suffix, const char* ns_addr)
     {
       int64_t ret = TFS_SUCCESS;
-      if (NULL == local_file)
+      if (NULL == local_file || NULL == ret_tfs_name)
       {
         ret = EXIT_PARAMETER_ERROR;
         TBSYS_LOG(WARN, "invalid parmater");
@@ -569,7 +569,7 @@ namespace tfs
         const char* buf, const int64_t buf_len, const int32_t mode, const char* suffix, const char* ns_addr)
     {
       int ret = TFS_SUCCESS;
-      if ((NULL == buf) || (buf_len <= 0))
+      if ((NULL == buf) || (buf_len <= 0) || (NULL == ret_tfs_name))
       {
         ret = EXIT_PARAMETER_ERROR;
         TBSYS_LOG(WARN, "invalid parmater");
@@ -640,6 +640,69 @@ namespace tfs
       ret = close(fd, ret_tfs_name, ret_tfs_name_len);
 
       return ret < 0 ? ret : done;
+    }
+
+    int TfsClientImplV2::fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+                                  const char* file_name, const char* suffix,
+                                  const char* ns_addr, const int flags)
+    {
+      int ret = TFS_SUCCESS;
+      TfsFileType file_type = INVALID_TFS_FILE_TYPE;
+
+      if (NULL == buf || count <= 0 || NULL == file_name)
+      {
+        TBSYS_LOG(ERROR, "invalid parameter");
+        ret = EXIT_PARAMETER_ERROR;
+      }
+      else
+      {
+        FSName fs;
+        if ((file_type = fs.check_file_type(file_name)) == INVALID_TFS_FILE_TYPE)
+        {
+          TBSYS_LOG(ERROR, "invalid tfs name: %s", file_name);
+          ret = EXIT_PARAMETER_ERROR;
+        }
+        else
+        {
+          int32_t flag = T_DEFAULT | flags;
+          int32_t io_size = MAX_READ_SIZE;
+
+          int tfs_fd = open(file_name, suffix, ns_addr, T_READ|flag);
+          if (tfs_fd <= 0)
+          {
+            TBSYS_LOG(ERROR, "open tfs file to read fail. tfsname: %s, suffix: %s, ret: %d",
+                      file_name, suffix, tfs_fd);
+          }
+          else
+          {
+            int64_t read_len = 0, left_len = count, per_io_size = 0;
+            while (left_len > 0)
+            {
+              per_io_size = io_size > left_len ? left_len : io_size;
+              if ((read_len = read(tfs_fd, buf + (count - left_len), per_io_size)) < 0)
+              {
+                TBSYS_LOG(ERROR, "read tfs file fail. tfsname: %s, suffix: %s, ret: %"PRI64_PREFIX"d",
+                          file_name, suffix, read_len);
+                ret = read_len;
+                break;
+              }
+
+              left_len -= read_len;
+
+              // read over
+              if (0 == left_len || read_len < per_io_size)
+              {
+                ret_count = count - left_len;
+                break;
+              }
+            }
+
+            close(tfs_fd);
+          }
+        }
+      }
+
+      return ret;
     }
 
     int TfsClientImplV2::fetch_file(const char* local_file, const char* file_name, const char* suffix,const common::ReadDataOptionFlag read_flag, const char* ns_addr)

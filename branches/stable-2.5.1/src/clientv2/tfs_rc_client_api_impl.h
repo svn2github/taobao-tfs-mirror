@@ -48,6 +48,7 @@ namespace tfs
         RcClientImpl();
         ~RcClientImpl();
 
+        // initialize and  destroy must be used in pair
         TfsRetType initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
             const int32_t cache_times = common::DEFAULT_BLOCK_CACHE_TIME,
             const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS,
@@ -58,6 +59,7 @@ namespace tfs
             const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS,
             const char* dev_name = NULL);
 
+        void destroy();
         int64_t get_app_id() const { return app_id_;}
 
 #ifdef WITH_TAIR_CACHE
@@ -90,7 +92,10 @@ namespace tfs
             char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL);
 
         int fetch_file(const char* local_file,
-                       const char* file_name, const char* suffix = NULL);
+            const char* file_name, const char* suffix = NULL);
+
+        int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+            const char* file_name, const char* suffix = NULL);
 
         // for kv meta
         void set_kv_rs_addr(const char *rs_addr); // tmp use
@@ -139,7 +144,6 @@ namespace tfs
 
         TfsRetType check_init_stat(const bool check_app_id = false) const;
 
-        void destory();
 
         uint64_t get_active_rc_ip(size_t& retry_index) const;
         void get_ka_info(common::KeepAliveInfo& kainfo);
@@ -160,8 +164,10 @@ namespace tfs
             char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL);
 
         int fetch_file(const char* ns_addr, const char* local_file,
-                       const char* file_name, const char* suffix);
+            const char* file_name, const char* suffix);
 
+        int fetch_buf(const char* ns_addr, int64_t& ret_count, char* buf, const int64_t count,
+            const char* file_name, const char* suffix);
 
         static void parse_cluster_id(const std::string& cluster_id_str, int32_t& id, bool& is_master);
 

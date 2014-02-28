@@ -141,6 +141,12 @@ namespace tfs
       return impl_->fetch_file(local_file, file_name, suffix);
     }
 
+    int RcClient::fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+        const char* file_name, const char* suffix)
+    {
+      return impl_->fetch_buf(ret_count, buf, count, file_name, suffix);
+    }
+
     // for kv meta
     void RcClient::set_kv_rs_addr(const char *rs_addr)
     {

@@ -1141,7 +1141,7 @@ namespace tfs
     {
       bool is_valid = true;
 
-      if (NULL == bucket_name)
+      if (NULL == bucket_name || 0 == strlen(bucket_name))
       {
         is_valid = false;
       }

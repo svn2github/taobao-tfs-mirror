@@ -44,7 +44,7 @@ read_index_tool_SOURCES = read_index_tool.cpp
 
 check_down_disk_data_SOURCES = check_down_disk_data.cpp
 
-recover_disk_data_to_clusterv2_SOURCES = recover_disk_data_to_cluster_v2.cpp
+#recover_disk_data_to_clusterv2_SOURCES = recover_disk_data_to_cluster_v2.cpp
 
 #recover_disk_data_to_cluster_SOURCES = recover_disk_data_to_cluster.cpp
 

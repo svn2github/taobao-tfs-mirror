@@ -84,6 +84,8 @@ namespace tfs
             char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL);
         int fetch_file(const char* local_file,
                        const char* file_name, const char* suffix = NULL);
+        int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+                             const char* file_name, const char* suffix = NULL);
         // for kv meta
         void set_kv_rs_addr(const char *rs_addr); // tmp use
 
