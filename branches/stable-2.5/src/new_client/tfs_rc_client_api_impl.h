@@ -131,18 +131,29 @@ namespace tfs
 
         TfsRetType put_object(const char *bucket_name, const char *object_name,
             const char* local_file, const common::UserInfo &user_info);
+        TfsRetType put_object_tag(const char *bucket_name, const char *object_name,
+            const char* kv, const common::UserInfo &user_info);
         int64_t pwrite_object(const char *bucket_name, const char *object_name,
             const void *buf, const int64_t offset, const int64_t length,
             const common::UserInfo &user_info);
         int64_t pread_object(const char *bucket_name, const char *object_name,
             void *buf, const int64_t offset, const int64_t length,
             common::ObjectMetaInfo *object_meta_info,
-            common::CustomizeInfo *customize_info,
+            common::UserMetadata *customize_info,
             const common::UserInfo &user_info);
         TfsRetType get_object(const char *bucket_name, const char *object_name,
             const char* local_file, const common::UserInfo &user_info);
+
+        TfsRetType get_object_tag(const char *bucket_name, const char *object_name,
+            const char *keys, const common::UserInfo &user_info,
+            std::map<std::string, std::string> *object_tag_map);
+
         TfsRetType del_object(const char *bucket_name, const char *object_name,
             const common::UserInfo &user_info);
+        TfsRetType del_object_tag(const char *bucket_name, const char *object_name,
+            const char *keys, const common::UserInfo &user_info);
+        TfsRetType update_object_tag(const char *bucket_name, const char *object_name,
+            const char *kv, const common::UserInfo &user_info);
         TfsRetType head_object(const char *bucket_name, const char *object_name,
             common::ObjectInfo *object_info, const common::UserInfo &user_info);
 

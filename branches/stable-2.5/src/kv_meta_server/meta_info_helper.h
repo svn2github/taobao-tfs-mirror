@@ -56,14 +56,40 @@ namespace tfs
                        common::ObjectInfo &object_info,
                        const common::UserInfo &user_info);
 
+        int check_put_object_zero(common::ObjectInfo &object_info,
+                      common::ObjectInfo &object_info_zero,
+                      const common::UserInfo &user_info,
+                      int64_t &offset, int64_t &length,
+                      bool &is_append);
+
+        int check_put_object_part(common::ObjectInfo &object_info,
+                      const int64_t offset, const bool is_append,
+                      bool &need_put_part);
+
+        int put_object_metadata(const std::string& bucket_name,
+                       const std::string& file_name,
+                       //const common::META_MAP_STRING &object_tag_map);
+                       const common::UserMetadata &user_metadata);
+
         int get_object(const std::string& bucket_name,
                        const std::string& file_name,
                        const int64_t offset, const int64_t length,
                        common::ObjectInfo *object_info, bool *still_have);
 
+        int get_object_metadata(const std::string &bucket_name,
+                      const std::string &file_name,
+                      const common::UserMetadata& user_metadata,
+                      //const std::vector<std::string>& keys_vec,
+                      common::META_MAP_STRING &object_tag_map);
+
         int del_object(const std::string& bucket_name,
                        const std::string& file_name,
                        common::ObjectInfo *object_info, bool* still_have);
+
+        int del_object_metadata(const std::string& bucket_name,
+                      const std::string& file_name,
+                      //const std::vector<std::string>& keys_vec);
+                      const common::UserMetadata& user_metadata);
 
         /*----------------------------bucket part-----------------------------*/
 
@@ -73,10 +99,12 @@ namespace tfs
 
         int put_bucket(const std::string& bucket_name, common::BucketMetaInfo& bucket_meta_info,
                        const common::UserInfo &user_info);
+
         int get_bucket(const std::string& bucket_name, const std::string& prefix,
             const std::string& start_key, const char delimiter, int32_t *limit,
             std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
             std::set<std::string>* s_common_prefix, int8_t* is_truncated);
+
         int del_bucket(const std::string& bucket_name);
 
       public:
@@ -90,6 +118,7 @@ namespace tfs
                            const int64_t offset,
                            common::ObjectInfo *object_info,
                            int64_t *version);
+
         int deserialize_key(const char *key, const int32_t key_size, std::string *bucket_name, std::string *object_name,
             int64_t *offset, int64_t *version);
         int serialize_key(const std::string &bucket_name,
@@ -123,6 +152,13 @@ namespace tfs
         const std::string& file_name, const common::KvKey& start_key,
         common::ObjectInfo *object_info, int32_t& valid_result);
 
+        int find_object(const std::string& bucket_name, const std::string& file_name,
+            std::vector<common::KvValue*>& kv_value_keys,
+            std::vector<common::KvValue*>& kv_value_values,
+            int32_t &result_size, bool* still_have);
+
+        int find_object_zero(const std::string& bucket_name, const std::string& file_name,
+            common::KvValue* kv_value, int64_t* version);
 
       protected:
         common::KvEngineHelper* kv_engine_helper_;

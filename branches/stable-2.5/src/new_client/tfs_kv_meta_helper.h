@@ -44,16 +44,20 @@ namespace tfs
       static int do_put_object(const uint64_t server_id,
                                const char *bucket_name, const char *object_name,
                                const common::ObjectInfo &object_info, const common::UserInfo &user_info);
+
       static int do_get_object(const uint64_t server_id,
                                const char *bucket_name, const char *object_name,
                                const int64_t offset, const int64_t length,
                                common::ObjectInfo *object_info, bool *still_have,
                                const common::UserInfo &user_info);
+
       static int do_del_object(const uint64_t server_id,
                                const char *bucket_name,
                                const char *object_name,
                                common::ObjectInfo *object_info, bool *still_have,
                                const common::UserInfo &user_info);
+
+
       static int do_head_object(const uint64_t server_id,
                                const char *bucket_name,
                                const char *object_name,
@@ -70,6 +74,7 @@ namespace tfs
 
       static int do_rm_life_cycle(const uint64_t server_id,
                                   const int32_t file_type, const char *file_name);
+    private:
     };
   }
 }

@@ -510,10 +510,22 @@ namespace tfs
           case common::GET_BLOCK_STATISTIC_VISIT_INFO_MESSAGE:
             packet = new BlockStatisticVisitInfoMessage();
             break;
+          case common::REQ_KVMETA_PUT_OBJECT_METADATA_MESSAGE:
+            packet = new ReqKvMetaPutObjectMetaDataMessage();
+            break;
+          case common::REQ_KVMETA_GET_OBJECT_METADATA_MESSAGE:
+            packet = new ReqKvMetaGetObjectMetaDataMessage();
+            break;
+          case common::RSP_KVMETA_GET_OBJECT_METADATA_MESSAGE:
+            packet = new RspKvMetaGetObjectMetaDataMessage();
+            break;
+          case common::REQ_KVMETA_DEL_OBJECT_METADATA_MESSAGE:
+            packet = new ReqKvMetaDelObjectMetaDataMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;
-         }
+        }
       }
       return packet;
     }

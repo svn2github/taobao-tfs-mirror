@@ -21,9 +21,9 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_split_key test_bucket test_object test_life_cycle test_life_cycle_rootserver test_life_cycle_expireserver
-TESTS+=test_split_key test_bucket test_life_cycle test_life_cycle_rootserver test_life_cycle_expireserver
-check_PROGRAMS+=test_split_key test_bucket test_object test_life_cycle test_life_cycle_rootserver test_life_cycle_expireserver
+noinst_PROGRAMS=test_split_key test_bucket test_object test_object_tag test_life_cycle test_life_cycle_rootserver test_life_cycle_expireserver
+TESTS+=test_split_key test_bucket test_object_tag test_life_cycle test_life_cycle_rootserver test_life_cycle_expireserver
+check_PROGRAMS+=test_split_key test_bucket test_object test_object_tag test_life_cycle test_life_cycle_rootserver test_life_cycle_expireserver
 
 test_split_key_SOURCES=test_split_key.cpp
 test_split_key_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
@@ -33,6 +33,9 @@ test_bucket_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest
 
 test_object_SOURCES=test_object.cpp test_kvengine.cpp
 test_object_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest
+
+test_object_tag_SOURCES=test_object_tag.cpp test_kvengine.cpp
+test_object_tag_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest
 
 test_life_cycle_SOURCES=test_lifecycle.cpp test_kvengine.cpp
 test_life_cycle_LDFLASG=${AM_LDFLAGS} -static-libgcc -lgtest

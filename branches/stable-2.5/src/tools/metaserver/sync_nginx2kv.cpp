@@ -94,7 +94,7 @@ int write_to_kv(NameMetaClientImpl &client, int64_t app_id, int64_t uid, const s
 
   ObjectInfo obj_info;
   obj_info.has_meta_info_ = true;
-  obj_info.has_customize_info_ = false;
+  obj_info.has_user_metadata_ = false;
   obj_info.meta_info_.create_time_ = file_meta_info.create_time_;
   obj_info.meta_info_.modify_time_ = file_meta_info.modify_time_;
   obj_info.meta_info_.max_tfs_file_size_ = -5; //TODO this is a tricky in server

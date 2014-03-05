@@ -308,6 +308,36 @@ namespace tfs
       return ret;
     }
 
+    int MetaInfoHelper::check_put_object_part(ObjectInfo &object_info, const int64_t offset, const bool is_append, bool &need_put_part)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        //bool need_put_part = false;
+        if (object_info.v_tfs_file_info_.size() > 1
+            || 0 != offset)
+        {
+          need_put_part = true;
+        }
+        if (need_put_part)
+        {
+          if (is_append)
+          {
+            // update offsets
+            int64_t tmp_offset = offset;
+            for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
+            {
+              object_info.v_tfs_file_info_[i].offset_ = tmp_offset;
+              tmp_offset += object_info.v_tfs_file_info_[i].file_size_;
+            }
+          }
+
+        }
+      }
+      return ret;
+    }
+
     int MetaInfoHelper::put_object_zero(const string &bucket_name,
         const string &file_name, ObjectInfo *object_info_zero,
         int64_t *offset, const int64_t length, int64_t version,
@@ -378,12 +408,12 @@ namespace tfs
 
               int64_t curr_file_size = curr_object_info_zero.meta_info_.big_file_size_;
               object_info_zero->meta_info_.big_file_size_ =
-                  curr_file_size > (*offset + length) ? curr_file_size : (*offset + length);
+                curr_file_size > (*offset + length) ? curr_file_size : (*offset + length);
             }
-            if (!object_info_zero->has_customize_info_)
+            if (!object_info_zero->has_user_metadata_)
             {
-              object_info_zero->has_customize_info_ = curr_object_info_zero.has_customize_info_;
-              object_info_zero->customize_info_ = curr_object_info_zero.customize_info_;
+              object_info_zero->has_user_metadata_ = curr_object_info_zero.has_user_metadata_;
+              object_info_zero->user_metadata_ = curr_object_info_zero.user_metadata_;
             }
           }
         }
@@ -392,30 +422,17 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::put_object(const std::string &bucket_name,
-        const std::string &file_name,
-        ObjectInfo &object_info, const UserInfo &user_info)
+    int MetaInfoHelper::check_put_object_zero(ObjectInfo &object_info, ObjectInfo &object_info_zero, const UserInfo &user_info, int64_t &offset, int64_t &length, bool &is_append)
     {
-      int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
-
-      // check bucket whether exist
-      if (TFS_SUCCESS == ret)
-      {
-        BucketMetaInfo bucket_meta_info;
-        ret = head_bucket(bucket_name, &bucket_meta_info);
-        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
-            bucket_name.c_str(), file_name.c_str(), ret);
-      }
-
-      ObjectInfo object_info_zero;
-      int64_t offset = 0;
+      int ret = TFS_SUCCESS;
+      //ObjectInfo object_info_zero;
+      //int64_t offset = 0;
       if (object_info.v_tfs_file_info_.size() > 0)
       {
         offset = object_info.v_tfs_file_info_.front().offset_;
       }
 
-      int64_t version = KvDefine::MAX_VERSION;
-      bool is_append = (-1 == offset);
+      is_append = (-1 == offset);
       // assume this is object info zero
       if (is_append)
       {
@@ -435,15 +452,15 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        uint64_t length = 0;
+        length = 0;
         for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
         {
           length += object_info.v_tfs_file_info_[i].file_size_;
         }
 
-        TBSYS_LOG(DEBUG, "will put object, bucekt: %s, object: %s, "
-            "offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
-            bucket_name.c_str(), file_name.c_str(), offset, length);
+        //TBSYS_LOG(DEBUG, "will put object, bucekt: %s, object: %s, "
+        //"offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
+        //bucket_name.c_str(), file_name.c_str(), offset, length);
 
         object_info_zero.has_meta_info_ = true;
         object_info_zero.meta_info_.big_file_size_ = offset + length;
@@ -461,51 +478,135 @@ namespace tfs
           }
 
           //TODO: check this
-          object_info_zero.has_customize_info_ = object_info.has_customize_info_;
-          object_info_zero.customize_info_ = object_info.customize_info_;
+          object_info_zero.has_user_metadata_ = object_info.has_user_metadata_;
+          object_info_zero.user_metadata_ = object_info.user_metadata_;
 
           if (!object_info.v_tfs_file_info_.empty())
           {
             object_info_zero.v_tfs_file_info_.push_back(object_info.v_tfs_file_info_.front());
           }
         }
+      }
 
+      return ret;
+    }
+
+    int MetaInfoHelper::put_object(const std::string &bucket_name,
+        const std::string &file_name,
+        ObjectInfo &object_info, const UserInfo &user_info)
+    {
+      int64_t offset = 0;
+      int64_t version = KvDefine::MAX_VERSION;
+      bool is_append = 0;
+      int64_t length = 0;
+      ObjectInfo object_info_zero;
+
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+
+      // check bucket whether exist
+      if (TFS_SUCCESS == ret)
+      {
+        BucketMetaInfo bucket_meta_info;
+        ret = head_bucket(bucket_name, &bucket_meta_info);
+        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
+            bucket_name.c_str(), file_name.c_str(), ret);
+      }
+
+      /* check object zero info */
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_put_object_zero(object_info, object_info_zero, user_info, offset, length, is_append);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = put_object_zero(bucket_name, file_name, &object_info_zero,
             &offset, length, version, is_append);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        bool need_put_part = false;
+        /* check object part info */
+        ret = check_put_object_part(object_info, offset, is_append, need_put_part);
 
         if (TFS_SUCCESS == ret)
         {
-          bool need_put_part = false;
-          if (object_info.v_tfs_file_info_.size() > 1
-              || 0 != offset)
-          {
-            need_put_part = true;
-          }
           if (need_put_part)
           {
-            if (is_append)
-            {
-              // update offsets
-              int64_t tmp_offset = offset;
-              for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
-              {
-                object_info.v_tfs_file_info_[i].offset_ = tmp_offset;
-                tmp_offset += object_info.v_tfs_file_info_[i].file_size_;
-              }
-            }
-
             ret = put_object_part(bucket_name, file_name, object_info);
             TBSYS_LOG(DEBUG, "put object part ret: %d, bucekt_name: %s, object_name: %s, "
                 "offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
                 ret, bucket_name.c_str(), file_name.c_str(), offset, length);
           }
         }
-        else
-        {
-          TBSYS_LOG(ERROR, "put object zero failed, ret: %d, bucekt: %s, object: %s, "
-              "offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
-              ret, bucket_name.c_str(), file_name.c_str(), offset, length);
-        }
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "put object zero failed, ret: %d, bucekt: %s, object: %s, "
+            "offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
+            ret, bucket_name.c_str(), file_name.c_str(), offset, length);
+      }
+
+      return ret;
+    }
+
+    int MetaInfoHelper::put_object_metadata(const std::string &bucket_name,
+        const std::string &file_name,
+        const common::UserMetadata &user_metadata)
+    {
+      int32_t ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+
+      if (user_metadata.is_meta_data_excessed())
+      {
+        ret = EXIT_KV_METADATA_LENNTH_EXCEED;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        BucketMetaInfo bucket_meta_info;
+        ret = head_bucket(bucket_name, &bucket_meta_info);
+        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
+            bucket_name.c_str(), file_name.c_str(), ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t lock_version = 0;
+        int32_t retry = KvDefine::VERSION_ERROR_RETRY_COUNT;
+        ObjectInfo object_info_zero;
+
+        do {
+          ret = get_object_part(bucket_name, file_name, 0, &object_info_zero, &lock_version);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(WARN, "get object zero fail, ret: %d, bucket: %s, object: %s",
+                ret, bucket_name.c_str(), file_name.c_str());
+            break;
+          }
+
+          object_info_zero.has_user_metadata_ = true;
+
+          common::META_MAP_STRING& meta_data_zero = object_info_zero.get_mutable_user_metadata().get_mutable_meta_data();
+          CMETA_MAP_STRING_ITER it = user_metadata.get_meta_data().begin();
+          for (; it != user_metadata.get_meta_data().end(); ++ it) 
+          {
+            meta_data_zero[it->first] = it->second;
+          }
+
+          ret = put_object_ex(bucket_name, file_name, 0, object_info_zero, lock_version);
+
+          if (EXIT_KV_RETURN_VERSION_ERROR == ret)
+          {
+            TBSYS_LOG(INFO, "put object zero version conflict, bucket: %s, object: %s",
+                bucket_name.c_str(), file_name.c_str());
+          }
+          else if (TFS_ERROR == ret)
+          {
+            TBSYS_LOG(WARN, "put object zero fail, ret: %d, bucket: %s, object: %s",
+                ret, bucket_name.c_str(), file_name.c_str());
+          }
+        }while (retry-- && EXIT_KV_RETURN_VERSION_ERROR == ret);
       }
 
       return ret;
@@ -695,12 +796,12 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             ret = serialize_key(bucket_name, file_name, start_offset,
-                  &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+                &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
           }
           if (TFS_SUCCESS == ret)
           {
             ret = serialize_key(bucket_name, file_name, end_offset,
-                  &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+                &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
           }
 
           //op value
@@ -731,7 +832,7 @@ namespace tfs
               //value get
               int64_t pos = 0;
               tmp_object_info.deserialize(kv_value_values[i]->get_data(),
-                                       kv_value_values[i]->get_size(), pos);
+                  kv_value_values[i]->get_size(), pos);
               if (tmp_object_info.v_tfs_file_info_.size() > 0)
               {
                 last_offset = tmp_object_info.v_tfs_file_info_[0].offset_;
@@ -762,7 +863,7 @@ namespace tfs
             {
               scan_offset = 1;
               ret = serialize_key(bucket_name, file_name, last_offset,
-                                  &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+                  &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
             }
             else
             {
@@ -799,12 +900,65 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::del_object(const std::string& bucket_name, const std::string& file_name,
-        common::ObjectInfo *object_info, bool* still_have)
+    int MetaInfoHelper::get_object_metadata(const std::string &bucket_name,
+        const std::string &file_name, const common::UserMetadata &user_metadata,
+        common::META_MAP_STRING &object_tag_map)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        BucketMetaInfo bucket_meta_info;
+        ret = head_bucket(bucket_name, &bucket_meta_info);
+        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
+            bucket_name.c_str(), file_name.c_str(), ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        common::ObjectInfo object_info_zero;
+        ret = get_object_part(bucket_name, file_name, 0, &object_info_zero, NULL);
+
+        if (EXIT_OBJECT_NOT_EXIST == ret)
+        {
+          TBSYS_LOG(ERROR, "object %s %s not exist", bucket_name.c_str(), file_name.c_str());
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          common::META_MAP_STRING& meta_data_map = object_info_zero.get_mutable_user_metadata().get_mutable_meta_data();
+          if (user_metadata.get_meta_data().size() == 0)
+          {
+            object_tag_map = meta_data_map;
+          }
+          else
+          {
+            if (meta_data_map.size() > 0)
+            {
+              CMETA_MAP_STRING_ITER it = user_metadata.get_meta_data().begin();
+              for (; it != user_metadata.get_meta_data().end() ; ++it)
+              {
+                if (meta_data_map.find(it->first) != meta_data_map.end())
+                {
+                  object_tag_map.insert(make_pair<string, string>(it->first, meta_data_map[it->first]));
+                }
+              }
+            }
+          }
+        }
+      }
+      return ret;
+    }
+
+    int MetaInfoHelper::find_object(const std::string& bucket_name, const std::string& file_name, vector<KvValue*>& kv_value_keys, vector<KvValue*>& kv_value_values, int32_t &result_size, bool* still_have)
+    {
+      int ret = TFS_SUCCESS;
       *still_have = false;
       //op key
+      KvKey start_key;
+      KvKey end_key;
+      int64_t start_offset = 0;
+      int64_t end_offset = INT64_INFI;
+
       char *start_key_buff = NULL;
       if (TFS_SUCCESS == ret)
       {
@@ -823,36 +977,27 @@ namespace tfs
       {
         ret = TFS_ERROR;
       }
-      KvKey start_key;
-      KvKey end_key;
-      int64_t start_offset = 0;
-      int64_t end_offset = INT64_INFI;
+
       if (TFS_SUCCESS == ret)
       {
         ret = serialize_key(bucket_name, file_name, start_offset,
-              &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+            &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
       }
       if (TFS_SUCCESS == ret)
       {
         ret = serialize_key(bucket_name, file_name, end_offset,
-              &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+            &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
       }
 
       int32_t limit = MESS_LIMIT;
-      int32_t i;
       int32_t scan_offset = 0;
       short scan_type = CMD_RANGE_ALL;
-      vector<KvValue*> kv_value_keys;
-      vector<KvValue*> kv_value_values;
-      object_info->v_tfs_file_info_.clear();
-      vector<KvKey> vec_keys;
 
-      int32_t result_size = 0;
       if (TFS_SUCCESS == ret)
       {
         ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_key, end_key, limit + 1, scan_offset,
-          &kv_value_keys, &kv_value_values, &result_size, scan_type);
-        TBSYS_LOG(DEBUG, "del object, bucekt_name: %s, object_name: %s, "
+            &kv_value_keys, &kv_value_values, &result_size, scan_type);
+        TBSYS_LOG(DEBUG, "find objects, bucekt_name: %s, object_name: %s, "
             "scan ret: %d, limit: %d, result size: %d",
             bucket_name.c_str(), file_name.c_str(), ret, limit + 1, result_size);
         if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret && result_size == 0)
@@ -864,55 +1009,6 @@ namespace tfs
           result_size -= 1;
           *still_have = true;
         }
-        if(TFS_SUCCESS == ret || EXIT_KV_RETURN_HAS_MORE_DATA == ret)
-        {
-          if (EXIT_KV_RETURN_HAS_MORE_DATA == ret)
-          {
-            ret = TFS_SUCCESS;
-            *still_have = true;
-          }
-          for(i = 0; i < result_size; ++i)
-          {
-            //key get
-            KvKey tmp_key;
-            tmp_key.key_ = kv_value_keys[i]->get_data();
-            tmp_key.key_size_ = kv_value_keys[i]->get_size();
-            tmp_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
-            vec_keys.push_back(tmp_key);
-
-            //value get
-            common::ObjectInfo tmp_object_info;
-            int64_t pos = 0;
-            if(TFS_SUCCESS == ret)
-            {
-              ret = tmp_object_info.deserialize(kv_value_values[i]->get_data(),
-                                     kv_value_values[i]->get_size(), pos);
-            }
-            if(TFS_SUCCESS == ret)
-            {
-              //j now max == 1
-              for (size_t j = 0; j < tmp_object_info.v_tfs_file_info_.size(); j++)
-              {
-                TBSYS_LOG(DEBUG, "del tfs file info:");
-                tmp_object_info.v_tfs_file_info_[j].dump();
-                object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[j]);
-              }
-            }
-          }
-        }
-
-        //del from kv
-        if(TFS_SUCCESS == ret && result_size > 0)
-        {
-           ret = kv_engine_helper_->delete_keys(meta_info_name_area_, vec_keys);
-        }
-        for(i = 0; i < result_size; ++i)//free kv
-        {
-          kv_value_keys[i]->free();
-          kv_value_values[i]->free();
-        }
-        kv_value_keys.clear();
-        kv_value_values.clear();
       }
 
       if(NULL != start_key_buff)
@@ -925,11 +1021,146 @@ namespace tfs
         free(end_key_buff);
         end_key_buff = NULL;
       }
+
       return ret;
     }
+
+    int MetaInfoHelper::del_object(const std::string& bucket_name, const std::string& file_name,
+        common::ObjectInfo *object_info, bool* still_have)
+    {
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+
+      vector<KvValue*> kv_value_keys;
+      vector<KvValue*> kv_value_values;
+      int32_t result_size = 0;
+      int32_t i;
+      vector<KvKey> vec_keys;
+      object_info->v_tfs_file_info_.clear();
+
+      ret = find_object(bucket_name, file_name, kv_value_keys, kv_value_values, result_size, still_have);
+
+      if(TFS_SUCCESS == ret || EXIT_KV_RETURN_HAS_MORE_DATA == ret)
+      {
+        if (EXIT_KV_RETURN_HAS_MORE_DATA == ret)
+        {
+          ret = TFS_SUCCESS;
+          *still_have = true;
+        }
+        for(i = 0; i < result_size; ++i)
+        {
+          //key get
+          KvKey tmp_key;
+          tmp_key.key_ = kv_value_keys[i]->get_data();
+          tmp_key.key_size_ = kv_value_keys[i]->get_size();
+          tmp_key.key_type_ = KvKey::KEY_TYPE_OBJECT;
+          //vec_keys.push_back(tmp_key);
+          //
+          if (TFS_SUCCESS == ret)
+          {
+            ret = kv_engine_helper_->delete_key(meta_info_name_area_, tmp_key);
+          }
+
+          //value get
+          common::ObjectInfo tmp_object_info;
+          int64_t pos = 0;
+          if(TFS_SUCCESS == ret)
+          {
+            ret = tmp_object_info.deserialize(kv_value_values[i]->get_data(),
+                kv_value_values[i]->get_size(), pos);
+          }
+          if(TFS_SUCCESS == ret)
+          {
+            //j now max == 1
+            for (size_t j = 0; j < tmp_object_info.v_tfs_file_info_.size(); j++)
+            {
+              TBSYS_LOG(DEBUG, "del tfs file info:");
+              tmp_object_info.v_tfs_file_info_[j].dump();
+              object_info->v_tfs_file_info_.push_back(tmp_object_info.v_tfs_file_info_[j]);
+            }
+          }
+        }
+      }
+
+      for(int32_t i = 0; i < result_size; ++i)//free kv
+      {
+        kv_value_keys[i]->free();
+        kv_value_values[i]->free();
+      }
+      kv_value_keys.clear();
+      kv_value_values.clear();
+
+      return ret;
+    }
+
+    int MetaInfoHelper::del_object_metadata(const std::string& bucket_name, const std::string& file_name, const common::UserMetadata& user_metadata)
+    {
+      int32_t ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BucketMetaInfo bucket_meta_info;
+        ret = head_bucket(bucket_name, &bucket_meta_info);
+        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
+            bucket_name.c_str(), file_name.c_str(), ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t lock_version = 0;
+        ObjectInfo object_info_zero;
+        int32_t retry = KvDefine::VERSION_ERROR_RETRY_COUNT;
+
+        do {
+          ret = get_object_part(bucket_name, file_name, 0, &object_info_zero, &lock_version);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(WARN, "get object zero fail, ret: %d, bucket: %s, object: %s",
+                ret, bucket_name.c_str(), file_name.c_str());
+            break;
+          }
+
+          UserMetadata& exist_user_metadata = object_info_zero.get_mutable_user_metadata();
+          if(exist_user_metadata.get_meta_data().size() > 0)
+          {
+            const META_MAP_STRING& metadata = user_metadata.get_meta_data();
+            if (metadata.size() == 0)
+            {
+              exist_user_metadata.clear_meta_data();
+            }
+            else if (metadata.size() != 0)
+            {
+              common::META_MAP_STRING& meta_data_map = exist_user_metadata.get_mutable_meta_data();
+
+              CMETA_MAP_STRING_ITER it = user_metadata.get_meta_data().begin();
+              for (; it != user_metadata.get_meta_data().end() ; ++it)
+              {
+                if (meta_data_map.find(it->first) != meta_data_map.end())
+                {
+                  meta_data_map.erase(it->first);
+                }
+              }
+            }
+
+            ret = put_object_ex(bucket_name, file_name, 0, object_info_zero, lock_version);
+            if (EXIT_KV_RETURN_VERSION_ERROR == ret)
+            {
+              TBSYS_LOG(INFO, "put object zero version conflict, bucket: %s, object: %s",
+                  bucket_name.c_str(), file_name.c_str());
+            }
+            else if (TFS_ERROR == ret)
+            {
+              TBSYS_LOG(WARN, "put object zero fail, ret: %d, bucket: %s, object: %s",
+                  ret, bucket_name.c_str(), file_name.c_str());
+            }
+          }
+        }while (retry-- && EXIT_KV_RETURN_VERSION_ERROR == ret);
+      }
+
+      return ret;
+    }
+
     /*----------------------------bucket part-----------------------------*/
 
-     int MetaInfoHelper::get_common_prefix(const char *key, const string& prefix,
+    int MetaInfoHelper::get_common_prefix(const char *key, const string& prefix,
         const char delimiter, bool *prefix_flag, bool *common_flag, int *common_end_pos)
     {
       int ret = TFS_SUCCESS;
@@ -976,8 +1207,8 @@ namespace tfs
     }
 
     int MetaInfoHelper::get_range(const KvKey &pkey, const string &start_key,
-          const int32_t offset, const int32_t limit, vector<KvValue*> *kv_value_keys,
-          vector<KvValue*> *kv_value_values, int32_t *result_size)
+        const int32_t offset, const int32_t limit, vector<KvValue*> *kv_value_keys,
+        vector<KvValue*> *kv_value_values, int32_t *result_size)
     {
       int ret = TFS_SUCCESS;
 
@@ -1384,7 +1615,7 @@ namespace tfs
       pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
 
       TBSYS_LOG(DEBUG, "get bucket: %s, prefix: %s, start_key: %s, delimiter: %c",
-                bucket_name.c_str(), prefix.c_str(), start_key.c_str(), delimiter);
+          bucket_name.c_str(), prefix.c_str(), start_key.c_str(), delimiter);
       // check bucket whether exist
       if (TFS_SUCCESS == ret)
       {
@@ -1396,7 +1627,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = list_objects(pkey, prefix, start_key, delimiter, limit,
-          v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
+            v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
       }
 
       return ret;

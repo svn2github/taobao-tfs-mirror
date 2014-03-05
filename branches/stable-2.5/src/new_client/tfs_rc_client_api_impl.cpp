@@ -228,6 +228,7 @@ namespace tfs
           active_rc_ip_ = rc_ip;
           init_stat_ = INIT_LOGINED;
           name_meta_client_->set_tfs_cluster_manager(tfs_cluster_manager_);
+
           if (NULL != rs_addr)
           {
             name_meta_client_->initialize(rs_addr);
@@ -1585,6 +1586,20 @@ namespace tfs
         return ret;
       }
 
+#if 0
+      TfsRetType RcClientImpl::put_object_tag(const char *bucket_name, const char *object_name,
+          const char* kv, const common::UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->put_object_tag(bucket_name, object_name,
+              kv, user_info);
+        }
+        return ret;
+      }
+#endif
+
       int64_t RcClientImpl::pwrite_object(const char *bucket_name, const char *object_name,
           const void *buf, const int64_t offset, const int64_t length,
           const UserInfo &user_info)
@@ -1600,14 +1615,14 @@ namespace tfs
 
       int64_t RcClientImpl::pread_object(const char *bucket_name, const char *object_name,
           void *buf, const int64_t offset, const int64_t length,
-          ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info,
+          ObjectMetaInfo *object_meta_info, UserMetadata *user_metadata,
           const UserInfo &user_info)
       {
         TfsRetType ret = check_init_stat();
         if (TFS_SUCCESS == ret)
         {
           ret = kv_meta_client_->pread_object(bucket_name, object_name,
-              buf, offset, length, object_meta_info, customize_info,
+              buf, offset, length, object_meta_info, user_metadata,
               user_info);
         }
         return ret;
@@ -1620,12 +1635,26 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ObjectMetaInfo object_meta_info;
-          CustomizeInfo customize_info;
+          UserMetadata user_metadata;
           ret = kv_meta_client_->get_object(bucket_name, object_name,
-              local_file, &object_meta_info, &customize_info, user_info);
+              local_file, &object_meta_info, &user_metadata, user_info);
         }
         return ret;
       }
+
+#if 0
+      TfsRetType RcClientImpl::get_object_tag(const char *bucket_name, const char *object_name,
+          const char *keys, const UserInfo &user_info, map<string, string> *object_tag_map)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->get_object_tag(bucket_name, object_name,
+              keys, user_info, object_tag_map);
+        }
+        return ret;
+      }
+#endif
 
       TfsRetType RcClientImpl::del_object(const char *bucket_name, const char *object_name,
           const UserInfo &user_info)
@@ -1637,6 +1666,30 @@ namespace tfs
         }
         return ret;
       }
+
+#if 0
+      TfsRetType RcClientImpl::del_object_tag(const char *bucket_name, const char *object_name,
+          const char *keys, const UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->del_object_tag(bucket_name, object_name, keys, user_info);
+        }
+        return ret;
+      }
+
+      TfsRetType RcClientImpl::update_object_tag(const char *bucket_name, const char *object_name,
+          const char *kv, const UserInfo &user_info)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->update_object_tag(bucket_name, object_name, kv, user_info);
+        }
+        return ret;
+      }
+#endif
 
       TfsRetType RcClientImpl::head_object(const char *bucket_name, const char *object_name,
           ObjectInfo *object_info, const UserInfo &user_info)

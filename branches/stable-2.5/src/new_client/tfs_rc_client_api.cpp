@@ -234,11 +234,11 @@ namespace tfs
 
     int64_t RcClient::pread_object(const char *bucket_name, const char *object_name,
         void *buf, const int64_t offset, const int64_t length,
-        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info,
+        ObjectMetaInfo *object_meta_info, UserMetadata *user_metadata,
         const UserInfo &user_info)
     {
       return impl_->pread_object(bucket_name, object_name, buf, offset,
-          length, object_meta_info, customize_info, user_info);
+          length, object_meta_info, user_metadata, user_info);
     }
 
     TfsRetType RcClient::get_object(const char *bucket_name, const char *object_name,

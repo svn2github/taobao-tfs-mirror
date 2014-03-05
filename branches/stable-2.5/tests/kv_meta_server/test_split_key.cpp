@@ -116,7 +116,6 @@ TEST_F(SplitKeyTest, test_only_prefix)
   EXPECT_EQ(real_prefix, prefix_key);
   EXPECT_EQ(0, second_key.get_size());
 
-
 }
 
 

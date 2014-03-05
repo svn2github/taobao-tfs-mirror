@@ -6,7 +6,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid -lsnappy $(MYSQL_LDFLAGS)
 
-bin_PROGRAMS =  dump2mysql press_select meta_transfer txt2new txt2new_V2 check_old_new check_old_new_V2 sync_nginx2kv go_tair_for_kv  # del_from_tair put_bucket_to_tair
+bin_PROGRAMS =  dump2mysql press_select meta_transfer txt2new txt2new_V2 check_old_new check_old_new_V2 sync_nginx2kv go_tair_for_kv  #query_progress # del_from_tair put_bucket_to_tair
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/new_client/.libs/libtfsclient.a \

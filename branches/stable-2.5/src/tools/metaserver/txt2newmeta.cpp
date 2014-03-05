@@ -195,7 +195,7 @@ void* transfer(void* param)
     //    meta_info.file_info_.size_);
 
     obj_info.has_meta_info_ = true;
-    obj_info.has_customize_info_ = false;
+    obj_info.has_user_metadata_ = false;
     obj_info.meta_info_.create_time_ = meta_info.file_info_.create_time_;
     obj_info.meta_info_.modify_time_ = meta_info.file_info_.modify_time_;
     obj_info.meta_info_.max_tfs_file_size_ = -5; //TODO this is a tricky in server

@@ -425,7 +425,7 @@ namespace tfs
       {
         ObjectInfo object_info_null;
         object_info_null.has_meta_info_ = true;
-        object_info_null.has_customize_info_ = false;
+        object_info_null.has_user_metadata_ = true;
         object_info_null.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
 
         ret = do_put_object(bucket_name, object_name, object_info_null, user_info);
@@ -491,7 +491,8 @@ namespace tfs
               if (0 == iter->offset_)
               {
                 object_info.has_meta_info_ = true;
-                object_info.has_customize_info_ = false;
+                //object_info.has_user_metadata_ = false;
+                object_info.has_user_metadata_ = true;
                 object_info.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
                 TBSYS_LOG(DEBUG, "first object info, will put meta info.");
                 object_info.meta_info_.dump();
@@ -499,7 +500,7 @@ namespace tfs
               else
               {
                 object_info.has_meta_info_ = false;
-                object_info.has_customize_info_ = false;
+                object_info.has_user_metadata_ = false;
               }
               TfsFileInfo tmp_tfs_info;
               tmp_tfs_info.offset_ = iter->offset_;
@@ -548,7 +549,7 @@ namespace tfs
     int64_t KvMetaClientImpl::pread_object(const char *bucket_name,
         const char *object_name, void *buffer, const int64_t offset,
         int64_t length, ObjectMetaInfo *object_meta_info,
-        CustomizeInfo *customize_info, const UserInfo &user_info)
+        UserMetadata *user_metadata, const UserInfo &user_info)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
@@ -604,9 +605,9 @@ namespace tfs
             {
               *object_meta_info = object_info.meta_info_;
             }
-            if (NULL != customize_info)
+            if (NULL != user_metadata)
             {
-              *customize_info = object_info.customize_info_;
+              *user_metadata = object_info.user_metadata_;
             }
           }
 
@@ -711,9 +712,10 @@ namespace tfs
       return ret;
     }
 
+
     TfsRetType KvMetaClientImpl::get_object(const char *bucket_name,
         const char *object_name, const char* local_file,
-        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info,
+        ObjectMetaInfo *object_meta_info, UserMetadata *user_metadata,
         const UserInfo &user_info)
     {
       TfsRetType ret = TFS_SUCCESS;
@@ -746,7 +748,7 @@ namespace tfs
         {
           cur_length = min(io_size, length);
           read_len = pread_object(bucket_name, object_name, buf, offset,
-              cur_length, object_meta_info, customize_info, user_info);
+              cur_length, object_meta_info, user_metadata, user_info);
           if (0 == offset)
           {
             length = object_meta_info->big_file_size_;
@@ -778,7 +780,7 @@ namespace tfs
             break;
           }
           TBSYS_LOG(DEBUG, "@@ out while once, offset: %ld, read_length: %ld",
-                     offset, read_len);
+              offset, read_len);
         }
         tbsys::gDeleteA(buf);
         ::close(fd);
@@ -786,6 +788,7 @@ namespace tfs
 
       return ret;
     }
+
 
     TfsRetType KvMetaClientImpl::del_object(const char *bucket_name,
         const char *object_name, const UserInfo &user_info)
@@ -816,10 +819,10 @@ namespace tfs
             for(; i < object_info.v_tfs_file_info_.size(); ++i)
             {
               TfsFileInfo tfs_info(object_info.v_tfs_file_info_[i].cluster_id_,
-              object_info.v_tfs_file_info_[i].block_id_,
-              object_info.v_tfs_file_info_[i].file_id_,
-              object_info.v_tfs_file_info_[i].offset_,
-              object_info.v_tfs_file_info_[i].file_size_);
+                  object_info.v_tfs_file_info_[i].block_id_,
+                  object_info.v_tfs_file_info_[i].file_id_,
+                  object_info.v_tfs_file_info_[i].offset_,
+                  object_info.v_tfs_file_info_[i].file_size_);
               v_tfs_file_info.push_back(tfs_info);
             }
           }
@@ -838,6 +841,7 @@ namespace tfs
       }
       return ret;
     }
+
 
     TfsRetType KvMetaClientImpl::head_object(const char *bucket_name, const char *object_name, ObjectInfo *object_info, const UserInfo &user_info)
     {
@@ -861,7 +865,7 @@ namespace tfs
     }
 
     TfsRetType KvMetaClientImpl::set_life_cycle(const int32_t file_type, const char *file_name,
-                                                const int32_t invalid_time_s, const char *app_key)
+        const int32_t invalid_time_s, const char *app_key)
     {
       TfsRetType ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
@@ -886,7 +890,7 @@ namespace tfs
     }
 
     TfsRetType KvMetaClientImpl::get_life_cycle(const int32_t file_type, const char *file_name,
-                                                int32_t *invalid_time_s)
+        int32_t *invalid_time_s)
     {
       TfsRetType ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
@@ -1147,85 +1151,85 @@ namespace tfs
       }
 
       /*
-      int32_t len = -1;
+         int32_t len = -1;
       // len > 3 && len < 256
       if (is_valid)
       {
-        len = static_cast<int32_t>(strlen(bucket_name));
+      len = static_cast<int32_t>(strlen(bucket_name));
 
-        if (len < MIN_FILE_PATH_LEN || len > MAX_FILE_PATH_LEN)
-        {
-          is_valid = false;
-        }
+      if (len < MIN_FILE_PATH_LEN || len > MAX_FILE_PATH_LEN)
+      {
+      is_valid = false;
+      }
       }
 
       // start & end loweralpha or digit, other is loweralpha or digit or '.'
       // my..aws is not permit
       if (is_valid)
       {
-        //handle the string like my..aws
-        bool conjoin = false;
-        for (int32_t i = 0; i < len; i++)
-        {
-          if (i == 0 || i == len - 1)
-          {
-            if (!islower(bucket_name[i]) && !isdigit(bucket_name[i]))
-            {
-              is_valid = false;
-              break;
-            }
-          }
-          else
-          {
-            if (!islower(bucket_name[i]) && !isdigit(bucket_name[i])
-                && KvDefine::PERIOD != bucket_name[i] && KvDefine::DASH != bucket_name[i])
-            {
-              is_valid = false;
-              break;
-            }
-            else if (KvDefine::PERIOD == bucket_name[i])
-            {
-              if (conjoin)
-              {
-                is_valid = false;
-                break;
-              }
-              else
-              {
-                conjoin = true;
-              }
-            }
-            else
-            {
-              conjoin = false;
-            }
-          }
-        }
+      //handle the string like my..aws
+      bool conjoin = false;
+      for (int32_t i = 0; i < len; i++)
+      {
+      if (i == 0 || i == len - 1)
+      {
+      if (!islower(bucket_name[i]) && !isdigit(bucket_name[i]))
+      {
+      is_valid = false;
+      break;
+      }
+      }
+      else
+      {
+      if (!islower(bucket_name[i]) && !isdigit(bucket_name[i])
+      && KvDefine::PERIOD != bucket_name[i] && KvDefine::DASH != bucket_name[i])
+      {
+      is_valid = false;
+      break;
+      }
+      else if (KvDefine::PERIOD == bucket_name[i])
+      {
+      if (conjoin)
+      {
+      is_valid = false;
+      break;
+      }
+      else
+      {
+      conjoin = true;
+      }
+      }
+      else
+      {
+      conjoin = false;
+      }
+      }
+      }
       }
 
       // check the form 192.234.34.45
       if (is_valid)
       {
-        int32_t period_size = 0;
-        int32_t digit_size = 0;
-        for (int i = 0; i < len; i++)
-        {
-          if (isdigit(bucket_name[i]))
-          {
-            digit_size++;
-          }
-          else if (KvDefine::PERIOD == bucket_name[i])
-          {
-            period_size++;
-          }
-        }
-
-        if (MIN_FILE_PATH_LEN == period_size && period_size + digit_size == len)
-        {
-          is_valid = false;
-        }
+      int32_t period_size = 0;
+      int32_t digit_size = 0;
+      for (int i = 0; i < len; i++)
+      {
+      if (isdigit(bucket_name[i]))
+      {
+      digit_size++;
       }
-      */
+      else if (KvDefine::PERIOD == bucket_name[i])
+      {
+      period_size++;
+    }
+    }
+
+    if (MIN_FILE_PATH_LEN == period_size && period_size + digit_size == len)
+    {
+      is_valid = false;
+    }
+    }
+    */
 
       return is_valid;
     }
@@ -1244,4 +1248,3 @@ namespace tfs
 
   }
 }
-

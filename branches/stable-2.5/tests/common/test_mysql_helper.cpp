@@ -38,7 +38,7 @@ namespace tfs
         MysqlClusterTest(){}
         virtual ~MysqlClusterTest(){}
         virtual void SetUp(){
-          assert(database_pool_.init_pool(5, "10.232.137.34:8808:tfsmeta", "tfsmeta", "tfsmeta"));
+          assert(database_pool_.init_pool(5, "10.232.35.41:3306:tfsmeta", "root", "root"));
         }
         virtual void TearDown(){}
         DataBasePool database_pool_;
@@ -163,6 +163,7 @@ namespace tfs
 
       database_pool_.release(database_);
     }
+
     TEST_F(MysqlClusterTest, get_v)
     {
       MysqlDatabaseHelper* database_ = database_pool_.get();

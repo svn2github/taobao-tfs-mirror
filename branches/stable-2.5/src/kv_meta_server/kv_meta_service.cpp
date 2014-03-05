@@ -198,11 +198,20 @@ namespace tfs
           case REQ_KVMETA_PUT_OBJECT_MESSAGE:
             ret = put_object(dynamic_cast<ReqKvMetaPutObjectMessage*>(base_packet));
             break;
+          case REQ_KVMETA_PUT_OBJECT_METADATA_MESSAGE:
+            ret = put_object_user_metadata(dynamic_cast<ReqKvMetaPutObjectMetaDataMessage*>(base_packet));
+            break;
           case REQ_KVMETA_GET_OBJECT_MESSAGE:
             ret = get_object(dynamic_cast<ReqKvMetaGetObjectMessage*>(base_packet));
             break;
+          case REQ_KVMETA_GET_OBJECT_METADATA_MESSAGE:
+            ret = get_object_user_metadata(dynamic_cast<ReqKvMetaGetObjectMetaDataMessage*>(base_packet));
+            break;
           case REQ_KVMETA_DEL_OBJECT_MESSAGE:
             ret = del_object(dynamic_cast<ReqKvMetaDelObjectMessage*>(base_packet));
+            break;
+          case REQ_KVMETA_DEL_OBJECT_METADATA_MESSAGE:
+            ret = del_object_user_metadata(dynamic_cast<ReqKvMetaDelObjectMetaDataMessage*>(base_packet));
             break;
           case REQ_KVMETA_HEAD_OBJECT_MESSAGE:
             ret = head_object(dynamic_cast<ReqKvMetaHeadObjectMessage*>(base_packet));
@@ -276,6 +285,34 @@ namespace tfs
       return ret;
     }
 
+    int KvMetaService::put_object_user_metadata(ReqKvMetaPutObjectMetaDataMessage *req_put_object_metadata_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_put_object_metadata_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::put_object tag fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        const common::UserMetadata& user_metadata = req_put_object_metadata_msg->get_user_metadata();
+        ret = meta_info_helper_.put_object_metadata(req_put_object_metadata_msg->get_bucket_name(),
+            req_put_object_metadata_msg->get_object_name(), user_metadata);
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = req_put_object_metadata_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "put object tag fail");
+      }
+      else
+      {
+        ret = req_put_object_metadata_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "put_object tag ", 1);
+      }
+      return ret;
+    }
+
     int KvMetaService::get_object(ReqKvMetaGetObjectMessage* req_get_object_msg)
     {
       int ret = TFS_SUCCESS;
@@ -320,6 +357,51 @@ namespace tfs
       return ret;
     }
 
+    int KvMetaService::get_object_user_metadata(ReqKvMetaGetObjectMetaDataMessage* req_get_object_metadata_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_get_object_metadata_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::get_object_tag fail, ret: %d", ret);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        META_MAP_STRING object_tag_map;
+        const UserInfo& user_info = req_get_object_metadata_msg->get_user_info();
+        ret = meta_info_helper_.get_object_metadata(req_get_object_metadata_msg->get_bucket_name(),
+                                           req_get_object_metadata_msg->get_object_name(),
+                                           req_get_object_metadata_msg->get_user_metadata(),
+                                           object_tag_map);
+        TBSYS_LOG(DEBUG, "get object_tag, bucket_name: %s , object_name: %s ret: %d",
+                  req_get_object_metadata_msg->get_bucket_name().c_str(),
+                  req_get_object_metadata_msg->get_object_name().c_str(),
+                  ret);
+
+        if (TFS_SUCCESS == ret)
+        {
+          RspKvMetaGetObjectMetaDataMessage* rsp_get_object_metadata_msg = new(std::nothrow) RspKvMetaGetObjectMetaDataMessage();
+          assert(NULL != rsp_get_object_metadata_msg);
+          rsp_get_object_metadata_msg->set_bucket_name(req_get_object_metadata_msg->get_bucket_name());
+          rsp_get_object_metadata_msg->set_object_name(req_get_object_metadata_msg->get_object_name());
+          rsp_get_object_metadata_msg->set_user_info(user_info);
+
+          UserMetadata user_metadata;
+          user_metadata.set_meta_data(object_tag_map);
+          rsp_get_object_metadata_msg->set_user_metadata(user_metadata);
+
+          ret = req_get_object_metadata_msg->reply(rsp_get_object_metadata_msg);
+          stat_mgr_.update_entry(tfs_kv_meta_stat_, "get_object user metadata", 1);
+        }
+        else
+        {
+          ret = req_get_object_metadata_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),
+              ret, "get object user metadata fail");
+        }
+      }
+      return ret;
+    }
+
     int KvMetaService::del_object(ReqKvMetaDelObjectMessage* req_del_object_msg)
     {
       int ret = TFS_SUCCESS;
@@ -351,6 +433,34 @@ namespace tfs
       else
       {
         ret = req_del_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "del object fail");
+      }
+      return ret;
+    }
+
+    int KvMetaService::del_object_user_metadata(ReqKvMetaDelObjectMetaDataMessage* req_del_object_tag_msg)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == req_del_object_tag_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::del_object_user_metadata fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.del_object_metadata(req_del_object_tag_msg->get_bucket_name(),
+                                           req_del_object_tag_msg->get_object_name(), req_del_object_tag_msg->get_user_metadata());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = req_del_object_tag_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "del object tag fail");
+      }
+      else
+      {
+        ret = req_del_object_tag_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "del_object tag ", 1);
       }
       return ret;
     }

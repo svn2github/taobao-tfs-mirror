@@ -126,7 +126,7 @@ namespace tfs
         int64_t pread_object(const char *bucket_name, const char *object_name,
             void *buf, const int64_t offset, const int64_t length,
             common::ObjectMetaInfo *object_meta_info,
-            common::CustomizeInfo *customize_info,
+            common::UserMetadata *user_metadata,
             const common::UserInfo &user_info);
         TfsRetType get_object(const char *bucket_name, const char *object_name,
             const char* local_file, const common::UserInfo &user_info);

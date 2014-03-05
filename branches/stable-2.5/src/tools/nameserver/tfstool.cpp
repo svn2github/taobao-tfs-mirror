@@ -172,8 +172,12 @@ int cmd_del_bucket(const VSTRING& param);
 int cmd_head_bucket(const VSTRING& param);
 
 int cmd_put_object(const VSTRING& param);
+int cmd_put_object_tag(const VSTRING& param);
 int cmd_get_object(const VSTRING& param);
+int cmd_get_object_tag(const VSTRING& param);
 int cmd_del_object(const VSTRING& param);
+int cmd_del_object_tag(const VSTRING& param);
+int cmd_update_object_tag(const VSTRING& param);
 int cmd_head_object(const VSTRING& param);
 
 /* for lifecycle */
@@ -413,10 +417,14 @@ void init()
     g_cmd_map["get_bucket"] = CmdNode("get_bucket bucket_name [ prefix start_key delimiter limit app_key]", "get a bucket(list object)", 1, 6, cmd_get_bucket);
     g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name [app_key]", "delete a bucket", 1, 2, cmd_del_bucket);
     g_cmd_map["head_bucket"] = CmdNode("head_bucket bucket_name [app_key]", "stat a bucket", 1, 2, cmd_head_bucket);
+    //g_cmd_map["put_object_tag"] = CmdNode("put_object_tag bucket_name object_name k=v owner_id [app_key]", "put a object tag", 4, 5, cmd_put_object_tag);
 
     g_cmd_map["put_object"] = CmdNode("put_object bucket_name object_name local_file owner_id [app_key]", "put a object", 4, 5, cmd_put_object);
     g_cmd_map["get_object"] = CmdNode("get_object bucket_name object_name local_file [app_key]", "get a object", 3, 4, cmd_get_object);
+    //g_cmd_map["get_object_tag"] = CmdNode("get_object_tag bucket_name object_name keys [app_key]", "get a object", 2, 4, cmd_get_object_tag);
     g_cmd_map["del_object"] = CmdNode("del_object bucket_name object_name [app_key]", "delete a object", 2, 3, cmd_del_object);
+    //g_cmd_map["del_object_tag"] = CmdNode("del_object_tag bucket_name object_name keys [app_key]", "delete a object tag", 2, 4, cmd_del_object_tag);
+    //g_cmd_map["update_object_tag"] = CmdNode("update_object_tag bucket_name object_name k=v [app_key]", "update a object tag", 4, 5, cmd_update_object_tag);
     g_cmd_map["head_object"] = CmdNode("head_object bucket_name object_name [app_key]", "stat a object", 2, 3, cmd_head_object);
     g_cmd_map["set_life_cycle"] = CmdNode("set_life_cycle file_type file_name invalid_time_s app_key", "set a expire time for file", 4, 4, cmd_set_life_cycle);
     g_cmd_map["get_life_cycle"] = CmdNode("get_life_cycle file_type file_name", "get a expire time for a file", 2, 2, cmd_get_life_cycle);
@@ -2150,6 +2158,46 @@ int cmd_put_object(const VSTRING& param)
   return ret;
 }
 
+#if 0
+int cmd_put_object_tag(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  const char* object_name = param[1].c_str();
+  const char* kv = expand_path(const_cast<string&>(param[2]));
+  int64_t owner_id = strtoll(param[3].c_str(), NULL, 10);
+  char appkey[257];
+  int size = param.size();
+  if (size > 4)
+  {
+    strncpy(appkey, param[4].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
+
+  UserInfo user_info;
+  user_info.owner_id_ = owner_id;
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.put_object_tag(bucket_name, object_name, kv, user_info);
+    ToolUtil::print_info(ret, "put object: %s, object: %s => %s owner_id: %"PRI64_PREFIX"d",
+        bucket_name, object_name, kv, owner_id);
+  }
+  return ret;
+}
+#endif
+
 int cmd_get_object(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
@@ -2187,6 +2235,57 @@ int cmd_get_object(const VSTRING& param)
   return ret;
 }
 
+#if 0
+int cmd_get_object_tag(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  const char* object_name = param[1].c_str();
+  char *keys = NULL;
+  char appkey[257];
+  int size = param.size();
+  if (size > 2)
+  {
+    keys = const_cast<char*>(param[2].c_str());
+  }
+  if (size > 3)
+  {
+    strncpy(appkey, param[3].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
+
+  UserInfo user_info;
+  map<string, string> object_tag_map;
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.get_object_tag(bucket_name, object_name, keys, user_info, &object_tag_map);
+  }
+
+  ToolUtil::print_info(ret, "get object: %s, object: %s tag info :",bucket_name, object_name);
+
+  map<string, string>::const_iterator iter = object_tag_map.begin();
+  for (; iter != object_tag_map.end(); ++iter)
+  {
+    ToolUtil::print_info(ret, "%s : %s :",iter->first.c_str(), iter->second.c_str());
+  }
+
+  return ret;
+}
+#endif
+
+
 int cmd_del_object(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
@@ -2221,6 +2320,87 @@ int cmd_del_object(const VSTRING& param)
 
   return ret;
 }
+
+#if 0
+int cmd_del_object_tag(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  const char* object_name = param[1].c_str();
+  char *keys = NULL;
+  char appkey[257];
+  int size = param.size();
+  if (size > 2)
+  {
+    keys = const_cast<char*>(param[2].c_str());
+  }
+  if (size > 3)
+  {
+    strncpy(appkey, param[2].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
+
+  UserInfo user_info;
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.del_object_tag(bucket_name, object_name, keys, user_info);
+  }
+  ToolUtil::print_info(ret, "del bucket: %s, object: %s", bucket_name, object_name);
+
+  return ret;
+}
+
+int cmd_update_object_tag(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  const char* object_name = param[1].c_str();
+  const char* kv = param[2].c_str();
+  int64_t owner_id = strtoll(param[3].c_str(), NULL, 10);
+
+  char appkey[257];
+  int size = param.size();
+  if (size > 4)
+  {
+    strncpy(appkey, param[4].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
+
+  UserInfo user_info;
+  user_info.owner_id_ = owner_id;
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.update_object_tag(bucket_name, object_name, kv, user_info);
+  }
+  ToolUtil::print_info(ret, "update bucket: %s, object: %s", bucket_name, object_name);
+
+  return ret;
+}
+#endif
 
 int cmd_head_object(const VSTRING& param)
 {
