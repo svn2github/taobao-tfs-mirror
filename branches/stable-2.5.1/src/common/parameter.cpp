@@ -327,6 +327,18 @@ namespace tfs
       }
 
       max_mount_size_ = strtoull(tmp_max_size, NULL, 10);
+      // use system disk for index 0
+      if (index == "0")
+      {
+        const char* tmp_extra_size = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_EXTRA_MOUNT_MAX_USESIZE);
+        if (tmp_extra_size == NULL)
+        {
+          TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_EXTRA_MOUNT_MAX_USESIZE, CONF_SN_DATASERVER);
+          return EXIT_SYSTEM_PARAMETER_ERROR;
+        }
+        max_mount_size_ = strtoull(tmp_extra_size, NULL, 10);
+      }
+
       base_fs_type_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_BASE_FS_TYPE);
       super_block_reserve_offset_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_SUPERBLOCK_START, 0);
       avg_segment_size_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_AVG_SEGMENT_SIZE);
