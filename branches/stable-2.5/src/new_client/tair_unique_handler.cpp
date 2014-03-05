@@ -63,7 +63,8 @@ namespace tfs
         // md5
         get_md5(data_, data_len_, key_buf, pos);
         // size
-        Serialization::set_int32(key_buf, UNIQUE_KEY_LENGTH, pos, data_len_);
+        int32_t size = htonl(data_len_); // to network byte order, keep same with restful client
+        Serialization::set_int32(key_buf, UNIQUE_KEY_LENGTH, pos, size);
 
         entry_->set_alloced_data(key_buf, UNIQUE_KEY_LENGTH);
       }
