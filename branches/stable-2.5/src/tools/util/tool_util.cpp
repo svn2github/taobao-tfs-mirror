@@ -20,6 +20,7 @@
 #include "message/block_info_message_v2.h"
 #include "message/file_info_message.h"
 #include "message/read_data_message.h"
+#include "message/family_info_message.h"
 
 #include "tool_util.h"
 
@@ -115,6 +116,40 @@ namespace tfs
       return ret;
     }
 
+    // copy from DsLib::get_block_info
+    int ToolUtil::get_block_info(const uint64_t ds_id, const uint64_t block_id, BlockInfoV2& block_info)
+    {
+      GetBlockInfoMessageV2 req_gbi_msg;
+      req_gbi_msg.set_block_id(block_id);
+
+      NewClient* client = NewClientManager::get_instance().create_client();
+      tbnet::Packet* ret_msg = NULL;
+      int ret = send_msg_to_server(ds_id, client, &req_gbi_msg, ret_msg);
+      if (TFS_SUCCESS == ret)
+      {
+        if (UPDATE_BLOCK_INFO_MESSAGE_V2 == ret_msg->getPCode())
+        {
+          UpdateBlockInfoMessageV2 *req_ubi_msg = dynamic_cast<UpdateBlockInfoMessageV2*> (ret_msg);
+          block_info = req_ubi_msg->get_block_info();
+        }
+        else if (STATUS_MESSAGE == ret_msg->getPCode())
+        {
+          StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_msg);
+          ret = s_msg->get_status();
+          fprintf(stderr, "get block info from Data Server failure, %s\n", s_msg->get_error());
+        }
+        else
+        {
+          ret = EXIT_UNKNOWN_MSGTYPE;
+        }
+      }
+      else
+      {
+        fprintf(stderr, "send message to Data Server failure\n");
+      }
+      NewClientManager::get_instance().destroy_client(client);
+      return ret;
+    }
 
     int ToolUtil::read_file_infos_v2(const uint64_t ns_id, const uint64_t block_id, std::vector<FileInfoV2>& finofs)
     {
@@ -442,6 +477,58 @@ namespace tfs
           break;
         }
       }
+
+      return ret;
+    }
+
+    int ToolUtil::get_family_info(const int64_t family_id, const uint64_t ns_id,
+        std::vector<std::pair<uint64_t,uint64_t> >& family_members, int32_t& family_aid_info)
+    {
+      int ret = TFS_SUCCESS;
+      std::pair<uint64_t,uint64_t>* members = NULL;
+      family_members.clear();
+
+      // get family info
+      GetFamilyInfoMessage gfi_message;
+      gfi_message.set_family_id(family_id);
+      gfi_message.set_mode(T_READ);
+      tbnet::Packet* rsp = NULL;
+      NewClient* client = NewClientManager::get_instance().create_client();
+      ret = send_msg_to_server(ns_id, client, &gfi_message, rsp);
+      if (TFS_SUCCESS == ret)
+      {
+        if (rsp->getPCode() == RSP_GET_FAMILY_INFO_MESSAGE)
+        {
+          GetFamilyInfoResponseMessage* gfi_resp = dynamic_cast<GetFamilyInfoResponseMessage*>(rsp);
+          family_aid_info = gfi_resp->get_family_aid_info();
+          members = gfi_resp->get_members();
+          for (int i = 0; i < MAX_MARSHALLING_NUM; ++i)
+          {
+            if (members[i].first != INVALID_BLOCK_ID)
+            {
+              family_members.push_back(members[i]);
+            }
+          }
+        }
+        else if (rsp->getPCode() == STATUS_MESSAGE)
+        {
+          StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+          ret = sm->get_status();
+          TBSYS_LOG(WARN, "get family info fail, familyid: %"PRI64_PREFIX"d, error msg: %s, ret: %d",
+              family_id, sm->get_error(), ret);
+        }
+        else
+        {
+          ret = EXIT_UNKNOWN_MSGTYPE;
+          TBSYS_LOG(WARN, "get family info fail, familyid: %"PRI64_PREFIX"d, unknown msg, pcode: %d",
+              family_id, rsp->getPCode());
+        }
+      }
+      else
+      {
+        TBSYS_LOG(WARN, "send GetFamilyInfoMessage fail, familyid: %"PRI64_PREFIX"d, ret: %d", family_id, ret);
+      }
+      NewClientManager::get_instance().destroy_client(client);
 
       return ret;
     }

@@ -14,6 +14,7 @@
  *
  */
 #include "show_factory.h"
+#include "tools/util/tool_util.h"
 
 using namespace __gnu_cxx;
 using namespace tbsys;
@@ -25,6 +26,45 @@ namespace tfs
   namespace tools
   {
     static const int64_t FILE_COUNT_PRECISION_ADJUST = 1000000;
+
+    int get_all_blocks_from_ds(const VUINT64& ds_list, DS_BLOCKS_MAP& all_ds_blocks_map)
+    {
+      int ret = TFS_SUCCESS;
+      all_ds_blocks_map.clear();
+      for (uint32_t i = 0; i < ds_list.size(); ++i)
+      {
+        uint64_t ds_id = ds_list[i];
+        ListBlockMessage req_lb_msg;
+        req_lb_msg.set_block_type(LB_BLOCK);
+        NewClient* client = NewClientManager::get_instance().create_client();
+        tbnet::Packet* ret_msg = NULL;
+        ret = send_msg_to_server(ds_id, client, &req_lb_msg, ret_msg);
+        if (TFS_SUCCESS == ret )
+        {
+          if (RESP_LIST_BLOCK_MESSAGE == ret_msg->getPCode())
+          {
+            RespListBlockMessage* resp_lb_msg = dynamic_cast<RespListBlockMessage*>(ret_msg);
+            VUINT64* list_blocks = const_cast<VUINT64*> (resp_lb_msg->get_blocks());
+            std::pair<DS_BLOCKS_MAP_ITER, bool> res;
+            res = all_ds_blocks_map.insert(DS_BLOCKS_MAP::value_type(ds_id, std::set<uint64_t>()));
+            assert(res.second);
+            res.first->second.insert(list_blocks->begin(), list_blocks->end());
+          }
+          else
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+          }
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "list block from ds: %s error, send message ret: %d\n",
+              tbsys::CNetUtil::addrToString(ds_id).c_str(), ret);
+        }
+        NewClientManager::get_instance().destroy_client(client);
+      }
+
+      return TFS_SUCCESS;
+    }
 
     void compute_tp(Throughput* tp, int32_t time)
     {
@@ -57,6 +97,10 @@ namespace tfs
       if(print_type & FAMILY_TYPE)
       {
          fprintf(fp, "FAMILY_ID  DATA_CNT CHECK_CNT %10s MEMBERS( BLOCK_ID )\n", "");
+      }
+      if (print_type & CHECK_BLOCK_TYPE)
+      {
+        fprintf(fp, "BLOCK_ID  |  NS_MORE_COPY\n");
       }
       if (print_type & SERVER_TYPE)
       {
@@ -258,7 +302,7 @@ namespace tfs
 
 //**********************************************************************
 //**************************Block Info**********************************
-    void BlockShow::dump(int8_t type, FILE* fp) const
+    void BlockInfoShow::dump(int8_t type, FILE* fp) const
     {
       if (fp == NULL) { return; }
       if (type & BLOCK_TYPE_BLOCK_INFO)
@@ -282,6 +326,69 @@ namespace tfs
     }
 
 //**********************************************************************
+//**************************Check Block Info**********************************
+    bool BlockCheckShow::check_consistency(DS_BLOCKS_MAP& all_ds_blocks_map)
+    {
+      bool is_consistent = true;
+      std::vector<ServerInfo>::iterator iter = server_list_.begin();
+      for (; iter != server_list_.end(); ++iter)
+      {
+        uint64_t server_id = iter->server_id_;
+        std::set<uint64_t>& real_hold = all_ds_blocks_map[server_id];
+        if (real_hold.find(info_.block_id_) == real_hold.end())
+        {
+          is_consistent = false;
+          break;
+        }
+      }
+      return is_consistent;
+    }
+
+    int BlockCheckShow::check_block_finally(const uint64_t ns_ip,  bool& is_consistent)
+    {
+      int ret = TFS_SUCCESS;
+      is_consistent = true;
+      VUINT64 ds_list;
+      ret = ToolUtil::get_block_ds_list_v2(ns_ip, info_.block_id_, ds_list);
+      if (TFS_SUCCESS == ret)
+      {
+        BlockInfoV2 block_info;
+        for (uint32_t i = 0; i < ds_list.size(); ++i)
+        {
+          ret = ToolUtil::get_block_info(ds_list[i], info_.block_id_, block_info);
+          if (EXIT_NO_LOGICBLOCK_ERROR == ret)
+          {
+            is_consistent = false;
+            ns_more_.push_back(ds_list[i]);
+            ret = TFS_SUCCESS;
+          }
+          else if (TFS_SUCCESS != ret)
+          {
+            fprintf(stderr, "get block info fail from ds, ret: %d\n", ret);
+            break;
+          }
+        }
+      }
+      else
+      {
+        fprintf(stderr, "get block: %"PRI64_PREFIX"u ds_list from ns fail, ret: %d\n",
+            info_.block_id_, ret);
+      }
+      return ret;
+    }
+
+    void BlockCheckShow::dump(FILE* fp) const
+    {
+      if (fp == NULL) { return; }
+      fprintf(fp, "%"PRI64_PREFIX"u", info_.block_id_);
+      string out = "";
+      for (uint32_t i = 0; i < ns_more_.size(); ++i)
+      {
+        out += "  " + tbsys::CNetUtil::addrToString(ns_more_[i]);
+      }
+      fprintf(fp, "%s\n", out.c_str());
+    }
+//**********************************************************************
 //**************************Block Unnormal Distribution Info**********************************
 
     BlockDistributionShow::~BlockDistributionShow()
@@ -297,33 +404,8 @@ namespace tfs
       }
     }
 
-    bool BlockDistributionShow::check_block_ip_distribution()
-    {
-      int8_t server_size = server_list_.size();
-      std::vector<uint64_t> *ipport_list = NULL;
-      for(int8_t index = 0; index < server_size; index++)
-      {
-        uint64_t server = server_list_[index].server_id_;
-        assert(INVALID_SERVER_ID != server);
-        IpAddr* adr = (IpAddr *) (&server);
-        uint32_t ip = adr->ip_;
-        std::map<uint32_t, std::vector<uint64_t>* >::const_iterator it = ip_servers_.find(ip);
-        if(it == ip_servers_.end())
-        {
-           ipport_list = new std::vector<uint64_t>();
-           ipport_list->push_back(server);
-           ip_servers_.insert(std::make_pair(ip, ipport_list));
-        }
-        else
-        {
-           it->second->push_back(server);
-           has_same_ip_ = true;
-        }
-      }
-      return has_same_ip_;
-    }
-
-    bool BlockDistributionShow::check_block_rack_distribution(string& rack_ip_mask)
+    //uint32_t ip_mask
+    bool BlockDistributionShow::check_block_rack_distribution(const uint32_t ip_mask)
     {
       int8_t server_size = server_list_.size();
       std::vector<uint64_t>* ipport_list = NULL;
@@ -331,7 +413,6 @@ namespace tfs
       {
         uint64_t server = server_list_[index].server_id_;
         assert(INVALID_SERVER_ID != server);
-        uint32_t ip_mask = Func::get_addr(rack_ip_mask.c_str());
         uint32_t rack_ip = Func::get_lan(server, ip_mask);
         std::map<uint32_t, std::vector<uint64_t>* >::const_iterator it = ip_rack_servers_.find(rack_ip);
         if(it == ip_rack_servers_.end())
@@ -347,29 +428,6 @@ namespace tfs
         }
       }
       return has_same_ip_rack_;
-    }
-
-    void BlockDistributionShow::dump_ip(FILE* fp) const
-    {
-      if (fp == NULL) { return; }
-      //fprintf(fp, " %-10"PRI64_PREFIX"u    %Zd     ", info_.block_id_, ip_servers_.size());
-      std::string server_str = "";
-      std::map<uint32_t, std::vector<uint64_t>* >::const_iterator iter = ip_servers_.begin();
-      int32_t count = 0;
-      for (; iter != ip_servers_.end(); iter++)
-      {
-        std::vector<uint64_t>::const_iterator iter_ipport = iter->second->begin();
-        if(iter->second->size() > 1)
-        {
-          for(; iter_ipport != iter->second->end(); iter_ipport++)
-          {
-            server_str += ( "    " + static_cast<std::string> (tbsys::CNetUtil::addrToString(*iter_ipport).c_str()) );
-          }
-          count++;
-        }
-      }
-      fprintf(fp, " %-10"PRI64_PREFIX"u   %d(%Zd)     ", info_.block_id_, count, ip_servers_.size());
-      fprintf(fp, " %s\n", server_str.c_str());
     }
 
     void BlockDistributionShow::dump_rack(FILE* fp) const
@@ -407,14 +465,13 @@ namespace tfs
       }
     }
 
-    void RackBlockShow::add(BlockShow &block, string& rack_ip_mask)
+    void RackBlockShow::add(BlockInfoShow &block, const uint32_t ip_mask)
     {
       int8_t server_size = block.server_list_.size();
       for(int index = 0; index < server_size; index++)
       {
         uint64_t server = block.server_list_[index].server_id_;
         assert(INVALID_SERVER_ID != server);
-        uint32_t ip_mask = Func::get_addr(rack_ip_mask.c_str());
         uint32_t server_ip_group =  Func::get_lan(server, ip_mask);//在前面解析命令时就过滤输入不正确的ip格式
         std::map<uint32_t, std::vector<uint64_t> *>::iterator iter =  rack_blocks_.find(server_ip_group);
         if(iter == rack_blocks_.end())
@@ -431,7 +488,7 @@ namespace tfs
       total_block_replicate_count_ += server_size;
     }
 
-    void RackBlockShow::dump(const int8_t type, string& rack_ip_group, FILE* fp) const
+    void RackBlockShow::dump(const int8_t type, const uint32_t ip_group, FILE* fp) const
     {
       if (fp == NULL) { return; }
       std::map<uint32_t, std::vector<uint64_t>*>::const_iterator iter = rack_blocks_.begin();
@@ -446,8 +503,7 @@ namespace tfs
       }
       else
       {
-        assert(!rack_ip_group.empty());
-        uint32_t ip_group = Func::get_addr(rack_ip_group.c_str());//必须是ip_group的string 否则找不到对应的block list
+        //必须是ip_group的string 否则找不到对应的block list
         std::string server_str = "";
         uint64_t block_count = 0;
         for(; iter != rack_blocks_.end(); iter++)
@@ -472,13 +528,15 @@ namespace tfs
         {
           fprintf(fp, "%s\n", server_str.c_str());
         }
-        fprintf(fp, "the total block replicates count is %"PRI64_PREFIX"u in rack %s\n", block_count, rack_ip_group.c_str());//直接原样输出用户输入的ip_group
+        fprintf(fp, "the total block replicates count is %"PRI64_PREFIX"u in rack %s\n",
+            block_count, tbsys::CNetUtil::addrToString(ip_group).c_str());//直接原样输出用户输入的ip_group
       }
       fprintf(fp, "\n");
     }
 
 
-    BlockDistributionStruct::BlockDistributionStruct() : total_block_count_(0), ip_same_block_count_(0), ip_rack_same_block_count_(0)
+    BlockDistributionStruct::BlockDistributionStruct()
+        : total_block_count_(0), ip_same_block_count_(0), ip_rack_same_block_count_(0)
     {}
 
     BlockDistributionStruct::~BlockDistributionStruct()
@@ -503,17 +561,14 @@ namespace tfs
 
       if (type & BLOCK_IP_DISTRIBUTION_TYPE)
       {
-        fprintf(fp, "unnormal blocks count: %d\n", ip_same_block_count_);
-        //fprintf(fp, "The count of unnormal blocks is %d, their replicates in same machine ip dataserver.\n", ip_same_block_count_);
+        fprintf(fp, "Unnormal blocks count: %d\n", ip_same_block_count_);
       }
 
       if (type & BLOCK_RACK_DISTRIBUTION_TYPE)
       {
-        fprintf(fp, "unmormal blocks count: %d\n", ip_rack_same_block_count_);
-        //fprintf(fp, "The count of unmormal blocks is %d, their replicates in same machine rack dataserver.\n", ip_rack_same_block_count_);
+        fprintf(fp, "Unmormal blocks count: %d\n", ip_rack_same_block_count_);
       }
       fprintf(fp, "\n");
-      //fprintf(fp, "The count of ip or rack unnormal total blocks is %d in cluster.\n", total_block_count_);
     }
 
     //**********************************************************************
@@ -723,7 +778,7 @@ namespace tfs
       add_tp(&last_tp_, &machine.last_tp_, &last_tp_, ADD_OP);
       return TFS_SUCCESS;
     }
-    int StatStruct::add(BlockShow& block)
+    int StatStruct::add(BlockInfoShow& block)
     {
       block_count_++;
       file_count_ += block.info_.file_count_;

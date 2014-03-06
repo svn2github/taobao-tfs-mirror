@@ -18,12 +18,18 @@
 
 #include <stdio.h>
 #include <vector>
+#include <map>
+#include <set>
 #include "common.h"
 
 namespace tfs
 {
   namespace tools
   {
+    typedef std::map<uint64_t, std::set<uint64_t> > DS_BLOCKS_MAP;
+    typedef std::map<uint64_t, std::set<uint64_t> >::iterator DS_BLOCKS_MAP_ITER;
+
+    int get_all_blocks_from_ds(const common::VUINT64& ds_list, DS_BLOCKS_MAP& all_ds_blocks_map);
     void compute_tp(common::Throughput* tp, const int32_t time);
     void add_tp(const common::Throughput* atp, const common::Throughput* btp, common::Throughput*, const int32_t sign);
     void print_header(const int8_t print_type, const int8_t type, FILE* fp);
@@ -41,12 +47,24 @@ namespace tfs
         void dump(const uint64_t server_id, const std::set<uint64_t>& blocks, FILE* fp) const;
     };
 
-    class BlockShow : public BlockBase
+    class BlockInfoShow : public BlockBase
     {
       public:
-        BlockShow(){}
-        virtual ~BlockShow(){}
+        BlockInfoShow(){}
+        virtual ~BlockInfoShow(){}
         void dump(const int8_t flag, FILE* fp) const;
+    };
+
+    class BlockCheckShow : public BlockBase
+    {
+      public:
+        BlockCheckShow(){}
+        virtual ~BlockCheckShow(){}
+        bool check_consistency(DS_BLOCKS_MAP& all_ds_map);
+        int check_block_finally(const uint64_t ns_ip,  bool& is_inconsistent);
+        void dump(FILE* fp) const;
+        std::vector<uint64_t> ns_more_;
+        //std::vector<uint64_t> ds_more_;
     };
 
     class BlockDistributionShow : public BlockBase
@@ -55,8 +73,7 @@ namespace tfs
         BlockDistributionShow() : has_same_ip_(false), has_same_ip_rack_(false){}
         virtual ~BlockDistributionShow();
         bool check_block_ip_distribution();
-        bool check_block_rack_distribution(std::string& rack_ip_mask);
-        void dump_ip(FILE* fp) const;
+        bool check_block_rack_distribution(const uint32_t ip_mask);
         void dump_rack(FILE* fp) const;
 
         bool has_same_ip_;
@@ -70,8 +87,8 @@ namespace tfs
       public:
         RackBlockShow() : total_block_replicate_count_(0){}
         virtual ~RackBlockShow();
-        void add(BlockShow& block, std::string& rack_ip_mask);
-        void dump(const int8_t flag, std::string& server_ip_port,  FILE* fp) const;
+        void add(BlockInfoShow& block, const uint32_t ip_mask);
+        void dump(const int8_t flag, const uint32_t ip_group,  FILE* fp) const;
       private:
         std::map<uint32_t, std::vector<uint64_t> *> rack_blocks_;
         int64_t total_block_replicate_count_;
@@ -140,7 +157,7 @@ namespace tfs
 
         int add(ServerShow& server);
         int add(MachineShow& machine);
-        int add(BlockShow& block);
+        int add(BlockInfoShow& block);
         void dump(const int8_t flag, const int8_t sub_flag, FILE* fp) const;
     };
 

@@ -39,7 +39,8 @@ namespace tfs
       MACHINE_TYPE = 4,
       BLOCK_DISTRIBUTION_TYPE = 8,
       RACK_BLOCK_TYPE = 16,
-      FAMILY_TYPE = 32
+      FAMILY_TYPE = 32,
+      CHECK_BLOCK_TYPE = 64,
     };
 
     enum ComCmd
