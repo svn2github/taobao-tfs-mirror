@@ -452,12 +452,12 @@ int switch_cmd(const int cmd, VSTRING & param)
       ret = DsLib::verify_file_data(ds_task);
       if (TFS_SUCCESS == ret)
       {
-        printf ("verify file success. blockid: %"PRI64_PREFIX"u, %"PRI64_PREFIX"u\n",
+        printf ("verify file success. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u\n",
             block_id, file_id);
       }
       else
       {
-        printf ("verify file fail. blockid: %"PRI64_PREFIX"u, %"PRI64_PREFIX"u\n",
+        printf ("verify file fail. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u\n",
             block_id, file_id);
       }
 

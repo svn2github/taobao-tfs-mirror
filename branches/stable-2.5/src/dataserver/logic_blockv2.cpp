@@ -397,7 +397,7 @@ namespace tfs
           {
             if (FORCE_STAT & flag)
             {
-              ret = (0 != info.status_ & FILE_STATUS_INVALID) ? EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
+              ret = (0 != (info.status_ & FILE_STATUS_INVALID)) ? EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
             }
             else
             {

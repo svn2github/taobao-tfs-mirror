@@ -459,7 +459,7 @@ namespace tfs
       rd_message.set_file_id(file_id);
       rd_message.set_length(read_len);
       rd_message.set_offset(offset);
-      rd_message.set_flag(READ_DATA_OPTION_WITH_FINFO);
+      rd_message.set_flag(READ_DATA_OPTION_WITH_FINFO |  READ_DATA_OPTION_FLAG_FORCE);
 
       int ret = TFS_SUCCESS;
       do
@@ -478,6 +478,15 @@ namespace tfs
             file_info = resp_rd_msg->get_file_info();
             data = resp_rd_msg->get_data();
           }
+          else if (ret_msg->getPCode() == STATUS_MESSAGE)
+          {
+            StatusMessage* smsg = dynamic_cast<StatusMessage*>(ret_msg);
+            ret = smsg->get_status();
+          }
+          else
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+          }
         }
 
         if (TFS_SUCCESS == ret)
@@ -495,12 +504,12 @@ namespace tfs
         }
 
         NewClientManager::get_instance().destroy_client(client);
-      } while ((TFS_SUCCESS == ret) && (offset < file_info.size_ - FILEINFO_EXT_SIZE));
+      } while ((TFS_SUCCESS == ret) && (offset < file_info.size_));
 
       ret = (crc == file_info.crc_) ? TFS_SUCCESS : EXIT_CHECK_CRC_ERROR;
       if (TFS_SUCCESS != ret)
       {
-        printf("fileinfo crc: %u, filedata crc: %u\n", file_info.crc_, crc);
+        printf("fileinfo crc: %u, filedata crc: %u, ret: %d\n", file_info.crc_, crc, ret);
       }
 
       return ret;
