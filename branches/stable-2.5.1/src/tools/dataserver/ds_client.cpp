@@ -449,29 +449,34 @@ int switch_cmd(const int cmd, VSTRING & param)
     }
   case CMD_VERIFY_FILE_DATA:
     {
-      if (param.size() != 2)
+      if (param.size() < 2 || param.size() > 3)
       {
-        printf("Usage:read_file_data blockid fileid\n");
+        printf("Usage:read_file_data blockid fileid [attach_block_id]\n");
         printf("check if tfs data crc match.\n");
         break;
       }
       uint64_t block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t attach_block_id = block_id;
+      if (param.size() == 3)
+      {
+        attach_block_id = strtoull(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
+      }
 
       ds_task.block_id_ = block_id;
-      ds_task.attach_block_id_ = block_id;
+      ds_task.attach_block_id_ = attach_block_id;
       ds_task.new_file_id_ = file_id;
 
       ret = DsLib::verify_file_data(ds_task);
       if (TFS_SUCCESS == ret)
       {
         printf ("verify file success. blockid: %"PRI64_PREFIX"u, %"PRI64_PREFIX"u\n",
-            block_id, file_id);
+            attach_block_id, file_id);
       }
       else
       {
         printf ("verify file fail. blockid: %"PRI64_PREFIX"u, %"PRI64_PREFIX"u\n",
-            block_id, file_id);
+            attach_block_id, file_id);
       }
 
       break;
@@ -547,25 +552,27 @@ int switch_cmd(const int cmd, VSTRING & param)
     }
   case CMD_READ_FILE_INFO:
     {
-      if (param.size() < 2 || param.size() > 3)
+      if (param.size() < 3 || param.size() > 4)
       {
-        printf("Usage:read_file_info block_id file_id [ds_mode]\n");
+        printf("Usage:read_file_info block_id attach_block_id file_id [ds_mode]\n");
         printf("      ds_mode  0|1,  0          => exclude deleted file\n\
                                      1(default) => include deleted file\n");
         printf("get the file information.\n");
         break;
       }
       uint64_t ds_block_id = strtoull(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_attach_block_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
+      uint64_t ds_file_id = strtoull(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
       int32_t ds_mode = 1;
-      if (3 == param.size())
+      if (4 == param.size())
       {
-        ds_mode = atoi(const_cast<char*> (param[2].c_str()));
+        ds_mode = atoi(const_cast<char*> (param[3].c_str()));
       }
       ds_task.block_id_ = ds_block_id;
+      ds_task.attach_block_id_ = ds_attach_block_id;
       ds_task.new_file_id_ = ds_file_id;
       ds_task.mode_ = ds_mode;
-      ret = DsLib::read_file_info(ds_task);
+      ret = DsLib::read_file_info_v2(ds_task);
       break;
     }
   case CMD_SEND_CRC_ERROR:
@@ -714,16 +721,13 @@ int show_help(VSTRING &)
     "list_blocks_throughput                                                      list all blocks' visit count in ds order by count desc\n"
     "list_file  block_id                                                         list all the files in a block.\n"
     "read_file_data  blockid attach_blockid fileid local_file_name               download a tfs file to local.\n"
-    "verify_file_data  tfs_file_name                                             check tfs file data crc.\n"
+ "verify_file_data  block_id file_id [attach_block_id]                           check tfs file data crc.\n"
     "write_file_data block_id file_id local_file_name                            upload a local file to tfs\n"
     "unlink_file  block_id file_id [unlink_type]                                 delete a file.\n"
     "read_file_info  block_id file_id [ds_mode]                                  get the file information.\n"
     "list_bitmap  type                                                           list the bitmap of the server\n"
     "create_file_id block_id file_id                                             create a new file_id\n"
     "remove_block block_id                                                       remove a block\n"
-    "reset_block_version block_id                                                 reset block version to 1, will not affect files in the block\n"
-    "rename_file block_id old_file_id new_file_id                                rename old file_id to a new file_id\n"
-    "send_crc_error  block_id file_id crc [error_flag] [ds_addr1 ds_addr2 ...]   label file crc error or block eio error, will repair file or block\n"
     "quit                                                                        quit console.\n"
     "help                                                                        show help.\n\n");
   return TFS_SUCCESS;

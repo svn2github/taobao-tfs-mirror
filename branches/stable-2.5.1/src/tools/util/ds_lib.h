@@ -72,6 +72,7 @@ namespace tfs
       static int unlink_file_v2(common::DsTask& ds_task, uint64_t& lease_id, bool prepare);
       static int rename_file(common::DsTask& ds_task);
       static int read_file_info(common::DsTask& ds_task);
+      static int read_file_info_v2(common::DsTask& ds_task);
       static int list_bitmap(common::DsTask& ds_task);
       static int send_crc_error(common::DsTask& ds_task);
       static int get_blocks_index_header(common::DsTask& ds_task, std::vector<common::IndexHeaderV2>& blocks_header);
