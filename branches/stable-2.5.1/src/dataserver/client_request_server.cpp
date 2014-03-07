@@ -953,7 +953,7 @@ namespace tfs
         }
       }
 
-      TBSYS_LOG_DW(ret, "read raw data fail. blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG_DW(ret, "read raw data. blockid: %"PRI64_PREFIX"u, "
           "length: %d, offset: %d, ret: %d", block_id, length, offset, ret);
 
       return ret;
@@ -990,7 +990,7 @@ namespace tfs
         }
       }
 
-      TBSYS_LOG_DW(ret, "write raw data fail. blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG_DW(ret, "write raw data. blockid: %"PRI64_PREFIX"u, "
           "length: %d, offset: %d, tmp: %d, ret: %d", block_id, length, offset, tmp, ret);
 
       return ret;
@@ -1088,7 +1088,7 @@ namespace tfs
       {
         tbsys::gDelete(resp_msg);
       }
-      TBSYS_LOG_DW(ret, "get all blocks header fail, ret: %d", ret);
+      TBSYS_LOG_DW(ret, "get all blocks header, ret: %d", ret);
       return ret;
     }
 
@@ -1150,7 +1150,7 @@ namespace tfs
         }
       }
 
-      TBSYS_LOG_DW(ret, "query ec meta fail. blockid: %"PRI64_PREFIX"u, ret: %d",
+      TBSYS_LOG_DW(ret, "query ec meta. blockid: %"PRI64_PREFIX"u, ret: %d",
           block_id, ret);
 
       return ret;

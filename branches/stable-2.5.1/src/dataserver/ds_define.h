@@ -160,6 +160,7 @@ namespace tfs
             const char* function, const char* format, ...);
       common::DataServerStatInfo information_;
       uint64_t ns_vip_port_;
+      uint64_t master_ns_ip_port_;
       int32_t max_mr_network_bandwidth_mb_;
       int32_t max_rw_network_bandwidth_mb_;
       int32_t max_block_size_;

@@ -56,7 +56,7 @@ namespace tfs
 
     void WritableBlockManager::expire_update_blocks()
     {
-      RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
+      RWLock::Lock lock(rwmutex_, READ_LOCKER);
       BLOCK_TABLE::iterator iter = writable_.begin();
       for ( ; iter != writable_.end(); iter++)
       {
@@ -71,7 +71,7 @@ namespace tfs
 
     void WritableBlockManager::expire_all_blocks()
     {
-      RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
+      RWLock::Lock lock(rwmutex_, READ_LOCKER);
       BLOCK_TABLE::iterator iter = writable_.begin();
       for ( ; iter != writable_.end(); iter++)
       {
@@ -210,7 +210,7 @@ namespace tfs
 
     int WritableBlockManager::alloc_writable_block(WritableBlock*& block)
     {
-      rwmutex_.rdlock();
+      rwmutex_.wrlock();
       int retry = 0;
       int count = writable_.size();
       VUINT64 expires;
@@ -282,8 +282,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        rwmutex_.rdlock();
-        target = get_(block_id);
+        target = get(block_id);
         ret = NULL == target ? EXIT_NO_WRITABLE_BLOCK : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
@@ -293,7 +292,6 @@ namespace tfs
             ret = target->get_type() == BLOCK_EXPIRED ? EXIT_NO_WRITABLE_BLOCK: TFS_SUCCESS;
           }
         }
-        rwmutex_.unlock();
       }
 
       // apply from ns
@@ -407,7 +405,10 @@ namespace tfs
       get_blocks(blocks, BLOCK_EXPIRED);
       req_msg.set_size(blocks.get_array_index());
 
-      ret = post_msg_to_server(ds_info.ns_vip_port_, &req_msg, ds_async_callback);
+      if (blocks.get_array_index() > 0)
+      {
+        ret = post_msg_to_server(ds_info.ns_vip_port_, &req_msg, ds_async_callback);
+      }
       return ret;
     }
 
@@ -420,7 +421,7 @@ namespace tfs
       for ( ; iter != writable_.end() &&
           blocks.get_array_index() < blocks.get_array_size(); iter++)
       {
-        if (type == (*iter)->get_type())
+        if (BLOCK_ANY == type || (*iter)->get_type() == type)
         {
           uint64_t block_id = (*iter)->get_block_id();
           BlockInfoV2 block_info;
@@ -469,6 +470,16 @@ namespace tfs
           {
             apply_block_callback(dynamic_cast<DsApplyBlockResponseMessage* >(packet));
           }
+          else if (STATUS_MESSAGE == packet->getPCode())
+          {
+            StatusMessage* smsg = dynamic_cast<StatusMessage*>(packet);
+            ret = smsg->get_status();
+          }
+          else
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+          }
+          TBSYS_LOG(DEBUG, "apply block callback, ret: %d", ret);
         }
         else if (DS_GIVEUP_BLOCK_MESSAGE == pcode && sresponse->size() > 0)
         {
@@ -478,6 +489,16 @@ namespace tfs
           {
             giveup_block_callback(dynamic_cast<DsGiveupBlockResponseMessage* >(packet));
           }
+          else if (STATUS_MESSAGE == packet->getPCode())
+          {
+            StatusMessage* smsg = dynamic_cast<StatusMessage*>(packet);
+            ret = smsg->get_status();
+          }
+          else
+          {
+            ret = EXIT_UNKNOWN_MSGTYPE;
+          }
+          TBSYS_LOG(DEBUG, "giveup block callback, ret: %d", ret);
         }
       }
 

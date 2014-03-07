@@ -29,6 +29,7 @@ namespace tfs
   {
     enum BlockType
     {
+      BLOCK_ANY = 0,
       BLOCK_WRITABLE,
       BLOCK_UPDATE,
       BLOCK_EXPIRED

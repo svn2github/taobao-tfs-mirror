@@ -62,9 +62,6 @@ namespace tfs
         void free_writable_block(const uint64_t block_id);
         void expire_block(const uint64_t block_id);
 
-        // cleanup expired leases
-        int timeout(const time_t now);
-
         // lease thread
         void run_lease(const int32_t who);
 
@@ -101,11 +98,13 @@ namespace tfs
 
         bool is_master(const int32_t who) const
         {
-          return lease_meta_[who].ns_role_ == common::NS_ROLE_MASTER;
+          DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+          return ns_ip_port_[who] == ds_info.master_ns_ip_port_;
         }
 
       private:
         void update_stat(const int32_t who);
+        bool update_global_config(const int32_t who, const common::LeaseMeta& lease_meta);
         void process_apply_response(message::DsApplyLeaseResponseMessage* response, const int32_t who);
         void process_renew_response(message::DsRenewLeaseResponseMessage* response, const int32_t who);
 

@@ -55,7 +55,7 @@ namespace tfs
       int add(bool& writable, bool& master, const uint64_t server, const time_t now);
       int remove(const uint64_t server, const time_t now);
       bool exist(const uint64_t server) const;
-      inline bool is_master(const uint64_t server) const { return (NULL != servers_ && common::INVALID_SERVER_ID != server && server_size_ > 0) ? server == servers_[0] : false;}
+      inline bool is_master(const uint64_t server) const { return (NULL != servers_ && common::INVALID_SERVER_ID != server && server_size_ > 0) ? is_in_family() ? exist(server) : server == servers_[0] : false;}
       inline bool is_writable() const { return ((!is_full()) && check_copies_complete() && is_equal_group(id()) && !has_version_conflict());}
       inline bool is_creating() const { return BLOCK_CREATE_FLAG_YES == create_flag_;}
       inline bool in_replicate_queue() const { return BLOCK_IN_REPLICATE_QUEUE_YES == in_replicate_queue_;}

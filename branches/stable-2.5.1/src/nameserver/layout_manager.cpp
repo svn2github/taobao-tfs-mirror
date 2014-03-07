@@ -1706,7 +1706,7 @@ namespace tfs
         ret = get_block_manager().need_replicate(block, now);
         if ((ret) && (ret = get_block_manager().push_to_emergency_replicate_queue(block)))
           --need;
-        ret = (!ret && plan_run_flag_ && PLAN_RUN_FLAG_RESLOVE_VERSION_CONFLICT
+        ret = (!ret && (plan_run_flag_ & PLAN_RUN_FLAG_RESLOVE_VERSION_CONFLICT)
             && get_block_manager().check_version_conflict(block, now));
         if ((ret) && (ret = build_resolve_block_conflict_(block, now)))
           --need;

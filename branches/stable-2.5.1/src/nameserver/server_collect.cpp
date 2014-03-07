@@ -205,7 +205,8 @@ namespace tfs
             scan_writable_block_id_ = *helper.at(index);
             assert(INVALID_BLOCK_ID != scan_writable_block_id_);
             block = manager.get_block_manager().get(scan_writable_block_id_);
-            assert(NULL != block);
+            if (NULL == block)  // dissove maybe happened here
+              continue;
             if (cleanup_invalid_block_(block, now))
               continue;
             RWLock::Lock lock(mutex_, READ_LOCKER);
@@ -316,6 +317,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
             ret = pblock->check_copies_complete() && is_equal_group(entry->block_id_) && pblock->is_master(id()) ? TFS_SUCCESS : EXIT_CANNOT_APPLY_LEASE;
+            TBSYS_LOG(DEBUG, "server %s apply block %"PRI64_PREFIX"u for update. copyies_complete: %d, equal_group: %d, is_master: %d, no_conflict: %d,", CNetUtil::addrToString(id()).c_str(), entry->block_id_, pblock->check_copies_complete(), is_equal_group(entry->block_id_), pblock->is_master(id()), !pblock->has_version_conflict());
         }
         if (TFS_SUCCESS == ret)
         {
@@ -476,12 +478,6 @@ namespace tfs
         {
           uint64_t server = pblock->get_server(0);
           ret = (id() == server) ? TFS_SUCCESS : EXIT_CANNOT_GIVEUP_LEASE;
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(WARN, "%s cannot giveup lease, %s has lease, real %s ,block: %"PRI64_PREFIX"u",
-                CNetUtil::addrToString(id()).c_str(), CNetUtil::addrToString(id()).c_str(),
-                CNetUtil::addrToString(server).c_str(), entry->block_id_);
-          }
         }
         if (TFS_SUCCESS == ret)
         {
@@ -505,12 +501,6 @@ namespace tfs
       {
         uint64_t server = pblock->get_server(0);
         ret = (id() == server) ? TFS_SUCCESS : EXIT_CANNOT_GIVEUP_LEASE;
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(WARN, "%s cannot giveup lease, %s has lease, real %s ,block: %"PRI64_PREFIX"u",
-              CNetUtil::addrToString(id()).c_str(), CNetUtil::addrToString(id()).c_str(),
-              CNetUtil::addrToString(server).c_str(), block);
-        }
       }
       if (TFS_SUCCESS == ret)
       {

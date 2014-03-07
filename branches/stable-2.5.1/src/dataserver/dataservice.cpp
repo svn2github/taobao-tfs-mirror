@@ -559,7 +559,6 @@ namespace tfs
           block_manager_->timeout(Func::get_monotonic_time());
 
         task_manager_.expire_task();
-        lease_manager_->timeout(Func::get_monotonic_time());
 
         usleep(MAX_SLEEP_TIME_US);
       }
