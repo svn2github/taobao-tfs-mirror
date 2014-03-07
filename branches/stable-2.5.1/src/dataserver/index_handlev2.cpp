@@ -321,7 +321,6 @@ namespace tfs
         {
           time_t now = time(NULL);
           header->info_.last_access_time_ = now;
-          header->throughput_.last_statistics_time_ = time(NULL);
           int32_t file_count = rollback ? -1 : 1;
           int32_t real_new_size = rollback ? 0 - new_size : new_size;
           int32_t real_old_size = rollback ? 0 - old_size : old_size;
@@ -954,59 +953,6 @@ namespace tfs
         iter += header->file_info_bucket_size_;
       }
       return iter;
-    }
-
-    int BaseIndexHandle::inc_write_visit_count(const int32_t step, const int32_t nbytes)
-    {
-      int32_t ret = check_load();
-      if (TFS_SUCCESS == ret)
-      {
-        IndexHeaderV2* header = get_index_header_();
-        assert(NULL != header);
-        header->throughput_.write_visit_count_+= step;
-        header->throughput_.write_bytes_ += nbytes;
-      }
-      return ret;
-    }
-
-    int BaseIndexHandle::inc_read_visit_count(const int32_t step, const int32_t nbytes)
-    {
-      int32_t ret = check_load();
-      if (TFS_SUCCESS == ret)
-      {
-        IndexHeaderV2* header = get_index_header_();
-        assert(NULL != header);
-        header->throughput_.read_visit_count_+= step;
-        header->throughput_.read_bytes_ += nbytes;
-        header->throughput_.last_statistics_time_ = time(NULL);
-      }
-      return ret;
-    }
-
-    int BaseIndexHandle::inc_update_visit_count(const int32_t step, const int32_t nbytes)
-    {
-      int32_t ret = check_load();
-      if (TFS_SUCCESS == ret)
-      {
-        IndexHeaderV2* header = get_index_header_();
-        assert(NULL != header);
-        header->throughput_.update_visit_count_+= step;
-        header->throughput_.update_bytes_ += nbytes;
-      }
-      return ret;
-    }
-
-    int BaseIndexHandle::inc_unlink_visit_count(const int32_t step, const int32_t nbytes)
-    {
-      int32_t ret = check_load();
-      if (TFS_SUCCESS == ret)
-      {
-        IndexHeaderV2* header = get_index_header_();
-        assert(NULL != header);
-        header->throughput_.unlink_visit_count_ += step;
-        header->throughput_.unlink_bytes_ += nbytes;
-      }
-      return ret;
     }
 
     int IndexHandle::remmap_(const double threshold, const int32_t max_hash_bucket,

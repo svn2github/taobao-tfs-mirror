@@ -127,8 +127,8 @@ namespace tfs
       while (!mrgi.is_destroyed())
       {
         helper.clear();
-        blocks_[0].clear();
-        blocks_[1].clear();
+        blocks_[0].clear(); // system disk's cold blocks list
+        blocks_[1].clear(); // data disk's cool blocks list
 
         MigrateEntry entry;
         memset(&entry, 0, sizeof(entry));
@@ -143,6 +143,7 @@ namespace tfs
             get_index_header_(item->first, item->second);
           }
           int32_t ret = choose_migrate_entry_(entry);
+
           if (TFS_SUCCESS == ret)
           {
             ret = do_migrate_(entry);
@@ -198,17 +199,17 @@ namespace tfs
       return ret;
     }
 
-    int64_t MigrateManager::calc_block_weight_(const common::IndexHeaderV2& info, const int32_t type) const
+    int64_t MigrateManager::calc_block_weight_(const common::IndexHeaderV2& iheader, const int32_t type) const
     {
       int64_t weights = -1;
       const int64_t now = time(NULL);
       const AccessRatio &ar = DATASERVER_DISK_TYPE_SYSTEM == type ? system_disk_access_ratio_ : full_disk_access_ratio_;
-      const ThroughputV2 &th = info.throughput_;
+      const ThroughputV2 &th = iheader.throughput_;
       bool calc = common::DATASERVER_DISK_TYPE_SYSTEM == type ? true :
-          (th.last_statistics_time_ + hot_time_range_ < now && is_full(info.info_));
+          (iheader.info_.last_access_time_ + hot_time_range_ < now && is_full(iheader.info_));
       if (calc)
       {
-        weights = th.last_statistics_time_ * ar.last_access_time_ratio +
+        weights = iheader.info_.last_access_time_ * ar.last_access_time_ratio +
             th.read_visit_count_ * ar.read_ratio + th.write_visit_count_ * ar.write_ratio +
             th.update_visit_count_ * ar.update_ratio + th.unlink_visit_count_* ar.unlink_ratio;
       }
@@ -284,6 +285,10 @@ namespace tfs
             entry.block_id_ = (*iter).second.second;
             ret = choose_move_dest_server_(entry.source_addr_, entry.dest_addr_) ? TFS_SUCCESS : EXIT_CHOOSE_MIGRATE_DEST_SERVER_ERROR;
           }
+        }
+        else
+        {
+          ret = EXIT_NO_BLOCK_NEED_MIGRATE_ERROR;
         }
       }
       return ret;

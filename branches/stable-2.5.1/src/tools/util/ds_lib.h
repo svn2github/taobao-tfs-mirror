@@ -28,19 +28,19 @@ namespace tfs
   {
     struct BlockVisit
     {
-      BlockVisit(uint64_t block_id, int64_t total_visit_count, int64_t last_statistics_time) :
-        block_id_(block_id), total_visit_count_(total_visit_count), last_statistics_time_(last_statistics_time)
+      BlockVisit(uint64_t block_id, int64_t total_visit_count, int64_t last_access_time) :
+        block_id_(block_id), total_visit_count_(total_visit_count), last_access_time_(last_access_time)
       {}
       bool operator < (const BlockVisit& b) const
       {
         if (total_visit_count_ != b.total_visit_count_)
           return total_visit_count_ < b.total_visit_count_;// asc
         else
-          return last_statistics_time_ < b.last_statistics_time_;// asc
+          return last_access_time_ < b.last_access_time_;// asc
       }
       uint64_t block_id_;
       int64_t total_visit_count_;
-      int64_t last_statistics_time_;
+      int64_t last_access_time_;
     };
 
     class DsLib

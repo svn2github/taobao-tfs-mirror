@@ -81,7 +81,7 @@ namespace tfs
         return ((info.size_ + common::BLOCK_RESERVER_LENGTH) >= max_block_size_
           || info.file_count_ >= common::MAX_SINGLE_BLOCK_FILE_COUNT);
       }
-      inline int64_t calc_block_weight_(const common::IndexHeaderV2& info, const int32_t type) const;
+      inline int64_t calc_block_weight_(const common::IndexHeaderV2& iheader, const int32_t type) const;
       void get_all_servers_(common::ArrayHelper<std::pair<uint64_t, int32_t> >& servers) const;
 
       void calc_system_disk_migrate_info_(MigrateEntry& entry) const;

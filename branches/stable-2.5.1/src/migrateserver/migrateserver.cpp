@@ -64,7 +64,7 @@ namespace tfs
         std::vector<string> ratios[2];
         Func::split_string(str_full_disk_access_ratio, ':', ratios[0]);
         Func::split_string(str_system_disk_access_ratio, ':', ratios[1]);
-        int32_t ret = (5U == ratios[0].size() && 5U == ratios[1].size()) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
+        ret = (5U == ratios[0].size() && 5U == ratios[1].size()) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
         if (TFS_SUCCESS == ret)
         {
           AccessRatio ar[2];
@@ -78,7 +78,7 @@ namespace tfs
           }
           manager_ = new (std::nothrow)MigrateManager(ns_vip_port, balance_percent, hot_time_range, ar[0], ar[1]);
           assert(NULL != manager_);
-          manager_->initialize();
+          ret = manager_->initialize();
         }
       }
       if (TFS_SUCCESS == ret)

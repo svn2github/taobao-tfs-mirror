@@ -637,7 +637,8 @@ int switch_cmd(const int cmd, VSTRING & param)
           total_visit_count += header_it->throughput_.write_visit_count_;
           total_visit_count += header_it->throughput_.update_visit_count_;
           total_visit_count += header_it->throughput_.unlink_visit_count_;
-          blocks_visit.insert(BlockVisit(header_it->info_.block_id_, total_visit_count, header_it->throughput_.last_statistics_time_));
+          blocks_visit.insert(BlockVisit(header_it->info_.block_id_,
+              total_visit_count, header_it->info_.last_access_time_));
         }
 
         printf("block List Size = %zd\n", blocks_visit.size());
@@ -647,7 +648,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         for (; it != blocks_visit.end(); ++it)
         {
           printf("%c     %10"PRI64_PREFIX"u    %10"PRI64_PREFIX"d    %s\n", IS_VERFIFY_BLOCK(it->block_id_) ? 'C' : 'D',
-              it->block_id_, it->total_visit_count_, Func::time_to_str(it->last_statistics_time_).c_str());
+              it->block_id_, it->total_visit_count_, Func::time_to_str(it->last_access_time_).c_str());
         }
         printf("----------------------------------------------------------\n");
         printf("TYPE BLOCKID     VISIT_COUNT     LAST_VISIT_TIME\n");

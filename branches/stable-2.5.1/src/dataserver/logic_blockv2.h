@@ -122,10 +122,6 @@ namespace tfs
         int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
         int traverse(std::vector<common::FileInfo>& finfos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int check_block_intact();
-        int inc_write_visit_count(const int32_t step = 1, const int32_t nbytes = 0);
-        int inc_read_visit_count(const int32_t step = 1,  const int32_t nbytes = 0);
-        int inc_update_visit_count(const int32_t step = 1,const int32_t nbytes = 0);
-        int inc_unlink_visit_count(const int32_t step = 1,const int32_t nbytes = 0);
       private:
         IndexHandle* get_index_handle_() const { return dynamic_cast<IndexHandle*>(index_handle_);}
 

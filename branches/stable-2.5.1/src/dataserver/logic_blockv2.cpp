@@ -325,10 +325,6 @@ namespace tfs
           {
             ret = data_handle_.pread(buf, nbytes, finfo.offset_ + offset);
           }
-          if (TFS_SUCCESS == ret)
-          {
-            index_handle_->inc_read_visit_count(1, nbytes);
-          }
         }
       }
       return ret;
@@ -408,10 +404,6 @@ namespace tfs
               ret = (0 != (info.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID | FILE_STATUS_CONCEAL))) ?
                 EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
             }
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            index_handle_->inc_read_visit_count(1, 0);
           }
         }
       }
@@ -787,26 +779,6 @@ namespace tfs
         ret = get_index_handle_()->traverse(finfos, logic_block_id);
       }
       return ret;
-    }
-
-    int LogicBlock::inc_write_visit_count(const int32_t step, const int32_t nbytes)
-    {
-      return get_index_handle_()->inc_write_visit_count(step, nbytes);
-    }
-
-    int LogicBlock::inc_read_visit_count(const int32_t step,  const int32_t nbytes)
-    {
-      return get_index_handle_()->inc_read_visit_count(step, nbytes);
-    }
-
-    int LogicBlock::inc_update_visit_count(const int32_t step,const int32_t nbytes)
-    {
-      return get_index_handle_()->inc_update_visit_count(step, nbytes);
-    }
-
-    int LogicBlock::inc_unlink_visit_count(const int32_t step,const int32_t nbytes)
-    {
-      return get_index_handle_()->inc_unlink_visit_count(step, nbytes);
     }
 
     bool SortFileInfoByOffset(const common::FileInfoV2& left, const common::FileInfoV2& right)
