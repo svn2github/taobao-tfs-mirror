@@ -198,9 +198,8 @@ namespace tfs
             key.cmd_ = sf->cmd_;
             key.block_id_ = sf->block_id_;
             key.file_id_  = sf->file_id_;
-            fail_queue_mutex_.lock();
+            tbutil::Monitor<tbutil::Mutex>::Lock lock(sync_mirror_monitor_);
             unique_key_.erase(key);
-            fail_queue_mutex_.unlock();
           }
           else
           {
@@ -251,9 +250,8 @@ namespace tfs
                 key.cmd_ = sf->cmd_;
                 key.block_id_ = sf->block_id_;
                 key.file_id_  = sf->file_id_;
-                fail_queue_mutex_.lock();
+                tbutil::Monitor<tbutil::Mutex>::Lock lock(sync_mirror_monitor_);
                 unique_key_.erase(key);
-                fail_queue_mutex_.unlock();
               }
               else
               {
