@@ -765,7 +765,7 @@ namespace tfs
       config.group_count_ = SYSPARAM_NAMESERVER.group_count_;
       config.replica_num_ = SYSPARAM_NAMESERVER.max_replication_;
       interval = SYSPARAM_NAMESERVER.client_keepalive_interval_;
-      if (flag != DATASERVER_TYPE_NONE)
+      if (flag != DS_TABLE_NONE)
       {
         manager_.get_server_manager().scan(flag, output);
       }

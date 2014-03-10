@@ -577,7 +577,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ClientNsKeepaliveMessage req_msg;
-        req_msg.set_flag(DATASERVER_TYPE_FULL);
+        req_msg.set_flag(DS_TABLE_FULL);
 
         tbnet::Packet* ret_msg = NULL;
         ret = send_msg_to_server(ns_id_, new_client, &req_msg, ret_msg);

@@ -358,12 +358,12 @@ namespace tfs
       SERVER_TABLE_ITER iter = servers_.begin();
       for ( ; iter != servers_.end(); iter++)
       {
-        if (flag & DATASERVER_TYPE_FULL)
+        if (flag & DS_TABLE_FULL)
         {
           if (DATASERVER_DISK_TYPE_FULL !=  (*iter)->get_disk_type())
             continue;
         }
-        else if (flag & DATASERVER_TYPE_SYSTEM)
+        else if (flag & DS_TABLE_SYSTEM)
         {
           if (DATASERVER_DISK_TYPE_SYSTEM !=  (*iter)->get_disk_type())
             continue;

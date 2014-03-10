@@ -502,12 +502,12 @@ namespace tfs
       DATASERVER_DISK_TYPE_SYSTEM = 1//system disk
     };
 
-    enum DataServerType
+    enum DsTableType
     {
-      DATASERVER_TYPE_ALL = 0,
-      DATASERVER_TYPE_FULL = 1,
-      DATASERVER_TYPE_SYSTEM = 2,
-      DATASERVER_TYPE_NONE = 3
+      DS_TABLE_ALL = 0,
+      DS_TABLE_FULL = 1,
+      DS_TABLE_SYSTEM = 2,
+      DS_TABLE_NONE = 3
     };
 
     struct SSMScanParameter
