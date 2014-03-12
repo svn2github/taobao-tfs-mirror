@@ -522,6 +522,11 @@ namespace tfs
           case common::REQ_KVMETA_DEL_OBJECT_METADATA_MESSAGE:
             packet = new ReqKvMetaDelObjectMetaDataMessage();
             break;
+          case common::CLIENT_NS_KEEPALIVE_MESSAGE:
+            packet = new ClientNsKeepaliveMessage();                                                                      break;
+          case common::CLIENT_NS_KEEPALIVE_RESPONSE_MESSAGE:
+            packet = new ClientNsKeepaliveResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;

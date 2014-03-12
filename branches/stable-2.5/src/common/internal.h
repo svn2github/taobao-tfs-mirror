@@ -167,6 +167,9 @@ namespace tfs
     static const int32_t DEFAULT_META_RETRY_COUNT = 3;
     static const uint32_t DEFAULT_UPDATE_KMT_INTERVAL_COUNT = 100;
     static const uint32_t DEFAULT_UPDATE_KMT_FAIL_COUNT = 10;
+    static const uint32_t DEFAULT_UPDATE_DST_INTERVAL_COUNT = 1000;
+    static const uint32_t DEFAULT_UPDATE_DST_FAIL_COUNT = 10;
+
     // unit ms
     static const int64_t DEFAULT_STAT_INTERNAL = 60000; // 1min
     static const int64_t DEFAULT_GC_INTERNAL = 43200000; // 12h
@@ -1311,6 +1314,31 @@ namespace tfs
       NS_ROLE_NONE = 0x00,
       NS_ROLE_MASTER,
       NS_ROLE_SLAVE
+    };
+
+    enum DsTableType
+    {
+      DS_TABLE_ALL = 0,
+      DS_TABLE_FULL = 1,
+      DS_TABLE_SYSTEM = 2,
+      DS_TABLE_NONE = 3
+    };
+
+    struct ClusterConfig
+    {
+      int32_t cluster_id_;
+      int32_t group_seq_;
+      int32_t group_count_;
+      int32_t replica_num_;
+      int32_t reserve_[4];
+
+      ClusterConfig():cluster_id_(0), group_seq_(0), group_count_(1), replica_num_(0)
+      {
+      }
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
     };
 
     // defined type typedef

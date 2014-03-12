@@ -122,8 +122,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)//master
         {
           //check this block if doing any operations like replicating, moving, compacting...
-          if ((block_id > 0)
-              && (!(mode & T_NOLEASE)))
+          if (block_id > 0)
           {
             if (manager_.get_task_manager().exist_block(block_id))
             {
@@ -392,10 +391,7 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          if (!(mode & T_NOLEASE))
-          {
-            manager_.get_block_manager().update_block_last_wirte_time(lease_id, block_id, now);
-          }
+          manager_.get_block_manager().update_block_last_wirte_time(lease_id, block_id, now);
         }
       }
       return ret;

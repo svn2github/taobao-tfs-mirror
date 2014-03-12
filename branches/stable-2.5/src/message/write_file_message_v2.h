@@ -182,6 +182,16 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
+        void set_block_id(const uint64_t block_id)
+        {
+          block_id_ = block_id;
+        }
+
+        uint64_t get_block_id() const
+        {
+          return block_id_;
+        }
+
         void set_file_id(const uint64_t file_id)
         {
           file_id_ = file_id;

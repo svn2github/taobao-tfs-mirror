@@ -63,6 +63,7 @@
 #include "write_index_message_v2.h"
 #include "ec_meta_message.h"
 #include "expire_message.h"
+#include "client_ns_keepalive_message.h"
 
 namespace tfs
 {
