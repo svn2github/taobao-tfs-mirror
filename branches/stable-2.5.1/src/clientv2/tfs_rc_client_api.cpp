@@ -50,6 +50,11 @@ namespace tfs
       return impl_->initialize(rc_ip, app_key, app_ip, real_cache_times, real_cache_items, dev_name);
     }
 
+    void RcClient::destroy()
+    {
+      return impl_->destroy();
+    }
+
     int64_t RcClient::get_app_id() const
     {
       return impl_->get_app_id();

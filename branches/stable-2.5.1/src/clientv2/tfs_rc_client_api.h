@@ -51,6 +51,7 @@ namespace tfs
             const int32_t cache_times = -1,
             const int32_t cache_items = -1,
             const char* dev_name = NULL);
+        void destroy();
 
         int64_t get_app_id() const;
 
