@@ -21,12 +21,14 @@ BuildRequires: google-perftools = 1.7
 BuildRequires: jemalloc-devel >= 2.2
 BuildRequires: snappy >= 1.1.2
 BuildRequires: libunwind
+BuildRequires: tfs-client-restful
 Requires: jemalloc-devel >= 2.2
 Requires: snappy >= 1.1.2
 Requires: google-perftools = 1.7
 Requires: libunwind
 Requires: readline-devel
 Requires: ncurses-devel
+Requires: tfs-client-restful
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}
@@ -49,7 +51,7 @@ files for developing applications that use the %name package.
 chmod u+x build.sh
 ./build.sh init
 #./configure --prefix=%{_prefix}
-./configure --prefix=%{_prefix} --enable-uniquestore --enable-taircache --with-tair-root=/opt/csr/tair-2.3
+./configure --prefix=%{_prefix} --enable-uniquestore --enable-taircache --enable-lifecycle --with-tair-root=/opt/csr/tair-2.3 --with-restful-root=/home/admin/tfs/restful
 make %{?_smp_mflags}
 
 %install
