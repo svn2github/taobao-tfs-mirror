@@ -20,11 +20,6 @@ namespace tfs
 {
   namespace requester
   {
-    static const int32_t META_FLAG_ABNORMAL = -9800;
-    static const int32_t FILE_STATUS_ERROR  = -9801;
-    static const int32_t SYNC_SUCCESS = 0;
-    static const int32_t SYNC_FAILED  = -99999;
-    static const int32_t SYNC_NOTHING = -100000;
     struct CompareFileInfoByFileId
     {
       bool operator()(const common::FileInfo& left, const common::FileInfo& right) const
@@ -40,7 +35,6 @@ namespace tfs
         return left.id_ < right.id_;
       }
     };
-
 
     // all requests are sent to nameserver
     class NsRequester
@@ -62,25 +56,18 @@ namespace tfs
         // get a cluster's group seq from nameserver
         static int get_group_seq(const uint64_t ns_id, int32_t& group_seq);
 
+        // get max block size from nameserver
+        static int get_max_block_size(const uint64_t ns_id, int32_t& max_block_size);
+
         // get nameserver's config parameter value
         static int get_ns_param(const uint64_t ns_id, const std::string& key, std::string& value);
 
         // get all dataserver's ip:port from nameserver
         static int get_ds_list(const uint64_t ns_id, common::VUINT64& ds_list);
 
-        static int read_file_infos(const std::string& ns_addr, const uint64_t block, std::multiset<std::string>& files, const int32_t version);
-        static int read_file_infos(const std::string& ns_addr, const uint64_t block, std::set<common::FileInfo, CompareFileInfoByFileId>& files, const int32_t version);
-        static int read_file_info(const std::string& ns_addr, const std::string& filename, common::FileInfo& info);
-        static int read_file_info_v2(const std::string& ns_addr, const std::string& filename, common::FileInfoV2& info);
-        static int read_file_stat(const std::string& ns_addr, const std::string& filename, common::TfsFileStat& info);
-        static int read_file_real_crc(const std::string& ns_addr, const std::string& filename, uint32_t& crc);
-        static int read_file_real_crc_v2(const std::string& ns_addr, const std::string& filename, common::FileInfoV2& info, const bool force);
-        static int write_file(const std::string& ns_addr, const std::string& filename, const char* data, const int32_t size, const int32_t status);
-        static int copy_file(const std::string& src_ns_addr, const std::string& dest_ns_addr, const std::string& file_name, const int32_t status);
-        static int cmp_and_sync_file(const std::string& src_ns_addr, const std::string& dest_ns_addr, const std::string& file_name,
-        const int64_t timestamp, const bool force, common::FileInfoV2& left, common::FileInfoV2& right, const bool confirm = true);
-        static int sync_file(const std::string& saddr, const std::string& daddr, const std::string& filename,
-            const common::FileInfoV2& sfinfo, const common::FileInfoV2& dfinfo, const int64_t timestamp, const bool force);
+        static int read_file_infos(const std::string& ns_addr,
+            const uint64_t block, std::set<common::FileInfo, CompareFileInfoByFileId>& files, const int32_t version);
+
         static int remove_block(const uint64_t block, const std::string& addr, const int32_t flag);
 
     private:

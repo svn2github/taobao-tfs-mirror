@@ -7,8 +7,9 @@ AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -lsnappy
 
 bin_PROGRAMS = transfer split_item_tool block_toolv2
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
-	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
+	$(top_builddir)/src/requester/libtfssyncutil.a\
   $(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
+	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
   $(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\

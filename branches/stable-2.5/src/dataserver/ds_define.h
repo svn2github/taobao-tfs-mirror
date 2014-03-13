@@ -66,14 +66,6 @@ namespace tfs
     #define RW_COUNT_W_FAILED  "rw-count-w-failed"
     #define RW_COUNT_U_FAILED  "rw-count-r-failed"*/
 
-    // 2 denotes file INVALID in stable-2.1 i
-    // but it's deprecated in stable-2.5, can be reused now
-    enum FileinfoFlag
-    {
-      FI_DELETED = 1,
-      FI_CONCEAL = 4
-    };
-
     struct SuperBlockInfo
     {
       int32_t version_;

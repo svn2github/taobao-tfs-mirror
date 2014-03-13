@@ -26,6 +26,7 @@
 #include "requester/ns_requester.h"
 #include "requester/ds_requester.h"
 #include "requester/misc_requester.h"
+#include "requester/sync_util.h"
 #include "nameserver/ns_define.h"
 
 #include "transfer.h"
@@ -221,7 +222,7 @@ namespace tfs
 
     int SyncByBlockWorker::check_file_integrity(const std::string& filename, const common::FileInfoV2& left, common::FileInfoV2& right)
     {
-      int32_t ret = NsRequester::read_file_real_crc_v2(get_dest_addr().c_str(), filename, right, true);
+      int32_t ret = SyncUtil::read_file_real_crc_v2(get_dest_addr().c_str(), filename, right, true);
       if (TFS_SUCCESS == ret)
       {
         ret = left.crc_ != right.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS;
@@ -314,7 +315,7 @@ namespace tfs
             retry = 2;
             do
             {
-              ret = NsRequester::cmp_and_sync_file(get_src_addr(), get_dest_addr(), filename, get_timestamp(), force, left, right, false);
+              ret = SyncUtil::cmp_and_sync_file(get_src_addr(), get_dest_addr(), filename, get_timestamp(), force, left, right, false);
               if (EXIT_SYNC_FILE_NOTHING == ret)
                 ret = TFS_SUCCESS;
             }
@@ -354,7 +355,7 @@ namespace tfs
         std::string filename(tmp);
         const bool force  = manager_.get_force();
         FileInfoV2 left, right;
-        ret = NsRequester::cmp_and_sync_file(get_src_addr(), get_dest_addr(), filename, get_timestamp(), force, left, right);
+        ret = SyncUtil::cmp_and_sync_file(get_src_addr(), get_dest_addr(), filename, get_timestamp(), force, left, right);
         if (EXIT_SYNC_FILE_NOTHING == ret)
           ret = TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
@@ -437,8 +438,8 @@ namespace tfs
           if (manager_.get_force())
           {
             FileInfoV2 tleft, tright;
-            int32_t lret = NsRequester::read_file_real_crc_v2(get_src_addr(), name, tleft, true);
-            int32_t rret = NsRequester::read_file_real_crc_v2(get_src_addr(), name, tright, true);
+            int32_t lret = SyncUtil::read_file_real_crc_v2(get_src_addr(), name, tleft, true);
+            int32_t rret = SyncUtil::read_file_real_crc_v2(get_src_addr(), name, tright, true);
             ret = (TFS_SUCCESS == lret && TFS_SUCCESS == rret) ? TFS_SUCCESS :
               TFS_SUCCESS == lret ? rret : lret;
             if (TFS_SUCCESS == ret)

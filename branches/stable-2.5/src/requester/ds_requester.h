@@ -28,6 +28,14 @@ namespace tfs
         static int read_block_index(const uint64_t ds_id,
             const uint64_t block_id, const uint64_t attach_block_id,
             common::IndexDataV2& index_data);
+        static int stat_file(const uint64_t ds_id,
+            const uint64_t block_id, const uint64_t attach_block_id,
+            const uint64_t file_id, common::TfsFileStat& file_stat, const int32_t flag);
+        static int read_file(const uint64_t ds_id,
+            const uint64_t block_id, const uint64_t attach_block_id, const uint64_t file_id,
+            char* data, const int32_t offset, const int32_t length, const int32_t flag);
+        static int list_block(const uint64_t ds_id, std::vector<common::BlockInfoV2>& block_infos);
+
         static int read_raw_data(const uint64_t server, const uint64_t block,
             const int64_t traffic, const int64_t total_size, tbnet::DataBuffer& data);
         static int recombine_raw_data(const common::IndexDataV2& sindex, tbnet::DataBuffer& sbuf,

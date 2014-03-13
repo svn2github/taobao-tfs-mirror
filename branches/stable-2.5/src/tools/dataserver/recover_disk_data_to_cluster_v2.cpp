@@ -315,7 +315,7 @@ int recover_block_from_disk_data(const char* ns_addr, const char* ns_slave_addr,
             for (uint32_t file_index = 0; file_index < finfos.size(); ++file_index)
             {
               // skip deleted file
-              if ((finfos.at(file_index).status_ & FI_DELETED) != 0)
+              if ((finfos.at(file_index).status_ & FILE_STATUS_DELETE) != 0)
                 continue;
 
               uint64_t file_id = finfos.at(file_index).id_;
@@ -397,7 +397,7 @@ void recover_block_from_slave_cluster(const char* ns_addr, const char* ns_slave_
       vector<FileInfoV2>::const_iterator v_file_iter = finfos.begin();
       for (; v_file_iter != finfos.end(); v_file_iter++)
       {
-        if ((v_file_iter->status_ & FI_DELETED) != 0)
+        if ((v_file_iter->status_ & FILE_STATUS_DELETE) != 0)
           continue;
 
         uint64_t file_id = v_file_iter->id_;

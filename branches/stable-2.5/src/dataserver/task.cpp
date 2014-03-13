@@ -339,7 +339,7 @@ namespace tfs
       }
       while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == (ret = iter->next(finfo))))
       {
-        if (finfo->status_ & FI_DELETED)
+        if (finfo->status_ & FILE_STATUS_DELETE)
         {
           continue;  // ignore deleted file
         }
