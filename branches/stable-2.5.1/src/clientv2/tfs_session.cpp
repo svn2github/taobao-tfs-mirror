@@ -50,7 +50,8 @@ namespace tfs
       block_cache_time_(cache_time),
       block_cache_items_(cache_items),
       last_update_time_(0),
-      update_interval_(0)
+      update_interval_(0),
+      version_(0)
     {
       if (cache_items <= 0)
       {
@@ -71,7 +72,7 @@ namespace tfs
     {
     }
 
-    int TfsSession::initialize()
+    int TfsSession::initialize(const int32_t version)
     {
       int ret = TFS_SUCCESS;
       if (!ns_addr_.empty())
@@ -87,7 +88,20 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = update_dstable();
+        version_ = version;
+        if (TFS_CLIENT_V1 == version_)
+        {
+          ret = update_cluster_id();
+        }
+        else if (TFS_CLIENT_V2 == version_)
+        {
+          ret = update_dstable();
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "nameserver %s version %d invalid", ns_addr_.c_str(), version_);
+          ret = EXIT_PARAMETER_ERROR;
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -129,6 +143,11 @@ namespace tfs
 
     bool TfsSession::need_update_dstable()
     {
+      if (TFS_CLIENT_V1 == version_)
+      {
+        return false;
+      }
+
       bool need_update = false;
       time_t now = Func::get_monotonic_time();
       if (now > last_update_time_ + update_interval_)
@@ -345,11 +364,18 @@ namespace tfs
 
       if (INVALID_BLOCK_ID == block_id)
       {
-        uint64_t server = select_server_from_dstable();
-        ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_DS_TABLE_EMPTY;
-        if (TFS_SUCCESS == ret)
+        if (TFS_CLIENT_V1 == version_)
         {
-          ds.push_back(server);
+          ret = get_block_info_ex(file.mode_, block_id, version, ds, info);
+        }
+        else if(TFS_CLIENT_V2 == version_)
+        {
+          uint64_t server = select_server_from_dstable();
+          ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_DS_TABLE_EMPTY;
+          if (TFS_SUCCESS == ret)
+          {
+            ds.push_back(server);
+          }
         }
       }
       else if (mode & T_READ)
@@ -511,8 +537,8 @@ namespace tfs
      int TfsSession::get_block_info_ex(const int32_t flag, uint64_t& block_id,
         int32_t& version, VUINT64& ds, FamilyInfoExt& info)
      {
-       TBSYS_LOG(DEBUG, "query block from ns %s, blockid: %"PRI64_PREFIX"u",
-           ns_addr_.c_str(), block_id);
+       TBSYS_LOG(DEBUG, "query block from ns %s, blockid: %"PRI64_PREFIX"u, mode: %d",
+           ns_addr_.c_str(), block_id, flag);
        int ret = TFS_SUCCESS;
        GetBlockInfoMessageV2 gbi_message;
        gbi_message.set_block_id(block_id);
@@ -559,12 +585,24 @@ namespace tfs
 
     int TfsSession::get_cluster_group_count_from_ns()
     {
-      return config_.group_count_;
+      int ret = NsRequester::get_group_count(ns_id_, config_.group_count_);
+      return ret < 0 ? ret : config_.group_count_;
     }
 
     int TfsSession::get_cluster_group_seq_from_ns()
     {
-      return config_.group_seq_;
+      int ret = NsRequester::get_group_seq(ns_id_, config_.group_seq_);
+      return ret < 0 ? ret : config_.group_seq_;
+    }
+
+    void TfsSession::set_version(const int32_t version)
+    {
+      version_ = version;
+    }
+
+    int32_t TfsSession::get_version() const
+    {
+      return version_;
     }
 
     int TfsSession::update_dstable()
@@ -613,10 +651,20 @@ namespace tfs
         {
           ds_table_ = tmp_table;
         }
-        TBSYS_LOG(DEBUG, "update dstable. cluster_id: %d, group_seq: %d, group_count: %d, replica_num: %d, interval: %d, server_count: %zd",
+        TBSYS_LOG(INFO, "update dstable. cluster_id: %d, group_seq: %d, group_count: %d, replica_num: %d, interval: %d, server_count: %zd",
             config.cluster_id_, config.group_seq_, config.group_count_, config.replica_num_, update_interval, tmp_table.size());
       }
 
+      return ret;
+    }
+
+    int TfsSession::update_cluster_id()
+    {
+      int ret = NsRequester::get_cluster_id(ns_id_, config_.cluster_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        TBSYS_LOG(INFO, "update cluster id: %d", config_.cluster_id_);
+      }
       return ret;
     }
 

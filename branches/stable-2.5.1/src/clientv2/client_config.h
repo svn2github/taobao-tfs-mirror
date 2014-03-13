@@ -46,6 +46,12 @@ namespace tfs
 #endif
     };
 
+    enum TfsClientVersion
+    {
+      TFS_CLIENT_V1 = 1,  // stable-2.5 client
+      TFS_CLIENT_V2 = 2  // write to ds client
+    };
+
     struct ClientConfig
     {
       static int32_t use_cache_;
@@ -70,6 +76,7 @@ namespace tfs
       static uint32_t update_kmt_fail_count_;
       static uint32_t update_dst_interval_count_;
       static uint32_t update_dst_fail_count_;
+      static int32_t default_client_version_;
     };
   }
 }

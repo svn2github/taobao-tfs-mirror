@@ -66,7 +66,7 @@ namespace tfs
             const std::string& ns_addr_, const int64_t cache_time, const int64_t cache_items);
         virtual ~TfsSession();
 
-        int initialize();
+        int initialize(const int32_t version);
         static void destroy();
 
         int32_t get_cluster_id() const
@@ -99,6 +99,9 @@ namespace tfs
         // cluser managment function
         int get_cluster_group_count_from_ns();
         int get_cluster_group_seq_from_ns();
+
+        void set_version(const int32_t version);
+        int32_t get_version() const;
 
       public:
         // local cache management
@@ -140,6 +143,9 @@ namespace tfs
         // update dataserver table from ns
         int update_dstable();
 
+        // compatible for v1
+        int update_cluster_id();
+
       private:
         tbutil::TimerPtr timer_;
         tbutil::Mutex mutex_;
@@ -154,6 +160,7 @@ namespace tfs
         time_t last_update_time_;
         int32_t update_interval_;
         common::ClusterConfig config_;
+        int32_t version_;
     };
   }
 }

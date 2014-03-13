@@ -14,6 +14,7 @@
  *
  */
 #include <Memory.hpp>
+#include "common/func.h"
 #include "tfs_session_pool.h"
 
 using namespace tfs::common;
@@ -22,9 +23,13 @@ namespace tfs
 {
   namespace clientv2
   {
-    TfsSessionPool::TfsSessionPool(tbutil::TimerPtr timer):
+    TfsSessionPool::TfsSessionPool(tbutil::TimerPtr timer, const VersionMap* version_map):
       timer_(timer)
     {
+      if (NULL != version_map)
+      {
+        version_map_ = *version_map;
+      }
     }
 
     TfsSessionPool::~TfsSessionPool()
@@ -51,7 +56,17 @@ namespace tfs
       else
       {
         session = new TfsSession(timer_, std::string(ns_addr), cache_time, cache_items);
-        int32_t ret = session->initialize();
+
+        // parse session's version
+        int32_t version = ClientConfig::default_client_version_;
+        uint64_t ns_id = Func::get_host_ip(ns_addr);
+        VersionMap::iterator it = version_map_.find(ns_id);
+        if (it != version_map_.end())
+        {
+          version = version_map_[ns_id];
+        }
+
+        int32_t ret = session->initialize(version);
         if (TFS_SUCCESS == ret)
         {
           pool_[ns_addr] = session;

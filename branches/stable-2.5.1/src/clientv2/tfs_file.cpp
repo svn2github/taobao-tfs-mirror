@@ -175,9 +175,20 @@ namespace tfs
       {
         file_.mode_ = T_READ;
       }
-      else if ((mode & T_WRITE) && !create)
+      else if (mode & T_WRITE)
       {
-        file_.mode_ |= T_UPDATE;
+        if (create)
+        {
+          file_.mode_ |= T_CREATE;
+        }
+        else
+        {
+          file_.mode_ |= T_UPDATE;
+        }
+      }
+      else if (mode & T_UNLINK)
+      {
+        file_.mode_ |= T_WRITE;
       }
     }
 
@@ -749,7 +760,10 @@ namespace tfs
         {
           WriteFileRespMessageV2* response = dynamic_cast<WriteFileRespMessageV2*>(resp_msg);
           file_.lease_id_ = response->get_lease_id();
-          fsname_.set_block_id(response->get_block_id());
+          if (TFS_CLIENT_V2 == session_->get_version())
+          {
+            fsname_.set_block_id(response->get_block_id());
+          }
           fsname_.set_file_id(response->get_file_id());
           TBSYS_LOG(DEBUG, "write file %s. blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, leaseid: %"PRI64_PREFIX"u",
               fsname_.get_name(), fsname_.get_block_id(), fsname_.get_file_id(), file_.lease_id_);

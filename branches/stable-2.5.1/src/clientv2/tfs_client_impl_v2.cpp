@@ -29,8 +29,6 @@ namespace tfs
 {
   namespace clientv2
   {
-    const int32_t DEFAULT_RETRY_TIMES = 2;
-
     TfsClientImplV2::TfsClientImplV2() : is_init_(false), fd_(0),
     ns_addr_(0), cluster_id_(0), packet_factory_(NULL), packet_streamer_(NULL),
     default_session_(NULL)
@@ -51,7 +49,8 @@ namespace tfs
       tbsys::gDelete(packet_streamer_);
     }
 
-    int TfsClientImplV2::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
+    int TfsClientImplV2::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items,
+        const std::map<uint64_t, int32_t>* version_map)
     {
       int ret = TFS_SUCCESS;
       tbutil::Mutex::Lock lock(mutex_);
@@ -70,7 +69,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           timer_ = new tbutil::Timer();
-          session_pool_ = new TfsSessionPool(timer_);
+          session_pool_ = new TfsSessionPool(timer_, version_map);
           if (NULL != ns_addr)
           {
             TfsSession* session = session_pool_->get(ns_addr, cache_time, cache_items);
@@ -474,7 +473,7 @@ namespace tfs
       }
       else
       {
-        for (int i = 0; i < DEFAULT_RETRY_TIMES; i++)
+        for (int i = 0; i < ClientConfig::client_retry_count_; i++)
         {
           ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, mode, NULL, suffix, ns_addr);
           if (ret >= 0)
@@ -576,7 +575,7 @@ namespace tfs
       }
       else
       {
-        for (int i = 0; i < DEFAULT_RETRY_TIMES; i++)
+        for (int i = 0; i < ClientConfig::client_retry_count_; i++)
         {
           ret = save_buf_ex(ret_tfs_name, ret_tfs_name_len, buf, buf_len, mode, NULL, suffix, ns_addr);
           if (ret >= 0)

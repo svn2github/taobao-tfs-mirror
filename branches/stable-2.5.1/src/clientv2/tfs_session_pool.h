@@ -26,11 +26,13 @@ namespace tfs
 {
   namespace clientv2
   {
+    typedef std::map<uint64_t, int32_t> VersionMap;
+
     class TfsSessionPool
     {
       typedef std::map<std::string, TfsSession*> SESSION_MAP;
       public:
-        TfsSessionPool(tbutil::TimerPtr timer);
+        TfsSessionPool(tbutil::TimerPtr timer, const VersionMap* version_map = NULL);
         virtual ~TfsSessionPool();
 
         TfsSession* get(const char* ns_addr,
@@ -43,6 +45,7 @@ namespace tfs
         tbutil::Mutex mutex_;
         SESSION_MAP pool_;
         tbutil::TimerPtr timer_;
+        VersionMap version_map_;
     };
   }
 }
