@@ -195,7 +195,7 @@ class WorkThread: public tbutil::Thread
    int repair_file(const uint64_t server_id, const uint64_t block_id, const FileInfo& finfo, const string& name)
    {
      int ret = TFS_SUCCESS;
-     if (!(finfo.flag_ & FI_DELETED))
+     if (!(finfo.flag_ & FILE_STATUS_DELETE))
      {
        char* data = new (std::nothrow) char[finfo.size_];
        assert(NULL != data);
@@ -208,7 +208,7 @@ class WorkThread: public tbutil::Thread
        tbsys::gDelete(data);
 
        // if it's concealed, conceal it, ignore return value
-       if ((TFS_SUCCESS == ret) && (finfo.flag_ & FI_CONCEAL))
+       if ((TFS_SUCCESS == ret) && (finfo.flag_ & FILE_STATUS_CONCEAL))
        {
          int64_t file_size = 0;
          TfsClientImplV2::Instance()->unlink(file_size, name.c_str(), NULL, CONCEAL, ns_addr_.c_str());
