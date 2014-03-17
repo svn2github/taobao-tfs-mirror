@@ -72,7 +72,7 @@ namespace tfs
           info.create_time_ = stat.create_time_;
           info.flag_ = stat.flag_;
           info.crc_ = stat.crc_;
-          ret = (stat.flag_ == 1 || stat.flag_ == 4 || stat.flag_ == 5) ? META_FLAG_ABNORMAL : TFS_SUCCESS;
+          ret = ((stat.flag_ & FILE_STATUS_DELETE) || (stat.flag_ & FILE_STATUS_CONCEAL)) ? META_FLAG_ABNORMAL : TFS_SUCCESS;
         }
         TfsClientImplV2::Instance()->close(fd);
       }
