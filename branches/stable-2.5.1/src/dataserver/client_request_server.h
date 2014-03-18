@@ -45,6 +45,7 @@ namespace tfs
         inline DataHelper& get_data_helper();
         inline TrafficControl& get_traffic_control();
         inline TaskManager& get_task_manager();
+        inline LeaseManager& get_lease_manager();
 
         /** main entrance, dispatch task */
         int handle(tbnet::Packet* packet);
@@ -85,6 +86,7 @@ namespace tfs
             common::ECMeta& ec_meta, const int32_t lock_time);
         int commit_ec_meta(const uint64_t block_id,
             const common::ECMeta& ec_meta, const int8_t switch_flag, const int8_t unlock_flag);
+        int del_block(const uint64_t block_id, const bool tmp = false);
 
         /** tool support interface */
       private:

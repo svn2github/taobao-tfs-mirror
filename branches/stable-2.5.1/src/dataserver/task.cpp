@@ -292,7 +292,7 @@ namespace tfs
         ret = get_block_manager().switch_logic_block(block_id, true);
         if (TFS_SUCCESS == ret)
         {
-          ret = get_block_manager().del_block(block_id, true);
+          ret = service_.get_client_request_server().del_block(block_id, true);
         }
       }
 
@@ -325,7 +325,7 @@ namespace tfs
       }
       while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == (ret = iter->next(finfo))))
       {
-        if (finfo->status_ & FI_DELETED)
+        if (finfo->status_ & FILE_STATUS_DELETE)
         {
           continue;  // ignore deleted file
         }
@@ -562,7 +562,7 @@ namespace tfs
 
       if (need_remove)
       {
-        int rm_ret = get_block_manager().del_block(repl_info_.block_id_);
+        int rm_ret = service_.get_client_request_server().del_block(repl_info_.block_id_);
         TBSYS_LOG(INFO, "send repl block complete info: del blockid: %"PRI64_PREFIX"u, ret: %d\n",
             repl_info_.block_id_, rm_ret);
       }

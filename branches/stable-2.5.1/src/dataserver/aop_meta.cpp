@@ -130,27 +130,44 @@ namespace tfs
           if (TFS_SUCCESS != members_[index].status_)
           {
             stat.status_ = members_[index].status_;
-          }
-
-          if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == members_[index].status_)
-          {
-            break; // found error conflict, break
+            break;
           }
         }
 
         if (TFS_SUCCESS == stat.status_)
         {
           stat.size_ = file_size_;
-          stat.cost_ = Func::get_monotonic_time_us() - start_time_;
         }
         else
         {
           strerror(stat.error_);
+          stat.conflict_ = check_version_conflict();
         }
 
+        stat.cost_ = Func::get_monotonic_time_us() - start_time_;
         done_server_size_ = 0; // ensure only one thread can get all_finish true
       }
       return all_finish;
+    }
+
+    // all servers's BlockInfo are valid, and has version conflict
+    bool OpMeta::check_version_conflict() const
+    {
+      bool conflict = false;
+      for (int index = 0; index < server_size_; index++)
+      {
+        if (INVALID_BLOCK_ID == members_[index].info_.block_id_)
+        {
+          conflict = false;
+          break;
+        }
+
+        if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == members_[index].status_)
+        {
+          conflict = true;
+        }
+      }
+      return conflict;
     }
 
     void OpMeta::strerror(std::stringstream& error)

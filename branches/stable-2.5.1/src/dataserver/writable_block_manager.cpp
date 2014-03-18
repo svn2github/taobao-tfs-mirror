@@ -46,7 +46,7 @@ namespace tfs
 
     void WritableBlockManager::expire_one_block(const uint64_t block_id)
     {
-      RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
+      RWLock::Lock lock(rwmutex_, READ_LOCKER);
       WritableBlock* block = get_(block_id);
       if (NULL != block)
       {
@@ -349,6 +349,7 @@ namespace tfs
       req_msg.set_count(count);
       req_msg.set_server_id(ds_info.information_.id_);
       ret = post_msg_to_server(ds_info.ns_vip_port_,&req_msg, ds_async_callback);
+      TBSYS_LOG_DW(ret, "apply block, count: %d, ret: %d", count, ret);
       return ret;
     }
 
@@ -388,8 +389,7 @@ namespace tfs
         NewClientManager::get_instance().destroy_client(new_client);
       }
 
-      TBSYS_LOG_DW(ret, "apply update block %"PRI64_PREFIX"u, ret: %d",
-          block_id, ret);
+      TBSYS_LOG_DW(ret, "apply update block %"PRI64_PREFIX"u, ret: %d", block_id, ret);
 
       return ret;
     }
@@ -409,6 +409,7 @@ namespace tfs
       {
         ret = post_msg_to_server(ds_info.ns_vip_port_, &req_msg, ds_async_callback);
       }
+      TBSYS_LOG_DW(ret, "giveup block, count: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
       return ret;
     }
 
@@ -429,6 +430,10 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             blocks.push_back(block_info);
+          }
+          else if (EXIT_NO_LOGICBLOCK_ERROR == ret)
+          {
+            expire_one_block_(*iter);
           }
         }
       }
@@ -479,7 +484,7 @@ namespace tfs
           {
             ret = EXIT_UNKNOWN_MSGTYPE;
           }
-          TBSYS_LOG(DEBUG, "apply block callback, ret: %d", ret);
+          TBSYS_LOG_DW(ret, "apply block callback, ret: %d", ret);
         }
         else if (DS_GIVEUP_BLOCK_MESSAGE == pcode && sresponse->size() > 0)
         {
@@ -498,7 +503,7 @@ namespace tfs
           {
             ret = EXIT_UNKNOWN_MSGTYPE;
           }
-          TBSYS_LOG(DEBUG, "giveup block callback, ret: %d", ret);
+          TBSYS_LOG_DW(ret, "giveup block callback, ret: %d", ret);
         }
       }
 
@@ -533,7 +538,7 @@ namespace tfs
           insert(block_lease[index].block_id_,
               servers, BLOCK_WRITABLE);
         }
-        TBSYS_LOG(DEBUG, "apply writable block %"PRI64_PREFIX"u replica: %d, ret %d",
+        TBSYS_LOG(INFO, "apply block %"PRI64_PREFIX"u, replica: %d, ret %d",
             block_lease[index].block_id_, block_lease[index].size_, block_lease[index].result_);
       }
     }
@@ -547,7 +552,7 @@ namespace tfs
       {
         uint64_t block_id = block_lease[index].block_id_;
         remove(block_id, BLOCK_EXPIRED);
-        TBSYS_LOG(DEBUG, "giveup writable block %"PRI64_PREFIX"u ret %d",
+        TBSYS_LOG(INFO, "giveup block %"PRI64_PREFIX"u, ret %d",
             block_lease[index].block_id_, block_lease[index].result_);
       }
     }

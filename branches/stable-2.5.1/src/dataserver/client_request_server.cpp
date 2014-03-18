@@ -61,6 +61,11 @@ namespace tfs
       return service_.get_task_manager();
     }
 
+    inline LeaseManager& ClientRequestServer::get_lease_manager()
+    {
+      return service_.get_lease_manager();
+    }
+
     int ClientRequestServer::handle(tbnet::Packet* packet)
     {
       int ret = (NULL == packet) ? EXIT_POINTER_NULL : TFS_SUCCESS;
@@ -674,12 +679,22 @@ namespace tfs
       return ret;
     }
 
+    int ClientRequestServer::del_block(const uint64_t block_id, const bool tmp)
+    {
+      int ret = get_block_manager().del_block(block_id, tmp);
+      if (TFS_SUCCESS == ret && !tmp)
+      {
+        get_lease_manager().expire_block(block_id);
+      }
+      return ret;
+    }
+
     int ClientRequestServer::remove_block(RemoveBlockMessageV2* message)
     {
       int ret = TFS_SUCCESS;
       uint64_t block_id = message->get_block_id();
       bool tmp = message->get_tmp_flag();
-      ret = get_block_manager().del_block(block_id, tmp);
+      ret = del_block(block_id, tmp);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(WARN, "remove block %"PRI64_PREFIX"u fail, tmp: %d, ret: %d",
@@ -783,7 +798,7 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           // req ns resolve version conflict
-          if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == ret)
+          if (op_stat.conflict_)
           {
             get_op_manager().resolve_block_version_conflict(attach_block_id, file_id, lease_id);
           }

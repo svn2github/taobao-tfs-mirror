@@ -46,10 +46,11 @@ namespace tfs
       int64_t cost_;            // op cost
       int64_t size_;            // op file size
       int32_t status_;          // op status
+      bool conflict_;
       std::stringstream error_; // set only error occurs
 
       OpStat(): cost_(0), size_(0),
-        status_(common::TFS_SUCCESS)
+        status_(common::TFS_SUCCESS), conflict_(false)
       {
       }
     };
@@ -149,6 +150,7 @@ namespace tfs
         // check op staa
         // if all finish return true
         bool check(OpStat& stat);
+        bool check_version_conflict() const;
 
       private:
         // get error msg, called by check
