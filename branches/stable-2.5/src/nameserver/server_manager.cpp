@@ -417,7 +417,7 @@ namespace tfs
         ServerCollect* pserver = NULL;
         uint64_t start_server = tbsys::CNetUtil::ipToAddr(param.addition_param1_, param.addition_param2_);
         ServerCollect query(manager_, start_server);
-        SERVER_TABLE_ITER iter = 0 == start_server ? servers_.begin() : servers_.upper_bound(&query);
+        SERVER_TABLE_ITER iter = 0 == start_server ? servers_.begin() : servers_.lower_bound(&query);// include this ds
         while (servers_.end() != iter && actual < should)
         {
           pserver = (*iter);
@@ -430,6 +430,7 @@ namespace tfs
         all_over = servers_.end() == iter;
         if (!all_over)
         {
+          pserver = (*iter);// next ds
           assert(NULL != pserver);
           uint64_t host = pserver->id();
           IpAddr* addr = reinterpret_cast<IpAddr*>(&host);
