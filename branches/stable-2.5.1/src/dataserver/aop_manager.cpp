@@ -368,13 +368,23 @@ namespace tfs
         (NULL != buffer) && (offset >= 0) || (length > 0) ?
         TFS_SUCCESS : EXIT_PARAMETER_ERROR;
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = service_.get_task_manager().exist_block(block_id) ?
+          EXIT_BLOCK_IN_TASK_QUEUE : TFS_SUCCESS;
+      }
+
       if ((TFS_SUCCESS == ret) && (remote_version >= 0))
       {
-        ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
-        if (TFS_SUCCESS != ret)
+        DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
+        if (ENABLE_VERSION_CHECK_FLAG_YES == info.enable_version_check_)
         {
-          TBSYS_LOG(WARN, "write version conflict. blockid: %"PRI64_PREFIX"u, version: %d<>%d",
-            block_id, remote_version, local.version_);
+          ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(WARN, "write version conflict. blockid: %"PRI64_PREFIX"u, version: %d<>%d",
+                block_id, remote_version, local.version_);
+          }
         }
       }
 
@@ -405,6 +415,12 @@ namespace tfs
       int ret = (INVALID_BLOCK_ID != block_id) && (INVALID_BLOCK_ID != attach_block_id) &&
         (INVALID_FILE_ID != file_id) && (INVALID_LEASE_ID != op_id ) ?
         TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = service_.get_task_manager().exist_block(block_id) ?
+          EXIT_BLOCK_IN_TASK_QUEUE : TFS_SUCCESS;
+      }
 
       OpMeta* op_meta = NULL;
       if (TFS_SUCCESS == ret)

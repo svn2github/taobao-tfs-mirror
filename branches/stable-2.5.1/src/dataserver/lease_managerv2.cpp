@@ -199,6 +199,7 @@ namespace tfs
         ds_info.max_rw_network_bandwidth_mb_ = lease_meta_[who].max_rw_network_bandwith_;
         ds_info.max_block_size_ = lease_meta_[who].max_block_size_;
         ds_info.max_write_file_count_ = lease_meta_[who].max_write_file_count_;
+        ds_info.enable_version_check_ = lease_meta_[who].enable_version_check_;
       }
       return ns_switch;
     }
