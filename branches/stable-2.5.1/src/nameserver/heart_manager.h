@@ -36,7 +36,7 @@ namespace tfs
     public:
       explicit HeartManagement(NameServer& manager);
       virtual ~HeartManagement();
-      int initialize(const int32_t keepalive_thread_count, const int32_t report_block_thread_count, const int32_t port);
+      int initialize(const int32_t keepalive_thread_count, const int32_t report_block_thread_count, const int32_t base_port, const int32_t port_num);
       void wait_for_shut_down();
       void destroy();
 
@@ -71,10 +71,11 @@ namespace tfs
       int renew_(tbnet::Packet* packet);
       int giveup_(tbnet::Packet* packet);
       int report_block_(tbnet::Packet* packet);
+    private:
       NameServer& manager_;
       common::BasePacketFactory* packet_factory_;
-      common::BasePacketStreamer* streamer_;
-      tbnet::Transport* transport_;
+      common::BasePacketStreamer* streamer_[common::MAX_LISTEN_PORT_NUM];
+      tbnet::Transport* transport_[common::MAX_LISTEN_PORT_NUM];
       tbnet::PacketQueueThread keepalive_threads_;
       tbnet::PacketQueueThread report_block_threads_;
       KeepAliveIPacketQueueHeaderHelper keepalive_queue_header_;

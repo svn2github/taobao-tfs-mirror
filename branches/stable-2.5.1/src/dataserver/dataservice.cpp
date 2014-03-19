@@ -209,7 +209,7 @@ namespace tfs
       //check dev & ip
       if (TFS_SUCCESS == ret)
       {
-        const char* ip_addr = get_ip_addr();
+        /*const char* ip_addr = get_ip_addr();
         if (NULL == ip_addr)//get ip addr
         {
           ret =  EXIT_CONFIG_ERROR;
@@ -234,7 +234,7 @@ namespace tfs
               ret = EXIT_CONFIG_ERROR;
             }
           }
-        }
+        }*/
       }
 
       //start clientmanager
@@ -377,14 +377,18 @@ namespace tfs
     int DataService::initialize_nameserver_ip_addr_(std::vector<uint64_t>& ns_ip_port)
     {
       IpAddr* addr = NULL;
+      uint64_t id = INVALID_SERVER_ID;
+      IpAddr* adr = reinterpret_cast<IpAddr*>(&id);
+      adr->ip_ = tbsys::CNetUtil::getAddr(get_ip_addr());
+      adr->port_ = get_listen_port();
       int32_t ret = (SYSPARAM_DATASERVER.local_ns_ip_.empty()) ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-
+        const int32_t index = id % SYSPARAM_DATASERVER.business_port_count_;
         DsRuntimeGlobalInformation& instance = DsRuntimeGlobalInformation::instance();
         addr = reinterpret_cast<IpAddr*> (&instance.ns_vip_port_);
         addr->ip_ =  Func::get_addr(SYSPARAM_DATASERVER.local_ns_ip_.c_str());
-        addr->port_ =  SYSPARAM_DATASERVER.local_ns_port_;
+        addr->port_ =  SYSPARAM_DATASERVER.local_ns_port_ + index;
         ret = (0 == addr->ip_) ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
           TBSYS_LOG(ERROR, "nameserver ip addrr is invalid, %s", SYSPARAM_DATASERVER.local_ns_ip_.c_str());
@@ -399,6 +403,8 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        const int32_t index = id % SYSPARAM_DATASERVER.heart_port_count_;
+        const int32_t port  = SYSPARAM_DATASERVER.local_ns_port_ + SYSPARAM_DATASERVER.business_port_count_ + index;
         const int32_t BUF_LEN = 512;
         char buffer[BUF_LEN] = {'\0'};
         strncpy(buffer, SYSPARAM_DATASERVER.ns_addr_list_.c_str(), BUF_LEN);
@@ -410,7 +416,7 @@ namespace tfs
           if (TFS_SUCCESS != ret)
             TBSYS_LOG(ERROR, "nameserver real ip addrr: %s is invalid...", t);
           else
-            ns_ip_port.push_back(Func::str_to_addr(t, (addr->port_ + 1)));
+            ns_ip_port.push_back(Func::str_to_addr(t, (port)));
         }
       }
 
