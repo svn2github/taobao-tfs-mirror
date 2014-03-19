@@ -186,6 +186,7 @@ namespace tfs
     struct ServerInfo
     {
       uint64_t server_id_;
+      int32_t  version_;
       operator uint64_t() const {return server_id_;}
       ServerInfo operator=(const ServerInfo& a)
       {

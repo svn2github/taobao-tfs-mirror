@@ -71,6 +71,11 @@ namespace tfs
       peer_status_ = NS_STATUS_NONE;
     }
 
+    uint64_t NsRuntimeGlobalInformation::choose_report_block_ipport_addr(const uint64_t server) const
+    {
+      return heart_ip_ports_.empty() ? INVALID_SERVER_ID : heart_ip_ports_[server % heart_ip_ports_.size()];
+    }
+
     bool NsRuntimeGlobalInformation::is_destroyed() const
     {
       return destroy_flag_;
@@ -110,9 +115,9 @@ namespace tfs
       if (startup)//startup
       {
         startup_time_ = now;
+        apply_block_safe_mode_time_  = now;
         switch_time_  = now + common::SYSPARAM_NAMESERVER.safe_mode_time_;
         discard_newblk_safe_mode_time_ =  now + common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
-        apply_block_safe_mode_time_  = now;
         peer_role_ = NS_ROLE_SLAVE;
         owner_role_ = common::Func::is_local_addr(vip_) == true ? NS_ROLE_MASTER : NS_ROLE_SLAVE;
         TBSYS_LOG(INFO, "i %s the master server", owner_role_ == NS_ROLE_MASTER ? "am" : "am not");
@@ -256,6 +261,15 @@ namespace tfs
       }
     }
 
+    void print_int64(const common::ArrayHelper<std::pair<uint64_t, int32_t> >&servers, std::stringstream& result)
+    {
+      for (int64_t i = 0; i < servers.get_array_index(); ++i)
+      {
+        std::pair<uint64_t, int32_t>* item = servers.at(i);
+        result << "/" << tbsys::CNetUtil::addrToString(item->first) << " : " << item->second;
+      }
+    }
+
     void print_int64(const std::vector<uint64_t>& servers, std::string& result)
     {
       std::vector<uint64_t>::const_iterator iter = servers.begin();
@@ -263,6 +277,26 @@ namespace tfs
       {
         result += "/";
         result += tbsys::CNetUtil::addrToString((*iter));
+      }
+    }
+
+    void print_int64(const std::vector<std::pair<uint64_t, int32_t> >&servers, std::stringstream& result)
+    {
+      std::vector<std::pair<uint64_t, int32_t> >::const_iterator iter = servers.begin();
+      for (; iter != servers.end(); ++iter)
+      {
+        result << "/" << tbsys::CNetUtil::addrToString(iter->first) << " : " << iter->second;
+      }
+    }
+
+    void print_lease(const common::ArrayHelper<common::BlockLease>& helper, std::stringstream& result)
+    {
+      if (helper.get_array_index() > 0)
+        result << " size: " << helper.get_array_index() << " ";
+      for (int64_t index = 0; index < helper.get_array_index(); ++index)
+      {
+        BlockLease* lease = helper.at(index);
+        lease->dump(result);
       }
     }
 

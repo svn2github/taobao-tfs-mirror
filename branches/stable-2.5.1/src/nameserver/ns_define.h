@@ -103,6 +103,12 @@ namespace tfs
       CALL_BACK_FLAG_CLEAR = 2
     };
 
+    enum BlockChooseMasterCompleteFlag
+    {
+      BLOCK_CHOOSE_MASTER_COMPLETE_FLAG_NO = 0,
+      BLOCK_CHOOSE_MASTER_COMPLETE_FLAG_YES = 1
+    };
+
     struct NsGlobalStatisticsInfo
     {
       void dump(int32_t level, const char* file = __FILE__, const int32_t line = __LINE__, const char* function =
@@ -115,7 +121,7 @@ namespace tfs
 
     struct NsRuntimeGlobalInformation
     {
-      uint64_t heart_ip_port_;
+      std::vector<uint64_t> heart_ip_ports_;
       uint64_t owner_ip_port_;
       uint64_t peer_ip_port_;
       int64_t switch_time_;
@@ -150,6 +156,7 @@ namespace tfs
       bool own_is_initialize_complete() const;
       void initialize();
       void destroy();
+      uint64_t choose_report_block_ipport_addr(const uint64_t server) const;
       void dump(const int32_t level, const char* file, const int32_t line,
             const char* function, const pthread_t thid, const char* format, ...);
       NsRuntimeGlobalInformation();
@@ -179,7 +186,10 @@ namespace tfs
 
     extern int ns_async_callback(common::NewClient* client);
     extern void print_int64(const common::ArrayHelper<uint64_t>&servers, std::string& result);
+    extern void print_int64(const common::ArrayHelper<std::pair<uint64_t, int32_t> >&servers, std::stringstream& result);
     extern void print_int64(const std::vector<uint64_t>& servers, std::string& result);
+    extern void print_int64(const std::vector<std::pair<uint64_t, int32_t> >&servers, std::stringstream& result);
+    extern void print_lease(const common::ArrayHelper<common::BlockLease>& helper, std::stringstream& result);
     extern bool is_equal_group(const uint64_t id);
     extern bool in_hour_range(const int64_t now, int32_t& min, int32_t& max);
  }/** nameserver **/

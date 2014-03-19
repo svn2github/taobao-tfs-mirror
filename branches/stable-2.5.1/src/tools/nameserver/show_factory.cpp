@@ -271,13 +271,14 @@ namespace tfs
       if (type & BLOCK_TYPE_SERVER_LIST)
       {
         fprintf(fp, "%15"PRI64_PREFIX"u", info_.block_id_);
-        std::string server_str = "";
+        std::stringstream server_str;
         std::vector<ServerInfo>::const_iterator iter = server_list_.begin();
         for (; iter != server_list_.end(); iter++)
         {
-          server_str += (" " + static_cast<std::string> (tbsys::CNetUtil::addrToString((*iter).server_id_).c_str()));
+          server_str << " " << tbsys::CNetUtil::addrToString((*iter).server_id_) << " " << (*iter).version_;
+          //server_str += (" " + static_cast<std::string> (tbsys::CNetUtil::addrToString((*iter).server_id_).c_str()));
         }
-        fprintf(fp, " %s", server_str.c_str());
+        fprintf(fp, " %s", server_str.str().c_str());
       }
       fprintf(fp, "\n");
     }

@@ -154,7 +154,7 @@ namespace tfs
                 for (; it != (*iter).family_member_.end(); ++it)
                 {
                   helper.push_back(std::make_pair((*it).first, (*it).second));
-                  BlockCollect* block =  manager_.get_block_manager().insert((*it).first, now);
+                  BlockCollect* block =  manager_.get_block_manager().insert((*it).first, now, false);
                   assert(block);
                   block->set_family_id(family_id);
                 }
@@ -413,63 +413,51 @@ namespace tfs
         BlockOpLog oplog;
         memset(&oplog, 0, sizeof(oplog));
         ret = oplog.deserialize(data, data_len, pos);
+        ret = (TFS_SUCCESS == ret) ? TFS_SUCCESS : EXIT_DESERIALIZE_ERROR;
         if (TFS_SUCCESS != ret)
         {
           oplog.dump(TBSYS_LOG_LEVEL_INFO);
-          ret = EXIT_DESERIALIZE_ERROR;
           TBSYS_LOG(INFO, "deserialize error, data: %s, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
         }
         if (TFS_SUCCESS == ret)
         {
-          if (oplog.server_num_ <= 0)
-          {
+          ret = oplog.server_num_ > 0 ? TFS_SUCCESS : EXIT_PLAY_LOG_ERROR;
+          if (TFS_SUCCESS != ret)
             TBSYS_LOG(INFO, "play log error, data: %s, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
-            ret = EXIT_PLAY_LOG_ERROR;
-          }
         }
         if (TFS_SUCCESS == ret)
         {
           if (OPLOG_UPDATE == oplog.cmd_)
           {
-            bool addnew = false;
-            ret = manager_.update_block_info(oplog.info_, oplog.servers_[0], now, addnew);
-            if (TFS_SUCCESS != ret)
-            {
+            BlockCollect* block = manager_.get_block_manager().get(oplog.info_.block_id_);
+            ret = NULL == block ? EXIT_PLAY_LOG_ERROR : TFS_SUCCESS;
+            if (TFS_SUCCESS == ret)
+              manager_.get_block_manager().update_block_info(oplog.info_, block);
+            else
               TBSYS_LOG(INFO, "update block information error, block: %"PRI64_PREFIX"u, server: %s",
                   oplog.info_.block_id_, CNetUtil::addrToString(oplog.servers_[0]).c_str());
-            }
           }
           else if (OPLOG_INSERT == oplog.cmd_)
           {
-              BlockCollect* block = NULL;
-              ret = id_factory_.update(oplog.info_.block_id_);
-              if (TFS_SUCCESS != ret)
-              {
-                TBSYS_LOG(INFO, "update block id: %"PRI64_PREFIX"u failed, ret: %d", oplog.info_.block_id_, ret);
-              }
-              else
-              {
-                block = manager_.get_block_manager().get(oplog.info_.block_id_);
-                if (NULL == block)
-                {
-                  block = manager_.get_block_manager().insert(oplog.info_.block_id_, now);
-                  ret = NULL == block ? EXIT_PLAY_LOG_ERROR : TFS_SUCCESS;
-                }
-                if (TFS_SUCCESS == ret)
-                {
-                  block->update(oplog.info_);
-                }
-              }
+            int32_t result  = id_factory_.update(oplog.info_.block_id_);
+            if (TFS_SUCCESS != result)
+              TBSYS_LOG(INFO, "update block id: %"PRI64_PREFIX"u failed, result: %d", oplog.info_.block_id_, result);
 
-              if (TFS_SUCCESS == ret)
+            BlockCollect* block = manager_.get_block_manager().get(oplog.info_.block_id_);
+            if (NULL == block)
+            {
+              block = manager_.get_block_manager().insert(oplog.info_.block_id_, now, false);
+              ret = NULL == block ? EXIT_PLAY_LOG_ERROR : TFS_SUCCESS;
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              manager_.get_block_manager().update_block_info(oplog.info_, block);
+              for (int8_t index = 0; index < oplog.server_num_; ++index)
               {
-                ServerCollect* server = NULL;
-                for (int8_t index = 0; index < oplog.server_num_; ++index)
-                {
-                  server = manager_.get_server_manager().get(oplog.servers_[index]);
-                  manager_.build_relation(block, server, now);
-                }
+                ServerCollect* server = manager_.get_server_manager().get(oplog.servers_[index]);
+                manager_.build_relation(block, server, &oplog.info_, now, false);
               }
+            }
           }
           else if (OPLOG_REMOVE== oplog.cmd_)
           {
@@ -481,13 +469,10 @@ namespace tfs
           {
             for (int8_t index = 0; index < oplog.server_num_; ++index)
             {
-              ServerCollect* server = manager_.get_server_manager().get(oplog.servers_[index]);
-              BlockCollect*  block  = manager_.get_block_manager().get(oplog.info_.block_id_);
-              if (!manager_.relieve_relation(block, server, now, false))//id
-              {
+              int32_t result = manager_.relieve_relation(oplog.info_.block_id_, oplog.servers_[index], now, true);
+              if (TFS_SUCCESS != result)
                 TBSYS_LOG(INFO, "relieve relation between block: %"PRI64_PREFIX"u and server: %s failed",
                     oplog.info_.block_id_, CNetUtil::addrToString(oplog.servers_[index]).c_str());
-              }
             }
           }
           else

@@ -1326,7 +1326,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[57] = {
+    const char* dynamic_parameter_str[62] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1383,7 +1383,12 @@ namespace tfs
         "marshalling_visit_time",
         "client_keepalive_interval",
         "verify_index_reserved_space_ratio",
-        "max_block_size"
+        "max_block_size",
+        "block_safe_mode_time",
+        "between_ns_and_ds_lease_expire_time",
+        "between_ns_and_ds_lease_safe_time",
+        "between_ns_and_ds_lease_retry_times",
+        "between_ns_and_ds_lease_retry_expire_time"
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
@@ -2972,7 +2977,11 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; i < 4; i++)
+        Serialization::set_int32(data, data_len, pos, business_port_num_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; i < 3; i++)
         {
           Serialization::set_int32(data, data_len, pos, reserve_[i]);
         }
@@ -3001,7 +3010,11 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; i < 4; i++)
+        Serialization::get_int32(data, data_len, pos, &business_port_num_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; i < 3; i++)
         {
           Serialization::get_int32(data, data_len, pos, &reserve_[i]);
         }

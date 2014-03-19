@@ -40,61 +40,75 @@ namespace tfs
     HeartManagement::HeartManagement(NameServer& m) :
       manager_(m),
       packet_factory_(NULL),
-      streamer_(NULL),
-      transport_(NULL),
       keepalive_queue_header_(*this),
       report_block_queue_header_(*this)
     {
-
+      for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
+      {
+        streamer_[index] = NULL;
+        transport_[index] = NULL;
+      }
     }
 
     HeartManagement::~HeartManagement()
     {
       tbsys::gDelete(packet_factory_);
-      tbsys::gDelete(streamer_);
-      tbsys::gDelete(transport_);
+      for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
+      {
+        tbsys::gDelete(streamer_[index]);
+        tbsys::gDelete(transport_[index]);
+      }
     }
 
-    int HeartManagement::initialize(const int32_t keepalive_thread_count,const int32_t report_block_thread_count, const int32_t port)
+    int HeartManagement::initialize(const int32_t keepalive_thread_count,const int32_t report_block_thread_count, const int32_t base_port, const int32_t port_num)
     {
-      keepalive_threads_.setThreadParameter(keepalive_thread_count, &keepalive_queue_header_, this);
-      report_block_threads_.setThreadParameter(report_block_thread_count, &report_block_queue_header_, this);
-      keepalive_threads_.start();
-      report_block_threads_.start();
-      streamer_ = new (std::nothrow)common::BasePacketStreamer();
-      assert(NULL != streamer_);
-      packet_factory_ = new (std::nothrow)message::MessageFactory();
-      assert(NULL != packet_factory_);
-      transport_ = new (std::nothrow)tbnet::Transport();
-      streamer_->set_packet_factory(packet_factory_);
-      assert(NULL != transport_);
-      char spec[32];
-      snprintf(spec, 32, "tcp::%d", port);
-      tbnet::IOComponent* com = transport_->listen(spec, streamer_, this);
-      int32_t ret = (NULL == com) ? EXIT_NETWORK_ERROR : TFS_SUCCESS;
-      if (TFS_SUCCESS != ret)
+      int32_t ret = (port_num <= MAX_LISTEN_PORT_NUM && port_num > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(ERROR, "listen port: %d fail", port);
-      }
-      else
-      {
-        transport_->start();
+        keepalive_threads_.setThreadParameter(keepalive_thread_count, &keepalive_queue_header_, this);
+        report_block_threads_.setThreadParameter(report_block_thread_count, &report_block_queue_header_, this);
+        keepalive_threads_.start();
+        report_block_threads_.start();
+        packet_factory_ = new (std::nothrow)message::MessageFactory();
+        assert(NULL != packet_factory_);
+        char spec[32] = {'\0'};
+        for (int32_t index = 0; index < port_num && TFS_SUCCESS == ret; ++index)
+        {
+          streamer_[index] = new (std::nothrow)common::BasePacketStreamer();
+          assert(NULL != streamer_[index]);
+          streamer_[index]->set_packet_factory(packet_factory_);
+          transport_[index] = new (std::nothrow)tbnet::Transport();
+          assert(NULL != transport_[index]);
+          snprintf(spec, 32, "tcp:%d", base_port + index);
+          tbnet::IOComponent* com = transport_[index]->listen(spec, streamer_[index], this);
+          ret = (NULL == com) ? EXIT_NETWORK_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
+            transport_[index]->start();
+          else
+            TBSYS_LOG(ERROR, "listen port %d failed, ret: %d", base_port + index, ret);
+        }
       }
       return ret;
     }
 
     void HeartManagement::wait_for_shut_down()
     {
-      if (NULL != transport_)
-        transport_->wait();
+      for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
+      {
+        if (NULL != transport_[index])
+          transport_[index]->wait();
+      }
       keepalive_threads_.wait();
       report_block_threads_.wait();
     }
 
     void HeartManagement::destroy()
     {
-      if (NULL != transport_)
-        transport_->stop();
+      for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
+      {
+        if (NULL != transport_[index])
+          transport_[index]->stop();
+      }
       keepalive_threads_.stop(true);
       report_block_threads_.stop(true);
     }
@@ -199,7 +213,7 @@ namespace tfs
           msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
         }
         TIMER_END();
-        TBSYS_LOG(INFO, "dataserver: %s %s %s consume times: %"PRI64_PREFIX"d(us), ret: %d", CNetUtil::addrToString(server).c_str(),
+        TBSYS_LOG(DEBUG, "dataserver: %s %s %s consume times: %"PRI64_PREFIX"d(us), ret: %d", CNetUtil::addrToString(server).c_str(),
             transform_type_to_str_(pcode) ,TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(), ret);
       }
       return bret;

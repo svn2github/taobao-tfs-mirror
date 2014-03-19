@@ -169,6 +169,7 @@ namespace tfs
         virtual int handle();
         virtual int handle_complete(common::BasePacket* msg);
       protected:
+        common::BlockInfoV2* query_(common::BlockInfoV2* infos, const int32_t num, const uint64_t block);
         DISALLOW_COPY_AND_ASSIGN(ECReinstateTask);
     };
 

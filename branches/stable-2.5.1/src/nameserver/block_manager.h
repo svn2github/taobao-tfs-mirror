@@ -62,7 +62,7 @@ namespace tfs
       public:
         explicit BlockManager(LayoutManager& manager);
         virtual ~BlockManager();
-        BlockCollect* insert(const uint64_t block, const time_t now, const bool set = false);
+        BlockCollect* insert(const uint64_t block, const time_t now, const bool set);
         bool remove(BlockCollect*& object, const uint64_t block);
 
         bool push_to_delete_queue(const uint64_t block, const uint64_t server);
@@ -91,11 +91,8 @@ namespace tfs
         int update_relation(std::vector<uint64_t>& cleanup_family_id_array, ServerCollect* server,
             const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now);
         int build_relation(BlockCollect* block, bool& writable, bool& master, const uint64_t server,
-            const time_t now, const bool set =false);
+            const common::BlockInfoV2* info, const int64_t now, const bool set);
         int relieve_relation(BlockCollect* block, const uint64_t server, const time_t now);
-        int relieve_relation(const uint64_t block, const uint64_t server, const time_t now);
-        int update_block_info(BlockCollect*& output, bool& isnew, bool& writable, bool& master,
-            const common::BlockInfoV2& info, const ServerCollect* server, const time_t now, const bool addnew);
         int update_block_info(const common::BlockInfoV2& info, BlockCollect* block);
 
         int set_family_id(const uint64_t block, const uint64_t family_id);
@@ -111,20 +108,23 @@ namespace tfs
         bool need_marshalling(const BlockCollect* block, const time_t now);
         bool need_marshalling(common::ArrayHelper<uint64_t>& servers, const BlockCollect* block, const time_t now) const;
         bool need_reinstate(const BlockCollect* block, const time_t now) const;
-        bool check_version_conflict(const BlockCollect* block, const time_t now) const;
-        bool check_version_conflict(const BlockCollect* block, const time_t now, common::ArrayHelper<uint64_t>& servers) const;
-        bool need_adjust_copies_location(common::ArrayHelper<uint64_t>& adjust_copies, const BlockCollect* block, const time_t now) const;
+        bool need_adjust_copies_location(common::ArrayHelper<std::pair<uint64_t, int32_t> >& adjust_copies, const BlockCollect* block, const time_t now) const;
 
         int expand_ratio(int32_t& index, const float expand_ratio = 0.1);
 
         int update_block_last_wirte_time(uint64_t& id, const uint64_t block, const time_t now);
         bool has_valid_lease(const uint64_t block, const time_t now) const;
         bool has_valid_lease(const BlockCollect* pblock, const time_t now) const;
-        int apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update, const uint64_t block);
-        int apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update, BlockCollect* pblock);
-        int renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update, const common::BlockInfoV2& info, const uint64_t block);
-        int renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update, const common::BlockInfoV2& info, BlockCollect* pblock);
-        int giveup_lease(const uint64_t block, const uint64_t server, const time_t now, const common::BlockInfoV2* info);
+        int apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
+          const uint64_t block, common::ArrayHelper<std::pair<uint64_t, int32_t> >& helper);
+        int apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
+          BlockCollect* pblock, common::ArrayHelper<std::pair<uint64_t, int32_t> >& helper);
+        int renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
+          const common::BlockInfoV2& info, const uint64_t block, common::ArrayHelper<std::pair<uint64_t, int32_t> >& helper);
+        int renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
+          const common::BlockInfoV2& info, BlockCollect* pblock, common::ArrayHelper<std::pair<uint64_t, int32_t> >& helper);
+        int giveup_lease(const uint64_t server, const time_t now, const common::BlockInfoV2* info, const uint64_t block);
+        int giveup_lease(const uint64_t server, const time_t now, const common::BlockInfoV2* info, BlockCollect* pblock);
         void timeout(const time_t now);
       private:
         DISALLOW_COPY_AND_ASSIGN(BlockManager);
@@ -132,11 +132,11 @@ namespace tfs
 
         BlockCollect* get_(const uint64_t block) const;
 
-        BlockCollect* insert_(const uint64_t block, const time_t now, const bool set = false);
+        BlockCollect* insert_(const uint64_t block, const time_t now, const bool set);
         BlockCollect* remove_(const uint64_t block);
 
         int build_relation_(BlockCollect* block, bool& writable, bool& master,
-            const uint64_t server, const time_t now, const bool set = false);
+            const uint64_t server, const common::BlockInfoV2* info, const int64_t now, const bool set);
 
         bool pop_from_delete_queue_(std::pair<uint64_t, uint64_t>& output);
 
@@ -146,7 +146,6 @@ namespace tfs
 
         int update_relation_(const common::ArrayHelper<common::BlockInfoV2*>& blocks, const time_t now,
               const bool change, std::vector<uint64_t>& cleanup_family_id_array, ServerCollect* server);
-        int relieve_relation_(ServerCollect* server, const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now);
 
       private:
         LayoutManager& manager_;

@@ -170,10 +170,10 @@ namespace tfs
       return ret;
     }
 
-    bool ServerCollect::calc_regular_create_block_count(const double average_used_capacity,LayoutManager& manager, bool& promote, int32_t& count)
+    bool ServerCollect::calc_regular_create_block_count(const double average_used_capacity,LayoutManager& manager, int32_t& count)
     {
-      bool ret = ((next_report_block_time_ > 0 || promote) /*&& !is_full()*/
-                    && count > 0 && total_capacity_ > 0 && use_capacity_ >= 0 && DATASERVER_DISK_TYPE_FULL == get_disk_type());
+      bool ret = (count > 0 && total_capacity_ > 0 && use_capacity_ >= 0
+                  && DATASERVER_DISK_TYPE_FULL == get_disk_type());
       if (!ret)
       {
         count = 0;
@@ -212,7 +212,7 @@ namespace tfs
             RWLock::Lock lock(mutex_, READ_LOCKER);
             if (!exist_(scan_writable_block_id_, *issued_leases_))
             {
-              ++actual;//TODO
+              ++actual;
             }
           }
           if (complete)
@@ -296,10 +296,13 @@ namespace tfs
 
     int ServerCollect::apply_block_for_update(LayoutManager& manager, ArrayHelper<BlockLease>& result)
     {
+      std::pair<uint64_t, int32_t> arrays[MAX_REPLICATION_NUM];
+      common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_REPLICATION_NUM, arrays);
       int64_t now = Func::get_monotonic_time();
       BlockManager& block_manager = manager.get_block_manager();
       for (int64_t index = 0; index < result.get_array_index(); ++index)
       {
+        helper.clear();
         BlockLease* entry = result.at(index);
         assert(NULL != entry);
         BlockCollect* pblock = NULL;
@@ -312,16 +315,16 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = (exist_(entry->block_id_, *issued_leases_) && block_manager.has_valid_lease(pblock, now)) ? EXIT_LEASE_EXISTED : TFS_SUCCESS;
+          ret = block_manager.has_valid_lease(pblock, now) ? EXIT_LEASE_EXISTED : TFS_SUCCESS;
         }
         if (TFS_SUCCESS == ret)
         {
-            ret = pblock->check_copies_complete() && is_equal_group(entry->block_id_) && pblock->is_master(id()) ? TFS_SUCCESS : EXIT_CANNOT_APPLY_LEASE;
-            TBSYS_LOG(DEBUG, "server %s apply block %"PRI64_PREFIX"u for update. copyies_complete: %d, equal_group: %d, is_master: %d, no_conflict: %d,", CNetUtil::addrToString(id()).c_str(), entry->block_id_, pblock->check_copies_complete(), is_equal_group(entry->block_id_), pblock->is_master(id()), !pblock->has_version_conflict());
+          ret = manager.get_task_manager().exist_block(entry->block_id_) ? EXIT_BLOCK_BUSY : TFS_SUCCESS;
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager.apply_lease(id(), now, get() - now, true, pblock);
+          ret = block_manager.apply_lease(id(), now, get() - now, true, pblock, helper);
+          invalid_block_copies_(manager, helper, entry->block_id_);
         }
         if (TFS_SUCCESS == ret)
         {
@@ -368,47 +371,35 @@ namespace tfs
         helper.clear();
         now = Func::get_monotonic_time();
         all_over = get_range_blocks(start, *writable_, helper);
+        std::pair<uint64_t, int32_t> arrays[MAX_REPLICATION_NUM];
+        common::ArrayHelper<std::pair<uint64_t, int32_t> > invalid_helper(MAX_REPLICATION_NUM, arrays);
         for (int64_t index = 0; index < helper.get_array_index() && result.get_array_index() < result.get_array_size(); ++index)
         {
+          invalid_helper.clear();
           start = *helper.at(index);
-          BlockCollect* pblock = NULL;
           ret = (exist_(start, *issued_leases_)) ? EXIT_LEASE_EXISTED : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
-            pblock = block_manager.get(start);
-            ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+            ret = manager.get_task_manager().exist_block(start) ? EXIT_BLOCK_BUSY : TFS_SUCCESS;
           }
           if (TFS_SUCCESS == ret)
           {
-            ret = pblock->is_writable() && pblock->is_master(id()) ? TFS_SUCCESS : EXIT_BLOCK_NO_WRITABLE;
-            if (TFS_SUCCESS != ret)
-            {
-              if (pblock->has_version_conflict() || pblock->is_full() || !is_equal_group(start) || !pblock->is_master(id()))
-              {
-                RWLock::Lock lock(mutex_, WRITE_LOCKER);
-                remove_(start, *writable_);
-              }
-            }
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            ret = block_manager.has_valid_lease(pblock, now) ? EXIT_LEASE_EXISTED : TFS_SUCCESS;
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            ret = block_manager.apply_lease(id(), now, get() - now, false, pblock);
+            ret = block_manager.apply_lease(id(), now, get() - now, false, start, invalid_helper);
+            invalid_block_copies_(manager, invalid_helper, start);
           }
           if (TFS_SUCCESS == ret)
           {
             uint64_t rt = INVALID_BLOCK_ID;
             RWLock::Lock lock(mutex_, WRITE_LOCKER);
             ret = issued_leases_->insert_unique(rt , start);
-            if (TFS_SUCCESS != ret && EXIT_ELEMENT_EXIST != ret)
+            if (EXIT_ELEMENT_EXIST == ret)
+              ret = TFS_SUCCESS;
+            if (TFS_SUCCESS != ret)
             {
-              block_manager.giveup_lease(start, id(), now, NULL);
+              block_manager.giveup_lease(id(), now, NULL, start);
             }
           }
-          if (TFS_SUCCESS == ret || EXIT_ELEMENT_EXIST == ret)
+          if (TFS_SUCCESS == ret)
           {
             result.push_back(BlockLease());
             BlockLease* entry = result.at(result.get_array_index() - 1);
@@ -416,7 +407,7 @@ namespace tfs
             entry->block_id_ = start;
             entry->result_   = TFS_SUCCESS;
             ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, entry->servers_);
-            block_manager.get_servers(servers, pblock);
+            block_manager.get_servers(servers, start);
             entry->size_ = servers.get_array_index();
           }
         }
@@ -426,9 +417,12 @@ namespace tfs
 
     int ServerCollect::renew_block(const ArrayHelper<BlockInfoV2>& input,LayoutManager& manager, ArrayHelper<BlockLease>& output)
     {
+      std::pair<uint64_t, int32_t> arrays[MAX_REPLICATION_NUM];
+      common::ArrayHelper<std::pair<uint64_t, int32_t> > invalid_helper(MAX_REPLICATION_NUM, arrays);
       BlockManager& block_manager = manager.get_block_manager();
       for (int64_t index = 0; index < input.get_array_index(); ++index)
       {
+        invalid_helper.clear();
         int64_t now = Func::get_monotonic_time();
         output.push_back(BlockLease());
         BlockLease* result = output.at(index);
@@ -439,12 +433,12 @@ namespace tfs
         ret = (pblock != NULL) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
-          uint64_t server = pblock->get_server(0);
-          ret = (id() == server) ? TFS_SUCCESS : EXIT_CANNOT_RENEW_LEASE;
+          ret = manager.get_task_manager().exist_block(entry->block_id_) ? EXIT_BLOCK_BUSY : TFS_SUCCESS;
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager.renew_lease(id(), now, get() - now, false, *entry, pblock);
+          ret = block_manager.renew_lease(id(), now, get() - now, false, *entry, pblock, invalid_helper);
+          invalid_block_copies_(manager, invalid_helper, entry->block_id_);
         }
         if (TFS_SUCCESS == ret)
         {
@@ -481,11 +475,12 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager.giveup_lease(entry->block_id_, id(), now, entry);
+          ret = block_manager.giveup_lease(id(), now, entry, entry->block_id_);
         }
         if (TFS_SUCCESS == ret)
         {
           cleanup_invalid_block_(pblock, now);
+          write_block_oplog_(manager, OPLOG_UPDATE, *entry, now);
         }
       }
       return TFS_SUCCESS;
@@ -504,7 +499,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = block_manager.giveup_lease(block, id(), now, NULL);
+        ret = block_manager.giveup_lease(id(), now, NULL, pblock);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -681,6 +676,27 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    void ServerCollect::copy_block(ServerCollect* server)
+    {
+      bool all_over = false;
+      const int32_t MAX_QUERY_NUM = 2048;
+      uint64_t start = 0;
+      uint64_t blocks[MAX_QUERY_NUM];
+      ArrayHelper<uint64_t> helper(MAX_QUERY_NUM, blocks);
+      while (!all_over)
+      {
+        helper.clear();
+        all_over = server->get_range_blocks(start, *server->hold_, helper);
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
+        for (int64_t index = 0; index < helper.get_array_index(); ++index)
+        {
+          uint64_t result;
+          start = *helper.at(index);
+          hold_->insert_unique(result, start);
+        }
+      }
+    }
+
     int ServerCollect::clear_(const int32_t args, LayoutManager& manager)
     {
       bool all_over = false;
@@ -725,7 +741,7 @@ namespace tfs
         {
           start = *helper.at(index);
           now = Func::get_monotonic_time();
-          block_manager.giveup_lease(start, id(), now, NULL);
+          block_manager.giveup_lease(id(), now, NULL, start);
         }
       }
 
@@ -774,12 +790,12 @@ namespace tfs
       if (NULL != block)
       {
         RWLock::Lock lock(mutex_, WRITE_LOCKER);
-        if (!block->is_writable() || !block->is_master(id()) || !block->has_valid_lease(now))
+        if (!block->is_writable() || !block->is_master(id()) || !block->has_valid_lease(now) || IS_VERFIFY_BLOCK(block->id()))
         {
           ret = true;
           remove_(block->id(), *issued_leases_);
         }
-        if (block->is_full() || !block->is_master(id()) || block->has_version_conflict() || !is_equal_group(block->id()))
+        if (block->is_full() || !block->is_master(id()) || !is_equal_group(block->id()) || IS_VERFIFY_BLOCK(block->id()))
         {
           ret = true;
           remove_(block->id(), *writable_);
@@ -788,5 +804,24 @@ namespace tfs
       return ret;
     }
 
+    void ServerCollect::invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<std::pair<uint64_t, int32_t> > helper, const uint64_t block)
+    {
+      for (int64_t index = 0; index < helper.get_array_index(); ++index)
+      {
+        std::pair<uint64_t, int32_t>* item = helper.at(index);
+        assert(NULL != item);
+        ServerCollect* pserver = manager.get_server_manager().get(item->first);
+        manager.get_server_manager().relieve_relation(pserver, block);
+        manager.get_block_manager().push_to_delete_queue(block, item->first);
+      }
+    }
+
+    void ServerCollect::write_block_oplog_(LayoutManager& manager, const int32_t cmd, const common::BlockInfoV2& info, const int64_t now)
+    {
+      uint64_t servers[1];
+      ArrayHelper<uint64_t> helper(1, servers);
+      helper.push_back(id());
+      manager.block_oplog_write_helper(cmd, info, helper, now);
+    }
   } /** nameserver **/
 }/** tfs **/

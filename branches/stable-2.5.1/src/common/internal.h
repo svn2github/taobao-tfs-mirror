@@ -228,6 +228,9 @@ namespace tfs
     static const int32_t HTTP_BLANK_LENGTH = 1;
 
     static const int32_t VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO = 2;
+    static const int32_t BLOCK_VERSION_INIT_VALUE = 0;
+
+    static const int32_t MAX_LISTEN_PORT_NUM = 64;
 
     enum NsRole
     {
@@ -1099,7 +1102,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[57];
+    extern const char* dynamic_parameter_str[62];
 
 #pragma pack (1)
     struct FileInfoV2//30
@@ -1293,6 +1296,18 @@ namespace tfs
       {
       }
 
+      void dump(std::stringstream& str)
+      {
+        str << " block id: " << block_id_ << " server size: " << size_ << " result: " << result_ << " servers: ";
+        for (int32_t index = 0; index < size_; ++index)
+        {
+          if (INVALID_SERVER_ID != servers_[index])
+          {
+            str << " " << tbsys::CNetUtil::addrToString(servers_[index]);
+          }
+        }
+      }
+
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
@@ -1408,9 +1423,10 @@ namespace tfs
       int32_t group_seq_;
       int32_t group_count_;
       int32_t replica_num_;
-      int32_t reserve_[4];
+      int32_t business_port_num_;
+      int32_t reserve_[3];
 
-      ClusterConfig():cluster_id_(0), group_seq_(0), group_count_(1), replica_num_(0)
+      ClusterConfig():cluster_id_(0), group_seq_(0), group_count_(1), replica_num_(0), business_port_num_(0)
       {
       }
 

@@ -91,6 +91,9 @@ namespace tfs
       int32_t enable_version_check_;
       int32_t client_keepalive_interval_;
       int32_t verify_index_reserved_space_ratio_;
+      int32_t block_safe_mode_time_;
+      int32_t business_port_count_;
+      int32_t heart_port_count_;
       double  balance_percent_;
       static NameServerParameter ns_parameter_;
       static NameServerParameter& instance()
@@ -152,6 +155,8 @@ namespace tfs
       int32_t max_sync_retry_interval_;
       int32_t sync_fail_retry_interval_;
       int32_t max_bg_task_queue_size_;
+      int32_t business_port_count_;
+      int32_t heart_port_count_;
       static std::string get_real_file_name(const std::string& src_file,
           const std::string& index, const std::string& suffix);
       static int get_real_ds_port(const int ds_port, const std::string& index);

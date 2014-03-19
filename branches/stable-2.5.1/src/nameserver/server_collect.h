@@ -69,7 +69,7 @@ namespace tfs
       int remove(const common::ArrayHelper<uint64_t>& blocks);
       void statistics(NsGlobalStatisticsInfo& stat) const;
       int add_writable(const uint64_t block, const bool isfull);
-      bool calc_regular_create_block_count(const double average_used_capacity,LayoutManager& manager, bool& promote, int32_t& count);
+      bool calc_regular_create_block_count(const double average_used_capacity,LayoutManager& manager, int32_t& count);
       bool get_range_blocks(const uint64_t begin, BLOCK_TABLE& table, common::ArrayHelper<uint64_t>& blocks) const;
       int scan(common::SSMScanParameter& param, const int8_t scan_flag) const;
       virtual void callback(void* args, LayoutManager& manager);
@@ -112,6 +112,7 @@ namespace tfs
       void set_next_report_block_time(const time_t now, const int64_t time_seed, const int32_t flag);
       int choose_move_block_random(uint64_t& result) const;
       int expand_ratio(const float expand_ratio = 0.1);
+      void copy_block(ServerCollect* server);
 
       static const int8_t AVERAGE_USED_CAPACITY_MULTIPLE;
       private:
@@ -123,6 +124,8 @@ namespace tfs
       int for_each_(const uint64_t begin, const BLOCK_TABLE& table, common::ArrayHelper<uint64_t>& blocks) const;
       bool exist_(const uint64_t block, const BLOCK_TABLE& table) const;
       bool cleanup_invalid_block_(BlockCollect* block, const int64_t now);
+      void invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<std::pair<uint64_t, int32_t> > helper, const uint64_t block);
+      void write_block_oplog_(LayoutManager& manager, const int32_t cmd, const common::BlockInfoV2& info, const int64_t now);
 
       private:
       mutable common::RWLock mutex_;

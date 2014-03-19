@@ -82,16 +82,14 @@ namespace tfs
 
       int update_relation(std::vector<uint64_t>& expires, ServerCollect* server,
           const common::ArrayHelper<common::BlockInfoV2>& blocks, const time_t now);
-      int build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set = false);
-      bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool print = true);
-      bool relieve_relation(BlockCollect* block, const uint64_t server, const time_t now);
-      bool relieve_relation(const uint64_t block, ServerCollect* server, const time_t now);
-      bool relieve_relation(const uint64_t block, const uint64_t server, const time_t now);
+      int build_relation(BlockCollect* block, ServerCollect* server, const common::BlockInfoV2* info, const int64_t now, const bool set);
+      int relieve_relation(const uint64_t block, const uint64_t server, const time_t now, const bool print);
+      int relieve_relation(BlockCollect* pblock, ServerCollect* pserver, const time_t now, const bool print);
 
-      int update_block_info(const common::BlockInfoV2& info, const uint64_t server, const time_t now, const bool addnew);
+      //int update_block_info(const common::BlockInfoV2& info, const uint64_t server, const time_t now, const bool addnew);
 
-      int repair(char* msg, const int32_t length, const uint64_t block_id,
-          const uint64_t server, const int64_t family_id, const int32_t type, const time_t now);
+      //int repair(char* msg, const int32_t length, const uint64_t block_id,
+      //    const uint64_t server, const int64_t family_id, const int32_t type, const time_t now);
 
       int scan(common::SSMScanParameter& stream);
 
@@ -131,7 +129,6 @@ namespace tfs
       bool scan_reinstate_or_dissolve_queue_(int64_t& need, const time_t now);
       bool build_replicate_task_(int64_t& need, const BlockCollect* block, const time_t now);
       bool build_compact_task_(const BlockCollect* block, const time_t now);
-      bool build_resolve_block_conflict_(const BlockCollect* block, const time_t now);
       bool build_balance_task_(int64_t& need, common::TfsSortedVector<ServerCollect*,ServerIdCompare>& targets,
           const ServerCollect* source, const BlockCollect* block, const time_t now);
       bool build_reinstate_task_(int64_t& need, const FamilyCollect* family,
@@ -140,12 +137,12 @@ namespace tfs
           const common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members, const time_t now);
       bool build_redundant_(int64_t& need, const time_t now);
       int build_marshalling_(int64_t& need, const time_t now);
-      bool build_adjust_copies_location_task_(common::ArrayHelper<uint64_t>& copies_location, BlockCollect* block, const time_t now);
+      bool build_adjust_copies_location_task_(common::ArrayHelper<std::pair<uint64_t, int32_t> >& copies_location, BlockCollect* block, const time_t now);
       int64_t has_space_in_task_queue_() const;
 
       bool scan_block_(common::ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, int64_t& max_compact_task_count,
           const int32_t max_query_block_num, const time_t now, const bool compact_time,
-          const bool marshalling_time, const bool adjust_copies_location_time, const bool report_time);
+          const bool marshalling_time, const bool report_time);
 
       bool scan_family_(common::ArrayHelper<FamilyCollect*>& results, int64_t& need, int64_t& start,
           const int32_t max_query_family_num, const time_t now, const bool compact_time);

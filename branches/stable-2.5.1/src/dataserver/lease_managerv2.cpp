@@ -378,7 +378,9 @@ namespace tfs
           for (int i = 0; i < lease_meta_[who].renew_retry_times_; i++)
           {
             ret = renew(lease_meta_[who].renew_retry_timeout_ * 1000, who);
-            if (TFS_SUCCESS == ret)
+            if (TFS_SUCCESS == ret
+              || EIXT_SERVER_OBJECT_NOT_FOUND == ret
+              || EXIT_LEASE_EXPIRED == ret)
             {
               break;
             }

@@ -40,14 +40,16 @@ namespace tfs
 
     int ClientRequestServer::apply(common::DataServerStatInfo& info, int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout)
     {
+      TIMER_START();
       const time_t now = Func::get_monotonic_time();
       int32_t ret = manager_.get_server_manager().apply(info, now,SYSPARAM_NAMESERVER.between_ns_and_ds_lease_expire_time_);
       if (TFS_SUCCESS == ret)
       {
         calc_lease_expire_time_(expire_time, next_renew_time, renew_retry_times, renew_retry_timeout);
       }
-      TBSYS_LOG(INFO, "dataserver: %s apply lease %s, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u,lease_expired_time: %d, next_renew_time: %d, retry_times: %d",
-        CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", ret, info.use_capacity_, info.total_capacity_,
+      TIMER_END();
+      TBSYS_LOG(INFO, "dataserver: %s apply lease %s, consume: %"PRI64_PREFIX"d, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u,lease_expired_time: %d, next_renew_time: %d, retry_times: %d",
+        CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(), ret, info.use_capacity_, info.total_capacity_,
         expire_time, next_renew_time, renew_retry_times);
       return ret;
     }
@@ -56,6 +58,7 @@ namespace tfs
           common::DataServerStatInfo& info, common::ArrayHelper<common::BlockLease>& output,
           int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout)
     {
+      TIMER_START();
       const time_t now = Func::get_monotonic_time();
       ServerManager& server_manager = manager_.get_server_manager();
       int32_t ret = server_manager.renew(info, now, SYSPARAM_NAMESERVER.between_ns_and_ds_lease_expire_time_);
@@ -67,14 +70,16 @@ namespace tfs
       {
         ret = server_manager.renew_block(info.id_,input, output);
       }
-      TBSYS_LOG(INFO, "dataserver: %s renew lease %s, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u,lease_expired_time: %d, next_renew_time: %d, retry_times: %d",
-        CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", ret, info.use_capacity_, info.total_capacity_,
-        expire_time, next_renew_time, renew_retry_times);
+      TIMER_END();
+      TBSYS_LOG(INFO, "dataserver: %s renew lease %s consume: %"PRI64_PREFIX"d, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u,lease_expired_time: %d, next_renew_time: %d, retry_times: %d, input block count: %"PRI64_PREFIX"d, output block count: %"PRI64_PREFIX"d",
+        CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(), ret, info.use_capacity_, info.total_capacity_,
+        expire_time, next_renew_time, renew_retry_times, input.get_array_index(), output.get_array_index());
       return ret;
     }
 
     int ClientRequestServer::giveup(const common::ArrayHelper<common::BlockInfoV2>& input,common::DataServerStatInfo& info)
     {
+      TIMER_START();
       BlockLease lease_array[1024];
       ArrayHelper<BlockLease> output(1024, lease_array);
       const time_t now = Func::get_monotonic_time();
@@ -84,8 +89,9 @@ namespace tfs
       {
         ret = server_manager.giveup(now, info.id_);
       }
-      TBSYS_LOG(INFO, "dataserver: %s giveup lease %s, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u",
-        CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", ret, info.use_capacity_, info.total_capacity_);
+      TBSYS_LOG(INFO, "dataserver: %s giveup lease %s,consume: %"PRI64_PREFIX"d, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u",
+        CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(), ret, info.use_capacity_, info.total_capacity_);
+      TIMER_END();
       return ret;
     }
 
@@ -275,10 +281,10 @@ namespace tfs
             }
             if (TFS_SUCCESS == ret)
             {
-              ret = manager_.build_relation(block, server, now, true);
+              ret = manager_.build_relation(block, server, NULL, now, true);
             }
           }
-          if (block->get_servers_size() <= 0 && new_create_block_collect)
+          if (manager_.get_block_manager().get_servers_size(block) <= 0 && new_create_block_collect)
             manager_.get_block_manager().remove(block, info.value3_);
           manager_.get_gc_manager().insert(block, now);
         }
@@ -322,7 +328,8 @@ namespace tfs
             for (int64_t index = 0; index < helper.get_array_index() && TFS_SUCCESS == ret; ++index)
             {
               uint64_t server = *helper.at(index);
-              ret = manager_.relieve_relation(pblock, server, now) ? TFS_SUCCESS : EXIT_RELIEVE_RELATION_ERROR;
+              ServerCollect* pserver = manager_.get_server_manager().get(server);
+              ret = manager_.relieve_relation(pblock, pserver, now, true);
               if (TFS_SUCCESS == ret && info.value4_ == HANDLE_DELETE_BLOCK_FLAG_BOTH)
               {
                 ret = manager_.get_task_manager().remove_block_from_dataserver(server, info.value3_, now);
@@ -352,7 +359,8 @@ namespace tfs
             for (int64_t index = 0; index < helper.get_array_index() && TFS_SUCCESS == ret; ++index)
             {
               uint64_t server = *helper.at(index);
-              ret = manager_.relieve_relation(pblock, server, now) ? TFS_SUCCESS : EXIT_RELIEVE_RELATION_ERROR;
+              ServerCollect* pserver = manager_.get_server_manager().get(server);
+              ret = manager_.relieve_relation(pblock, pserver, now, true);
               if (TFS_SUCCESS == ret)
               {
                 ret = manager_.get_task_manager().remove_block_from_dataserver(server, info.value3_, now);
@@ -375,9 +383,9 @@ namespace tfs
           }
           else
           {
-            ret = manager_.relieve_relation(pblock, server, now) ? TFS_SUCCESS : EXIT_RELIEVE_RELATION_ERROR;
+            ret = manager_.relieve_relation(pblock, server, now, true);
           }
-          if (pblock->get_servers_size() <= 0)
+          if (manager_.get_block_manager().get_servers_size(pblock) <= 0)
           {
             manager_.get_block_manager().remove(pobject, info.value3_);
           }
@@ -486,7 +494,8 @@ namespace tfs
             }
           }
           BlockCollect* pobject = NULL;
-          if (block->get_servers_size() <= 0 && new_create_block_collect)
+
+          if (manager_.get_block_manager().get_servers_size(block) <= 0 && new_create_block_collect)
             manager_.get_block_manager().remove(pobject, info.value3_);
           manager_.get_gc_manager().insert(pobject, now);
         }
@@ -726,7 +735,7 @@ namespace tfs
               //解除关系失败可以暂时不管
               update_last_time = true;
               server = server_manager.get(item->first);
-              manager_.relieve_relation(block, server, now);
+              manager_.relieve_relation(block, server, now, true);
               block_manager.push_to_delete_queue(block_id, item->first);
               TBSYS_LOG(INFO, "resolve block version conflict: relieve relation block: %"PRI64_PREFIX"u, server: %s, version: %d",
                 block_id, tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
@@ -740,7 +749,6 @@ namespace tfs
           {
             block->set(now, 0);
           }
-          block->set_has_version_conflict(BLOCK_HAS_VERSION_CONFLICT_FLAG_NO);
         }
       }
       return ret;

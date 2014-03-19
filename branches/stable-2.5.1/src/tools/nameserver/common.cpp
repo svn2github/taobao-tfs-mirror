@@ -163,6 +163,7 @@ namespace tfs
       {
         ServerInfo server_info;
         server_info.server_id_ = input.readInt64();
+        server_info.version_   = input.readInt32();
         server_list_.push_back(server_info);
         server_size--;
       }

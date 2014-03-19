@@ -99,7 +99,6 @@ namespace tfs
           const bool writable, const bool master);
 
       int relieve_relation(ServerCollect* server, const uint64_t block);
-      int relieve_relation(const uint64_t server, const uint64_t block);
 
       int move_statistic_all_server_info(int64_t& total_capacity, int64_t& total_use_capacity,
           int64_t& alive_server_nums) const;
@@ -151,6 +150,7 @@ namespace tfs
           const common::ArrayHelper<uint64_t>& except, const std::set<uint32_t>& lans) const;
 
       bool for_each_(const uint64_t start, const SERVER_TABLE& table, common::ArrayHelper<ServerCollect*>& servers) const;
+      int in_apply_block_safe_mode_time_() const;
 
       private:
       SERVER_TABLE servers_;

@@ -178,14 +178,14 @@ namespace tfs
       return ret;
     }
 
-    int LayoutManager::build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set)
+    int LayoutManager::build_relation(BlockCollect* block, ServerCollect* server, const BlockInfoV2* info, const int64_t now, const bool set)
     {
       int32_t ret = ((NULL != block) && (NULL != server)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         bool writable = false;
         bool master   = false;
-        ret = get_block_manager().build_relation(block, writable, master, server->id(), now, set);
+        ret = get_block_manager().build_relation(block, writable, master, server->id(), info, now, set);
         if (TFS_SUCCESS == ret)
         {
           ret = get_server_manager().build_relation(server, block->id(), writable, master);
@@ -194,149 +194,39 @@ namespace tfs
       return ret;
     }
 
-    bool LayoutManager::relieve_relation(BlockCollect* block, ServerCollect* server, time_t now, const bool print)
-    {
-      int32_t result = TFS_ERROR;
-      int32_t ret = ((NULL != block) && (NULL != server)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        //release relation between block and dataserver
-        ret = get_block_manager().relieve_relation(block, server->id(), now);
-        if (TFS_SUCCESS != ret && print)
-        {
-          TBSYS_LOG(INFO, "failed when relieve between block: %"PRI64_PREFIX"u and dataserver: %s, ret: %d",
-              block->id(), CNetUtil::addrToString(server->id()).c_str(), ret);
-        }
-        result = get_server_manager().relieve_relation(server,block->id());
-        if (TFS_SUCCESS != result && print)
-        {
-          TBSYS_LOG(INFO, "failed when relieve between block: %"PRI64_PREFIX"u and dataserver: %s, ret: %d",
-              block->id(), CNetUtil::addrToString(server->id()).c_str(), result);
-        }
-      }
-      return (TFS_SUCCESS == ret && TFS_SUCCESS == result);
-    }
-
-
-    bool LayoutManager::relieve_relation(BlockCollect* block, const uint64_t server, const time_t now)
-    {
-      int32_t ret = ((NULL != block) && (INVALID_SERVER_ID != server)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ServerCollect* pserver = get_server_manager().get(server);
-        ret = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
-        if (TFS_SUCCESS == ret)
-          ret = relieve_relation(block, pserver, now) ? TFS_SUCCESS : EXIT_RELIEVE_RELATION_ERROR;
-      }
-      return TFS_SUCCESS == ret;
-    }
-
-    bool LayoutManager::relieve_relation(const uint64_t block, ServerCollect* server, const time_t now)
-    {
-      int32_t ret = ((INVALID_BLOCK_ID != block) && (NULL != server)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        BlockCollect* pblock = get_block_manager().get(block);
-        ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_NO_BLOCK;
-        if (TFS_SUCCESS == ret)
-          ret = relieve_relation(pblock, server, now) ? TFS_SUCCESS : EXIT_RELIEVE_RELATION_ERROR;
-      }
-      return TFS_SUCCESS == ret;
-    }
-
-    bool LayoutManager::relieve_relation(const uint64_t block, const uint64_t server, const time_t now)
+    int LayoutManager::relieve_relation(const uint64_t block, const uint64_t server, const time_t now, const bool print)
     {
       int32_t ret = ((INVALID_BLOCK_ID != block) && (INVALID_BLOCK_ID != server)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         BlockCollect* pblock = get_block_manager().get(block);
-        ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_NO_BLOCK;
-        if (TFS_SUCCESS == ret)
-        {
-          ServerCollect* pserver = get_server_manager().get(server);
-          ret = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
-          if (TFS_SUCCESS == ret)
-            ret = relieve_relation(block, pserver, now) ? TFS_SUCCESS : EXIT_RELIEVE_RELATION_ERROR;
-        }
-      }
-      return TFS_SUCCESS == ret;
-    }
-
-    int LayoutManager::update_block_info(const BlockInfoV2& info, const uint64_t server, const time_t now,const bool addnew)
-    {
-      bool isnew = false;
-      bool master = false;
-      bool writable = false;
-      BlockCollect* block = NULL;
-      ServerCollect* pserver = get_server_manager().get(server);
-      int32_t ret = (NULL != pserver) ? TFS_SUCCESS : EXIT_DATASERVER_NOT_FOUND;
-      if (TFS_SUCCESS == ret)
-      {
-        block = get_block_manager().get(info.block_id_);
-        ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-      }
-      if (TFS_SUCCESS == ret || addnew)
-      {
-        ret = get_block_manager().update_block_info(block, isnew, writable, master,
-            info, pserver, now, addnew);
-      }
-      if ((TFS_SUCCESS == ret)
-          && (isnew))
-      {
-        get_server_manager().build_relation(pserver, block->id(), writable, master);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        //write oplog
-        uint64_t arrays[1];
-        common::ArrayHelper<uint64_t> servers(1, arrays);
-        servers.push_back(server);
-        #ifndef TFS_GTEST
-        ret = block_oplog_write_helper(isnew ? OPLOG_INSERT : OPLOG_UPDATE, info, servers, now);
-        #endif
+        ServerCollect* pserver = get_server_manager().get(server);
+        ret = this->relieve_relation(pblock, pserver, now, print);
       }
       return ret;
     }
 
-    int LayoutManager::repair(char* msg, const int32_t length, const uint64_t block_id,
-          const uint64_t server, const int64_t family_id, const int32_t type, const time_t now)
+    int LayoutManager::relieve_relation(BlockCollect* pblock, ServerCollect* pserver, const time_t now, const bool print)
     {
-      int32_t ret = ((NULL != msg) && (length > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
+      int32_t ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_NO_BLOCK;
+      int32_t result = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+      if (TFS_SUCCESS == ret && TFS_SUCCESS == result)
       {
-        uint64_t servers[MAX_REPLICATION_NUM];
-        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
-        BlockCollect* block = get_block_manager().get(block_id);
-        ret = (NULL == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
-        if (TFS_SUCCESS != ret)
+        //release relation between block and dataserver
+        ret = get_block_manager().relieve_relation(pblock, pserver->id(), now);
+        if (TFS_SUCCESS != ret && print)
         {
-          snprintf(msg, length, "repair block, block object not found by block: %"PRI64_PREFIX"u, ret: %d", block_id, ret);
+          TBSYS_LOG(INFO, "failed when relieve between block: %"PRI64_PREFIX"u and dataserver: %s, ret: %d",
+              pblock->id(), CNetUtil::addrToString(pserver->id()).c_str(), ret);
         }
-        else
+        result = get_server_manager().relieve_relation(pserver,pblock->id());
+        if (TFS_SUCCESS != result && print)
         {
-          get_block_manager().get_servers(helper, block_id);
-          if (REAPIR_BLOCK_NOT_EXIST == type)
-          {
-            relieve_relation(block, server, now);
-            get_block_manager().push_to_emergency_replicate_queue(block);
-          }
-          if (REPAIR_FAMILY_ID_CONFLICT == type)
-          {
-            TBSYS_LOG(INFO, "Family id: %"PRI64_PREFIX"d: %"PRI64_PREFIX"d conflict, block: %"PRI64_PREFIX"u, server: %s",
-              family_id,block->get_family_id(),block_id, tbsys::CNetUtil::addrToString(server).c_str());
-            if (get_family_manager().exist(block->get_family_id(), block_id) && helper.exist(server))
-            {
-              relieve_relation(block, server, now);
-              if (block->get_servers_size() <= 0)
-              {
-                FamilyCollect* family = get_family_manager().get(block->get_family_id());
-                get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_REINSTATE);
-              }
-            }
-          }
+          TBSYS_LOG(INFO, "failed when relieve between block: %"PRI64_PREFIX"u and dataserver: %s, ret: %d",
+              pblock->id(), CNetUtil::addrToString(pserver->id()).c_str(), result);
         }
       }
-      return ret;
+      return ret != TFS_SUCCESS ? ret : result;
     }
 
     int LayoutManager::scan(SSMScanParameter& param)
@@ -418,7 +308,8 @@ namespace tfs
         ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
-          if (block->get_servers_size() <= 0)
+
+          if (get_block_manager().get_servers_size(block) <= 0)
           {
             if (block->is_creating())
             {
@@ -532,7 +423,12 @@ namespace tfs
           &SYSPARAM_NAMESERVER.marshalling_visit_time_,
           &SYSPARAM_NAMESERVER.client_keepalive_interval_,
           &SYSPARAM_NAMESERVER.verify_index_reserved_space_ratio_,
-          &SYSPARAM_NAMESERVER.max_block_size_
+          &SYSPARAM_NAMESERVER.max_block_size_,
+          &SYSPARAM_NAMESERVER.block_safe_mode_time_,
+          &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_expire_time_,
+          &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_safe_time_,
+          &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_times_,
+          &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
@@ -649,11 +545,10 @@ namespace tfs
           const bool report_time      = ngi.in_report_block_time(now);
           const bool compact_time     = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
           const bool marshalling_time = in_hour_range(current, SYSPARAM_NAMESERVER.marshalling_time_lower_, SYSPARAM_NAMESERVER.marshalling_time_upper_);
-          const bool adjust_copies_location_time = in_hour_range(current, SYSPARAM_NAMESERVER.adjust_copies_location_time_lower_, SYSPARAM_NAMESERVER.adjust_copies_location_time_upper_);
           if (need > 0)
           {
             now = Func::get_monotonic_time();
-            over = scan_block_(results, need, block_start, max_compact_task_count, MAX_QUERY_BLOCK_NUMS, now, compact_time, marshalling_time, adjust_copies_location_time, report_time);
+            over = scan_block_(results, need, block_start, max_compact_task_count, MAX_QUERY_BLOCK_NUMS, now, compact_time, marshalling_time, report_time);
             if (over)
               block_start = 0;
           }
@@ -854,7 +749,7 @@ namespace tfs
                 for (; it != (*iter).family_member_.end(); ++it)
                 {
                   helper.push_back(std::make_pair((*it).first, (*it).second));
-                  BlockCollect* block =  get_block_manager().insert((*it).first, now);
+                  BlockCollect* block =  get_block_manager().insert((*it).first, now, false);
                   assert(block);
                   block->set_family_id(family_id);
                 }
@@ -905,7 +800,7 @@ namespace tfs
           assert(NULL != pserver);
           now = Func::get_monotonic_time();
           CallDsReportBlockRequestMessage req;
-          req.set_server(ngi.heart_ip_port_);
+          req.set_server(ngi.choose_report_block_ipport_addr(pserver->id()));
           post_msg_to_server(pserver->id(), &req, ns_async_callback);
           now = Func::get_monotonic_time();
           pserver->set_report_block_expire_time(now);
@@ -926,13 +821,10 @@ namespace tfs
     void LayoutManager::regular_create_block_for_servers()
     {
       uint64_t begin = 0;
-      const int32_t SLEEP_TIME_S  = 2;
+      const int32_t SLEEP_TIME_S  = 1;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
-        if (ngi.in_safe_mode_time(Func::get_monotonic_time()))
-          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
-
         bool complete = get_server_manager().size() < SYSPARAM_NAMESERVER.max_replication_;
         if (!complete)
         {
@@ -1064,7 +956,7 @@ namespace tfs
           ServerCollect* pserver = get_server_manager().get(server);
           ret = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
           if (TFS_SUCCESS == ret)
-            ret = build_relation(block, pserver, now, true);
+            ret = build_relation(block, pserver, NULL, now, true);
         }
       }
       return ret;
@@ -1131,7 +1023,7 @@ namespace tfs
                       || ((NULL != block)
                         && (!new_create_block_collect)
                         && (!block->is_creating())
-                        && (block->get_servers_size() <= 0)))
+                        && (get_block_manager().get_servers_size(block) <= 0)))
                   {
                     get_block_manager().remove(pobject,block_id);
                   }
@@ -1325,21 +1217,6 @@ namespace tfs
         }
       }
       return (TFS_SUCCESS == ret);
-    }
-
-    bool LayoutManager::build_resolve_block_conflict_(const BlockCollect* block, const time_t now)
-    {
-      int ret = ((NULL != block) && (plan_run_flag_ & PLAN_RUN_FLAG_RESLOVE_VERSION_CONFLICT)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        uint64_t servers[MAX_REPLICATION_NUM];
-        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
-        if (get_block_manager().check_version_conflict(block, now, helper))
-        {
-          ret = get_task_manager().add(block->id(), helper, PLAN_TYPE_RESOLVE_VERSION_CONFLICT, now);
-        }
-      }
-      return ret;
     }
 
     bool LayoutManager::build_balance_task_(int64_t& need, common::TfsSortedVector<ServerCollect*,ServerIdCompare>& targets,
@@ -1551,19 +1428,12 @@ namespace tfs
 
     bool LayoutManager::build_redundant_(int64_t& need, const time_t now)
     {
-      UNUSED(now);
       bool ret = false;
       std::pair<uint64_t, uint64_t> output;
       while (need-- > 0 && get_block_manager().pop_from_delete_queue(output))
       {
-        BlockCollect* block = get_block_manager().get(output.second);
-        ServerCollect* server = get_server_manager().get(output.first);
-        ret = ((NULL != block) && (NULL != server));
-        if (ret)
-        {
-          relieve_relation(block, server, now, false);//这里有可能误报，因为有一些地方会先解除关系后再加入到删除列表
-          ret = (TFS_SUCCESS == get_task_manager().remove_block_from_dataserver(server->id(), block->id(), now));
-        }
+        relieve_relation(output.second, output.first, now, false);
+        ret = (TFS_SUCCESS == get_task_manager().remove_block_from_dataserver(output.first, output.second, now));
       }
       return true;
     }
@@ -1661,24 +1531,28 @@ namespace tfs
       return ret;
     }
 
-    bool LayoutManager::build_adjust_copies_location_task_(common::ArrayHelper<uint64_t>& copies_location, BlockCollect* block, const time_t now)
+    bool LayoutManager::build_adjust_copies_location_task_(common::ArrayHelper<std::pair<uint64_t, int32_t> >& copies_location, BlockCollect* block, const time_t now)
     {
       bool ret = copies_location.get_array_index() > 0 && NULL != block;
       if (ret)
       {
-        bool result = false;
-        uint64_t server = INVALID_SERVER_ID;
+        NsRuntimeGlobalInformation& ngi = NsRuntimeGlobalInformation::instance();
+        int32_t result = TFS_SUCCESS;
         for (int64_t index = 0; index < copies_location.get_array_index(); ++index)
         {
-          server = *copies_location.at(index);
-          result = (relieve_relation(block, server, now));
-          if (result)
+          std::pair<uint64_t, int32_t>* item = copies_location.at(index);
+          ServerCollect* pserver = this->get_server_manager().get(item->first);
+          result = relieve_relation(block, pserver, now, false);
+          if (TFS_SUCCESS == result && ngi.is_master())
           {
-            ret = true;
-            result = get_block_manager().push_to_emergency_replicate_queue(block);
-            if (result)
-              get_block_manager().push_to_delete_queue(block->id(), server);
+            get_block_manager().push_to_delete_queue(block->id(), item->first);
           }
+        }
+        if (ngi.is_master())
+        {
+          ret = get_block_manager().need_replicate(block);
+          if (ret)
+            get_block_manager().push_to_emergency_replicate_queue(block);
         }
       }
       return ret;
@@ -1690,29 +1564,27 @@ namespace tfs
     }
 
     bool LayoutManager::scan_block_(ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, int64_t& max_compact_task_count, const int32_t max_query_block_num,
-          const time_t now, const bool compact_time, const bool marshalling_time, const bool adjust_copies_location_time, const bool report_time)
+          const time_t now, const bool compact_time, const bool marshalling_time, const bool report_time)
     {
       results.clear();
       bool ret  = false;
       BlockCollect* block = NULL;
-      uint64_t copies[SYSPARAM_NAMESERVER.max_replication_];
-      ArrayHelper<uint64_t> copies_location(SYSPARAM_NAMESERVER.max_replication_, copies);
+      std::pair<uint64_t, int32_t> copies[MAX_REPLICATION_NUM];
+      ArrayHelper<std::pair<uint64_t, int32_t> > copies_location(MAX_REPLICATION_NUM, copies);
       bool over = get_block_manager().scan(results, start, max_query_block_num);
       for (int64_t index = 0; index < results.get_array_index() && need > 0; ++index)
       {
         copies_location.clear();
         block = *results.at(index);
         assert(NULL != block);
-        ret = get_block_manager().need_replicate(block, now);
+        ret = get_block_manager().need_adjust_copies_location(copies_location,block,now);
+        if ((ret) && (ret = (build_adjust_copies_location_task_(copies_location, block, now))))
+        {
+
+        }
+        ret = (get_block_manager().need_replicate(block, now));
         if ((ret) && (ret = get_block_manager().push_to_emergency_replicate_queue(block)))
           --need;
-        ret = (!ret && (plan_run_flag_ & PLAN_RUN_FLAG_RESLOVE_VERSION_CONFLICT)
-            && get_block_manager().check_version_conflict(block, now));
-        if ((ret) && (ret = build_resolve_block_conflict_(block, now)))
-          --need;
-        ret = (!ret && adjust_copies_location_time && (plan_run_flag_ & PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION)
-            && get_block_manager().need_adjust_copies_location(copies_location,block,now));
-        ret = ((ret) && (ret == build_adjust_copies_location_task_(copies_location, block, now)));
         ret = (!ret && compact_time && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT) && max_compact_task_count > 0
             && get_block_manager().need_compact(block,now));
         if ((ret) && (ret = build_compact_task_(block, now)))

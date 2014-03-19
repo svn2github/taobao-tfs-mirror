@@ -175,6 +175,8 @@ namespace tfs
       if (safe_mode_time_ <= 0)
         safe_mode_time_ = 300;
 
+      block_safe_mode_time_ = safe_mode_time_;
+
       task_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_EXPIRED_TIME, 120);
       if (task_expired_time_ <= 0)
         task_expired_time_ = 120;
@@ -226,6 +228,9 @@ namespace tfs
       max_check_member_num_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_CHECK_MEMBER_NUM, 1);
 
       max_marshalling_queue_timeout_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_MARSHALLING_QUEUE_TIMEOUT, 3600);
+
+      business_port_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BUSINESS_PORT_COUNT, 2);
+      heart_port_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_PORT_COUNT, 2);
       return TFS_SUCCESS;
     }
 
@@ -293,6 +298,8 @@ namespace tfs
       max_sync_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_INTERVAL, 30);
       sync_fail_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_SYNC_FAIL_RETRY_INTERVAL, 300);
       max_bg_task_queue_size_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_BG_TASK_QUEUE_SIZE, 5);
+      business_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_BUSINESS_PORT_COUNT, 2);
+      heart_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_HEART_PORT_COUNT, 2);
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 

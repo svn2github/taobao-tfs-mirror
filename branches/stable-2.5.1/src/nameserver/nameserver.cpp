@@ -40,12 +40,20 @@ namespace tfs
       master_slave_heart_manager_(layout_manager_),
       heart_manager_(*this)
     {
-
+      for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
+      {
+        streamer_[index] = NULL;
+        transport_[index] = NULL;
+      }
     }
 
     NameServer::~NameServer()
     {
-
+      for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
+      {
+        tbsys::gDelete(streamer_[index]);
+        tbsys::gDelete(transport_[index]);
+      }
     }
 
     int NameServer::initialize(int /*argc*/, char* /*argv*/[])
@@ -62,6 +70,9 @@ namespace tfs
         ret =  EXIT_CONFIG_ERROR;
         TBSYS_LOG(ERROR, "%s", "nameserver not set ip_addr");
       }
+
+      const int32_t base_port = get_port();
+      const int32_t heart_base_port = base_port + SYSPARAM_NAMESERVER.business_port_count_;
 
       if (TFS_SUCCESS == ret)
       {
@@ -83,14 +94,38 @@ namespace tfs
           {
             uint32_t local_ip = Func::get_local_addr(dev_name);
             NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-            ngi.owner_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, get_port());
-            ngi.heart_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, get_port() + 1);
+            ngi.owner_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, heart_base_port);
+            for (int32_t index = 0; index < SYSPARAM_NAMESERVER.heart_port_count_; ++index)
+            {
+              uint64_t ipport = tbsys::CNetUtil::ipToAddr(local_ip, (heart_base_port + index));
+              ngi.heart_ip_ports_.push_back(ipport);
+            }
             bool find_ip_in_dev = Func::is_local_addr(ip_addr_id);
             if (!find_ip_in_dev)
             {
               TBSYS_LOG(WARN, "ip '%s' is not local ip, local ip: %s",ip_addr, tbsys::CNetUtil::addrToString(local_ip).c_str());
             }
           }
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        char spec[32] = {'\0'};
+        for (int32_t index = 1; index < SYSPARAM_NAMESERVER.business_port_count_ && TFS_SUCCESS == ret; ++index)
+        {
+          streamer_[index] = new (std::nothrow)common::BasePacketStreamer();
+          assert(NULL != streamer_[index]);
+          streamer_[index]->set_packet_factory(get_packet_factory());
+          transport_[index] = new (std::nothrow)tbnet::Transport();
+          assert(NULL != transport_[index]);
+          snprintf(spec, 32, "tcp:%d", base_port + index);
+          tbnet::IOComponent* com = transport_[index]->listen(spec, streamer_[index], this);
+          ret = (NULL == com) ? EXIT_NETWORK_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
+            transport_[index]->start();
+          else
+            TBSYS_LOG(ERROR, "listen port %d failed, ret: %d", base_port + index, ret);
         }
       }
 
@@ -132,10 +167,9 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        int32_t port = get_listen_port() + 1;
-        int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_THREAD_COUNT, 1);
-        int32_t report_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_THREAD_COUNT, 2);
-        ret = heart_manager_.initialize(heart_thread_count, report_thread_count, port);
+        const int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_THREAD_COUNT, 1);
+        const int32_t report_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_THREAD_COUNT, 2);
+        ret = heart_manager_.initialize(heart_thread_count, report_thread_count, heart_base_port , SYSPARAM_NAMESERVER.heart_port_count_);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "initialize heart manager failed, must be exit, ret: %d", ret);
@@ -181,6 +215,15 @@ namespace tfs
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       if (!ngi.is_destroyed())
       {
+        for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
+        {
+          if (NULL != transport_[index])
+          {
+            transport_[index]->stop();
+            transport_[index]->wait();
+          }
+        }
+
         GFactory::destroy();
         heart_manager_.destroy();
         master_slave_heart_manager_.destroy();
@@ -315,7 +358,7 @@ namespace tfs
               ret = get_family_info(msg);
               break;
             case REPAIR_BLOCK_MESSAGE_V2:
-              ret = repair(msg);
+              //ret = repair(msg);
               break;
             case DS_APPLY_BLOCK_MESSAGE:
               ret = apply_block(msg);
@@ -619,12 +662,14 @@ namespace tfs
               ngi.owner_status_ = NS_STATUS_UNINITIALIZE;
               ngi.peer_status_ = NS_STATUS_UNINITIALIZE;
               ngi.vip_ = Func::get_addr(get_ip_addr());
+              const int32_t base_port = get_port();
+              const int32_t heart_base_port = base_port + SYSPARAM_NAMESERVER.business_port_count_;
               for (iter = ns_ip_list.begin();iter != ns_ip_list.end(); ++iter)
               {
                 if (local_ip == (*iter))
-                  ngi.owner_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
+                  ngi.owner_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), heart_base_port);
                 else
-                  ngi.peer_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
+                  ngi.peer_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), heart_base_port);
               }
               ngi.switch_role(true);
             }
@@ -651,7 +696,10 @@ namespace tfs
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
             && pcode != SET_DATASERVER_MESSAGE
             && pcode != REQ_REPORT_BLOCKS_TO_NS_MESSAGE
-            && pcode != CLIENT_CMD_MESSAGE)
+            && pcode != CLIENT_CMD_MESSAGE
+            && pcode != CLIENT_NS_KEEPALIVE_MESSAGE
+            && pcode != DS_GIVEUP_BLOCK_MESSAGE
+            && pcode != DS_APPLY_BLOCK_MESSAGE)
           {
             ret = ngi.owner_status_ < NS_STATUS_INITIALIZED? common::TFS_ERROR : common::TFS_SUCCESS;
           }
@@ -676,7 +724,9 @@ namespace tfs
             && pcode != MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE
             && pcode != SET_DATASERVER_MESSAGE
             && pcode != REQ_REPORT_BLOCKS_TO_NS_MESSAGE
-            && pcode != CLIENT_CMD_MESSAGE)
+            && pcode != CLIENT_CMD_MESSAGE
+            && pcode != CLIENT_NS_KEEPALIVE_MESSAGE
+            && pcode != DS_GIVEUP_BLOCK_MESSAGE)
           {
             if (ngi.owner_status_ < NS_STATUS_INITIALIZED)
             {
@@ -734,28 +784,12 @@ namespace tfs
       return ret;
     }
 
-    int NameServer::repair(common::BasePacket* msg)
-    {
-      int32_t ret = ((NULL != msg) && (msg->getPCode() == REPAIR_BLOCK_MESSAGE_V2)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        char error_msg[512] = {'\0'};
-        RepairBlockMessageV2* message = dynamic_cast<RepairBlockMessageV2*>(msg);
-        const uint64_t block_id = message->get_block_id();
-        const uint64_t server   = message->get_server_id();
-        const int64_t  family_id = message->get_family_id();
-        const int32_t  type     = message->get_repair_type();
-        ret = layout_manager_.repair(error_msg, 512, block_id, server, family_id, type, Func::get_monotonic_time());
-        ret = message->reply(new StatusMessage(ret, error_msg));
-      }
-      return ret;
-    }
-
     int NameServer::apply_block(common::BasePacket* msg)
     {
       int32_t ret = ((NULL != msg) && (msg->getPCode() == DS_APPLY_BLOCK_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        TIMER_START();
         DsApplyBlockMessage* ab_msg = dynamic_cast<DsApplyBlockMessage*>(msg);
         uint64_t server   = ab_msg->get_server_id();
         int32_t MAX_COUNT = ab_msg->get_count();
@@ -773,6 +807,10 @@ namespace tfs
         {
           reply_msg->free();
         }
+        TIMER_END();
+        TBSYS_LOG(INFO, "dataserver: %s apply block %s consume times: %"PRI64_PREFIX"d(us), ret: %d, need: %d, actual: %"PRI64_PREFIX"d",
+          tbsys::CNetUtil::addrToString(server).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(),
+          ret, MAX_COUNT, output.get_array_index());
       }
       return ret;
     }
@@ -782,6 +820,7 @@ namespace tfs
       int32_t ret = ((NULL != msg) && (msg->getPCode() == DS_APPLY_BLOCK_FOR_UPDATE_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        TIMER_START();
         DsApplyBlockForUpdateMessage* ab_msg = dynamic_cast<DsApplyBlockForUpdateMessage*>(msg);
         uint64_t server   = ab_msg->get_server_id();
         DsApplyBlockForUpdateResponseMessage* reply_msg = new (std::nothrow)DsApplyBlockForUpdateResponseMessage();
@@ -800,6 +839,10 @@ namespace tfs
         {
           reply_msg->free();
         }
+        TIMER_END();
+        TBSYS_LOG(INFO, "dataserver: %s apply block for update %s consume times: %"PRI64_PREFIX"d(us), ret: %d, need: %d, actual: %"PRI64_PREFIX"d",
+          tbsys::CNetUtil::addrToString(server).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(),
+          ret, MAX_COUNT, output.get_array_index());
       }
       return ret;
     }
@@ -809,6 +852,7 @@ namespace tfs
       int32_t ret = ((NULL != msg) && (msg->getPCode() == DS_GIVEUP_BLOCK_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        TIMER_START();
         DsGiveupBlockMessage* ab_msg = dynamic_cast<DsGiveupBlockMessage*>(msg);
         uint64_t server   = ab_msg->get_server_id();
         int32_t MAX_COUNT = ab_msg->get_size();
@@ -827,6 +871,10 @@ namespace tfs
         {
           reply_msg->free();
         }
+        TIMER_END();
+        TBSYS_LOG(INFO, "dataserver: %s giveup block %s consume times: %"PRI64_PREFIX"d(us), ret: %d, need: %d, actual: %"PRI64_PREFIX"d",
+          tbsys::CNetUtil::addrToString(server).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(),
+          ret, MAX_COUNT, output.get_array_index());
       }
       return ret;
     }

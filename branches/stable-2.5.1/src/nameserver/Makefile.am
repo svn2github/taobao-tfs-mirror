@@ -19,9 +19,9 @@ oplog.h oplog_sync_manager.h server_collect.h server_manager.h task.h task_manag
 family_collect.h family_manager.h tair_helper.h
 
 
-NAMSERVER_SOURCE_LIST=block_collect.cpp block_manager.cpp  server_collect.cpp server_manager.cpp\
+NAMSERVER_SOURCE_LIST=ns_define.cpp block_collect.cpp block_manager.cpp  server_collect.cpp server_manager.cpp\
 	task.cpp task_manager.cpp family_collect.cpp family_manager.cpp block_id_factory.cpp global_factory.cpp \
-	ns_define.cpp oplog.cpp oplog_sync_manager.cpp heart_manager.cpp  layout_manager.cpp client_request_server.cpp\
+	oplog.cpp oplog_sync_manager.cpp heart_manager.cpp  layout_manager.cpp client_request_server.cpp\
 	tair_helper.cpp  nameserver.cpp $(NAMESERVER_SOURCE_LIST_HEADER)
 
 libnameserver_a_SOURCES=$(NAMSERVER_SOURCE_LIST)

@@ -104,7 +104,7 @@ namespace tfs
       bool is_target(const int32_t index);
       bool is_target(const common::FamilyMemberInfo& info, const int32_t index,
         const common::PlanType type, const int32_t family_aid_info);
-      inline LayoutManager& get_manager() { return manager_;}
+      inline LayoutManager& get_layout_manager() { return manager_;}
       private:
       int remove_(const uint64_t server, const bool target = false);
       int remove_(Task* task);

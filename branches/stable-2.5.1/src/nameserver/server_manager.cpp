@@ -96,26 +96,39 @@ namespace tfs
           pserver->reset(info, now, manager_);
         }
         pserver->set_status(SERVICE_STATUS_ONLINE);
-        TBSYS_LOG(INFO, "dataserver %s join", tbsys::CNetUtil::addrToString(pserver->id()).c_str());
       }
+      TBSYS_LOG(DEBUG, "dataserver %s apply lease: %s, ret: %d", tbsys::CNetUtil::addrToString(pserver->id()).c_str(),
+        TFS_SUCCESS == ret ? "successful" : "failed", ret);
       return ret;
     }
 
     int ServerManager::giveup(const int64_t now, const uint64_t server)
     {
-      TBSYS_LOG(INFO, "dataserver %s exit", tbsys::CNetUtil::addrToString(server).c_str());
       rwmutex_.wrlock();
+      ServerCollect* last    = NULL;
       ServerCollect* pserver = get_(server);
-      int32_t ret = (NULL == pserver) ? EXIT_LEASE_NOT_EXIST : common::TFS_SUCCESS;
+      int32_t ret = (NULL == pserver) ? EIXT_SERVER_OBJECT_NOT_FOUND : common::TFS_SUCCESS;
       if (common::TFS_SUCCESS == ret)
       {
         ServerCollect* result = NULL;
         ret = wait_free_servers_.insert_unique(result, pserver);
+        if (EXIT_ELEMENT_EXIST == ret)
+        {
+          last = result;
+          result = NULL;
+          wait_free_servers_.erase(result);
+          ret = wait_free_servers_.insert_unique(result, pserver);
+        }
         assert(common::TFS_SUCCESS == ret);
         assert(NULL != result);
         servers_.erase(pserver);
       }
       rwmutex_.unlock();
+
+      if (NULL != last && common::TFS_SUCCESS == ret)
+      {
+        pserver->copy_block(last);
+      }
       if (common::TFS_SUCCESS == ret)
       {
         int32_t args = CALL_BACK_FLAG_NONE;
@@ -124,6 +137,8 @@ namespace tfs
         pserver->set_wait_free_phase(OBJECT_WAIT_FREE_PHASE_CLEAR);
         pserver->set(now, common::SYSPARAM_NAMESERVER.replicate_wait_time_);
       }
+      TBSYS_LOG(DEBUG, "dataserver %s giveup lease: %s, ret: %d", tbsys::CNetUtil::addrToString(server).c_str(),
+        TFS_SUCCESS == ret ? "successful" : "failed", ret);
       return ret;
     }
 
@@ -132,7 +147,7 @@ namespace tfs
       assert(times > 0);
       rwmutex_.rdlock();
       ServerCollect* pserver = get_(info.id_);
-      int32_t ret = (NULL == pserver) ? EXIT_LEASE_NOT_EXIST : common::TFS_SUCCESS;
+      int32_t ret = (NULL == pserver) ? EIXT_SERVER_OBJECT_NOT_FOUND: common::TFS_SUCCESS;
       if (common::TFS_SUCCESS == ret)
       {
         ret = pserver->has_valid_lease(now) ? common::TFS_SUCCESS : EXIT_LEASE_EXPIRED;
@@ -140,7 +155,7 @@ namespace tfs
       rwmutex_.unlock();
       if (common::TFS_SUCCESS == ret)
       {
-        pserver->renew(info, now, times);
+        ret = pserver->renew(info, now, times) ? common::TFS_SUCCESS : EXIT_LEASE_EXPIRED;
       }
       return ret;
     }
@@ -188,6 +203,7 @@ namespace tfs
         {
           ++expire_count;
           giveup(now, last_traverse_server);
+          TBSYS_LOG(INFO, "dataserver %s giveup lease", tbsys::CNetUtil::addrToString(last_traverse_server).c_str());
         }
         else
         {
@@ -266,9 +282,7 @@ namespace tfs
       int32_t ret = (INVALID_SERVER_ID == server) ? EXIT_SERVER_ID_INVALID_ERROR: TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        int64_t now = Func::get_monotonic_time();
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        ret = ngi.in_apply_block_safe_mode_time(now) ? EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR : TFS_SUCCESS;
+        ret = in_apply_block_safe_mode_time_();
       }
       if (TFS_SUCCESS == ret)
       {
@@ -291,9 +305,7 @@ namespace tfs
       int32_t ret = (INVALID_SERVER_ID == server) ? EXIT_SERVER_ID_INVALID_ERROR: TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        int64_t now = Func::get_monotonic_time();
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        ret = ngi.in_apply_block_safe_mode_time(now) ? EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR : TFS_SUCCESS;
+        ret = in_apply_block_safe_mode_time_();
       }
       if (TFS_SUCCESS == ret)
       {
@@ -451,19 +463,6 @@ namespace tfs
     int ServerManager::relieve_relation(ServerCollect* server, const uint64_t block)
     {
       return ((NULL != server) && (INVALID_SERVER_ID != block)) ? server->remove(block) : EXIT_PARAMETER_ERROR;
-    }
-
-    int ServerManager::relieve_relation(const uint64_t server, const uint64_t block)
-    {
-      int32_t ret = ((INVALID_SERVER_ID != server) && (INVALID_BLOCK_ID != block)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ServerCollect* pserver = get(server);
-        ret = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
-        if (TFS_SUCCESS == ret)
-          ret = relieve_relation(pserver, block);
-      }
-      return ret;
     }
 
     //statistic all dataserver 's information(capactiy, user_capacity, alive server nums)
@@ -707,12 +706,11 @@ namespace tfs
 
     int ServerManager::regular_create_block_for_servers(uint64_t& begin, bool& all_over)
     {
-      const int32_t MAX_SLOT_NUMS = 32;
+      const int32_t MAX_SLOT_NUMS = 1024;
       ServerCollect* server = NULL;
       ServerCollect* servers[MAX_SLOT_NUMS];
       ArrayHelper<ServerCollect*> helper(MAX_SLOT_NUMS, servers);
       all_over = traverse(begin, servers_, helper);
-      bool promote = true;
       int32_t count = SYSPARAM_NAMESERVER.add_primary_block_count_;
       double total_capacity = global_stat_info_.total_capacity_ <= 0
               ? 1 : global_stat_info_.total_capacity_;
@@ -728,10 +726,10 @@ namespace tfs
         assert(NULL != server);
         int32_t ret = TFS_SUCCESS;
         count = SYSPARAM_NAMESERVER.add_primary_block_count_;
-        server->calc_regular_create_block_count(average_used_capacity, manager_,promote, count);
-        int64_t now = Func::get_monotonic_time();
+        server->calc_regular_create_block_count(average_used_capacity, manager_, count);
         while (TFS_SUCCESS == ret && GFactory::get_runtime_info().is_master() && count-- > 0)
         {
+          int64_t now = Func::get_monotonic_time();
           uint64_t new_block_id = INVALID_BLOCK_ID;
           BlockCollect* pblock = manager_.add_new_block(new_block_id, server, now);
           ret = (pblock != NULL) ? TFS_SUCCESS : EXIT_ADD_NEW_BLOCK_ERROR;
@@ -914,6 +912,13 @@ namespace tfs
         servers.push_back((*iter));
       }
       return servers.get_array_index() < servers.get_array_size();
+    }
+
+    int ServerManager::in_apply_block_safe_mode_time_() const
+    {
+      int64_t now = Func::get_monotonic_time();
+      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+      return ngi.in_apply_block_safe_mode_time(now) ? EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR : TFS_SUCCESS;
     }
 
 #ifdef TFS_GTEST
