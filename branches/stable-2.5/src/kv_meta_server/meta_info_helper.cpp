@@ -589,7 +589,7 @@ namespace tfs
 
           common::META_MAP_STRING& meta_data_zero = object_info_zero.get_mutable_user_metadata().get_mutable_meta_data();
           CMETA_MAP_STRING_ITER it = user_metadata.get_meta_data().begin();
-          for (; it != user_metadata.get_meta_data().end(); ++ it) 
+          for (; it != user_metadata.get_meta_data().end(); ++ it)
           {
             meta_data_zero[it->first] = it->second;
           }
@@ -747,8 +747,8 @@ namespace tfs
           ret = EXIT_READ_OFFSET_ERROR;
         }
       }
-
-      if (TFS_SUCCESS == ret)
+      //if offset == big_file_size_ return TFS_SUCCESS
+      if (TFS_SUCCESS == ret && offset < object_info_zero.meta_info_.big_file_size_)
       {
         bool is_big_file = false;
 
@@ -821,7 +821,7 @@ namespace tfs
             int64_t last_offset = 0;
             ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_key, end_key, SCAN_LIMIT, scan_offset,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
-            if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret && offset < object_info_zero.meta_info_.big_file_size_)
+            if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
             {
               //we should find pre record
               ret = scan_pre_record(bucket_name, file_name, start_key, object_info, valid_result);
