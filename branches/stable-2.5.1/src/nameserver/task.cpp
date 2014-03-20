@@ -281,7 +281,6 @@ namespace tfs
         BlockCollect* block = manager_.get_layout_manager().get_block_manager().get(block_);
         if (NULL != block)
         {
-          assert(!block->has_valid_lease(Func::get_monotonic_time()));
           block->set(common::Func::get_monotonic_time(),SYSPARAM_NAMESERVER.move_task_expired_time_);
         }
       }

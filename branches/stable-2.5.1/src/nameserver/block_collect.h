@@ -60,7 +60,7 @@ namespace tfs
       int remove(const uint64_t server, const time_t now);
       bool exist(const uint64_t server) const;
       bool is_master(const uint64_t server) const;
-      inline bool is_writable() const { return ((!is_full()) && check_copies_complete() && is_equal_group(id()));}
+      inline bool is_writable() const { return ((!is_full()) && check_copies_complete() && is_equal_group(id()) && !IS_VERFIFY_BLOCK(id()));}
       inline bool is_creating() const { return BLOCK_CREATE_FLAG_YES == create_flag_;}
       inline bool in_replicate_queue() const { return BLOCK_IN_REPLICATE_QUEUE_YES == in_replicate_queue_;}
       inline bool has_lease() const   { return BLOCK_HAS_LEASE_FLAG_YES == has_lease_;}

@@ -79,7 +79,7 @@ namespace tfs
           streamer_[index]->set_packet_factory(packet_factory_);
           transport_[index] = new (std::nothrow)tbnet::Transport();
           assert(NULL != transport_[index]);
-          snprintf(spec, 32, "tcp:%d", base_port + index);
+          snprintf(spec, 32, "tcp::%d", base_port + index);
           tbnet::IOComponent* com = transport_[index]->listen(spec, streamer_[index], this);
           ret = (NULL == com) ? EXIT_NETWORK_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
