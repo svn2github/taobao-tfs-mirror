@@ -36,10 +36,13 @@ namespace tfs
        * @brief initialize a tfs client object
        *
        * @param ns_addr: the cluster's ns address
-       *
+       * @param cache_time: cache expire time(seconds)
+       * @param cache_items: max cache items
        * @return TFS_SUCCESS on success, errno on fail.
        */
-      int initialize(const char* ns_addr = NULL);
+       int initialize(const char* ns_addr = NULL,
+          const int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
+          const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
 
       /**
        * @brief destroy a tfs client object
@@ -123,14 +126,17 @@ namespace tfs
        *
        * @return default ns address
        */
-      int64_t get_server_id();
+      uint64_t get_server_id();
 
       /**
        * @brief get default cluster id, which passed in intialize
        *
        * @return default cluster id
        */
-      int32_t get_cluster_id();
+      int32_t get_cluster_id(const char* ns_addr = NULL);
+
+      void set_wait_timeout(const int64_t timeout_ms);
+      int64_t get_wait_timeout() const;
 
     private:
       TfsClientV2();

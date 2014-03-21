@@ -19,6 +19,7 @@
 #include <pthread.h>
 
 #include "common/internal.h"
+#include "tfs_session_pool.h"
 
 namespace tfs
 {
@@ -42,7 +43,10 @@ namespace tfs
         return &tfs_client_impl;
       }
 
-      int initialize(const char* ns_addr = NULL);
+      int initialize(const char* ns_addr = NULL,
+          const int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
+          const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS,
+          const std::map<uint64_t, int32_t>* version_map = NULL);
       int destroy();
       int set_option_flag(const int fd, const int opt_flag);
       void set_log_level(const char* level);
@@ -73,6 +77,8 @@ namespace tfs
       int64_t save_buf_update(const char* buf, const int64_t buf_len, const int32_t mode,
         const char* tfs_name, const char* suffix, const char* ns_addr = NULL);
 
+      int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+                     const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL, const int flags = common::T_DEFAULT);
       int fetch_file(const char* local_file, const char* file_name, const char* suffix = NULL,
           const common::ReadDataOptionFlag read_flag = common::READ_DATA_OPTION_FLAG_NORMAL,
           const char* ns_addr = NULL);
@@ -80,16 +86,29 @@ namespace tfs
           const common::TfsUnlinkType action = common::DELETE,
           const char* ns_addr = NULL, const int32_t flag = common::TFS_FILE_DEFAULT_OPTION);
 
-      int64_t get_server_id();
-      int32_t get_cluster_id();
+      uint64_t get_server_id();  // get default session's server id
+      int32_t get_cluster_id(const char* ns_addr = NULL); // get session's cluster id
+      int32_t get_cluster_group_count(const char* ns_addr = NULL);
+      int32_t get_cluster_group_seq(const char* ns_addr = NULL);
+      void set_use_local_cache(const bool enable = true);
+      void set_use_remote_cache(const bool enable = true);
+
+      void set_wait_timeout(const int64_t timeout_ms);
+      int64_t get_wait_timeout() const;
+
+#ifdef WITH_TAIR_CACHE
+      void set_remote_cache_info(const char* remote_cache_master_addr,
+          const char* remote_cache_slave_addr,
+          const char* remote_cache_group_name,
+          const int32_t area);
+#endif
 
     private:
+      int get_session(const char* ns_addr, TfsSession*& session);
       int get_fd();
       TfsFile* get_file(const int fd);
       int insert_file(const int fd, TfsFile* tfs_file);
       int erase_file(const int fd);
-      int initialize_cluster_id();
-      uint64_t ipport_to_addr(const char* addr);
       int64_t save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* local_file,
           const int32_t mode, const char* tfs_name, const char* suffix, const char* ns_addr);
       int64_t save_buf_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
@@ -107,8 +126,11 @@ namespace tfs
       int32_t cluster_id_;
       FILE_MAP tfs_file_map_;
       tbutil::Mutex mutex_;
+      tbutil::TimerPtr timer_;
+      TfsSessionPool* session_pool_;
       common::BasePacketFactory* packet_factory_;
       common::BasePacketStreamer* packet_streamer_;
+      TfsSession* default_session_;
     };
   }
 }

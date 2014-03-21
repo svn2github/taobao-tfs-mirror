@@ -29,9 +29,9 @@ namespace tfs
     {
     }
 
-    int TfsClientV2::initialize(const char* ns_addr)
+    int TfsClientV2::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
     {
-      return TfsClientImplV2::Instance()->initialize(ns_addr);
+      return TfsClientImplV2::Instance()->initialize(ns_addr, cache_time, cache_items);
     }
 
     int TfsClientV2::destroy()
@@ -70,14 +70,24 @@ namespace tfs
       return TfsClientImplV2::Instance()->unlink(file_size, file_name, suffix, action, ns_addr);
     }
 
-    int64_t TfsClientV2::get_server_id()
+    uint64_t TfsClientV2::get_server_id()
     {
       return TfsClientImplV2::Instance()->get_server_id();
     }
 
-    int32_t TfsClientV2::get_cluster_id()
+    int32_t TfsClientV2::get_cluster_id(const char* ns_addr)
     {
-      return TfsClientImplV2::Instance()->get_cluster_id();
+      return TfsClientImplV2::Instance()->get_cluster_id(ns_addr);
+    }
+
+    void TfsClientV2::set_wait_timeout(const int64_t timeout_ms)
+    {
+      return TfsClientImplV2::Instance()->set_wait_timeout(timeout_ms);
+    }
+
+    int64_t TfsClientV2::get_wait_timeout() const
+    {
+      return TfsClientImplV2::Instance()->get_wait_timeout();
     }
   }
 }

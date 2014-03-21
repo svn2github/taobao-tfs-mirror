@@ -290,6 +290,48 @@ namespace tfs
       max_sync_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_INTERVAL, 30);
       sync_fail_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_SYNC_FAIL_RETRY_INTERVAL, 300);
       max_bg_task_queue_size_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_BG_TASK_QUEUE_SIZE, 5);
+
+      // example ==> 10.232.36.201:3100:1|10.232.36.202:3100:2|10.232.36.203:3100:1
+      const char* cluster_version_str = config.getString(CONF_SN_DATASERVER, CONF_CLUSTER_VERSION_LIST, NULL);
+      if (NULL != cluster_version_str)
+      {
+        std::vector<std::string> clusters;
+        Func::split_string(cluster_version_str, '|', clusters);
+        std::vector<std::string>::iterator it = clusters.begin();
+        for ( ; it != clusters.end(); it++)
+        {
+          std::vector<std::string> items;
+          Func::split_string(it->c_str(), ':', items);
+          if (items.size() != 3)
+          {
+            TBSYS_LOG(ERROR, "cluster_version %s invalid", cluster_version_str);
+            return EXIT_SYSTEM_PARAMETER_ERROR;
+          }
+          else
+          {
+            uint64_t ns_id = Func::str_to_addr(items[0].c_str(), atoi(items[1].c_str()));
+            int32_t version = atoi(items[2].c_str());
+            std::map<uint64_t, int32_t>::iterator iter = cluster_version_list_.find(ns_id);
+            if (iter == cluster_version_list_.end())
+            {
+              cluster_version_list_.insert(std::make_pair(ns_id, version));
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "cluster_version %s invalid, ns_addr duplicate", cluster_version_str);
+              return EXIT_SYSTEM_PARAMETER_ERROR;
+            }
+          }
+        }
+
+        std::map<uint64_t, int32_t>::iterator iter = cluster_version_list_.begin();
+        for ( ; iter != cluster_version_list_.end(); iter++)
+        {
+          TBSYS_LOG(INFO, "cluster nsip: %s, version: %d",
+              tbsys::CNetUtil::addrToString(iter->first).c_str(), iter->second);
+        }
+      }
+
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 

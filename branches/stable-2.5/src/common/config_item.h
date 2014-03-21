@@ -154,6 +154,7 @@ namespace tfs
 #define CONF_MAX_INIT_INDEX_ELEMENT_NUMS              "max_init_index_element_nums"
 #define CONF_MAX_EXTEND_INDEX_ELEMENT_NUMS            "max_extend_index_element_nums"
 #define CONF_MAX_BG_TASK_QUEUE_SIZE                   "max_bg_task_queue_size"
+#define CONF_CLUSTER_VERSION_LIST                          "cluster_version_list"
 
 //rc
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"

@@ -116,7 +116,7 @@ namespace tfs
       {
         tfs_client_ = TfsClientImplV2::Instance();
         client_init_flag_ =
-          tfs_client_->initialize() == TFS_SUCCESS ?
+          tfs_client_->initialize(NULL, 0, 0, &SYSPARAM_DATASERVER.cluster_version_list_) == TFS_SUCCESS ?
           true : false;
         TBSYS_LOG(INFO, "TfsSyncMirror init %s. source ns addr: %s, destination ns addr: %s",
             client_init_flag_ ? "success" : "fail", src_addr_, dest_addr_);
