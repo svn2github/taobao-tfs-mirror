@@ -47,7 +47,7 @@ namespace tfs
       int create_family(common::FamilyInfo& family_info);
       int query_family(common::FamilyInfo& family_info);
       int del_family(const int64_t family_id);
-      int scan(std::vector<common::FamilyInfo>& family_infos, const int64_t start_family_id = 0);
+      int scan(std::vector<common::FamilyInfo>& family_infos, const int64_t start_family_id = 0, const int32_t key_offset = 0);
     private:
       DISALLOW_COPY_AND_ASSIGN(TairHelper);
       tbutil::Mutex mutex_;

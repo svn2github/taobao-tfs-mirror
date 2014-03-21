@@ -472,7 +472,7 @@ namespace tfs
         ArrayHelper<BlockMeta> meta(MAX_BATCH_SIZE, reply->get_block_metas());
         const int32_t  mode     = message->get_mode();
         const int32_t  flag     = message->get_flag();
-        for (int64_t index = 0; index < blocks.get_array_index(); ++index)
+        for (int64_t index = 0; index < blocks.get_array_index() && index < meta.get_array_size(); ++index)
         {
           meta.push_back(BlockMeta());
           BlockMeta* bm = meta.at(index);

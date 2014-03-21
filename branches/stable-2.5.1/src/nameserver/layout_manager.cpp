@@ -722,6 +722,7 @@ namespace tfs
       int64_t family_id = 0;
       int32_t ret = TFS_SUCCESS;
       const int32_t MAX_SLEEP_TIME = 10;//10s
+      bool first_loop = true;
       std::vector<common::FamilyInfo> infos;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       const int32_t SAFE_MODE_TIME = SYSPARAM_NAMESERVER.safe_mode_time_ * 4;
@@ -735,9 +736,10 @@ namespace tfs
           do
           {
             infos.clear();
-            ret = get_oplog_sync_mgr().scan_family(infos, family_id);
+            ret = get_oplog_sync_mgr().scan_family(infos, family_id, first_loop ? 0 : 1);
             if (TFS_SUCCESS == ret)
             {
+              first_loop = false;
               std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
               common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
               std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
