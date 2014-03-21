@@ -133,15 +133,16 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
+          bool first_loop = true;
           int64_t family_id = 0;
           std::vector<common::FamilyInfo> infos;
           do
           {
-            ret = dbhelper_->scan(infos, family_id);
-            if (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret)
+            infos.clear();
+            ret = scan_family(infos, family_id, first_loop ? 0 : 1);
+            if (TFS_SUCCESS == ret)
             {
-              if (TAIR_RETURN_SUCCESS == ret)
-                ret = TFS_SUCCESS;
+              first_loop = false;
               time_t now = Func::get_monotonic_time();
               std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
               common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
@@ -162,7 +163,7 @@ namespace tfs
               }
             }
           }
-          while (infos.size() > 0 && TAIR_HAS_MORE_DATA == ret);
+          while (infos.size() > 0 && TFS_SUCCESS == ret);
         }
       }
       return ret;
@@ -649,12 +650,12 @@ namespace tfs
       return ret;
     }
 
-    int OpLogSyncManager::scan_family(std::vector<common::FamilyInfo>& infos, const int64_t start_family_id)
+    int OpLogSyncManager::scan_family(std::vector<common::FamilyInfo>& infos, const int64_t start_family_id, const int32_t key_offset)
     {
       int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = dbhelper_->scan(infos, start_family_id);
+        ret = dbhelper_->scan(infos, start_family_id, key_offset);
       }
       return ret;
     }

@@ -61,7 +61,7 @@ namespace tfs
       int create_family_id(int64_t& family_id);
       int create_family(common::FamilyInfo& family_info);
       int del_family(const int64_t family_id);
-      int scan_family(std::vector<common::FamilyInfo>& infos, const int64_t start_family_id = 0);
+      int scan_family(std::vector<common::FamilyInfo>& infos, const int64_t start_family_id = 0, const int32_t key_offset = 0);
     private:
       DISALLOW_COPY_AND_ASSIGN( OpLogSyncManager);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);

@@ -598,6 +598,7 @@ namespace tfs
         int32_t  flag     = message->get_flag();
         int32_t  mode     = message->get_mode();
         int32_t  block_count = message->get_size();
+        block_count = std::min(MAX_BATCH_SIZE, block_count);
         ret = layout_manager_.get_client_request_server().batch_open(blocks, mode, block_count, meta, flag);
         if (TFS_SUCCESS == ret)
         {
