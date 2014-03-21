@@ -711,7 +711,6 @@ namespace tfs
                 ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        NewClient* client = NewClientManager::get_instance().create_client();
         UpdateTableMessage packet;
         packet.set_version(get_build_table_version());
         packet.set_phase(phase);
@@ -728,7 +727,7 @@ namespace tfs
             }
           }
         }
-        iret = post_msg_to_server(server, client, &packet, rs_async_callback);
+        iret = post_msg_to_server(server, &packet, rs_async_callback);
       }
       return iret;
     }

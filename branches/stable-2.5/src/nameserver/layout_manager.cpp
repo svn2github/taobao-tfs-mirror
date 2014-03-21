@@ -962,10 +962,8 @@ namespace tfs
 
     void LayoutManager::check_all_server_report_block_()
     {
-      int32_t ret = TFS_SUCCESS;
       const int32_t MAX_SLOT_NUMS = 64;
       const int32_t SLEEP_TIME_US = 1000;
-      NewClient* client = NULL;
       ServerCollect* last = NULL;
       ServerCollect* servers[MAX_SLOT_NUMS];
       ArrayHelper<ServerCollect*> helper(MAX_SLOT_NUMS, servers);
@@ -983,11 +981,7 @@ namespace tfs
           assert(NULL != last);
           CallDsReportBlockRequestMessage req;
           req.set_server(ngi.heart_ip_port_);
-          client = NewClientManager::get_instance().create_client();
-          if (NULL != client)
-            ret = post_msg_to_server(last->id(), client, &req, ns_async_callback);
-          if (TFS_SUCCESS != ret)
-            NewClientManager::get_instance().destroy_client(client);
+          post_msg_to_server(last->id(), &req, ns_async_callback);
         }
         usleep(100);
       }

@@ -363,15 +363,24 @@ namespace tfs
       return iret;
     }
 
-    int post_msg_to_server(uint64_t servers, NewClient* client, tbnet::Packet* msg,
+    int post_msg_to_server(uint64_t servers, tbnet::Packet* msg,
                           NewClient::callback_func func, const bool save_msg)
     {
-      int32_t iret = servers > 0 && NULL != client && NULL != msg  && NULL != func? common::TFS_SUCCESS : common::TFS_ERROR;
+      int32_t iret = servers > 0 && NULL != msg  && NULL != func? common::TFS_SUCCESS : common::TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        std::vector<uint64_t> tmp;
-        tmp.push_back(servers);
-        iret = client->async_post_request(tmp, msg, func, save_msg);
+        NewClient* client = NewClientManager::get_instance().create_client();
+        iret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          std::vector<uint64_t> tmp;
+          tmp.push_back(servers);
+          iret = client->async_post_request(tmp, msg, func, save_msg);
+          if (TFS_SUCCESS != iret)
+          {
+            NewClientManager::get_instance().destroy_client(client);
+          }
+        }
       }
       return iret;
     }

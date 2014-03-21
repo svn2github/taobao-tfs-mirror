@@ -398,8 +398,6 @@ namespace tfs
       // post request to slaves
       if ((TFS_SUCCESS == ret) && (servers.size() > 1U) && is_master)
       {
-        NewClient* client = NewClientManager::get_instance().create_client();
-        assert(NULL != client);
         for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers.size()); i++)
         {
           if (servers[i] == ds_info.information_.id_)
@@ -411,10 +409,9 @@ namespace tfs
             message->set_block_id(family_info.get_block(servers[i]));
           }
           family_info.family_id_ = INVALID_FAMILY_ID; // not send family to slave
-          ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
+          ret = post_msg_to_server(servers[i], message, ds_async_callback);
           if (TFS_SUCCESS != ret)
           {
-            NewClientManager::get_instance().destroy_client(client);
             TBSYS_LOG(WARN, "post write to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, ret: %d",
                 attach_block_id, file_id, lease_id, ret);
@@ -523,8 +520,6 @@ namespace tfs
       // post request to slaves
       if ((TFS_SUCCESS == ret) && (servers.size() > 1U) && is_master)
       {
-        NewClient* client = NewClientManager::get_instance().create_client();
-        assert(NULL != client);
         for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers.size()); i++)
         {
           if (servers[i] == ds_info.information_.id_)
@@ -536,10 +531,9 @@ namespace tfs
             message->set_block_id(family_info.get_block(servers[i]));
           }
           family_info.family_id_ = INVALID_FAMILY_ID; // won't send family to slave
-          ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
+          ret = post_msg_to_server(servers[i], message, ds_async_callback);
           if (TFS_SUCCESS != ret)
           {
-            NewClientManager::get_instance().destroy_client(client);
             TBSYS_LOG(WARN, "post close to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, ret: %d",
                 attach_block_id, file_id, lease_id, ret);
@@ -656,8 +650,6 @@ namespace tfs
 
       if ((TFS_SUCCESS == ret) && (servers.size() > 1U) && is_master)
       {
-        NewClient* client = NewClientManager::get_instance().create_client();
-        assert(NULL != client);
         for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers.size()); i++)
         {
           if (servers[i] == ds_info.information_.id_)
@@ -669,10 +661,9 @@ namespace tfs
             message->set_block_id(family_info.get_block(servers[i]));
           }
           family_info.family_id_ = INVALID_FAMILY_ID; // won't send family to slave
-          ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
+          ret = post_msg_to_server(servers[i], message, ds_async_callback);
           if (TFS_SUCCESS != ret)
           {
-            NewClientManager::get_instance().destroy_client(client);
             TBSYS_LOG(WARN, "post unlink to slave fail. blockid: %"PRI64_PREFIX"u, "
                 "fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, ret: %d",
                 attach_block_id, file_id, lease_id, ret);
