@@ -22,6 +22,8 @@ BuildRequires: jemalloc-devel >= 2.2
 BuildRequires: snappy >= 1.1.2
 BuildRequires: libunwind
 BuildRequires: tfs-client-restful
+BuildRequires: json-c-devel = 0.9
+BuildRequires: json-c = 0.9
 Requires: jemalloc-devel >= 2.2
 Requires: snappy >= 1.1.2
 Requires: google-perftools = 1.7
@@ -29,6 +31,8 @@ Requires: libunwind
 Requires: readline-devel
 Requires: ncurses-devel
 Requires: tfs-client-restful
+Requires: json-c-devel = 0.9
+Requires: json-c = 0.9
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}
