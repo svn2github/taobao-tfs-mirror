@@ -198,8 +198,6 @@ namespace tfs
     {
       // post request to slaves
       int ret = TFS_SUCCESS;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      assert(NULL != client);
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
 
       // take master's version to slave
@@ -248,10 +246,9 @@ namespace tfs
           assert(false);
         }
 
-        ret = post_msg_to_server(servers[i], client, message, ds_async_callback);
+        ret = post_msg_to_server(servers[i], message, ds_async_callback);
         if (TFS_SUCCESS != ret)
         {
-          NewClientManager::get_instance().destroy_client(client);
           TBSYS_LOG(WARN, "forward request to slave fail, ret : %d", ret);
         }
       }

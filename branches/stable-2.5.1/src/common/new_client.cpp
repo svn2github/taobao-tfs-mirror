@@ -363,19 +363,6 @@ namespace tfs
       return iret;
     }
 
-    int post_msg_to_server(uint64_t servers, NewClient* client, tbnet::Packet* msg,
-                          NewClient::callback_func func, const bool save_msg)
-    {
-      int32_t iret = servers > 0 && NULL != client && NULL != msg  && NULL != func? common::TFS_SUCCESS : common::TFS_ERROR;
-      if (TFS_SUCCESS == iret)
-      {
-        std::vector<uint64_t> tmp;
-        tmp.push_back(servers);
-        iret = client->async_post_request(tmp, msg, func, save_msg);
-      }
-      return iret;
-    }
-
     int post_msg_to_server(uint64_t server, tbnet::Packet* msg, NewClient::callback_func func, bool save_source_msg)
     {
       int32_t ret = INVALID_SERVER_ID != server && NULL != msg  && NULL != func? common::TFS_SUCCESS : common::TFS_ERROR;

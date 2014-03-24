@@ -138,6 +138,11 @@ namespace tfs
         stat_mgr_.add_entry(cache_stat_ptr, ClientConfig::stat_interval_ * 1000);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        srandom(time(NULL));
+      }
+
       return ret;
     }
 

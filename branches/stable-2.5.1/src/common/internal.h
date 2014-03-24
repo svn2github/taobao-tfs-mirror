@@ -1493,9 +1493,6 @@ namespace tfs
       //KvMetaTable
       KV_META_TABLE_V_META_TABLE_TAG = 601,
 
-      //ExpTable
-      EXP_TABLE_V_EXP_TABLE_TAG = 701,
-
       //UserInfo
       USER_INFO_OWNER_ID_TAG = 801,
 
@@ -1504,6 +1501,9 @@ namespace tfs
       REMOTE_CACHE_KEY_BLOCK_ID_TAG = 702,
       REMOTE_CACHE_VALUE_DS_LIST_TAG = 703,
       REMOTE_CACHE_VALUE_FAMILY_INFO_TAG = 704,
+
+      //ExpTable
+      EXP_TABLE_V_EXP_TABLE_TAG = 901,
 
       //End TAG
       END_TAG = 999
