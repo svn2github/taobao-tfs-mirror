@@ -1092,6 +1092,12 @@ namespace tfs
               family_members_[i].block_, ec_metas[i], expire_time_);
           need_unlock[i] = (TFS_SUCCESS == ret);
         }
+        else if (ErasureCode::NODE_UNUSED == erased_[i])
+        {
+          // query ec meta, but won't lock
+          ret = get_data_helper().query_ec_meta(family_members_[i].server_,
+              family_members_[i].block_, ec_metas[i], 0);
+        }
         else if (ErasureCode::NODE_DEAD == erased_[i])
         {
           if (i < data_num)
