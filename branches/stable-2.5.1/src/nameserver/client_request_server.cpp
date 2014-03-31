@@ -89,9 +89,9 @@ namespace tfs
       {
         ret = server_manager.giveup(now, info.id_);
       }
+      TIMER_END();
       TBSYS_LOG(INFO, "dataserver: %s giveup lease %s,consume: %"PRI64_PREFIX"d, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u",
         CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(), ret, info.use_capacity_, info.total_capacity_);
-      TIMER_END();
       return ret;
     }
 

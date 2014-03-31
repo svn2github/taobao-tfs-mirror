@@ -72,12 +72,13 @@ namespace tfs
     // prepare_op is called in write stage
     // a client request directly send to ds when direct flag is set
     int OpManager::prepare_op(uint64_t& block_id, uint64_t& file_id, uint64_t& op_id,
-        const OpType type, const bool is_master, const FamilyInfoExt& family_info, VUINT64& servers)
+        const OpType type, const bool is_master, const FamilyInfoExt& family_info, VUINT64& servers,
+        const int32_t flag)
     {
       int ret = TFS_SUCCESS;
 
       WritableBlock* block = NULL;
-      if (is_master && INVALID_OP_ID == op_id)
+      if (is_master && INVALID_OP_ID == op_id && !(flag & TFS_FILE_RECOVER_UPDATED_FILE))
       {
         if (INVALID_BLOCK_ID == block_id)
         {

@@ -337,7 +337,8 @@ namespace tfs
      */
     int DataHelper::write_file(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, const uint64_t file_id,
-        const char* data, const int32_t len, const int32_t status, const bool tmp)
+        const char* data, const int32_t len, const int32_t status,
+        const bool tmp, const int32_t flag)
     {
       int ret = ((INVALID_SERVER_ID == server_id) || (INVALID_BLOCK_ID == block_id) ||
           (INVALID_BLOCK_ID == attach_block_id) || (INVALID_FILE_ID == file_id) ||
@@ -352,7 +353,7 @@ namespace tfs
         {
           length = std::min(len - offset, MAX_READ_SIZE);
           ret = write_file_ex(server_id, block_id, attach_block_id, file_id,
-              data + offset, length, offset, lease_id);
+              data + offset, length, offset, lease_id, flag);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "write file fail. server: %s, blockid: %"PRI64_PREFIX"u, "
@@ -842,7 +843,8 @@ namespace tfs
 
     int DataHelper::write_file_ex(const uint64_t server_id, const uint64_t block_id,
         const uint64_t attach_block_id, const uint64_t file_id,
-        const char* data, const int32_t length, const int32_t offset, uint64_t& lease_id)
+        const char* data, const int32_t length, const int32_t offset, uint64_t& lease_id,
+        const int32_t flag)
     {
       int ret = TFS_SUCCESS;
       NewClient* new_client = NewClientManager::get_instance().create_client();
@@ -867,6 +869,7 @@ namespace tfs
         req_msg.set_master_id(server_id);
         req_msg.set_ds(dslist);
         req_msg.set_version(-1); // won't check version
+        req_msg.set_flag(flag);
 
         ret = send_msg_to_server(server_id, new_client, &req_msg, ret_msg);
         if (TFS_SUCCESS == ret)

@@ -124,7 +124,7 @@ namespace tfs
       int for_each_(const uint64_t begin, const BLOCK_TABLE& table, common::ArrayHelper<uint64_t>& blocks) const;
       bool exist_(const uint64_t block, const BLOCK_TABLE& table) const;
       bool cleanup_invalid_block_(BlockCollect* block, const int64_t now);
-      void invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<std::pair<uint64_t, int32_t> > helper, const uint64_t block);
+      void invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<std::pair<uint64_t, int32_t> >& helper, const uint64_t block);
       void write_block_oplog_(LayoutManager& manager, const int32_t cmd, const common::BlockInfoV2& info, const int64_t now);
 
       private:

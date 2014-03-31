@@ -80,8 +80,9 @@ namespace tfs
           {
             if (!has_master_())
             {
+              bool force_master = is_in_family() ? true: servers_.size() >= 1U;
               const int32_t random_value = random() % SYSPARAM_NAMESERVER.max_replication_;
-              if (0 == random_value)
+              if (0 == random_value || force_master)
               {
                 choose_master_ = BLOCK_CHOOSE_MASTER_COMPLETE_FLAG_YES;
                 pos = servers_.begin();
@@ -96,8 +97,9 @@ namespace tfs
             const_cast<SERVER_ITEM*>(result)->second = info->version_;
           if (!has_master_())
           {
+            bool force_master = is_in_family() ? true: servers_.size() >= 2U;
             const int32_t random_value = random() % SYSPARAM_NAMESERVER.max_replication_;
-            if (0 == random_value)
+            if (0 == random_value || force_master)
             {
               choose_master_ = BLOCK_CHOOSE_MASTER_COMPLETE_FLAG_YES;
               SERVER_ITEM new_item = *result;
@@ -305,7 +307,7 @@ namespace tfs
         for (iter = servers_.begin(); iter != servers_.end(); ++iter)
         {
           int32_t diff = version - iter->second;
-          if (diff <= VERSION_DIFF)
+          if (diff > VERSION_DIFF)
           {
             adjust_copies.push_back((*iter));
           }
@@ -391,6 +393,9 @@ namespace tfs
             ++iter;
           }
         }
+
+        // TODO: if more than max_replication blocks has same version
+
         std::stringstream normal, abnormal;
         print_int64(helper, abnormal);
         print_int64(servers_, normal);
@@ -478,9 +483,12 @@ namespace tfs
       return ret;
     }
 
-    void BlockCollect::update_version(const common::ArrayHelper<uint64_t>& helper, const int32_t step)
+    void BlockCollect::update_version(const common::ArrayHelper<uint64_t>& helper, const int32_t step, const bool update_info_flag)
     {
-      info_.version_ += step;
+      if (update_info_flag)
+      {
+        info_.version_ += step;
+      }
       for (int64_t index = 0; index < helper.get_array_index(); ++index)
       {
         SERVER_ITEM* item = get_(*helper.at(index));
@@ -499,7 +507,7 @@ namespace tfs
         CONST_SERVER_ITER iter = servers_.begin();
         for (; iter != servers_.end(); ++iter)
         {
-          str << CNetUtil::addrToString(iter->first) << iter->second << "/";
+          str << CNetUtil::addrToString(iter->first) << " " << iter->second << "/";
         }
         int64_t now = Func::get_monotonic_time();
         TBSYS_LOGGER.logMessage(level, file, line, function,thid,

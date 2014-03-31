@@ -65,7 +65,7 @@ namespace tfs
        */
       int prepare_op(uint64_t& block_id, uint64_t& file_id, uint64_t& op_id,
         const OpType type, const bool is_master, const common::FamilyInfoExt& family_info,
-        common::VUINT64& servers);
+        common::VUINT64& servers, const int32_t flag = 0);
 
       /*
        * when receive a close/unlink reqeust

@@ -82,7 +82,7 @@ namespace tfs
       int renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
         const common::BlockInfoV2& info,common::ArrayHelper<std::pair<uint64_t, int32_t> >& helper);
       int giveup_lease(const uint64_t server, const time_t now, const common::BlockInfoV2* info);
-      void update_version(const common::ArrayHelper<uint64_t>& helper, const int32_t step);
+      void update_version(const common::ArrayHelper<uint64_t>& helper, const int32_t step, const bool update_info_flag);
       void dump(int32_t level, const char* file = __FILE__,
           const int32_t line = __LINE__, const char* function = __FUNCTION__, const pthread_t thid = pthread_self()) const;
       inline int32_t size() const { return info_.size_;}

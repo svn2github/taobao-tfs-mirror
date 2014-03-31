@@ -429,11 +429,11 @@ namespace tfs
       PLAN_RUN_FLAG_REPLICATE = 1,
       PLAN_RUN_FLAG_MOVE = 1 << 1,
       PLAN_RUN_FLAG_COMPACT = 1 << 2,
-      PLAN_RUN_FLAG_RESLOVE_VERSION_CONFLICT = 1 << 3,
-      PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION = 1 << 4,
-      PLAN_RUN_FALG_MARSHALLING = 1 << 5,
-      PLAN_RUN_FALG_REINSTATE = 1 << 6,
-      PLAN_RUN_FALG_DISSOLVE  = 1 << 7
+      PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION = 1 << 3,
+      PLAN_RUN_FALG_MARSHALLING = 1 << 4,
+      PLAN_RUN_FALG_REINSTATE = 1 << 5,
+      PLAN_RUN_FALG_DISSOLVE  = 1 << 6,
+      PLAN_RUN_FLAG_RESLOVE_VERSION_CONFLICT = 1 << 7,
     };
 
     const char* plan_type_to_str(const PlanType type);

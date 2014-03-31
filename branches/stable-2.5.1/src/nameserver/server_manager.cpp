@@ -128,6 +128,7 @@ namespace tfs
       if (NULL != last && common::TFS_SUCCESS == ret)
       {
         pserver->copy_block(last);
+        tbsys::gDelete(last);
       }
       if (common::TFS_SUCCESS == ret)
       {

@@ -73,7 +73,8 @@ namespace tfs
             char* data, const int32_t len, const int32_t off, const int8_t flag);
         int write_file(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id,
-            const char*data, const int32_t len, const int32_t status, const bool tmp);
+            const char*data, const int32_t len, const int32_t status,
+            const bool tmp, const int32_t flag);
         int unlink_file(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id,
             const int32_t status);
@@ -120,7 +121,8 @@ namespace tfs
             char* data, int32_t& length, const int32_t offset, const int8_t flag);
         int write_file_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id,
-            const char* data, const int32_t length, const int32_t offset, uint64_t& lease_id);
+            const char* data, const int32_t length, const int32_t offset, uint64_t& lease_id,
+            const int32_t flag);
         int close_file_ex(const uint64_t server_id, const uint64_t block_id,
             const uint64_t attach_block_id, const uint64_t file_id, const uint64_t lease_id,
             const uint32_t crc, const int32_t status, const bool tmp);

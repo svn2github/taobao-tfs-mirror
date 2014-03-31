@@ -250,7 +250,7 @@ namespace tfs
                 uint64_t array[MAX_REPLICATION_NUM];
                 common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, array);
                 manager_.get_layout_manager().get_block_manager().get_servers(helper, block);
-                block->update_version(helper, VERSION_INC_STEP_REPLICATE);
+                block->update_version(helper, VERSION_INC_STEP_REPLICATE, true);
               }
             }
 
@@ -388,7 +388,7 @@ namespace tfs
             }
 
             block->update(info);
-            block->update_version(success_helper,VERSION_INC_STEP_COMPACT);
+            block->update_version(success_helper,VERSION_INC_STEP_COMPACT, false);
 
             if (GFactory::get_runtime_info().is_master())
             {

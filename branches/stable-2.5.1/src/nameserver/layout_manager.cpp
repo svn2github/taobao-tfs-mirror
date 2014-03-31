@@ -73,7 +73,7 @@ namespace tfs
       plan_run_flag_ |= PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION;
       //plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;//TODO
       plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
-      plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
+      // plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
     }
 
 

@@ -231,7 +231,6 @@ namespace tfs
       }
 
       // post repsonse to master ds, won't care result
-      //int32_t rret = post_msg_to_server(source_id_, &resp_cpt_msg, Task::ds_task_callback);
       post_msg_to_server(source_id_, &resp_cpt_msg, Task::ds_task_callback);
 
       service_.get_task_manager().remove_block(this);
@@ -588,7 +587,6 @@ namespace tfs
           "blockid: %"PRI64_PREFIX"u, status: %d, source: %s",
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
 
-      //int32_t ret = post_msg_to_server(source_id_,  &resp_repl_msg, Task::ds_task_callback);
       post_msg_to_server(source_id_,  &resp_repl_msg, Task::ds_task_callback);
 
       service_.get_task_manager().remove_block(this);
@@ -1084,6 +1082,12 @@ namespace tfs
               family_members_[i].block_, ec_metas[i], expire_time_);
           need_unlock[i] = (TFS_SUCCESS == ret);
         }
+        else if (ErasureCode::NODE_UNUSED == erased_[i])
+        {
+          // query ec meta, but won't lock
+          ret = get_data_helper().query_ec_meta(family_members_[i].server_,
+              family_members_[i].block_, ec_metas[i], 0);
+        }
         else if (ErasureCode::NODE_DEAD == erased_[i])
         {
           if (i < data_num)
@@ -1362,6 +1366,17 @@ namespace tfs
         ec_meta.mars_offset_ = marshalling_len;
         ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
+
+        if (TFS_SUCCESS == ret)
+        {
+          BlockInfoV2 info;
+          ret = get_data_helper().get_block_info(family_members_[i].server_,
+              family_members_[i].block_, info);
+          if (TFS_SUCCESS == ret)
+          {
+            block_infos_[reinstate_num_++] = info;
+          }
+        }
       }
 
       return ret;
@@ -1396,7 +1411,8 @@ namespace tfs
         {
           ret = get_data_helper().write_file(family_members_[dest].server_,
               family_members_[dest].block_, block_id,
-              finfos[i].id_, data, length, finfos[i].status_, true);  // write to a temp block
+              finfos[i].id_, data, length, finfos[i].status_,
+              true, TFS_FILE_NO_SYNC_LOG | TFS_FILE_RECOVER_UPDATED_FILE);  // write to a temp block
         }
         tbsys::gDeleteA(data);
       }

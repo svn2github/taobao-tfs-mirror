@@ -804,7 +804,7 @@ namespace tfs
       return ret;
     }
 
-    void ServerCollect::invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<std::pair<uint64_t, int32_t> > helper, const uint64_t block)
+    void ServerCollect::invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<std::pair<uint64_t, int32_t> >& helper, const uint64_t block)
     {
       for (int64_t index = 0; index < helper.get_array_index(); ++index)
       {

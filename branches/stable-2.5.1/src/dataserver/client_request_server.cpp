@@ -376,7 +376,7 @@ namespace tfs
         {
           // first write to master
           ret = get_op_manager().prepare_op(attach_block_id,
-              file_id, lease_id, OP_TYPE_WRITE, is_master, family_info, servers);
+              file_id, lease_id, OP_TYPE_WRITE, is_master, family_info, servers, flag);
           if (TFS_SUCCESS == ret)
           {
             // callback & slave will use
@@ -395,7 +395,7 @@ namespace tfs
         {
           // first write to slave
           ret = get_op_manager().prepare_op(attach_block_id,
-              file_id, lease_id, OP_TYPE_WRITE, is_master, family_info, servers);
+              file_id, lease_id, OP_TYPE_WRITE, is_master, family_info, servers, flag);
         }
         else
         {
