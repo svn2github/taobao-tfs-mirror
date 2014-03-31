@@ -69,7 +69,7 @@ namespace tfs
         dump(TBSYS_LOG_LEVEL(DEBUG));
         if (NULL != info && info->version_ > info_.version_)
           info_ = *info;
-        writable = !is_full();
+        writable = !is_full() && !IS_VERFIFY_BLOCK(id());
         const int32_t size = servers_.size();
         SERVER_ITER pos = servers_.end();
         SERVER_ITEM* result = get_(server);

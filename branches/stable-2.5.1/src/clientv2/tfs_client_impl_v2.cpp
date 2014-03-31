@@ -258,7 +258,7 @@ namespace tfs
         else
         {
           ret = tfs_file->read(buf, count);
-          tfs_file->get_session()->update_stat(ST_READ, ret > 0);
+          tfs_file->get_session()->update_stat(ST_READ, ret >= 0);
         }
       }
       return ret;
@@ -285,7 +285,7 @@ namespace tfs
           {
             ret = tfs_file->read(buf, count);
           }
-          tfs_file->get_session()->update_stat(ST_READ, ret > 0);
+          tfs_file->get_session()->update_stat(ST_READ, ret >= 0);
         }
       }
       return ret;
@@ -309,7 +309,7 @@ namespace tfs
         {
           tfs_file->set_option_flag(READ_DATA_OPTION_WITH_FINFO);
           ret = tfs_file->read(buf, count, file_info);
-          tfs_file->get_session()->update_stat(ST_READ, ret > 0);
+          tfs_file->get_session()->update_stat(ST_READ, ret >= 0);
         }
       }
       return ret;
@@ -379,7 +379,7 @@ namespace tfs
         else
         {
           ret = tfs_file->close(status);
-          tfs_file->get_session()->update_stat(ST_WRITE, ret > 0);
+          tfs_file->get_session()->update_stat(ST_WRITE, TFS_SUCCESS == ret);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
