@@ -46,6 +46,7 @@ namespace tfs
         ~CheckManager();
         BlockManager& get_block_manager();
         DataHelper& get_data_helper();
+        int get_sync_mirror(const uint64_t ns_ip, SyncBase*& base);
 
         void run_check();
         int handle(tbnet::Packet* packet);
@@ -59,14 +60,13 @@ namespace tfs
         void check_single_block(const uint64_t block_id,
             const uint64_t peer_ip, const common::CheckFlag flag, common::CheckResult& result);
         int check_single_block(const uint64_t block_id,
-          std::vector<common::FileInfoV2>& finfos, const uint64_t peer_ip,
-          common::CheckFlag flag, common::CheckResult& result);
+            std::vector<common::FileInfoV2>& finfos, SyncBase& peer, common::CheckFlag flag, common::CheckResult& result);
 
-        int process_more_files(const uint64_t peer_ip,
+        int process_more_files(SyncBase& peer,
             const uint64_t block_id, const std::vector<common::FileInfoV2>& more);
-        int process_diff_files(const uint64_t peer_ip,
+        int process_diff_files(SyncBase& peer,
             const uint64_t block_id, const std::vector<common::FileInfoV2>& diff);
-        int process_less_files(const uint64_t peer_ip,
+        int process_less_files(SyncBase& peer,
             const uint64_t block_id, const std::vector<common::FileInfoV2>& less);
         void compare_block_fileinfos(const uint64_t block_id,
             const std::vector<common::FileInfoV2>& left,

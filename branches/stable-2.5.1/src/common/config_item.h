@@ -165,6 +165,7 @@ namespace tfs
 #define CONF_SYNC_FILE_ENTRY_QUEUE_LIMIT              "sync_file_entry_queue_limit"
 #define CONF_SYNC_FILE_ENTRY_QUEUE_WARN_RATIO         "sync_file_entry_queue_warn_ratio"
 #define CONF_SYNC_FILE_ENTRY_DEST_ADDR                "sync_file_entry_dest_addr"
+#define CONF_CLUSTER_VERSION_LIST                     "cluster_version_list"
 
 //migrate server
 #define CONF_MIGRATE_SERVER_ADDR                      "migrate_server_addr"

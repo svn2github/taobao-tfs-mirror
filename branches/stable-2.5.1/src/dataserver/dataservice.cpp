@@ -45,7 +45,6 @@ namespace tfs
         client_request_server_(*this),
         writable_block_manager_(*this),
         check_manager_(*this),
-        sync_manager_(NULL),
         migrate_manager_(NULL),
         timeout_thread_(0),
         task_thread_(0),
@@ -56,7 +55,6 @@ namespace tfs
 
     DataService::~DataService()
     {
-      tbsys::gDelete(sync_manager_);
       tbsys::gDelete(migrate_manager_);
       tbsys::gDelete(lease_manager_);
       tbsys::gDelete(block_manager_);
@@ -312,6 +310,16 @@ namespace tfs
       // sync mirror should init after bootstrap
       if (TFS_SUCCESS == ret)
       {
+        ret = initialize_sync_mirror_();
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "dataservice::start, init sync mirror fail!, ret: %d", ret);
+        }
+      }
+
+      /*
+      if (TFS_SUCCESS == ret)
+      {
         const int32_t limit = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_SYNC_FILE_ENTRY_QUEUE_LIMIT, 100 * 30 * 60);
         const char* ratio = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_SYNC_FILE_ENTRY_QUEUE_WARN_RATIO,"0.8");
         float warn_ratio  = strtof(ratio, NULL);
@@ -340,6 +348,7 @@ namespace tfs
             TFS_SUCCESS == ret ? "successful" : "failed", limit, warn_ratio, NULL != str_dest_addr ? str_dest_addr : "null");
         }
       }
+      */
 
       // init migrate
       if (TFS_SUCCESS == ret)
@@ -371,6 +380,41 @@ namespace tfs
         }
       }
 
+      return ret;
+    }
+
+    int DataService::initialize_sync_mirror_()
+    {
+      int32_t ret = (!SYSPARAM_DATASERVER.local_ns_ip_.empty()
+                    &&  SYSPARAM_DATASERVER.local_ns_port_ > 1024
+                    &&  SYSPARAM_DATASERVER.local_ns_port_ < 65535) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        char src_addr[common::MAX_SYNC_IPADDR_LENGTH] = {'\0'};
+        char dest_addr[common::MAX_SYNC_IPADDR_LENGTH] = {'\0'};
+        snprintf(src_addr, MAX_SYNC_IPADDR_LENGTH, "%s:%d",
+            SYSPARAM_DATASERVER.local_ns_ip_.c_str(), SYSPARAM_DATASERVER.local_ns_port_);
+        std::vector<std::string> slave_ns_ip;
+        common::Func::split_string(SYSPARAM_DATASERVER.slave_ns_ip_.c_str(), '|', slave_ns_ip);
+        std::vector<std::string>::iterator iter = slave_ns_ip.begin();
+        for (int32_t index = 0; iter != slave_ns_ip.end() && TFS_SUCCESS == ret; ++iter, index++)
+        {
+          snprintf(dest_addr, MAX_SYNC_IPADDR_LENGTH, "%s", (*iter).c_str());
+          SyncBase* sync_base = new (std::nothrow)SyncBase(*this,
+              SYNC_TO_TFS_MIRROR, index, src_addr, dest_addr);
+          assert(NULL != sync_base);
+          ret = sync_base->init();
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "initialize sync mirror failed, local cluster ns ip addr: %s, "
+                "remote cluster ns ip addr: %s",src_addr, dest_addr);
+          }
+          else
+          {
+            sync_mirror_.push_back(sync_base);
+          }
+        }
+      }
       return ret;
     }
 
@@ -433,9 +477,6 @@ namespace tfs
     int DataService::destroy_service()
     {
       DsRuntimeGlobalInformation::instance().destroy();
-
-      if (NULL != sync_manager_)
-        sync_manager_->destroy();
 
       if (NULL != migrate_manager_)
         migrate_manager_->destroy();

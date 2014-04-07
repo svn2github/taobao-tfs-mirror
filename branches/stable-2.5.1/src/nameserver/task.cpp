@@ -224,7 +224,7 @@ namespace tfs
             if ((NULL != block) && (NULL != dest))
             {
               BlockInfoV2 info = block->get_block_info();
-              const BlockCollect::SERVER_ITEM* item = block->get_server_item(source->id());
+              const BlockCollect::SERVER_ITEM* item = (NULL != source) ? block->get_server_item(source->id()) : NULL;
               if (NULL != item && info.version_ != item->second)
                 info.version_ = item->second;
               if (blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)

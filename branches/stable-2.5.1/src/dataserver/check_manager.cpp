@@ -46,6 +46,23 @@ namespace tfs
       return service_.get_data_helper();
     }
 
+    int CheckManager::get_sync_mirror(const uint64_t ns_ip, SyncBase*& base)
+    {
+      int ret = EXIT_PARAMETER_ERROR;
+      std::vector<SyncBase*>& mirrors = service_.get_sync_mirror();
+      std::vector<SyncBase*>::iterator iter = mirrors.begin();
+      for ( ; iter != mirrors.end(); iter++)
+      {
+        if (Func::get_host_ip((*iter)->get_dest_addr().c_str()) == ns_ip)
+        {
+          base = *iter;
+          ret = TFS_SUCCESS;
+          break;
+        }
+      }
+      return ret;
+    }
+
     void CheckManager::run_check()
     {
       const int32_t SLEEP_TIME_S = 1;
@@ -141,6 +158,7 @@ namespace tfs
 
       TBSYS_LOG(INFO, "report check status to %s, senqo: %"PRI64_PREFIX"d",
           tbsys::CNetUtil::addrToString(param.cs_id_).c_str(), param.seqno_);
+
       post_msg_to_server(param.cs_id_, &rsp_msg, Task::ds_task_callback);
     }
 
@@ -171,7 +189,12 @@ namespace tfs
       {
         if (main_finfos.size() > 0)
         {
-          result.status_ = check_single_block(block_id, main_finfos, peer_ip, flag, result);
+          SyncBase* sync_mirror = NULL;
+          result.status_ = get_sync_mirror(peer_ip, sync_mirror);
+          if (TFS_SUCCESS == result.status_)
+          {
+            result.status_ = check_single_block(block_id, main_finfos, *sync_mirror, flag, result);
+          }
         }
         else if (main_finfos.size() == 0)
         {
@@ -197,11 +220,12 @@ namespace tfs
     }
 
     int CheckManager::check_single_block(const uint64_t block_id,
-        vector<FileInfoV2>& finfos, const uint64_t peer_ip, CheckFlag flag, CheckResult& result)
+        vector<FileInfoV2>& finfos, SyncBase& peer, CheckFlag flag, CheckResult& result)
     {
+      uint64_t peer_ns = Func::get_host_ip(peer.get_dest_addr().c_str());
       vector<uint64_t> replicas;
       IndexDataV2 peer_index;
-      int ret = get_data_helper().get_block_replicas(peer_ip, block_id, replicas);
+      int ret = get_data_helper().get_block_replicas(peer_ns, block_id, replicas);
       if (TFS_SUCCESS == ret)
       {
         vector<uint64_t>::iterator iter = replicas.begin();
@@ -222,7 +246,7 @@ namespace tfs
       else
       {
         TBSYS_LOG(WARN, "read block %"PRI64_PREFIX"u index fail, peer ns: %s, ret: %d",
-            block_id, tbsys::CNetUtil::addrToString(peer_ip).c_str(), ret);
+            block_id, tbsys::CNetUtil::addrToString(peer_ns).c_str(), ret);
       }
 
       if (TFS_SUCCESS == ret)
@@ -235,14 +259,14 @@ namespace tfs
         // if CHECK_FLAG_SYNC not set, just compare, don't sync
         if (flag & CHECK_FLAG_SYNC)
         {
-          ret = process_more_files(peer_ip, block_id, more);
+          ret = process_more_files(peer, block_id, more);
           if (TFS_SUCCESS == ret)
           {
-            ret = process_diff_files(peer_ip, block_id, diff);
+            ret = process_diff_files(peer, block_id, diff);
           }
           if (TFS_SUCCESS == ret)
           {
-            ret = process_less_files(peer_ip, block_id, less);
+            ret = process_less_files(peer, block_id, less);
           }
         }
 
@@ -257,43 +281,35 @@ namespace tfs
       return ret;
     }
 
-    int CheckManager::process_more_files(const uint64_t peer_ip,
+    int CheckManager::process_more_files(SyncBase& peer,
         const uint64_t block_id, const vector<FileInfoV2>& more)
     {
       int ret = TFS_SUCCESS;
       vector<FileInfoV2>::const_iterator iter = more.begin();
       for ( ; (TFS_SUCCESS == ret) && (iter != more.end()); iter++)
       {
-        SyncManager* manager = service_.get_sync_manager();
-        if (NULL != manager)
-        {
-          ret =  manager->insert(peer_ip, 0, block_id, iter->id_, OPLOG_INSERT);
-        }
+        ret = peer.write_sync_log(OPLOG_INSERT, block_id, iter->id_);
         TBSYS_LOG(DEBUG, "MORE file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
-            tbsys::CNetUtil::addrToString(peer_ip).c_str(), block_id, iter->id_);
+            peer.get_dest_addr().c_str(), block_id, iter->id_);
       }
       return ret;
     }
 
-    int CheckManager::process_diff_files(const uint64_t peer_ip,
+    int CheckManager::process_diff_files(SyncBase& peer,
         const uint64_t block_id, const vector<FileInfoV2>& diff)
     {
       int ret = TFS_SUCCESS;
       vector<FileInfoV2>::const_iterator iter = diff.begin();
       for ( ; (TFS_SUCCESS == ret) && (iter != diff.end()); iter++)
       {
-        SyncManager* manager = service_.get_sync_manager();
-        if (NULL != manager)
-        {
-          ret =  manager->insert(peer_ip, 0, block_id, iter->id_, OPLOG_REMOVE);
-        }
+        ret = peer.write_sync_log(OPLOG_REMOVE, block_id, iter->id_);
         TBSYS_LOG(DEBUG, "DIFF file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
-            tbsys::CNetUtil::addrToString(peer_ip).c_str(), block_id, iter->id_);
+            peer.get_dest_addr().c_str(), block_id, iter->id_);
       }
       return ret;
     }
 
-    int CheckManager::process_less_files(const uint64_t peer_ip,
+    int CheckManager::process_less_files(SyncBase& peer,
         const uint64_t block_id, const vector<FileInfoV2>& less)
     {
       vector<FileInfoV2>::const_iterator iter = less.begin();
@@ -301,7 +317,7 @@ namespace tfs
       {
         // TODO: process less file in master cluster
         TBSYS_LOG(DEBUG, "LESS file compared with %s blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u",
-            tbsys::CNetUtil::addrToString(peer_ip).c_str(), block_id, iter->id_);
+            peer.get_dest_addr().c_str(), block_id, iter->id_);
       }
       return TFS_SUCCESS;
     }

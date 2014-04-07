@@ -242,7 +242,7 @@ namespace tfs
     bool BlockCollect::check_balance(const time_t now) const
     {
       return (!is_creating() && !in_replicate_queue() && !has_valid_lease(now)
-              && expire(now) && check_copies_complete());
+              && expire(now) && check_copies_complete() && !is_in_family());
     }
 
     bool BlockCollect::check_marshalling(const time_t now) const

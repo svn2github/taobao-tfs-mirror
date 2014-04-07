@@ -157,6 +157,7 @@ namespace tfs
       int32_t max_bg_task_queue_size_;
       int32_t business_port_count_;
       int32_t heart_port_count_;
+      std::map<uint64_t, int32_t> cluster_version_list_;
       static std::string get_real_file_name(const std::string& src_file,
           const std::string& index, const std::string& suffix);
       static int get_real_ds_port(const int ds_port, const std::string& index);
