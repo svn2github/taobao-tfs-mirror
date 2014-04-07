@@ -783,7 +783,7 @@ namespace tfs
           assert(NULL != pheader);
           int32_t need_bucket_slot = static_cast<int32_t>(header.used_file_info_bucket_size_ / threshold) +
             getpagesize() / FILE_INFO_V2_LENGTH;
-          need_bucket_slot = std::min(need_bucket_slot, MAX_SINGLE_BLOCK_FILE_COUNT);
+          need_bucket_slot = std::min(need_bucket_slot, MAX_INDEX_ELEMENT_NUM);
           if (need_bucket_slot > pheader->file_info_bucket_size_)
           {
             int32_t need_length = INDEX_HEADER_V2_LENGTH +
@@ -1165,7 +1165,7 @@ namespace tfs
           index->logic_block_id_ = logic_block_id;
           index->offset_ = (1 == pheader->index_num_) ? INDEX_DATA_START_OFFSET : last_index->offset_ + last_index->size_;
           int32_t bucket_size = header.file_info_bucket_size_ * ratio;
-          real_header.file_info_bucket_size_ = std::min(bucket_size, MAX_SINGLE_BLOCK_FILE_COUNT);
+          real_header.file_info_bucket_size_ = std::min(bucket_size, MAX_INDEX_ELEMENT_NUM);
           index->size_ = INDEX_HEADER_V2_LENGTH + (real_header.file_info_bucket_size_ * FILE_INFO_V2_LENGTH);
           real_header.used_file_info_bucket_size_ = 0;
           char* data  = new (std::nothrow) char[index->size_];

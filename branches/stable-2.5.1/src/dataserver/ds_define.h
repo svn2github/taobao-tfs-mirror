@@ -47,8 +47,7 @@ namespace tfs
     static const int32_t INDEXFILE_SAFE_MULT = 4;
     //static const int32_t MAX_INITIALIZE_INDEX_SIZE = 8;
     static const int32_t BLOCK_RESERVER_SPACE = 1048576; // reserve 1M space for update
-    static const int32_t MAX_INDEX_ELEMENT_NUM = 65535;
-    static const int32_t MAX_MMAP_SIZE = (MAX_INDEX_ELEMENT_NUM * common::FILE_INFO_V2_LENGTH ) + common::INDEX_HEADER_V2_LENGTH;
+    static const int32_t MAX_MMAP_SIZE = (tfs::common::MAX_INDEX_ELEMENT_NUM * common::FILE_INFO_V2_LENGTH ) + common::INDEX_HEADER_V2_LENGTH;
 
     // flow control parameter
     static const int32_t MB = 1 * 1024 * 1024;
