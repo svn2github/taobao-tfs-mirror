@@ -73,7 +73,7 @@ namespace tfs
     int SyncByBlockWorker::process(string& line)
     {
       assert(!line.empty());
-      int32_t ret = TFS_ERROR;
+      int32_t ret = TFS_SUCCESS;
       uint64_t block = INVALID_BLOCK_ID;
       const int32_t type = manager_.get_type();
       if (TRANSFER_TYPE_TRANSFER == type)
@@ -90,8 +90,7 @@ namespace tfs
           }
         }
       }
-
-      if (TRANSFER_TYPE_SYNC_BLOCK == type)
+      else if (TRANSFER_TYPE_SYNC_BLOCK == type)
       {
         block= strtoull(line.c_str(), NULL, 10);
         ret = (INVALID_BLOCK_ID != block) ? TFS_SUCCESS : EXIT_BLOCK_ID_INVALID_ERROR;
@@ -104,13 +103,11 @@ namespace tfs
           }
         }
       }
-
-      if (TRANSFER_TYPE_SYNC_FILE == type)
+      else if (TRANSFER_TYPE_SYNC_FILE == type)
       {
         ret = transfer_file(line);
       }
-
-      if (TRANSFER_TYPE_COMPARE_BLOCK == type)
+      else if (TRANSFER_TYPE_COMPARE_BLOCK == type)
       {
         block= strtoull(line.c_str(), NULL, 10);
         ret = (INVALID_BLOCK_ID != block) ? TFS_SUCCESS : EXIT_BLOCK_ID_INVALID_ERROR;
@@ -119,6 +116,12 @@ namespace tfs
           ret = compare_crc_by_block(block);
         }
       }
+      else
+      {
+        ret = EXIT_PARAMETER_ERROR;
+        TBSYS_LOG(WARN, "invalid op type: %d", type);
+      }
+
       return ret;
     }
 
@@ -127,22 +130,36 @@ namespace tfs
       uint64_t sserver = INVALID_SERVER_ID;
       tbnet::DataBuffer sbuf, dbuf;
       common::IndexDataV2 sindex_data, dindex_data;
-      int32_t traffic = atoi(get_extra_arg().c_str());
+      int32_t traffic = 1048576; // default 1M
+      if (!get_extra_arg().empty())
+      {
+        traffic = atoi(get_extra_arg().c_str());
+      }
       int32_t ret = (INVALID_BLOCK_ID != block && INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         std::vector<uint64_t> servers;
-        NsRequester::get_block_replicas(Func::get_host_ip(get_src_addr().c_str()), block, servers);
+        ret = NsRequester::get_block_replicas(Func::get_host_ip(get_src_addr().c_str()), block, servers);
         if (TFS_SUCCESS == ret)
         {
           if (!servers.empty())
             sserver = servers[random() % servers.size()];
+          ret = INVALID_SERVER_ID != sserver ? TFS_SUCCESS : EXIT_SERVER_ID_INVALID_ERROR;
+        }
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "get block %"PRI64_PREFIX"u replica from src cluster %s fail, ret: %d",
+              block, get_src_addr().c_str(), ret);
         }
       }
-      ret = INVALID_SERVER_ID != sserver ? TFS_SUCCESS : EXIT_SERVER_ID_INVALID_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = DsRequester::read_block_index(sserver, block, block, sindex_data);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "read %"PRI64_PREFIX"u index from src cluster %s fail, ret: %d",
+              block, get_src_addr().c_str(), ret);
+        }
       }
       if (TFS_SUCCESS == ret && !sindex_data.finfos_.empty())
       {
@@ -288,11 +305,21 @@ namespace tfs
       common::IndexDataV2 sindex_data, dindex_data;
       int32_t sret = TFS_SUCCESS, dret = TFS_SUCCESS;
       sret = MiscRequester::read_block_index(Func::get_host_ip(get_src_addr().c_str()), block, block, sindex_data);
-      if (TFS_SUCCESS == sret)
+      if (TFS_SUCCESS != sret)
+      {
+        TBSYS_LOG(WARN, "read block %"PRI64_PREFIX"u index from src cluster %s fail, ret: %d",
+            block, get_src_addr().c_str(), ret);
+      }
+      else
       {
         dret = MiscRequester::read_block_index(Func::get_host_ip(get_dest_addr().c_str()), block, block, dindex_data);
-        dret = (TFS_SUCCESS == dret || EXIT_BLOCK_NOT_FOUND == dret || EXIT_NO_DATASERVER == dret) ? TFS_SUCCESS : dret;
-        if (TFS_SUCCESS == dret)
+        dret = (TFS_SUCCESS == dret || EXIT_BLOCK_NOT_FOUND == dret) ? TFS_SUCCESS : dret;
+        if (TFS_SUCCESS != dret)
+        {
+          TBSYS_LOG(WARN, "read block %"PRI64_PREFIX"u index from dest cluster %s fail, ret: %d",
+              block, get_dest_addr().c_str(), ret);
+        }
+        else
         {
           const bool force = manager_.get_force();
           FileInfoV2 left, right;
@@ -303,16 +330,16 @@ namespace tfs
           for (; iter != sfinfos.end() && TFS_SUCCESS == ret; ++iter)
           {
             left = (*iter);
+            memset(&right, 0, sizeof(right));
             std::set<FileInfoV2, CompareFileInfoV2ByFileId>::const_iterator it = dfinfos.find(left);
             if (dfinfos.end() != it)
             {
-              right  = left;
+              right  = *it;
               dfinfos.erase(it);
             }
 
             FSName name(block, left.id_);
             std::string filename(name.get_name());
-            retry = 2;
             do
             {
               ret = SyncUtil::cmp_and_sync_file(get_src_addr(), get_dest_addr(), filename, get_timestamp(), force, left, right, false);
@@ -326,13 +353,14 @@ namespace tfs
             }
           }
 
-          memset(&right, 0, sizeof(right));
           TBSYS_LOG(INFO, "sync block: %"PRI64_PREFIX"u %s successful",block, TFS_SUCCESS == ret ? "all" : "part");
+
+          memset(&left, 0, sizeof(left));
           for (iter = dfinfos.begin(); iter != dfinfos.end(); ++iter)
           {
             FSName name(block, (*iter).id_);
             std::string filename(name.get_name());
-            log_info("TRANSFER_BLOCK_BY_FILE_MORE", filename, TFS_SUCCESS, (*iter), right);
+            log_info("TRANSFER_BLOCK_BY_FILE_LESS", filename, TFS_SUCCESS, left, (*iter));
           }
         }
       }
@@ -341,9 +369,8 @@ namespace tfs
 
     int SyncByBlockWorker::transfer_file(const std::string& line)
     {
-      char name[FILE_NAME_LEN_V2 + 1] = {'\0'};
-      const int32_t len = std::min(FILE_NAME_LEN_V2, static_cast<int32_t>(line.length()));
-      memcpy(name, line.c_str(), len);
+      char name[256] = {'\0'};  // filename may has suffix
+      strncpy(name, line.c_str(), 256);
       char* tmp= tfs::transfer::trim(name);
       int32_t ret = (NULL != tmp) ? TFS_SUCCESS : EXIT_INVALID_FILE_NAME;
       if (TFS_SUCCESS != ret)
@@ -389,6 +416,7 @@ namespace tfs
             left = (*iter);
             FSName name(block, left.id_);
             std::string filename(name.get_name());
+            memset(&right, 0, sizeof(right));
             std::set<FileInfoV2, CompareFileInfoV2ByFileId>::const_iterator it = dfinfos.find(left);
             if (dfinfos.end() != it)
             {
@@ -487,8 +515,12 @@ namespace tfs
             while (NULL != fgets(line, 256, fp))
             {
               int32_t len = strlen(line);
-              while (line[len-1] == '\n') len--;
+              while (line[len-1] == '\n' || line[len-1] == ' ' || line[len-1] == '\t') len--;
               line[len] = '\0';
+              if (len == 0) // ignore empty line
+              {
+                continue;
+              }
               uint64_t server = Func::get_host_ip(line);
               assert(INVALID_SERVER_ID != server);
               dest_server_addr_.push_back(server);
@@ -531,11 +563,15 @@ namespace tfs
         "-d           dest server ip:port\n"
         "-f           input file path\n"
         "-k           dest server addr path\n"
-        "-c           retry count when process fail\n"
+        "-c           retry count when process fail, default 2\n"
         "-m           timestamp eg: 20130610, optional, default next day 0'clock\n"
         "-i           sleep interval (ms), optional, default 0\n"
         "-e           force flag, need strong consistency(crc), optional\n"
-        "-u           type, 0: transfer block, 1: sync block, 2: sync file, 3: compare block, optional\n"
+        "-u           type [0, 1, 2, 3]\n"
+        "             -- 0: transfer block, will remove block from dest first!!!\n"
+        "             -- 1: sync block by file\n"
+        "             -- 2: sync file\n"
+        "             -- 3: compare block \n"
         "-x           traffic threshold per thread, default 1024(kB/s)\n"
         "-t           thread count, optional, defaul 1\n"
         "-l           log level, optional, default info\n"
@@ -544,7 +580,11 @@ namespace tfs
         "-v           print version information\n"
         "-h           print help information\n"
         "signal       SIGUSR1 inc sleep interval 1000ms\n"
-        "             SIGUSR2 dec sleep interval 1000ms\n";
+        "             SIGUSR2 dec sleep interval 1000ms\n"
+        "examples: daily t1m ==> t1b\n"
+        "-- sync_by_blk ==> transfer -s 10.232.31.17:3100 -d 10.232.128.33:3100 -u 1 -f block_list -t 3 -p log_dir\n"
+        "-- sync_by_file ==> transfer -s 10.232.31.17:3100 -d 10.232.128.33:3100 -u 2 -f file_list -t 3 -p log_dir\n"
+        "-- transfer_by_raw ==> transfer -s 10.232.31.17:3100 -d 10.232.128.33:3100 -u 0 -k server_list -f block_list -t 3 -p log_dir\n";
       fprintf(stderr, "%s usage:\n%s", app_name, options);
       exit(-1);
     }
@@ -554,14 +594,6 @@ namespace tfs
 
 int main(int argc, char* argv[])
 {
-  std::string timestamp("20321231000000");
-  time_t timestamp_ = tbsys::CTimeUtil::strToTime(const_cast<char*>(timestamp.c_str()));
-  printf("%s %lu \n",tfs::common:: Func::time_to_str(timestamp_).c_str(), timestamp_);
-  //std::string filename("T11111111111111");
-  //tfs::common::FileInfoV2 left, right;
-  //memset(&left, 0, sizeof(left));
-  //memset(&right, 0, sizeof(right));
-  //tfs::transfer::log_info("TRANSFER_BLOCK_BY_RAW", filename, 0, left, right);
   tfs::transfer::SyncByBlockManger work_manager;
   return work_manager.main(argc, argv);
 }

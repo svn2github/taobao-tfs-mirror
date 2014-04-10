@@ -90,7 +90,7 @@ namespace tfs
           rrd_msg.set_block_id(block);
           rrd_msg.set_offset(cur_offset);
           rrd_msg.set_length(read_size);
-          //rrd_msg.set_degrade_flag(false); //不考虑degrade read
+          rrd_msg.set_degrade_flag(true); // won't do flow control
           NewClient* client = NewClientManager::get_instance().create_client();
           tbnet::Packet* rsp = NULL;
           ret = send_msg_to_server(server, client, &rrd_msg, rsp);

@@ -42,7 +42,7 @@ namespace tfs
     static BaseWorkerPtr* g_workers = NULL;
 
     BaseWorkerManager::BaseWorkerManager():
-      retry_count_(3), timestamp_(0), interval_ms_(0), type_(-1), force_(false),
+      retry_count_(2), timestamp_(0), interval_ms_(0), type_(-1), force_(false),
       succ_fp_(NULL), fail_fp_(NULL)
     {
     }
@@ -144,6 +144,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       bool daemon = false;
+      log_level_ = "info"; // default log level
       output_dir_ = "./";  // default output directory
       string timestamp = get_day(1, true);//第二天0点
       int flag = 0;
@@ -257,9 +258,12 @@ namespace tfs
           while (NULL != fgets(line, 256, succ_fp_))
           {
             int32_t len = strlen(line);
-            while (line[len-1] == '\n' || line[len-1] == ' ') len--;
+            while (line[len-1] == '\n' || line[len-1] == ' ' || line[len-1] == '\t') len--;
             line[len] = '\0';
-            done.insert(line);
+            if (len > 0)  // ignore empty line
+            {
+              done.insert(line);
+            }
           }
         }
 
