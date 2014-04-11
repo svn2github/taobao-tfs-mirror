@@ -831,52 +831,42 @@ namespace tfs
 
     void LayoutManager::load_family_info_()
     {
-      time_t now = 0;
-      int64_t family_id = 0;
-      int32_t ret = TFS_SUCCESS;
-      const int32_t MAX_SLEEP_TIME = 10;//10s
-      bool first_loop = true;
+      int64_t family_id = INVALID_FAMILY_ID;
+      int32_t ret = TAIR_RETURN_SUCCESS, rt = TAIR_RETURN_SUCCESS;
+      const int32_t MAX_SLEEP_TIME = 3;//3s
       std::vector<common::FamilyInfo> infos;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      const int32_t SAFE_MODE_TIME = SYSPARAM_NAMESERVER.safe_mode_time_ * 4;
       while (!ngi.is_destroyed())
       {
-        now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now))
-          Func::sleep(SAFE_MODE_TIME, ngi.destroy_flag_);
+        if (!ngi.load_family_complete())
+        {
+          family_id = get_family_manager().get_max_family_id();
+          do
+          {
+            ret = get_oplog_sync_mgr().scan_all_family(family_id);
+          }
+          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret);
+
+          do
+          {
+            rt = get_oplog_sync_mgr().scan_all_family_log();
+          }
+          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret);
+          ngi.set_load_family_complete(true);
+        }
+
         if (!ngi.is_master())
         {
           do
           {
-            infos.clear();
-            ret = get_oplog_sync_mgr().scan_family(infos, family_id, first_loop ? 0 : 1);
-            if (TFS_SUCCESS == ret)
-            {
-              first_loop = false;
-              std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
-              common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
-              std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
-              for (; iter != infos.end(); ++iter)
-              {
-                helper.clear();
-                family_id = (*iter).family_id_;
-                std::vector<std::pair<uint64_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
-                for (; it != (*iter).family_member_.end(); ++it)
-                {
-                  helper.push_back(std::make_pair((*it).first, (*it).second));
-                  BlockCollect* block =  get_block_manager().insert((*it).first, now);
-                  assert(block);
-                  block->set_family_id(family_id);
-                }
-                ret = get_family_manager().insert(family_id, (*iter).family_aid_info_, helper, now);
-                if (EXIT_ELEMENT_EXIST == ret)
-                  ret = TFS_SUCCESS;
-                if (TFS_SUCCESS != ret)
-                  TBSYS_LOG(WARN, "load family information error,family id: %"PRI64_PREFIX"d, ret: %d", family_id, ret);
-              }
-            }
+            ret = get_oplog_sync_mgr().scan_all_family(family_id);
           }
-          while (infos.size() > 0 && TFS_SUCCESS == ret);
+          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret);
+          do
+          {
+            rt = get_oplog_sync_mgr().scan_all_family_log();
+          }
+          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret);
         }
         Func::sleep(MAX_SLEEP_TIME, ngi.destroy_flag_);
       }
@@ -1454,9 +1444,30 @@ namespace tfs
       if (ret)
       {
         ServerCollect* result= NULL;
-        uint64_t servers[MAX_REPLICATION_NUM];
-        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
+        uint64_t servers[MAX_REPLICATION_NUM + MAX_MARSHALLING_NUM];
+        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM + MAX_MARSHALLING_NUM, servers);
         ret = get_block_manager().need_balance(helper, block, now);
+        if (ret)
+        {
+          int32_t family_aid_info = 0;
+          int64_t family_id = block->get_family_id();
+          if (INVALID_FAMILY_ID != family_id)
+          {
+            std::pair<uint64_t, uint64_t> arrays[MAX_MARSHALLING_NUM];
+            common::ArrayHelper<std::pair<uint64_t, uint64_t> > members(MAX_MARSHALLING_NUM, arrays);
+            int32_t rt = get_family_manager().get_members(members, family_aid_info, family_id);
+            ret = (TFS_SUCCESS == rt);
+            if (ret)
+            {
+              for (int64_t index = 0; index < members.get_array_index(); ++index)
+              {
+                std::pair<uint64_t, uint64_t>* item = members.at(index);
+                if (INVALID_SERVER_ID != item->second)
+                  helper.push_back(item->second);
+              }
+            }
+          }
+        }
         if (ret)
         {
           ret = helper.exist(source->id());

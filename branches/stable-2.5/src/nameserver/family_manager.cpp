@@ -121,7 +121,8 @@ namespace tfs
 
     FamilyManager::FamilyManager(LayoutManager& manager):
       manager_(manager),
-      marshalling_queue_(MAX_RACK_NUM, 1, 0.1)
+      marshalling_queue_(MAX_RACK_NUM, 1, 0.1),
+      max_family_id_(INVALID_FAMILY_ID)
     {
       for (int32_t i = 0; i < MAX_FAMILY_CHUNK_NUM; ++i)
       {
@@ -327,6 +328,8 @@ namespace tfs
             BlockCollect* block = manager_.get_block_manager().get(item.first);
             if (NULL != block)
               members.push_back(block);
+            else
+              TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u, object maybe delete, family_id: %"PRI64_PREFIX"d", item.first, family_id);
           }
         }
       }
@@ -882,6 +885,8 @@ namespace tfs
         }
         if (TFS_SUCCESS != ret)
           tbsys::gDelete(family);
+        if (max_family_id_ < family_id)
+          max_family_id_ = family_id;
       }
       return ret;
     }
@@ -922,6 +927,37 @@ namespace tfs
         {
           ret = family->exist(current_version, block, version);
         }
+      }
+      return ret;
+    }
+
+    int FamilyManager::del_family(const int64_t family_id)
+    {
+      int32_t family_aid_info = 0;
+      std::pair<uint64_t, uint64_t> members[MAX_MARSHALLING_NUM];
+      common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MAX_MARSHALLING_NUM, members);
+      int32_t ret = manager_.get_family_manager().get_members(helper, family_aid_info, family_id);
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t index = 0;
+        const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info);
+        const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family_aid_info);
+        const int32_t MEMBER_NUM = DATA_MEMBER_NUM + CHECK_MEMBER_NUM;
+        for (index = 0; index < MEMBER_NUM; ++index)
+        {
+          std::pair<uint64_t, uint64_t>* item = helper.at(index);
+          assert(NULL != item);
+          manager_.get_block_manager().update_family_id(item->first, INVALID_FAMILY_ID);
+          if (index >= DATA_MEMBER_NUM)
+          {
+            //TODO
+            manager_.get_block_manager().push_to_delete_queue(item->first, item->second);
+          }
+        }
+
+        GCObject* object = NULL;
+        remove(object, family_id);
+        manager_.get_gc_manager().add(object, Func::get_monotonic_time());
       }
       return ret;
     }

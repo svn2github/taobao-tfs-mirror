@@ -147,6 +147,7 @@ namespace tfs
       int8_t peer_role_;
       int8_t owner_status_;
       int8_t peer_status_;
+      bool load_family_complete_;
 
       bool is_destroyed() const;
       bool in_safe_mode_time(const int64_t now) const;
@@ -165,6 +166,8 @@ namespace tfs
       bool own_is_initialize_complete() const;
       void initialize();
       void destroy();
+      void set_load_family_complete(const bool complete) { load_family_complete_ = complete; }
+      bool load_family_complete() const { return load_family_complete_;}
       void dump(const int32_t level, const char* file, const int32_t line,
             const char* function, const pthread_t thid, const char* format, ...);
       NsRuntimeGlobalInformation();

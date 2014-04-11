@@ -742,35 +742,11 @@ namespace tfs
       int32_t ret = (info.value3_ <= 0) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        ret = manager_.get_oplog_sync_mgr().del_family(info.value3_);
-        if (TFS_SUCCESS == ret)
+        OpLogSyncManager& oplogmgr = manager_.get_oplog_sync_mgr();
+        ret = oplogmgr.del_family(info.value3_);
+        if (TFS_SUCCESS == ret || info.value1_)
         {
-          int32_t family_aid_info = 0;
-          std::pair<uint64_t, uint64_t> members[MAX_MARSHALLING_NUM];
-          common::ArrayHelper<std::pair<uint64_t, uint64_t> > helper(MAX_MARSHALLING_NUM, members);
-          ret = manager_.get_family_manager().get_members(helper, family_aid_info, info.value3_);
-          if (TFS_SUCCESS == ret)
-          {
-            int32_t index = 0;
-            const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info);
-            const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family_aid_info);
-            const int32_t MEMBER_NUM = DATA_MEMBER_NUM + CHECK_MEMBER_NUM;
-            for (index = 0; index < MEMBER_NUM; ++index)
-            {
-              std::pair<uint64_t, uint64_t>* item = helper.at(index);
-              assert(NULL != item);
-              manager_.get_block_manager().update_family_id(item->first, INVALID_FAMILY_ID);
-              if (index >= DATA_MEMBER_NUM)
-              {
-                manager_.get_block_manager().push_to_delete_queue(item->first, item->second);
-              }
-            }
-
-            GCObject* object = NULL;
-            manager_.get_family_manager().remove(object, info.value3_);
-            if (NULL != object)
-              manager_.get_gc_manager().add(object, Func::get_monotonic_time());
-          }
+          ret = manager_.get_family_manager().del_family(info.value3_);
         }
       }
 

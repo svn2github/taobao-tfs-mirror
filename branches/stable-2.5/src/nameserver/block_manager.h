@@ -113,6 +113,7 @@ namespace tfs
         int update_block_info(const common::BlockInfoV2& info, BlockCollect* block);
 
         int update_family_id(const uint64_t block, const uint64_t family_id);
+        int set_family_id(BlockCollect* block, const uint64_t family_id);
 
         bool need_replicate(const BlockCollect* block) const;
         bool need_replicate(const BlockCollect* block, const time_t now) const;

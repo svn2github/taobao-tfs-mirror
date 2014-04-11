@@ -133,37 +133,25 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          bool first_loop = true;
           int64_t family_id = 0;
-          std::vector<common::FamilyInfo> infos;
           do
           {
-            infos.clear();
-            ret = scan_family(infos, family_id, first_loop ? 0 : 1);
-            if (TFS_SUCCESS == ret)
-            {
-              first_loop = false;
-              time_t now = Func::get_monotonic_time();
-              std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
-              common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
-              std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
-              for (; iter != infos.end(); ++iter)
-              {
-                helper.clear();
-                family_id = (*iter).family_id_;
-                std::vector<std::pair<uint64_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
-                for (; it != (*iter).family_member_.end(); ++it)
-                {
-                  helper.push_back(std::make_pair((*it).first, (*it).second));
-                  BlockCollect* block =  manager_.get_block_manager().insert((*it).first, now);
-                  assert(block);
-                  block->set_family_id(family_id);
-                }
-                ret = manager_.get_family_manager().insert(family_id, (*iter).family_aid_info_, helper, now);
-              }
-            }
+            ret = scan_all_family(family_id);
           }
-          while (infos.size() > 0 && TFS_SUCCESS == ret);
+          while (TAIR_RETURN_DATA_NOT_EXIST != ret
+            && TAIR_RETURN_SUCCESS != ret);
+
+          if (TAIR_RETURN_DATA_NOT_EXIST == ret || TAIR_RETURN_SUCCESS == ret)
+          {
+            do
+            {
+              ret = scan_all_family_log();
+            }
+            while (TAIR_RETURN_DATA_NOT_EXIST != ret
+                && TAIR_RETURN_SUCCESS != ret);
+          }
+          if (TAIR_RETURN_DATA_NOT_EXIST == ret || TAIR_RETURN_SUCCESS == ret)
+            ret = TFS_SUCCESS;
         }
       }
       return ret;
@@ -645,19 +633,87 @@ namespace tfs
       int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = dbhelper_->del_family(family_id);
+        ret = dbhelper_->del_family(family_id, false, true);
       }
       return ret;
     }
 
-    int OpLogSyncManager::scan_family(std::vector<common::FamilyInfo>& infos, const int64_t start_family_id, const int32_t key_offset)
+    int OpLogSyncManager::scan_all_family(int64_t& start_family_id)
     {
-      int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
+      int32_t ret = TAIR_RETURN_SUCCESS, rt = TFS_SUCCESS;
+      std::vector<common::FamilyInfo> infos;
+      std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
+      common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
+      do
       {
-        ret = dbhelper_->scan(infos, start_family_id, key_offset);
+        infos.clear();
+        assert(NULL != dbhelper_);
+        ret = dbhelper_->scan(infos, start_family_id, false);
+        std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
+        int64_t now = Func::get_monotonic_time();
+        for (; iter != infos.end(); ++iter)
+        {
+          helper.clear();
+          const FamilyInfo& family = (*iter);
+          if (start_family_id < family.family_id_)
+            start_family_id = family.family_id_;
+          std::stringstream str;
+          str << family.family_id_ << ":" << family.family_aid_info_ << ":";
+          std::vector<std::pair<uint64_t, int32_t> >::const_iterator it = family.family_member_.begin();
+          for (; it != family.family_member_.end(); ++it)
+          {
+            helper.push_back(std::make_pair((*it).first, (*it).second));
+            BlockCollect* block =  manager_.get_block_manager().insert((*it).first, now);
+            assert(NULL != block);
+            manager_.get_block_manager().set_family_id(block,family.family_id_);
+            id_factory_.update((*it).first);
+            str << it->first << ":" << it->second << ":";
+          }
+          rt = manager_.get_family_manager().insert(family.family_id_, family.family_aid_info_, helper, now);
+          if (EXIT_ELEMENT_EXIST == rt)
+            rt = TFS_SUCCESS;
+          if (TFS_SUCCESS != rt)
+            TBSYS_LOG(WARN, "load family information error,family id: %"PRI64_PREFIX"d, ret: %d", family.family_id_, ret);
+          TBSYS_LOG(INFO, "FAMILY: %s, rt: %d", str.str().c_str(), rt);
+        }
+        if (!infos.empty())
+          ++start_family_id;
       }
+      while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
       return ret;
-    }
+   }
+
+    int OpLogSyncManager::scan_all_family_log()
+    {
+      int64_t start_family_id = 0;
+      int32_t ret = TAIR_RETURN_SUCCESS, rt = TFS_SUCCESS;
+      std::vector<common::FamilyInfo> infos;
+      do
+      {
+        infos.clear();
+        assert(NULL != dbhelper_);
+        ret = dbhelper_->scan(infos, start_family_id, true);
+        std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
+        for (; iter != infos.end(); ++iter)
+        {
+          const FamilyInfo& family = (*iter);
+          std::stringstream str;
+          str << family.family_id_ << ":" << family.family_aid_info_ << ":";
+          if (start_family_id < family.family_id_)
+            start_family_id = family.family_id_;
+          rt = manager_.get_family_manager().del_family(family.family_id_);
+          if (TFS_SUCCESS != rt)
+            TBSYS_LOG(WARN, "del family information error,family id: %"PRI64_PREFIX"d, ret: %d", family.family_id_, rt);
+          else
+            rt = dbhelper_->del_family(family.family_id_, true, false);
+
+          TBSYS_LOG(INFO, "DEL FAMILY: %s, rt: %d", str.str().c_str(), rt);
+        }
+        if (!infos.empty())
+          ++start_family_id;
+      }
+      while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
+      return ret;
+   }
   }//end namespace nameserver
 }//end namespace tfs

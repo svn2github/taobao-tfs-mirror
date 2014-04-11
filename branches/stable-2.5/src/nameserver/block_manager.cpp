@@ -656,6 +656,14 @@ namespace tfs
       return ret;
     }
 
+    int BlockManager::set_family_id(BlockCollect* block, const uint64_t family_id)
+    {
+      assert(NULL != block);
+      RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+      block->set_family_id(family_id);
+      return TFS_SUCCESS;
+    }
+
     int BlockManager::relieve_relation(BlockCollect* block, const uint64_t server, const time_t now)
     {
       RWLock::Lock lock(get_mutex_(block->id()), WRITE_LOCKER);

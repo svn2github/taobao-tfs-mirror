@@ -45,9 +45,15 @@ namespace tfs
       int destroy();
       int create_family_id(int64_t& family_id);
       int create_family(common::FamilyInfo& family_info);
+      int del_family(const int64_t family_id, const bool del, const bool log);
       int query_family(common::FamilyInfo& family_info);
-      int del_family(const int64_t family_id);
-      int scan(std::vector<common::FamilyInfo>& family_infos, const int64_t start_family_id = 0, const int32_t key_offset = 0);
+      int scan(std::vector<common::FamilyInfo>& family_infos, const int64_t start_family_id,
+          const bool del);
+    private:
+      int put_(const char* pkey, const char* skey, const char* value, const int32_t value_len);
+      int get_(const char* pkey, const char* skey, char* value, const int32_t value_len);
+      int del_(const char* pkey, const char* skey);
+      int insert_del_family_log_(const int64_t family_id);
     private:
       DISALLOW_COPY_AND_ASSIGN(TairHelper);
       tbutil::Mutex mutex_;
@@ -56,7 +62,6 @@ namespace tfs
       std::string master_ipaddr_;
       std::string slave_ipaddr_;
       std::string group_name_;
-      std::string max_key_;
       int32_t area_;
     };
   }/** end namespace nameserver **/

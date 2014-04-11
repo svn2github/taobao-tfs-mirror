@@ -118,6 +118,9 @@ namespace tfs
       bool check_need_compact(const FamilyCollect* family, const time_t now) const;
       void dump_marshalling_queue(const int32_t level, const char* format = NULL) const;
       void clear_marshalling_queue();
+      inline int64_t get_max_family_id() const { return max_family_id_;}
+
+      int del_family(const int64_t family_id);
     private:
       DISALLOW_COPY_AND_ASSIGN(FamilyManager);
       FamilyCollect* get_(const int64_t family_id) const;
@@ -135,6 +138,7 @@ namespace tfs
       mutable common::RWLock marshallin_queue_mutex_;
       FAMILY_MAP* families_[MAX_FAMILY_CHUNK_NUM];
       mutable common::RWLock mutexs_[MAX_FAMILY_CHUNK_NUM];
+      int64_t max_family_id_;
 
       std::deque<int64_t> reinstate_or_dissolve_queue_;
     };

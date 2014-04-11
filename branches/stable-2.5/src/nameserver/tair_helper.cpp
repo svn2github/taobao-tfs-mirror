@@ -28,7 +28,6 @@ namespace tfs
       master_ipaddr_(master_ipaddr),
       slave_ipaddr_(slave_ipaddr),
       group_name_(group_name),
-      max_key_("4294967295"),
       area_(area)
     {
 
@@ -54,19 +53,17 @@ namespace tfs
         tair_ret = tair_client_.incr(area_, tair_key, 1, &ret_value);
         family_id = ret_value;
       }
-      while (0 != tair_ret && retry++ < 3);
-      if (0 != tair_ret)
+      while (TAIR_RETURN_SUCCESS != tair_ret && retry++ < 3);
+      if (TAIR_RETURN_SUCCESS != tair_ret)
       {
         TBSYS_LOG(WARN, "call tair incr error, ret: %"PRI64_PREFIX"d, key: %s", tair_ret, key);
       }
-      return (0 == tair_ret) ? TFS_SUCCESS : EXIT_OP_TAIR_ERROR;
+      return (TAIR_RETURN_SUCCESS == tair_ret) ? TFS_SUCCESS : EXIT_OP_TAIR_ERROR;
     }
 
     int TairHelper::create_family(FamilyInfo& family_info)
     {
-      int64_t tair_ret = -1;
       int64_t pos = 0;
-
       char pkey[64] = {'\0'};
       char skey[128] = {'\0'};
       char value[1024] = {'\0'};
@@ -75,76 +72,78 @@ namespace tfs
       int32_t ret = TFS_SUCCESS != family_info.serialize(value, 1024, pos) ? EXIT_SERIALIZE_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        int32_t retry = 0;
-        data_entry tair_pkey(pkey, false);
-        data_entry tair_skey(skey, false);
-        data_entry tair_value(value, family_info.length(), false);
-        do
+        tbutil::Mutex::Lock lock(mutex_);
+        ret = put_(pkey, skey, value, family_info.length());
+        if (TAIR_RETURN_SUCCESS != ret)
         {
-          tbutil::Mutex::Lock lock(mutex_);
-          tair_ret = tair_client_.prefix_put(area_, tair_pkey, tair_skey,tair_value, 0, 0);
+          TBSYS_LOG(WARN, "create family : %"PRI64_PREFIX"d error: call tair put error, ret: %d, pkey: %s, skey: %s", family_info.family_id_, ret, pkey, skey);
         }
-        while (0 != tair_ret && retry++ < 3);
-        if (0 != tair_ret)
-        {
-          TBSYS_LOG(WARN, "create family : %"PRI64_PREFIX"d error: call tair put error, ret: %"PRI64_PREFIX"d, pkey: %s, skey: %s", family_info.family_id_,tair_ret, pkey, skey);
-        }
-        ret = (0 == tair_ret) ? TFS_SUCCESS : EXIT_OP_TAIR_ERROR;
+        ret = (TAIR_RETURN_SUCCESS == ret) ? TFS_SUCCESS : EXIT_OP_TAIR_ERROR;
       }
       return ret;
     }
 
     int TairHelper::query_family(FamilyInfo& family_info)
     {
+      int64_t pos = 0;
       char pkey[64] = {'\0'};
       char skey[128] = {'\0'};
+      char value[1024] = {'\0'};
       snprintf(pkey, 64, "%s", key_prefix_.c_str());
-      snprintf(skey, 128, "%010"PRI64_PREFIX"d", family_info.family_id_);
-      int32_t retry = 0, ret = TFS_SUCCESS;
-      data_entry tair_pkey(pkey, false);
-      data_entry tair_skey(skey, false);
-      data_entry* tair_value = NULL;
-      do
+      snprintf(skey, 64, "%010"PRI64_PREFIX"d", family_info.family_id_);
+      tbutil::Mutex::Lock lock(mutex_);
+      int32_t ret = get_(pkey, skey, value, 1024);
+      if (TAIR_RETURN_SUCCESS != ret)
       {
-        tbutil::Mutex::Lock lock(mutex_);
-        ret = tair_client_.prefix_get(area_, tair_pkey, tair_skey, tair_value);
-      }
-      while (0 != ret && retry++ < 3);
-      if (0 != ret )
-      {
-        TBSYS_LOG(WARN, "query family : %"PRI64_PREFIX"d error: call tair put error, ret: %d, pkey: %s, skey: %s", family_info.family_id_,ret, pkey, skey);
-        ret = EXIT_OP_TAIR_ERROR;
+        TBSYS_LOG(WARN, "query family : %"PRI64_PREFIX"d error: call tair put error, ret: %d, pkey: %s, skey: %s", family_info.family_id_, ret, pkey, skey);
       }
       else
       {
-        int64_t pos = 0;
-        ret = TFS_SUCCESS != family_info.deserialize(tair_value->get_data(), tair_value->get_size(), pos) ? EXIT_DESERIALIZE_ERROR : TFS_SUCCESS;
-        tbsys::gDelete(tair_value);
+        ret = family_info.deserialize(value, 1024, pos);
       }
+      ret = (TAIR_RETURN_SUCCESS == ret) ? TFS_SUCCESS : EXIT_OP_TAIR_ERROR;
       return ret;
     }
 
-    int TairHelper::del_family(const int64_t family_id)
+    int TairHelper::del_family(const int64_t family_id, const bool del, const bool log)
     {
-      int64_t tair_ret = -1;
-      int32_t retry = 0;
       char pkey[64] = {'\0'};
       char skey[128] = {'\0'};
-      snprintf(pkey, 64, "%s", key_prefix_.c_str());
+      snprintf(pkey, 64, "%s%s", key_prefix_.c_str(), del ? "_del" : "");
       snprintf(skey, 128, "%010"PRI64_PREFIX"d", family_id);
       data_entry tair_pkey(pkey, false);
       data_entry tair_skey(skey, false);
-      do
+      TBSYS_LOG(INFO, "DEL FAMILY: %ld:", family_id);
+      int32_t ret = del_(pkey, skey);
+      if (TAIR_RETURN_SUCCESS != ret)
       {
-        tbutil::Mutex::Lock lock(mutex_);
-        tair_ret = tair_client_.prefix_remove(area_, tair_pkey, tair_skey);
+        TBSYS_LOG(WARN, "del family : %"PRI64_PREFIX"d error: call tair put error, ret: %d, pkey: %s, skey: %s", family_id, ret, pkey, skey);
       }
-      while (0 != tair_ret && retry++ < 3);
-      if (0 != tair_ret)
+      else
       {
-        TBSYS_LOG(WARN, "create family : %"PRI64_PREFIX"d error: call tair put error, ret: %"PRI64_PREFIX"d, pkey: %s, skey: %s", family_id, tair_ret, pkey, skey);
+        if (log)
+          ret = insert_del_family_log_(family_id);
       }
-      return (0 == tair_ret) ? TFS_SUCCESS : EXIT_OP_TAIR_ERROR;
+      return (TAIR_RETURN_SUCCESS == ret) ? TFS_SUCCESS : EXIT_OP_TAIR_ERROR;
+    }
+
+    int TairHelper::insert_del_family_log_(const int64_t family_id)
+    {
+      char pkey[64] = {'\0'};
+      char skey[128] = {'\0'};
+      char value[1024] = {'\0'};
+      snprintf(pkey, 64, "%s_del", key_prefix_.c_str());
+      snprintf(skey, 128, "%010"PRI64_PREFIX"d", family_id);
+      FamilyInfo family_info;
+      family_info.family_id_ = family_id;
+      int64_t pos = 0;
+      int32_t ret = TFS_SUCCESS != family_info.serialize(value, 1024, pos) ? EXIT_SERIALIZE_ERROR : TFS_SUCCESS;
+      ret = put_(pkey, skey, value, family_info.length());
+      if (TAIR_RETURN_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "del family log : %"PRI64_PREFIX"d error: call tair put error, ret: %d, pkey: %s, skey: %s", family_info.family_id_, ret, pkey, skey);
+      }
+      return ret;
     }
 
     int TairHelper::initialize()
@@ -159,68 +158,104 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int TairHelper::scan(std::vector<FamilyInfo>& family_infos, const int64_t start_family_id, const int32_t key_offset)
+    int TairHelper::scan(std::vector<FamilyInfo>& family_infos, const int64_t start_family_id, const bool del)
     {
-      const int32_t ROW_LIMIT = 10000; // FamilyInfo 88bytes
+      const int32_t ROW_LIMIT = 0;
       char pkey[64] = {'\0'};
-      char start_key[128] = {'\0'};
-      char end_key[128] = {'\0'};
-      snprintf(pkey, 64, "%s", key_prefix_.c_str());
-      snprintf(start_key, 128, "%010"PRI64_PREFIX"d", start_family_id);
-      snprintf(end_key, 128, "%s", max_key_.c_str());
+      char start_key[64] = {'\0'};
+      char end_key[64] = {'\0'};
+      snprintf(pkey, 64, "%s%s", key_prefix_.c_str(), del ? "_del" : "");
+      snprintf(start_key, 64, "%010"PRI64_PREFIX"d", start_family_id);
       data_entry tair_pkey(pkey, false);
       data_entry tair_start_key(start_key, true);
       data_entry tair_end_key(end_key, false);
-      int32_t ret = TFS_SUCCESS, retry = 0;
-      tair_client_.set_timeout(5000);  // set get range timeout to 5s
+      int32_t ret = TAIR_RETURN_SUCCESS, retry = 0;
 
       family_infos.clear();
       std::vector<data_entry*> values;
+
       do
       {
         tbutil::Mutex::Lock lock(mutex_);
-        ret = tair_client_.get_range(area_, tair_pkey, tair_start_key, tair_end_key, key_offset, ROW_LIMIT, values);
+        ret = tair_client_.get_range(area_, tair_pkey, tair_start_key, tair_end_key,
+            0, ROW_LIMIT, values, CMD_RANGE_VALUE_ONLY);
       }
-      while (TAIR_RETURN_DATA_NOT_EXIST != ret &&
-          TAIR_HAS_MORE_DATA != ret && TAIR_RETURN_SUCCESS != ret && retry++ < 3);
-
-      if (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret)
+      while (TAIR_RETURN_DATA_NOT_EXIST != ret
+            && TAIR_HAS_MORE_DATA != ret
+            && TAIR_RETURN_SUCCESS != ret
+            && retry++ < 3);
+      std::vector<data_entry*>::iterator iter = values.begin();
+      for (; iter != values.end(); ++iter)
       {
-        int tmp_ret = TFS_SUCCESS;
-        uint32_t value_size = values.size();
-        for (uint32_t index = 1; index < value_size; index += 2)
-        {
-          int64_t pos = 0;
-          family_infos.push_back(FamilyInfo());
-          std::vector<FamilyInfo>::iterator it = family_infos.end() - 1;
-          tmp_ret = TFS_SUCCESS != (*it).deserialize((values[index])->get_data(),
-              values[index]->get_size(), pos) ? EXIT_DESERIALIZE_ERROR : TFS_SUCCESS;
-          if (TFS_SUCCESS != tmp_ret)
-          {
-            ret = tmp_ret;
-            break;
-          }
-        }
-
-        for (uint32_t index = 0; index < values.size(); index++)
-        {
-          tbsys::gDelete(values[index]);
-        }
-
-        ret = TFS_SUCCESS;
+        int64_t pos = 0;
+        family_infos.push_back(FamilyInfo());
+        std::vector<FamilyInfo>::iterator it = family_infos.end() - 1;
+        int32_t rt = (*it).deserialize((*iter)->get_data(), (*iter)->get_size(), pos);
+        assert(TFS_SUCCESS == rt);
+        tbsys::gDelete((*iter));
       }
-      else if (TAIR_RETURN_DATA_NOT_EXIST == ret)
-      {
-        ret = TFS_SUCCESS;
-      }
-      else
-      {
-        TBSYS_LOG(WARN, "scan family information error: %d, pkey: %s start_key: %s, end_key: %s", ret, pkey, start_key, end_key);
-      }
-
-      tair_client_.set_timeout(2000);  // change timeout to default 2000 after get_range
-
+      TBSYS_LOG(INFO, "scan family information : %d, pkey: %s start_key: %s, end_key: %s, infos.size : %zd", ret, pkey, start_key, end_key, family_infos.size());
       return ret;
     };
+
+    int TairHelper::put_(const char* pkey, const char* skey, const char* value, const int32_t value_len)
+    {
+      int32_t ret = (NULL != pkey && NULL != skey && NULL != value && value_len > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t index = 0;
+        data_entry tair_pkey(pkey, false);
+        data_entry tair_skey(skey, false);
+        data_entry tair_value(value, value_len, false);
+        do
+        {
+          ret = tair_client_.prefix_put(area_, tair_pkey, tair_skey, tair_value, 0, 0);
+        }
+        while (TAIR_RETURN_SUCCESS != ret && index++ < 3);
+      }
+      return ret;
+    }
+
+    int TairHelper::del_(const char* pkey, const char* skey)
+    {
+      int32_t ret = (NULL != pkey && NULL != skey) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t index = 0;
+        data_entry tair_pkey(pkey, false);
+        data_entry tair_skey(skey, false);
+        do
+        {
+          ret = tair_client_.prefix_remove(area_, tair_pkey, tair_skey);
+        }
+        while (TAIR_RETURN_SUCCESS != ret && index++ < 3);
+      }
+      return ret;
+    }
+
+    int TairHelper::get_(const char* pkey, const char* skey, char* value, const int32_t value_len)
+    {
+      int32_t ret = (NULL != pkey && NULL != skey && NULL != value && value_len > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t index = 0;
+        data_entry tair_pkey(pkey, false);
+        data_entry tair_skey(skey, false);
+        data_entry* tair_value = NULL;
+        do
+        {
+          ret = tair_client_.prefix_get(area_, tair_pkey, tair_skey, tair_value);
+        }
+        while (TAIR_RETURN_SUCCESS != ret && index++ < 3);
+
+        if (TFS_SUCCESS == ret)
+        {
+          assert(tair_value->get_size() <= value_len);
+          memcpy(value, tair_value->get_data(), tair_value->get_size());
+          tbsys::gDelete(tair_value);
+        }
+      }
+      return ret;
+    }
   }/** end namespace nameserver **/
 }/** end namespace tfs **/
