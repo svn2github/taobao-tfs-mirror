@@ -674,7 +674,7 @@ namespace tfs
             rt = TFS_SUCCESS;
           if (TFS_SUCCESS != rt)
             TBSYS_LOG(WARN, "load family information error,family id: %"PRI64_PREFIX"d, ret: %d", family.family_id_, ret);
-          TBSYS_LOG(INFO, "FAMILY: %s, rt: %d", str.str().c_str(), rt);
+          TBSYS_LOG(DEBUG, "FAMILY: %s, rt: %d", str.str().c_str(), rt);
         }
         if (!infos.empty())
           ++start_family_id;
@@ -694,6 +694,7 @@ namespace tfs
         assert(NULL != dbhelper_);
         ret = dbhelper_->scan(infos, start_family_id, true);
         std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
+        TBSYS_LOG(DEBUG, "QUERY DEL FAMILY, size: %zd", infos.size());
         for (; iter != infos.end(); ++iter)
         {
           const FamilyInfo& family = (*iter);
@@ -707,7 +708,7 @@ namespace tfs
           else
             rt = dbhelper_->del_family(family.family_id_, true, false);
 
-          TBSYS_LOG(INFO, "DEL FAMILY: %s, rt: %d", str.str().c_str(), rt);
+          TBSYS_LOG(DEBUG, "DEL FAMILY: %s, rt: %d", str.str().c_str(), rt);
         }
         if (!infos.empty())
           ++start_family_id;

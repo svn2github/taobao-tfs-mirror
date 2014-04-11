@@ -111,6 +111,7 @@ namespace tfs
       destroy_flag_ = false;
       owner_status_ = NS_STATUS_NONE;
       peer_status_ = NS_STATUS_NONE;
+      load_family_complete_ = false;
     }
 
     void NsRuntimeGlobalInformation::destroy()
@@ -121,6 +122,7 @@ namespace tfs
       destroy_flag_ = true;
       owner_status_ = NS_STATUS_NONE;
       peer_status_ = NS_STATUS_NONE;
+      load_family_complete_ = false;
     }
 
     bool NsRuntimeGlobalInformation::is_destroyed() const
@@ -154,6 +156,7 @@ namespace tfs
     {
       lease_id_ = common::INVALID_LEASE_ID;
       lease_expired_time_ = 0;
+      load_family_complete_ = false;
       if (startup)//startup
       {
         startup_time_ = now;
