@@ -478,6 +478,10 @@ namespace tfs
     {
       DsRuntimeGlobalInformation::instance().destroy();
 
+      vector<SyncBase*>::iterator iter = sync_mirror_.begin();
+      for (; iter != sync_mirror_.end(); iter++)
+        (*iter)->stop();
+
       if (NULL != migrate_manager_)
         migrate_manager_->destroy();
 
