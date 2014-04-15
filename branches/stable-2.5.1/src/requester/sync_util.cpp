@@ -169,7 +169,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(ERROR, "read file fail, filename:%s, ns:%s, ret:%d", filename.c_str(), ns_addr.c_str(), ret);
+            TBSYS_LOG(WARN, "read file fail, filename:%s, ns:%s, ret:%d", filename.c_str(), ns_addr.c_str(), ret);
             break;
           }
         }
@@ -218,7 +218,7 @@ namespace tfs
         if (source_fd < 0)
         {
           ret = source_fd;
-          TBSYS_LOG(INFO, "open source %s fail when copy file, ns_addr: %s ret:%d", file_name.c_str(), src_ns_addr.c_str(), ret);
+          TBSYS_LOG(WARN, "open source %s fail when copy file, ns_addr: %s ret:%d", file_name.c_str(), src_ns_addr.c_str(), ret);
         }
         if (TFS_SUCCESS == ret)
         {
@@ -226,7 +226,7 @@ namespace tfs
           if (dest_fd < 0)
           {
             ret = dest_fd;
-            TBSYS_LOG(INFO, "open dest %s fail when copy file, ns_addr: %s ret:%d", file_name.c_str(), dest_ns_addr.c_str(), ret);
+            TBSYS_LOG(WARN, "open dest %s fail when copy file, ns_addr: %s ret:%d", file_name.c_str(), dest_ns_addr.c_str(), ret);
           }
         }
         if (TFS_SUCCESS == ret)
@@ -236,7 +236,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           int32_t rlen = 0, wlen = 0;
-          const int32_t MAX_READ_DATA_SIZE = 4 * 1024 * 1024;
+          const int32_t MAX_READ_DATA_SIZE = 2 * 1024 * 1024;
           char data[MAX_READ_DATA_SIZE];
           for (;;)
           {
@@ -244,7 +244,7 @@ namespace tfs
             if (rlen < 0)
             {
               ret = rlen;
-              TBSYS_LOG(INFO, "read %s fail when copy file, ns_addr: %s ret:%d", file_name.c_str(), src_ns_addr.c_str(), ret);
+              TBSYS_LOG(WARN, "read %s fail when copy file, ns_addr: %s ret:%d", file_name.c_str(), src_ns_addr.c_str(), ret);
               break;
             }
             if (rlen == 0)
@@ -276,7 +276,7 @@ namespace tfs
           ret = TfsClientImplV2::Instance()->close(dest_fd, NULL, 0, status);
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(INFO, "close %s fail when copy file, ns_addr: %s ret:%d", file_name.c_str(), dest_ns_addr.c_str(), ret);
+            TBSYS_LOG(WARN, "close %s fail when copy file, ns_addr: %s ret:%d", file_name.c_str(), dest_ns_addr.c_str(), ret);
           }
         }
       }
@@ -313,13 +313,13 @@ namespace tfs
               if (TFS_SUCCESS == ret)
                 ret = copy_file(saddr, daddr, filename, sfinfo.status_);
               else
-                TBSYS_LOG(WARN, "ignore filename: %s althought it is not exist in %s, its status is 'DELETE' in %s , unlink is set 'false', ret: %d",
+                TBSYS_LOG(INFO, "ignore filename: %s althought it is not exist in %s, its status is 'DELETE' in %s , unlink is set 'false', ret: %d",
                     filename.c_str(), daddr.c_str(), saddr.c_str(), ret);
             }
-            if (dfinfo.status_ != sfinfo.status_
+            else if (dfinfo.status_ != sfinfo.status_
               && common::INVALID_FILE_ID != dfinfo.id_)
             {
-              TBSYS_LOG(WARN, "%s status conflict! size: %d <> %d , crc %u <> %u , status: %d <> %d , create_time: %s <> %s , modify_time: %s <> %s",
+              TBSYS_LOG(INFO, "%s status conflict! size: %d <> %d , crc %u <> %u , status: %d <> %d , create_time: %s <> %s , modify_time: %s <> %s",
                   filename.c_str(), sfinfo.size_, dfinfo.size_, sfinfo.crc_, dfinfo.crc_, sfinfo.status_, dfinfo.status_,
                   Func::time_to_str(sfinfo.create_time_).c_str(), Func::time_to_str(dfinfo.create_time_).c_str(),
                   Func::time_to_str(sfinfo.modify_time_).c_str(), Func::time_to_str(dfinfo.modify_time_).c_str());
@@ -340,8 +340,8 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(WARN, "dest file %s has been modifyed, do nothing %s > %s, ret: %d",
-              filename.c_str(), Func::time_to_str(dfinfo.modify_time_).c_str(), Func::time_to_str(timestamp).c_str(), ret);
+          TBSYS_LOG(INFO, "dest file %s has been modifyed, do nothing %s > %s",
+              filename.c_str(), Func::time_to_str(dfinfo.modify_time_).c_str(), Func::time_to_str(timestamp).c_str());
         }
       }
       return ret;
@@ -357,16 +357,20 @@ namespace tfs
         ret =read_file_info_v2(src_ns_addr, file_name, left);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "read %s file info fail from %s, ret: %d", file_name.c_str(), src_ns_addr.c_str(), ret);
+          TBSYS_LOG(WARN, "read %s file info fail from src cluster %s, ret: %d", file_name.c_str(), src_ns_addr.c_str(), ret);
         }
       }
       if (TFS_SUCCESS == ret && confirm)
       {
         memset(&right, 0, sizeof(right));
         ret =read_file_info_v2(dest_ns_addr, file_name, right);
-        if (EXIT_BLOCK_NOT_FOUND == ret || EXIT_NO_DATASERVER == ret || EXIT_META_NOT_FOUND_ERROR == ret)
+        if (EXIT_BLOCK_NOT_FOUND == ret || EXIT_META_NOT_FOUND_ERROR == ret)
         {
           ret = TFS_SUCCESS;
+        }
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "read %s file info fail from dest cluster %s, ret: %d", file_name.c_str(), dest_ns_addr.c_str(), ret);
         }
       }
       if (TFS_SUCCESS == ret)

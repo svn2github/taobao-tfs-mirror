@@ -172,11 +172,13 @@ namespace tfs
               if (item.second >= retry_count_)
               {
                 fprintf(fail_fp_, "%s\n", item.first.c_str());
+                TBSYS_LOG(WARN, "line %s fail finally after %d times retry, ret: %d",
+                    item.first.c_str(), retry_count_, ret);
               }
               else
               {
                 input_.push(item);
-                TBSYS_LOG(DEBUG, "line %s fail, will retry", item.first.c_str());
+                TBSYS_LOG(DEBUG, "line %s fail, will retry later, ret: %d", item.first.c_str(), ret);
               }
             }
             usleep(interval_ms_ * 1000);
