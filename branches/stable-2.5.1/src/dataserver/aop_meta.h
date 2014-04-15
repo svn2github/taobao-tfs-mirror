@@ -121,6 +121,16 @@ namespace tfs
           return ref_count_;
         }
 
+        int32_t get_flag() const
+        {
+          return flag_;
+        }
+
+        void set_flag(const int32_t flag)
+        {
+          flag_ = flag;
+        }
+
         // unlink need return file_size to client for nginx log statistics
         int64_t get_file_size()
         {
@@ -164,6 +174,7 @@ namespace tfs
         int32_t server_size_;       // servers in this op
         int32_t done_server_size_;  // done servers in this op
         int32_t ref_count_;         // reference count
+        int32_t flag_;              // async op option flag
         tbutil::Mutex mutex_;       // mutex lock
         OpMember members_[common::MAX_REPLICATION_NUM];
 

@@ -515,7 +515,6 @@ namespace tfs
     bool TfsMirrorBackup::file_not_exist(int ret)
     {
       return ((EXIT_BLOCK_NOT_FOUND == ret) ||  // ns cannot find block
-         (EXIT_NO_LOGICBLOCK_ERROR == ret) ||  // ds cannot find logic block
          (EXIT_META_NOT_FOUND_ERROR == ret) ||
          (EXIT_NO_BLOCK == ret));// ds cannot find file in index
     }

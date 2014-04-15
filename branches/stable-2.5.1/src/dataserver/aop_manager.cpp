@@ -78,7 +78,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
 
       WritableBlock* block = NULL;
-      if (is_master && INVALID_OP_ID == op_id && !(flag & TFS_FILE_RECOVER_UPDATED_FILE))
+      if (is_master && INVALID_OP_ID == op_id && !(flag & TFS_FILE_OP_NO_LEASE))
       {
         if (INVALID_BLOCK_ID == block_id)
         {
@@ -152,6 +152,7 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
+          op_meta->set_flag(flag);
           op_meta->set_members(servers);
         }
         else
@@ -340,18 +341,27 @@ namespace tfs
           INVALID_FILE_ID != file_id &&
           INVALID_OP_ID != op_id)
       {
-        get_lease_manager().free_writable_block(block_id);
+        int32_t flag = 0;
         OpId oid(block_id, file_id, op_id);
+        OpMeta* op_meta = NULL;
+        if (TFS_SUCCESS == get(oid, op_meta))
+        {
+          flag = op_meta->get_flag();
+        }
         remove(oid);
 
-        // write error, this block no longer writable, expire it
-        if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == status ||
-            EXIT_NO_LOGICBLOCK_ERROR == status ||
-            EXIT_DATASERVER_READ_ONLY == status ||
-            EXIT_BLOCK_SIZE_OUT_OF_RANGE == status)
+        if (0 == (flag & TFS_FILE_OP_NO_LEASE))
         {
-          get_lease_manager().expire_block(block_id);
-          TBSYS_LOG(INFO, "expire block %"PRI64_PREFIX"u because write error, ret: %d", block_id, status);
+          get_lease_manager().free_writable_block(block_id);
+          // write error, this block no longer writable, expire it
+          if (EXIT_BLOCK_VERSION_CONFLICT_ERROR == status ||
+              EXIT_NO_LOGICBLOCK_ERROR == status ||
+              EXIT_DATASERVER_READ_ONLY == status ||
+              EXIT_BLOCK_SIZE_OUT_OF_RANGE == status)
+          {
+            get_lease_manager().expire_block(block_id);
+            TBSYS_LOG(INFO, "expire block %"PRI64_PREFIX"u because write error, ret: %d", block_id, status);
+          }
         }
       }
     }

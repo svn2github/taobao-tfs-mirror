@@ -115,7 +115,6 @@ namespace tfs
         if (EXIT_ELEMENT_EXIST == ret)
         {
           last = result;
-          result = NULL;
           wait_free_servers_.erase(result);
           ret = wait_free_servers_.insert_unique(result, pserver);
         }

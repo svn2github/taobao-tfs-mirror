@@ -1412,7 +1412,7 @@ namespace tfs
           ret = get_data_helper().write_file(family_members_[dest].server_,
               family_members_[dest].block_, block_id,
               finfos[i].id_, data, length, finfos[i].status_,
-              true, TFS_FILE_NO_SYNC_LOG | TFS_FILE_RECOVER_UPDATED_FILE);  // write to a temp block
+              true, TFS_FILE_NO_SYNC_LOG | TFS_FILE_OP_NO_LEASE);  // write to a temp block
         }
         tbsys::gDeleteA(data);
       }
