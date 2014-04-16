@@ -340,6 +340,7 @@ namespace tfs
             printf("DEL_SIZE:      %d\n", block_info.del_size_);
             printf("UPDATE_COUNT:  %d\n", block_info.update_file_count_);
             printf("UPDATE_SIZE:   %d\n", block_info.update_size_);
+            printf("LAST_ACCESS:   %s\n", Func::time_to_str(block_info.last_access_time_).c_str());
             int32_t value = req_ubi_msg->get_server_id();
             printf("INFO_LOADED:   %d%s\n", value, (value == 1 ? " (ERR)" : ""));
           }

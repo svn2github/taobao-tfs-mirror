@@ -470,17 +470,20 @@ namespace tfs
         check_blocks(range);
         TIMER_END();
 
-        int32_t wait_time = SYSPARAM_CHECKSERVER.check_interval_ - TIMER_DURATION() / 1000000;
-        wait_time = std::max(wait_time, 0);
-        for (int index = 0; index < wait_time && !stop_; index++)
-        {
-          sleep(1);  // check if stoped every seconds, may receive stop signal
-        }
+        // free memory after check
+        clear();
 
         if (NULL != result_fp_)
         {
           fclose(result_fp_);
           result_fp_ = NULL;
+        }
+
+        int32_t wait_time = SYSPARAM_CHECKSERVER.check_interval_ - TIMER_DURATION() / 1000000;
+        wait_time = std::max(wait_time, 0);
+        for (int index = 0; index < wait_time && !stop_; index++)
+        {
+          sleep(1);  // check if stoped every seconds, may receive stop signal
         }
 
         if (!stop_)
