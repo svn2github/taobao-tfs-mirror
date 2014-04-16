@@ -885,7 +885,7 @@ namespace tfs
         }
         if (TFS_SUCCESS != ret)
           tbsys::gDelete(family);
-        if (max_family_id_ < family_id)
+        if (TFS_SUCCESS == ret && max_family_id_ < family_id)
           max_family_id_ = family_id;
       }
       return ret;

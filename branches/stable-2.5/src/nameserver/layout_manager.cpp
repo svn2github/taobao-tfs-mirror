@@ -834,39 +834,44 @@ namespace tfs
       int64_t family_id = INVALID_FAMILY_ID;
       int32_t ret = TAIR_RETURN_SUCCESS, rt = TAIR_RETURN_SUCCESS;
       const int32_t MAX_SLEEP_TIME = 3;//3s
+      int32_t retry = 3;
       std::vector<common::FamilyInfo> infos;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
         if (!ngi.load_family_complete())
         {
+          retry = 3;
           family_id = get_family_manager().get_max_family_id();
           do
           {
             ret = get_oplog_sync_mgr().scan_all_family(family_id);
           }
-          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret);
+          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry-- > 0);
 
+          retry = 3;
           do
           {
             rt = get_oplog_sync_mgr().scan_all_family_log();
           }
-          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret);
+          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry-- > 0);
           ngi.set_load_family_complete(true);
         }
 
         if (!ngi.is_master())
         {
+          retry = 3;
           do
           {
             ret = get_oplog_sync_mgr().scan_all_family(family_id);
           }
-          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret);
+          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry-- > 0);
+          retry = 3;
           do
           {
             rt = get_oplog_sync_mgr().scan_all_family_log();
           }
-          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret);
+          while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry-- > 0);
         }
         Func::sleep(MAX_SLEEP_TIME, ngi.destroy_flag_);
       }
