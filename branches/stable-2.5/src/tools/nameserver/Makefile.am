@@ -6,7 +6,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -luuid -lz -lsnappy
 
-bin_PROGRAMS = admintool tfstool ssm check_replication repair_file_tool stat_tool gen_compact_blk_order  get_block_info_test
+bin_PROGRAMS = admintool tfstool ssm check_replication repair_file_tool stat_tool gen_compact_blk_order 
 if WITH_TAIR_CACHE
 bin_PROGRAMS += remote_block_cache_tool
 endif
@@ -43,4 +43,3 @@ check_replication_SOURCES=check_replication.cpp
 repair_file_tool_SOURCES=repair_file_tool.cpp
 stat_tool_SOURCES=stat_main.cpp stat_tool.cpp stat_tool.h common.cpp common.h
 gen_compact_blk_order_SOURCES = gen_compact_blk_order.cpp common.cpp common.h
-get_block_info_test_SOURCES = get_block_info_test.cpp

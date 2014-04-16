@@ -43,6 +43,8 @@ namespace tfs
       BLOCK_STATUS_SUCC
     };
 
+    const int32_t MAX_BLOCK_REPLICATION = 2;
+
     class BlockObject
     {
       public:
@@ -81,18 +83,21 @@ namespace tfs
         void add_server(const uint64_t server_id)
         {
           tbutil::Mutex::Lock lock(mutex_);
-          bool found = false;
-          for (int index = 0; index < server_size_; index++)
+          if (server_size_ < MAX_BLOCK_REPLICATION)
           {
-            if (servers_[index] == server_id)
+            bool found = false;
+            for (int index = 0; index < server_size_; index++)
             {
-              found = true;
-              break;
+              if (servers_[index] == server_id)
+              {
+                found = true;
+                break;
+              }
             }
-          }
-          if (!found)
-          {
-            servers_[server_size_++] = server_id;
+            if (!found)
+            {
+              servers_[server_size_++] = server_id;
+            }
           }
         }
 
@@ -143,7 +148,7 @@ namespace tfs
 
       private:
         uint64_t block_id_;
-        uint64_t servers_[common::MAX_REPLICATION_NUM];
+        uint64_t servers_[MAX_BLOCK_REPLICATION];
         int8_t server_size_;
         int8_t status_;
         tbutil::Mutex mutex_;
