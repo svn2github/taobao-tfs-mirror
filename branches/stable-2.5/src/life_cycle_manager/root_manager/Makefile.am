@@ -24,8 +24,8 @@ ROOTSERVER_SOURCE_LIST=exp_root_server.cpp exp_server_manager.cpp handle_task_he
 librootserver_a_SOURCES=$(ROOTSERVER_SOURCE_LIST)
 librootserver_a_LIBFLAGS=$(AM_LDFLAGS)
 
-bin_PROGRAMS = rootserver
+bin_PROGRAMS = expirerootserver
 
-rootserver_SOURCES=$(ROOTSERVER_SOURCE_LIST) service.cpp
+expirerootserver_SOURCES=$(ROOTSERVER_SOURCE_LIST) service.cpp
 
 
