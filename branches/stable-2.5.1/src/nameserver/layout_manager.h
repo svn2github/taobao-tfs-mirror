@@ -108,6 +108,8 @@ namespace tfs
 
       BlockCollect* add_new_block(uint64_t& block_id, ServerCollect* server = NULL, const time_t now = common::Func::get_monotonic_time());
 
+      tbsys::CLogger& get_block_log() { return block_logger_;}
+
       private:
       void rotate_(const time_t now);
       uint64_t get_alive_block_id_(const bool verify);
@@ -146,6 +148,8 @@ namespace tfs
 
       bool scan_family_(common::ArrayHelper<FamilyCollect*>& results, int64_t& need, int64_t& start,
           const int32_t max_query_family_num, const time_t now, const bool compact_time);
+
+      void init_block_logger_();
 
       class BuildPlanThreadHelper: public tbutil::Thread
       {
@@ -272,6 +276,7 @@ namespace tfs
       ClientRequestServer client_request_server_;
       common::GCObjectManager<LayoutManager, common::BaseObject> gc_manager_;
       FamilyManager  family_manager_;
+      tbsys::CLogger block_logger_;
     };
   }/** end namespace nameserver **/
 }/** end namespace tfs **/

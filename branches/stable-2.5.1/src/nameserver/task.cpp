@@ -204,6 +204,18 @@ namespace tfs
       }
     }
 
+    void ReplicateTask::dump_block(const int32_t level, const char* file, const int32_t line,
+         const char* function, pthread_t thid, tbsys::CLogger& log)
+    {
+        std::stringstream str;
+        for (int8_t index = 0; index < server_num_ && NULL != servers_; ++index)
+        {
+          str << " " << tbsys::CNetUtil::addrToString(servers_[index]) << "/";
+        }
+        log.logMessage(level, file, line, function, thid, "%s block-%"PRI64_PREFIX"u, seqno:%"PRI64_PREFIX"d, status:%s, servers :%s",
+            transform_type_to_str(), block_, seqno_, transform_status_to_str(status_), str.str().c_str());
+    }
+
     int ReplicateTask::handle_complete(common::BasePacket* msg)
     {
       int32_t ret = (NULL != msg) ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR;
@@ -684,6 +696,23 @@ namespace tfs
         TBSYS_LOGGER.logMessage(level, file, line, function, thid, "%s type: %s, status: %s, expired_time: %"PRI64_PREFIX"d, infomations: %s",
           msgstr, transform_type_to_str(), transform_status_to_str(status_), get(), str.str().c_str());
       }
+    }
+
+    void ECMarshallingTask::dump_block(const int32_t level, const char* file, const int32_t line,
+         const char* function, pthread_t thid, tbsys::CLogger& log)
+    {
+        std::stringstream stream;
+        const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+        stream << "master_index:" << GET_MASTER_INDEX(family_aid_info_)
+                << ", " << GET_DATA_MEMBER_NUM(family_aid_info_)
+                << "+" <<  GET_CHECK_MEMBER_NUM(family_aid_info_);
+        for (int32_t index =  0; index < MEMBER_NUM ; ++index)
+        {
+          stream << " | " << tbsys::CNetUtil::addrToString(family_members_[index].server_) << ", block-" << family_members_[index].block_
+                 << ", status:" << family_members_[index].status_ ;
+        }
+        log.logMessage(level, file, line, function, thid, "%s family-%"PRI64_PREFIX"u, seqno:%"PRI64_PREFIX"d, status:%s, %s",
+            transform_type_to_str(), family_id_, seqno_, transform_status_to_str(status_), stream.str().c_str());
     }
 
     ECReinstateTask::ECReinstateTask(TaskManager& manager, const int64_t family_id, const int32_t family_aid_info,

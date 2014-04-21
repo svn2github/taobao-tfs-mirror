@@ -48,6 +48,8 @@ namespace tfs
         virtual void dump(std::stringstream& stream) = 0;
         virtual void dump(const int32_t level, const char* file, const int32_t line,
                           const char* function, pthread_t thid, const char* format, ...) = 0;
+        virtual void dump_block(const int32_t level, const char* file, const int32_t line,
+                         const char* function, pthread_t thid, tbsys::CLogger& log) = 0;
         virtual void runTimerTask();
         bool operator < (const Task& task) const;
         int send_msg_to_server(const uint64_t server, common::BasePacket* msg);
@@ -94,6 +96,8 @@ namespace tfs
         virtual void dump(std::stringstream& stream);
         virtual void dump(const int32_t level, const char* file, const int32_t line,
                           const char* function, pthread_t thid, const char* format, ...);
+        virtual void dump_block(const int32_t level, const char* file, const int32_t line,
+                         const char* function, pthread_t thid, tbsys::CLogger& log);
       protected:
         DISALLOW_COPY_AND_ASSIGN(ReplicateTask);
         uint64_t* servers_;
@@ -151,6 +155,8 @@ namespace tfs
         virtual void dump(std::stringstream& stream);
         virtual void dump(const int32_t level, const char* file, const int32_t line,
                           const char* function, pthread_t thid, const char* format, ...);
+        virtual void dump_block(const int32_t level, const char* file, const int32_t line,
+                         const char* function, pthread_t thid, tbsys::CLogger& log);
       private:
         DISALLOW_COPY_AND_ASSIGN(ECMarshallingTask);
       protected:

@@ -411,7 +411,7 @@ namespace tfs
                     STATUS_MESSAGE_OK == sm->get_status() ? "successful" : "failure");
                 }
               }
-           }
+            }
           }
         }
       }

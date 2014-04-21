@@ -74,6 +74,27 @@ namespace tfs
       //plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;//TODO
       plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
       // plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
+
+    }
+
+    void LayoutManager::init_block_logger_()
+    {
+      // output block operator action to this logger
+      char log_file[256];
+      BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+      const char* work_dir = service->get_work_dir();
+      snprintf(log_file, 256, "%s/logs/block.log", work_dir);
+      if (access(log_file, R_OK) == 0)
+      {
+        char old_log_file[256];
+        sprintf(old_log_file, "%s.%s", log_file, Func::time_to_str(time(NULL), 1).c_str());
+        rename(log_file, old_log_file);
+      }
+      block_logger_.setLogLevel("INFO");
+      block_logger_.setFileName(log_file, true);
+      block_logger_.setMaxFileSize(service->get_log_file_size());
+      block_logger_.setMaxFileIndex(service->get_log_file_count());
+      block_logger_.logMessage(TBSYS_LOG_LEVEL(INFO), "start record block operation log");
     }
 
 
@@ -114,6 +135,7 @@ namespace tfs
         gc_manager_.initialize(SYSPARAM_NAMESERVER.object_wait_free_time_, SYSPARAM_NAMESERVER.object_wait_clear_time_);
       }
 
+      init_block_logger_();
       return ret;
     }
 
@@ -558,7 +580,6 @@ namespace tfs
             if (over)
               family_start = 0;
           }
-
           if (need > 0 && !report_time && reinsate_or_dissolve_queue_size <= 0 && replicate_queue_size <= 0 && max_marshalling_num > 0)
           {
             int32_t rt = build_marshalling_(need, now);
@@ -938,6 +959,8 @@ namespace tfs
               {
                 TBSYS_LOG(INFO, "add block: %"PRI64_PREFIX"u on servers: %s successful", block_id, success_servers.c_str());
               }
+              block_logger_.logMessage(TBSYS_LOG_LEVEL(INFO), "add block-%"PRI64_PREFIX"u, success %s",
+                  block_id, success_servers.c_str());
             }
           }
           NewClientManager::get_instance().destroy_client(client);

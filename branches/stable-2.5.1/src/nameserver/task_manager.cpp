@@ -399,6 +399,9 @@ namespace tfs
       int32_t ret = remove_block_from_dataserver_(server, block, now);
       TBSYS_LOG(INFO, "send remove block: %"PRI64_PREFIX"u command on server : %s %s",
         block, tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
+      tbsys::CLogger& block_log = get_layout_manager().get_block_log();
+      block_log.logMessage(TBSYS_LOG_LEVEL(INFO), "send remove block-%"PRI64_PREFIX"u server: %s %s",
+          block, tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
       return ret;
     }
 
@@ -529,6 +532,7 @@ namespace tfs
         {
           ret = task->handle_complete(msg);
           task->dump(TBSYS_LOG_LEVEL(INFO), "handle message complete, show result: %d,", ret);
+          task->dump_block(TBSYS_LOG_LEVEL(INFO), get_layout_manager().get_block_log());
           if (master)
           {
             remove(task);
