@@ -280,7 +280,7 @@ namespace tfs
           param.addition_param1_ = (*iter)->get_family_id();
         for(;families_[next]->end() != iter; ++iter)
         {
-          if (TFS_SUCCESS == (*iter)->scan(param))
+          if (TFS_SUCCESS == (*iter)->scan(manager_, param, should == 1))
           {
             if (++actual >= should)
             {

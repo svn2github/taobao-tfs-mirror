@@ -479,7 +479,7 @@ namespace tfs
               base_block->BlockBase::dump();// log info of each block info
               if (once && (base_block->info_.block_id_ != block_id))
               {
-                TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", base_block->info_.block_id_, block_id);
+                //TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", base_block->info_.block_id_, block_id);
                 break;
               }
               worker->process(base_block, fp);// not sort by block
@@ -600,14 +600,15 @@ namespace tfs
           while ((data_len > offset) && !interrupt_)
           {
             FamilyShow family;
-            if (TFS_SUCCESS == family.deserialize(ret_param.data_, data_len, offset))
+            bool need_ds_id = (param.should_actual_count_ >> 16) == 1;
+            if (TFS_SUCCESS == family.deserialize(ret_param.data_, data_len, offset, need_ds_id))
             {
               if (once && (family.family_id_ != family_id))
               {
-                TBSYS_LOG(ERROR, "only get family: %"PRI64_PREFIX"u, but %"PRI64_PREFIX"u not exists", family.family_id_, family_id);
+                //TBSYS_LOG(ERROR, "only get family: %"PRI64_PREFIX"u, but %"PRI64_PREFIX"u not exists", family.family_id_, family_id);
                 break;
               }
-               family.dump(fp);
+               family.dump(fp, need_ds_id);
                ++family_count;
             }
           }

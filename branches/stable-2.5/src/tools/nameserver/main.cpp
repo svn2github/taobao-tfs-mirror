@@ -205,9 +205,10 @@ int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
       {
         case CMD_NUM:
           ret = get_value((*iter).c_str(), ret_param.num_);
-          if(0 == ret_param.num_ || ret_param.num_ > (uint64_t)MAX_READ_NUM)
+          if(ret_param.num_ <= 1 || ret_param.num_ > (uint64_t)MAX_READ_NUM)
           {
-            TBSYS_LOG(ERROR, "please input num in [1, %d]", MAX_READ_NUM);
+            // when num = 1, show family will scan random all block,cause lots of lock
+            TBSYS_LOG(ERROR, "please input num in [2, %d]", MAX_READ_NUM);
             return TFS_ERROR;
           }
           break;

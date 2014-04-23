@@ -709,7 +709,7 @@ namespace tfs
     {
     }
 
-    int32_t FamilyShow::deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset)
+    int32_t FamilyShow::deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const bool need_ds_id)
     {
       if (input.getDataLen() <= 0 || offset >= length)
       {
@@ -721,14 +721,18 @@ namespace tfs
       const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) +  GET_CHECK_MEMBER_NUM(family_aid_info_);
       for (int32_t i = 0; i < MEMBER_NUM ; ++i)
       {
-        members_[i] = input.readInt64();//block_id
+        members_[i].first = input.readInt64();//block_id
         input.readInt32();//version
+        if (need_ds_id)
+        {
+          members_[i].second = input.readInt64();//server_id
+        }
       }
       offset += (len - input.getDataLen());
       return TFS_SUCCESS;
     }
 
-    void FamilyShow::dump(FILE* fp) const
+    void FamilyShow::dump(FILE* fp, const bool need_ds_id) const
     {
       int32_t data_member_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_member_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
@@ -737,7 +741,11 @@ namespace tfs
       std::ostringstream member_str;
       for(int32_t index = 0; index < member_num; index++)
       {
-        member_str << "   " << members_[index];
+        member_str << "   " << members_[index].first;
+        if(need_ds_id)
+        {
+          member_str << "/" << tbsys::CNetUtil::addrToString(members_[index].second).c_str();
+        }
       }
       fprintf(fp, "%s\n", member_str.str().c_str());
     }
