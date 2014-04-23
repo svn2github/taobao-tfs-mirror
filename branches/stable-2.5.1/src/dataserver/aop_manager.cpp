@@ -347,6 +347,7 @@ namespace tfs
         if (TFS_SUCCESS == get(oid, op_meta))
         {
           flag = op_meta->get_flag();
+          put(op_meta);
         }
         remove(oid);
 

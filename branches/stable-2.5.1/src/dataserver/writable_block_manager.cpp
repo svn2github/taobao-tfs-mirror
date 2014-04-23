@@ -321,7 +321,7 @@ namespace tfs
         target->set_use_flag(true);
       }
 
-      TBSYS_LOG_DW(ret, "alloc update block, ret: %d", ret);
+      TBSYS_LOG_DW(ret, "alloc update block %"PRI64_PREFIX"u, ret: %d", block_id, ret);
 
       return ret;
     }
