@@ -14,7 +14,6 @@
  *
  */
 #include "family_collect.h"
-#include "layout_manager.h"
 
 using namespace tfs::common;
 namespace tfs
@@ -145,7 +144,7 @@ namespace tfs
       }
     }
 
-    int FamilyCollect::scan(LayoutManager& manager, SSMScanParameter& param, bool need_ds_id) const
+    int FamilyCollect::scan(SSMScanParameter& param) const
     {
       param.data_.writeInt64(family_id_);
       param.data_.writeInt32(family_aid_info_);
@@ -154,11 +153,6 @@ namespace tfs
       {
         param.data_.writeInt64(members_[i].first);//block_id
         param.data_.writeInt32(members_[i].second);//version
-        if (need_ds_id)
-        {
-          uint64_t ds_id = manager.get_block_manager().get_server(members_[i].first);
-          param.data_.writeInt64(ds_id);
-        }
       }
       return TFS_SUCCESS;
     }

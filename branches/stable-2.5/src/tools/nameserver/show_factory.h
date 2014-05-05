@@ -129,11 +129,11 @@ namespace tfs
           return family_id_ < b.family_id_;
         }
 
-        int32_t deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const bool need_ds_id);
-        void dump(FILE* fp, const bool need_ds_id) const;
+        int32_t deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset);
+        void dump(FILE* fp) const;
         int64_t family_id_;
         int32_t family_aid_info_;
-        std::pair<uint64_t, uint64_t> members_[common::MAX_MARSHALLING_NUM];//blockid, ds_id
+        uint64_t members_[common::MAX_MARSHALLING_NUM];
     };
 
     struct StatStruct
