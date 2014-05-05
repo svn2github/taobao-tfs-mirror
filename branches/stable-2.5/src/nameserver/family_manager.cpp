@@ -940,17 +940,16 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int32_t index = 0;
-        const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info);
-        const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family_aid_info);
-        const int32_t MEMBER_NUM = DATA_MEMBER_NUM + CHECK_MEMBER_NUM;
-        for (index = 0; index < MEMBER_NUM; ++index)
+        for (index = 0; index < helper.get_array_index(); ++index)
         {
           std::pair<uint64_t, uint64_t>* item = helper.at(index);
           assert(NULL != item);
           manager_.get_block_manager().update_family_id(item->first, INVALID_FAMILY_ID);
-          if (index >= DATA_MEMBER_NUM)
+          if (IS_VERFIFY_BLOCK(item->first))
           {
-            //TODO
+            GCObject* object = NULL;
+            manager_.get_block_manager().remove(object, item->first);
+            manager_.get_gc_manager().add(object, Func::get_monotonic_time());
             manager_.get_block_manager().push_to_delete_queue(item->first, item->second);
           }
         }

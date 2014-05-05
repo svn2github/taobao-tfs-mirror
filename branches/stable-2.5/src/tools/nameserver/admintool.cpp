@@ -1538,13 +1538,14 @@ int cmd_clear_system_table(const VSTRING& param)
 
 int cmd_set_all_server_report_block(const VSTRING& param)
 {
+  UNUSED(param);
   ClientCmdMessage req_cc_msg;
-  req_cc_msg.set_cmd(CLIENT_CMD_CLEAR_SYSTEM_TABLE);
+  req_cc_msg.set_cmd(CLIENT_CMD_SET_ALL_SERVER_REPORT_BLOCK);
   int status = TFS_ERROR;
 
   int32_t ret = send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
 
-  ToolUtil::print_info(status, "clear system table %s, ret: %d",param[0].c_str(), ret);
+  ToolUtil::print_info(status, "set all server report block, ret: %d", ret);
 
   return status;
 }

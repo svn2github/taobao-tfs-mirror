@@ -739,6 +739,9 @@ namespace tfs
     // remove family from db, clear family id
     int ClientRequestServer::handle_control_delete_family(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
+      TBSYS_LOG(INFO, "handle control remove family: %"PRI64_PREFIX"u, flag: %"PRI64_PREFIX"u",
+          info.value3_, info.value1_);
+
       int32_t ret = (info.value3_ <= 0) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {

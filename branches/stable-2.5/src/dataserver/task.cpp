@@ -322,6 +322,7 @@ namespace tfs
       char* buffer = new (std::nothrow) char[MAX_SINGLE_FILE_SIZE];
       assert(NULL != buffer);
 
+      const int32_t reserve_size = sizeof(FileInfoInDiskExt);
       int32_t new_offset = 0;  // offset to write new file
       int32_t inner_offset = 0; // offset in compact buffer
       IndexHeaderV2 header, old_header;
@@ -379,7 +380,7 @@ namespace tfs
             assert(NULL != file_data);
             memcpy(buffer + inner_offset, file_data, finfo->size_);
             uint32_t crc = 0;
-            crc = Func::crc(crc, (buffer + inner_offset + 4), (finfo->size_ - 4));
+            crc = Func::crc(crc, (buffer + inner_offset + reserve_size), (finfo->size_ - reserve_size));
             if (crc != finfo->crc_)
             {
               Func::hex_dump(file_data, 10, true, TBSYS_LOG_LEVEL_INFO);//TODO

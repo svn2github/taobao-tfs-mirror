@@ -703,6 +703,8 @@ namespace tfs
           if (start_family_id < family.family_id_)
             start_family_id = family.family_id_;
           rt = manager_.get_family_manager().del_family(family.family_id_);
+          if (EXIT_NO_FAMILY == rt)
+            rt = TFS_SUCCESS;
           if (TFS_SUCCESS != rt)
             TBSYS_LOG(WARN, "del family information error,family id: %"PRI64_PREFIX"d, ret: %d", family.family_id_, rt);
           else

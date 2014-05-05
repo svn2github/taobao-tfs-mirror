@@ -97,6 +97,10 @@ namespace tfs
         if (TFS_SUCCESS == ret && !IS_VERFIFY_BLOCK(block))
         {
           ret = check_dest_block_copies(block, false);
+          if (EXIT_FAMILY_EXISTED == ret) // block in family can do sync_by_blk
+          {
+            ret = TFS_SUCCESS;
+          }
           if (TFS_SUCCESS == ret)
           {
             ret = transfer_block_by_file(block);
@@ -220,8 +224,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         FileInfoV2 left, right;
-        std::vector<FileInfoV2>::const_iterator iter = index_data.finfos_.begin();
-        for (; iter != index_data.finfos_.end() && TFS_SUCCESS == ret; ++iter)
+        std::vector<FileInfoV2>::const_iterator iter = dindex_data.finfos_.begin();
+        for (; iter != dindex_data.finfos_.end() && TFS_SUCCESS == ret; ++iter)
         {
           left = (*iter);
           FSName name(dindex_data.header_.info_.block_id_, left.id_);
@@ -301,7 +305,7 @@ namespace tfs
 
     int SyncByBlockWorker::transfer_block_by_file(const uint64_t block)
     {
-      int32_t ret = TFS_SUCCESS, retry = 2;
+      int32_t ret = TFS_SUCCESS;
       common::IndexDataV2 sindex_data, dindex_data;
       int32_t sret = TFS_SUCCESS, dret = TFS_SUCCESS;
       sret = MiscRequester::read_block_index(Func::get_host_ip(get_src_addr().c_str()), block, block, sindex_data);
@@ -338,6 +342,7 @@ namespace tfs
               dfinfos.erase(it);
             }
 
+            int32_t retry = 2;
             FSName name(block, left.id_);
             std::string filename(name.get_name());
             do
@@ -467,7 +472,7 @@ namespace tfs
           {
             FileInfoV2 tleft, tright;
             int32_t lret = SyncUtil::read_file_real_crc_v2(get_src_addr(), name, tleft, true);
-            int32_t rret = SyncUtil::read_file_real_crc_v2(get_src_addr(), name, tright, true);
+            int32_t rret = SyncUtil::read_file_real_crc_v2(get_dest_addr(), name, tright, true);
             ret = (TFS_SUCCESS == lret && TFS_SUCCESS == rret) ? TFS_SUCCESS :
               TFS_SUCCESS == lret ? rret : lret;
             if (TFS_SUCCESS == ret)
