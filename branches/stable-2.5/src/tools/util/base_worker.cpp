@@ -145,7 +145,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
       bool daemon = false;
       log_level_ = "info"; // default log level
-      output_dir_ = "./";  // default output directory
+      output_dir_ = ".";  // default output directory
       string timestamp = get_day(1, true);//第二天0点
       int flag = 0;
 
@@ -218,21 +218,32 @@ namespace tfs
         return TFS_ERROR;
       }
 
-      string log_dir = output_dir_ + "logs/";
-      string data_dir = output_dir_ + "data/";
+      string log_dir = output_dir_ + "/logs/";
+      string data_dir = output_dir_ + "/data/";
       DirectoryOp::create_directory(output_dir_.c_str());
       DirectoryOp::create_directory(log_dir.c_str());
       DirectoryOp::create_directory(data_dir.c_str());
       string log_file = log_dir + basename(argv[0]) + ".log";
       string pid_file = log_dir + basename(argv[0]) + ".pid";
-      TBSYS_LOGGER.rotateLog(log_file.c_str());
       TBSYS_LOGGER.setMaxFileSize(1024 * 1024 * 1024);
       TBSYS_LOGGER.setLogLevel(log_level_.c_str());
 
       int pid = 0;
       if (daemon)
       {
+        TBSYS_LOGGER.rotateLog(log_file.c_str());
         pid = Func::start_daemon(pid_file.c_str(), log_file.c_str());
+      }
+      else
+      {
+        if (access(log_file.c_str(), R_OK) == 0)
+        {
+          char old_log_file[256];
+          snprintf(old_log_file, sizeof(old_log_file), "%s.%s",
+              log_file.c_str(), Func::time_to_str(time(NULL), 1).c_str());
+          rename(log_file.c_str(), old_log_file);
+        }
+        TBSYS_LOGGER.setFileName(log_file.c_str(), true); // keep stdout/stderr
       }
 
       if (0 == pid)
@@ -316,6 +327,7 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             g_workers = new BaseWorkerPtr[g_thread_count];
+            assert(NULL != g_workers);
             for (int index = 0; index < g_thread_count; ++index)
             {
               g_workers[index] = create_worker();
