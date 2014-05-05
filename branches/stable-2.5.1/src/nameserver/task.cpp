@@ -246,7 +246,7 @@ namespace tfs
                   result = manager_.get_layout_manager().relieve_relation(block, source, now, true);
                 manager_.get_layout_manager().build_relation(block, dest, &info, now, false);
                 const int32_t size =  manager_.get_layout_manager().get_block_manager().get_servers_size(block);
-                ret = (size > 0 && result) ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
+                ret = (size > 0 && TFS_SUCCESS == result) ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
                 if ((size <= 0) && (NULL != source))
                 {
                   int32_t rt = manager_.get_layout_manager().build_relation(block, source, &info, now, false);
