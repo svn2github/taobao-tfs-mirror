@@ -97,6 +97,10 @@ namespace tfs
         if (TFS_SUCCESS == ret && !IS_VERFIFY_BLOCK(block))
         {
           ret = check_dest_block_copies(block, false);
+          if (EXIT_FAMILY_EXISTED == ret)
+          {
+            ret = TFS_SUCCESS;
+          }
           if (TFS_SUCCESS == ret)
           {
             ret = transfer_block_by_file(block);
