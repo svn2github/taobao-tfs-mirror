@@ -142,12 +142,20 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    void ShowInfo::put_file_handle(FILE* fp)
+    {
+      if (NULL != fp && stdout != fp)
+      {
+        fclose(fp);
+      }
+    }
+
     int ShowInfo::show_server(const int8_t type, const int32_t num, const string& server_ip_port, int32_t count, const int32_t interval, const string& filename)
     {
       FILE* fp = NULL;
       if (TFS_SUCCESS != get_file_handle(filename, &fp))
       {
-        return TFS_ERROR;
+        return EXIT_TFS_ERROR;
       }
 
       interrupt_ = false;
@@ -187,6 +195,7 @@ namespace tfs
           if (ret != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "server(%s) not valid", server_ip_port.c_str());
+            put_file_handle(fp);
             return ret;
           }
           once = true;
@@ -208,13 +217,15 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
             TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
           SSMScanParameter& ret_param = message->get_param();
@@ -277,10 +288,7 @@ namespace tfs
           sleep(interval);
         }
       }
-      if (fp != stdout)
-      {
-        fclose(fp);
-      }
+      put_file_handle(fp);
       return TFS_SUCCESS;
     }
 
@@ -289,7 +297,7 @@ namespace tfs
       FILE* fp = NULL;
       if (TFS_SUCCESS != get_file_handle(filename, &fp))
       {
-        return TFS_ERROR;
+        return EXIT_TFS_ERROR;
       }
 
       interrupt_ = false;
@@ -323,13 +331,15 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
             TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
           SSMScanParameter& ret_param = message->get_param();
@@ -395,10 +405,7 @@ namespace tfs
         }
       }
 
-      if (fp != stdout)
-      {
-        fclose(fp);
-      }
+      put_file_handle(fp);
       return TFS_SUCCESS;
 
     }
@@ -418,6 +425,7 @@ namespace tfs
       {
         if(TFS_SUCCESS != worker->begin())
         {
+          put_file_handle(fp);
           return EXIT_TFS_ERROR;
         }
         ShowServerInformationMessage msg;
@@ -451,7 +459,8 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
@@ -462,7 +471,8 @@ namespace tfs
             }
             TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
           SSMScanParameter& ret_param = message->get_param();
@@ -479,7 +489,7 @@ namespace tfs
               base_block->BlockBase::dump();// log info of each block info
               if (once && (base_block->info_.block_id_ != block_id))
               {
-                TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", base_block->info_.block_id_, block_id);
+                //TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", base_block->info_.block_id_, block_id);
                 break;
               }
               worker->process(base_block, fp);// not sort by block
@@ -488,6 +498,7 @@ namespace tfs
             {
               TBSYS_LOG(ERROR, "Block deserialize error, ret: %d", ret);
               NewClientManager::get_instance().destroy_client(client);
+              put_file_handle(fp);
               return ret;
             }
             tbsys::gDelete(base_block);
@@ -513,10 +524,7 @@ namespace tfs
           sleep(interval);
         }
       }
-      if (fp != stdout)
-      {
-        fclose(fp);
-      }
+      put_file_handle(fp);
       return TFS_SUCCESS;
     }
 
@@ -527,7 +535,7 @@ namespace tfs
       return show_block_common(num, block_id, count, interval, filename, &worker);
     }
 
-    int ShowInfo::show_family(const int32_t num, const int64_t family_id, int32_t count, const int32_t interval, const string& filename)
+    int ShowInfo::show_family(const int8_t type, const int32_t num, const int64_t family_id, int32_t count, const int32_t interval, const string& filename)
     {
       interrupt_ = false;
       is_loop_ = (count == 0);//count表示循环重复拉取的次数,默认是1，0表示一直按照间间隔循环
@@ -555,6 +563,12 @@ namespace tfs
         }
         else if (family_id == 0)
         {
+          if (type & BLOCK_TYPE_SERVER_LIST)
+          {
+            fprintf(fp, "para error, -s must be used with -d\n");
+            put_file_handle(fp);
+            return EXIT_PARAMETER_ERROR;
+          }
           param.should_actual_count_ = (num << 16);
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
           //其余，如param.start_next_position_ 等都初始化为0
@@ -562,6 +576,7 @@ namespace tfs
         else
         {
           TBSYS_LOG(ERROR, "get invalid family_id: %"PRI64_PREFIX"d < 0", family_id);
+          put_file_handle(fp);
           return EXIT_PARAMETER_ERROR;
         }
 
@@ -575,7 +590,8 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
@@ -586,7 +602,8 @@ namespace tfs
             }
             TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
           SSMScanParameter& ret_param = message->get_param();
@@ -595,7 +612,7 @@ namespace tfs
           int32_t offset = 0;
           if (data_len > 0)
           {
-            print_header(FAMILY_TYPE, 0, fp);
+            print_header(FAMILY_TYPE, type, fp);
           }
           while ((data_len > offset) && !interrupt_)
           {
@@ -604,11 +621,20 @@ namespace tfs
             {
               if (once && (family.family_id_ != family_id))
               {
-                TBSYS_LOG(ERROR, "only get family: %"PRI64_PREFIX"u, but %"PRI64_PREFIX"u not exists", family.family_id_, family_id);
+                //TBSYS_LOG(ERROR, "only get family: %"PRI64_PREFIX"u, but %"PRI64_PREFIX"u not exists", family.family_id_, family_id);
                 break;
               }
-               family.dump(fp);
-               ++family_count;
+              if (once && (type & BLOCK_TYPE_SERVER_LIST))
+              {
+                ret = family.get_members_ds_list(ns_ip_);
+                if (TFS_SUCCESS != ret)
+                {
+                  put_file_handle(fp);
+                  return ret;
+                }
+              }
+              family.dump(type, fp);
+              ++family_count;
             }
           }
           param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
@@ -625,17 +651,14 @@ namespace tfs
         }
         if (!once)
         {
-            fprintf(fp, "Total Count: %"PRI64_PREFIX"u\n", family_count);
+          fprintf(fp, "Total Count: %"PRI64_PREFIX"u\n", family_count);
         }
         if (--count)
         {
           sleep(interval);
         }
       }
-      if (fp != stdout)
-      {
-        fclose(fp);
-      }
+      put_file_handle(fp);
       return TFS_SUCCESS;
     }
 

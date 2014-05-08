@@ -231,7 +231,7 @@ namespace tfs
         int show_block_distribution(const int8_t type, std::string& rack_ip_mask, const int32_t num, const uint64_t block_id, int32_t count, const int32_t interval, const std::string& filename);
         int show_rack_block(const int8_t type, std::string& rack_ip_mask, std::string& rack_ip_group, const int32_t num, int32_t count, const int32_t interval,
           const std::string& filename);
-        int show_family(const int32_t num, const int64_t family_id, int32_t count, const int32_t interval, const std::string& filename);
+        int show_family(const int8_t type, const int32_t num, const int64_t family_id, int32_t count, const int32_t interval, const std::string& filename);
         bool is_loop_;
         bool interrupt_;
 
@@ -239,6 +239,7 @@ namespace tfs
         void load_last_ds();
         void save_last_ds();
         int get_file_handle(const std::string& filename, FILE** fp);
+        void put_file_handle(FILE* fp);
         uint64_t get_machine_id(const uint64_t server_id);
         std::map<uint64_t, ServerShow> last_server_map_;
         std::map<uint64_t, ServerShow> server_map_;

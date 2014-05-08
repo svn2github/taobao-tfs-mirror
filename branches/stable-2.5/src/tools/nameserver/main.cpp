@@ -370,6 +370,9 @@ int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
               ret_param.family_id_ = tmp;
             }
             break;
+          case CMD_SERVER_LIST:
+            ret_param.type_ = BLOCK_TYPE_SERVER_LIST;
+            break;
           default:
             ret = CMD_UNKNOWN;
             break;
@@ -453,6 +456,7 @@ void print_help()
     fprintf(stderr, "family [-n num] [-d family_id] [-c] [-i] [> filename]   show family info.\n"
         "  -n the number of one fetch, default 1024, optional.\n"
         "  -d family id, optional.\n"
+        "  -s print server list, can be used when -d specify family optional.\n"
         "  -c execute times, default 1, it will always loop execute when it is 0, optional.\n"
         "  -i interval time, default 2, optional.\n"
         "  > redirect to file, optional.\n");
@@ -625,7 +629,7 @@ int cmd_show_family(VSTRING& param)
   ParamInfo ret_param;
   if ((ret = parse_param(param, FAMILY_TYPE, ret_param)) != TFS_ERROR)
   {
-    g_show_info.show_family(ret_param.num_, ret_param.family_id_, ret_param.count_, ret_param.interval_, ret_param.filename_);
+    g_show_info.show_family(ret_param.type_, ret_param.num_, ret_param.family_id_, ret_param.count_, ret_param.interval_, ret_param.filename_);
   }
   return ret;
 }
