@@ -190,7 +190,14 @@ namespace tfs
             {
               BlockIndex* current = (pstart + info->main_block_id_seq_);
               if (INVALID_PHYSICAL_BLOCK_ID == current->physical_block_id_)
-                physical_block_id = info->main_block_id_seq_;
+{
+                std::stringstream block_file_path;
+                block_file_path << info->mount_point_ << "/" << info->main_block_id_seq_;
+                if (0 == access(block_file_path.str().c_str(), F_OK))
+                  physical_block_id = info->main_block_id_seq_;
+                else
+                  TBSYS_LOG(INFO, "block file %s has been removed", block_file_path.str().c_str());
+              }
             }
           }
         }

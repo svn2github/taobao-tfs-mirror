@@ -1217,7 +1217,8 @@ namespace tfs
           InnerIndex* last_index = (1 == pheader->index_num_) ? &inner_index[0] : &inner_index[pheader->index_num_ - 2];
           index->logic_block_id_ = logic_block_id;
           index->offset_ = (1 == pheader->index_num_) ? INDEX_DATA_START_OFFSET : last_index->offset_ + last_index->size_;
-          int32_t bucket_size = header.file_info_bucket_size_ * ratio;
+          int32_t bucket_size = header.used_file_info_bucket_size_ * ratio;
+          bucket_size = std::max(static_cast<int32_t>(header.file_info_bucket_size_), bucket_size);
           real_header.file_info_bucket_size_ = std::min(bucket_size, MAX_INDEX_ELEMENT_NUM);
           index->size_ = INDEX_HEADER_V2_LENGTH + (real_header.file_info_bucket_size_ * FILE_INFO_V2_LENGTH);
           real_header.used_file_info_bucket_size_ = 0;

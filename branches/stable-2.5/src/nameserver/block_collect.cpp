@@ -292,10 +292,10 @@ namespace tfs
 
     bool BlockCollect::check_marshalling() const
     {
-      bool ret = (!is_creating() && !is_in_family() && !in_replicate_queue());
+      bool ret = (!is_creating() && !is_in_family() && !in_replicate_queue() && !IS_VERFIFY_BLOCK(id()));
       if (ret)
       {
-        ret = (server_size_ >= SYSPARAM_NAMESERVER.max_replication_  && is_full() && size() <= MAX_MARSHALLING_BLOCK_SIZE_LIMIT);
+        ret = (server_size_ >= SYSPARAM_NAMESERVER.max_replication_  && is_full() && size() <= MAX_MARSHALLING_BLOCK_SIZE_LIMIT && info_.file_count_ <= MAX_MARSHALLING_FILE_COUNT);
         if (ret)
         {
           int32_t delete_file_num_ratio = get_delete_file_num_ratio();
