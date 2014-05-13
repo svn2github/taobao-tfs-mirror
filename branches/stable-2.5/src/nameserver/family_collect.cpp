@@ -24,6 +24,7 @@ namespace tfs
       GCObject(0),
       family_id_(family_id),
       family_aid_info_(0),
+      in_reinstate_or_dissolve_queue_(FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_NO),
       members_(NULL)
     {
       //for query
@@ -33,6 +34,7 @@ namespace tfs
       GCObject(now),
       family_id_(family_id),
       family_aid_info_(family_aid_info),
+      in_reinstate_or_dissolve_queue_(FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_NO),
       members_(NULL)
     {
       const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
