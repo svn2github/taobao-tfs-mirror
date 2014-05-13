@@ -287,7 +287,8 @@ namespace tfs
 
     bool BlockCollect::check_balance() const
     {
-      return (!is_creating() && !in_replicate_queue()) ? server_size_ >= SYSPARAM_NAMESERVER.max_replication_ : false;
+      int32_t least_copies = this->is_in_family() ? 1 : SYSPARAM_NAMESERVER.max_replication_;
+      return (!is_creating() && !in_replicate_queue()) ? server_size_ >= least_copies : false;
     }
 
     bool BlockCollect::check_marshalling() const

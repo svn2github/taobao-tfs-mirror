@@ -214,7 +214,7 @@ namespace tfs
                 bool insert_server= is_insert_server_(type, DATA_MEMBER_NUM, index);
                 ret = insert_(helper, task, members[index], target, insert_block, insert_server);
                 if (TFS_SUCCESS != ret)
-                  TBSYS_LOG(INFO, "family_id : %"PRI64_PREFIX"d, block: %"PRI64_PREFIX"u, server: %"PRI64_PREFIX"u", family_id, members[index].block_, members[index].server_);
+                  TBSYS_LOG(INFO, "family_id : %"PRI64_PREFIX"d, block: %"PRI64_PREFIX"u, server: %"PRI64_PREFIX"u, ret: %d", family_id, members[index].block_, members[index].server_, ret);
               }
             }
 
