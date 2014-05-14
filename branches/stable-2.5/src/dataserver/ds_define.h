@@ -34,8 +34,6 @@ namespace tfs
     static const int32_t COPY_BETWEEN_CLUSTER = -1;
     static const int32_t BLOCK_VERSION_MAGIC_NUM = 2;
     static const int32_t FS_SPEEDUP_VERSION = 2;
-    static const int32_t PARITY_INDEX_START = 1024; // index start positioin
-    static const int32_t PARITY_INDEX_MMAP_SIZE = PARITY_INDEX_START;
     static const int32_t FILE_INFO_EXT_INIT_VERSION = 1;
     static const int32_t DEFAULT_BLOCK_EXPIRE_TIME = 180; // seconds
     static const int32_t WRITE_INDEX_TIMEOUT_MS = 5000; // millseconds
@@ -44,9 +42,6 @@ namespace tfs
     static const int32_t EXIT_POST_MSG_RET_POST_MSG_ERROR  = -1;
 
     static const int32_t PHYSICAL_BLOCK_ID_INIT_VALUE = 1;
-    static const int32_t INDEXFILE_SAFE_MULT = 4;
-    //static const int32_t MAX_INITIALIZE_INDEX_SIZE = 8;
-    static const int32_t BLOCK_RESERVER_SPACE = 1048576; // reserve 1M space for update
     static const int32_t MAX_MMAP_SIZE = (common::MAX_INDEX_ELEMENT_NUM * common::FILE_INFO_V2_LENGTH ) + common::INDEX_HEADER_V2_LENGTH;
 
     // flow control parameter

@@ -704,7 +704,7 @@ namespace tfs
       }
 
       // when move parity block, marshalling offset should be set to target
-      if (IS_VERFIFY_BLOCK(block_id))
+      if (TFS_SUCCESS == ret && IS_VERFIFY_BLOCK(block_id))
       {
         ret = get_block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
       }
