@@ -30,6 +30,7 @@ namespace tfs
     const int32_t SCAN_LIMIT = 20;
     const int32_t MESS_LIMIT = 10;
     const int64_t INT64_INFI = 0x7FFFFFFFFFFFFFFF;
+    const int32_t GET_BUCKET_KV_SCAN_MAX_NUM = 20;//every time take 0.08s
     enum
     {
       MODE_REQ_LIMIT = 1,
@@ -1374,8 +1375,15 @@ namespace tfs
           //never handle start_key
           first_loop = false;
         }
-
+        /* if is dir need skip the lastone at lasttime */
+        if (start_key[start_key.length() - 1] == delimiter)
+        {
+          const char next_delimiter = delimiter + 1;
+          temp_start_key = start_key.substr(0, start_key.length() - 1) + next_delimiter;
+          first_loop = false;
+        }
         bool loop = true;
+        int32_t has_scan_times = 0;
         do
         {
           int32_t res_size = -1;
@@ -1397,6 +1405,7 @@ namespace tfs
 
           TBSYS_LOG(DEBUG, "get range once, res_size: %d, limit_size: %d", res_size, limit_size);
 
+          has_scan_times++;
           if (res_size == 0)
           {
             break;
@@ -1404,6 +1413,11 @@ namespace tfs
           else if (res_size < limit_size + extra && EXIT_KV_RETURN_HAS_MORE_DATA != ret)
           {
             loop = false;
+          }
+          else if (has_scan_times > GET_BUCKET_KV_SCAN_MAX_NUM - 1)
+          {
+            loop = false;
+            *is_truncated = 1;
           }
 
           string object_name;
@@ -1465,8 +1479,34 @@ namespace tfs
 
           if (loop)
           {
+            int32_t found;
+            string new_object_name;
+            const char next_delimiter = delimiter + 1;
             KvKey key;
             char key_buff[KEY_BUFF_SIZE];
+
+            if (KvDefine::DEFAULT_CHAR != delimiter)
+            {
+              if (prefix.empty())
+              {
+                found = object_name.find(delimiter);
+                if (found != -1)
+                {
+                  new_object_name = object_name.substr(0, found);
+                  object_name = new_object_name + next_delimiter;
+                }
+              }
+              else
+              {
+                found = object_name.find(delimiter, prefix.size());
+                if (found != -1)
+                {
+                  new_object_name = object_name.substr(0, found);
+                  object_name = new_object_name + next_delimiter;
+                }
+              }
+            }
+
             offset = INT64_MAX;
             ret = serialize_key_ex(object_name, offset, &key, key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
             if (TFS_SUCCESS == ret)
