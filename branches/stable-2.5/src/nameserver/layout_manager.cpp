@@ -1309,7 +1309,7 @@ namespace tfs
       {
         FamilyCollect* family = NULL;
         bool reinstate = false, dissolve = false;
-        const int64_t MAX_QUERY_FAMILY_NUMS = 8;
+        const int64_t MAX_QUERY_FAMILY_NUMS = 256;
         FamilyMemberInfo members[MAX_MARSHALLING_NUM];
         ArrayHelper<FamilyMemberInfo> helper(MAX_MARSHALLING_NUM, members);
         int64_t count = get_family_manager().get_reinstate_or_dissolve_queue_size();
