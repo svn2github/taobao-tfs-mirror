@@ -109,6 +109,17 @@ namespace tfs
       BLOCK_CHOOSE_MASTER_COMPLETE_FLAG_YES = 1
     };
 
+    struct ServerItem
+    {
+      uint64_t server_;
+      int64_t  family_id_;
+      int32_t  version_;
+      bool operator ==(const ServerItem& item)
+      {
+        return server_ == item.server_ && family_id_ == item.family_id_ && version_ == item.version_;
+      }
+    };
+
     struct NsGlobalStatisticsInfo
     {
       void dump(int32_t level, const char* file = __FILE__, const int32_t line = __LINE__, const char* function =
@@ -124,6 +135,7 @@ namespace tfs
       std::vector<uint64_t> heart_ip_ports_;
       uint64_t owner_ip_port_;
       uint64_t peer_ip_port_;
+      uint64_t sync_log_peer_ip_port_;
       int64_t switch_time_;
       int64_t discard_newblk_safe_mode_time_;
       int64_t lease_id_;
@@ -136,6 +148,7 @@ namespace tfs
       int8_t peer_role_;
       int8_t owner_status_;
       int8_t peer_status_;
+      bool   load_family_info_complete_;
 
       bool is_destroyed() const;
       bool in_safe_mode_time(const int64_t now) const;
@@ -154,6 +167,8 @@ namespace tfs
       void switch_role(const bool startup = false, const int64_t now = common::Func::get_monotonic_time());
       void update_peer_info(const uint64_t server, const int8_t role, const int8_t status);
       bool own_is_initialize_complete() const;
+      bool load_family_info_complete() const { return load_family_info_complete_;}
+      void set_load_family_info_complete(const bool complete) { load_family_info_complete_ = complete;}
       void initialize();
       void destroy();
       uint64_t choose_report_block_ipport_addr(const uint64_t server) const;
@@ -184,11 +199,14 @@ namespace tfs
 
     static const int32_t MAX_TASK_RESERVE_TIME = 5;
 
+    static const int32_t MAX_LOAD_FAMILY_INFO_THREAD_NUM = 4;
+    static const int32_t DELETE_FAMILY_CHUNK_DEFAULT_VALUE = 0;
+
     extern int ns_async_callback(common::NewClient* client);
     extern void print_int64(const common::ArrayHelper<uint64_t>&servers, std::string& result);
-    extern void print_int64(const common::ArrayHelper<std::pair<uint64_t, int32_t> >&servers, std::stringstream& result);
+    extern void print_int64(const common::ArrayHelper<ServerItem>&servers, std::stringstream& result);
     extern void print_int64(const std::vector<uint64_t>& servers, std::string& result);
-    extern void print_int64(const std::vector<std::pair<uint64_t, int32_t> >&servers, std::stringstream& result);
+    extern void print_int64(const std::vector<ServerItem>& servers, std::stringstream& result);
     extern void print_lease(const common::ArrayHelper<common::BlockLease>& helper, std::stringstream& result);
     extern bool is_equal_group(const uint64_t id);
     extern bool in_hour_range(const int64_t now, int32_t& min, int32_t& max);

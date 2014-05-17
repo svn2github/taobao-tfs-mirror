@@ -25,6 +25,7 @@ namespace tfs
       expire_time_ = 0;
       _packetHeader._pcode = common::REPLICATE_BLOCK_MESSAGE;
       memset(&repl_block_, 0, sizeof(common::ReplBlock));
+      memset(&source_block_info_, 0, sizeof(source_block_info_));
     }
 
     ReplicateBlockMessage::~ReplicateBlockMessage()
@@ -33,6 +34,7 @@ namespace tfs
 
     int ReplicateBlockMessage::deserialize(common::Stream& input)
     {
+      int64_t pos = 0;
       int32_t ret = input.get_int32(&status_);
       if (common::TFS_SUCCESS == ret)
       {
@@ -40,17 +42,24 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        int64_t pos = 0;
         ret = repl_block_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (common::TFS_SUCCESS == ret)
         {
           input.drain(repl_block_.length());
         }
       }
-      if (common::TFS_SUCCESS == ret
-        && input.get_data_length() > 0 )
+      if (common::TFS_SUCCESS == ret)
       {
         ret = input.get_int64(&seqno_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        pos = 0;
+        ret = source_block_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (common::TFS_SUCCESS == ret)
+        {
+          input.drain(source_block_info_.length());
+        }
       }
       return ret;
     }
@@ -66,21 +75,25 @@ namespace tfs
       {
         ret = repl_block_.deserialize(data, data_len, pos);
       }
-      if (common::TFS_SUCCESS == ret
-        && pos + common::INT64_SIZE <= data_len)
+      if (common::TFS_SUCCESS == ret)
       {
         ret = common::Serialization::get_int64(data, data_len, pos, &seqno_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = source_block_info_.deserialize(data, data_len, pos);
       }
       return ret;
     }
 
     int64_t ReplicateBlockMessage::length() const
     {
-      return common::INT_SIZE * 2 + common::INT64_SIZE + repl_block_.length();
+      return common::INT_SIZE * 2 + common::INT64_SIZE + repl_block_.length() + source_block_info_.length();
     }
 
     int ReplicateBlockMessage::serialize(common::Stream& output) const
     {
+      int64_t pos = 0;
       int32_t ret = output.set_int32(status_);
       if (common::TFS_SUCCESS == ret)
       {
@@ -88,7 +101,6 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        int64_t pos = 0;
         ret = repl_block_.serialize(output.get_free(), output.get_free_length(), pos);
         if (common::TFS_SUCCESS == ret)
         {
@@ -98,6 +110,15 @@ namespace tfs
       if (common::TFS_SUCCESS == ret)
       {
         ret = output.set_int64(seqno_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        pos = 0;
+        ret = source_block_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == ret)
+        {
+          output.pour(source_block_info_.length());
+        }
       }
       return ret;
     }

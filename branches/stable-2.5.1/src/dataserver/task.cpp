@@ -514,56 +514,59 @@ namespace tfs
 
     int ReplicateTask::report_to_ns(const int status)
     {
-      ReplicateBlockMessage req_rb_msg;
-      int ret = TFS_SUCCESS;
-
-      req_rb_msg.set_seqno(seqno_);
-      req_rb_msg.set_repl_block(&repl_info_);
-      req_rb_msg.set_status(status);
-
-      bool need_remove = false;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL == client)
+      BlockInfoV2 info;
+      int ret = get_block_manager().get_block_info(info, repl_info_.block_id_, false);
+      if (TFS_SUCCESS == ret)
       {
-        ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
-      }
-      else
-      {
-        tbnet::Packet* rsp_msg = NULL;
-        ret = send_msg_to_server(source_id_, client, &req_rb_msg, rsp_msg);
-        if (TFS_SUCCESS == ret)
+        ReplicateBlockMessage req_rb_msg;
+        req_rb_msg.set_seqno(seqno_);
+        req_rb_msg.set_repl_block(repl_info_);
+        req_rb_msg.set_status(status);
+        req_rb_msg.set_block_info(info);
+        bool need_remove = false;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        if (NULL == client)
         {
-          if (STATUS_MESSAGE == rsp_msg->getPCode())
+          ret = EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
+        }
+        else
+        {
+          tbnet::Packet* rsp_msg = NULL;
+          ret = send_msg_to_server(source_id_, client, &req_rb_msg, rsp_msg);
+          if (TFS_SUCCESS == ret)
           {
-            StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
-            if ((REPLICATE_BLOCK_MOVE_FLAG_YES == repl_info_.is_move_) &&
-                (STATUS_MESSAGE_REMOVE == sm->get_status()))
+            if (STATUS_MESSAGE == rsp_msg->getPCode())
             {
-              need_remove = true;
-              ret = TFS_SUCCESS;
-            }
-            else if (STATUS_MESSAGE_OK == sm->get_status())
-            {
-              ret = TFS_SUCCESS;
+              StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
+              if ((REPLICATE_BLOCK_MOVE_FLAG_YES == repl_info_.is_move_) &&
+                  (STATUS_MESSAGE_REMOVE == sm->get_status()))
+              {
+                need_remove = true;
+                ret = TFS_SUCCESS;
+              }
+              else if (STATUS_MESSAGE_OK == sm->get_status())
+              {
+                ret = TFS_SUCCESS;
+              }
+              else
+              {
+                ret = sm->get_status();
+              }
             }
             else
             {
-              ret = sm->get_status();
+              ret = EXIT_UNKNOWN_MSGTYPE;
             }
           }
-          else
-          {
-            ret = EXIT_UNKNOWN_MSGTYPE;
-          }
+          NewClientManager::get_instance().destroy_client(client);
         }
-        NewClientManager::get_instance().destroy_client(client);
-      }
 
-      if (need_remove)
-      {
-        int rm_ret = service_.get_client_request_server().del_block(repl_info_.block_id_);
-        TBSYS_LOG(INFO, "send repl block complete info: del blockid: %"PRI64_PREFIX"u, ret: %d\n",
-            repl_info_.block_id_, rm_ret);
+        if (need_remove)
+        {
+          int rm_ret = service_.get_client_request_server().del_block(repl_info_.block_id_);
+          TBSYS_LOG(INFO, "send repl block complete info: del blockid: %"PRI64_PREFIX"u, ret: %d\n",
+              repl_info_.block_id_, rm_ret);
+        }
       }
 
       service_.get_task_manager().remove_block(this);

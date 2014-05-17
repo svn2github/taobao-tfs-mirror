@@ -40,7 +40,10 @@ namespace tfs
     {
       OPLOG_TYPE_BLOCK_OP = 0x00,
       OPLOG_TYPE_REPLICATE_MSG,
-      OPLOG_TYPE_COMPACT_MSG
+      OPLOG_TYPE_COMPACT_MSG,
+      OPLOG_TYPE_MARSHALLING_MSG,
+      OPLOG_TYPE_REINSTATE_MSG,
+      OPLOG_TYPE_DISSOLVE_MSG
     };
 #pragma pack(1)
     struct OpLogHeader

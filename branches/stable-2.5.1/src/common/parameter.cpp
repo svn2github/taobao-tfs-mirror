@@ -172,8 +172,8 @@ namespace tfs
       add_primary_block_count_ = std::min(add_primary_block_count_, max_write_file_count_);
 
       safe_mode_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_SAFE_MODE_TIME, 300);
-      if (safe_mode_time_ <= 0)
-        safe_mode_time_ = 300;
+      if (safe_mode_time_ <= 120)
+        safe_mode_time_ = 120;
 
       block_safe_mode_time_ = safe_mode_time_;
 
@@ -229,7 +229,7 @@ namespace tfs
 
       max_marshalling_queue_timeout_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_MARSHALLING_QUEUE_TIMEOUT, 3600);
 
-      business_port_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BUSINESS_PORT_COUNT, 2);
+      business_port_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BUSINESS_PORT_COUNT, 4);
       heart_port_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_PORT_COUNT, 2);
       return TFS_SUCCESS;
     }
@@ -298,7 +298,7 @@ namespace tfs
       max_sync_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_INTERVAL, 30);
       sync_fail_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_SYNC_FAIL_RETRY_INTERVAL, 300);
       max_bg_task_queue_size_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_BG_TASK_QUEUE_SIZE, 5);
-      business_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_BUSINESS_PORT_COUNT, 2);
+      business_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_BUSINESS_PORT_COUNT, 4);
       heart_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_HEART_PORT_COUNT, 2);
 
       // example ==> 10.232.36.201:3100:1|10.232.36.202:3100:2|10.232.36.203:3100:1

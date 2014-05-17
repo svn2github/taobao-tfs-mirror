@@ -176,6 +176,10 @@ namespace tfs
         time_t last_update_time_;
         time_t startup_time_;
         time_t current_time_;
+        time_t rb_expired_time_;
+        time_t next_report_block_time_;
+        int8_t disk_type_;
+        int8_t rb_status_;
         common::DataServerLiveStatus status_;
         std::set<uint64_t> hold_;
         std::set<uint64_t> writable_;
@@ -186,6 +190,7 @@ namespace tfs
     struct ServerInfo
     {
       uint64_t server_id_;
+      int64_t  family_id_;
       int32_t  version_;
       operator uint64_t() const {return server_id_;}
       ServerInfo operator=(const ServerInfo& a)

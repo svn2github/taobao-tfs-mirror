@@ -166,6 +166,8 @@ namespace tfs
     const int32_t EXIT_COPIES_OUT_OF_LIMIT = -5064;
     const int32_t EXIT_CANNOT_ACCEPT_THIS_COPIES_ERROR = -5065;
     const int32_t EXIT_VERIYF_BLOCK_CANNOT_APPLY_LESAE  = -5066;
+    const int32_t EXIT_MARSHALLING_CANNOT_COMPACT = -5067;
+    const int32_t EXIT_LOAD_BLOCK_ERROR = -5068;
 
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error

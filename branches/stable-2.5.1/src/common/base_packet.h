@@ -437,6 +437,7 @@ namespace tfs
 
       virtual int serialize(Stream& output) const = 0;
       virtual int deserialize(Stream& input) = 0;
+      virtual int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       virtual int64_t length() const = 0;
       int64_t get_data_length() const { return stream_.get_data_length();}
       virtual int reply(BasePacket* packet);

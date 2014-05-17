@@ -139,18 +139,16 @@ namespace tfs
         ReportBlocksToNsRequestMessage req_msg;
         req_msg.set_server(info.information_.id_);
         int32_t block_count = 0;
+        uint64_t server = msg->get_server();
         BlockInfoV2* blocks_ext = NULL;
         TIMER_START();
         get_block_manager().get_all_block_info(blocks_ext, block_count);
-        TIMER_END();
-        TBSYS_LOG(INFO, "report block to ns, blocks size: %d, cost: %"PRI64_PREFIX"d",
-            block_count, TIMER_DURATION());
         req_msg.set_block_count(block_count);
         req_msg.set_blocks_ext(blocks_ext);
 
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* message = NULL;
-        ret = send_msg_to_server(msg->get_server(), client, &req_msg, message);
+        ret = send_msg_to_server(server, client, &req_msg, message);
         if (TFS_SUCCESS == ret)
         {
           ret = message->getPCode() == RSP_REPORT_BLOCKS_TO_NS_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
@@ -159,7 +157,7 @@ namespace tfs
             ReportBlocksToNsResponseMessage* msg = dynamic_cast<ReportBlocksToNsResponseMessage*>(message);
             std::vector<uint64_t>& cleanup_family_id_array = msg->get_blocks();
             TBSYS_LOG(INFO, "nameserver %s ask for cleanup family id blocks, count: %zd",
-                tbsys::CNetUtil::addrToString(msg->get_server()).c_str(), cleanup_family_id_array.size());
+                tbsys::CNetUtil::addrToString(server).c_str(), cleanup_family_id_array.size());
             std::vector<uint64_t>::const_iterator iter = cleanup_family_id_array.begin();
             for (; iter != cleanup_family_id_array.end(); ++iter)
             {
@@ -168,6 +166,10 @@ namespace tfs
           }
         }
         NewClientManager::get_instance().destroy_client(client);
+
+        TIMER_END();
+        TBSYS_LOG(INFO, "report block to %s %s, blocks size: %d, cost: %"PRI64_PREFIX"d, ret: %d",
+            tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "succesful" : "failed", block_count, TIMER_DURATION(), ret);
       }
       return ret;
     }

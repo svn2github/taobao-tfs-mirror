@@ -132,7 +132,7 @@ void init()
   g_cmd_map["removeblk"] = CmdNode("removeblk blockid [flag|dsip:port]",
       "remove block. flag: 1--remove block from both ds and ns, 2--just relieve relation from ns, default is 1.",
       1, 3, cmd_remove_block);
-  g_cmd_map["removefamily"] = CmdNode("removefamily family_id", "remove family", 1, 1, cmd_remove_family);
+  g_cmd_map["removefamily"] = CmdNode("removefamily family_id flag", "remove family. falg 1--store, 2--memory, default: store & memory", 1, 2, cmd_remove_family);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list.", 1, 1, cmd_list_block);
   //g_cmd_map["loadblk"] = CmdNode("loadblk blockid dsip:port", "build relationship between block and dataserver.", 2, 2, cmd_load_block);
   g_cmd_map["clearsystemtable"] = CmdNode("clearsystemtable", "clear system table 1--task, 2--last_write block, 4--report block server, 8--delete block queue.", 1, 1, cmd_clear_system_table);
@@ -511,7 +511,8 @@ int cmd_remove_block(const VSTRING& param)
 
 int cmd_remove_family(const VSTRING& param)
 {
-  if (param.empty())
+  int32_t flag = DELETE_FAMILY_IN_STORE | DELETE_FAMILY_IN_MEMORY;
+  if (param.size() < 1)
   {
     fprintf(stderr, "invalid parameter, param.empty\n");
     return TFS_ERROR;
@@ -522,10 +523,13 @@ int cmd_remove_family(const VSTRING& param)
     fprintf(stderr, "invalid familyid %s\n", param[0].c_str());
     return TFS_ERROR;
   }
+  if (param.size() == 2)
+    flag = atoi(param[1].c_str());
 
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_cmd(CLIENT_CMD_DELETE_FAMILY);
   req_cc_msg.set_value3(family_id);
+  req_cc_msg.set_value4(flag);
 
   int32_t status = TFS_ERROR;
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
@@ -1124,6 +1128,9 @@ int cmd_get_file_retry(char*, char*)
 
 int main(int argc,char** argv)
 {
+
+  uint64_t server = 13764466632714;
+  printf("%s\n", tbsys::CNetUtil::addrToString(server).c_str());
   int32_t i;
   bool directly = false;
   bool set_log_level = false;

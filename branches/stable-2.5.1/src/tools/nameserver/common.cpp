@@ -23,7 +23,8 @@ namespace tfs
   {
     ServerBase::ServerBase():
       id_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
-      last_update_time_(0), startup_time_(0), current_time_(0)
+      last_update_time_(0), startup_time_(0), current_time_(0),rb_expired_time_(0),
+      next_report_block_time_(0),disk_type_(0),rb_status_(0)
     {
       memset(&total_tp_, 0, sizeof(total_tp_));
       memset(&last_tp_, 0, sizeof(last_tp_));
@@ -58,6 +59,10 @@ namespace tfs
       total_tp_.fail_unlink_file_count_ = input.readInt64();
       current_time_ = input.readInt64();
       status_ = (DataServerLiveStatus)input.readInt32();
+      rb_expired_time_ = input.readInt64();
+      next_report_block_time_ = input.readInt64();
+      disk_type_ = input.readInt8();
+      rb_status_ = input.readInt8();
 
       offset += (len - input.getDataLen());
 
@@ -163,7 +168,9 @@ namespace tfs
       {
         ServerInfo server_info;
         server_info.server_id_ = input.readInt64();
+        server_info.family_id_ = input.readInt64();
         server_info.version_   = input.readInt32();
+
         server_list_.push_back(server_info);
         server_size--;
       }

@@ -32,7 +32,7 @@ namespace tfs
     class NewClient;
     class BaseService :  public BaseMain,
                          public tbnet::IServerAdapter,
-                         public tbnet::IPacketQueueHandler 
+                         public tbnet::IPacketQueueHandler
     {
     public:
       BaseService();

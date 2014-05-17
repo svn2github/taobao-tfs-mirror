@@ -72,15 +72,14 @@ namespace tfs
       inline void set_in_reinstate_or_dissolve_queue(const int8_t falg = FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES) { in_reinstate_or_dissolve_queue_ = falg;}
       bool check_need_reinstate(const time_t now) const;
       bool check_need_dissolve(const time_t now) const;
-      bool check_need_compact(const time_t now) const;
 
     private:
       DISALLOW_COPY_AND_ASSIGN(FamilyCollect);
+      std::pair<uint64_t, int32_t>* members_;//当前family的成员列表 block,version
       int64_t family_id_;//family id
       int32_t family_aid_info_;//family 辅助信息(高8位: 数据成员个数，中8位: 校验块成员个数: 中8位: master所在下标,低8位: 编码方法,eg. rs, rs2)
       int8_t  in_reinstate_or_dissolve_queue_;
       int8_t  reserve[3];
-      std::pair<uint64_t, int32_t>* members_;//当前family的成员列表 block,version
     };
   }/** end namespace nameserver **/
 }/** end namespace tfs **/

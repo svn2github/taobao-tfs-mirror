@@ -22,23 +22,25 @@ namespace tfs
   {
     FamilyCollect::FamilyCollect(const int64_t family_id):
       BaseObject<LayoutManager>(0),
+      members_(NULL),
       family_id_(family_id),
       family_aid_info_(0),
-      members_(NULL)
+      in_reinstate_or_dissolve_queue_(FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_NO)
     {
       //for query
     }
 
     FamilyCollect::FamilyCollect(const int64_t family_id, const int32_t family_aid_info, const time_t now):
       BaseObject<LayoutManager>(now),
+      members_(NULL),
       family_id_(family_id),
       family_aid_info_(family_aid_info),
-      members_(NULL)
+      in_reinstate_or_dissolve_queue_(FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_NO)
     {
       const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
       members_ = new (std::nothrow)std::pair<uint64_t, int32_t>[MEMBER_NUM];
       memset(members_, 0, (sizeof(std::pair<uint64_t, int32_t>) * MEMBER_NUM));
-      assert(members_);
+      assert(NULL != members_);
     }
 
     FamilyCollect::~FamilyCollect()
@@ -49,7 +51,7 @@ namespace tfs
     int FamilyCollect::add(const uint64_t block, const int32_t version)
     {
       bool complete = false;
-      int32_t ret = INVALID_BLOCK_ID != block && version > 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = INVALID_BLOCK_ID != block && version >= 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
@@ -63,7 +65,7 @@ namespace tfs
           }
         }
       }
-      return TFS_SUCCESS == ret ? complete ? TFS_SUCCESS: EXIT_OUT_OF_RANGE : ret;
+      return complete ? TFS_SUCCESS : TFS_SUCCESS == ret ? EXIT_OUT_OF_RANGE : ret;
     }
 
     int FamilyCollect::add(const common::ArrayHelper<std::pair<uint64_t, int32_t> >& members)
@@ -95,7 +97,7 @@ namespace tfs
             members_[i].second = version;
         }
       }
-      return TFS_SUCCESS == ret ? complete ? TFS_SUCCESS : EXIT_NO_BLOCK : ret;
+      return complete ? TFS_SUCCESS : TFS_SUCCESS == ret ? EXIT_NO_BLOCK : ret;
     }
 
     bool FamilyCollect::exist(const uint64_t block) const
@@ -103,6 +105,7 @@ namespace tfs
       bool ret = INVALID_BLOCK_ID != block;
       if (ret)
       {
+        ret = false;
         const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
         for (int32_t i = 0; i < MEMBER_NUM && !ret; ++i)
         {
@@ -117,6 +120,7 @@ namespace tfs
       bool ret = INVALID_BLOCK_ID != block;
       if (ret)
       {
+        ret = false;
         const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
         for (int32_t i = 0; i < MEMBER_NUM && !ret; ++i)
         {
@@ -173,39 +177,14 @@ namespace tfs
       }
     }
 
-    #ifdef TFS_GTEST
-    int FamilyCollect::get_version(int32_t& version, const uint64_t block) const
-    {
-      version = -1;
-      bool complete = false;
-      int32_t ret = INVALID_BLOCK_ID != block ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
-        for (int32_t i = 0; i < MEMBER_NUM && !complete; ++i)
-        {
-          complete = (members_[i].first == block);
-          if (complete)
-            version = members_[i].second;
-        }
-      }
-      return TFS_SUCCESS == ret ? complete ? TFS_SUCCESS : EXIT_NO_BLOCK : ret;
-    }
-    #endif
-
     bool FamilyCollect::check_need_reinstate(const time_t now) const
     {
-      return (get() + SYSPARAM_NAMESERVER.reinstate_task_expired_time_) <= now;
+      return now > get();
     }
 
     bool FamilyCollect::check_need_dissolve(const time_t now) const
     {
-      return (get() + SYSPARAM_NAMESERVER.dissolve_task_expired_time_) <= now;
-    }
-
-    bool FamilyCollect::check_need_compact(const time_t now) const
-    {
-      return (get() + SYSPARAM_NAMESERVER.compact_task_expired_time_) <= now;
+      return now > get();
     }
   }/** end namespace nameserver **/
 }/** end namespace tfs **/

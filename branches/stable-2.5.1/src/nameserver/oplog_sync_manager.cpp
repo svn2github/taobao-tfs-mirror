@@ -40,7 +40,10 @@ namespace tfs
     OpLogSyncManager::OpLogSyncManager(LayoutManager& mm) :
       manager_(mm), oplog_(NULL), file_queue_(NULL), file_queue_thread_(NULL),dbhelper_(NULL)
     {
-
+      for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
+      {
+        load_family_info_thread_[index] = 0;
+      }
     }
 
     OpLogSyncManager::~OpLogSyncManager()
@@ -49,6 +52,10 @@ namespace tfs
       tbsys::gDelete( file_queue_thread_);
       tbsys::gDelete( oplog_);
       tbsys::gDelete( dbhelper_);
+      for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
+      {
+        load_family_info_thread_[index] = 0;
+      }
     }
 
     int OpLogSyncManager::initialize()
@@ -133,37 +140,10 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          bool first_loop = true;
-          int64_t family_id = 0;
-          std::vector<common::FamilyInfo> infos;
-          do
+          for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
           {
-            infos.clear();
-            ret = scan_family(infos, family_id, first_loop ? 0 : 1);
-            if (TFS_SUCCESS == ret)
-            {
-              first_loop = false;
-              time_t now = Func::get_monotonic_time();
-              std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
-              common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
-              std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
-              for (; iter != infos.end(); ++iter)
-              {
-                helper.clear();
-                family_id = (*iter).family_id_;
-                std::vector<std::pair<uint64_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
-                for (; it != (*iter).family_member_.end(); ++it)
-                {
-                  helper.push_back(std::make_pair((*it).first, (*it).second));
-                  BlockCollect* block =  manager_.get_block_manager().insert((*it).first, now, false);
-                  assert(block);
-                  block->set_family_id(family_id);
-                }
-                ret = manager_.get_family_manager().insert(family_id, (*iter).family_aid_info_, helper, now);
-              }
-            }
+            load_family_info_thread_[index] = new LoadFamilyInfoThreadHelper(*this, index);
           }
-          while (infos.size() > 0 && TFS_SUCCESS == ret);
         }
       }
       return ret;
@@ -177,6 +157,11 @@ namespace tfs
       }
       work_thread_.wait();
 
+      for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
+      {
+        if (load_family_info_thread_[index] != 0)
+          load_family_info_thread_[index]->join();
+      }
       return id_factory_.destroy();
     }
 
@@ -203,6 +188,10 @@ namespace tfs
       if (NULL != file_queue_)
         file_queue_->clear();
       id_factory_.skip();
+      for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
+      {
+        load_family_info_thread_[index]->set_reload();
+      }
     }
 
     int OpLogSyncManager::log(const uint8_t type, const char* const data, const int64_t length, const time_t now)
@@ -280,7 +269,7 @@ namespace tfs
             for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && ngi.has_valid_lease(now); ++i, rmsg = NULL)
             {
               NewClient* client = NewClientManager::get_instance().create_client();
-              ret = send_msg_to_server(ngi.peer_ip_port_, client, &request_msg, rmsg);
+              ret = send_msg_to_server(ngi.sync_log_peer_ip_port_, client, &request_msg, rmsg);
               if (TFS_SUCCESS == ret)
               {
                 ret = rmsg->getPCode() == OPLOG_SYNC_RESPONSE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
@@ -358,7 +347,7 @@ namespace tfs
         int32_t status = STATUS_MESSAGE_ERROR;
         for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && STATUS_MESSAGE_OK != status; i++)
         {
-          ret = send_msg_to_server(GFactory::get_runtime_info().peer_ip_port_, msg, status);
+          ret = send_msg_to_server(GFactory::get_runtime_info().sync_log_peer_ip_port_, msg, status);
         }
         ret = STATUS_MESSAGE_OK == status ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_ERROR != ret)
@@ -374,21 +363,12 @@ namespace tfs
       int32_t ret = (NULL != data) && (data_len - pos > 0) &&  (pos >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        BasePacket* msg = NULL;
-        if (type == OPLOG_TYPE_REPLICATE_MSG)
+        BasePacket* msg = this->malloc_(type);
+        if (NULL != msg)
         {
-          ReplicateBlockMessage* tmp = new (std::nothrow)ReplicateBlockMessage();
-          assert(NULL != tmp);
-          ret = tmp->deserialize(data, data_len, pos);
-          msg = tmp;
+          ret = msg->deserialize(data, data_len, pos);
         }
-        else
-        {
-          DsCommitCompactBlockCompleteToNsMessage * tmp = new (std::nothrow)DsCommitCompactBlockCompleteToNsMessage();
-          msg = tmp;
-          ret = tmp->deserialize(data, data_len, pos);
-          assert(NULL != tmp);
-        }
+
         if (TFS_SUCCESS == ret
             && NULL != msg)
         {
@@ -630,19 +610,175 @@ namespace tfs
       int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = dbhelper_->del_family(family_id);
+        ret = dbhelper_->del_family(family_id, false, true, GFactory::get_runtime_info().owner_ip_port_);
       }
       return ret;
     }
 
-    int OpLogSyncManager::scan_family(std::vector<common::FamilyInfo>& infos, const int64_t start_family_id, const int32_t key_offset)
+    common::BasePacket* OpLogSyncManager::malloc_(const int32_t type)
     {
-      int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      BasePacket* result = NULL;
+      int32_t ret = (type >= OPLOG_TYPE_BLOCK_OP && type <= OPLOG_TYPE_DISSOLVE_MSG) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = dbhelper_->scan(infos, start_family_id, key_offset);
+        if (OPLOG_TYPE_REPLICATE_MSG == type)
+          result = new (std::nothrow)ReplicateBlockMessage();
+        else if (OPLOG_TYPE_COMPACT_MSG == type)
+          result = new (std::nothrow)DsCommitCompactBlockCompleteToNsMessage();
+        else if (OPLOG_TYPE_MARSHALLING_MSG == type)
+          result = new (std::nothrow)ECMarshallingCommitMessage(true);
+        else if (OPLOG_TYPE_REINSTATE_MSG == type)
+          result = new (std::nothrow)ECReinstateCommitMessage(true);
+        else if (OPLOG_TYPE_DISSOLVE_MSG == type)
+          result = new (std::nothrow)ECDissolveCommitMessage(true);
+        assert(NULL != result);
       }
+      return result;
+    }
+
+    int OpLogSyncManager::load_all_family_info_(const int32_t thseqno, bool& load_complete)
+    {
+      int32_t ret = TAIR_RETURN_SUCCESS, retry = 0;
+      int64_t start_family_id = INVALID_FAMILY_ID;
+      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+      FamilyManager& family_manager = manager_.get_family_manager();
+      while (!ngi.is_destroyed())
+      {
+        if (!load_complete || !ngi.is_master())
+        {
+          for (int32_t chunk = thseqno; chunk < MAX_FAMILY_CHUNK_NUM; chunk +=MAX_LOAD_FAMILY_INFO_THREAD_NUM)
+          {
+            retry = 0;
+            start_family_id = family_manager.get_max_family_id(chunk);
+            do
+            {
+              ret = scan_all_family_(chunk, start_family_id);
+            }
+            while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry++ < 3);
+          }
+          if (0 == thseqno)
+          {
+            retry = 0;
+            do
+            {
+              ret = scan_all_family_log_();
+            }
+            while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry++ < 3);
+          }
+          if (!load_complete)
+            load_complete = true;
+        }
+        if (0 == thseqno && !ngi.load_family_info_complete())
+        {
+          bool  complete = true;
+          for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && complete; ++index)
+          {
+            complete = load_family_info_thread_[index]->load_complete();
+          }
+          ngi.set_load_family_info_complete(complete);
+        }
+        usleep(100000);
+      }
+      return TFS_SUCCESS;
+    }
+
+    int OpLogSyncManager::scan_all_family_(const int32_t chunk, int64_t& start_family_id)
+    {
+      uint64_t id = INVALID_BLOCK_ID;
+      std::vector<common::FamilyInfo> infos;
+      int32_t ret = TAIR_RETURN_SUCCESS, rt = TFS_SUCCESS;
+      BlockManager& block_manager = manager_.get_block_manager();
+      FamilyManager& family_manager = manager_.get_family_manager();
+      std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
+      common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
+      do
+      {
+        infos.clear();
+        assert(NULL != dbhelper_);
+        ret = dbhelper_->scan(infos, start_family_id, chunk, false,  GFactory::get_runtime_info().peer_ip_port_);
+        std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
+        int64_t now = Func::get_monotonic_time();
+        for (; iter != infos.end(); ++iter)
+        {
+          helper.clear();
+          const FamilyInfo& family = (*iter);
+          if (start_family_id < family.family_id_)
+            start_family_id = family.family_id_;
+          std::stringstream str;
+          str << family.family_id_ << ":" << family.family_aid_info_ << ":";
+          std::vector<std::pair<uint64_t, int32_t> >::const_iterator it = family.family_member_.begin();
+          for (; it != family.family_member_.end(); ++it)
+          {
+            id = it->first;
+            helper.push_back(std::make_pair(id, it->second));
+            BlockCollect* block =  block_manager.insert(id, now, false);
+            assert(NULL != block);
+            block_manager.set_family_id(id, family.family_id_);
+            id_factory_.update(id);
+            str << id << ":" << it->second << ":";
+          }
+          rt = family_manager.insert(family.family_id_, family.family_aid_info_, helper, now);
+          if (EXIT_ELEMENT_EXIST == rt)
+            rt = TFS_SUCCESS;
+          if (TFS_SUCCESS != rt)
+            TBSYS_LOG(WARN, "load family information error,family id: %"PRI64_PREFIX"d, ret: %d", family.family_id_, ret);
+          TBSYS_LOG(DEBUG, "FAMILY: %s, rt: %d", str.str().c_str(), rt);
+        }
+        if (!infos.empty())
+          ++start_family_id;
+      }
+      while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
       return ret;
+    }
+
+    int OpLogSyncManager::scan_all_family_log_()
+    {
+      int64_t start_family_id = 0;
+      std::vector<common::FamilyInfo> infos;
+      int32_t ret = TAIR_RETURN_SUCCESS, rt = TFS_SUCCESS;
+      FamilyManager& family_manager = manager_.get_family_manager();
+      do
+      {
+        infos.clear();
+        assert(NULL != dbhelper_);
+        ret = dbhelper_->scan(infos, start_family_id,DELETE_FAMILY_CHUNK_DEFAULT_VALUE, true,  GFactory::get_runtime_info().peer_ip_port_);
+        std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
+        for (; iter != infos.end(); ++iter)
+        {
+          const FamilyInfo& family = (*iter);
+          std::stringstream str;
+          str << family.family_id_ << ":" << family.family_aid_info_ << ":";
+          if (start_family_id < family.family_id_)
+            start_family_id = family.family_id_;
+          rt = family_manager.del_family(family.family_id_);
+          if (TFS_SUCCESS != rt)
+            TBSYS_LOG(WARN, "del family information error,family id: %"PRI64_PREFIX"d, ret: %d", family.family_id_, rt);
+          else
+            rt = dbhelper_->del_family(family.family_id_, true, false, GFactory::get_runtime_info().owner_ip_port_);
+
+          TBSYS_LOG(DEBUG, "DEL FAMILY: %s, rt: %d", str.str().c_str(), rt);
+        }
+        if (!infos.empty())
+          ++start_family_id;
+      }
+      while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
+      return ret;
+    }
+
+    void OpLogSyncManager::LoadFamilyInfoThreadHelper::run()
+    {
+      try
+      {
+        manager_.load_all_family_info_(thread_seqno_, load_complete_);
+      }
+      catch(std::exception& e)
+      {
+        TBSYS_LOG(ERROR, "catch exception: %s", e.what());
+      }
+      catch(...)
+      {
+        TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
+      }
     }
   }//end namespace nameserver
 }//end namespace tfs

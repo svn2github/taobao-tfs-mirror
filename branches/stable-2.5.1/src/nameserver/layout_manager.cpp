@@ -51,7 +51,6 @@ namespace tfs
       balance_thread_(0),
       timeout_thread_(0),
       redundant_thread_(0),
-      load_family_info_thread_(0),
       last_rotate_log_time_(0),
       plan_run_flag_(PLAN_RUN_FLAG_REPLICATE),
       manager_(manager),
@@ -69,11 +68,9 @@ namespace tfs
       last_rotate_log_time_ = 0;
       plan_run_flag_ |= PLAN_RUN_FLAG_MOVE;
       plan_run_flag_ |= PLAN_RUN_FLAG_COMPACT;
-      plan_run_flag_ |= PLAN_RUN_FLAG_RESLOVE_VERSION_CONFLICT;
-      plan_run_flag_ |= PLAN_RUN_FLAG_ADJUST_COPIES_LOCATION;
-      //plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;//TODO
+      plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;//TODO
       plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
-      // plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
+      plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
 
     }
 
@@ -107,7 +104,6 @@ namespace tfs
       balance_thread_ = 0;
       timeout_thread_ = 0;
       redundant_thread_ = 0;
-      load_family_info_thread_ = 0;
     }
 
     int LayoutManager::initialize()
@@ -127,7 +123,6 @@ namespace tfs
         balance_thread_  = new BuildBalanceThreadHelper(*this);
         timeout_thread_  = new TimeoutThreadHelper(*this);
         redundant_thread_= new RedundantThreadHelper(*this);
-        load_family_info_thread_ = new LoadFamilyInfoThreadHelper(*this);
       }
 
       if (TFS_SUCCESS == ret)
@@ -169,10 +164,6 @@ namespace tfs
       {
         redundant_thread_->join();
       }
-      if (load_family_info_thread_ != 0)
-      {
-        load_family_info_thread_->join();
-      }
       oplog_sync_mgr_.wait_for_shut_down();
     }
 
@@ -207,7 +198,7 @@ namespace tfs
       {
         bool writable = false;
         bool master   = false;
-        ret = get_block_manager().build_relation(block, writable, master, server->id(), info, now, set);
+        ret = get_block_manager().build_relation(block, writable, master, server->id(), info, NULL != info ? info->family_id_ : INVALID_FAMILY_ID, now, set);
         if (TFS_SUCCESS == ret)
         {
           ret = get_server_manager().build_relation(server, block->id(), writable, master);
@@ -475,7 +466,7 @@ namespace tfs
     {
       get_task_manager().clear();
       GFactory::get_runtime_info().switch_role(false, now);
-      get_server_manager().set_all_server_next_report_time(SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_SWITCH, now);
+      get_server_manager().set_all_server_next_report_time(now);
       oplog_sync_mgr_.switch_role();
     }
 
@@ -531,13 +522,13 @@ namespace tfs
 
       while (!ngi.is_destroyed())
       {
+        //checkpoint
         current = time(NULL);
+        rotate_(current);
+
         now = Func::get_monotonic_time();
         if (ngi.in_safe_mode_time(now))
           Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
-
-        //checkpoint
-        rotate_(current);
 
         if (ngi.is_master())
         {
@@ -549,22 +540,22 @@ namespace tfs
           need = SYSPARAM_NAMESERVER.max_replication_ > 1 ? need / SYSPARAM_NAMESERVER.max_replication_ : need / 2;
           max_compact_task_count = need > 0 ? (need * SYSPARAM_NAMESERVER.compact_task_ratio_) / 100 : 0;
           max_marshalling_num = SYSPARAM_NAMESERVER.max_marshalling_num_;
+          const bool report_time      = ngi.in_report_block_time(now);
 
           query_helper.clear();
-          if (need > 0)
+          if (need > 0 && !report_time)
           {
             scan_replicate_queue_(need, now);
           }
 
           const int64_t replicate_queue_size = get_block_manager().get_emergency_replicate_queue_size();
-          if (need > 0)
+          if (need > 0 && !report_time)
           {
             scan_reinstate_or_dissolve_queue_(need , now);
           }
 
           results.clear();
           const int64_t reinsate_or_dissolve_queue_size = get_family_manager().get_reinstate_or_dissolve_queue_size();
-          const bool report_time      = ngi.in_report_block_time(now);
           const bool compact_time     = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
           const bool marshalling_time = in_hour_range(current, SYSPARAM_NAMESERVER.marshalling_time_lower_, SYSPARAM_NAMESERVER.marshalling_time_upper_);
           if (need > 0)
@@ -714,79 +705,31 @@ namespace tfs
 
         get_gc_manager().gc(now);
 
-        usleep(50000);
+        usleep(100000);
       }
     }
 
     void LayoutManager::redundant_()
     {
-      const int32_t MAX_REDUNDNAT_NUMS = 256;
+      const int32_t MAX_REDUNDNAT_NUMS = 512;
       const int32_t MAX_SLEEP_TIME_US  = 500000;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
-        while ((ngi.in_report_block_time(Func::get_monotonic_time()) && !ngi.is_destroyed()))
+        int64_t now = Func::get_monotonic_time();
+        if (ngi.in_safe_mode_time(now))
+          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ , ngi.destroy_flag_);
+
+        now = Func::get_monotonic_time();
+        while ((ngi.in_report_block_time(now) && !ngi.is_destroyed()))
           Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
 
         while ((get_block_manager().delete_queue_empty() && !ngi.is_destroyed()))
           Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
 
         int64_t need = MAX_REDUNDNAT_NUMS;
-        build_redundant_(need, 0);
+        build_redundant_(need, now, ngi.is_master());
         usleep(MAX_SLEEP_TIME_US);
-      }
-    }
-
-    void LayoutManager::load_family_info_()
-    {
-      time_t now = 0;
-      int64_t family_id = 0;
-      int32_t ret = TFS_SUCCESS;
-      const int32_t MAX_SLEEP_TIME = 10;//10s
-      bool first_loop = true;
-      std::vector<common::FamilyInfo> infos;
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      const int32_t SAFE_MODE_TIME = SYSPARAM_NAMESERVER.safe_mode_time_ * 4;
-      while (!ngi.is_destroyed())
-      {
-        now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now))
-          Func::sleep(SAFE_MODE_TIME, ngi.destroy_flag_);
-        if (!ngi.is_master())
-        {
-          do
-          {
-            infos.clear();
-            ret = get_oplog_sync_mgr().scan_family(infos, family_id, first_loop ? 0 : 1);
-            if (TFS_SUCCESS == ret)
-            {
-              first_loop = false;
-              std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
-              common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
-              std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
-              for (; iter != infos.end(); ++iter)
-              {
-                helper.clear();
-                family_id = (*iter).family_id_;
-                std::vector<std::pair<uint64_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
-                for (; it != (*iter).family_member_.end(); ++it)
-                {
-                  helper.push_back(std::make_pair((*it).first, (*it).second));
-                  BlockCollect* block =  get_block_manager().insert((*it).first, now, false);
-                  assert(block);
-                  block->set_family_id(family_id);
-                }
-                ret = get_family_manager().insert(family_id, (*iter).family_aid_info_, helper, now);
-                if (EXIT_ELEMENT_EXIST == ret)
-                  ret = TFS_SUCCESS;
-                if (TFS_SUCCESS != ret)
-                  TBSYS_LOG(WARN, "load family information error,family id: %"PRI64_PREFIX"d, ret: %d", family_id, ret);
-              }
-            }
-          }
-          while (infos.size() > 0 && TFS_SUCCESS == ret);
-        }
-        Func::sleep(MAX_SLEEP_TIME, ngi.destroy_flag_);
       }
     }
 
@@ -803,14 +746,6 @@ namespace tfs
       while (!ngi.is_destroyed())
       {
         int64_t now = Func::get_monotonic_time();
-        /*
-        if (ngi.in_safe_mode_time(now))
-        {
-          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
-        }
-        now = Func::get_monotonic_time();
-        */
-
         //check dataserver is alive
         helper.clear();  // avoid report block dead loop
         get_server_manager().timeout(now, stat_info, helper,last_traverse_server, all_over);
@@ -1147,7 +1082,7 @@ namespace tfs
       {
         FamilyCollect* family = NULL;
         bool reinstate = false, dissolve = false;
-        const int64_t MAX_QUERY_FAMILY_NUMS = 8;
+        const int64_t MAX_QUERY_FAMILY_NUMS = 256;
         FamilyMemberInfo members[MAX_MARSHALLING_NUM];
         ArrayHelper<FamilyMemberInfo> helper(MAX_MARSHALLING_NUM, members);
         int64_t count = get_family_manager().get_reinstate_or_dissolve_queue_size();
@@ -1451,13 +1386,13 @@ namespace tfs
       return TFS_SUCCESS == ret;
     }
 
-    bool LayoutManager::build_redundant_(int64_t& need, const time_t now)
+    bool LayoutManager::build_redundant_(int64_t& need, const time_t now, const bool master)
     {
       bool ret = false;
-      std::pair<uint64_t, uint64_t> output;
-      while (need-- > 0 && get_block_manager().pop_from_delete_queue(output))
+      std::pair<uint64_t, ServerItem> output;
+      while (need-- > 0 && get_block_manager().pop_from_delete_queue(output, master))
       {
-        relieve_relation(output.second, output.first, now, false);
+        relieve_relation(output.first, output.second.server_, now, false);
         ret = (TFS_SUCCESS == get_task_manager().remove_block_from_dataserver(output.first, output.second, now));
       }
       return true;
@@ -1556,21 +1491,21 @@ namespace tfs
       return ret;
     }
 
-    bool LayoutManager::build_adjust_copies_location_task_(common::ArrayHelper<std::pair<uint64_t, int32_t> >& copies_location, BlockCollect* block, const time_t now)
+    bool LayoutManager::build_resolve_invalid_copies_task_(common::ArrayHelper<ServerItem>& invalids, BlockCollect* block, const time_t now)
     {
-      bool ret = copies_location.get_array_index() > 0 && NULL != block;
+      bool ret = invalids.get_array_index() > 0 && NULL != block;
       if (ret)
       {
         NsRuntimeGlobalInformation& ngi = NsRuntimeGlobalInformation::instance();
         int32_t result = TFS_SUCCESS;
-        for (int64_t index = 0; index < copies_location.get_array_index(); ++index)
+        for (int64_t index = 0; index < invalids.get_array_index(); ++index)
         {
-          std::pair<uint64_t, int32_t>* item = copies_location.at(index);
-          ServerCollect* pserver = this->get_server_manager().get(item->first);
+          ServerItem* item = invalids.at(index);
+          ServerCollect* pserver = this->get_server_manager().get(item->server_);
           result = relieve_relation(block, pserver, now, false);
           if (TFS_SUCCESS == result && ngi.is_master())
           {
-            get_block_manager().push_to_delete_queue(block->id(), item->first);
+            get_block_manager().push_to_delete_queue(block->id(), *item, GFactory::get_runtime_info().is_master());
           }
         }
         if (ngi.is_master())
@@ -1594,16 +1529,16 @@ namespace tfs
       results.clear();
       bool ret  = false;
       BlockCollect* block = NULL;
-      std::pair<uint64_t, int32_t> copies[MAX_REPLICATION_NUM];
-      ArrayHelper<std::pair<uint64_t, int32_t> > copies_location(MAX_REPLICATION_NUM, copies);
+      ServerItem copies[MAX_REPLICATION_NUM];
+      ArrayHelper<ServerItem> invalids(MAX_REPLICATION_NUM, copies);
       bool over = get_block_manager().scan(results, start, max_query_block_num);
       for (int64_t index = 0; index < results.get_array_index() && need > 0; ++index)
       {
-        copies_location.clear();
+        invalids.clear();
         block = *results.at(index);
         assert(NULL != block);
-        ret = get_block_manager().need_adjust_copies_location(copies_location,block,now);
-        if ((ret) && (ret = (build_adjust_copies_location_task_(copies_location, block, now))))
+        ret = get_block_manager().resolve_invalid_copies(invalids,block,now);
+        if ((ret) && (ret = (build_resolve_invalid_copies_task_(invalids, block, now))))
         {
 
         }
@@ -1659,7 +1594,7 @@ namespace tfs
       return over;
     }
 
-    void LayoutManager::BuildPlanThreadHelper::run()
+      void LayoutManager::BuildPlanThreadHelper::run()
     {
       try
       {
@@ -1771,20 +1706,5 @@ namespace tfs
       }
     }
 
-    void LayoutManager::LoadFamilyInfoThreadHelper::run()
-    {
-      try
-      {
-        manager_.load_family_info_();
-      }
-      catch(std::exception& e)
-      {
-        TBSYS_LOG(ERROR, "catch exception: %s", e.what());
-      }
-      catch(...)
-      {
-        TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
-      }
-    }
   } /** nameserver **/
 }/** tfs **/

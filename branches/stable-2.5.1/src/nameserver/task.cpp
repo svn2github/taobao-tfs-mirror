@@ -113,6 +113,26 @@ namespace tfs
       dump(TBSYS_LOG_LEVEL(INFO), "task expired");
     }
 
+    int Task::log(const int32_t type, common::BasePacket* msg)
+    {
+      int32_t ret = (type >= OPLOG_TYPE_BLOCK_OP && type <= OPLOG_TYPE_DISSOLVE_MSG && NULL != msg) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        if (GFactory::get_runtime_info().is_master())
+        {
+          LayoutManager& lm = manager_.get_layout_manager();
+          common::Stream stream(msg->length());
+          ret = msg->serialize(stream);
+          assert(TFS_SUCCESS == ret);
+          int32_t result = lm.get_oplog_sync_mgr().log(
+                      OPLOG_TYPE_REPLICATE_MSG, stream.get_data(), stream.get_data_length(), Func::get_monotonic_time());
+          if (TFS_SUCCESS == ret)
+            dump(TBSYS_LOG_LEVEL(INFO), "write %s oplog %s, ret: %d", transform_type_to_str(), TFS_SUCCESS == result ? "successful": "failed", result);
+        }
+      }
+      return ret;
+    }
+
     ReplicateTask::ReplicateTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers,
       const common::PlanType type):
       Task(manager, type),
@@ -133,6 +153,7 @@ namespace tfs
 
     int ReplicateTask::handle()
     {
+      const int64_t now = Func::get_monotonic_time();
       int32_t ret = (INVALID_BLOCK_ID != block_ && NULL != servers_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -149,14 +170,19 @@ namespace tfs
         block.start_time_ = Func::get_monotonic_time();
         block.is_move_ = PLAN_TYPE_MOVE  == type_ ? REPLICATE_BLOCK_MOVE_FLAG_YES : REPLICATE_BLOCK_MOVE_FLAG_NO;
         block.source_num_ = (server_num_ - 1);
-        msg.set_repl_block(&block);
+        msg.set_repl_block(block);
         msg.set_status(PLAN_STATUS_BEGIN);
         msg.set_seqno(seqno_);
         msg.set_expire_time(SYSPARAM_NAMESERVER.move_task_expired_time_ - MAX_TASK_RESERVE_TIME);
         ret = send_msg_to_server(block.source_id_[0], &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
-      set(Func::get_monotonic_time(), SYSPARAM_NAMESERVER.move_task_expired_time_);
+      if (TFS_SUCCESS == ret)
+      {
+        BlockManager& bm =  manager_.get_layout_manager().get_block_manager();
+        bm.set_task_expired_time(block_, now, SYSPARAM_NAMESERVER.move_task_expired_time_);
+      }
+      set(now, SYSPARAM_NAMESERVER.move_task_expired_time_);
       return ret;
     }
 
@@ -207,6 +233,8 @@ namespace tfs
     void ReplicateTask::dump_block(const int32_t level, const char* file, const int32_t line,
          const char* function, pthread_t thid, tbsys::CLogger& log)
     {
+      if (level <= log._level)
+      {
         std::stringstream str;
         for (int8_t index = 0; index < server_num_ && NULL != servers_; ++index)
         {
@@ -214,6 +242,7 @@ namespace tfs
         }
         log.logMessage(level, file, line, function, thid, "%s block-%"PRI64_PREFIX"u, seqno:%"PRI64_PREFIX"d, status:%s, servers :%s",
             transform_type_to_str(), block_, seqno_, transform_status_to_str(status_), str.str().c_str());
+      }
     }
 
     int ReplicateTask::handle_complete(common::BasePacket* msg)
@@ -224,59 +253,53 @@ namespace tfs
         ret = (msg->getPCode() == REPLICATE_BLOCK_MESSAGE) ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR;
         if (STATUS_MESSAGE_OK == ret)
         {
+          BlockManager& bm = manager_.get_layout_manager().get_block_manager();
+          ServerManager& sm = manager_.get_layout_manager().get_server_manager();
+          LayoutManager& lm = manager_.get_layout_manager();
           time_t now = Func::get_monotonic_time();
           ReplicateBlockMessage* message = dynamic_cast<ReplicateBlockMessage*>(msg);
-          const ReplBlock blocks = *message->get_repl_block();
+          const ReplBlock& blocks = message->get_repl_block();
+          BlockInfoV2 info = message->get_block_info();
           status_ = static_cast<PlanStatus>(message->get_status());
           if (status_ == PLAN_STATUS_END)
           {
-            ServerCollect* dest   = manager_.get_layout_manager().get_server_manager().get(blocks.destination_id_);// find destination dataserver
-            ServerCollect* source = manager_.get_layout_manager().get_server_manager().get(blocks.source_id_[0]);// find source dataserver
-            BlockCollect* block = manager_.get_layout_manager().get_block_manager().get(blocks.block_id_);
+            BlockCollect* block = bm.get(blocks.block_id_);
+            ServerCollect* dest   = sm.get(blocks.destination_id_);// find destination dataserver
+            ServerCollect* source = sm.get(blocks.source_id_[0]);// find source dataserver
             if ((NULL != block) && (NULL != dest))
             {
-              BlockInfoV2 info = block->get_block_info();
-              const BlockCollect::SERVER_ITEM* item = (NULL != source) ? block->get_server_item(source->id()) : NULL;
-              if (NULL != item && info.version_ != item->second)
-                info.version_ = item->second;
               if (blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
               {
-                int32_t result = TFS_SUCCESS;
-                if ((NULL != source) && block->exist(source->id()))
-                  result = manager_.get_layout_manager().relieve_relation(block, source, now, true);
-                manager_.get_layout_manager().build_relation(block, dest, &info, now, false);
-                const int32_t size =  manager_.get_layout_manager().get_block_manager().get_servers_size(block);
-                ret = (size > 0 && TFS_SUCCESS == result) ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
-                if ((size <= 0) && (NULL != source))
+                ret = STATUS_MESSAGE_ERROR;
+                int32_t result = lm.build_relation(block, dest, &info, now, false);
+                if (TFS_SUCCESS == result)
                 {
-                  int32_t rt = manager_.get_layout_manager().build_relation(block, source, &info, now, false);
-                  if (TFS_SUCCESS != rt && STATUS_MESSAGE_REMOVE == ret)
-                    ret = STATUS_MESSAGE_OK;
+                  ret = STATUS_MESSAGE_OK;
+                  const int32_t size =  bm.get_servers_size(block);
+                  if (size > 1 && (NULL != source) && block->exist(source->id()))
+                  {
+                    result = lm.relieve_relation(block, source, now, true);
+                    ret = (TFS_SUCCESS == result) ? STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
+                  }
                 }
               }
               else
               {
+                const int32_t version = info.version_;
+                info.version_ -= VERSION_INC_STEP_REPLICATE;
                 //build relation between block and dest dataserver
-                ret = TFS_SUCCESS == manager_.get_layout_manager().build_relation(block, dest, &info, now, false)
-                        ? STATUS_MESSAGE_OK: STATUS_MESSAGE_ERROR;
-                uint64_t array[MAX_REPLICATION_NUM];
-                common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, array);
-                manager_.get_layout_manager().get_block_manager().get_servers(helper, block);
-                block->update_version(helper, VERSION_INC_STEP_REPLICATE, true);
+                ret = TFS_SUCCESS == lm.build_relation(block, dest, &info, now, false)
+                  ? STATUS_MESSAGE_OK: STATUS_MESSAGE_ERROR;
+                if (STATUS_MESSAGE_OK == ret)
+                {
+                  uint64_t array[MAX_REPLICATION_NUM];
+                  common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, array);
+                  bm.get_servers(helper, block);
+                  bm.update_version(helper, info.block_id_, version, VERSION_INC_STEP_REPLICATE, info);
+                }
               }
             }
-
-            if (GFactory::get_runtime_info().is_master())
-            {
-              common::Stream stream(message->length());
-              if (TFS_SUCCESS == message->serialize(stream))
-              {
-                int32_t result = manager_.get_layout_manager().get_oplog_sync_mgr().log(
-                      OPLOG_TYPE_REPLICATE_MSG, stream.get_data(), stream.get_data_length(), now);
-                if (TFS_SUCCESS != result)
-                  dump(TBSYS_LOG_LEVEL(INFO), "write %s block oplog failed, ret: %d", transform_type_to_str(), result);
-              }
-            }
+            this->log(OPLOG_TYPE_REPLICATE_MSG, message);
           }
           else
           {
@@ -287,16 +310,7 @@ namespace tfs
         if (GFactory::get_runtime_info().is_master())
           msg->reply(new StatusMessage(ret));
       }
-      ret = (ret == STATUS_MESSAGE_OK || ret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : ret;
-      if (TFS_SUCCESS != ret || status_ != PLAN_STATUS_END)
-      {
-        BlockCollect* block = manager_.get_layout_manager().get_block_manager().get(block_);
-        if (NULL != block)
-        {
-          block->set(common::Func::get_monotonic_time(),SYSPARAM_NAMESERVER.move_task_expired_time_);
-        }
-      }
-      return ret;
+      return (ret == STATUS_MESSAGE_OK || ret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : ret;
     }
 
     MoveTask::MoveTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers):
@@ -313,6 +327,7 @@ namespace tfs
 
     int CompactTask::handle()
     {
+      int64_t now = Func::get_monotonic_time();
       int32_t ret = (INVALID_BLOCK_ID != block_ && NULL != servers_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -325,10 +340,14 @@ namespace tfs
         ret = send_msg_to_server(servers_[0], &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
-      set(Func::get_monotonic_time(), SYSPARAM_NAMESERVER.compact_task_expired_time_);
+      if (TFS_SUCCESS == ret)
+      {
+        BlockManager& bm =  manager_.get_layout_manager().get_block_manager();
+        bm.set_task_expired_time(block_,now, SYSPARAM_NAMESERVER.compact_task_expired_time_);
+      }
+      set(now, SYSPARAM_NAMESERVER.compact_task_expired_time_);
       return ret;
     }
-
 
     int CompactTask::handle_complete(common::BasePacket* msg)
     {
@@ -336,13 +355,14 @@ namespace tfs
       int32_t ret = (NULL != msg) && (msg->getPCode() == BLOCK_COMPACT_COMPLETE_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        BlockManager& bm = manager_.get_layout_manager().get_block_manager();
+        ServerManager& sm = manager_.get_layout_manager().get_server_manager();
         DsCommitCompactBlockCompleteToNsMessage* message = dynamic_cast<DsCommitCompactBlockCompleteToNsMessage*>(msg);
         BlockInfoV2 info = message->get_block_info();
-        BlockCollect* block = manager_.get_layout_manager().get_block_manager().get(info.block_id_);
+        BlockCollect* block = bm.get(info.block_id_);
         ret = (NULL != block) ? TFS_SUCCESS : EXIT_NO_BLOCK;
         if (TFS_SUCCESS == ret)
         {
-          time_t now = Func::get_monotonic_time();
           uint64_t array[MAX_REPLICATION_NUM], success[MAX_REPLICATION_NUM];
           common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, array);
           common::ArrayHelper<uint64_t> success_helper(MAX_REPLICATION_NUM, success);
@@ -350,19 +370,14 @@ namespace tfs
           std::vector<std::pair<uint64_t, int8_t> >::const_iterator iter = result.begin();
           for (; iter != result.end(); ++iter)
           {
-            ServerCollect* pserver = manager_.get_layout_manager().get_server_manager().get(iter->first);
+            ServerCollect* pserver = sm.get(iter->first);
             ret = (NULL != pserver) ? TFS_SUCCESS : EXIT_NO_DATASERVER;
             if (TFS_SUCCESS == ret)
             {
               if (PLAN_STATUS_END == iter->second)
-              {
                 success_helper.push_back(iter->first);
-                pserver->add_writable(block->id(), block->is_full());
-              }
               else
-              {
                 helper.push_back(iter->first);
-              }
             }
           }
           const int64_t total = result.size();
@@ -370,111 +385,20 @@ namespace tfs
           status_ = total == count ? PLAN_STATUS_END : count > 0 ? PLAN_STATUS_PART_END : PLAN_STATUS_FAILURE;
           if (PLAN_STATUS_FAILURE != status_)
           {
-            for (int64_t index = 0; index < helper.get_array_index(); ++index)
+            int64_t index = 0;
+            bm.update_version(success_helper, info.block_id_, info.version_, VERSION_INC_STEP_COMPACT, info);
+            for (index = 0; index < success_helper.get_array_index(); ++index)
             {
-              const uint64_t server = *helper.at(index);
-              BlockCollect::SERVER_ITEM* item = block->get_server_item(server);
-              ServerCollect* pserver = manager_.get_layout_manager().get_server_manager().get(server);
-              const int32_t result = manager_.get_layout_manager().relieve_relation(block, pserver, now, true);
-              if (TFS_SUCCESS == result)
-              {
-                int32_t size = manager_.get_layout_manager().get_block_manager().get_servers_size(block);
-                if (size > 0 && GFactory::get_runtime_info().is_master())
-                {
-                  manager_.get_layout_manager().get_block_manager().push_to_delete_queue(info.block_id_, server);
-                }
-                if (size <= 0)
-                {
-                  BlockInfoV2 real_info = block->get_block_info();
-                  if (NULL != item)
-                    real_info.version_ = item->second;
-                  pserver = manager_.get_layout_manager().get_server_manager().get(server);
-                  int32_t rt = manager_.get_layout_manager().build_relation(block, pserver, &real_info, now, false);
-                  if (TFS_SUCCESS != rt)
-                  {
-                    TBSYS_LOG(INFO, "build relation error, ret: %d, block: %"PRI64_PREFIX"u, dataserver: %s",
-                        rt, info.block_id_, tbsys::CNetUtil::addrToString(server).c_str());
-                  }
-                }
-              }
+              uint64_t server = *success_helper.at(index);
+              ServerCollect* pserver = sm.get(server);
+              if (NULL != pserver)
+                pserver->add_writable(block->id(), block->is_full());
             }
-
-            block->update(info);
-            block->update_version(success_helper,VERSION_INC_STEP_COMPACT, false);
-
-            if (GFactory::get_runtime_info().is_master())
-            {
-              common::Stream stream(message->length());
-              int32_t result = message->serialize(stream);
-              if (TFS_SUCCESS == result)
-              {
-                result = manager_.get_layout_manager().get_oplog_sync_mgr().log(
-                      OPLOG_TYPE_COMPACT_MSG, stream.get_data(), stream.get_data_length(), now);
-                if (TFS_SUCCESS != result)
-                  dump(TBSYS_LOG_LEVEL(INFO), "write compact oplog failed, result: %d", result);
-              }
-            }
+            ret = this->log(OPLOG_TYPE_COMPACT_MSG, message);
           }
         }
         if ( GFactory::get_runtime_info().is_master())
           message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-      }
-      if (TFS_SUCCESS != ret || status_ != PLAN_STATUS_END)
-      {
-        BlockCollect* block = manager_.get_layout_manager().get_block_manager().get(block_);
-        if (NULL != block)
-        {
-          assert(!block->has_valid_lease(Func::get_monotonic_time()));
-          block->set(common::Func::get_monotonic_time(), SYSPARAM_NAMESERVER.compact_task_expired_time_);
-        }
-      }
-      return ret;
-    }
-
-    ResolveBlockVersionConflictTask::ResolveBlockVersionConflictTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers):
-      ReplicateTask(manager, block, server_num, servers, PLAN_TYPE_RESOLVE_VERSION_CONFLICT)
-    {
-
-    }
-
-    ResolveBlockVersionConflictTask::~ResolveBlockVersionConflictTask()
-    {
-
-    }
-
-    int ResolveBlockVersionConflictTask::handle()
-    {
-      int32_t ret = (INVALID_BLOCK_ID != block_ && NULL != servers_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        NsReqResolveBlockVersionConflictMessage msg;
-        msg.set_seqno(seqno_);
-        msg.set_block(block_);
-        msg.set_size(server_num_);
-        msg.set_expire_time(SYSPARAM_NAMESERVER.resolve_version_conflic_task_expired_time_ - MAX_TASK_RESERVE_TIME);
-        for (int8_t index = 0; index < server_num_; ++index)
-          msg.get_members()[index] = servers_[index];
-        ret = send_msg_to_server(servers_[0], &msg);
-        status_ = PLAN_STATUS_BEGIN;
-      }
-      set(Func::get_monotonic_time(), SYSPARAM_NAMESERVER.resolve_version_conflic_task_expired_time_);
-      return ret;
-    }
-
-    int ResolveBlockVersionConflictTask::handle_complete(common::BasePacket* msg)
-    {
-      status_ = PLAN_STATUS_FAILURE;
-      int32_t ret = (NULL != msg) && (msg->getPCode() == REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ResolveBlockVersionConflictMessage* message = dynamic_cast<ResolveBlockVersionConflictMessage*>(msg);
-        ArrayHelper<std::pair<uint64_t, BlockInfoV2> > members(message->get_size(), message->get_members(),message->get_size());
-        ret = manager_.get_layout_manager().get_client_request_server().resolve_block_version_conflict(message->get_block(), members);
-        ResolveBlockVersionConflictResponseMessage* reply_msg = new ResolveBlockVersionConflictResponseMessage();
-        reply_msg->set_status(ret);
-        if (TFS_SUCCESS == ret)
-         status_ = PLAN_STATUS_END;
-        ret = message->reply(reply_msg);
       }
       return ret;
     }
@@ -522,8 +446,13 @@ namespace tfs
       int32_t ret = (NULL != msg) && (msg->getPCode() == REQ_EC_MARSHALLING_COMMIT_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        BlockManager& bm = manager_.get_layout_manager().get_block_manager();
+        ServerManager& sm = manager_.get_layout_manager().get_server_manager();
+        FamilyManager& fm = manager_.get_layout_manager().get_family_manager();
+        LayoutManager& lm = manager_.get_layout_manager();
         ECMarshallingCommitMessage* packet = dynamic_cast<ECMarshallingCommitMessage*>(msg);
         status_ = static_cast<common::PlanStatus>(packet->get_status());
+        const bool forward = packet->get_forward();
         if (PLAN_STATUS_END == status_)
         {
           FamilyInfo family_info;
@@ -542,22 +471,21 @@ namespace tfs
               family_info.family_member_.push_back(std::make_pair(base_info[index].block_, base_info[index].version_));
               helper.push_back(std::make_pair(base_info[index].block_, base_info[index].version_));
             }
-            FamilyCollect* family = manager_.get_layout_manager().get_family_manager().get(family_info.family_id_);
-            ret = NULL == family ? TFS_SUCCESS : EXIT_FAMILY_EXISTED;
+            FamilyCollect* family = fm.get(family_info.family_id_);
+            ret = (NULL == family) ? TFS_SUCCESS : EXIT_FAMILY_EXISTED;
             if (TFS_SUCCESS == ret)
             {
-              ret = manager_.get_layout_manager().get_family_manager().insert(family_info.family_id_, family_info.family_aid_info_,
-                helper, now);
+              ret = fm.insert(family_info.family_id_, family_info.family_aid_info_,helper, now);
               if (TFS_SUCCESS != ret)
                 TBSYS_LOG(INFO, "add new family in memory failed, ret: %d, family id: %"PRI64_PREFIX"d", ret, family_info.family_id_);
             }
-            if (TFS_SUCCESS == ret)
+            if (TFS_SUCCESS == ret && !forward)
             {
-              ret = manager_.get_layout_manager().get_oplog_sync_mgr().create_family(family_info);
+              ret = lm.get_oplog_sync_mgr().create_family(family_info);
               if (TFS_SUCCESS != ret)
                 TBSYS_LOG(INFO, "add new family in db failed, ret: %d, family id: %"PRI64_PREFIX"d", ret, family_info.family_id_);
             }
-            if (TFS_SUCCESS == ret)//想办法确保BLOCK ID 不会被重用,前期可以不搞
+            if (TFS_SUCCESS == ret)
             {
               int32_t index = 0, del_index = 0;
               BlockCollect * pblock  = NULL;
@@ -572,40 +500,50 @@ namespace tfs
               for (; index < DATA_MEMBER_NUM && TFS_SUCCESS == ret; ++index)
               {
                 helper2.clear();
-                ret = (NULL != (pblock = manager_.get_layout_manager().get_block_manager().get(base_info[index].block_))) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-                if (TFS_SUCCESS == ret)
-                  ret = manager_.get_layout_manager().get_block_manager().get_servers(helper2, pblock);
-                if (TFS_SUCCESS == ret)
-                  ret = (NULL != (pserver = manager_.get_layout_manager().get_server_manager().get(base_info[index].server_))) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+                uint64_t block = base_info[index].block_;
+                uint64_t server = base_info[index].server_;
+                pblock = bm.get(block);
+                ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
                 if (TFS_SUCCESS == ret)
                 {
-                  ret = manager_.get_layout_manager().get_block_manager().set_family_id(base_info[index].block_, family_info.family_id_);
-                  if (TFS_SUCCESS == ret)
+                  ret = bm.get_servers(helper2, pblock);
+                }
+                if (TFS_SUCCESS == ret)
+                {
+                  pserver = sm.get(server);
+                  ret  = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+                }
+                if (TFS_SUCCESS == ret)
+                {
+                  ret = bm.set_family_id(block, family_info.family_id_);
+                }
+                if (TFS_SUCCESS == ret)
+                {
+                  base_info[index].status_ = FAMILY_MEMBER_STATUS_OTHER;
+                  helper2.remove(server);
+                  for (int64_t i = 0; i < helper2.get_array_index(); ++i)
                   {
-                    base_info[index].status_ = FAMILY_MEMBER_STATUS_OTHER;
-                    helper2.remove(pserver->id());
-                    for (int64_t i = 0; i < helper2.get_array_index(); ++i)
-                    {
-                      uint64_t server = *helper2.at(i);
-                      pserver = manager_.get_layout_manager().get_server_manager().get(server);
-                      assert(pserver);
-                      std::pair<ServerCollect*, BlockCollect*>* item = &del_items[del_index++];
-                      item->first = pserver;
-                      item->second= pblock;
-                    }
+                    uint64_t server = *helper2.at(i);
+                    pserver = sm.get(server);
+                    assert(NULL != pserver);
+                    std::pair<ServerCollect*, BlockCollect*>* item = &del_items[del_index++];
+                    item->first = pserver;
+                    item->second= pblock;
                   }
                 }
               }
 
               for (; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
               {
-                pblock = manager_.get_layout_manager().get_block_manager().insert(base_info[index].block_, now, false);
+                uint64_t block = base_info[index].block_;
+                uint64_t server = base_info[index].server_;
+                pblock = bm.insert(block, now, false);
                 assert(NULL != pblock);
-                ret = manager_.get_layout_manager().get_block_manager().set_family_id(base_info[index].block_, family_info.family_id_);
+                ret = bm.set_family_id(block, family_info.family_id_);
                 if (TFS_SUCCESS == ret)
-                  ret = (NULL != (pserver = manager_.get_layout_manager().get_server_manager().get(base_info[index].server_))) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+                  ret = (NULL != (pserver = sm.get(server))) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
                 if (TFS_SUCCESS == ret)
-                 ret =  manager_.get_layout_manager().build_relation(pblock, pserver, NULL, now, false);
+                  ret =  lm.build_relation(pblock, pserver, NULL, now, false);
                 if (TFS_SUCCESS == ret)
                   base_info[index].status_ = FAMILY_MEMBER_STATUS_OTHER;
               }
@@ -613,16 +551,20 @@ namespace tfs
               //build relation failed, we'll rollback
               if (TFS_SUCCESS != ret)
               {
-                ret = manager_.get_layout_manager().get_oplog_sync_mgr().del_family(family_info.family_id_);
+                family = NULL;
+                fm.remove(family, family_info.family_id_);
+                lm.get_gc_manager().insert(family, now);
+                if (!forward)
+                  ret = lm.get_oplog_sync_mgr().del_family(family_info.family_id_);
                 for (index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
                 {
                   if (FAMILY_MEMBER_STATUS_OTHER == base_info[index].status_)
-                    ret = manager_.get_layout_manager().get_block_manager().set_family_id(base_info[index].block_, INVALID_FAMILY_ID);
+                    ret = bm.set_family_id(base_info[index].block_, INVALID_FAMILY_ID);
                 }
                 for (index = DATA_MEMBER_NUM; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
                 {
                   if (FAMILY_MEMBER_STATUS_OTHER == base_info[index].status_)
-                    ret = manager_.get_layout_manager().relieve_relation(pblock, pserver, now, true);
+                    ret = lm.relieve_relation(pblock, pserver, now, true);
                 }
               }
               else
@@ -630,17 +572,16 @@ namespace tfs
                 for (index = 0; index < del_index; ++index)
                 {
                   std::pair<ServerCollect*, BlockCollect*>* item = &del_items[index];
-                  manager_.get_layout_manager().relieve_relation(item->second,item->first, now, true);
-                  manager_.get_layout_manager().get_block_manager().push_to_delete_queue(item->second->id(), item->first->id());
+                  ServerItem si;
+                  si.server_ = item->first->id();
+                  si.family_id_ = INVALID_FAMILY_ID;
+                  si.version_   = 0;
+                  lm.relieve_relation(item->second,item->first, now, true);
+                  bm.push_to_delete_queue(item->second->id(), si,GFactory::get_runtime_info().is_master());
                 }
+                //if (!forward)
+                //  this->log(OPLOG_TYPE_MARSHALLING_MSG, msg);
               }
-            }
-
-            if (TFS_SUCCESS != ret)
-            {
-              family = NULL;
-              manager_.get_layout_manager().get_family_manager().remove(family, family_info.family_id_);
-              manager_.get_layout_manager().get_gc_manager().insert(family, now);
             }
           }
         }
@@ -701,6 +642,8 @@ namespace tfs
     void ECMarshallingTask::dump_block(const int32_t level, const char* file, const int32_t line,
          const char* function, pthread_t thid, tbsys::CLogger& log)
     {
+      if (level <= log._level)
+      {
         std::stringstream stream;
         const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
         stream << "master_index:" << GET_MASTER_INDEX(family_aid_info_)
@@ -713,6 +656,7 @@ namespace tfs
         }
         log.logMessage(level, file, line, function, thid, "%s family-%"PRI64_PREFIX"u, seqno:%"PRI64_PREFIX"d, status:%s, %s",
             transform_type_to_str(), family_id_, seqno_, transform_status_to_str(status_), stream.str().c_str());
+      }
     }
 
     ECReinstateTask::ECReinstateTask(TaskManager& manager, const int64_t family_id, const int32_t family_aid_info,
@@ -729,6 +673,7 @@ namespace tfs
 
     int ECReinstateTask::handle()
     {
+      const int64_t now = Func::get_monotonic_time();
       const int32_t index = GET_MASTER_INDEX(family_aid_info_);
       const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
       int32_t ret = (NULL != family_members_ && CHECK_MEMBER_NUM(MEMBER_NUM)
@@ -744,7 +689,12 @@ namespace tfs
         ret = send_msg_to_server(server, &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
-      set(Func::get_monotonic_time(),  SYSPARAM_NAMESERVER.reinstate_task_expired_time_);
+      if (TFS_SUCCESS == ret)
+      {
+        FamilyManager& fm = manager_.get_layout_manager().get_family_manager();
+        fm.set_task_expired_time(family_id_, now, SYSPARAM_NAMESERVER.reinstate_task_expired_time_);
+      }
+      set(now,  SYSPARAM_NAMESERVER.reinstate_task_expired_time_);
       return ret;
     }
 
@@ -767,8 +717,14 @@ namespace tfs
       int32_t ret = (NULL != msg) && (msg->getPCode() == REQ_EC_REINSTATE_COMMIT_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        BlockManager& bm = manager_.get_layout_manager().get_block_manager();
+        ServerManager& sm = manager_.get_layout_manager().get_server_manager();
+        FamilyManager& fm = manager_.get_layout_manager().get_family_manager();
+        LayoutManager& lm = manager_.get_layout_manager();
         ECReinstateCommitMessage* packet = dynamic_cast<ECReinstateCommitMessage*>(msg);
         status_ = static_cast<common::PlanStatus>(packet->get_status());
+        //const bool forward = packet->get_forward();
+
         if (PLAN_STATUS_END == status_)
         {
           FamilyInfo family_info;
@@ -780,7 +736,7 @@ namespace tfs
           ret = (INVALID_FAMILY_ID != family_info.family_id_ && CHECK_MEMBER_NUM(MEMBER_NUM) && NULL != member_info) ? TFS_SUCCESS : EXIT_EXECUTE_TASK_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            FamilyCollect* family = manager_.get_layout_manager().get_family_manager().get(family_info.family_id_);
+            FamilyCollect* family = fm.get(family_info.family_id_);
             ret = (NULL != family) ? TFS_SUCCESS : EXIT_NO_FAMILY;
           }
           if (TFS_SUCCESS == ret)
@@ -795,32 +751,31 @@ namespace tfs
             {
               if (FAMILY_MEMBER_STATUS_ABNORMAL == member_info[index].status_)
               {
-                block  = manager_.get_layout_manager().get_block_manager().get(member_info[index].block_);
+                block  = bm.get(member_info[index].block_);
                 ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
                 if (TFS_SUCCESS != ret)
                 {
-                  block = manager_.get_layout_manager().get_block_manager().insert(member_info[index].block_, now, false);
+                  block = bm.insert(member_info[index].block_, now, false);
                   ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
                   if (TFS_SUCCESS == ret)
-                    ret = manager_.get_layout_manager().get_block_manager().set_family_id(member_info[index].block_, family_info.family_id_);
+                    ret = bm.set_family_id(member_info[index].block_, family_info.family_id_);
                 }
                 if (TFS_SUCCESS == ret)
                 {
-                  server = manager_.get_layout_manager().get_server_manager().get(member_info[index].server_);
+                  server = sm.get(member_info[index].server_);
                   ret = (NULL != server) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
                 }
                 if (TFS_SUCCESS == ret)
                 {
-                  const int32_t copies = manager_.get_layout_manager().get_block_manager().get_servers_size(member_info[index].block_);
-                  if (copies <= 0)
-                  {
-                    BlockInfoV2* info = query_(blockinfos, REINSTATE_NUM, member_info[index].block_);
-                    assert(NULL != info);
-                    ret = manager_.get_layout_manager().build_relation(block, server, info, now, false);
-                  }
+                  BlockInfoV2* info = query_(blockinfos, REINSTATE_NUM, member_info[index].block_);
+                  assert(NULL != info);
+                  ret = lm.build_relation(block, server, info,now, false);
                 }
               }
             }
+
+            //if (TFS_SUCCESS == ret && !forward)
+            //  this->log(OPLOG_TYPE_REINSTATE_MSG, msg);
           }
         }
         if (TFS_SUCCESS != ret)
@@ -829,15 +784,7 @@ namespace tfs
                       ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
         ret = msg->reply(reply_msg);
       }
-      if (TFS_SUCCESS != ret || status_ != PLAN_STATUS_END)
-      {
-        FamilyCollect* family = manager_.get_layout_manager().get_family_manager().get(family_id_);
-        if (NULL != family)
-        {
-          family->set(common::Func::get_monotonic_time(),SYSPARAM_NAMESERVER.reinstate_task_expired_time_);
-        }
-      }
-      return ret;
+     return ret;
     }
 
     ECDissolveTask::ECDissolveTask(TaskManager& manager, const int64_t family_id, const int32_t family_aid_info,
@@ -854,6 +801,7 @@ namespace tfs
 
     int ECDissolveTask::handle()
     {
+      const int64_t now = Func::get_monotonic_time();
       const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
       int32_t ret = (NULL != family_members_ && MEMBER_NUM > 0 && MEMBER_NUM <= (MAX_MARSHALLING_NUM * 2))
                       ? common::TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -868,7 +816,12 @@ namespace tfs
         ret = send_msg_to_server(family_members_[index].server_, &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
-      set(Func::get_monotonic_time(), SYSPARAM_NAMESERVER.dissolve_task_expired_time_);
+      if (TFS_SUCCESS == ret)
+      {
+        FamilyManager& fm = manager_.get_layout_manager().get_family_manager();
+        fm.set_task_expired_time(family_id_, now, SYSPARAM_NAMESERVER.dissolve_task_expired_time_);
+      }
+      set(now, SYSPARAM_NAMESERVER.dissolve_task_expired_time_);
       return ret;
     }
 
@@ -877,8 +830,13 @@ namespace tfs
       int32_t ret = (NULL != msg) && (msg->getPCode() == REQ_EC_DISSOLVE_COMMIT_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        BlockManager& bm = manager_.get_layout_manager().get_block_manager();
+        ServerManager& sm = manager_.get_layout_manager().get_server_manager();
+        FamilyManager& fm = manager_.get_layout_manager().get_family_manager();
+        LayoutManager& lm = manager_.get_layout_manager();
         ECDissolveCommitMessage* packet = dynamic_cast<ECDissolveCommitMessage*>(msg);
         status_ = static_cast<common::PlanStatus>(packet->get_status());
+        const bool forward = packet->get_forward();
         if (PLAN_STATUS_END == status_)
         {
           FamilyInfo family_info;
@@ -891,12 +849,13 @@ namespace tfs
           ret = (INVALID_FAMILY_ID != family_info.family_id_ && MEMBER_NUM > 0 && MEMBER_NUM <= (MAX_MARSHALLING_NUM * 2) && NULL != member_info) ? TFS_SUCCESS : EXIT_EXECUTE_TASK_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            FamilyCollect* family = manager_.get_layout_manager().get_family_manager().get(family_info.family_id_);
+            FamilyCollect* family = fm.get(family_info.family_id_);
             ret = (NULL != family) ? TFS_SUCCESS : EXIT_NO_FAMILY;
           }
           if (TFS_SUCCESS == ret)
           {
-            ret = manager_.get_layout_manager().get_oplog_sync_mgr().del_family(family_info.family_id_);
+            if (!forward)
+              ret = lm.get_oplog_sync_mgr().del_family(family_info.family_id_);
             if (TFS_SUCCESS == ret)
             {
               int32_t index = 0;
@@ -908,16 +867,16 @@ namespace tfs
               {
                 if (INVALID_BLOCK_ID != member_info[index].block_)
                 {
-                  block  = manager_.get_layout_manager().get_block_manager().get(member_info[index].block_);
+                  block  = bm.get(member_info[index].block_);
                   ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
                   if (TFS_SUCCESS != ret)
                   {
-                    block = manager_.get_layout_manager().get_block_manager().insert(member_info[index].block_, now, false);
+                    block = bm.insert(member_info[index].block_, now, false);
                     ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
                   }
                   if (TFS_SUCCESS == ret)
                   {
-                    ret = manager_.get_layout_manager().get_block_manager().set_family_id(member_info[index].block_, INVALID_FAMILY_ID);
+                    ret = bm.set_family_id(member_info[index].block_, INVALID_FAMILY_ID);
                   }
                   if (TFS_SUCCESS == ret)
                   {
@@ -926,10 +885,10 @@ namespace tfs
                     {
                       BlockInfoV2 info = block->get_block_info();
                       info.version_ += VERSION_INC_STEP_REPLICATE;
-                      server = manager_.get_layout_manager().get_server_manager().get(member_info[index].server_);
+                      server = sm.get(member_info[index].server_);
                       ret = (NULL != server) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
                       if (TFS_SUCCESS == ret)
-                        manager_.get_layout_manager().build_relation(block, server, &info, now, false);
+                        lm.build_relation(block, server, &info, now, false);
                     }
                   }
                 }
@@ -938,14 +897,17 @@ namespace tfs
               {
                 if (INVALID_BLOCK_ID != member_info[index].block_)
                 {
-                  manager_.get_layout_manager().get_block_manager().remove(block, member_info[index].block_);
-                  manager_.get_layout_manager().get_gc_manager().insert(block, now);
+                  bm.remove(block, member_info[index].block_);
+                  lm.get_gc_manager().insert(block, now);
                 }
               }
               FamilyCollect* family = NULL;
-              manager_.get_layout_manager().get_family_manager().remove(family, family_info.family_id_);
-              manager_.get_layout_manager().get_gc_manager().insert(family, now);
+              fm.remove(family, family_info.family_id_);
+              lm.get_gc_manager().insert(family, now);
             }
+
+            //if (TFS_SUCCESS == ret && !forward)
+            //  this->log(OPLOG_TYPE_DISSOLVE_MSG, msg);
           }
         }
         if (TFS_SUCCESS != ret)
@@ -953,14 +915,6 @@ namespace tfs
         StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
                       ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
         ret = msg->reply(reply_msg);
-      }
-      if (TFS_SUCCESS != ret || status_ != PLAN_STATUS_END)
-      {
-        FamilyCollect* family = manager_.get_layout_manager().get_family_manager().get(family_id_);
-        if (NULL != family)
-        {
-          family->set(common::Func::get_monotonic_time(),SYSPARAM_NAMESERVER.dissolve_task_expired_time_);
-        }
       }
       return ret;
     }

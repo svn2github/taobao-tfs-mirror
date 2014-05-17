@@ -169,6 +169,14 @@ namespace tfs
       return bret;
     }
 
+    int BasePacket::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      UNUSED(data);
+      UNUSED(data_len);
+      UNUSED(pos);
+      return TFS_SUCCESS;
+    }
+
     int BasePacket::reply(BasePacket* packet)
     {
       int32_t iret = NULL != packet ? TFS_SUCCESS : TFS_ERROR;

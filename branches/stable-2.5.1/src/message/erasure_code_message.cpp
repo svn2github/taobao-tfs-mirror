@@ -52,6 +52,38 @@ namespace tfs
      return ret;
     }
 
+    int ECMarshallingMessage::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = common::Serialization::get_int64(data, data_len, pos, &family_id_);
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int64(data, data_len, pos, &seqno_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int32(data, data_len, pos, &expire_time_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int32(data, data_len, pos, &family_aid_info_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+        ret = (MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM) ? common::TFS_SUCCESS : common::EXIT_PARAMETER_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          family_members_ = new (std::nothrow)FamilyMemberInfo[MEMBER_NUM];
+          assert(family_members_);
+          for (int32_t index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
+          {
+            ret = family_members_[index].deserialize(data, data_len , pos);
+          }
+        }
+      }
+      return ret;
+    }
+
     int ECMarshallingMessage::deserialize(common::Stream& input)
     {
       int32_t ret = input.get_int64(&family_id_);
@@ -117,8 +149,9 @@ namespace tfs
       return ret;
     }
 
-    ECMarshallingCommitMessage::ECMarshallingCommitMessage():
-      status_(PLAN_STATUS_FAILURE)
+    ECMarshallingCommitMessage::ECMarshallingCommitMessage(const bool forward):
+      status_(PLAN_STATUS_FAILURE),
+      forward_(forward)
     {
       _packetHeader._pcode = common::REQ_EC_MARSHALLING_COMMIT_MESSAGE;
     }
@@ -148,6 +181,16 @@ namespace tfs
       return ret;
     }
 
+    int ECMarshallingCommitMessage::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = ECMarshallingMessage::deserialize(data, data_len, pos);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int8(data, data_len, pos, &status_);
+      }
+      return ret;
+    }
+
     int64_t ECMarshallingCommitMessage::length() const
     {
       return ECMarshallingMessage::length() + INT8_SIZE;
@@ -168,7 +211,8 @@ namespace tfs
 
     }
 
-    ECReinstateCommitMessage::ECReinstateCommitMessage()
+    ECReinstateCommitMessage::ECReinstateCommitMessage(const bool forward):
+      ECMarshallingCommitMessage(forward)
     {
       _packetHeader._pcode = common::REQ_EC_REINSTATE_COMMIT_MESSAGE;
       reinstate_num_ = 0;
@@ -221,6 +265,22 @@ namespace tfs
       return ret;
     }
 
+    int ECReinstateCommitMessage::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int ret = ECMarshallingCommitMessage::deserialize(data, data_len, pos);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int32(data, data_len, pos, &reinstate_num_);
+      }
+
+      for (int i = 0; (TFS_SUCCESS == ret) && (i < reinstate_num_); i++)
+      {
+        ret = block_infos_[i].deserialize(data, data_len, pos);
+      }
+
+      return ret;
+    }
+
     int64_t ECReinstateCommitMessage::length() const
     {
       int64_t len = ECMarshallingCommitMessage::length() + INT_SIZE;
@@ -268,7 +328,8 @@ namespace tfs
 
     }
 
-    ECDissolveCommitMessage::ECDissolveCommitMessage()
+    ECDissolveCommitMessage::ECDissolveCommitMessage(const bool forward):
+      ECMarshallingCommitMessage(forward)
     {
       _packetHeader._pcode = common::REQ_EC_DISSOLVE_COMMIT_MESSAGE;
     }

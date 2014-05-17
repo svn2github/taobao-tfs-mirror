@@ -123,10 +123,10 @@ namespace tfs
             uint64_t server = INVALID_SERVER_ID;
             std::pair<uint64_t, bool> success[MAX_REPLICATION_NUM];
             ArrayHelper<std::pair<uint64_t, bool> > helper(MAX_REPLICATION_NUM, success);
-            for (index = 0; index < servers.get_array_index() && TFS_SUCCESS == ret; ++index)
+            for (index = 0; index < servers.get_array_index() && index < 2 && TFS_SUCCESS == ret; ++index)
             {
               server = *servers.at(index);
-              if (task->type_ != PLAN_TYPE_COMPACT && task->type_ != PLAN_TYPE_RESOLVE_VERSION_CONFLICT && index < 2)
+              if (task->type_ != PLAN_TYPE_COMPACT)
               {
                 std::pair<MACHINE_TO_TASK_ITER, bool> mrs;
                 uint64_t machine_ip = (server & 0xFFFFFFFF);
@@ -149,13 +149,11 @@ namespace tfs
               for (index = 0; index < helper.get_array_index(); ++index)
               {
                 std::pair<uint64_t, bool>* item = helper.at(index);
-                if (task->type_ != PLAN_TYPE_COMPACT && task->type_ != PLAN_TYPE_RESOLVE_VERSION_CONFLICT)
+                if (task->type_ != PLAN_TYPE_COMPACT)
                   remove_(item->first, item->second);
               }
             }
           }
-
-          TBSYS_LOG(DEBUG, "add task result: seqno: %ld, %d", task->seqno_, ret);
 
           if (TFS_SUCCESS != ret)
           {
@@ -212,7 +210,7 @@ namespace tfs
                 bool insert_server= is_insert_server_(type, DATA_MEMBER_NUM, index);
                 ret = insert_(helper, task, members[index], target, insert_block, insert_server);
                 if (TFS_SUCCESS != ret)
-                  TBSYS_LOG(INFO, "family_id : %"PRI64_PREFIX"d, block: %"PRI64_PREFIX"u, server: %"PRI64_PREFIX"u", family_id, members[index].block_, members[index].server_);
+                  TBSYS_LOG(INFO, "family_id : %"PRI64_PREFIX"d, block: %"PRI64_PREFIX"u, server: %"PRI64_PREFIX"u, ret: %d", family_id, members[index].block_, members[index].server_, ret);
               }
             }
 
@@ -227,15 +225,12 @@ namespace tfs
               }
             }
           }
-          if (TFS_SUCCESS != ret)
-          {
-            family_to_tasks_.erase(family_id);
-          }
         }
 
         if (TFS_SUCCESS != ret)
         {
           task->dump(TBSYS_LOG_LEVEL(INFO), "add task failed, rollback, ret: %d", ret);
+          family_to_tasks_.erase(family_id);
           pending_queue_.erase(task);
           tbsys::gDelete(task);
         }
@@ -283,6 +278,7 @@ namespace tfs
       machine_to_tasks_.clear();
       block_to_tasks_.clear();
       pending_queue_.clear();
+      family_to_tasks_.clear();
    }
 
     void TaskManager::dump(tbnet::DataBuffer& stream) const
@@ -307,6 +303,10 @@ namespace tfs
         BLOCK_TO_TASK_CONST_ITER iter = block_to_tasks_.begin();
         for (; iter != block_to_tasks_.end(); ++iter)
           iter->second->dump(TBSYS_LOG_NUM_LEVEL(level), format);
+
+        FAMILY_TO_TASK_CONST_ITER tr = family_to_tasks_.begin();
+        for (; tr != family_to_tasks_.end(); ++tr)
+          tr->second->dump(TBSYS_LOG_NUM_LEVEL(level), format);
       }
     }
 
@@ -394,14 +394,15 @@ namespace tfs
       return total < SYSPARAM_NAMESERVER.max_task_in_machine_nums_;
     }
 
-    int TaskManager::remove_block_from_dataserver(const uint64_t server, const uint64_t block, const time_t now)
+    int TaskManager::remove_block_from_dataserver(const uint64_t block, const ServerItem& item, const time_t now)
     {
-      int32_t ret = remove_block_from_dataserver_(server, block, now);
-      TBSYS_LOG(INFO, "send remove block: %"PRI64_PREFIX"u command on server : %s %s",
-        block, tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
+      int32_t ret = remove_block_from_dataserver_(block, item, now);
+      TBSYS_LOG(INFO, "send remove block: %"PRI64_PREFIX"u command on server : %s %s, family_id: %"PRI64_PREFIX"d, version: %d",
+        block, tbsys::CNetUtil::addrToString(item.server_).c_str(), TFS_SUCCESS == ret ? "successful" : "failed",
+        item.family_id_, item.version_);
       tbsys::CLogger& block_log = get_layout_manager().get_block_log();
       block_log.logMessage(TBSYS_LOG_LEVEL(INFO), "send remove block-%"PRI64_PREFIX"u server: %s %s",
-          block, tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
+          block, tbsys::CNetUtil::addrToString(item.server_).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
       return ret;
     }
 
@@ -411,7 +412,7 @@ namespace tfs
      * @param [in] block, the one need expired.
      * @return TFS_SUCCESS success.
      */
-    int TaskManager::remove_block_from_dataserver_(const uint64_t server, const uint64_t block, const time_t now)
+    int TaskManager::remove_block_from_dataserver_(const uint64_t block, const ServerItem& item, const time_t now)
     {
       RemoveBlockMessageV2 rbmsg;
       rbmsg.set_block_id(block);
@@ -419,11 +420,11 @@ namespace tfs
       info.block_id_ = block;
       uint64_t servers[1];
       common::ArrayHelper<uint64_t> helper(1,servers);
-      helper.push_back(server);
+      helper.push_back(item.server_);
       manager_.block_oplog_write_helper(OPLOG_RELIEVE_RELATION, info, helper, now);
       std::vector<uint64_t> targets;
-      targets.push_back(server);
-      int32_t ret = post_msg_to_server(server, &rbmsg, ns_async_callback);
+      targets.push_back(item.server_);
+      int32_t ret = post_msg_to_server(item.server_, &rbmsg, ns_async_callback);
       return ret;
     }
 
@@ -521,10 +522,6 @@ namespace tfs
           {
             task = new (std::nothrow)ECDissolveTask(*this, family_id, family_aid_info, MAX_NUM, info);
           }
-          else if (msg->getPCode() == REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE)
-          {
-            task = new (std::nothrow)ResolveBlockVersionConflictTask(*this, block, MAX_NUM, server);
-          }
           assert(NULL != task);
         }
         ret = (NULL != task) ? TFS_SUCCESS : EXIT_TASK_NO_EXIST_ERROR;
@@ -583,14 +580,13 @@ namespace tfs
         const PlanType type = task->type_;
         if ((PLAN_TYPE_REPLICATE == type)
             || (PLAN_TYPE_MOVE == type)
-            || (PLAN_TYPE_COMPACT == type)
-            || (PLAN_TYPE_RESOLVE_VERSION_CONFLICT == type))
+            || (PLAN_TYPE_COMPACT == type))
         {
           ReplicateTask* ptask = dynamic_cast<ReplicateTask*>(task);
           block_to_tasks_.erase(ptask->block_);
           for (int8_t index = 0; index < ptask->server_num_ && index < 2; ++index)
           {
-            if (PLAN_TYPE_COMPACT != type && PLAN_TYPE_RESOLVE_VERSION_CONFLICT != type)
+            if (PLAN_TYPE_COMPACT != type)
               remove_(ptask->servers_[index], is_target(index));
           }
         }
@@ -602,16 +598,17 @@ namespace tfs
           ECMarshallingTask* ptask = dynamic_cast<ECMarshallingTask*>(task);
           const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(ptask->family_aid_info_)
                 + GET_CHECK_MEMBER_NUM(ptask->family_aid_info_);
+          FamilyMemberInfo* members = ptask->family_members_;
           family_to_tasks_.erase(ptask->family_id_);
           for (int64_t index = 0; index < MEMBER_NUM; ++index)
           {
-            if (INVALID_SERVER_ID != ptask->family_members_[index].server_)
+            if (INVALID_SERVER_ID != members[index].server_)
             {
-              bool target = is_target(ptask->family_members_[index], index, ptask->type_, ptask->family_aid_info_);
-              remove_(ptask->family_members_[index].server_, target);
+              bool target = is_target(members[index], index, ptask->type_, ptask->family_aid_info_);
+              remove_(members[index].server_, target);
             }
-            if (INVALID_BLOCK_ID != ptask->family_members_[index].block_)
-              block_to_tasks_.erase(ptask->family_members_[index].block_);
+            if (INVALID_BLOCK_ID != members[index].block_)
+              block_to_tasks_.erase(members[index].block_);
           }
         }
         manager_.get_gc_manager().insert(task, Func::get_monotonic_time());
@@ -706,8 +703,6 @@ namespace tfs
         result = new (std::nothrow)MoveTask(*this, id, servers.get_array_index(), servers.get_base_address());
       else if (type == PLAN_TYPE_COMPACT)
         result = new (std::nothrow)CompactTask(*this, id, servers.get_array_index(), servers.get_base_address());
-      else if (type == PLAN_TYPE_RESOLVE_VERSION_CONFLICT)
-        result = new (std::nothrow)ResolveBlockVersionConflictTask(*this, id, servers.get_array_index(), servers.get_base_address());
       assert(NULL != result);
       result->seqno_ = ++seqno_;
       return result;
@@ -751,7 +746,7 @@ namespace tfs
 
     bool TaskManager::is_insert_block_(const int32_t type, const int32_t member_num, const int32_t index) const
     {
-      return (PLAN_TYPE_EC_DISSOLVE == type) ? (index >= member_num / 2) : true;
+      return (PLAN_TYPE_EC_DISSOLVE == type) ? (index >= (member_num / 2)) : true;
     }
 
     bool TaskManager::is_insert_server_(const int32_t type, const int32_t data_member_num, const int32_t index) const

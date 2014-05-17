@@ -109,7 +109,6 @@ namespace tfs
       BlockCollect* add_new_block(uint64_t& block_id, ServerCollect* server = NULL, const time_t now = common::Func::get_monotonic_time());
 
       tbsys::CLogger& get_block_log() { return block_logger_;}
-
       private:
       void rotate_(const time_t now);
       uint64_t get_alive_block_id_(const bool verify);
@@ -117,7 +116,6 @@ namespace tfs
       void balance_();
       void timeout_();
       void redundant_();
-      void load_family_info_();
       void check_all_server_lease_timeout_();
       void regular_create_block_for_servers();
 
@@ -137,9 +135,9 @@ namespace tfs
           const common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members, const time_t now);
       bool build_dissolve_task_(int64_t& need, const FamilyCollect* family,
           const common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members, const time_t now);
-      bool build_redundant_(int64_t& need, const time_t now);
+      bool build_redundant_(int64_t& need, const time_t now, const bool master);
       int build_marshalling_(int64_t& need, const time_t now);
-      bool build_adjust_copies_location_task_(common::ArrayHelper<std::pair<uint64_t, int32_t> >& copies_location, BlockCollect* block, const time_t now);
+      bool build_resolve_invalid_copies_task_(common::ArrayHelper<ServerItem>& invalids, BlockCollect* block, const time_t now);
       int64_t has_space_in_task_queue_() const;
 
       bool scan_block_(common::ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, int64_t& max_compact_task_count,
@@ -241,20 +239,7 @@ namespace tfs
           DISALLOW_COPY_AND_ASSIGN(RedundantThreadHelper);
       };
       typedef tbutil::Handle<RedundantThreadHelper> RedundantThreadHelperPtr;
-      class LoadFamilyInfoThreadHelper: public tbutil::Thread
-      {
-        public:
-          explicit LoadFamilyInfoThreadHelper(LayoutManager& manager):
-            manager_(manager) {start(THREAD_STATCK_SIZE);}
-          virtual ~LoadFamilyInfoThreadHelper() {}
-          void run();
-        private:
-          LayoutManager& manager_;
-          DISALLOW_COPY_AND_ASSIGN(LoadFamilyInfoThreadHelper);
-      };
-      typedef tbutil::Handle<LoadFamilyInfoThreadHelper> LoadFamilyInfoThreadHelperPtr;
-
-      private:
+     private:
       BuildPlanThreadHelperPtr build_plan_thread_;
       RunPlanThreadHelperPtr run_plan_thread_;
       CheckDataServerThreadHelperPtr check_dataserver_thread_;
@@ -262,7 +247,6 @@ namespace tfs
       BuildBalanceThreadHelperPtr balance_thread_;
       TimeoutThreadHelperPtr timeout_thread_;
       RedundantThreadHelperPtr redundant_thread_;
-      LoadFamilyInfoThreadHelperPtr load_family_info_thread_;
 
       time_t  zonesec_;
       time_t  last_rotate_log_time_;

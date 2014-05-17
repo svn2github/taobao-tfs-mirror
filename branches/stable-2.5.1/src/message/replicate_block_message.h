@@ -44,20 +44,26 @@ namespace tfs
           return static_cast<common::ReplicateBlockMoveFlag>(repl_block_.is_move_);
         }
 
-        inline void set_repl_block(const common::ReplBlock* repl_block)
+        inline void set_repl_block(const common::ReplBlock& repl_block)
         {
-          if (NULL != repl_block)
-          {
-            repl_block_ = *repl_block;
-          }
+          repl_block_ = repl_block;
         }
-        inline const common::ReplBlock* get_repl_block() const
+        inline const common::ReplBlock& get_repl_block() const
         {
-          return &repl_block_;
+          return repl_block_;
+        }
+        inline const common::BlockInfoV2& get_block_info() const
+        {
+          return source_block_info_;
+        }
+        inline void set_block_info(const common::BlockInfoV2& info)
+        {
+          source_block_info_ = info;
         }
       protected:
         int32_t status_;
         common::ReplBlock repl_block_;
+        common::BlockInfoV2 source_block_info_;
     };
   }
 }

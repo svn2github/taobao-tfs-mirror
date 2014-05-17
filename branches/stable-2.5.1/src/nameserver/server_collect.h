@@ -99,9 +99,10 @@ namespace tfs
       inline void set_report_block_status(const int8_t status) { rb_status_ = status;}
       inline bool is_report_block(const time_t now) const
       {
-        return (now >= next_report_block_time_
-                && now > rb_expired_time_
-                && rb_status_ != REPORT_BLOCK_FLAG_YES);
+        return ((now > next_report_block_time_
+                  && rb_status_ == REPORT_BLOCK_FLAG_NO)
+               || (now > rb_expired_time_
+                  && rb_status_ == REPORT_BLOCK_FLAG_YES));
       }
       inline int8_t get_report_block_status() const { return rb_status_;}
       inline void set_report_block_expire_time(const time_t now)
@@ -109,7 +110,7 @@ namespace tfs
         rb_status_ = REPORT_BLOCK_FLAG_YES;
         rb_expired_time_ = now + common::SYSPARAM_NAMESERVER.report_block_expired_time_;
       }
-      void set_next_report_block_time(const time_t now, const int64_t time_seed, const int32_t flag);
+      void set_next_report_block_time(const time_t now, const int64_t time_seed, const bool force);
       int choose_move_block_random(uint64_t& result) const;
       int expand_ratio(const float expand_ratio = 0.1);
       void copy_block(ServerCollect* server);
@@ -124,7 +125,7 @@ namespace tfs
       int for_each_(const uint64_t begin, const BLOCK_TABLE& table, common::ArrayHelper<uint64_t>& blocks) const;
       bool exist_(const uint64_t block, const BLOCK_TABLE& table) const;
       bool cleanup_invalid_block_(BlockCollect* block, const int64_t now);
-      void invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<std::pair<uint64_t, int32_t> >& helper, const uint64_t block);
+      void invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<ServerItem> helper, const uint64_t block);
       void write_block_oplog_(LayoutManager& manager, const int32_t cmd, const common::BlockInfoV2& info, const int64_t now);
 
       private:

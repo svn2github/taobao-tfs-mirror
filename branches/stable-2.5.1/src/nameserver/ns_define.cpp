@@ -115,10 +115,10 @@ namespace tfs
       if (startup)//startup
       {
         startup_time_ = now;
+        peer_role_ = NS_ROLE_SLAVE;
         apply_block_safe_mode_time_  = now;
         switch_time_  = now + common::SYSPARAM_NAMESERVER.safe_mode_time_;
         discard_newblk_safe_mode_time_ =  now + common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
-        peer_role_ = NS_ROLE_SLAVE;
         owner_role_ = common::Func::is_local_addr(vip_) == true ? NS_ROLE_MASTER : NS_ROLE_SLAVE;
         TBSYS_LOG(INFO, "i %s the master server", owner_role_ == NS_ROLE_MASTER ? "am" : "am not");
       }
@@ -127,15 +127,9 @@ namespace tfs
         owner_role_ = owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
         peer_role_ = owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
         apply_block_safe_mode_time_ = now + common::SYSPARAM_NAMESERVER.between_ns_and_ds_lease_expire_time_;
-        if (now - common::SYSPARAM_NAMESERVER.safe_mode_time_ > startup_time_)
-        {
-          switch_time_  = now + (common::SYSPARAM_NAMESERVER.safe_mode_time_ / 2);
-        }
-        else//这里有可能出现在第一次启动的时候，在safe_mode_time内又发生了切换,这种情况我们按初始状态处理
-        {
-          switch_time_  = now + common::SYSPARAM_NAMESERVER.safe_mode_time_;
+        if (now - common::SYSPARAM_NAMESERVER.safe_mode_time_ < startup_time_)
           discard_newblk_safe_mode_time_ =  now + common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
-        }
+        TBSYS_LOG(INFO, "i %s the master server", owner_role_ == NS_ROLE_MASTER ? "am" : "am not");
       }
     }
 
@@ -261,12 +255,12 @@ namespace tfs
       }
     }
 
-    void print_int64(const common::ArrayHelper<std::pair<uint64_t, int32_t> >&servers, std::stringstream& result)
+    void print_int64(const common::ArrayHelper<ServerItem> &servers, std::stringstream& result)
     {
       for (int64_t i = 0; i < servers.get_array_index(); ++i)
       {
-        std::pair<uint64_t, int32_t>* item = servers.at(i);
-        result << "/" << tbsys::CNetUtil::addrToString(item->first) << " : " << item->second;
+        ServerItem* iter = servers.at(i);
+        result << "/" << tbsys::CNetUtil::addrToString(iter->server_) << " : " << iter->family_id_ << " : " << iter->version_;
       }
     }
 
@@ -280,12 +274,12 @@ namespace tfs
       }
     }
 
-    void print_int64(const std::vector<std::pair<uint64_t, int32_t> >&servers, std::stringstream& result)
+    void print_int64(const std::vector<ServerItem>& servers, std::stringstream& result)
     {
-      std::vector<std::pair<uint64_t, int32_t> >::const_iterator iter = servers.begin();
+      std::vector<ServerItem>::const_iterator iter = servers.begin();
       for (; iter != servers.end(); ++iter)
       {
-        result << "/" << tbsys::CNetUtil::addrToString(iter->first) << " : " << iter->second;
+        result << "/" << tbsys::CNetUtil::addrToString(iter->server_) << " : " << iter->family_id_ << " : " << iter->version_;
       }
     }
 

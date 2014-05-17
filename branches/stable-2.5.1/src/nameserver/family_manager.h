@@ -77,11 +77,12 @@ namespace tfs
       typedef FAMILY_MAP::iterator FAMILY_MAP_ITER;
       typedef common::TfsSortedVector<MarshallingItem*, MarshallingItemCompare> MARSHALLING_MAP;
       typedef MARSHALLING_MAP::iterator MARSHALLING_MAP_ITER;
-    public:
+      public:
       explicit FamilyManager(LayoutManager& manager);
       virtual ~FamilyManager();
       int insert(const int64_t family_id, const int32_t family_aid_info,
           const common::ArrayHelper<std::pair<uint64_t, int32_t> >& member, const time_t now);
+      int del_family(const int64_t family_id);
       int update(const int64_t family_id, const uint64_t block, const int32_t version);
       bool exist(const int64_t family_id, const uint64_t block) const;
       bool exist(int32_t& version, const int64_t family_id, const uint64_t block, const int32_t new_version);
@@ -98,7 +99,6 @@ namespace tfs
       FamilyCollect* pop_from_reinstate_or_dissolve_queue();
       bool reinstate_or_dissolve_queue_empty() const;
       int64_t get_reinstate_or_dissolve_queue_size() const;
-      bool has_marshalling(int32_t& current_version, const int64_t family_id, const uint64_t block, const int32_t version) const;
       bool push_block_to_marshalling_queues(const BlockCollect* block, const time_t now);
       int push_block_to_marshalling_queues(const uint32_t rack, const uint64_t server, const uint64_t block);
       int marshalling_queue_timeout(const time_t now);
@@ -118,24 +118,26 @@ namespace tfs
       bool check_need_compact(const FamilyCollect* family, const time_t now) const;
       void dump_marshalling_queue(const int32_t level, const char* format = NULL) const;
       void clear_marshalling_queue();
-    private:
+      void clear_reinstate_or_dissolve_queue();
+      int64_t get_max_family_id(const int32_t chunk) { return max_family_ids_[chunk];}
+      void set_task_expired_time(const int64_t family_id, const int64_t now, const int32_t step);
+      private:
       DISALLOW_COPY_AND_ASSIGN(FamilyManager);
       FamilyCollect* get_(const int64_t family_id) const;
       int insert_(const int64_t family_id, const int32_t family_aid_info,
           const common::ArrayHelper<std::pair<uint64_t, int32_t> >& member, const time_t now);
       int get_members_(common::ArrayHelper<std::pair<uint64_t, int32_t> >& members, const int64_t family_id) const;
-      int get_members_(common::ArrayHelper<BlockCollect*>& members, const int64_t family_id) const;
-      int get_members_(common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> >& members, const int64_t family_id) const;
       common::RWLock& get_mutex_(const int64_t family_id) const;
       int32_t get_chunk_(const int64_t family_id) const;
-      bool has_marshalling_(int32_t& current_version, const int64_t family_id, const uint64_t block, const int32_t version) const;
-    private:
+      private:
       LayoutManager& manager_;
       MARSHALLING_MAP marshalling_queue_;
       mutable common::RWLock marshallin_queue_mutex_;
       FAMILY_MAP* families_[MAX_FAMILY_CHUNK_NUM];
       mutable common::RWLock mutexs_[MAX_FAMILY_CHUNK_NUM];
+      int64_t max_family_ids_[MAX_FAMILY_CHUNK_NUM];
 
+      tbutil::Mutex reinstate_or_dissolve_queue_mutex_;
       std::deque<int64_t> reinstate_or_dissolve_queue_;
     };
   }/** end namespace nameserver **/

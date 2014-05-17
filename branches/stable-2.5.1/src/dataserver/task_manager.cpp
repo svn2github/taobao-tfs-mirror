@@ -150,25 +150,24 @@ namespace tfs
     {
       int64_t seqno = message->get_seqno();
       int32_t expire_time = message->get_expire_time();
-      const ReplBlock* repl_info = message->get_repl_block();
+      const ReplBlock& repl_info = message->get_repl_block();
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       int ret = TFS_SUCCESS;
-      if ((NULL == repl_info) ||
-          (seqno < 0) || (expire_time <= 0) ||
-          (INVALID_BLOCK_ID == repl_info->block_id_) ||
-          (INVALID_SERVER_ID == repl_info->destination_id_))
+      if((seqno < 0) || (expire_time <= 0) ||
+          (INVALID_BLOCK_ID == repl_info.block_id_) ||
+          (INVALID_SERVER_ID == repl_info.destination_id_))
       {
         ret = EXIT_PARAMETER_ERROR;
       }
       else
       {
-        ret = check_source(repl_info->source_id_, repl_info->source_num_);
+        ret = check_source(repl_info.source_id_, repl_info.source_num_);
       }
 
       if (TFS_SUCCESS == ret)
       {
         ReplicateTask* task = new (std::nothrow) ReplicateTask(service_, seqno,
-            ds_info.ns_vip_port_, expire_time, *repl_info);
+            ds_info.ns_vip_port_, expire_time, repl_info);
         ret = add_task_queue(task);
         if (TFS_SUCCESS != ret)
         {

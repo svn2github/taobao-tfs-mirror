@@ -55,6 +55,7 @@ namespace tfs
         int send_msg_to_server(const uint64_t server, common::BasePacket* msg);
         const char* transform_type_to_str() const;
         const char* transform_status_to_str(const int8_t status) const;
+        int log(const int32_t type, common::BasePacket* msg);
       public:
         TaskManager& manager_;
         int64_t seqno_;
@@ -124,18 +125,6 @@ namespace tfs
         virtual int handle_complete(common::BasePacket* msg);
       private:
         DISALLOW_COPY_AND_ASSIGN(CompactTask);
-    };
-
-    class ResolveBlockVersionConflictTask : public ReplicateTask
-    {
-        friend class TaskManager;
-      public:
-        ResolveBlockVersionConflictTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers);
-        virtual ~ResolveBlockVersionConflictTask();
-        virtual int handle();
-        virtual int handle_complete(common::BasePacket* msg);
-      private:
-        DISALLOW_COPY_AND_ASSIGN(ResolveBlockVersionConflictTask);
     };
 
     class ECMarshallingTask : public Task

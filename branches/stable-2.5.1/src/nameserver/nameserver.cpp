@@ -112,6 +112,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         char spec[32] = {'\0'};
+        int32_t thread_count = get_work_thread_count();
         for (int32_t index = 1; index < SYSPARAM_NAMESERVER.business_port_count_ && TFS_SUCCESS == ret; ++index)
         {
           streamer_[index] = new (std::nothrow)common::BasePacketStreamer();
@@ -123,9 +124,15 @@ namespace tfs
           tbnet::IOComponent* com = transport_[index]->listen(spec, streamer_[index], this);
           ret = (NULL == com) ? EXIT_NETWORK_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
+          {
             transport_[index]->start();
+            work_threads_[index].setThreadParameter(thread_count, this, NULL);
+            work_threads_[index].start();
+          }
           else
+          {
             TBSYS_LOG(ERROR, "listen port %d failed, ret: %d", base_port + index, ret);
+          }
         }
       }
 
@@ -169,7 +176,7 @@ namespace tfs
       {
         const int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_THREAD_COUNT, 1);
         const int32_t report_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_THREAD_COUNT, 2);
-        ret = heart_manager_.initialize(heart_thread_count, report_thread_count, heart_base_port , SYSPARAM_NAMESERVER.heart_port_count_);
+        ret = heart_manager_.initialize(heart_thread_count, report_thread_count, heart_base_port );
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "initialize heart manager failed, must be exit, ret: %d", ret);
@@ -222,6 +229,8 @@ namespace tfs
             transport_[index]->stop();
             transport_[index]->wait();
           }
+          work_threads_[index].stop();
+          work_threads_[index].wait();
         }
 
         GFactory::destroy();
@@ -262,8 +271,11 @@ namespace tfs
           {
             bpacket->dump();
           }
+          uint64_t peer_id = connection->getPeerId();
           int32_t pcode = bpacket->getPCode();
           int32_t ret = common::TFS_ERROR;
+          int32_t index = ((peer_id & 0xFFFFFFFF) % SYSPARAM_NAMESERVER.business_port_count_);
+          tbnet::PacketQueueThread* work_thread = index == 0 ? &main_workers_ : &work_threads_[index];
           if (GFactory::get_runtime_info().is_master())
             ret = do_master_msg_helper(bpacket);
           else
@@ -281,7 +293,7 @@ namespace tfs
               layout_manager_.get_oplog_sync_mgr().push(bpacket, 0, false);
               break;
             default:
-              if (!main_workers_.push(bpacket, work_queue_size_, false))
+              if (!work_thread->push(bpacket, work_queue_size_, false))
               {
                 hret = tbnet::IPacketHandler::FREE_CHANNEL;
                 bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "%s, task message beyond max queue size, discard, peer ip: %s", get_ip_addr(),
@@ -667,9 +679,14 @@ namespace tfs
               for (iter = ns_ip_list.begin();iter != ns_ip_list.end(); ++iter)
               {
                 if (local_ip == (*iter))
+                {
                   ngi.owner_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), heart_base_port);
+                }
                 else
+                {
+                  ngi.sync_log_peer_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), base_port);
                   ngi.peer_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), heart_base_port);
+                }
               }
               ngi.switch_role(true);
             }

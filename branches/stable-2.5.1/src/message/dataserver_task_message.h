@@ -61,7 +61,7 @@ namespace tfs
         virtual ~RespDsReplicateBlockMessage();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
-        int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+        //int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         virtual int64_t length() const;
         inline int32_t get_status() const { return status_;}
         inline void set_status(const int32_t status) { status_ = status;}
@@ -79,7 +79,7 @@ namespace tfs
         virtual ~RespDsCompactBlockMessage();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
-        int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+        //int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         virtual int64_t length() const;
         inline int32_t get_status() const { return status_;}
         inline void set_status(const int32_t status) { status_ = status;}

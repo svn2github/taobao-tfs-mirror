@@ -116,7 +116,8 @@ namespace tfs
              ||(EXIT_ELEMENT_EXIST == ret))
             && (writable)
             && (master)
-            && (is_equal_group(block)))
+            && (is_equal_group(block))
+            && !IS_VERFIFY_BLOCK(block))
         {
           ret = writable_->insert_unique(result, block);
         }
@@ -159,7 +160,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != block) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = (!isfull && is_equal_group(block)) ? TFS_SUCCESS : EXIT_BLOCK_FULL;
+        ret = (!isfull && is_equal_group(block) && !IS_VERFIFY_BLOCK(block)) ? TFS_SUCCESS : EXIT_BLOCK_FULL;
         if (TFS_SUCCESS == ret)
         {
           RWLock::Lock lock(mutex_, WRITE_LOCKER);
@@ -248,6 +249,10 @@ namespace tfs
         }
         param.data_.writeInt64(time(NULL));
         param.data_.writeInt32(status_);
+        param.data_.writeInt64(rb_expired_time_);
+        param.data_.writeInt64(next_report_block_time_);
+        param.data_.writeInt8(disk_type_);
+        param.data_.writeInt8(rb_status_);
       }
 
       RWLock::Lock lock(mutex_, READ_LOCKER);
@@ -296,8 +301,8 @@ namespace tfs
 
     int ServerCollect::apply_block_for_update(LayoutManager& manager, ArrayHelper<BlockLease>& result)
     {
-      std::pair<uint64_t, int32_t> arrays[MAX_REPLICATION_NUM];
-      common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_REPLICATION_NUM, arrays);
+      ServerItem arrays[MAX_REPLICATION_NUM];
+      common::ArrayHelper<ServerItem> helper(MAX_REPLICATION_NUM, arrays);
       int64_t now = Func::get_monotonic_time();
       BlockManager& block_manager = manager.get_block_manager();
       for (int64_t index = 0; index < result.get_array_index(); ++index)
@@ -308,6 +313,7 @@ namespace tfs
         BlockCollect* pblock = NULL;
         int32_t& ret = entry->result_;
         ret = is_equal_group(entry->block_id_) ? TFS_SUCCESS : EXIT_BLOCK_NOT_IN_CURRENT_GROUP;
+        if (TFS_SUCCESS == ret)
         if (TFS_SUCCESS == ret)
         {
           pblock = block_manager.get(entry->block_id_);
@@ -341,10 +347,7 @@ namespace tfs
           block_manager.get_servers(servers, pblock);
           entry->size_ = servers.get_array_index();
           int32_t expect_size = pblock->is_in_family() ? 1 : common::SYSPARAM_NAMESERVER.max_replication_;
-          if (entry->size_ != expect_size)
-          {
-            ret = EXIT_BLOCK_COPIES_INCOMPLETE;
-          }
+          ret = entry->size_ != expect_size ? EXIT_BLOCK_COPIES_INCOMPLETE : TFS_SUCCESS;
         }
 
         if (TFS_SUCCESS != ret)
@@ -371,8 +374,8 @@ namespace tfs
         helper.clear();
         now = Func::get_monotonic_time();
         all_over = get_range_blocks(start, *writable_, helper);
-        std::pair<uint64_t, int32_t> arrays[MAX_REPLICATION_NUM];
-        common::ArrayHelper<std::pair<uint64_t, int32_t> > invalid_helper(MAX_REPLICATION_NUM, arrays);
+        ServerItem arrays[MAX_REPLICATION_NUM];
+        common::ArrayHelper<ServerItem> invalid_helper(MAX_REPLICATION_NUM, arrays);
         for (int64_t index = 0; index < helper.get_array_index() && result.get_array_index() < result.get_array_size(); ++index)
         {
           invalid_helper.clear();
@@ -412,13 +415,16 @@ namespace tfs
           }
         }
       }
+      std::stringstream rts;
+      print_lease(result, rts);
+      TBSYS_LOG(DEBUG, "%s apply block: %s", tbsys::CNetUtil::addrToString(id()).c_str(), rts.str().c_str());
       return TFS_SUCCESS;
     }
 
     int ServerCollect::renew_block(const ArrayHelper<BlockInfoV2>& input,LayoutManager& manager, ArrayHelper<BlockLease>& output)
     {
-      std::pair<uint64_t, int32_t> arrays[MAX_REPLICATION_NUM];
-      common::ArrayHelper<std::pair<uint64_t, int32_t> > invalid_helper(MAX_REPLICATION_NUM, arrays);
+      ServerItem arrays[MAX_REPLICATION_NUM];
+      common::ArrayHelper<ServerItem> invalid_helper(MAX_REPLICATION_NUM, arrays);
       BlockManager& block_manager = manager.get_block_manager();
       for (int64_t index = 0; index < input.get_array_index(); ++index)
       {
@@ -445,6 +451,7 @@ namespace tfs
           ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, result->servers_);
           block_manager.get_servers(servers, pblock);
           result->size_ = servers.get_array_index();
+          write_block_oplog_(manager, OPLOG_UPDATE, *entry, now);
         }
         else
         {
@@ -470,7 +477,7 @@ namespace tfs
         ret = (pblock != NULL) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
-          uint64_t server = pblock->get_server(0);
+          uint64_t server = pblock->get_master();
           ret = (id() == server) ? TFS_SUCCESS : EXIT_CANNOT_GIVEUP_LEASE;
         }
         if (TFS_SUCCESS == ret)
@@ -494,7 +501,7 @@ namespace tfs
       int32_t ret = (pblock != NULL) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
       if (TFS_SUCCESS == ret)
       {
-        uint64_t server = pblock->get_server(0);
+        uint64_t server = pblock->get_master();
         ret = (id() == server) ? TFS_SUCCESS : EXIT_CANNOT_GIVEUP_LEASE;
       }
       if (TFS_SUCCESS == ret)
@@ -584,12 +591,12 @@ namespace tfs
           ++right_index;
           same.push_back(right_element);
         }
-        else if (left_element < right_element->block_id_)
+        if (left_element < right_element->block_id_)
         {
           ++left_index;
           left.push_back(left_element);
         }
-        else if (right_element->block_id_ < left_element)
+        if (left_element > right_element->block_id_)
         {
           ++right_index;
           right.push_back(right_element);
@@ -609,45 +616,33 @@ namespace tfs
       return left.get_array_index() + right.get_array_index();
     }
 
-    void ServerCollect::set_next_report_block_time(const time_t now, const int64_t time_seed, const int32_t flag)
+    void ServerCollect::set_next_report_block_time(const time_t now, const int64_t time_seed, const bool force)
     {
+      time_t current = time(NULL), next = time(NULL);
+      int32_t SAFE_MODE_TIME = next_report_block_time_ > 0 ? SYSPARAM_NAMESERVER.safe_mode_time_ :
+          SYSPARAM_NAMESERVER.safe_mode_time_ - (now - GFactory::get_runtime_info().startup_time_);
+      SAFE_MODE_TIME = std::max(SAFE_MODE_TIME, 120);
       int32_t hour = SYSPARAM_NAMESERVER.report_block_time_upper_ - SYSPARAM_NAMESERVER.report_block_time_lower_ ;
-      time_t current = time(NULL);
-      time_t next    = current;
-      if (SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_SWITCH == flag)
+      if (common::SYSPARAM_NAMESERVER.report_block_time_interval_ > 0 && force)
       {
-        next += (time_seed % (hour * 3600));
-      }
-
-      if (SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_IMMEDIATELY == flag)
-      {
-        if (SYSPARAM_NAMESERVER.report_block_time_interval_ > 0)
-          next += (time_seed % 300);
-      }
-
-      if (SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_NONE == flag)
-      {
-        if (common::SYSPARAM_NAMESERVER.report_block_time_interval_ > 0)
-        {
-          next += (SYSPARAM_NAMESERVER.report_block_time_interval_ * 24 * 3600);
-          struct tm lt;
-          localtime_r(&next, &lt);
-          if (hour > 0)
-            lt.tm_hour = time_seed % hour + SYSPARAM_NAMESERVER.report_block_time_lower_;
-          else
-            lt.tm_hour = SYSPARAM_NAMESERVER.report_block_time_lower_;
-          lt.tm_min  = time_seed % 60;
-          lt.tm_sec =  time_seed % 60;
-          next = mktime(&lt);
-        }
+        next += (SYSPARAM_NAMESERVER.report_block_time_interval_ * 24 * 3600);
+        struct tm lt;
+        localtime_r(&next, &lt);
+        if (hour > 0)
+          lt.tm_hour = time_seed % hour + SYSPARAM_NAMESERVER.report_block_time_lower_;
         else
-        {
-          next += (SYSPARAM_NAMESERVER.report_block_time_interval_min_ * 60);
-        }
+          lt.tm_hour = SYSPARAM_NAMESERVER.report_block_time_lower_;
+        lt.tm_min  = time_seed % ((SAFE_MODE_TIME / 60) - 1);
+        lt.tm_sec  = time_seed % 60;
+        next = mktime(&lt);
+      }
+      else
+      {
+        next += (time_seed % SAFE_MODE_TIME);
       }
       time_t diff_sec = next - current;
       next_report_block_time_ = now + diff_sec;
-      TBSYS_LOG(DEBUG, "%s next: %"PRI64_PREFIX"d, diff: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d, hour: %d",
+      TBSYS_LOG(INFO, "%s next: %"PRI64_PREFIX"d, diff: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d, hour: %d",
         tbsys::CNetUtil::addrToString(id()).c_str(), next_report_block_time_, diff_sec, now, hour);
     }
 
@@ -679,8 +674,8 @@ namespace tfs
     void ServerCollect::copy_block(ServerCollect* server)
     {
       bool all_over = false;
-      const int32_t MAX_QUERY_NUM = 2048;
       uint64_t start = 0;
+      const int32_t MAX_QUERY_NUM = 2048;
       uint64_t blocks[MAX_QUERY_NUM];
       ArrayHelper<uint64_t> helper(MAX_QUERY_NUM, blocks);
       while (!all_over)
@@ -700,6 +695,8 @@ namespace tfs
     int ServerCollect::clear_(const int32_t args, LayoutManager& manager)
     {
       bool all_over = false;
+      BlockCollect*  pblock  = NULL;
+      ServerCollect* pserver = NULL;
       const int32_t MAX_QUERY_NUM = 2048;
       uint64_t start = 0, now = Func::get_monotonic_time();
       uint64_t blocks[MAX_QUERY_NUM];
@@ -714,11 +711,13 @@ namespace tfs
         {
           start = *helper.at(index);
           now   = Func::get_monotonic_time();
-          BlockCollect* pblock = block_manager.get(start);
-          if (SERVICE_STATUS_OFFLINE == get_status() && NULL != pblock)
+          pblock = block_manager.get(start);
+          if ((SERVICE_STATUS_OFFLINE == get_status())
+              && (NULL != pblock))
           {
-            ServerCollect* pserver = server_manager.get(id());
-            if (pblock->exist(id()) && (NULL == pserver))
+            pserver = server_manager.get(id());
+            if (pblock->exist(id())
+                && (NULL == pserver))
             {
               block_manager.relieve_relation(pblock, id(), now);
             }
@@ -786,16 +785,24 @@ namespace tfs
 
     bool ServerCollect::cleanup_invalid_block_(BlockCollect* block, const int64_t now)
     {
-      bool ret = false;
-      if (NULL != block)
+      bool ret = (NULL != block);
+      if (ret)
       {
+        ret = false;
         RWLock::Lock lock(mutex_, WRITE_LOCKER);
-        if (!block->is_writable() || !block->is_master(id()) || !block->has_valid_lease(now) || IS_VERFIFY_BLOCK(block->id()))
+        if (!block->is_writable()
+            || !block->is_master(id())
+            || !is_equal_group(block->id())
+            || !block->has_valid_lease(now)
+            || IS_VERFIFY_BLOCK(block->id()))
         {
           ret = true;
           remove_(block->id(), *issued_leases_);
         }
-        if (block->is_full() || !block->is_master(id()) || !is_equal_group(block->id()) || IS_VERFIFY_BLOCK(block->id()))
+        if (!block->is_full()
+            || !block->is_master(id())
+            || !is_equal_group(block->id())
+            || IS_VERFIFY_BLOCK(block->id()))
         {
           ret = true;
           remove_(block->id(), *writable_);
@@ -804,15 +811,15 @@ namespace tfs
       return ret;
     }
 
-    void ServerCollect::invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<std::pair<uint64_t, int32_t> >& helper, const uint64_t block)
+    void ServerCollect::invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<ServerItem> helper, const uint64_t block)
     {
       for (int64_t index = 0; index < helper.get_array_index(); ++index)
       {
-        std::pair<uint64_t, int32_t>* item = helper.at(index);
+        ServerItem* item = helper.at(index);
         assert(NULL != item);
-        ServerCollect* pserver = manager.get_server_manager().get(item->first);
+        ServerCollect* pserver = manager.get_server_manager().get(item->server_);
         manager.get_server_manager().relieve_relation(pserver, block);
-        manager.get_block_manager().push_to_delete_queue(block, item->first);
+        manager.get_block_manager().push_to_delete_queue(block, *item, GFactory::get_runtime_info().is_master());
       }
     }
 

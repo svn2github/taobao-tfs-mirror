@@ -133,9 +133,9 @@ namespace tfs
       {
         int32_t args = CALL_BACK_FLAG_NONE;
         pserver->set_status(SERVICE_STATUS_OFFLINE);
+        pserver->set(now, common::SYSPARAM_NAMESERVER.replicate_wait_time_);
         pserver->callback(reinterpret_cast<void*>(&args), manager_);
         pserver->set_wait_free_phase(OBJECT_WAIT_FREE_PHASE_CLEAR);
-        pserver->set(now, common::SYSPARAM_NAMESERVER.replicate_wait_time_);
       }
       TBSYS_LOG(DEBUG, "dataserver %s giveup lease: %s, ret: %d", tbsys::CNetUtil::addrToString(server).c_str(),
         TFS_SUCCESS == ret ? "successful" : "failed", ret);
@@ -190,7 +190,7 @@ namespace tfs
     {
       ServerCollect* pserver = NULL;
       int32_t expire_count = 0;
-      const int32_t MAX_TRAVERSE_COUNT = 256;
+      const int32_t MAX_TRAVERSE_COUNT = 512;
       ServerCollect* entry[MAX_TRAVERSE_COUNT];
       ArrayHelper<ServerCollect*> helper(MAX_TRAVERSE_COUNT, entry);
       all_over = traverse(last_traverse_server, servers_, helper);
@@ -435,14 +435,14 @@ namespace tfs
       return traverse(begin, this->servers_, result);
     }
 
-    void ServerManager::set_all_server_next_report_time(const int32_t flag , const time_t now)
+    void ServerManager::set_all_server_next_report_time(const time_t now)
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
       SERVER_TABLE_ITER iter = servers_.begin();
       for (; iter != servers_.end(); ++iter)
       {
         assert(NULL != (*iter));
-        (*iter)->set_next_report_block_time(now, random() % 0xFFFFFFF, flag);
+        (*iter)->set_next_report_block_time(now, random() % 0xFFFFFFF, false);
       }
     }
 
@@ -690,13 +690,6 @@ namespace tfs
         int32_t& max_rw_network_bandwith, const DataServerStatInfo& info) const
     {
       UNUSED(info);
-      /*if (info.total_network_bandwith_ > 0)
-        {
-        int32_t capacity = info.total_network_bandwith_ / 12;
-        max_mr_network_bandwith = capacity * SYSPARAM_NAMESERVER.max_mr_network_bandwith_ratio_ / 100;
-        max_rw_network_bandwith = capacity * SYSPARAM_NAMESERVER.max_rw_network_bandwith_ratio_ / 100;
-        }*/
-
       int32_t capacity = SYSPARAM_NAMESERVER.max_single_machine_network_bandwith_ / 12;
       max_mr_network_bandwith = capacity * SYSPARAM_NAMESERVER.max_mr_network_bandwith_ratio_ / 100;
       max_rw_network_bandwith = capacity * SYSPARAM_NAMESERVER.max_rw_network_bandwith_ratio_ / 100;
@@ -788,69 +781,6 @@ namespace tfs
         }
       }
     }
-
-    /*int ServerManager::choose_writable_block(BlockCollect*& result)
-    {
-      result = NULL;
-      rwmutex_.rdlock();
-      int64_t index = 0, count = servers_.size();
-      rwmutex_.unlock();
-      int32_t ret = TFS_SUCCESS;
-      ServerCollect* server = NULL;
-      for (index= 0; index < count && NULL == result; ++index)
-      {
-        result = NULL;
-        ret = choose_writable_server_lock_(server);
-        if (TFS_SUCCESS != ret || NULL == server)
-          continue;
-        ret = server->choose_writable_block(manager_, result);
-      }
-
-      if (NULL == result)
-      {
-        for (index = 0; index < count && NULL == result; ++index)
-        {
-          result = NULL;
-          ret = choose_writable_server_random_lock_(server);
-          if (TFS_SUCCESS != ret || NULL == server)
-            continue;
-          ret = server->choose_writable_block(manager_, result);
-        }
-      }
-      return NULL == result ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-    }
-
-    int ServerManager::choose_writable_server_lock_(ServerCollect*& result)
-    {
-      result = NULL;
-      RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      int32_t ret = servers_.empty() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
-      if (TFS_SUCCESS == ret)
-      {
-        int32_t index = write_index_;
-        ++write_index_;
-        if (write_index_ >= servers_.size())
-          write_index_ = 0;
-        if (index >= servers_.size())
-          index = 0;
-        result = servers_.at(index);
-        assert(NULL != result);
-      }
-      return NULL != result ? TFS_SUCCESS : EXIT_NO_DATASERVER;
-    }
-
-    int ServerManager::choose_writable_server_random_lock_(ServerCollect*& result)
-    {
-      result = NULL;
-      RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      int32_t ret = !servers_.empty() ? TFS_SUCCESS : EXIT_NO_DATASERVER;
-      if (TFS_SUCCESS == ret)
-      {
-        result = servers_.at(random() % servers_.size());
-        assert(NULL != result);
-      }
-      return NULL != result ? TFS_SUCCESS : EXIT_NO_DATASERVER;
-    }*/
 
     int ServerManager::choose_replciate_random_choose_server_base_lock_(ServerCollect*& result,
         const common::ArrayHelper<uint64_t>& except, const std::set<uint32_t>& lans) const

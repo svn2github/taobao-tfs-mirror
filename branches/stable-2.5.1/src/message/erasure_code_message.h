@@ -27,6 +27,7 @@ namespace tfs
         virtual ~ECMarshallingMessage();
         virtual int serialize(common::Stream& output) const;
         virtual int deserialize(common::Stream& input);
+        virtual int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         virtual int64_t length() const;
         virtual void dump(void) const;
         inline int64_t get_family_id() const { return family_id_;}
@@ -44,17 +45,20 @@ namespace tfs
     class ECMarshallingCommitMessage : virtual public ECMarshallingMessage
     {
       public:
-      ECMarshallingCommitMessage();
+      ECMarshallingCommitMessage(const bool forward = false);
       virtual ~ECMarshallingCommitMessage();
       virtual int serialize(common::Stream& output) const;
       virtual int deserialize(common::Stream& input);
+      virtual int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       virtual int64_t length() const;
       virtual void dump(void) const;
       inline int8_t get_status() const { return status_;}
       inline void set_status(const int8_t status) { status_ = status;}
+      inline bool get_forward() const { return forward_;}
       private:
       DISALLOW_COPY_AND_ASSIGN(ECMarshallingCommitMessage);
       int8_t status_;
+      bool forward_;
     };
 
     class ECReinstateMessage : virtual public ECMarshallingMessage
@@ -69,10 +73,11 @@ namespace tfs
     class ECReinstateCommitMessage: virtual public ECMarshallingCommitMessage
     {
       public:
-        ECReinstateCommitMessage();
+        ECReinstateCommitMessage(const bool forward = false);
         virtual ~ECReinstateCommitMessage();
         virtual int serialize(common::Stream& output) const;
         virtual int deserialize(common::Stream& input);
+        virtual int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         virtual int64_t length() const;
         int32_t get_reinstate_num() const;
         common::BlockInfoV2* get_reinstate_block_info();
@@ -95,7 +100,7 @@ namespace tfs
     class ECDissolveCommitMessage : virtual public ECMarshallingCommitMessage
     {
       public:
-        ECDissolveCommitMessage();
+        ECDissolveCommitMessage(const bool forward = false);
         virtual ~ECDissolveCommitMessage();
       private:
         DISALLOW_COPY_AND_ASSIGN(ECDissolveCommitMessage);

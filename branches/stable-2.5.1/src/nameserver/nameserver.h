@@ -110,6 +110,7 @@ namespace tfs
     private:
       common::BasePacketStreamer* streamer_[common::MAX_LISTEN_PORT_NUM];
       tbnet::Transport* transport_[common::MAX_LISTEN_PORT_NUM];
+      tbnet::PacketQueueThread work_threads_[common::MAX_LISTEN_PORT_NUM];
     };
   }/** nameserver **/
 }/** tfs **/

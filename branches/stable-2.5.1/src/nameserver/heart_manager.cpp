@@ -53,27 +53,27 @@ namespace tfs
     HeartManagement::~HeartManagement()
     {
       tbsys::gDelete(packet_factory_);
-      for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
+      for (int32_t index = 0; index < SYSPARAM_NAMESERVER.heart_port_count_; ++index)
       {
         tbsys::gDelete(streamer_[index]);
         tbsys::gDelete(transport_[index]);
       }
     }
 
-    int HeartManagement::initialize(const int32_t keepalive_thread_count,const int32_t report_block_thread_count, const int32_t base_port, const int32_t port_num)
+    int HeartManagement::initialize(const int32_t keepalive_thread_count,const int32_t report_block_thread_count, const int32_t base_port)
     {
-      int32_t ret = (port_num <= MAX_LISTEN_PORT_NUM && port_num > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (keepalive_thread_count > 0 && report_block_thread_count > 0 && SYSPARAM_NAMESERVER.heart_port_count_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        keepalive_threads_.setThreadParameter(keepalive_thread_count, &keepalive_queue_header_, this);
-        report_block_threads_.setThreadParameter(report_block_thread_count, &report_block_queue_header_, this);
-        keepalive_threads_.start();
-        report_block_threads_.start();
         packet_factory_ = new (std::nothrow)message::MessageFactory();
         assert(NULL != packet_factory_);
         char spec[32] = {'\0'};
-        for (int32_t index = 0; index < port_num && TFS_SUCCESS == ret; ++index)
+        for (int32_t index = 0; index < SYSPARAM_NAMESERVER.heart_port_count_ && TFS_SUCCESS == ret; ++index)
         {
+          keepalive_threads_[index].setThreadParameter(keepalive_thread_count, &keepalive_queue_header_, this);
+          report_block_threads_[index].setThreadParameter(report_block_thread_count, &report_block_queue_header_, this);
+          keepalive_threads_[index].start();
+          report_block_threads_[index].start();
           streamer_[index] = new (std::nothrow)common::BasePacketStreamer();
           assert(NULL != streamer_[index]);
           streamer_[index]->set_packet_factory(packet_factory_);
@@ -93,24 +93,24 @@ namespace tfs
 
     void HeartManagement::wait_for_shut_down()
     {
-      for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
+      for (int32_t index = 0; index < SYSPARAM_NAMESERVER.heart_port_count_; ++index)
       {
         if (NULL != transport_[index])
           transport_[index]->wait();
+        keepalive_threads_[index].wait();
+        report_block_threads_[index].wait();
       }
-      keepalive_threads_.wait();
-      report_block_threads_.wait();
     }
 
     void HeartManagement::destroy()
     {
-      for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
+      for (int32_t index = 0; index < SYSPARAM_NAMESERVER.heart_port_count_; ++index)
       {
         if (NULL != transport_[index])
           transport_[index]->stop();
+        keepalive_threads_[index].stop(true);
+        report_block_threads_[index].stop(true);
       }
-      keepalive_threads_.stop(true);
-      report_block_threads_.stop(true);
     }
 
     tbnet::IPacketHandler::HPRetCode HeartManagement::handlePacket(tbnet::Connection *connection, tbnet::Packet *packet)
@@ -119,7 +119,7 @@ namespace tfs
       bool bret = (NULL != connection) && (NULL != packet);
       if (bret)
       {
-        TBSYS_LOG(DEBUG, "receive pcode : %d", packet->getPCode());
+        TBSYS_LOG(DEBUG, "receive pcode : %d, peer ip %s", packet->getPCode(), tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
         if (!packet->isRegularPacket())
         {
           bret = false;
@@ -138,17 +138,20 @@ namespace tfs
             bpacket->dump();
           }
           int32_t ret   = TFS_SUCCESS;
-          int32_t pcode = bpacket->getPCode();
+          const int32_t pcode = bpacket->getPCode();
+          uint64_t id = connection->getPeerId();
+          const int32_t index = (id & 0xFFFFFFFF) % SYSPARAM_NAMESERVER.heart_port_count_;
           hret = tbnet::IPacketHandler::KEEP_CHANNEL;
+
           switch (pcode)
           {
           case DS_APPLY_LEASE_MESSAGE:
           case DS_RENEW_LEASE_MESSAGE:
           case DS_GIVEUP_LEASE_MESSAGE:
-            ret = keepalive_threads_.push(bpacket, SYSPARAM_NAMESERVER.keepalive_queue_size_, false) ? TFS_SUCCESS : EXIT_QUEUE_FULL_ERROR;
+            ret = keepalive_threads_[index].push(bpacket, SYSPARAM_NAMESERVER.keepalive_queue_size_, false) ? TFS_SUCCESS : EXIT_QUEUE_FULL_ERROR;
           break;
           case REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
-            ret = report_block_threads_.push(bpacket, SYSPARAM_NAMESERVER.report_block_queue_size_, false) ? TFS_SUCCESS : EXIT_QUEUE_FULL_ERROR;
+            ret = report_block_threads_[index].push(bpacket, SYSPARAM_NAMESERVER.report_block_queue_size_, false) ? TFS_SUCCESS : EXIT_QUEUE_FULL_ERROR;
           break;
           default:
             ret  = EXIT_UNKNOWN_MSGTYPE;
@@ -157,7 +160,7 @@ namespace tfs
           }
           if (TFS_SUCCESS != ret)
           {
-            bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, unknown msg type: %d, discard, peer ip: %s", manager_.get_ip_addr(), pcode,
+            bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),ret, "%s, unknown msg type: %d, discard, peer ip: %s", manager_.get_ip_addr(), pcode,
                 tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
             bpacket->free();
           }
@@ -213,8 +216,8 @@ namespace tfs
           msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
         }
         TIMER_END();
-        TBSYS_LOG(DEBUG, "dataserver: %s %s %s consume times: %"PRI64_PREFIX"d(us), ret: %d", CNetUtil::addrToString(server).c_str(),
-            transform_type_to_str_(pcode) ,TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(), ret);
+        TBSYS_LOG(DEBUG, "dataserver: %s %s %s consume times: %"PRI64_PREFIX"d(us), ret: %d, port index: %"PRI64_PREFIX"u", CNetUtil::addrToString(server).c_str(),
+            transform_type_to_str_(pcode) ,TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(), ret, (server & 0xFFFFFFFF) % SYSPARAM_NAMESERVER.heart_port_count_);
       }
       return bret;
     }
@@ -229,18 +232,11 @@ namespace tfs
       {
         TIMER_START();
         int32_t ret = TFS_SUCCESS;
-        uint64_t server = INVALID_SERVER_ID;
-        int32_t block_count = 0;
         int32_t pcode = packet->getPCode();
         switch (pcode)
         {
         case REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
-        {
-          ReportBlocksToNsRequestMessage* msg = dynamic_cast<ReportBlocksToNsRequestMessage*>(packet);
-          server = msg->get_server();
-          block_count =msg->get_block_count();
           ret = manager_.report_block_(packet);
-        }
         break;
         default :
          ret = EXIT_UNKNOWN_MSGTYPE;
@@ -346,19 +342,19 @@ namespace tfs
     int HeartManagement::report_block_(tbnet::Packet* packet)
     {
       TIMER_START();
-      uint64_t server = 0;
+      uint64_t server = 0, id = 0;
       int32_t block_nums = 0, expire_nums = 0, result = 0;
       int32_t ret = (NULL != packet && REQ_REPORT_BLOCKS_TO_NS_MESSAGE == packet->getPCode()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        tbutil::Time begin = tbutil::Time::now();
+        time_t now = Func::get_monotonic_time();
         ReportBlocksToNsRequestMessage* message = dynamic_cast<ReportBlocksToNsRequestMessage*> (packet);
         assert(REQ_REPORT_BLOCKS_TO_NS_MESSAGE == packet->getPCode());
+        id = message->get_connection()->getPeerId();
         server = message->get_server();
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         ReportBlocksToNsResponseMessage* result_msg = new ReportBlocksToNsResponseMessage();
         result_msg->set_server(ngi.owner_ip_port_);
-        time_t now = Func::get_monotonic_time();
         ArrayHelper<BlockInfoV2> blocks(message->get_block_count(), message->get_blocks_ext(), message->get_block_count());
 			  result = ret = manager_.get_layout_manager().get_client_request_server().report_block(
           result_msg->get_blocks(), server, now, blocks);
@@ -368,9 +364,9 @@ namespace tfs
 			  ret = message->reply(result_msg);
       }
       TIMER_END();
-      TBSYS_LOG(INFO, "dataserver: %s report block %s, ret: %d, blocks: %d, cleanup family id blocks: %d,consume time: %"PRI64_PREFIX"u(us)",
+      TBSYS_LOG(INFO, "dataserver: %s report block %s, ret: %d, blocks: %d, cleanup family id blocks: %d,consume time: %"PRI64_PREFIX"u(us), port index: %"PRI64_PREFIX"u",
          CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed",
-         result , block_nums, expire_nums, TIMER_DURATION());
+         result , block_nums, expire_nums, TIMER_DURATION(), (id & 0xFFFFFFFFF) % SYSPARAM_NAMESERVER.heart_port_count_);
       return ret;
     }
 
