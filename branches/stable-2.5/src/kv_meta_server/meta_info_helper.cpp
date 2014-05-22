@@ -723,7 +723,7 @@ namespace tfs
         const int64_t length,
         common::ObjectInfo *object_info, bool* still_have)
     {
-      int ret = (bucket_name.size() > 0 && file_name.size() > 0 && length >= 0
+      int ret = (bucket_name.size() > 0 && file_name.size() > 0 && length > 0
           && offset >= 0 && object_info != NULL && still_have != NULL) ? TFS_SUCCESS : TFS_ERROR;
       ret = TFS_SUCCESS;
       common::ObjectInfo object_info_zero;
@@ -793,7 +793,7 @@ namespace tfs
           KvKey start_key;
           KvKey end_key;
           int64_t start_offset = offset;
-          int64_t end_offset = offset + length;
+          int64_t end_offset = offset + length - 1;
           if (TFS_SUCCESS == ret)
           {
             ret = serialize_key(bucket_name, file_name, start_offset,
