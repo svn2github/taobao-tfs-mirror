@@ -259,7 +259,7 @@ namespace tfs
         string fail_path = data_dir + "/fail";
 
         succ_fp_ = fopen(succ_path.c_str(), "a+");
-        fail_fp_ = fopen(fail_path.c_str(), "a");
+        fail_fp_ = fopen(fail_path.c_str(), "w+");
         ret = ((NULL != succ_fp_) && (NULL != fail_fp_)) ? TFS_SUCCESS : TFS_ERROR;
 
         set<string> done;
