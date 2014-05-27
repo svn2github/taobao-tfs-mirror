@@ -268,10 +268,9 @@ namespace tfs
 
     bool BlockCollect::check_marshalling(const time_t now) const
     {
-      //TODO
-      /*bool ret = (!is_creating() && !is_in_family() && !in_replicate_queue() && !has_valid_lease(now) && is_full()
+      bool ret = (!is_creating() && !is_in_family() && !in_replicate_queue() && !has_valid_lease(now) && is_full()
               && expire(now) && check_copies_complete() && size() <= MAX_MARSHALLING_BLOCK_SIZE_LIMIT
-              && !IS_VERFIFY_BLOCK(id()));
+              && !IS_VERFIFY_BLOCK(id()) && info_.file_count_ <= MAX_MARSHALLING_FILE_COUNT);
       if (ret)
       {
         const int32_t server_size = servers_.size();
@@ -286,9 +285,7 @@ namespace tfs
                 && marshalling_visit_time >= SYSPARAM_NAMESERVER.marshalling_visit_time_);
         }
       }
-      return ret;*/
-      return (!is_creating() && !is_in_family() && !in_replicate_queue() && !has_valid_lease(now)
-              && is_full() && expire(now) && check_copies_complete() && size() <= MAX_MARSHALLING_BLOCK_SIZE_LIMIT);
+      return ret;
     }
 
     bool BlockCollect::check_reinstate(const time_t now) const

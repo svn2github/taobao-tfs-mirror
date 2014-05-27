@@ -368,12 +368,15 @@ namespace tfs
           snprintf(buf, buf_length, "dataserver server: %s no exist in nameserver or is not alive, block: %"PRI64_PREFIX"u ret: %d", CNetUtil::addrToString(info.value1_).c_str(), info.value3_, ret);
       }
 
-      if (info.value4_ != HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION
-        && block_manager.get_servers_size(info.value3_) <= 0)
+      if (info.value4_ != HANDLE_DELETE_BLOCK_FLAG_ONLY_DS)
       {
-        pblock = NULL;
-        block_manager.remove(pblock, info.value3_);
-        manager_.get_gc_manager().insert(pblock, now);
+        if (info.value4_ == HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION
+            || block_manager.get_servers_size(info.value3_) <= 0)
+        {
+          pblock = NULL;
+          block_manager.remove(pblock, info.value3_);
+          manager_.get_gc_manager().insert(pblock, now);
+        }
       }
       TBSYS_LOG(INFO, "handle control remove block: %"PRI64_PREFIX"u, flag: %"PRI64_PREFIX"u, server: %s, ret: %d",
           info.value3_, info.value4_, CNetUtil::addrToString(info.value1_).c_str(), ret);
@@ -592,26 +595,25 @@ namespace tfs
     // remove family from db, clear family id
     int ClientRequestServer::handle_control_delete_family(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
-      int32_t ret = (info.value3_ == INVALID_FAMILY_ID) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-      FamilyManager& family_manager = manager_.get_family_manager();
-      if (TFS_SUCCESS == ret
-        && info.value4_ & DELETE_FAMILY_IN_STORE)
+      TBSYS_LOG(INFO, "handle control remove family: %"PRI64_PREFIX"u, flag: %"PRI64_PREFIX"u",
+          info.value3_, info.value1_);
+
+      int32_t ret = (info.value3_ <= 0) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
-        ret = manager_.get_oplog_sync_mgr().del_family(info.value3_);
-      }
-      if ((info.value4_ & DELETE_FAMILY_IN_MEMORY)
-          && info.value3_ != INVALID_FAMILY_ID)
-      {
-        ret = (info.value4_ & DELETE_FAMILY_IN_STORE) ? ret : TFS_SUCCESS;
-        if (TFS_SUCCESS == ret)
+        OpLogSyncManager& oplogmgr = manager_.get_oplog_sync_mgr();
+        ret = oplogmgr.del_family(info.value3_);
+        if (TFS_SUCCESS == ret || info.value1_)
         {
-          ret = family_manager.del_family(info.value3_);
+          ret = manager_.get_family_manager().del_family(info.value3_);
         }
       }
+
       if (TFS_SUCCESS != ret)
       {
         snprintf(buf, buf_length, "del family %"PRI64_PREFIX"d fail, ret: %d", info.value3_, ret);
       }
+
       return ret;
     }
 

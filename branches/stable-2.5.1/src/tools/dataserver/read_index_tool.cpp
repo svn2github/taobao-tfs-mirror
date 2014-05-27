@@ -38,6 +38,7 @@ void dump_index_header(const IndexHeaderV2& header)
   printf("update file count:         %d\n", header.info_.update_file_count_);
   printf("update file size:          %d\n",  header.info_.update_size_);
   printf("used offset:               %d\n", header.used_offset_);
+  printf("seq no:                    %d\n", header.seq_no_);
   printf("marshalling offset:        %d\n", header.marshalling_offset_);
   printf("available offset:          %d\n", header.avail_offset_);
   printf("hash slot(index num):      %d\n", header.file_info_bucket_size_);

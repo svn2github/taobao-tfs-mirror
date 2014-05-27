@@ -795,6 +795,7 @@ namespace tfs
         msg.set_master_id(file_.get_write_ds());
         msg.set_ds(file_.ds_);
         msg.set_crc(file_.crc_);
+        msg.set_flag(file_.opt_flag_);
         msg.set_status(status);
         if (file_.has_family())
         {

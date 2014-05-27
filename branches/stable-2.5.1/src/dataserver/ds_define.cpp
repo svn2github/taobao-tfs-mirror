@@ -91,6 +91,20 @@ namespace tfs
       return instance_;
     }
 
+    void interruptable_usleep(const int64_t usec)
+    {
+      assert(usec >= 0);
+      int64_t elapsed = 0;
+      int64_t t = 0;
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      while (elapsed < usec && !ds_info.is_destroyed())
+      {
+        t = std::min(100000L, usec - elapsed);
+        usleep(t);
+        elapsed += t;
+      }
+    }
+
     void DsRuntimeGlobalInformation::dump(const int32_t level, const char* file, const int32_t line,
         const char* function, const char* format, ...)
     {

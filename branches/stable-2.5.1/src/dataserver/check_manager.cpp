@@ -81,7 +81,7 @@ namespace tfs
         else
         {
           mutex_.unlock();
-          sleep(SLEEP_TIME_S);
+          interruptable_usleep(SLEEP_TIME_S * 1000000);
         }
       }
     }
@@ -164,15 +164,16 @@ namespace tfs
 
     void CheckManager::check_block(const CheckParam& param, vector<CheckResult>& result)
     {
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       vector<uint64_t>::const_iterator iter = param.blocks_.begin();
-      for ( ; iter != param.blocks_.end(); iter++)
+      for ( ; iter != param.blocks_.end() && !ds_info.is_destroyed(); iter++)
       {
         CheckResult current;
         check_single_block(*iter, param.peer_id_, param.flag_, current);
         result.push_back(current);
         if (param.interval_ > 0)
         {
-          usleep(param.interval_ * 1000);
+          interruptable_usleep(param.interval_ * 1000);
         }
       }
     }

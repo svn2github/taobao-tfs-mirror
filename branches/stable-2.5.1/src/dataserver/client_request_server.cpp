@@ -1248,6 +1248,7 @@ namespace tfs
       ECMeta& ec_meta = message->get_ec_meta();
       int8_t switch_flag = message->get_switch_flag();
       int8_t unlock_flag = message->get_unlock_flag();
+      uint64_t peer_id = message->get_connection()->getPeerId();
 
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
@@ -1260,9 +1261,10 @@ namespace tfs
       }
 
       TBSYS_LOG_IW(ret, "commit ec meta %s. blockid: %"PRI64_PREFIX"u, familyid: %"PRI64_PREFIX"d, "
-          "used_offset: %d, marshalling_offset: %d, version_step: %d, ret: %d",
+          "used_offset: %d, marshalling_offset: %d, version_step: %d, peer_ip: %s, ret: %d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, ec_meta.family_id_,
-          ec_meta.used_offset_, ec_meta.mars_offset_, ec_meta.version_step_, ret);
+          ec_meta.used_offset_, ec_meta.mars_offset_, ec_meta.version_step_,
+          tbsys::CNetUtil::addrToString(peer_id).c_str(), ret);
 
       return ret;
     }

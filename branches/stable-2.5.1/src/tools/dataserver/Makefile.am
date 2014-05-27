@@ -13,7 +13,8 @@ bin_PROGRAMS = clear_file_system\
 							 convert_name\
                reverse_name\
 							 check_down_disk_data\
-               check_super_block
+               check_super_block \
+							 safe_remove_block
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
@@ -43,6 +44,8 @@ format_file_system_SOURCES = format_file_system.cpp
 read_index_tool_SOURCES = read_index_tool.cpp
 
 check_down_disk_data_SOURCES = check_down_disk_data.cpp
+
+safe_remove_block_SOURCES = safe_remove_block.cpp
 
 #recover_disk_data_to_clusterv2_SOURCES = recover_disk_data_to_cluster_v2.cpp
 

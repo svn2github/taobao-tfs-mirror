@@ -212,6 +212,7 @@ namespace tfs
 
     static const int32_t MAX_INDEX_ELEMENT_NUM = UINT16_MAX;
     static const int32_t MAX_SINGLE_BLOCK_FILE_COUNT = MAX_INDEX_ELEMENT_NUM - 1;
+    static const int32_t MAX_MARSHALLING_FILE_COUNT = 8000;
     static const int32_t MAX_MAIN_AND_EXT_BLOCK_SIZE = 320 * 1024 * 1024;
 
     static const int32_t MAX_SINGLE_FILE_SIZE = 16 * 1024 * 1024;//16MB

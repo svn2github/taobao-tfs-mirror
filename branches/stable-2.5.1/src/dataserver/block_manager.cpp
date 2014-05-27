@@ -930,7 +930,7 @@ namespace tfs
             info.mmap_option_.max_mmap_size_ = max_count * pagesize;
           info.max_hash_bucket_count_ = MAX_INDEX_ELEMENT_NUM;
           info.mmap_option_.max_mmap_size_ = std::max(MAX_MMAP_SIZE, info.mmap_option_.max_mmap_size_);
-          const int32_t INDEXFILE_SAFE_MULT = 4;
+          const int32_t INDEXFILE_SAFE_MULT = 15;
           const int32_t avg_index_file_size = (avg_file_count + 1) * INDEXFILE_SAFE_MULT * FILE_INFO_V2_LENGTH + INDEX_HEADER_V2_LENGTH;
 
           info.used_main_block_count_  = 0;
