@@ -598,17 +598,22 @@ namespace tfs
       TBSYS_LOG(INFO, "handle control remove family: %"PRI64_PREFIX"u, flag: %"PRI64_PREFIX"u",
           info.value3_, info.value1_);
 
-      int32_t ret = (info.value3_ <= 0) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-      if (TFS_SUCCESS == ret)
+      int32_t ret = (info.value3_ == INVALID_FAMILY_ID) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      FamilyManager& family_manager = manager_.get_family_manager();
+      if (TFS_SUCCESS == ret
+        && info.value4_ & DELETE_FAMILY_IN_STORE)
       {
-        OpLogSyncManager& oplogmgr = manager_.get_oplog_sync_mgr();
-        ret = oplogmgr.del_family(info.value3_);
-        if (TFS_SUCCESS == ret || info.value1_)
+        ret = manager_.get_oplog_sync_mgr().del_family(info.value3_);
+      }
+      if ((info.value4_ & DELETE_FAMILY_IN_MEMORY)
+          && info.value3_ != INVALID_FAMILY_ID)
+      {
+        ret = (info.value4_ & DELETE_FAMILY_IN_STORE) ? ret : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
         {
-          ret = manager_.get_family_manager().del_family(info.value3_);
+          ret = family_manager.del_family(info.value3_);
         }
       }
-
       if (TFS_SUCCESS != ret)
       {
         snprintf(buf, buf_length, "del family %"PRI64_PREFIX"d fail, ret: %d", info.value3_, ret);

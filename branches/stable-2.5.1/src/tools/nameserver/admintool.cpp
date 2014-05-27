@@ -132,7 +132,7 @@ void init()
   g_cmd_map["removeblk"] = CmdNode("removeblk blockid [flag|dsip:port]",
       "remove block. flag: 1--remove block from both ds and ns, 2--just relieve relation from ns, default is 1.",
       1, 3, cmd_remove_block);
-  g_cmd_map["removefamily"] = CmdNode("removefamily family_id flag", "remove family. falg 1--store, 2--memory, default: store & memory", 1, 2, cmd_remove_family);
+  g_cmd_map["removefamily"] = CmdNode("removefamily family_id flag", "remove family. flag 1--store, 2--memory, default: store | memory", 1, 2, cmd_remove_family);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list.", 1, 1, cmd_list_block);
   //g_cmd_map["loadblk"] = CmdNode("loadblk blockid dsip:port", "build relationship between block and dataserver.", 2, 2, cmd_load_block);
   g_cmd_map["clearsystemtable"] = CmdNode("clearsystemtable", "clear system table 1--task, 2--last_write block, 4--report block server, 8--delete block queue.", 1, 1, cmd_clear_system_table);

@@ -314,7 +314,6 @@ namespace tfs
         int32_t& ret = entry->result_;
         ret = is_equal_group(entry->block_id_) ? TFS_SUCCESS : EXIT_BLOCK_NOT_IN_CURRENT_GROUP;
         if (TFS_SUCCESS == ret)
-        if (TFS_SUCCESS == ret)
         {
           pblock = block_manager.get(entry->block_id_);
           ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
