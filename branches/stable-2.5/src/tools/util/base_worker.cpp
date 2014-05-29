@@ -238,7 +238,7 @@ namespace tfs
       {
         if (access(log_file.c_str(), R_OK) == 0)
         {
-          char old_log_file[256];
+          char old_log_file[MAX_LINE_LENGTH];
           snprintf(old_log_file, sizeof(old_log_file), "%s.%s",
               log_file.c_str(), Func::time_to_str(time(NULL), 1).c_str());
           rename(log_file.c_str(), old_log_file);
@@ -259,14 +259,14 @@ namespace tfs
         string fail_path = data_dir + "/fail";
 
         succ_fp_ = fopen(succ_path.c_str(), "a+");
-        fail_fp_ = fopen(fail_path.c_str(), "w+");
+        fail_fp_ = fopen(fail_path.c_str(), "w");
         ret = ((NULL != succ_fp_) && (NULL != fail_fp_)) ? TFS_SUCCESS : TFS_ERROR;
 
         set<string> done;
         if (TFS_SUCCESS == ret)
         {
-          char line[256];
-          while (NULL != fgets(line, 256, succ_fp_))
+          char line[MAX_LINE_LENGTH];
+          while (NULL != fgets(line, MAX_LINE_LENGTH, succ_fp_))
           {
             int32_t len = strlen(line);
             while (line[len-1] == '\n' || line[len-1] == ' ' || line[len-1] == '\t') len--;
@@ -285,8 +285,8 @@ namespace tfs
           ret = (NULL == fp) ? EXIT_OPEN_FILE_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
-            char line[256];
-            while (NULL != fgets(line, 256, fp))
+            char line[MAX_LINE_LENGTH];
+            while (NULL != fgets(line, MAX_LINE_LENGTH, fp))
             {
               int32_t len = strlen(line);
               while (line[len-1] == '\n' || line[len-1] == ' ') len--;

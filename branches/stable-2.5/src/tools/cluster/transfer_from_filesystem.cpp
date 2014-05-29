@@ -18,6 +18,7 @@ using namespace tfs::client;
 
 RestClient* g_tfs_client = NULL;
 string g_app_key;
+string g_local_dir;
 bool g_need_private = false;
 int64_t g_app_id = -1;
 int64_t g_hash_count = 10000;
@@ -67,7 +68,8 @@ void TransferFileManger::usage(const char* app_name)
   char *options =
     "-s           rs server ip:port\n"
     "-x           app_key\n"
-    "-f           input file name\n"
+    "-f           input files name, each line is a self-defined filename start-with '/'\n"
+    "-d           local files dir, default is root mount point.\n"
     "-e           private flag, use /tfsprivate/xxx, optional, default false\n"
     "-t           thread count, optional, defaul 1\n"
     "-i           sleep interval (ms), optional, default 0\n"
@@ -78,8 +80,11 @@ void TransferFileManger::usage(const char* app_name)
     "signal       SIGTERM/SIGINT stop transfer\n"
     "             SIGUSR1 inc sleep interval 1000ms\n"
     "             SIGUSR2 dec sleep interval 1000ms\n";
+  fprintf(stderr, "tool will read local file by self-defined filename in local file dir\n");
   fprintf(stderr, "%s usage:\n%s", app_name, options);
-  fprintf(stderr, "eg: \t%s -s 192.168.0.1:9999 -x app_key [-e] [-n] -f input_file [-p transfer_dir] [-t thread_cnt]\n", app_name);
+  fprintf(stderr, "eg: %s -s 192.168.0.1:9999 -x app_key [-d /tfs/data] [-e] [-n] -f input_file [-p transfer_dir] [-t thread_cnt]\n", app_name);
+  fprintf(stderr, "\t# NAS file path: /tfs/data/dir1/abc/f1, if you want to save self-defined into tfs as '/dir1/abc/f1', please use prefix dir '-d /tfs/data' and put '/tfs/data/dir1/abc/f1' in input_file; or if you want to save self-defined as the whole path '/tfs/data/dir1/abc/f1', no need specify -d param.\n");
+  fprintf(stderr, "\t# you can run many times with the whole same command, when lines number of ./data/success equal with input_file, indicate all files transfer to tfs successfully \n");
   exit(-1);
 }
 
@@ -99,7 +104,7 @@ int TransferFileWorker::transfer_file(const char* localfile, const char* filenam
   }
   else if (filename[0] != '/')
   {
-    fprintf(stderr, "filename: %s format error, must start with '/'\n", filename);
+     TBSYS_LOG(ERROR, "filename: %s format error, must start with '/'\n", filename);
     ret = EXIT_PARAMETER_ERROR;
   }
 
@@ -270,32 +275,43 @@ int TransferFileWorker::process(string& line)
   int ret = TFS_SUCCESS;
   vector<string> fields;
   int len = Func::split_string(line.c_str(), '/', fields);
-  if (len < 1)
+  if (len < 1 || line.length() >= MAX_LINE_LENGTH-1) // one line length more than 512byte(include '\0')
   {
     ret = EXIT_PARAMETER_ERROR;
     TBSYS_LOG(ERROR, "this line(%s) is a null or invalid input file", line.c_str());
   }
-  else if(NULL == buf_)
+  else if(NULL == buf_) // copy file data buffer
   {
     TBSYS_LOG(ERROR, "buf is NULL error");
     ret = EXIT_PARAMETER_ERROR;
   }
   else
   {
-    char filename[256] = {'\0'};
-    char prefix[32]={'\0'};
-    if (g_need_private)
+    if (line.length() > g_local_dir.length() + 1 &&
+        0 == memcmp(line.c_str(), g_local_dir.c_str(), g_local_dir.length()) &&
+        '/' == line.at(g_local_dir.length()))// prefix must be g_local_dir
     {
-      strcpy(prefix, "/tfsprivate");
+      char filename[1024] = {'\0'};
+      char prefix[32]={'\0'};
+      if (g_need_private)
+      {
+        strcpy(prefix, "/tfsprivate");
+      }
+      snprintf(filename, sizeof(filename), "%s%s", prefix, line.c_str() + g_local_dir.length());
+      TBSYS_LOG(INFO, "self-defined filename: %s, local_file: %s\n", filename, line.c_str());
+      // calcalatue uid by hashing whole filename
+      int64_t hash_value = tbsys::CStringUtil::murMurHash((const void*)(filename), strlen(filename));
+      int64_t uid = (hash_value % g_hash_count + 1);
+      ret = transfer_file(line.c_str(), filename, uid);
+      if (TFS_SUCCESS != ret && EXIT_TARGET_EXIST_ERROR != ret) // delete transfer fail file
+      {
+        remove_fail_file(filename, uid);
+      }
     }
-    snprintf(filename, sizeof(filename), "%s/%s", prefix, fields[len-1].c_str());// self-define filename start with '/'
-    // filename start with "/", calc uid
-    int64_t hash_value = tbsys::CStringUtil::murMurHash((const void*)(filename), strlen(filename));
-    int64_t uid = (hash_value % g_hash_count + 1);
-    ret = transfer_file(line.c_str(), filename, uid);
-    if (TFS_SUCCESS != ret && EXIT_TARGET_EXIST_ERROR != ret) // delete transfer fail file
+    else
     {
-      remove_fail_file(filename, uid);
+      TBSYS_LOG(WARN, "local dir(%s) or local_file(%s) invalid\n", g_local_dir.c_str(), line.c_str());
+      ret = EXIT_PARAMETER_ERROR;
     }
   }
   return ret;
@@ -309,7 +325,13 @@ int TransferFileManger::begin()
   string rs_addr = get_src_addr();
   g_app_key = get_extra_arg();
   g_need_private = get_force();
-  if (NULL == rs_addr.c_str() || NULL == g_app_key.c_str())
+  g_local_dir = get_dest_addr();
+  if (g_local_dir.length() > 0 && '/' == g_local_dir.at(g_local_dir.length()-1))
+  {
+    ret = EXIT_PARAMETER_ERROR;
+    fprintf(stderr, "local files dir(%s) is invalid. if not null, it must like '/Dir1/..../Subdir', don't trailing with '/'\n", g_local_dir.c_str());
+  }
+  else if (NULL == rs_addr.c_str() || NULL == g_app_key.c_str())
   {
     tbsys::gDelete(g_tfs_client);
     ret = EXIT_PARAMETER_ERROR;
