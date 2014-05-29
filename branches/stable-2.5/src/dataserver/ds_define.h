@@ -147,6 +147,8 @@ namespace tfs
       static DsRuntimeGlobalInformation& instance();
     };
 
+    void interruptable_usleep(const int64_t usec);
+
     typedef enum _OperType
     {
       OPER_NONE   = 0,

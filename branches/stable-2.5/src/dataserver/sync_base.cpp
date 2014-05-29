@@ -269,11 +269,7 @@ namespace tfs
         TBSYS_LOG(INFO, "sync fail queue item size: %d, dest_addr: %s", header->queue_size_, dest_addr_.c_str());
 
         // default 5 minutes
-        int retry_interval = SYSPARAM_DATASERVER.sync_fail_retry_interval_;
-        for (int index = 0; index < retry_interval && !stop_; index++)
-        {
-          sleep(1);  // if stoped by signal, just exit
-        }
+        interruptable_usleep(SYSPARAM_DATASERVER.sync_fail_retry_interval_ * 1000000);
       }
 
       return TFS_SUCCESS;
