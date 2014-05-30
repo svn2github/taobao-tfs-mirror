@@ -70,6 +70,7 @@ void print_help();
 int cmd_show_help(VSTRING&);
 int cmd_quit(VSTRING&);
 int cmd_show_block(VSTRING&);
+int cmd_check_block(VSTRING&);
 int cmd_show_server(VSTRING& param);
 int cmd_show_machine(VSTRING& param);
 int cmd_show_block_distribution(VSTRING&);
@@ -331,7 +332,7 @@ int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
         }
       }
       if (com_type & RACK_BLOCK_TYPE)
-     {
+      {
         switch (cmd)
         {
           case CMD_IP_GROUP_ID:
@@ -375,6 +376,9 @@ int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
               ret_param.family_id_ = tmp;
             }
             break;
+          case CMD_SERVER_LIST:
+            ret_param.type_ = BLOCK_TYPE_SERVER_LIST;
+            break;
           default:
             ret = CMD_UNKNOWN;
             break;
@@ -404,6 +408,7 @@ void init()
   g_cmd_map["q"] = CmdNode(0, 0, cmd_quit);
   g_cmd_map["exit"] = CmdNode(0, 0, cmd_quit);
   g_cmd_map["block"] = CmdNode(0, 11, cmd_show_block);
+  g_cmd_map["check_block"] = CmdNode(0, 0, cmd_check_block);
   g_cmd_map["server"] = CmdNode(0, 11, cmd_show_server);
   g_cmd_map["machine"] = CmdNode(0, 7, cmd_show_machine);
   g_cmd_map["rack"] = CmdNode(0, 12, cmd_show_rack);
@@ -455,9 +460,10 @@ void print_help()
         "  -c execute times, default 1, it will always loop execute when it is 0, optional.\n"
         "  -i interval time, default 2, optional.\n"
         "  > redirect to file, optional.\n");
-    fprintf(stderr, "family [-n num] [-d family_id] [-c] [-i] [> filename]   show family info.\n"
+    fprintf(stderr, "family [-n num] [-d family_id [-s]] [-c] [-i] [> filename]   show family info.\n"
         "  -n the number of one fetch, default 1024, optional.\n"
         "  -d family id, optional.\n"
+        "  -s print server list, can be used when -d specify family optional.\n"
         "  -c execute times, default 1, it will always loop execute when it is 0, optional.\n"
         "  -i interval time, default 2, optional.\n"
         "  > redirect to file, optional.\n");
@@ -479,20 +485,23 @@ void print_help()
         "  -y show family count for each machine, optional.\n"
         "  -i interval\n"
         "  > redirect to file, optional.\n");
-    fprintf(stderr, "block_dist [-n num] [ [-ip [-d block_id]] | [-mask ip_mask] ] [-c] [-i] [> filename]   show dataservers ip/rack where block is stored.\n"
+    fprintf(stderr, "block_dist [-n num] [ [-ip [-d block_id]] | [-mask ip_mask] ] [-c] [-i] [> filename]   show unnormal block rack distribution, set rack by mask.\n"
         "  -n the number of one fetch, default 1024, optional.\n"
-        "  -ip print block's dataserver ip_port list group by machine ip(only for group which has more than one replicate), optional.\n"
+        "  -ip print unnormal block's ds list, one machine as one rack(equal with '-mask 255.255.255.255'), optional.\n"
         "  -d block id, optional.\n"
-        "  -mask print block's dataserver ip_port list group by ip_mask(only for group which has more than one replicate), optional.\n"
+        "  -mask print unnormal block's ds list, set rack by ip_mask, optional.\n"
         "  -c execute times, default 1, it will always loop execute when it is 0, optional.\n"
         "  -i interval time, default 2, optional.\n"
         "  > redirect to file, optional.\n");
-    fprintf(stderr, "rack [-n num] [-mask ip_mask] [-g ip_group] [-c] [-i] [> filename]   show all blocks in rack.\n"
+    fprintf(stderr, "rack [-n num] [-mask ip_mask] [-g ip_group] [-c] [-i] [> filename]   show all blocks by rack.\n"
         "  -n the number of one fetch, default 1024, optional.\n"
         "  -mask divide the machines into racks by ip_mask ,default 255.255.255.240, optional.\n"
         "  -g print block_id list of the ip_group's machine rack only, optional.\n"
         "  -c execute times, default 1, it will always loop execute when it is 0, optional.\n"
         "  -i interval time, default 2, optional.\n"
+        "  > redirect to file, optional.\n");
+    fprintf(stderr, "check_block [-n num] [> filename]   check whether all blocks's replicates position is really the same whith ns block table.\n"
+        "  -n the number of one fetch, default 1024, optional.\n"
         "  > redirect to file, optional.\n");
   }
   else
@@ -544,6 +553,18 @@ int cmd_show_block(VSTRING& param)
     {
       g_cmp_info.compare(BLOCK_TYPE, ret_param.type_, ret_param.num_);
     }
+  }
+  return ret;
+}
+
+int cmd_check_block(VSTRING& param)
+{
+  int ret = TFS_ERROR;
+  int8_t type = CMD_NOP;
+  ParamInfo ret_param(type);
+  if ((ret = parse_param(param, CHECK_BLOCK_TYPE, ret_param)) != TFS_ERROR)
+  {
+    g_show_info.check_block(ret_param.type_, ret_param.num_, ret_param.filename_);
   }
   return ret;
 }
@@ -619,7 +640,7 @@ int cmd_show_family(VSTRING& param)
   ParamInfo ret_param;
   if ((ret = parse_param(param, FAMILY_TYPE, ret_param)) != TFS_ERROR)
   {
-    g_show_info.show_family(ret_param.num_, ret_param.family_id_, ret_param.count_, ret_param.interval_, ret_param.filename_);
+    g_show_info.show_family(ret_param.type_, ret_param.num_, ret_param.family_id_, ret_param.count_, ret_param.interval_, ret_param.filename_);
   }
   return ret;
 }
@@ -701,6 +722,7 @@ void version(const char* app_name)
 
 static void sign_handler(int32_t sig)
 {
+  fprintf(stderr, "showssm sig %d.\n", sig);
   switch (sig)
   {
     case SIGINT:
@@ -814,15 +836,15 @@ int main(int argc,char** argv)
     g_cmp_info.set_ns_ip(ns_ip_port_1, ns_ip_port_2);
   }
 
+  signal(SIGINT, sign_handler);
+  signal(SIGTERM, sign_handler);
   if (optind >= argc)
   {
-    signal(SIGINT, sign_handler);
-    signal(SIGTERM, sign_handler);
     main_loop();
   }
   else
   {
-    if (directly)
+    if (directly) // ssm ... -i "cmd"
     {
       for (i = optind; i < argc; i++)
       {
@@ -830,7 +852,7 @@ int main(int argc,char** argv)
       }
       g_show_info.clean_last_file();
     }
-    else
+    else// exec filename
     {
       VSTRING param;
       for (i = optind; i < argc; i++)

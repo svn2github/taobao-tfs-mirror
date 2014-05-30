@@ -145,7 +145,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
       bool daemon = false;
       log_level_ = "info"; // default log level
-      output_dir_ = "./";  // default output directory
+      output_dir_ = ".";  // default output directory
       string timestamp = get_day(1, true);//第二天0点
       int flag = 0;
 
@@ -218,21 +218,32 @@ namespace tfs
         return TFS_ERROR;
       }
 
-      string log_dir = output_dir_ + "logs/";
-      string data_dir = output_dir_ + "data/";
+      string log_dir = output_dir_ + "/logs/";
+      string data_dir = output_dir_ + "/data/";
       DirectoryOp::create_directory(output_dir_.c_str());
       DirectoryOp::create_directory(log_dir.c_str());
       DirectoryOp::create_directory(data_dir.c_str());
       string log_file = log_dir + basename(argv[0]) + ".log";
       string pid_file = log_dir + basename(argv[0]) + ".pid";
-      TBSYS_LOGGER.rotateLog(log_file.c_str());
       TBSYS_LOGGER.setMaxFileSize(1024 * 1024 * 1024);
       TBSYS_LOGGER.setLogLevel(log_level_.c_str());
 
       int pid = 0;
       if (daemon)
       {
+        TBSYS_LOGGER.rotateLog(log_file.c_str());
         pid = Func::start_daemon(pid_file.c_str(), log_file.c_str());
+      }
+      else
+      {
+        if (access(log_file.c_str(), R_OK) == 0)
+        {
+          char old_log_file[MAX_LINE_LENGTH];
+          snprintf(old_log_file, sizeof(old_log_file), "%s.%s",
+              log_file.c_str(), Func::time_to_str(time(NULL), 1).c_str());
+          rename(log_file.c_str(), old_log_file);
+        }
+        TBSYS_LOGGER.setFileName(log_file.c_str(), true); // keep stdout/stderr
       }
 
       if (0 == pid)
@@ -248,14 +259,14 @@ namespace tfs
         string fail_path = data_dir + "/fail";
 
         succ_fp_ = fopen(succ_path.c_str(), "a+");
-        fail_fp_ = fopen(fail_path.c_str(), "a");
+        fail_fp_ = fopen(fail_path.c_str(), "w");
         ret = ((NULL != succ_fp_) && (NULL != fail_fp_)) ? TFS_SUCCESS : TFS_ERROR;
 
         set<string> done;
         if (TFS_SUCCESS == ret)
         {
-          char line[256];
-          while (NULL != fgets(line, 256, succ_fp_))
+          char line[MAX_LINE_LENGTH];
+          while (NULL != fgets(line, MAX_LINE_LENGTH, succ_fp_))
           {
             int32_t len = strlen(line);
             while (line[len-1] == '\n' || line[len-1] == ' ' || line[len-1] == '\t') len--;
@@ -274,8 +285,8 @@ namespace tfs
           ret = (NULL == fp) ? EXIT_OPEN_FILE_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
-            char line[256];
-            while (NULL != fgets(line, 256, fp))
+            char line[MAX_LINE_LENGTH];
+            while (NULL != fgets(line, MAX_LINE_LENGTH, fp))
             {
               int32_t len = strlen(line);
               while (line[len-1] == '\n' || line[len-1] == ' ') len--;
@@ -316,6 +327,7 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             g_workers = new BaseWorkerPtr[g_thread_count];
+            assert(NULL != g_workers);
             for (int index = 0; index < g_thread_count; ++index)
             {
               g_workers[index] = create_worker();

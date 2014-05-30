@@ -24,6 +24,7 @@ namespace tfs
 {
   namespace tools
   {
+    static const int32_t MAX_LINE_LENGTH = 512;
     class BaseWorker: public tbutil::Thread
     {
       public:

@@ -94,7 +94,10 @@ int fetch_blocks(const uint64_t ns_id, list<BlockBase>& block_list, const int32_
       BlockBase block;
       if (TFS_SUCCESS == block.deserialize(ret_param.data_, data_len, offset, param.child_type_))
       {
-        block_list.push_front(block);
+        if (!IS_VERFIFY_BLOCK(block.info_.block_id_)) // only data block need to be check crc by compact
+        {
+          block_list.push_front(block);
+        }
       }
     }
     param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
@@ -179,7 +182,7 @@ void helper()
     "gen_compact_blk_order -s ns_addr -o block_list [-r percent] [-c num]\n"
     "Options:\n"
     "-s                 ns ip:port\n"
-    "-o                 re-arranged blocks id output file path\n"
+    "-o                 re-arranged all blocks id output file path\n"
     "-r                 percent for compact filling rato of all dataservers, default 80\n"
     "-c                 block number fetch from ns once, default 1024\n"
     "-h                 show this message\n";

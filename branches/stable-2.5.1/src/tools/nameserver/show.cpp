@@ -37,6 +37,11 @@ namespace tfs
       sprintf(pid_tmp, "%d", getpid());
       string pid(pid_tmp);
       LAST_DS_FILE = "/tmp/.tfs_last_ds_v2_" + pid;
+      // delete old tmp file when exist at the begining, in case load_last_ds to read error data
+      if (access(LAST_DS_FILE.c_str(), F_OK) == 0)
+      {
+        DirectoryOp::delete_file(LAST_DS_FILE.c_str());
+      }
 
       return TFS_SUCCESS;
     }
@@ -127,7 +132,7 @@ namespace tfs
         if (*fp == NULL)
         {
           TBSYS_LOG(ERROR, "open file(%s) error...", filename.c_str());
-          return TFS_ERROR;
+          return EXIT_OPEN_FILE_ERROR;
         }
       }
       else
@@ -137,12 +142,20 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    void ShowInfo::put_file_handle(FILE* fp)
+    {
+      if (NULL != fp && stdout != fp)
+      {
+        fclose(fp);
+      }
+    }
+
     int ShowInfo::show_server(const int8_t type, const int32_t num, const string& server_ip_port, int32_t count, const int32_t interval, const bool need_family, const string& filename)
     {
       FILE* fp = NULL;
-      if (TFS_ERROR == get_file_handle(filename, &fp))
+      if (TFS_SUCCESS != get_file_handle(filename, &fp))
       {
-        return TFS_ERROR;
+        return EXIT_TFS_ERROR;
       }
 
       interrupt_ = false;
@@ -182,13 +195,14 @@ namespace tfs
           if (ret != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "server(%s) not valid", server_ip_port.c_str());
+            put_file_handle(fp);
             return ret;
           }
           once = true;
         }
         else
         {
-          param.start_next_position_ = 0x0;//这个变量在个函数其实是没有用的
+          param.start_next_position_ = 0x0;//它对SSM_TYPE_SERVER是没用的,因为ns直接使用addition_param
           param.should_actual_count_= (num << 16);
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
         }
@@ -203,13 +217,15 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
             TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
           SSMScanParameter& ret_param = message->get_param();
@@ -281,16 +297,16 @@ namespace tfs
           sleep(interval);
         }
       }
-      if (fp != stdout) fclose(fp);
+      put_file_handle(fp);
       return TFS_SUCCESS;
     }
 
     int ShowInfo::show_machine(const int8_t type, const int32_t num, int32_t count, const int32_t interval, const bool need_family, const string& filename)
     {
       FILE* fp = NULL;
-      if (TFS_ERROR == get_file_handle(filename, &fp))
+      if (TFS_SUCCESS != get_file_handle(filename, &fp))
       {
-        return TFS_ERROR;
+        return EXIT_TFS_ERROR;
       }
 
       interrupt_ = false;
@@ -324,13 +340,15 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
             TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
           SSMScanParameter& ret_param = message->get_param();
@@ -394,44 +412,51 @@ namespace tfs
           (it->second).dump(type, fp);
           stat.add(it->second);
         }
-        stat.dump(MACHINE_TYPE, type, fp);
+        // first time last_server_size=0, all tps are 0, so not show it for tps monitor
+        if (last_server_size > 0 || !(type & MACHINE_TYPE_FOR_MONITOR))
+        {
+          stat.dump(MACHINE_TYPE, type, fp);
+        }
         if (--count || is_loop_)
         {
           sleep(interval);
         }
       }
 
-      if (fp != stdout) fclose(fp);
+      put_file_handle(fp);
       return TFS_SUCCESS;
 
     }
 
-    int ShowInfo::show_block(const int8_t type, const int32_t num, const uint64_t block_id, int32_t count, const int32_t interval, const string& filename)
+    int ShowInfo::show_block_common(const int32_t num, const uint64_t block_id, int32_t count,
+        const int32_t interval, const string& filename, BaseBlockWorker* worker)
     {
-      const int32_t block_chunk_num = nameserver::MAX_BLOCK_CHUNK_NUMS;
+      FILE* fp = NULL;
+      if (TFS_SUCCESS != get_file_handle(filename, &fp))
+      {
+        return EXIT_TFS_ERROR;
+      }
       interrupt_ = false;
       is_loop_ = (count == 0);
-      FILE* fp = NULL;
-      if (TFS_ERROR == get_file_handle(filename, &fp))
-      {
-        return TFS_ERROR;
-      }
 
       while ((count > 0 || is_loop_) && !interrupt_)
       {
-        StatStruct stat;
-
+        if(TFS_SUCCESS != worker->begin())
+        {
+          put_file_handle(fp);
+          return EXIT_TFS_ERROR;
+        }
         ShowServerInformationMessage msg;
         SSMScanParameter& param = msg.get_param();
-        param.type_ = SSM_TYPE_BLOCK;
-        param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;
+        param.type_ = SSM_TYPE_BLOCK;//遍历ns上的block数据的类型
+        param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;//TYPE_INFO只为取block_id, TYPE_SERVER为ds_list
 
         bool once = false;
         if (block_id > 0)
         {
           param.should_actual_count_ = 0x10000;
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_NO;
-          param.start_next_position_ = ((block_id % block_chunk_num) << 16);//start是本次在ns上开始扫描blocks的桶的位置
+          param.start_next_position_ = ((block_id % nameserver::MAX_BLOCK_CHUNK_NUMS) << 16);//start是本次在ns上开始扫描blocks的桶的位置
           param.addition_param1_ = block_id;
           once = true;
         }
@@ -441,10 +466,10 @@ namespace tfs
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
         }
 
+        print_header(worker->block_type_, worker->sub_type_, fp);
         while ((!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)) && !interrupt_)
         {
           param.data_.clear();
-          block_set_.clear();
           tbnet::Packet*ret_msg = NULL;
           NewClient* client = NewClientManager::get_instance().create_client();
           int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
@@ -452,9 +477,9 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
-          //TBSYS_LOG(DEBUG, "pCode: %d", ret_msg->get_message_type());
           if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
             if (ret_msg->getPCode() == STATUS_MESSAGE)
@@ -464,36 +489,37 @@ namespace tfs
             }
             TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
           SSMScanParameter& ret_param = message->get_param();
 
           int32_t data_len = ret_param.data_.getDataLen();
           int32_t offset = 0;
-          if (data_len > 0)
-          {
-            print_header(BLOCK_TYPE, type, fp);
-          }
+          //如果指定的blockid不存在，且block表中[start_next_position_, +00)这些桶内没有block,则拉取block个数为0
           while ((data_len > offset) && !interrupt_)
           {
-            BlockShow block;
-            if (TFS_SUCCESS == block.deserialize(ret_param.data_, data_len, offset, param.child_type_))
+            BlockBase* base_block = worker->create_block();
+            ret = base_block->deserialize(ret_param.data_, data_len, offset, param.child_type_);
+            if (TFS_SUCCESS == ret)
             {
-              block.BlockBase::dump();// log info
-              if (once && (block.info_.block_id_ != block_id))
+              base_block->BlockBase::dump();// log info of each block info
+              if (once && (base_block->info_.block_id_ != block_id))
               {
-                TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", block.info_.block_id_, block_id);
+                //TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", base_block->info_.block_id_, block_id);
                 break;
               }
-              stat.add(block);
-              block_set_.insert(block);
+              worker->process(base_block, fp);// not sort by block
             }
-          }
-          std::set<BlockShow>::iterator iter = block_set_.begin();
-          for (; iter != block_set_.end(); iter++)
-          {
-             (*iter).dump(type, fp);
+            else
+            {
+              TBSYS_LOG(ERROR, "Block deserialize error, ret: %d", ret);
+              NewClientManager::get_instance().destroy_client(client);
+              put_file_handle(fp);
+              return ret;
+            }
+            tbsys::gDelete(base_block);
           }
           param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
           param.end_flag_ = ret_param.end_flag_;
@@ -509,27 +535,32 @@ namespace tfs
         }
         if (!once)
         {
-          stat.dump(BLOCK_TYPE, type, fp);
+          worker->end(fp);
         }
         if (--count)
         {
           sleep(interval);
         }
       }
-      if (fp != stdout) fclose(fp);
+      put_file_handle(fp);
       return TFS_SUCCESS;
     }
 
-
-    int ShowInfo::show_family(const int32_t num, const int64_t family_id, int32_t count, const int32_t interval, const string& filename)
+    // show block info
+    int ShowInfo::show_block(const int8_t type, const int32_t num, const uint64_t block_id, int32_t count, const int32_t interval, const string& filename)
     {
-      const int32_t family_chunk_num = nameserver::MAX_FAMILY_CHUNK_NUM;
+      BlockInfoWorker worker(type);
+      return show_block_common(num, block_id, count, interval, filename, &worker);
+    }
+
+    int ShowInfo::show_family(const int8_t type, const int32_t num, const int64_t family_id, int32_t count, const int32_t interval, const string& filename)
+    {
       interrupt_ = false;
       is_loop_ = (count == 0);//count表示循环重复拉取的次数,默认是1，0表示一直按照间间隔循环
       FILE* fp = NULL;
-      if (TFS_ERROR == get_file_handle(filename, &fp))
+      if (TFS_SUCCESS != get_file_handle(filename, &fp))
       {
-        return TFS_ERROR;
+        return EXIT_TFS_ERROR;
       }
 
       while ((count > 0 || is_loop_) && !interrupt_)
@@ -544,21 +575,32 @@ namespace tfs
         {
           param.should_actual_count_ = 0x10000;
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_NO;
-          param.start_next_position_ = ((family_id % family_chunk_num) << 16);
+          param.start_next_position_ = ((family_id % nameserver::MAX_FAMILY_CHUNK_NUM) << 16);
           param.addition_param1_ = family_id;
           once = true;
         }
-        else
+        else if (family_id == 0)
         {
+          if (type & BLOCK_TYPE_SERVER_LIST)
+          {
+            fprintf(fp, "para error, -s must be used with -d\n");
+            put_file_handle(fp);
+            return EXIT_PARAMETER_ERROR;
+          }
           param.should_actual_count_ = (num << 16);
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
           //其余，如param.start_next_position_ 等都初始化为0
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "get invalid family_id: %"PRI64_PREFIX"d < 0", family_id);
+          put_file_handle(fp);
+          return EXIT_PARAMETER_ERROR;
         }
 
         while ((!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)) && !interrupt_)
         {
           param.data_.clear();
-          family_set_.clear();
           tbnet::Packet*ret_msg = NULL;
           NewClient* client = NewClientManager::get_instance().create_client();
           int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
@@ -566,9 +608,9 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
-          //TBSYS_LOG(DEBUG, "pCode: %d", ret_msg->get_message_type());
           if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
             if (ret_msg->getPCode() == STATUS_MESSAGE)
@@ -578,7 +620,8 @@ namespace tfs
             }
             TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
             NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
+            put_file_handle(fp);
+            return EXIT_TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
           SSMScanParameter& ret_param = message->get_param();
@@ -587,7 +630,7 @@ namespace tfs
           int32_t offset = 0;
           if (data_len > 0)
           {
-            print_header(FAMILY_TYPE, 0, fp);
+            print_header(FAMILY_TYPE, type, fp);
           }
           while ((data_len > offset) && !interrupt_)
           {
@@ -596,17 +639,21 @@ namespace tfs
             {
               if (once && (family.family_id_ != family_id))
               {
-                TBSYS_LOG(ERROR, "only get family: %"PRI64_PREFIX"u, but %"PRI64_PREFIX"u not exists", family.family_id_, family_id);
+                //TBSYS_LOG(ERROR, "only get family: %"PRI64_PREFIX"u, but %"PRI64_PREFIX"u not exists", family.family_id_, family_id);
                 break;
               }
-              family_set_.insert(family);
+              if (once && (type & BLOCK_TYPE_SERVER_LIST))
+              {
+                ret = family.get_members_ds_list(ns_ip_);
+                if (TFS_SUCCESS != ret)
+                {
+                  put_file_handle(fp);
+                  return ret;
+                }
+              }
+              family.dump(type, fp);
+              ++family_count;
             }
-          }
-          std::set<FamilyShow>::iterator iter = family_set_.begin();
-          for (; iter != family_set_.end(); iter++)
-          {
-             (*iter).dump(fp);
-             ++family_count;
           }
           param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
           param.end_flag_ = ret_param.end_flag_;
@@ -622,236 +669,44 @@ namespace tfs
         }
         if (!once)
         {
-            fprintf(fp, "Total Count: %"PRI64_PREFIX"u\n", family_count);
+          fprintf(fp, "Total Count: %"PRI64_PREFIX"u\n", family_count);
         }
         if (--count)
         {
           sleep(interval);
         }
       }
-      if (fp != stdout) fclose(fp);
+      put_file_handle(fp);
       return TFS_SUCCESS;
     }
 
+    // show block's unnormal copy, include copy in the same machine or rack
     int ShowInfo::show_block_distribution(const int8_t type,  string& rack_ip_mask, const int32_t num, const uint64_t block_id, int32_t count, const int32_t interval, const string& filename)
     {
-      const int32_t block_chunk_num = nameserver::MAX_BLOCK_CHUNK_NUMS;
-      interrupt_ = false;
-      is_loop_ = (count == 0);
-      FILE* fp = NULL;
-      if (TFS_ERROR == get_file_handle(filename, &fp))
+      if (type & BLOCK_IP_DISTRIBUTION_TYPE)
       {
-        return TFS_ERROR;
+        rack_ip_mask = "255.255.255.255";// every ip as a single rack
       }
-
-      while ((count > 0 || is_loop_) && !interrupt_)
-      {
-        BlockDistributionStruct stat;
-
-        ShowServerInformationMessage msg;
-        SSMScanParameter& param = msg.get_param();
-        param.type_ = SSM_TYPE_BLOCK;//遍历ns上的block，这里设置的才是找ns取数据的类型
-        param.child_type_ = SSM_CHILD_BLOCK_TYPE_SERVER | SSM_CHILD_BLOCK_TYPE_INFO;//TODO:其实只取每个block的server list，但是BlockBase 反序列化接口不一致
-
-        bool once = false;
-        if (block_id > 0)
-        {
-          param.should_actual_count_ = 0x10000;
-          param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_NO;
-          param.start_next_position_ = ((block_id % block_chunk_num) << 16);
-          param.addition_param1_ = block_id;
-          once = true;
-        }
-        else
-        {
-          param.should_actual_count_ = (num << 16);//每次should从ns读取的最大block数
-          param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
-        }
-
-        print_header(BLOCK_DISTRIBUTION_TYPE, type, fp);
-        while ((!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)) && !interrupt_)//一直把ns上的所有block读取完成（除非终端中断）
-        {
-          param.data_.clear();
-          tbnet::Packet*ret_msg = NULL;
-          NewClient* client = NewClientManager::get_instance().create_client();
-          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
-          if (TFS_SUCCESS != ret || ret_msg == NULL)
-          {
-            TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
-            NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
-          }
-
-          if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
-          {
-            if (ret_msg->getPCode() == STATUS_MESSAGE)
-            {
-              StatusMessage* msg = dynamic_cast<StatusMessage*>(ret_msg);
-              TBSYS_LOG(ERROR, "get invalid message type: error: %s", msg->get_error());
-            }
-            TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
-            NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
-          }
-          ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
-          SSMScanParameter& ret_param = message->get_param();
-
-          int32_t data_len = ret_param.data_.getDataLen();
-          int32_t offset = 0;
-         // if (data_len > 0)
-         // {
-         //   print_header(BLOCK_DISTRIBUTION_TYPE, type, fp);
-         // }
-        //如果指定的blockid都不存在，且block表中>=start_next_position_桶后没有blockid,则拉取block个数为0
-          if(type & BLOCK_IP_DISTRIBUTION_TYPE)
-          {
-            while ((data_len > offset) && !interrupt_)
-            {
-              BlockDistributionShow block;
-              if (TFS_SUCCESS == block.deserialize(ret_param.data_, data_len, offset, param.child_type_))
-              {
-                if (once && (block.info_.block_id_ != block_id))
-                {
-                  TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", block.info_.block_id_, block_id);
-                  break;
-                }
-                if(block.check_block_ip_distribution())
-                {
-                  block.dump_ip(fp);
-                  stat.add(block);
-                }
-              }
-            }
-          }
-          else
-          {
-            assert( (type & BLOCK_RACK_DISTRIBUTION_TYPE) );
-            while ((data_len > offset) && !interrupt_)
-            {
-              BlockDistributionShow block;
-              if (TFS_SUCCESS == block.deserialize(ret_param.data_, data_len, offset, param.child_type_))
-              {
-                if (once && (block.info_.block_id_ != block_id))
-                {
-                  TBSYS_LOG(ERROR, "block: %"PRI64_PREFIX"u,%"PRI64_PREFIX"u not exists", block.info_.block_id_, block_id);
-                  break;
-                }
-                if(block.check_block_rack_distribution(rack_ip_mask))
-                {
-                  block.dump_rack(fp);
-                  stat.add(block);
-                }
-              }
-            }
-          }
-
-          param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
-          param.end_flag_ = ret_param.end_flag_;
-          if (param.end_flag_ & SSM_SCAN_CUTOVER_FLAG_NO)
-          {
-            param.addition_param1_ = ret_param.addition_param2_;
-          }
-          NewClientManager::get_instance().destroy_client(client);
-          if (once)
-          {
-            break;
-          }
-        }
-        if (!once)
-        {
-          stat.dump(type, fp);
-        }
-        if (--count)
-        {
-          sleep(interval);
-        }
-      }
-      if (fp != stdout) fclose(fp);
-      return TFS_SUCCESS;
+      uint32_t ip_mask = Func::get_addr(rack_ip_mask.c_str());
+      BlockDistWorker worker(ip_mask, type);
+      return show_block_common(num, block_id, count, interval, filename, &worker);
     }
 
-
+    // show block_id list by rack
     int ShowInfo::show_rack_block(const int8_t type, string& rack_ip_mask, string& rack_ip_group, const int32_t num, int32_t count, const int32_t interval, const string& filename)
     {
-      interrupt_ = false;
-      is_loop_ = (count == 0);
-      FILE* fp = NULL;
-      if (TFS_ERROR == get_file_handle(filename, &fp))
-      {
-        return TFS_ERROR;
-      }
+      count = 1;
+      uint32_t ip_mask = Func::get_addr(rack_ip_mask.c_str());
+      uint32_t ip_group = Func::get_addr(rack_ip_group.c_str());
+      BlockRackWorker worker(ip_mask, ip_group, type);
+      return show_block_common(num, 0, count, interval, filename, &worker);
+    }
 
-      while ((count > 0 || is_loop_) && !interrupt_)
-      {
-        RackBlockShow rack_block;
-        ShowServerInformationMessage msg;
-        SSMScanParameter& param = msg.get_param();//参数初始化为0
-        param.type_ = SSM_TYPE_BLOCK;
-        param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;//可以去掉INFO
-
-        param.should_actual_count_ = (num << 16);//每发一次消息读取的block数取最大值
-        param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
-
-        print_header(RACK_BLOCK_TYPE, type, fp);
-        while ((!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)) && !interrupt_)
-        {
-          param.data_.clear();
-          tbnet::Packet*ret_msg = NULL;
-          NewClient* client = NewClientManager::get_instance().create_client();
-          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
-          if (TFS_SUCCESS != ret || ret_msg == NULL)
-          {
-            TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
-            NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
-          }
-
-          if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
-          {
-            if (ret_msg->getPCode() == STATUS_MESSAGE)
-            {
-              StatusMessage* msg = dynamic_cast<StatusMessage*>(ret_msg);
-              TBSYS_LOG(ERROR, "get invalid message type: error: %s", msg->get_error());
-            }
-            TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
-            NewClientManager::get_instance().destroy_client(client);
-            return TFS_ERROR;
-          }
-          ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
-          SSMScanParameter& ret_param = message->get_param();
-
-          int32_t data_len = ret_param.data_.getDataLen();
-          int32_t offset = 0;
-          if (data_len > 0)
-          {
-          //  print_header(RACK_BLOCK_TYPE, type, fp);
-          }
-          while ((data_len > offset) && !interrupt_)
-          {
-            BlockShow block;
-            if (TFS_SUCCESS == block.deserialize(ret_param.data_, data_len, offset, param.child_type_))
-            {
-              rack_block.add(block, rack_ip_mask);
-            }
-          }
-          param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
-          param.end_flag_ = ret_param.end_flag_;
-          if (param.end_flag_ & SSM_SCAN_CUTOVER_FLAG_NO)
-          {
-            param.addition_param1_ = ret_param.addition_param2_;
-          }
-          NewClientManager::get_instance().destroy_client(client);
-        }
-        //把所有的block都拉取下来才输出
-        rack_block.dump(type, rack_ip_group, fp);
-
-        if (--count)
-        {
-          sleep(interval);
-        }
-      }
-      if (fp != stdout) fclose(fp);
-      return TFS_SUCCESS;
+    // check whether exist block in ns block table whose ds_list is [D1, D2..., Dn], but Di(dataserver) not hold the block actually
+    int ShowInfo::check_block(const int8_t type, const int32_t num, const std::string& filename)
+    {
+      BlockCheckWorker worker(ns_ip_, type);
+      return show_block_common(num, 0, 1, 0, filename, &worker);
     }
 
     uint64_t ShowInfo::get_machine_id(uint64_t server_id)

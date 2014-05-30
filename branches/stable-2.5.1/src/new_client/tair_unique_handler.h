@@ -33,8 +33,8 @@ namespace tfs
     {
       if (buf != NULL)
       {
-        buf[pos] = '\0';
-        buf[pos+1] = '\02';
+        buf[pos] = 0x00;
+        buf[pos+1] = 0x12;
         pos += UNIQUE_TAIR_TAG_LENGTH;
       }
     }
