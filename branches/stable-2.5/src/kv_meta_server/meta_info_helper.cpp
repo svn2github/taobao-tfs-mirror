@@ -1479,7 +1479,7 @@ namespace tfs
 
           if (loop)
           {
-            int32_t found;
+            int32_t found = -1;
             string new_object_name;
             const char next_delimiter = delimiter + 1;
             KvKey key;
@@ -1490,20 +1490,15 @@ namespace tfs
               if (prefix.empty())
               {
                 found = object_name.find(delimiter);
-                if (found != -1)
-                {
-                  new_object_name = object_name.substr(0, found);
-                  object_name = new_object_name + next_delimiter;
-                }
               }
               else
               {
                 found = object_name.find(delimiter, prefix.size());
-                if (found != -1)
-                {
-                  new_object_name = object_name.substr(0, found);
-                  object_name = new_object_name + next_delimiter;
-                }
+              }
+              if (found != -1)
+              {
+                new_object_name = object_name.substr(0, found);
+                object_name = new_object_name + next_delimiter;
               }
             }
 
