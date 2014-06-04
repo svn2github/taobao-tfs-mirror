@@ -256,6 +256,9 @@ namespace tfs
             {
               entry.source_addr_ = info.id_;
             }
+            TBSYS_LOG(DEBUG, "system disk curr_ratio: %.3lf, [%.3lf, %.3lf, %.3lf] do migrate %s",
+                curr_ratio, avg_ratio - balance_percent_, avg_ratio, avg_ratio + balance_percent_,
+                (entry.dest_addr_ != INVALID_SERVER_ID || entry.source_addr_ != INVALID_SERVER_ID) ?  "yes":"no");
           }
         }
       }
@@ -321,7 +324,7 @@ namespace tfs
             ret = send_msg_to_server(ns_vip_port_, client, &req_msg, result, TIMEOUT_MS);
             if (TFS_SUCCESS == ret)
             {
-              ret = STATUS_MESSAGE == result->getPCode() ? TFS_SUCCESS : EXIT_SEND_MIGRATE_MSG_ERROR;
+              ret = STATUS_MESSAGE == result->getPCode() ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
             }
             if (TFS_SUCCESS == ret)
             {
@@ -329,14 +332,14 @@ namespace tfs
               int32_t len = std::min(static_cast<int32_t>(rsp->get_error_msg_length()), 256);
               len = std::max(0, len);
               strncpy(msg, rsp->get_error(), len);
-              ret = STATUS_MESSAGE_OK == rsp->get_status() ? TFS_SUCCESS : EXIT_SEND_MIGRATE_MSG_ERROR;
+              ret = STATUS_MESSAGE_OK == rsp->get_status() ? TFS_SUCCESS : EXIT_DO_MIGRATE_FAIL;
             }
           }
           NewClientManager::get_instance().destroy_client(client);
         }
         while (retry_times-- > 0 && TFS_SUCCESS != ret);
       }
-      TBSYS_LOG(INFO, "send migrate message %s, ret: %d, error msg: %s block: %"PRI64_PREFIX"u, source: %s, dest: %s , ns_vip: %s",
+      TBSYS_LOG(INFO, "send migrate message %s, ret: %d, error msg: %s, block: %"PRI64_PREFIX"u, source: %s, dest: %s , ns_vip: %s",
           TFS_SUCCESS == ret ? "successful" : "failed", ret, msg, current.block_id_, tbsys::CNetUtil::addrToString(current.source_addr_).c_str(),
           tbsys::CNetUtil::addrToString(current.dest_addr_).c_str(), tbsys::CNetUtil::addrToString(ns_vip_port_).c_str());
       return ret;

@@ -370,7 +370,7 @@ namespace tfs
           DsRuntimeGlobalInformation& instance = DsRuntimeGlobalInformation::instance();
           migrate_manager_ = new (std::nothrow)MigrateManager(migrate_addr, instance.information_.id_);
           assert(NULL != migrate_manager_);
-          migrate_manager_->initialize();
+          ret = migrate_manager_->initialize();
         }
 
         if (INVALID_SERVER_ID != migrate_addr)
