@@ -13,6 +13,7 @@
  */
 
 #include "common/func.h"
+#include "common/internal.h"
 #include "common/client_manager.h"
 #include "common/base_packet.h"
 #include "common/status_message.h"
@@ -163,48 +164,6 @@ namespace tfs
       return ret;
     }
 
-    ServerStat::ServerStat():
-      id_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
-      last_update_time_(0), startup_time_(0), current_time_(0)
-    {
-      memset(&total_tp_, 0, sizeof(total_tp_));
-      memset(&last_tp_, 0, sizeof(last_tp_));
-    }
-
-    ServerStat::~ServerStat()
-    {
-    }
-
-    int ServerStat::deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset)
-    {
-      if (input.getDataLen() <= 0 || offset >= length)
-      {
-        return TFS_ERROR;
-      }
-      int32_t len = input.getDataLen();
-      id_ = input.readInt64();
-      use_capacity_ = input.readInt64();
-      total_capacity_ = input.readInt64();
-      current_load_ = input.readInt32();
-      block_count_  = input.readInt32();
-      last_update_time_ = input.readInt64();
-      startup_time_ = input.readInt64();
-      total_tp_.write_byte_ = input.readInt64();
-      total_tp_.read_byte_ = input.readInt64();
-      total_tp_.write_file_count_ = input.readInt64();
-      total_tp_.read_file_count_ = input.readInt64();
-      total_tp_.unlink_file_count_ = input.readInt64();
-      total_tp_.fail_write_byte_ = input.readInt64();
-      total_tp_.fail_read_byte_ = input.readInt64();
-      total_tp_.fail_write_file_count_ = input.readInt64();
-      total_tp_.fail_read_file_count_ = input.readInt64();
-      total_tp_.fail_unlink_file_count_ = input.readInt64();
-      current_time_ = input.readInt64();
-      status_ = (DataServerLiveStatus)input.readInt32();
-      offset += (len - input.getDataLen());
-
-      return TFS_SUCCESS;
-    }
 
     int NsRequester::get_ds_list(const uint64_t ns_id, common::VUINT64& ds_list)
     {

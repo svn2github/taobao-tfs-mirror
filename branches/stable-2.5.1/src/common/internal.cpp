@@ -3022,6 +3022,78 @@ namespace tfs
       return ret;
     }
 
+    int ServerStat::serialize(tbnet::DataBuffer& output, int32_t& length)
+    {
+      output.writeInt64(id_);
+      output.writeInt64(use_capacity_);
+      output.writeInt64(total_capacity_);
+      output.writeInt32(current_load_);
+      output.writeInt32(block_count_);
+      output.writeInt64(last_update_time_);
+      output.writeInt64(startup_time_);
+
+      output.writeInt64(total_tp_.write_byte_);
+      output.writeInt64(total_tp_.read_byte_);
+      output.writeInt64(total_tp_.write_file_count_);
+      output.writeInt64(total_tp_.read_file_count_);
+      output.writeInt64(total_tp_.unlink_file_count_);
+      output.writeInt64(total_tp_.fail_write_byte_);
+      output.writeInt64(total_tp_.fail_read_byte_);
+      output.writeInt64(total_tp_.fail_write_file_count_);
+      output.writeInt64(total_tp_.fail_read_file_count_);
+      output.writeInt64(total_tp_.fail_unlink_file_count_);
+
+      output.writeInt64(current_time_);
+      output.writeInt32(status_);
+      output.writeInt64(rb_expired_time_);
+      output.writeInt64(next_report_block_time_);
+      output.writeInt8(disk_type_);
+      output.writeInt8(rb_status_);
+
+      length += (output.getDataLen());
+
+      return TFS_SUCCESS;
+    }
+
+    int ServerStat::deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset)
+    {
+      int32_t ret = TFS_SUCCESS;
+      if (input.getDataLen() <= 0 || offset >= length)
+      {
+        ret = EXIT_PARAMETER_ERROR;
+      }
+      else
+      {
+        int32_t len = input.getDataLen();
+        id_ = input.readInt64();
+        use_capacity_ = input.readInt64();
+        total_capacity_ = input.readInt64();
+        current_load_ = input.readInt32();
+        block_count_  = input.readInt32();
+        last_update_time_ = input.readInt64();
+        startup_time_ = input.readInt64();
+        total_tp_.write_byte_ = input.readInt64();
+        total_tp_.read_byte_ = input.readInt64();
+        total_tp_.write_file_count_ = input.readInt64();
+        total_tp_.read_file_count_ = input.readInt64();
+        total_tp_.unlink_file_count_ = input.readInt64();
+        total_tp_.fail_write_byte_ = input.readInt64();
+        total_tp_.fail_read_byte_ = input.readInt64();
+        total_tp_.fail_write_file_count_ = input.readInt64();
+        total_tp_.fail_read_file_count_ = input.readInt64();
+        total_tp_.fail_unlink_file_count_ = input.readInt64();
+        current_time_ = input.readInt64();
+        status_ = (DataServerLiveStatus)input.readInt32();
+        rb_expired_time_ = input.readInt64();
+        next_report_block_time_ = input.readInt64();
+        disk_type_ = input.readInt8();
+        rb_status_ = input.readInt8();
+
+        offset += (len - input.getDataLen());
+      }
+      return ret;
+    }
+
     int64_t ClusterConfig::length() const
     {
       return INT_SIZE * 8;

@@ -1441,6 +1441,37 @@ namespace tfs
       int64_t length() const;
     };
 
+    struct ServerStat
+    {
+      uint64_t id_;
+      int64_t use_capacity_;
+      int64_t total_capacity_;
+      int32_t current_load_;
+      int32_t block_count_;
+      time_t last_update_time_;
+      time_t startup_time_;
+      common::Throughput total_tp_;
+      common::Throughput last_tp_;
+      time_t current_time_;
+      common::DataServerLiveStatus status_;
+      int64_t rb_expired_time_;
+      int64_t next_report_block_time_;
+      uint8_t disk_type_;
+      uint8_t rb_status_;
+
+      ServerStat():id_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
+          last_update_time_(0), startup_time_(0), current_time_(0),rb_expired_time_(0),
+          next_report_block_time_(0), disk_type_(0), rb_status_(0)
+      {
+        memset(&total_tp_, 0, sizeof(total_tp_));
+        memset(&last_tp_, 0, sizeof(last_tp_));
+      }
+      ~ServerStat() {}
+      int serialize(tbnet::DataBuffer& output, int32_t& length);
+      int deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset);
+    };
+
+
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;

@@ -39,8 +39,6 @@ namespace tfs
       public:
         ServerShow(){}
         virtual ~ServerShow(){}
-        int serialize(tbnet::DataBuffer& output, int32_t& length);
-        int deserialize(tbnet::DataBuffer& input, int32_t& length);
         int calculate(ServerShow& old_server);
         void dump(const int8_t flag, FILE* fp) const;
       private:

@@ -52,12 +52,12 @@ namespace tfs
             //server.dump();
             if (role == Master_Server_Role)
             {
-              master_server_map_[server.id_] = server;
+              master_server_map_[server.server_stat_.id_] = server;
               map_count++;
             }
             else if (role == Slave_Server_Role)
             {
-              slave_server_map_[server.id_] = server;
+              slave_server_map_[server.server_stat_.id_] = server;
             }
           }
         }

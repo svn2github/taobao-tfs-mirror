@@ -22,6 +22,7 @@
 #include "common/client_manager.h"
 #include "message/message_factory.h"
 #include "common/config_item.h"
+#include "common/internal.h"
 #include "nameserver/ns_define.h"
 
 namespace tfs
@@ -160,28 +161,15 @@ namespace tfs
       public:
         ServerBase();
         virtual ~ServerBase();
-        int deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const int8_t type);
+        int serialize(tbnet::DataBuffer& output, int32_t& length);
+        int deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const int8_t type = 0);
         int fetch_family_set();
         void dump() const;
 
 #ifdef TFS_NS_DEBUG
         int64_t total_elect_num_;
 #endif
-        uint64_t id_;
-        int64_t use_capacity_;
-        int64_t total_capacity_;
-        common::Throughput total_tp_;
-        common::Throughput last_tp_;
-        int32_t current_load_;
-        int32_t block_count_;
-        time_t last_update_time_;
-        time_t startup_time_;
-        time_t current_time_;
-        time_t rb_expired_time_;
-        time_t next_report_block_time_;
-        int8_t disk_type_;
-        int8_t rb_status_;
-        common::DataServerLiveStatus status_;
+        common::ServerStat server_stat_;
         std::set<uint64_t> hold_;
         std::set<uint64_t> writable_;
         std::set<uint64_t> master_;

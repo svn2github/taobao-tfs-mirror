@@ -148,15 +148,15 @@ namespace tfs
       int32_t b = 0;
       if (type & SERVER_TYPE_SERVER_INFO)
       {
-        if (use_capacity_ != server_b.use_capacity_) { flag_.set(b); server_b.flag_.set(b); }
-        if (total_capacity_ != server_b.total_capacity_) { flag_.set(b + 1); server_b.flag_.set(b + 1); }
-        if (current_load_ != server_b.current_load_) { flag_.set(b + 2); server_b.flag_.set(b + 2); }
-        if (block_count_ != server_b.block_count_) { flag_.set(b + 3); server_b.flag_.set(b + 3);}
-        if (total_tp_.write_byte_ != server_b.total_tp_.write_byte_) { flag_.set(b + 4); server_b.flag_.set(b + 4);}
-        if (total_tp_.write_file_count_ != server_b.total_tp_.write_file_count_) { flag_.set(b + 5); server_b.flag_.set(b + 5); }
-        if (total_tp_.read_byte_ != server_b.total_tp_.read_byte_) { flag_.set(b + 6); server_b.flag_.set(b + 6);}
-        if (total_tp_.read_file_count_ != server_b.total_tp_.read_file_count_) { flag_.set(b + 7); server_b.flag_.set(b + 7);}
-        if (startup_time_ != server_b.startup_time_) { flag_.set(b + 8); server_b.flag_.set(b + 8);}
+        if (server_stat_.use_capacity_ != server_b.server_stat_.use_capacity_) { flag_.set(b); server_b.flag_.set(b); }
+        if (server_stat_.total_capacity_ != server_b.server_stat_.total_capacity_) { flag_.set(b + 1); server_b.flag_.set(b + 1); }
+        if (server_stat_.current_load_ != server_b.server_stat_.current_load_) { flag_.set(b + 2); server_b.flag_.set(b + 2); }
+        if (server_stat_.block_count_ != server_b.server_stat_.block_count_) { flag_.set(b + 3); server_b.flag_.set(b + 3);}
+        if (server_stat_.total_tp_.write_byte_ != server_b.server_stat_.total_tp_.write_byte_) { flag_.set(b + 4); server_b.flag_.set(b + 4);}
+        if (server_stat_.total_tp_.write_file_count_ != server_b.server_stat_.total_tp_.write_file_count_) { flag_.set(b + 5); server_b.flag_.set(b + 5); }
+        if (server_stat_.total_tp_.read_byte_ != server_b.server_stat_.total_tp_.read_byte_) { flag_.set(b + 6); server_b.flag_.set(b + 6);}
+        if (server_stat_.total_tp_.read_file_count_ != server_b.server_stat_.total_tp_.read_file_count_) { flag_.set(b + 7); server_b.flag_.set(b + 7);}
+        if (server_stat_.startup_time_ != server_b.server_stat_.startup_time_) { flag_.set(b + 8); server_b.flag_.set(b + 8);}
         if (hold_.size() != server_b.hold_.size()) { flag_.set(b + 9); server_b.flag_.set(b + 9); }
         if (writable_.size() != server_b.writable_.size()) { flag_.set(b + 10); server_b.flag_.set(b + 10); }
         if (master_.size()!= server_b.master_.size()) { flag_.set(b + 11); server_b.flag_.set(b + 11);}
@@ -211,16 +211,16 @@ namespace tfs
         if (type & SERVER_TYPE_SERVER_INFO)
         {
           printf("%-21s %6s%c %4s%c %5u%c %5u%c %10s%c %13ld%c %10s%c %13ld%c %15s%c %4zd%c %4zd%c %4zd%c\n",
-            tbsys::CNetUtil::addrToString(id_).c_str(),
-            Func::format_size(use_capacity_).c_str(), suffix(flag_[b]),
-            Func::format_size(total_capacity_).c_str(), suffix(flag_[b+1]),
-            current_load_, suffix(flag_[b+2]),
-            block_count_, suffix(flag_[b+3]),
-            Func::format_size(total_tp_.write_byte_).c_str(), suffix(flag_[b + 4]),
-            total_tp_.write_file_count_, suffix(flag_[b + 5]),
-            Func::format_size(total_tp_.read_byte_).c_str(), suffix(flag_[b + 6]),
-            total_tp_.read_file_count_, suffix(flag_[b + 7]),
-            Func::time_to_str(startup_time_).c_str(), suffix(flag_[b + 8]),
+            tbsys::CNetUtil::addrToString(server_stat_.id_).c_str(),
+            Func::format_size(server_stat_.use_capacity_).c_str(), suffix(flag_[b]),
+            Func::format_size(server_stat_.total_capacity_).c_str(), suffix(flag_[b+1]),
+            server_stat_.current_load_, suffix(flag_[b+2]),
+            server_stat_.block_count_, suffix(flag_[b+3]),
+            Func::format_size(server_stat_.total_tp_.write_byte_).c_str(), suffix(flag_[b + 4]),
+            server_stat_.total_tp_.write_file_count_, suffix(flag_[b + 5]),
+            Func::format_size(server_stat_.total_tp_.read_byte_).c_str(), suffix(flag_[b + 6]),
+            server_stat_.total_tp_.read_file_count_, suffix(flag_[b + 7]),
+            Func::time_to_str(server_stat_.startup_time_).c_str(), suffix(flag_[b + 8]),
             hold_.size(), suffix(flag_[b + 9]),
             writable_.size(), suffix(flag_[b + 10]),
             master_.size(), suffix(flag_[b + 11])
@@ -228,23 +228,23 @@ namespace tfs
         }
         if (type & SERVER_TYPE_BLOCK_LIST)
         {
-          printf("%s_ns's %-21s has more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(id_).c_str());
+          printf("%s_ns's %-21s has more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(server_stat_.id_).c_str());
           print_container(hold_, flag_, false, false);
         }
         if (type & SERVER_TYPE_BLOCK_WRITABLE)
         {
-          printf("%s_ns's %-21s's has more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(id_).c_str());
+          printf("%s_ns's %-21s's has more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(server_stat_.id_).c_str());
           print_container(writable_, flag_, false, false);
         }
         if (type & SERVER_TYPE_BLOCK_MASTER)
         {
-          printf("%s_ns's %-21s's has more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(id_).c_str());
+          printf("%s_ns's %-21s's has more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(server_stat_.id_).c_str());
           print_container(master_, flag_, false, false);
         }
       }
       else if( (type & SERVER_TYPE_BLOCK_LIST) || (type & SERVER_TYPE_BLOCK_WRITABLE) || (type & SERVER_TYPE_BLOCK_MASTER) )
       {
-        printf("%s_ns's %-21s's has not more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(id_).c_str());
+        printf("%s_ns's %-21s's has not more blocks:\n", is_master?"MASTER":"SLAVE", tbsys::CNetUtil::addrToString(server_stat_.id_).c_str());
       }
     }
     BlockCmp::BlockCmp()

@@ -36,7 +36,7 @@ namespace tfs
         virtual ~ServerCmp();
         uint64_t get_id() const
         {
-          return id_;
+          return server_stat_.id_;
         }
         int cmp(ServerCmp& server_b, const int8_t type);
         void dump(ServerCmp& server_b, const int8_t type);

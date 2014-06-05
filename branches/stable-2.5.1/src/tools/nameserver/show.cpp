@@ -77,8 +77,9 @@ namespace tfs
           close(fd);
           return;
         }
-        server.deserialize(input, length);
-        last_server_map_[server.id_] = server;
+        int32_t offset = 0; // useless
+        server.deserialize(input, length, offset);
+        last_server_map_[server.server_stat_.id_] = server;
       }
       close(fd);
     }
@@ -252,26 +253,26 @@ namespace tfs
                 if (TFS_SUCCESS != ret)
                 {
                   TBSYS_LOG(WARN, "server(%s) fetch family list fail, ret: %d",
-                      tbsys::CNetUtil::addrToString(server.id_).c_str(), ret);
+                      tbsys::CNetUtil::addrToString(server.server_stat_.id_).c_str(), ret);
                 }
               }
               server.ServerBase::dump();
-              if (once && ((tbsys::CNetUtil::addrToString(server.id_)) != server_ip_port))
+              if (once && ((tbsys::CNetUtil::addrToString(server.server_stat_.id_)) != server_ip_port))
               {
                 break;
               }
-              server_map_[server.id_] = server;
+              server_map_[server.server_stat_.id_] = server;
               old_server = server;
               if (last_server_size > 0)
               {
-                map<uint64_t, ServerShow>::iterator iter = last_server_map_.find(server.id_);
+                map<uint64_t, ServerShow>::iterator iter = last_server_map_.find(server.server_stat_.id_);
                 if (iter != last_server_map_.end())
                 {
                   old_server = iter->second;
                   //old_server.ServerBase::dump();
                 }
               }
-              last_server_map_[server.id_] = server;
+              last_server_map_[server.server_stat_.id_] = server;
               server.calculate(old_server);
               stat.add(server);
               server.dump(type, fp);
@@ -361,28 +362,28 @@ namespace tfs
             ServerShow server;
             if (TFS_SUCCESS == server.ServerBase::deserialize(ret_param.data_, data_len, offset, SERVER_TYPE_SERVER_INFO))
             {
-              server_map_[server.id_] = server;
+              server_map_[server.server_stat_.id_] = server;
               ServerShow old_server;
               old_server = server;
               if (last_server_size > 0)
               {
-                map<uint64_t, ServerShow>::iterator iter = last_server_map_.find(server.id_);
+                map<uint64_t, ServerShow>::iterator iter = last_server_map_.find(server.server_stat_.id_);
                 if (iter != last_server_map_.end())
                 {
                   old_server = iter->second;
                 }
               }
-              last_server_map_[server.id_] = server;
+              last_server_map_[server.server_stat_.id_] = server;
               if (need_family)
               {
                 ret = server.fetch_family_set();
                 if (TFS_SUCCESS != ret)
                 {
                   TBSYS_LOG(WARN, "server(%s) fetch family list fail, ret: %d",
-                      tbsys::CNetUtil::addrToString(server.id_).c_str(), ret);
+                      tbsys::CNetUtil::addrToString(server.server_stat_.id_).c_str(), ret);
                 }
               }
-              uint64_t machine_id = get_machine_id(server.id_);
+              uint64_t machine_id = get_machine_id(server.server_stat_.id_);
               map<uint64_t, MachineShow>::iterator iter = machine_map_.find(machine_id);
               if (iter != machine_map_.end())
               {
