@@ -33,6 +33,7 @@ namespace tfs
   {
     const int ErasureCode::ws_ = 8;
     const int ErasureCode::ps_ = 128;
+    tbutil::Mutex ErasureCode::mutex_;
 
     ErasureCode::ErasureCode()
     {
@@ -49,7 +50,7 @@ namespace tfs
 
     int ErasureCode::config(const int dn, const int pn, int* erased)
     {
-      int ret = 0;
+      int ret = TFS_SUCCESS;
 
       clear();
 
@@ -57,8 +58,8 @@ namespace tfs
       pn_ = pn;
 
       matrix_ = (int*)malloc(dn_*pn_ * INT_SIZE);
-      //matrix_ = new (std::nothrow_t)int [dn_*pn];
-      assert(matrix_);
+      assert(NULL != matrix_);
+      mutex_.lock();
       for (int i = 0; i < pn_; i++)
       {
         for (int j = 0; j < dn_; j++)
@@ -66,7 +67,9 @@ namespace tfs
           matrix_[i*dn_+j] = galois_single_divide(1, i ^ (pn_ + j), ws_);
         }
       }
+      mutex_.unlock();
       int* bitmatrix = jerasure_matrix_to_bitmatrix(dn_, pn_, ws_, matrix_);
+      assert(NULL != bitmatrix);
       tbsys::gFree(matrix_);
       matrix_ = bitmatrix;
 
@@ -75,8 +78,7 @@ namespace tfs
       if (NULL != erased)
       {
         de_matrix_ = (int*)malloc(dn_*dn_*ws_*ws_*INT_SIZE);
-        //de_matrix_ = new (std::nothrow) int[dn_*dn_*ws_*ws_];
-        assert(de_matrix_);
+        assert(NULL != de_matrix_);
         int alive = 0;
         for (int i = 0; i < dn_ + pn_; i++)
         {
@@ -151,7 +153,7 @@ namespace tfs
       if (NULL == matrix_)
       {
         ret = EXIT_MATRIX_INVALID;
-        TBSYS_LOG(ERROR, "matrix invalid, which is null.");
+        TBSYS_LOG(ERROR, "matrix invalid, call config() first.");
       }
       else if (0 != size % (ws_ * ps_))
       {
@@ -185,7 +187,7 @@ namespace tfs
       if (NULL == de_matrix_)
       {
         ret = EXIT_MATRIX_INVALID;
-        TBSYS_LOG(ERROR, "matrix invalid, which is null.");
+        TBSYS_LOG(ERROR, "matrix invalid, call config() first");
       }
       else if (0 != size % (ws_ * ps_))
       {
