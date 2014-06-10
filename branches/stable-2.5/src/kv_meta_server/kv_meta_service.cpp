@@ -124,8 +124,11 @@ namespace tfs
         }
       }
 
-      //init global stat
-      ret = stat_mgr_.initialize(get_timer());
+      if (TFS_SUCCESS == ret)
+      {
+        //init global stat
+        ret = stat_mgr_.initialize(get_timer());
+      }
       if (ret != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "%s", "initialize stat manager fail");
