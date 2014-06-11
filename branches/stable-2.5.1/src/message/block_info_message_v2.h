@@ -406,6 +406,23 @@ namespace tfs
       protected:
         std::map<uint64_t, common::ThroughputV2> block_statistic_visit_maps_;
     };
+
+    class CleanFamilyInfoMessage : public common::BasePacket
+    {
+      public:
+        CleanFamilyInfoMessage();
+        virtual ~CleanFamilyInfoMessage();
+        virtual int serialize(common::Stream& output)  const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        inline void set_block(const uint64_t block) { block_ = block;}
+        inline uint64_t get_block() const { return block_;}
+        inline void set_family_id(const int64_t family_id) { family_id_ = family_id;}
+        inline int64_t get_family_id() const {return family_id_;}
+      private:
+        uint64_t block_;
+        int64_t  family_id_;
+    };
   }/** end namespace message **/
 }/** end namespace tfs **/
 #endif

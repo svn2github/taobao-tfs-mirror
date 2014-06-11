@@ -135,9 +135,10 @@ namespace tfs
           const common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members, const time_t now);
       bool build_dissolve_task_(int64_t& need, const FamilyCollect* family,
           const common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members, const time_t now);
-      bool build_redundant_(int64_t& need, const time_t now, const bool master);
+      void build_redundant_(int64_t& need, const time_t now, const bool master);
+      void build_clean_familyinfo_task_(int64_t& need, const time_t now, const bool master);
       int build_marshalling_(int64_t& need, const time_t now);
-      bool build_resolve_invalid_copies_task_(common::ArrayHelper<ServerItem>& invalids, BlockCollect* block, const time_t now);
+      void build_resolve_invalid_copies_task_(common::ArrayHelper<ServerItem>& invalids, BlockCollect* block, const time_t now);
       int64_t has_space_in_task_queue_() const;
 
       bool scan_block_(common::ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, int64_t& max_compact_task_count,

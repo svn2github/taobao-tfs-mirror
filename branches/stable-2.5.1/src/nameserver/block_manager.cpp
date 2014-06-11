@@ -229,6 +229,36 @@ namespace tfs
       emergency_replicate_queue_.clear();
     }
 
+    void BlockManager::push_to_clean_familyinfo_queue(const uint64_t block, const ServerItem& item, const bool master)
+    {
+      if (master)
+      {
+        tbutil::Mutex::Lock lock(clean_familyinfo_queue_mutex_);
+        clean_familyinfo_queue_.push_back(std::make_pair(block, item));
+      }
+    }
+
+    void BlockManager::pop_from_clean_familyinfo_queue(std::pair<uint64_t, ServerItem>& output, const bool master)
+    {
+      if (master)
+      {
+        tbutil::Mutex::Lock lock(clean_familyinfo_queue_mutex_);
+        output = clean_familyinfo_queue_.front();
+        clean_familyinfo_queue_.pop_front();
+      }
+    }
+
+    bool BlockManager::clean_familyinfo_queue_empty() const
+    {
+      return clean_familyinfo_queue_.empty();
+    }
+
+    void BlockManager::clear_familyinfo_queue()
+    {
+      tbutil::Mutex::Lock lock(clean_familyinfo_queue_mutex_);
+      clean_familyinfo_queue_.clear();
+    }
+
     bool BlockManager::scan(common::ArrayHelper<BlockCollect*>& result, uint64_t& begin, const int32_t count) const
     {
       bool end  = false;
@@ -632,13 +662,14 @@ namespace tfs
       return ret;
     }
 
-    bool BlockManager::resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids, BlockCollect* block, const time_t now)
+    bool BlockManager::resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids,
+      common::ArrayHelper<ServerItem>& clean_familyinfo, BlockCollect* block, const time_t now)
     {
       bool ret = (NULL != block );
       if (ret)
       {
         RWLock::Lock lock(get_mutex_(block->id()), WRITE_LOCKER);
-        ret = block->resolve_invalid_copies(invalids, now);
+        ret = block->resolve_invalid_copies(invalids, clean_familyinfo, now);
       }
       return ret;
     }
@@ -676,7 +707,7 @@ namespace tfs
     }
 
     int BlockManager::apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-          const uint64_t block, common::ArrayHelper<ServerItem>& helper)
+          const uint64_t block, common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo)
     {
       int32_t ret = (INVALID_BLOCK_ID != block && INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -686,26 +717,27 @@ namespace tfs
         ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
-          ret = pblock->apply_lease(server, now, step, update, helper);
+          ret = pblock->apply_lease(server, now, step, update, helper, clean_familyinfo);
         }
       }
       return ret;
     }
 
     int BlockManager::apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-          BlockCollect* pblock, common::ArrayHelper<ServerItem>& helper)
+          BlockCollect* pblock, common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo)
     {
       int32_t ret = (NULL != pblock && INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         RWLock::Lock lock(get_mutex_(pblock->id()), WRITE_LOCKER);
-        ret = pblock->apply_lease(server, now, step, update, helper);
+        ret = pblock->apply_lease(server, now, step, update, helper, clean_familyinfo);
       }
       return ret;
     }
 
     int BlockManager::renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-          const common::BlockInfoV2& info, const uint64_t block, common::ArrayHelper<ServerItem>& helper)
+          const common::BlockInfoV2& info, const uint64_t block, common::ArrayHelper<ServerItem>& helper,
+          common::ArrayHelper<ServerItem>& clean_familyinfo)
     {
       int32_t ret = (INVALID_BLOCK_ID != block && INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -715,20 +747,21 @@ namespace tfs
         ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
-          ret = pblock->renew_lease(server, now, step, update, info, helper);
+          ret = pblock->renew_lease(server, now, step, update, info, helper, clean_familyinfo);
         }
       }
       return ret;
     }
 
     int BlockManager::renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-          const common::BlockInfoV2& info, BlockCollect* pblock, common::ArrayHelper<ServerItem>& helper)
+          const common::BlockInfoV2& info, BlockCollect* pblock, common::ArrayHelper<ServerItem>& helper,
+         common::ArrayHelper<ServerItem>& clean_familyinfo )
     {
       int32_t ret = (NULL != pblock && INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         RWLock::Lock lock(get_mutex_(pblock->id()), WRITE_LOCKER);
-        ret = pblock->renew_lease(server, now, step, update, info, helper);
+        ret = pblock->renew_lease(server, now, step, update, info, helper, clean_familyinfo);
       }
       return ret;
     }

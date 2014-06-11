@@ -303,11 +303,15 @@ namespace tfs
     {
       ServerItem arrays[MAX_REPLICATION_NUM];
       common::ArrayHelper<ServerItem> helper(MAX_REPLICATION_NUM, arrays);
+      ServerItem family_arrays[MAX_REPLICATION_NUM];
+      common::ArrayHelper<ServerItem> clean_family_helper(MAX_REPLICATION_NUM, family_arrays);
+
       int64_t now = Func::get_monotonic_time();
       BlockManager& block_manager = manager.get_block_manager();
       for (int64_t index = 0; index < result.get_array_index(); ++index)
       {
         helper.clear();
+        clean_family_helper.clear();
         BlockLease* entry = result.at(index);
         assert(NULL != entry);
         BlockCollect* pblock = NULL;
@@ -328,8 +332,8 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager.apply_lease(id(), now, get() - now, true, pblock, helper);
-          invalid_block_copies_(manager, helper, entry->block_id_);
+          ret = block_manager.apply_lease(id(), now, get() - now, true, pblock, helper, clean_family_helper);
+          invalid_block_copies_(manager, helper, clean_family_helper, entry->block_id_);
         }
         if (TFS_SUCCESS == ret)
         {
@@ -375,6 +379,8 @@ namespace tfs
         all_over = get_range_blocks(start, *writable_, helper);
         ServerItem arrays[MAX_REPLICATION_NUM];
         common::ArrayHelper<ServerItem> invalid_helper(MAX_REPLICATION_NUM, arrays);
+        ServerItem family_arrays[MAX_REPLICATION_NUM];
+        common::ArrayHelper<ServerItem> clean_family_helper(MAX_REPLICATION_NUM, family_arrays);
         for (int64_t index = 0; index < helper.get_array_index() && result.get_array_index() < result.get_array_size(); ++index)
         {
           invalid_helper.clear();
@@ -386,8 +392,8 @@ namespace tfs
           }
           if (TFS_SUCCESS == ret)
           {
-            ret = block_manager.apply_lease(id(), now, get() - now, false, start, invalid_helper);
-            invalid_block_copies_(manager, invalid_helper, start);
+            ret = block_manager.apply_lease(id(), now, get() - now, false, start, invalid_helper, clean_family_helper);
+            invalid_block_copies_(manager, invalid_helper, clean_family_helper, start);
           }
           if (TFS_SUCCESS == ret)
           {
@@ -424,6 +430,8 @@ namespace tfs
     {
       ServerItem arrays[MAX_REPLICATION_NUM];
       common::ArrayHelper<ServerItem> invalid_helper(MAX_REPLICATION_NUM, arrays);
+      ServerItem family_arrays[MAX_REPLICATION_NUM];
+      common::ArrayHelper<ServerItem> clean_family_helper(MAX_REPLICATION_NUM, family_arrays);
       BlockManager& block_manager = manager.get_block_manager();
       for (int64_t index = 0; index < input.get_array_index(); ++index)
       {
@@ -442,8 +450,8 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager.renew_lease(id(), now, get() - now, false, *entry, pblock, invalid_helper);
-          invalid_block_copies_(manager, invalid_helper, entry->block_id_);
+          ret = block_manager.renew_lease(id(), now, get() - now, false, *entry, pblock, invalid_helper, clean_family_helper);
+          invalid_block_copies_(manager, invalid_helper, clean_family_helper, entry->block_id_);
         }
         if (TFS_SUCCESS == ret)
         {
@@ -810,7 +818,8 @@ namespace tfs
       return ret;
     }
 
-    void ServerCollect::invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<ServerItem> helper, const uint64_t block)
+    void ServerCollect::invalid_block_copies_(LayoutManager& manager, const common::ArrayHelper<ServerItem>& helper,
+    const common::ArrayHelper<ServerItem>& clean_family_helper, const uint64_t block)
     {
       for (int64_t index = 0; index < helper.get_array_index(); ++index)
       {
@@ -819,6 +828,13 @@ namespace tfs
         ServerCollect* pserver = manager.get_server_manager().get(item->server_);
         manager.get_server_manager().relieve_relation(pserver, block);
         manager.get_block_manager().push_to_delete_queue(block, *item, GFactory::get_runtime_info().is_master());
+      }
+
+      for (int64_t k = 0; k < clean_family_helper.get_array_index(); ++k)
+      {
+        ServerItem* item = clean_family_helper.at(k);
+        assert(NULL != item);
+        manager.get_block_manager().push_to_clean_familyinfo_queue(block, *item, GFactory::get_runtime_info().is_master());
       }
     }
 

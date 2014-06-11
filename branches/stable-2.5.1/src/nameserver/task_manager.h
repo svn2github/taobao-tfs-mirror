@@ -98,6 +98,7 @@ namespace tfs
       bool has_space_do_task_in_machine(const uint64_t server, const bool target) const;
       bool has_space_do_task_in_machine(const uint64_t server) const;
       int remove_block_from_dataserver(const uint64_t block, const ServerItem& item, const time_t now);
+      int clean_familyinfo_from_dataserver(const uint64_t block, const ServerItem& item, const time_t now);
       int run();
       int handle(common::BasePacket* msg, const int64_t seqno);
       int timeout(const time_t now);

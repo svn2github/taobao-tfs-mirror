@@ -70,16 +70,18 @@ namespace tfs
       bool check_balance(const time_t now) const;
       bool check_reinstate(const time_t now) const;
       bool check_marshalling(const time_t now) const;
-      bool resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids, const time_t now);
+      bool resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids,
+        common::ArrayHelper<ServerItem>& clean_familyinfo, const time_t now);
       void callback(void * args, LayoutManager& manger);
       void cleanup(common::ArrayHelper<uint64_t>& expires);
       int scan(common::SSMScanParameter& param) const;
       void get_servers(common::ArrayHelper<uint64_t>& servers) const;
       uint64_t get_master() const;
       int apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-        common::ArrayHelper<ServerItem>& helper);
+        common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo);
       int renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-        const common::BlockInfoV2& info,common::ArrayHelper<ServerItem>& helper);
+        const common::BlockInfoV2& info,common::ArrayHelper<ServerItem>& helper,
+        common::ArrayHelper<ServerItem>& clean_familyinfo);
       int giveup_lease(const uint64_t server, const time_t now, const common::BlockInfoV2* info);
       void update_version(const common::ArrayHelper<uint64_t>& helper, const int32_t step);
       void update_all_version(const int32_t step);

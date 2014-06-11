@@ -573,6 +573,9 @@ namespace tfs
           case common::CLIENT_NS_KEEPALIVE_RESPONSE_MESSAGE:
             packet = new ClientNsKeepaliveResponseMessage();
             break;
+          case common::NS_CLEAR_FAMILYINFO_MESSAGE:
+            packet = new CleanFamilyInfoMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;

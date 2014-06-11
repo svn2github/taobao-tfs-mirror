@@ -196,7 +196,7 @@ namespace tfs
           ret = !fres.second ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
-            //ç›®å‰çš„æµæ§åšå¾—ç®€å•ç‚¹ï¼Œå°†ä¸»æ§æœºçš„æµé‡è®°1ä¸ªï¼Œåé¢æ…¢æ…¢ä¼˜åŒ–
+            //Ä¿Ç°µÄÁ÷¿Ø×öµÃ¼òµ¥µã£¬½«Ö÷¿Ø»úµÄÁ÷Á¿¼Ç1¸ö£¬ºóÃæÂıÂıÓÅ»¯
             int64_t index = 0;
             std::pair<BLOCK_TO_TASK_ITER, bool> res;
             std::pair<FamilyMemberInfo, bool> success[MEMBER_NUM];
@@ -402,6 +402,22 @@ namespace tfs
         item.family_id_, item.version_);
       tbsys::CLogger& block_log = get_layout_manager().get_block_log();
       block_log.logMessage(TBSYS_LOG_LEVEL(INFO), "send remove block-%"PRI64_PREFIX"u server: %s %s",
+          block, tbsys::CNetUtil::addrToString(item.server_).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
+      return ret;
+    }
+
+    int TaskManager::clean_familyinfo_from_dataserver(const uint64_t block, const ServerItem& item, const time_t now)
+    {
+      UNUSED(now);
+      CleanFamilyInfoMessage cfmsg;
+      cfmsg.set_block(block);
+      cfmsg.set_family_id(item.family_id_);
+      int32_t ret = post_msg_to_server(item.server_, &cfmsg, ns_async_callback);
+      TBSYS_LOG(INFO, "send clean familyinfo block: %"PRI64_PREFIX"u command on server : %s %s, family_id: %"PRI64_PREFIX"d, version: %d",
+        block, tbsys::CNetUtil::addrToString(item.server_).c_str(), TFS_SUCCESS == ret ? "successful" : "failed",
+        item.family_id_, item.version_);
+      tbsys::CLogger& block_log = get_layout_manager().get_block_log();
+      block_log.logMessage(TBSYS_LOG_LEVEL(INFO), "send clean familyinfo block-%"PRI64_PREFIX"u server: %s %s",
           block, tbsys::CNetUtil::addrToString(item.server_).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
       return ret;
     }

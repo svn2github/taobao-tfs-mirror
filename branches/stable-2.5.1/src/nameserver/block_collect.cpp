@@ -317,9 +317,11 @@ namespace tfs
         *result = lan;
     }
 
-    bool BlockCollect::resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids, const time_t now)
+    bool BlockCollect::resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids,
+      common::ArrayHelper<ServerItem>& clean_familyinfo, const time_t now)
     {
       invalids.clear();
+      clean_familyinfo.clear();
       assert(invalids.get_array_size() >= MAX_REPLICATION_NUM);
       bool ret = (!is_creating() && expire(now) && servers_.size() > 1U);
       if (ret)
@@ -350,28 +352,41 @@ namespace tfs
             ++max_family_id_count;
         }
 
+        if (INVALID_FAMILY_ID != info_.family_id_)
+        {
+          if (INVALID_FAMILY_ID != max_family_id
+          && max_family_id_count > 0
+          && max_family_id_count != size)
+          {
+            info_.family_id_ = max_family_id;
+            for (iter = servers_.begin(); iter != servers_.end(); ++iter)
+            {
+              if (iter->family_id_ < max_family_id )
+              {
+                invalids.push_back((*iter));
+                insert_item(del_lans, iter->server_);
+              }
+            }
+          }
+        }
+        else
+        {
+          if (INVALID_FAMILY_ID != max_family_id
+            && max_family_id_count > 0)
+          {
+            for (iter = servers_.begin(); iter != servers_.end(); ++iter)
+            {
+              clean_familyinfo.push_back((*iter));
+            }
+          }
+        }
+
         if (size > 0 && size != max_version_count)
         {
           info_.version_ = max_version;
           for (iter = servers_.begin(); iter != servers_.end(); ++iter)
           {
-            if (max_version != iter->version_)
-            {
-              invalids.push_back((*iter));
-              insert_item(del_lans, iter->server_);
-            }
-          }
-        }
-
-        if (INVALID_FAMILY_ID != info_.family_id_
-          && INVALID_FAMILY_ID != max_family_id
-          && max_family_id_count > 0
-          && max_family_id_count != size)
-        {
-          info_.family_id_ = max_family_id;
-          for (iter = servers_.begin(); iter != servers_.end(); ++iter)
-          {
-            if (iter->family_id_ < max_family_id && !invalids.exist((*iter)))
+            if (max_version != iter->version_ && !invalids.exist((*iter)))
             {
               invalids.push_back((*iter));
               insert_item(del_lans, iter->server_);
@@ -471,7 +486,7 @@ namespace tfs
     }
 
     int BlockCollect::apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-      common::ArrayHelper<ServerItem>& helper)
+      common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo)
     {
       int32_t ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -488,7 +503,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        resolve_invalid_copies(helper, now);
+        resolve_invalid_copies(helper, clean_familyinfo, now);
         for (int64_t index = 0; index < helper.get_array_index(); ++index)
         {
           ServerItem* item = helper.at(index);
@@ -521,7 +536,7 @@ namespace tfs
     }
 
     int BlockCollect::renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-        const common::BlockInfoV2& info,common::ArrayHelper<ServerItem>& helper)
+        const common::BlockInfoV2& info,common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo)
     {
       int32_t ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -541,7 +556,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        resolve_invalid_copies(helper, now);
+        resolve_invalid_copies(helper, clean_familyinfo, now);
         for (int64_t index = 0; index < helper.get_array_index(); ++index)
         {
           ServerItem* item = helper.at(index);

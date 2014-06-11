@@ -36,7 +36,7 @@ namespace tfs
   namespace nameserver
   {
    class BlockManager
-    {
+   {
         struct BlockIdCompare
         {
           bool operator ()(const BlockCollect* lhs, const BlockCollect* rhs) const
@@ -77,6 +77,11 @@ namespace tfs
         int64_t get_emergency_replicate_queue_size() const;
         void clear_emergency_replicate_queue();
 
+        void push_to_clean_familyinfo_queue(const uint64_t block, const ServerItem& item, const bool master);
+        void pop_from_clean_familyinfo_queue(std::pair<uint64_t, ServerItem>& output, const bool master);
+        bool clean_familyinfo_queue_empty() const;
+        void clear_familyinfo_queue();
+
         BlockCollect* get(const uint64_t block) const;
         bool exist(const uint64_t block) const;
         bool scan(common::ArrayHelper<BlockCollect*>& result, uint64_t& begin, const int32_t count) const;
@@ -107,7 +112,8 @@ namespace tfs
         bool need_marshalling(const BlockCollect* block, const time_t now);
         bool need_marshalling(common::ArrayHelper<uint64_t>& servers, const BlockCollect* block, const time_t now) const;
         bool need_reinstate(const BlockCollect* block, const time_t now) const;
-        bool resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids, BlockCollect* block, const time_t now);
+        bool resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids,
+          common::ArrayHelper<ServerItem>& clean_familyinfo, BlockCollect* block, const time_t now);
 
         int expand_ratio(int32_t& index, const float expand_ratio = 0.1);
 
@@ -115,13 +121,15 @@ namespace tfs
         bool has_valid_lease(const uint64_t block, const time_t now) const;
         bool has_valid_lease(const BlockCollect* pblock, const time_t now) const;
         int apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-          const uint64_t block, common::ArrayHelper<ServerItem>& helper);
+          const uint64_t block, common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo);
         int apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-          BlockCollect* pblock, common::ArrayHelper<ServerItem>& helper);
+          BlockCollect* pblock, common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo);
         int renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-          const common::BlockInfoV2& info, const uint64_t block, common::ArrayHelper<ServerItem>& helper);
+          const common::BlockInfoV2& info, const uint64_t block, common::ArrayHelper<ServerItem>& helper,
+          common::ArrayHelper<ServerItem>& clean_familyinfo);
         int renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-          const common::BlockInfoV2& info, BlockCollect* pblock, common::ArrayHelper<ServerItem>& helper);
+          const common::BlockInfoV2& info, BlockCollect* pblock, common::ArrayHelper<ServerItem>& helper,
+          common::ArrayHelper<ServerItem>& clean_familyinfo);
         int giveup_lease(const uint64_t server, const time_t now, const common::BlockInfoV2* info, const uint64_t block);
         int giveup_lease(const uint64_t server, const time_t now, const common::BlockInfoV2* info, BlockCollect* pblock);
         void timeout(const time_t now);
@@ -156,6 +164,9 @@ namespace tfs
 
         tbutil::Mutex delete_queue_mutex_;
         std::deque< std::pair<uint64_t, ServerItem> > delete_queue_;
+
+        tbutil::Mutex clean_familyinfo_queue_mutex_;
+        std::deque< std::pair<uint64_t, ServerItem> > clean_familyinfo_queue_;
 
         tbutil::Mutex emergency_replicate_queue_mutex_;
         std::deque<uint64_t> emergency_replicate_queue_;

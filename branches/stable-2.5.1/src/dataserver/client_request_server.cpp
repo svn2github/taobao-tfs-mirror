@@ -119,6 +119,9 @@ namespace tfs
           case GET_ALL_BLOCKS_HEADER_MESSAGE:
             ret = get_all_blocks_header(dynamic_cast<GetAllBlocksHeaderMessage*>(packet));
             break;
+          case NS_CLEAR_FAMILYINFO_MESSAGE:
+            ret = clean_family_info(dynamic_cast<CleanFamilyInfoMessage*>(packet));
+            break;
           default:
             TBSYS_LOG(WARN, "process packet pcode: %d\n", pcode);
             ret = EXIT_UNKNOWN_MSGTYPE;
@@ -708,6 +711,25 @@ namespace tfs
         ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
 
+      return ret;
+    }
+
+    int ClientRequestServer::clean_family_info(message::CleanFamilyInfoMessage* message)
+    {
+      uint64_t block = message->get_block();
+      int64_t  family_id = message->get_family_id();
+      int64_t real_family_id = INVALID_FAMILY_ID;
+      int32_t ret = (INVALID_BLOCK_ID != block && INVALID_FAMILY_ID != family_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_manager().get_family_id(real_family_id, block);
+      }
+      if (TFS_SUCCESS == ret && real_family_id == family_id)
+      {
+        ret = get_block_manager().set_family_id(INVALID_FAMILY_ID, block);
+      }
+      TBSYS_LOG(INFO, "clean family info %s, ret: %d, block: %"PRI64_PREFIX"u, family: %"PRI64_PREFIX"d",TFS_SUCCESS == ret ? "successful" : "fail", ret, block, family_id);
+      ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return ret;
     }
 

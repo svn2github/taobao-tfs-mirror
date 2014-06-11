@@ -71,6 +71,7 @@ namespace tfs
         /** block service interface */
         int new_block(message::NewBlockMessageV2* message);
         int remove_block(message::RemoveBlockMessageV2* message);
+        int clean_family_info(message::CleanFamilyInfoMessage* message);
 
         /** data & index interface */
         int read_raw_data(message::ReadRawdataMessageV2* message);

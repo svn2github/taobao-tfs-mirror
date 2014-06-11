@@ -711,6 +711,7 @@ namespace tfs
 
     void LayoutManager::redundant_()
     {
+      const int32_t MAX_CLEAR_FAMILYINFO_NUMS = 512;
       const int32_t MAX_REDUNDNAT_NUMS = 512;
       const int32_t MAX_SLEEP_TIME_US  = 500000;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
@@ -724,11 +725,12 @@ namespace tfs
         while ((ngi.in_report_block_time(now) && !ngi.is_destroyed()))
           Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
 
-        while ((get_block_manager().delete_queue_empty() && !ngi.is_destroyed()))
-          Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
+        int64_t need = MAX_CLEAR_FAMILYINFO_NUMS;
+        build_clean_familyinfo_task_(need, now, ngi.is_master());
 
-        int64_t need = MAX_REDUNDNAT_NUMS;
+        need = MAX_REDUNDNAT_NUMS;
         build_redundant_(need, now, ngi.is_master());
+
         usleep(MAX_SLEEP_TIME_US);
       }
     }
@@ -1386,16 +1388,26 @@ namespace tfs
       return TFS_SUCCESS == ret;
     }
 
-    bool LayoutManager::build_redundant_(int64_t& need, const time_t now, const bool master)
+    void LayoutManager::build_redundant_(int64_t& need, const time_t now, const bool master)
     {
-      bool ret = false;
       std::pair<uint64_t, ServerItem> output;
       while (need-- > 0 && get_block_manager().pop_from_delete_queue(output, master))
       {
         relieve_relation(output.first, output.second.server_, now, false);
-        ret = (TFS_SUCCESS == get_task_manager().remove_block_from_dataserver(output.first, output.second, now));
+        get_task_manager().remove_block_from_dataserver(output.first, output.second, now);
       }
-      return true;
+    }
+
+    void LayoutManager::build_clean_familyinfo_task_(int64_t& need, const time_t now, const bool master)
+    {
+      BlockManager& block_manager = get_block_manager();
+      while(need-- > 0 && !block_manager.clean_familyinfo_queue_empty())
+      {
+        std::pair<uint64_t, ServerItem> output;
+        block_manager.pop_from_clean_familyinfo_queue(output, master);
+        if (master)
+          get_task_manager().clean_familyinfo_from_dataserver(output.first, output.second, now);
+      }
     }
 
     int LayoutManager::build_marshalling_(int64_t& need, const time_t now)
@@ -1491,10 +1503,9 @@ namespace tfs
       return ret;
     }
 
-    bool LayoutManager::build_resolve_invalid_copies_task_(common::ArrayHelper<ServerItem>& invalids, BlockCollect* block, const time_t now)
+    void LayoutManager::build_resolve_invalid_copies_task_(common::ArrayHelper<ServerItem>& invalids, BlockCollect* block, const time_t now)
     {
-      bool ret = invalids.get_array_index() > 0 && NULL != block;
-      if (ret)
+      if (NULL != block)
       {
         NsRuntimeGlobalInformation& ngi = NsRuntimeGlobalInformation::instance();
         int32_t result = TFS_SUCCESS;
@@ -1510,12 +1521,11 @@ namespace tfs
         }
         if (ngi.is_master())
         {
-          ret = get_block_manager().need_replicate(block);
+          bool ret = get_block_manager().need_replicate(block);
           if (ret)
             get_block_manager().push_to_emergency_replicate_queue(block);
         }
       }
-      return ret;
     }
 
     int64_t LayoutManager::has_space_in_task_queue_() const
@@ -1531,17 +1541,23 @@ namespace tfs
       BlockCollect* block = NULL;
       ServerItem copies[MAX_REPLICATION_NUM];
       ArrayHelper<ServerItem> invalids(MAX_REPLICATION_NUM, copies);
+      ServerItem family_arrays[MAX_REPLICATION_NUM];
+      common::ArrayHelper<ServerItem> clean_family_helper(MAX_REPLICATION_NUM, family_arrays);
+       NsRuntimeGlobalInformation& ngi = NsRuntimeGlobalInformation::instance();
       bool over = get_block_manager().scan(results, start, max_query_block_num);
       for (int64_t index = 0; index < results.get_array_index() && need > 0; ++index)
       {
         invalids.clear();
         block = *results.at(index);
         assert(NULL != block);
-        ret = get_block_manager().resolve_invalid_copies(invalids,block,now);
-        if ((ret) && (ret = (build_resolve_invalid_copies_task_(invalids, block, now))))
+        ret = get_block_manager().resolve_invalid_copies(invalids,clean_family_helper,block,now);
+        build_resolve_invalid_copies_task_(invalids, block, now);
+        for (int64_t k = 0; k < clean_family_helper.get_array_index(); ++k)
         {
-
+          ServerItem* item = clean_family_helper.at(k);
+          get_block_manager().push_to_clean_familyinfo_queue(block->id(), *item, ngi.is_master());
         }
+
         ret = (get_block_manager().need_replicate(block, now));
         if ((ret) && (ret = get_block_manager().push_to_emergency_replicate_queue(block)))
           --need;
