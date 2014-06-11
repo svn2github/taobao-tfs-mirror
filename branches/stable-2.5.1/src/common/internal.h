@@ -911,6 +911,7 @@ namespace tfs
       CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE  = 1 << 3,
       CLEAR_SYSTEM_TABLE_FLAG_MARSHALLING_QUEUE = 1 << 4,
       CLEAR_SYSTEM_TABLE_FLAG_REI_OR_DIS_QUEUE = 1 << 5,
+      CLEAR_SYSTEM_TABLE_CLEAN_FAMILYINFO_QUEUE = 1 << 6,
     }ClearSystemTableFlag;
     typedef enum _FamilyMemberStatus
     {

@@ -323,7 +323,7 @@ namespace tfs
       invalids.clear();
       clean_familyinfo.clear();
       assert(invalids.get_array_size() >= MAX_REPLICATION_NUM);
-      bool ret = (!is_creating() && expire(now) && servers_.size() > 1U);
+      bool ret = (!is_creating() && expire(now) && servers_.size() >= 1U);
       if (ret)
       {
         const int32_t size = servers_.size();
@@ -358,7 +358,6 @@ namespace tfs
           && max_family_id_count > 0
           && max_family_id_count != size)
           {
-            info_.family_id_ = max_family_id;
             for (iter = servers_.begin(); iter != servers_.end(); ++iter)
             {
               if (iter->family_id_ < max_family_id )

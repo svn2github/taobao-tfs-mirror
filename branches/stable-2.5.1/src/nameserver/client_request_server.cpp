@@ -587,6 +587,8 @@ namespace tfs
             manager_.get_family_manager().clear_reinstate_or_dissolve_queue();
         if (info.value3_ & CLEAR_SYSTEM_TABLE_REPLICATE_QUEUE)
             manager_.get_block_manager().clear_emergency_replicate_queue();
+        if (info.value3_ & CLEAR_SYSTEM_TABLE_CLEAN_FAMILYINFO_QUEUE)
+            manager_.get_block_manager().clear_familyinfo_queue();
       }
       return ret;
     }

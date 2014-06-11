@@ -527,7 +527,7 @@ namespace tfs
         rotate_(current);
 
         now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now))
+        if (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
           Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
 
         if (ngi.is_master())
@@ -610,7 +610,7 @@ namespace tfs
       while (!ngi.is_destroyed())
       {
         now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now))
+        if (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
           Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ * 4, ngi.destroy_flag_);
 
         if (ngi.is_master())
@@ -718,7 +718,7 @@ namespace tfs
       while (!ngi.is_destroyed())
       {
         int64_t now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now))
+        if (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
           Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ , ngi.destroy_flag_);
 
         now = Func::get_monotonic_time();
@@ -1539,6 +1539,9 @@ namespace tfs
       results.clear();
       bool ret  = false;
       BlockCollect* block = NULL;
+      uint64_t block_id = INVALID_BLOCK_ID;
+      uint64_t array[MAX_REPLICATION_NUM];
+      ArrayHelper<uint64_t> del_helper(MAX_REPLICATION_NUM, array);
       ServerItem copies[MAX_REPLICATION_NUM];
       ArrayHelper<ServerItem> invalids(MAX_REPLICATION_NUM, copies);
       ServerItem family_arrays[MAX_REPLICATION_NUM];
@@ -1549,29 +1552,53 @@ namespace tfs
       {
         invalids.clear();
         block = *results.at(index);
+        block_id = block->id();
         assert(NULL != block);
         ret = get_block_manager().resolve_invalid_copies(invalids,clean_family_helper,block,now);
         build_resolve_invalid_copies_task_(invalids, block, now);
         for (int64_t k = 0; k < clean_family_helper.get_array_index(); ++k)
         {
           ServerItem* item = clean_family_helper.at(k);
-          get_block_manager().push_to_clean_familyinfo_queue(block->id(), *item, ngi.is_master());
+          get_block_manager().push_to_clean_familyinfo_queue(block_id, *item, ngi.is_master());
         }
 
-        ret = (get_block_manager().need_replicate(block, now));
-        if ((ret) && (ret = get_block_manager().push_to_emergency_replicate_queue(block)))
-          --need;
-        ret = (!ret && compact_time && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT) && max_compact_task_count > 0
-            && get_block_manager().need_compact(block,now));
-        if ((ret) && (ret = build_compact_task_(block, now)))
+        if (!IS_VERFIFY_BLOCK(block_id))
         {
-          --need;
-          --max_compact_task_count;
+          ret = (get_block_manager().need_replicate(block, now));
+          if ((ret) && (ret = get_block_manager().push_to_emergency_replicate_queue(block)))
+            --need;
+          ret = (!ret && compact_time && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT) && max_compact_task_count > 0
+              && get_block_manager().need_compact(block,now));
+          if ((ret) && (ret = build_compact_task_(block, now)))
+          {
+            --need;
+            --max_compact_task_count;
+          }
+          ret = (!ret && marshalling_time && !report_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
+              && get_block_manager().need_marshalling(block, now));
+          if (ret)
+            ret = get_family_manager().push_block_to_marshalling_queues(block, now);
         }
-        ret = (!ret && marshalling_time && !report_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
-            && get_block_manager().need_marshalling(block, now));
-        if (ret)
-          ret = get_family_manager().push_block_to_marshalling_queues(block, now);
+        else
+        {
+          if (INVALID_FAMILY_ID == block->get_family_id())
+          {
+            BlockCollect* del_result = NULL;
+            del_helper.clear();
+            get_block_manager().get_servers(del_helper, block);
+            for (int64_t j = 0; j < del_helper.get_array_index(); ++j)
+            {
+              ServerItem item;
+              item.server_ =  *del_helper.at(j);
+              item.family_id_ = INVALID_FAMILY_ID;
+              item.version_  = -1;
+              relieve_relation(block_id, item.server_, now, false);
+              get_block_manager().push_to_delete_queue(block_id, item, GFactory::get_runtime_info().is_master());
+            }
+            get_block_manager().remove(del_result, block_id);
+            get_gc_manager().insert(del_result, now);
+          }
+        }
       }
       return over;
     }

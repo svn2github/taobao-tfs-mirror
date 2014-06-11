@@ -309,6 +309,10 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
+        ret = GFactory::get_runtime_info().load_family_info_complete() ? TFS_SUCCESS : EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
+      {
         ServerCollect* pserver = get(server);
         ret = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
         if (TFS_SUCCESS == ret)
