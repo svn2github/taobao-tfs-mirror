@@ -69,7 +69,7 @@ namespace tfs
       inline int32_t size() const { return info_.size_;}
       void get_servers(common::ArrayHelper<uint64_t>& servers) const;
       uint64_t get_server(const int8_t index = 0) const;
-      inline void update(const common::BlockInfoV2& info) { info_ = info;}
+      inline void update(const common::BlockInfoV2& info) { info_.assign_non_familyid(info); }
       inline bool is_full() const { return ((info_.size_ + common::BLOCK_RESERVER_LENGTH) >= common::SYSPARAM_NAMESERVER.max_block_size_
                                             || info_.file_count_ >= common::MAX_SINGLE_BLOCK_FILE_COUNT); }
       inline uint64_t id() const { return info_.block_id_;}

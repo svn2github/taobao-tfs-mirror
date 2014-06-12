@@ -295,6 +295,7 @@ namespace tfs
 
       protected:
         common::FamilyMemberInfo* family_members_;
+        int64_t crc_[common::MAX_MARSHALLING_NUM];
         int64_t family_id_;
         int32_t family_aid_info_;
     };

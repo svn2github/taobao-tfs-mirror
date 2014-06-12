@@ -841,6 +841,7 @@ namespace tfs
     {
       type_ = PLAN_TYPE_EC_MARSHALLING;
       family_id_ = family_id;
+      memset(crc_, 0, sizeof(crc_));
     }
 
     MarshallingTask::~MarshallingTask()
@@ -1012,6 +1013,15 @@ namespace tfs
               family_members_[i].block_, data[i], length, offset, true);
         }
 
+        // compute crc for all blocks
+        if (TFS_SUCCESS == ret)
+        {
+          for (int i = 0; i < member_num; i++)
+          {
+            crc_[i] = Func::crc(crc_[i], data[i], length);
+          }
+        }
+
         // one turn success, update offset
         if (TFS_SUCCESS == ret)
         {
@@ -1105,6 +1115,7 @@ namespace tfs
           ec_metas[i].family_id_ = family_id_;
           // set used_offset as marshalling_offset for data node
           // marshalling will unlock all data blocks on commit
+          ec_metas[i].data_crc_ = crc_[i];
           ec_metas[i].mars_offset_ = ec_metas[i].used_offset_;
           ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_metas[i], SWITCH_BLOCK_NO, UNLOCK_BLOCK_YES);
@@ -1115,6 +1126,7 @@ namespace tfs
         ec_meta.mars_offset_ = marshalling_len;
         for (int i = data_num; (TFS_SUCCESS == ret) && (i < member_num); i++)
         {
+          ec_meta.data_crc_ = crc_[i];
           ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
         }
@@ -1367,6 +1379,19 @@ namespace tfs
               family_members_[i].block_, data[i], length, offset, true);
         }
 
+        // compute lost data crc
+        if (TFS_SUCCESS == ret)
+        {
+          for (int32_t i = 0; i < member_num; i++)
+          {
+            if (ErasureCode::NODE_DEAD != erased_[i])
+            {
+              continue;
+            }
+            crc_[i] = Func::crc(crc_[i], data[i], length);
+          }
+        }
+
         // all success, update offset
         if (TFS_SUCCESS == ret)
         {
@@ -1412,6 +1437,11 @@ namespace tfs
             family_members_[pi].block_, family_members_[i].block_, index_data);
         if (TFS_SUCCESS == ret)
         {
+          // compactible with old family
+          if (index_data.header_.data_crc_ != 0)
+          {
+            assert(index_data.header_.data_crc_ == crc_[i]);
+          }
           // update lost data node's marshalling len
           // it's needed when recover check block
           ec_metas[i].mars_offset_ = index_data.header_.marshalling_offset_;
@@ -1440,6 +1470,7 @@ namespace tfs
 
         ECMeta ec_meta;
         ec_meta.family_id_ = family_id_;
+        ec_meta.data_crc_ = crc_[i];
         ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
       }
@@ -1487,6 +1518,7 @@ namespace tfs
         ECMeta ec_meta;
         ec_meta.family_id_ = family_id_;
         ec_meta.mars_offset_ = marshalling_len;
+        ec_meta.data_crc_ = crc_[i];
         ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
       }

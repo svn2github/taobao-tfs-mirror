@@ -1138,6 +1138,21 @@ namespace tfs
         return block_id_ < rhs.block_id_;
       }
 
+      void assign_non_familyid(const BlockInfoV2& info)
+      {
+        block_id_ = info.block_id_;
+        version_ = info.version_;
+        size_ = info.size_;
+        file_count_ = info.file_count_;
+        del_size_ = info.del_size_;
+        del_file_count_ = info.del_file_count_;
+        update_size_ = info.update_size_;
+        update_file_count_ = info.update_file_count_;
+        last_access_time_ = info.last_access_time_;
+        reserve_[0] = info.reserve_[0];
+        reserve_[1] = info.reserve_[1];
+      }
+
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
@@ -1176,7 +1191,8 @@ namespace tfs
     	};
     	uint16_t used_file_info_bucket_size_;
       int8_t  max_index_num_;
-    	int8_t  reserve_[27];
+    	int8_t  reserve_[23];
+      uint32_t data_crc_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
@@ -1201,9 +1217,11 @@ namespace tfs
       int32_t used_offset_;
       int32_t mars_offset_;
       int32_t version_step_;
+      int64_t data_crc_;    // need represent invalid value
+      int32_t reserve_[4];
 
       ECMeta(): family_id_(-1),
-        used_offset_(0), mars_offset_(0), version_step_(0)
+        used_offset_(0), mars_offset_(0), version_step_(0), data_crc_(-1)
       {
 
       }

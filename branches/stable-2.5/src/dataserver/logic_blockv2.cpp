@@ -267,6 +267,18 @@ namespace tfs
       return index_handle_->set_marshalling_offset(size);
     }
 
+    int BaseLogicBlock::get_data_crc(uint32_t& crc) const
+    {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return index_handle_->get_data_crc(crc);
+    }
+
+    int BaseLogicBlock::set_data_crc(const uint32_t crc)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      return index_handle_->set_data_crc(crc);
+    }
+
     int BaseLogicBlock::write_file_infos(const common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const uint64_t logic_block_id, const bool partial, const int32_t reserved_space_ratio)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
