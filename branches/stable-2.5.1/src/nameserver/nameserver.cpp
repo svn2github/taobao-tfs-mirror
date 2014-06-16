@@ -229,8 +229,11 @@ namespace tfs
             transport_[index]->stop();
             transport_[index]->wait();
           }
-          work_threads_[index].stop();
-          work_threads_[index].wait();
+          if (0 != index)
+          {
+            work_threads_[index].stop();
+            work_threads_[index].wait();
+          }
         }
 
         GFactory::destroy();

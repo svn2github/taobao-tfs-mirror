@@ -352,7 +352,6 @@ namespace tfs
 
     int FamilyManager::get_members(common::ArrayHelper<std::pair<uint64_t, uint64_t> >& members, int32_t& family_aid_info, const int64_t family_id) const
     {
-      UNUSED(family_aid_info);
       int32_t ret = (INVALID_FAMILY_ID != family_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -363,6 +362,7 @@ namespace tfs
         ret = NULL != family ? TFS_SUCCESS : EXIT_NO_FAMILY;
         if (TFS_SUCCESS == ret)
         {
+          family_aid_info = family->get_family_aid_info();
           ret = get_members_(helper, family_id);
         }
         if (TFS_SUCCESS == ret)
@@ -371,7 +371,7 @@ namespace tfs
           {
             std::pair<uint64_t, int32_t>* item = helper.at(index);
             assert(NULL != item);
-            std::pair<uint64_t, int32_t> new_item;
+            std::pair<uint64_t, uint64_t> new_item;
             new_item.first = item->first;
             new_item.second = bm.get_master(item->first);
             members.push_back(new_item);

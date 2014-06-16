@@ -515,9 +515,12 @@ namespace tfs
         if (update && !has_master_())//TODO
         {
           ServerItem* result = get_(server);
-          remove(server, now);
-          servers_.insert(servers_.begin(), *result);
-          choose_master_ = BLOCK_CHOOSE_MASTER_COMPLETE_FLAG_YES;
+          if (NULL != result)
+          {
+            remove(server, now);
+            servers_.insert(servers_.begin(), *result);
+            choose_master_ = BLOCK_CHOOSE_MASTER_COMPLETE_FLAG_YES;
+          }
         }
       }
 

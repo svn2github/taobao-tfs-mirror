@@ -95,6 +95,13 @@ namespace tfs
       int32_t business_port_count_;
       int32_t heart_port_count_;
       double  balance_percent_;
+
+      NameServerParameter()
+      {
+        business_port_count_ = 1;
+        heart_port_count_ = 1;
+      }
+
       static NameServerParameter ns_parameter_;
       static NameServerParameter& instance()
       {
