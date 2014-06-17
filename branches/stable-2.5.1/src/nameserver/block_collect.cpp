@@ -39,6 +39,7 @@ namespace tfs
     {
       memset(&info_, 0, sizeof(info_));
       info_.block_id_ = block_id;
+      servers_.reserve(SYSPARAM_NAMESERVER.max_replication_);
     }
 
     BlockCollect::BlockCollect(const uint64_t block_id):
@@ -375,6 +376,7 @@ namespace tfs
           {
             for (iter = servers_.begin(); iter != servers_.end(); ++iter)
             {
+              iter->family_id_ = INVALID_FAMILY_ID;
               clean_familyinfo.push_back((*iter));
             }
           }
@@ -397,7 +399,7 @@ namespace tfs
         for (iter = servers_.begin(); iter != servers_.end(); ++iter)
         {
           uint32_t lan = Func::get_lan(iter->server_, SYSPARAM_NAMESERVER.group_mask_);
-          uint32_t* result = query_item(lans, iter->server_);
+          uint32_t* result = query_item(lans, lan);
           if (0U == (*result))
           {
             *result = lan;
@@ -618,6 +620,13 @@ namespace tfs
       }
     }
 
+    void BlockCollect::update_family_id(const uint64_t server, const int64_t family_id)
+    {
+      ServerItem* item = get_(server);
+      if (NULL != item)
+        item->family_id_ = family_id;
+    }
+
     void BlockCollect::update_all_version(const int32_t step)
     {
       SERVER_ITER iter = servers_.begin();
@@ -677,11 +686,6 @@ namespace tfs
         ServerCollect* pserver = manager.get_server_manager().get(server);
         manager.get_server_manager().relieve_relation(pserver, id());
       }
-    }
-
-    ServerItem* BlockCollect::get_server_item(const uint64_t server)
-    {
-      return get_(server);
     }
 
     ServerItem* BlockCollect::get_(const uint64_t server)

@@ -713,7 +713,7 @@ namespace tfs
             helper.push_back(std::make_pair(id, it->second));
             BlockCollect* block =  block_manager.insert(id, now, false);
             assert(NULL != block);
-            block_manager.set_family_id(id, family.family_id_);
+            block_manager.set_family_id(id, INVALID_SERVER_ID, family.family_id_);
             id_factory_.update(id);
             str << id << ":" << it->second << ":";
           }

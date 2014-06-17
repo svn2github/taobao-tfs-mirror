@@ -54,13 +54,16 @@ namespace tfs
     {
       bool reset = false;
       rwmutex_.wrlock();
-      ServerCollect* pserver = get_(info.id_);
+      ServerCollect* pserver = NULL;
+      ServerCollect query(info.id_);
+      SERVER_TABLE_ITER iter  = servers_.find(&query);
+      if (servers_.end() != iter)
+        pserver = (*iter);
       int32_t ret = (NULL == pserver) ? common::TFS_SUCCESS : EXIT_APPLY_LEASE_ALREADY_ISSUED;
       if (common::TFS_SUCCESS == ret)
       {
         ServerCollect* result = NULL;
-        ServerCollect query(info.id_);
-        SERVER_TABLE_ITER iter  = wait_free_servers_.find(&query);
+        iter  = wait_free_servers_.find(&query);
         pserver = wait_free_servers_.end() == iter ? NULL : (*iter);
         reset = (NULL != pserver && (OBJECT_WAIT_FREE_PHASE_CLEAR == pserver->get_wait_free_phase()));
         if (reset)

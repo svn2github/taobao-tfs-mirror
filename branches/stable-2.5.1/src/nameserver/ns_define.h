@@ -210,6 +210,7 @@ namespace tfs
     extern void print_lease(const common::ArrayHelper<common::BlockLease>& helper, std::stringstream& result);
     extern bool is_equal_group(const uint64_t id);
     extern bool in_hour_range(const int64_t now, int32_t& min, int32_t& max);
+    extern bool in_min_range(const int64_t now, const int32_t hour, const int32_t min);
  }/** nameserver **/
 }/** tfs **/
 

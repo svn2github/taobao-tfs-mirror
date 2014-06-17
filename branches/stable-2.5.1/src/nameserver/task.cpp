@@ -515,7 +515,7 @@ namespace tfs
                 }
                 if (TFS_SUCCESS == ret)
                 {
-                  ret = bm.set_family_id(block, family_info.family_id_);
+                  ret = bm.set_family_id(block, server, family_info.family_id_);
                 }
                 if (TFS_SUCCESS == ret)
                 {
@@ -539,7 +539,7 @@ namespace tfs
                 uint64_t server = base_info[index].server_;
                 pblock = bm.insert(block, now, false);
                 assert(NULL != pblock);
-                ret = bm.set_family_id(block, family_info.family_id_);
+                ret = bm.set_family_id(block, server, family_info.family_id_);
                 if (TFS_SUCCESS == ret)
                   ret = (NULL != (pserver = sm.get(server))) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
                 if (TFS_SUCCESS == ret)
@@ -559,7 +559,7 @@ namespace tfs
                 for (index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
                 {
                   if (FAMILY_MEMBER_STATUS_OTHER == base_info[index].status_)
-                    ret = bm.set_family_id(base_info[index].block_, INVALID_FAMILY_ID);
+                    ret = bm.set_family_id(base_info[index].block_, base_info[index].server_, INVALID_FAMILY_ID);
                 }
                 for (index = DATA_MEMBER_NUM; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
                 {
@@ -758,7 +758,7 @@ namespace tfs
                   block = bm.insert(member_info[index].block_, now, false);
                   ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
                   if (TFS_SUCCESS == ret)
-                    ret = bm.set_family_id(member_info[index].block_, family_info.family_id_);
+                    ret = bm.set_family_id(member_info[index].block_, member_info[index].server_, family_info.family_id_);
                 }
                 if (TFS_SUCCESS == ret)
                 {
@@ -876,7 +876,7 @@ namespace tfs
                   }
                   if (TFS_SUCCESS == ret)
                   {
-                    ret = bm.set_family_id(member_info[index].block_, INVALID_FAMILY_ID);
+                    ret = bm.set_family_id(member_info[index].block_, member_info[index].server_, INVALID_FAMILY_ID);
                   }
                   if (TFS_SUCCESS == ret)
                   {

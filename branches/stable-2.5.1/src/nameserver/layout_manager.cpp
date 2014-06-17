@@ -722,8 +722,11 @@ namespace tfs
           Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ , ngi.destroy_flag_);
 
         now = Func::get_monotonic_time();
-        while ((ngi.in_report_block_time(now) && !ngi.is_destroyed()))
+        while (ngi.in_report_block_time(now) && !ngi.is_destroyed())
+        {
           Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
+          now = Func::get_monotonic_time();
+        }
 
         int64_t need = MAX_CLEAR_FAMILYINFO_NUMS;
         build_clean_familyinfo_task_(need, now, ngi.is_master());

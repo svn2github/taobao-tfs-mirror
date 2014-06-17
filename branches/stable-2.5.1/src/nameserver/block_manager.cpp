@@ -436,7 +436,8 @@ namespace tfs
           {
             uint64_t block_id = *left_less_helper.at(index);
             BlockCollect* pblock = this->get(block_id);
-            manager_.relieve_relation(pblock, server, now, true);
+            if (NULL != pblock && 0 != pblock->get_last_leave_time())
+              manager_.relieve_relation(pblock, server, now, true);
           }
         }
       }
@@ -539,7 +540,7 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::set_family_id(const uint64_t block, const uint64_t family_id)
+    int BlockManager::set_family_id(const uint64_t block, const uint64_t server, const uint64_t family_id)
     {
       RWLock::Lock lock(get_mutex_(block), WRITE_LOCKER);
       BlockCollect* pblock = get_(block);
@@ -547,6 +548,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         pblock->set_family_id(family_id);
+        if (INVALID_SERVER_ID != server)
+          pblock->update_family_id(server, family_id);
       }
       return ret;
     }

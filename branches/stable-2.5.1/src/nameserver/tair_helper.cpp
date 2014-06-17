@@ -226,6 +226,8 @@ namespace tfs
         do
         {
           ret = tair_client_.prefix_remove(area_, tair_pkey, tair_skey);
+          if (TAIR_RETURN_DATA_NOT_EXIST == ret)
+            ret = TAIR_RETURN_SUCCESS;
         }
         while (TAIR_RETURN_SUCCESS != ret && index++ < 3);
       }

@@ -253,7 +253,7 @@ namespace tfs
     tbnet::IPacketHandler::HPRetCode NameServer::handlePacket(tbnet::Connection *connection, tbnet::Packet *packet)
     {
       tbnet::IPacketHandler::HPRetCode hret = tbnet::IPacketHandler::FREE_CHANNEL;
-      bool bret = (NULL != connection) && (NULL != packet);
+      bool bret = (NULL != connection) && (NULL != packet) && (GFactory::get_runtime_info().own_is_initialize_complete());
       if (bret)
       {
         TBSYS_LOG(DEBUG, "receive pcode : %d", packet->getPCode());

@@ -880,7 +880,7 @@ namespace tfs
         {
           std::pair<uint64_t, uint64_t>* item = helper.at(index);
           assert(NULL != item);
-          block_manager.set_family_id(item->first, INVALID_FAMILY_ID);
+          block_manager.set_family_id(item->first, item->second, INVALID_FAMILY_ID);
           if (IS_VERFIFY_BLOCK(item->first))
           {
             ServerItem si;

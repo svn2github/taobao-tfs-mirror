@@ -85,6 +85,7 @@ namespace tfs
       int giveup_lease(const uint64_t server, const time_t now, const common::BlockInfoV2* info);
       void update_version(const common::ArrayHelper<uint64_t>& helper, const int32_t step);
       void update_all_version(const int32_t step);
+      void update_family_id(const uint64_t server, const int64_t family_id);
       void dump(int32_t level, const char* file = __FILE__,
           const int32_t line = __LINE__, const char* function = __FUNCTION__, const pthread_t thid = pthread_self()) const;
       void update_info(const common::BlockInfoV2& info);
@@ -107,11 +108,11 @@ namespace tfs
         return servers_.size() == copies;
       }
       inline const common::BlockInfoV2& get_block_info() const { return info_;}
-      ServerItem* get_server_item(const uint64_t server);
       inline void set_task_expired_time(const int64_t now, const int32_t step)
       {
         task_expired_time_ = now + step;
       }
+      inline int64_t get_last_leave_time() const { return last_leave_time_;}
     private:
       inline int32_t get_delete_file_num_ratio_() const
       {

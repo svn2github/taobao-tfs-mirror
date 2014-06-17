@@ -100,7 +100,7 @@ namespace tfs
             const common::BlockInfoV2* info, const int64_t family_id, const int64_t now, const bool set);
         int relieve_relation(BlockCollect* block, const uint64_t server, const time_t now);
         int update_block_info(const common::BlockInfoV2& info, BlockCollect* block);
-        int set_family_id(const uint64_t block, const uint64_t family_id);
+        int set_family_id(const uint64_t block, const uint64_t server, const uint64_t family_id);
         bool need_replicate(const BlockCollect* block) const;
         bool need_replicate(const BlockCollect* block, const time_t now) const;
         bool need_replicate(common::ArrayHelper<uint64_t>& servers, common::PlanPriority& priority,

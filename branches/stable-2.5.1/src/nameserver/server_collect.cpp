@@ -174,7 +174,7 @@ namespace tfs
     bool ServerCollect::calc_regular_create_block_count(const double average_used_capacity,LayoutManager& manager, int32_t& count)
     {
       bool ret = (count > 0 && total_capacity_ > 0 && use_capacity_ >= 0
-                  && DATASERVER_DISK_TYPE_FULL == get_disk_type());
+                  && DATASERVER_DISK_TYPE_FULL == get_disk_type() && rb_status_ == REPORT_BLOCK_FLAG_YES);
       if (!ret)
       {
         count = 0;
@@ -629,16 +629,12 @@ namespace tfs
       int32_t SAFE_MODE_TIME = next_report_block_time_ > 0 ? SYSPARAM_NAMESERVER.safe_mode_time_ :
           SYSPARAM_NAMESERVER.safe_mode_time_ - (now - GFactory::get_runtime_info().startup_time_);
       SAFE_MODE_TIME = std::max(SAFE_MODE_TIME, 120);
-      int32_t hour = SYSPARAM_NAMESERVER.report_block_time_upper_ - SYSPARAM_NAMESERVER.report_block_time_lower_ ;
       if (common::SYSPARAM_NAMESERVER.report_block_time_interval_ > 0 && force)
       {
         next += (SYSPARAM_NAMESERVER.report_block_time_interval_ * 24 * 3600);
         struct tm lt;
         localtime_r(&next, &lt);
-        if (hour > 0)
-          lt.tm_hour = time_seed % hour + SYSPARAM_NAMESERVER.report_block_time_lower_;
-        else
-          lt.tm_hour = SYSPARAM_NAMESERVER.report_block_time_lower_;
+        lt.tm_hour = SYSPARAM_NAMESERVER.report_block_time_lower_;
         lt.tm_min  = time_seed % ((SAFE_MODE_TIME / 60) - 1);
         lt.tm_sec  = time_seed % 60;
         next = mktime(&lt);
@@ -649,8 +645,8 @@ namespace tfs
       }
       time_t diff_sec = next - current;
       next_report_block_time_ = now + diff_sec;
-      TBSYS_LOG(INFO, "%s next: %"PRI64_PREFIX"d, diff: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d, hour: %d",
-        tbsys::CNetUtil::addrToString(id()).c_str(), next_report_block_time_, diff_sec, now, hour);
+      TBSYS_LOG(INFO, "%s next: %"PRI64_PREFIX"d, diff: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d",
+        tbsys::CNetUtil::addrToString(id()).c_str(), next_report_block_time_, diff_sec, now);
     }
 
     int ServerCollect::choose_move_block_random(uint64_t& result) const
