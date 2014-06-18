@@ -142,20 +142,20 @@ namespace tfs
       ServerCollect* server = NULL;
       int32_t loop = 0;
       const int32_t MAX_LOOP_NUM = delete_queue_.size();
-      const int8_t MIN_REPLICATE = SYSPARAM_NAMESERVER.max_replication_ > 1 ? 2 : SYSPARAM_NAMESERVER.max_replication_;
+      const int8_t MIN_REPLICATE = SYSPARAM_NAMESERVER.max_replication_;
       while (loop++ < MAX_LOOP_NUM && !ret && pop_from_delete_queue_(output))
       {
         block = get(output.second);
         server = manager_.get_server_manager().get(output.first);
-        ret = (NULL != block) && (NULL != server);
+        ret = (NULL != block) && (NULL != server) && !block->exist(server->id());
         if (ret)
         {
           get_mutex_(output.second).rdlock();
           int8_t size = block->get_servers_size();
           bool in_family = block->is_in_family();
-          ret = in_family ? !block->exist(server->id()) : size >= MIN_REPLICATE && !block->exist(server->id());
+          ret = in_family ? size > 0 : size >= MIN_REPLICATE;// delete if replicate safe enougth
           get_mutex_(output.second).unlock();
-          if (!ret && size < MIN_REPLICATE && size > 0 && !in_family)
+          if (!ret && size > 0)
             push_to_delete_queue(output.second, output.first);
         }
       }
@@ -271,7 +271,6 @@ namespace tfs
           }
         }
         end = (blocks_[next]->end() == iter);
-        all_over = ((next == MAX_BLOCK_CHUNK_NUMS - 1) && end);
         if (!end)
           begin = (*iter)->id();
         rwmutex_[next].unlock();
@@ -295,6 +294,7 @@ namespace tfs
           }
         }
       }
+      all_over = (next == MAX_BLOCK_CHUNK_NUMS);
       return all_over;
     }
 
