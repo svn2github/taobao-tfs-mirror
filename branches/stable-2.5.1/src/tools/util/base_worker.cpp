@@ -24,14 +24,11 @@
 #include "common/base_packet.h"
 #include "common/client_manager.h"
 #include "message/message_factory.h"
-#include "new_client/tfs_client_impl.h"
-#include "new_client/fsname.h"
 
 #include "base_worker.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
-using namespace tfs::client;
 using namespace std;
 
 namespace tfs

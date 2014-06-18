@@ -9,7 +9,6 @@ AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid $(MYSQL_LDFLAGS)
 bin_PROGRAMS =  dump2mysql press_select meta_transfer txt2new txt2new_V2 check_old_new check_old_new_V2 sync_nginx2kv go_tair_for_kv  # del_from_tair put_bucket_to_tair
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
-				$(top_builddir)/src/new_client/.libs/libtfsclient.a \
 				$(top_builddir)/src/common/mysql_cluster/libkvengine_mysql.a \
 				$(top_builddir)/src/name_meta_server/libnamemetaserver.a \
         $(TAIR_CACHE_LDFLAGS) $(MYSQL_LDFLAGS)\

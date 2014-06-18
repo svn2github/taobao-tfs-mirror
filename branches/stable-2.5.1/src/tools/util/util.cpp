@@ -25,15 +25,13 @@
 #include "message/server_status_message.h"
 #include "message/block_info_message.h"
 #include "message/block_info_message_v2.h"
-#include "new_client/tfs_client_impl.h"
+#include "clientv2/fsname.h"
 #include "clientv2/tfs_client_impl_v2.h"
-#include "new_client/fsname.h"
 #include "util.h"
 #include "tool_util.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
-using namespace tfs::client;
 using namespace tfs::clientv2;
 using namespace std;
 
@@ -53,7 +51,7 @@ namespace tfs
           std::set<FileInfo, CompareFileInfoByFileId>::const_iterator iter = file_sets.begin();
           for (; iter != file_sets.end(); ++iter)
           {
-            FSName fsname(block, (*iter).id_,  TfsClientImpl::Instance()->get_cluster_id(ns_addr.c_str()));
+            FSName fsname(block, (*iter).id_,  TfsClientImplV2::Instance()->get_cluster_id(ns_addr.c_str()));
             files.insert(fsname.get_name());
           }
         }
@@ -142,12 +140,13 @@ namespace tfs
 
     int Util::read_file_info(const std::string& ns_addr, const std::string& filename, FileInfo& info)
     {
-      int32_t fd = TfsClientImpl::Instance()->open(filename.c_str(), NULL, ns_addr.c_str(), T_READ);
+      int32_t fd = TfsClientImplV2::Instance()->open(filename.c_str(), NULL, ns_addr.c_str(), T_READ);
       int32_t ret = fd < 0 ? fd : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         TfsFileStat stat;
-        ret = TfsClientImpl::Instance()->fstat(fd, &stat, FORCE_STAT);
+        TfsClientImplV2::Instance()->set_option_flag(src_fd, FORCE_STAT);
+        ret = TfsClientImplV2::Instance()->fstat(fd, &stat);
         if (TFS_SUCCESS == ret)
         {
           info.id_ = stat.file_id_;
@@ -160,7 +159,7 @@ namespace tfs
           info.crc_ = stat.crc_;
           ret = (stat.flag_ == 1 || stat.flag_ == 4 || stat.flag_ == 5) ? META_FLAG_ABNORMAL : TFS_SUCCESS;
         }
-        TfsClientImpl::Instance()->close(fd);
+        TfsClientImplV2::Instance()->close(fd);
       }
       return ret;
     }
@@ -168,7 +167,7 @@ namespace tfs
     int Util::read_file_real_crc(const std::string& ns_addr, const std::string& filename, uint32_t& crc)
     {
       crc = 0;
-      int32_t fd = TfsClientImpl::Instance()->open(filename.c_str(), NULL, ns_addr.c_str(), T_READ);
+      int32_t fd = TfsClientImplV2::Instance()->open(filename.c_str(), NULL, ns_addr.c_str(), T_READ);
       int32_t ret = fd < 0 ? fd : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
@@ -177,7 +176,7 @@ namespace tfs
         TfsFileStat stat;
         while (true)
         {
-          int32_t rlen = TfsClientImpl::Instance()->readv2(fd, data, MAX_READ_SIZE, &stat);
+          int32_t rlen = TfsClientImplV2::Instance()->readv2(fd, data, MAX_READ_SIZE, &stat);
           ret = rlen < 0 ? rlen : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
@@ -193,7 +192,7 @@ namespace tfs
             break;
           }
         }
-        TfsClientImpl::Instance()->close(fd);
+        TfsClientImplV2::Instance()->close(fd);
       }
       return ret;
     }

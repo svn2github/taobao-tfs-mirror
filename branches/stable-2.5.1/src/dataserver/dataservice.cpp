@@ -26,7 +26,7 @@
 #include "common/func.h"
 #include "common/config_item.h"
 #include "common/directory_op.h"
-#include "new_client/fsname.h"
+#include "clientv2/fsname.h"
 
 namespace tfs
 {
@@ -34,7 +34,7 @@ namespace tfs
   {
     using namespace std;
     using namespace tfs::common;
-    using namespace tfs::client;
+    using namespace tfs::clientv2;
     using namespace tfs::message;
     DataService::DataService():
         op_manager_(*this),

@@ -28,7 +28,6 @@
 #include "common/parameter.h"
 #include "common/directory_op.h"
 #include "clientv2/fsname.h"
-#include "new_client/fsname.h"
 #include "sync_base.h"
 #include "sync_backup.h"
 #include "dataservice.h"

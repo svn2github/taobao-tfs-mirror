@@ -8,7 +8,6 @@ AM_LDFLAGS=-lrt -lpthread -ldl -luuid -lz
 bin_PROGRAMS = #split_block_tool transfer_blockv2 compare_crcv2
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
         $(top_builddir)/src/dataserver/libdataserver.a\
-	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
   $(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
 	$(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/message/libtfsmessage.a\

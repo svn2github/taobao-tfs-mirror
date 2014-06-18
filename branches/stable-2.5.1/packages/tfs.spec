@@ -54,7 +54,7 @@ files for developing applications that use the %name package.
 %build
 chmod u+x build.sh
 ./build.sh init
-./configure --prefix=%{_prefix} --without-tcmalloc --enable-uniquestore --enable-taircache --with-tair-root=/opt/csr/tair-2.3
+./configure --prefix=%{_prefix} --without-tcmalloc --enable-uniquestore --enable-taircache --with-tair-root=/opt/csr/tair-2.3 --with-restful-root=/home/admin/tfs/restful/
 make %{?_smp_mflags}
 
 %install
@@ -93,4 +93,4 @@ rm  -f /etc/ld.so.conf.d/tfs-%{VERSION}.conf
 
 %files devel
 %{_prefix}/include
-%{_prefix}/lib/libtfsclient.*
+%{_prefix}/lib/libtfsclientv2.*

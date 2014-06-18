@@ -3,7 +3,8 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
       -I$(TBLIB_ROOT)/include/tbnet\
 	    $(READLINE_INCLUDE)\
-			$(TAIR_STORE_CPPFLAGS)
+			$(TAIR_STORE_CPPFLAGS)\
+  		$(TAIR_CACHE_CPPFLAGS) \
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -luuid -lz
 

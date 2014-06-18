@@ -159,7 +159,7 @@ int main(int argc, char* argv[])
   // init tfs session
   tbutil::Timer* timer = new tbutil::Timer();
   g_session = new TfsSession(timer, string(g_ns_addr), DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS);
-  ret = g_session->initialize();
+  ret = g_session->initialize(tfs::clientv2::TFS_CLIENT_V2);
   if (TFS_SUCCESS != ret)
   {
     fprintf(stderr, "init tfs session fail, ret: %d\n", ret);
