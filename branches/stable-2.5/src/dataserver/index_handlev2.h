@@ -66,6 +66,8 @@ namespace tfs
         int set_data_crc(const uint32_t crc);
         int get_family_id(int64_t& family_id) const;
         int set_family_id(const int64_t family_id);
+        int get_last_check_time(int32_t& timestamp) const;
+        int set_last_check_time(const int32_t timestamp);
         int rename_filename(const uint64_t logic_block_id);
         int remove_self(const uint64_t logic_block_id);
         int check_load() const;

@@ -531,7 +531,8 @@ namespace tfs
           &SYSPARAM_NAMESERVER.enable_old_interface_,
           &SYSPARAM_NAMESERVER.enable_version_check_,
           &SYSPARAM_NAMESERVER.marshalling_visit_time_,
-          &SYSPARAM_NAMESERVER.verify_index_reserved_space_ratio_
+          &SYSPARAM_NAMESERVER.verify_index_reserved_space_ratio_,
+          &SYSPARAM_NAMESERVER.check_integrity_interval_days_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;

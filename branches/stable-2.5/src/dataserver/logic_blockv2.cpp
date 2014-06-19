@@ -267,6 +267,18 @@ namespace tfs
       return index_handle_->set_marshalling_offset(size);
     }
 
+    int BaseLogicBlock::get_last_check_time(int32_t& timestamp) const
+    {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return index_handle_->get_last_check_time(timestamp);
+    }
+
+    int BaseLogicBlock::set_last_check_time(const int32_t timestamp)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      return index_handle_->set_last_check_time(timestamp);
+    }
+
     int BaseLogicBlock::get_data_crc(uint32_t& crc) const
     {
       RWLock::Lock lock(mutex_, READ_LOCKER);

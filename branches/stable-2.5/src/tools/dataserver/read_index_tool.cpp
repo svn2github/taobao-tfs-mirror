@@ -35,13 +35,15 @@ void dump_index_header(const IndexHeaderV2& header)
   printf("del file count:            %d\n", header.info_.del_file_count_);
   printf("del file size:             %d\n", header.info_.del_size_);
   printf("update file count:         %d\n", header.info_.update_file_count_);
-  printf("update file size:          %d\n",  header.info_.update_size_);
+  printf("update file size:          %d\n", header.info_.update_size_);
+  printf("last access time:          %d\n", header.info_.last_access_time_);
   printf("used offset:               %d\n", header.used_offset_);
   printf("seq no:                    %d\n", header.seq_no_);
   printf("marshalling offset:        %d\n", header.marshalling_offset_);
   printf("available offset:          %d\n", header.avail_offset_);
   printf("hash slot(index num):      %d\n", header.file_info_bucket_size_);
   printf("used hash slot:            %d\n", header.used_file_info_bucket_size_);
+  printf("last check time:           %d\n", header.last_check_time_);
   printf("data crc:                  %u\n", header.data_crc_);
   printf("\n");
 }

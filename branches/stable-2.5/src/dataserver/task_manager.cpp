@@ -69,6 +69,16 @@ namespace tfs
       return service_.get_block_manager();
     }
 
+    int32_t TaskManager::size() const
+    {
+      task_monitor_.lock();
+      int32_t size = task_queue_.size();
+      task_monitor_.unlock();
+
+      Mutex::Lock lock(running_task_mutex_);
+      return size + running_task_.size();
+    }
+
     int TaskManager::handle(BaseTaskMessage* packet)
     {
       int pcode = packet->getPCode();

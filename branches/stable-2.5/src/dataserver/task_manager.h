@@ -44,6 +44,7 @@ namespace tfs
         void run_task();
         void stop_task();
         void expire_task();
+        int32_t size() const;
 
         BlockManager& get_block_manager();
 

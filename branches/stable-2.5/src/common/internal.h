@@ -226,6 +226,7 @@ namespace tfs
     static const int32_t HTTP_BLANK_LENGTH = 1;
 
     static const int32_t VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO = 2;
+    static const int32_t CHECK_INTEGRITY_INTERVAL_DAYS_DEFAULT = 30;
 
     enum VersionStep
     {
@@ -1073,7 +1074,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[55];
+    extern const char* dynamic_parameter_str[56];
 
     #pragma pack (1)
     struct FileInfoV2//30
@@ -1191,7 +1192,8 @@ namespace tfs
     	};
     	uint16_t used_file_info_bucket_size_;
       int8_t  max_index_num_;
-    	int8_t  reserve_[23];
+    	int8_t  reserve_[19];  // Notice: use reserve should consider memory align
+      int32_t last_check_time_;
       uint32_t data_crc_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);

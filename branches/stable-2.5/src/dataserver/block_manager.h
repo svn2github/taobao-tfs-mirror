@@ -74,6 +74,8 @@ namespace tfs
         int set_used_offset(const int32_t size, const uint64_t logic_block_id);
         int get_marshalling_offset(int32_t& size, const uint64_t logic_block_id) const;
         int set_marshalling_offset(const int32_t size, const uint64_t logic_block_id);
+        int get_last_check_time(int32_t& timestamp, const uint64_t logic_block_id) const;
+        int set_last_check_time(const int32_t timestamp, const uint64_t logic_block_id);
         int get_data_crc(uint32_t& crc, const uint64_t logic_block_id) const;
         int set_data_crc(const uint32_t crc, const uint64_t logic_block_id);
 

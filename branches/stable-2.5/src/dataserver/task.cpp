@@ -127,7 +127,8 @@ namespace tfs
           }
           else
           {
-            ret = do_compact_only_check();
+            ret = get_data_helper().check_integrity(block_id_);
+            assert(EXIT_CHECK_CRC_ERROR != ret);
           }
         }
         int status = translate_status(ret);
@@ -325,29 +326,6 @@ namespace tfs
       return ret;
     }
 
-    int CompactTask::do_compact_only_check()
-    {
-      uint64_t block_id = block_id_;
-      BaseLogicBlock* src = NULL;
-
-      src = get_block_manager().get(block_id);
-      int ret = (NULL != src) ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
-
-      // do check work
-      if (TFS_SUCCESS == ret)
-      {
-        ret = check_integrity(src);
-      }
-
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(WARN, "Run task %s, ret: %d", dump().c_str(), ret);
-      }
-
-      return ret;
-    }
-
-
     int CompactTask::real_compact(BaseLogicBlock* src, BaseLogicBlock* dest)
     {
       LogicBlock* tmpsrc = dynamic_cast<LogicBlock* >(src);
@@ -397,7 +375,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           // special process big file
-          if (is_big_file(finfo->size_))
+          if (finfo->size_ > MAX_SINGLE_FILE_SIZE)
           {
             ret = write_big_file(src, dest, *finfo, new_offset);
             if (TFS_SUCCESS == ret)
@@ -452,9 +430,11 @@ namespace tfs
         header.info_.version_ = old_header.info_.version_;
         header.info_.update_size_ = old_header.info_.update_size_;
         header.info_.update_file_count_ = old_header.info_.update_file_count_;
+        header.info_.last_access_time_ = old_header.info_.last_access_time_;
         memcpy(&header.throughput_, &old_header.throughput_, sizeof(header.throughput_));
         header.info_.version_ = old_header.info_.version_;
         header.seq_no_ = old_header.seq_no_;
+        header.last_check_time_ =  time(NULL);
         dest->get_marshalling_offset(header.marshalling_offset_);
         DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
         ret = dest->write_file_infos(header, finfos_vec, block_id_, false, ds_info.verify_index_reserved_space_ratio_);
@@ -466,84 +446,6 @@ namespace tfs
       tbsys::gDeleteA(buffer);
       tbsys::gDelete(iter);
 
-      return ret;
-    }
-
-    int CompactTask::check_integrity(BaseLogicBlock* src)
-    {
-      LogicBlock* tmpsrc = dynamic_cast<LogicBlock* >(src);
-      LogicBlock::Iterator* iter = new (std::nothrow) LogicBlock::Iterator(tmpsrc);
-      assert(NULL != iter);
-
-      int ret = TFS_SUCCESS;
-      const int32_t reserve_size = sizeof(FileInfoInDiskExt);
-      FileInfoV2* finfo = NULL;
-      while ((TFS_SUCCESS == ret) && (TFS_SUCCESS == (ret = iter->next(finfo))))
-      {
-        if (finfo->status_ & FILE_STATUS_DELETE)
-        {
-          continue;  // ignore deleted file
-        }
-
-        uint32_t crc = 0;
-        // special process big file
-        if (is_big_file(finfo->size_))
-        {
-          ret = calc_big_file_crc(src, *finfo, crc);
-        }
-        else
-        {
-          const char* file_data = iter->get_data(finfo->offset_, finfo->size_);
-          assert(NULL != file_data);
-          crc = Func::crc(crc, file_data + reserve_size, finfo->size_ - reserve_size);
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          if (crc != finfo->crc_)
-          {
-            ret = EXIT_CHECK_CRC_ERROR;
-            TBSYS_LOG(WARN, "blockid %"PRI64_PREFIX"u fileid %"PRI64_PREFIX"u crc_error."
-                "data_crc %u finfo_crc %u ret %d", src->id(), finfo->id_, crc, finfo->crc_, ret);
-            break;
-          }
-        }
-      }
-
-      if (EXIT_BLOCK_NO_DATA == ret)
-        ret = TFS_SUCCESS;
-
-      if (TFS_SUCCESS == ret)
-      {
-        TBSYS_LOG(INFO, "check block %"PRI64_PREFIX"u crc_ok", src->id());
-      }
-
-      tbsys::gDelete(iter);
-
-      return ret;
-    }
-
-    int CompactTask::calc_big_file_crc(BaseLogicBlock* src,
-        const FileInfoV2& finfo, uint32_t& crc)
-    {
-      int offset = sizeof(FileInfoInDiskExt);
-      int length = 0;
-      int ret = TFS_SUCCESS;
-      char *buffer = new (std::nothrow) char[MAX_READ_SIZE];
-      assert(NULL != buffer);
-      crc = 0;
-      while ((TFS_SUCCESS == ret) && (offset < finfo.size_))
-      {
-        length = std::min(finfo.size_ - offset, MAX_READ_SIZE);
-        ret = src->pread(buffer, length, finfo.offset_ + offset);
-        ret = (ret >= 0) ? TFS_SUCCESS : ret;
-        if (TFS_SUCCESS == ret)
-        {
-          crc = Func::crc(crc, buffer, length);
-          offset += length;
-        }
-      }
-      tbsys::gDeleteA(buffer);
       return ret;
     }
 
@@ -572,11 +474,6 @@ namespace tfs
       }
       tbsys::gDeleteA(buffer);
       return ret;
-    }
-
-    bool CompactTask::is_big_file(const int32_t size) const
-    {
-      return size > MAX_SINGLE_FILE_SIZE;
     }
 
     ReplicateTask::ReplicateTask(DataService& service, const int64_t seqno,

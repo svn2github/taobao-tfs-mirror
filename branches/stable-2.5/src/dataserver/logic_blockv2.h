@@ -71,6 +71,8 @@ namespace tfs
       int get_avail_offset(int32_t& size) const;
       int get_marshalling_offset(int32_t& offset) const;
       int set_marshalling_offset(const int32_t size);
+      int get_last_check_time(int32_t& timestamp) const;
+      int set_last_check_time(const int32_t timestamp);
       int get_data_crc(uint32_t& crc) const;
       int set_data_crc(const uint32_t crc);
       int write_file_infos(const common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos,

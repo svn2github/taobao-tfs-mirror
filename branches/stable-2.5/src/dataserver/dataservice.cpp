@@ -46,6 +46,7 @@ namespace tfs
         heart_manager_(NULL),
         client_request_server_(*this),
         check_manager_(*this),
+        integrity_manager_(*this),
         timeout_thread_(0),
         task_thread_(0)
     {
@@ -310,7 +311,10 @@ namespace tfs
         assert(0 != timeout_thread_);
         check_thread_ = new (std::nothrow)RunCheckThreadHelper(*this);
         assert(0 != check_thread_);
+        check_integrity_thread_ = new (std::nothrow)CheckIntegrityThreadHelper(*this);
+        assert(0 != check_integrity_thread_);
       }
+
       return ret;
     }
 
@@ -415,6 +419,9 @@ namespace tfs
 
       if (0 != check_thread_)
           check_thread_->join();
+
+      if (0 != check_integrity_thread_)
+        check_integrity_thread_->join();
 
       return TFS_SUCCESS;
     }
@@ -1615,6 +1622,11 @@ namespace tfs
     void DataService::RunCheckThreadHelper::run()
     {
       service_.run_check_();
+    }
+
+    void DataService::CheckIntegrityThreadHelper::run()
+    {
+      service_.integrity_manager_.run_check();
     }
 
     int ds_async_callback(common::NewClient* client)

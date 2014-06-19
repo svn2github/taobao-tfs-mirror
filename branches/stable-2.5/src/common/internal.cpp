@@ -1392,7 +1392,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[55] = {
+    const char* dynamic_parameter_str[56] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1447,7 +1447,8 @@ namespace tfs
         "enable_old_interface",
         "enable_version_check",
         "marshalling_visit_time",
-        "verify_index_reserved_space_ratio"
+        "verify_index_reserved_space_ratio",
+        "check_integrity_interval_days"
     };
 
     const char* planstr[PLAN_TYPE_EC_MARSHALLING+1] =
@@ -2097,10 +2098,15 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; (TFS_SUCCESS == ret) && (i < 23); i++)
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 19); i++)
         {
           ret = Serialization::set_int8(data, data_len, pos, reserve_[i]);
         }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, last_check_time_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -2164,10 +2170,15 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; (TFS_SUCCESS == ret) && (i < 23); i++)
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 19); i++)
         {
           ret = Serialization::get_int8(data, data_len, pos, &reserve_[i]);
         }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+         ret = Serialization::get_int32(data, data_len, pos, &last_check_time_);
       }
 
       if (TFS_SUCCESS == ret)

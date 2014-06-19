@@ -161,6 +161,7 @@ namespace tfs
                 info.enable_old_interface_ = resp_hb_msg->get_enable_old_interface();
                 info.enable_version_check_ = resp_hb_msg->get_enable_version_check();
                 info.verify_index_reserved_space_ratio_ = resp_hb_msg->get_verify_index_reserved_space_ratio();
+                info.check_integrity_interval_days_ = resp_hb_msg->get_check_integrity_interval_days();
               }
               int32_t status = resp_hb_msg->get_status();
               if (HEART_MESSAGE_OK != status)

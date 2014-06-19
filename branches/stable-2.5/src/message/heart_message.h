@@ -46,6 +46,8 @@ namespace tfs
         inline void set_ns_role(const int8_t ns_role) { ns_role_ = ns_role;}
         inline int32_t get_verify_index_reserved_space_ratio() const { return verify_index_reserved_space_ratio_;}
         inline void set_verify_index_reserved_space_ratio(const int32_t ratio) { verify_index_reserved_space_ratio_ = ratio;}
+        inline int32_t get_check_integrity_interval_days() const { return check_integrity_interval_days_;}
+        inline void set_check_integrity_interval_days(const int32_t ratio) { check_integrity_interval_days_ = ratio;}
 
       protected:
         int32_t status_;
@@ -53,6 +55,7 @@ namespace tfs
         int32_t max_mr_network_bandwith_mb_;
         int32_t max_rw_network_bandwith_mb_;
         int32_t verify_index_reserved_space_ratio_;
+        int32_t check_integrity_interval_days_;
         int8_t  ns_role_;
         int8_t  enable_old_interface_;
         int8_t  enable_version_check_;

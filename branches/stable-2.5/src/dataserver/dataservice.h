@@ -40,6 +40,7 @@
 #include "task_manager.h"
 #include "traffic_control.h"
 #include "check_manager.h"
+#include "integrity_manager.h"
 
 namespace tfs
 {
@@ -205,6 +206,22 @@ namespace tfs
       };
       typedef tbutil::Handle<RunCheckThreadHelper> RunCheckThreadHelperPtr;
 
+      class CheckIntegrityThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit CheckIntegrityThreadHelper(DataService& service):
+            service_(service)
+        {
+          start();
+        }
+          virtual ~CheckIntegrityThreadHelper(){}
+          void run();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(CheckIntegrityThreadHelper);
+          DataService& service_;
+      };
+      typedef tbutil::Handle<CheckIntegrityThreadHelper> CheckIntegrityThreadHelperPtr;
+
       private:
       DISALLOW_COPY_AND_ASSIGN(DataService);
 
@@ -219,10 +236,12 @@ namespace tfs
       DataServerHeartManager* heart_manager_;
       ClientRequestServer client_request_server_;
       CheckManager check_manager_;
+      IntegrityManager integrity_manager_;
       std::vector<SyncBase*> sync_mirror_;
       TimeoutThreadHelperPtr  timeout_thread_;
       RunTaskThreadHelperPtr  task_thread_;
       RunCheckThreadHelperPtr check_thread_;
+      CheckIntegrityThreadHelperPtr check_integrity_thread_;
     };
   }/** end namespace dataserver **/
 }/** end namespace tfs **/
