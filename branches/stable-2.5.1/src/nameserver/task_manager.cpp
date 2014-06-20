@@ -181,6 +181,11 @@ namespace tfs
       int32_t ret = (flag && INVALID_FAMILY_ID != family_id && MEMBER_NUM == member_num && CHECK_MEMBER_NUM(MEMBER_NUM))? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        FAMILY_TO_TASK_CONST_ITER iter = family_to_tasks_.find(family_id);
+        ret = iter == family_to_tasks_.end() ? TFS_SUCCESS : EXIT_TASK_EXIST_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
+      {
         Task* task = generation_(family_id, family_aid_info, type, member_num, members);
         assert(NULL != task);
 

@@ -256,7 +256,7 @@ namespace tfs
       bool bret = (NULL != connection) && (NULL != packet) && (GFactory::get_runtime_info().own_is_initialize_complete());
       if (bret)
       {
-        TBSYS_LOG(DEBUG, "receive pcode : %d", packet->getPCode());
+        TBSYS_LOG(DEBUG, "receive pcode : %d, peer ip %s", packet->getPCode(), tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
         if (!packet->isRegularPacket())
         {
           bret = false;
@@ -328,8 +328,9 @@ namespace tfs
         int32_t ret = LOCAL_PACKET == pcode ? TFS_ERROR : common::TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          //TBSYS_LOG(DEBUG, "PCODE: %d", pcode);
           common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
+          tbnet::Connection* conn = msg->get_connection();
+          const uint64_t server = NULL != conn ? conn->getPeerId() : INVALID_SERVER_ID;
           switch (pcode)
           {
             case GET_BLOCK_INFO_MESSAGE_V2:
@@ -386,12 +387,13 @@ namespace tfs
               break;
             default:
               ret = EXIT_UNKNOWN_MSGTYPE;
-              TBSYS_LOG(WARN, "unknown msg type: %d", pcode);
+              TBSYS_LOG(WARN, "unknown msg type: %d peer ip: %s", pcode, tbsys::CNetUtil::addrToString(server).c_str());
               break;
           }
           if (common::TFS_SUCCESS != ret)
           {
-            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
+            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d, peer ip: %s", pcode,
+              tbsys::CNetUtil::addrToString(server).c_str());
           }
         }
       }

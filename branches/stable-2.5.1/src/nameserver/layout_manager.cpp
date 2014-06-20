@@ -1100,9 +1100,9 @@ namespace tfs
           dissolve  = get_family_manager().check_need_dissolve(family, helper, now);
           if (!reinstate && !dissolve)
             dissolve = get_family_manager().check_need_compact(family, now);
-          if (reinstate)
+          if (reinstate && !get_task_manager().exist_family(family->get_family_id()))
             ret = build_reinstate_task_(need, family, helper, now);
-          if (dissolve)
+          if (dissolve && !get_task_manager().exist_family(family->get_family_id()))
             ret = build_dissolve_task_(need, family, helper, now);
           if (ret)
           {
