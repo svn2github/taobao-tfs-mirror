@@ -22,6 +22,7 @@
 #include "message/dataserver_task_message.h"
 #include "common/new_client.h"
 #include "common/client_manager.h"
+#include "common/ob_crc.h"
 #include "task.h"
 #include "data_helper.h"
 #include "block_manager.h"
@@ -910,12 +911,12 @@ namespace tfs
               family_members_[i].block_, data[i], length, offset, true);
         }
 
-        // compute crc for all blocks
+        // compute crc for all blocks, use ob_crc to accelerate
         if (TFS_SUCCESS == ret)
         {
           for (int i = 0; i < member_num; i++)
           {
-            crc_[i] = Func::crc(crc_[i], data[i], length);
+            crc_[i] = ob_crc32(crc_[i], data[i], length);
           }
         }
 
@@ -950,6 +951,7 @@ namespace tfs
         {
           // we need record data block's marshalling len in check block
           index_data.header_.marshalling_offset_ = index_data.header_.used_offset_;
+          index_data.header_.data_crc_ = crc_[i];
           index_data.header_.info_.family_id_ = family_id_;
         }
         // backup every data block's index to all check blocks
@@ -1276,7 +1278,7 @@ namespace tfs
               family_members_[i].block_, data[i], length, offset, true);
         }
 
-        // compute lost data crc
+        // compute lost data crc, use ob_crc to accelerate
         if (TFS_SUCCESS == ret)
         {
           for (int32_t i = 0; i < member_num; i++)
@@ -1285,7 +1287,7 @@ namespace tfs
             {
               continue;
             }
-            crc_[i] = Func::crc(crc_[i], data[i], length);
+            crc_[i] = ob_crc32(crc_[i], data[i], length);
           }
         }
 
