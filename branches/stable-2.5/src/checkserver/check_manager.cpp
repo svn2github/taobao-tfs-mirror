@@ -93,15 +93,10 @@ namespace tfs
     {
       seqno_ = 0;
       all_servers_.clear();
-      // keep block, but clear server list
       for (int index = 0; index < MAX_BLOCK_CHUNK_NUMS; index++)
       {
         tbutil::Mutex::Lock lock(all_blocks_[index].mutex_);
-        BLOCK_MAP_ITER iter = all_blocks_[index].blocks_.begin();
-        for ( ; iter != all_blocks_[index].blocks_.end(); iter++)
-        {
-          (*iter)->reset();
-        }
+        all_blocks_[index].blocks_.clear();
       }
     }
 
@@ -450,7 +445,7 @@ namespace tfs
       while (!stop_)
       {
         TIMER_START();
-        clear();  // clear servers & keep failed block
+        clear();
         int64_t now = Func::curr_time();
 
         // prepare check result file
