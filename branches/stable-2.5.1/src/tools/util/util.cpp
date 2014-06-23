@@ -145,7 +145,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         TfsFileStat stat;
-        TfsClientImplV2::Instance()->set_option_flag(src_fd, FORCE_STAT);
+        TfsClientImplV2::Instance()->set_option_flag(fd, FORCE_STAT);
         ret = TfsClientImplV2::Instance()->fstat(fd, &stat);
         if (TFS_SUCCESS == ret)
         {
