@@ -45,6 +45,7 @@ namespace tfs
       FRIEND_TEST(BlockCollectTest, exist);
       FRIEND_TEST(BlockCollectTest, check_replicate);
       FRIEND_TEST(BlockCollectTest, check_compact);
+      FRIEND_TEST(BlockCollectTest, resolve_invalid_copies);
       #endif
       public:
       typedef std::vector<ServerItem> SERVER_MAP;
@@ -84,6 +85,7 @@ namespace tfs
         common::ArrayHelper<ServerItem>& clean_familyinfo);
       int giveup_lease(const uint64_t server, const time_t now, const common::BlockInfoV2* info);
       void update_version(const common::ArrayHelper<uint64_t>& helper, const int32_t step);
+      void update_version(const uint64_t server, const int32_t version);
       void update_all_version(const int32_t step);
       void update_family_id(const uint64_t server, const int64_t family_id);
       void dump(int32_t level, const char* file = __FILE__,

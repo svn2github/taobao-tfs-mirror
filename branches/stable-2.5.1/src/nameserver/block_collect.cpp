@@ -309,15 +309,6 @@ namespace tfs
       return result;
     }
 
-    static void insert_item(uint32_t* array, const uint64_t server)
-    {
-      assert(NULL != array);
-      uint32_t lan = Func::get_lan(server, SYSPARAM_NAMESERVER.group_mask_);
-      uint32_t* result = query_item(array, lan);
-      if (0U == (*result))
-        *result = lan;
-    }
-
     bool BlockCollect::resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids,
       common::ArrayHelper<ServerItem>& clean_familyinfo, const time_t now)
     {
@@ -327,90 +318,59 @@ namespace tfs
       bool ret = (!is_creating() && expire(now) && servers_.size() >= 1U);
       if (ret)
       {
-        const int32_t size = servers_.size();
         const int32_t MAX_COPIES = is_in_family() ? 1 : common::SYSPARAM_NAMESERVER.max_replication_;
         uint32_t lans[MAX_REPLICATION_NUM] = {0};
-        uint32_t del_lans[MAX_REPLICATION_NUM] = {0};
-        int64_t max_family_id = INVALID_FAMILY_ID;
-        int32_t max_version = -1, max_version_count = 0, max_family_id_count = 0, overage = 0;
+        int32_t max_version = -1, overage = 0;
         SERVER_ITER iter = servers_.begin();
-        for (; iter != servers_.end(); ++iter)
-        {
-          if (iter->version_ > max_version)
-          {
-            max_version_count = 0;
-            max_version = iter->version_;
-          }
-          if (iter->version_ >= max_version)
-            ++max_version_count;
-
-          if (iter->family_id_ > max_family_id)
-          {
-            max_family_id_count = 0;
-            max_family_id = iter->family_id_;
-          }
-          if (iter->family_id_ >= max_family_id)
-            ++max_family_id_count;
-        }
-
         if (INVALID_FAMILY_ID != info_.family_id_)
         {
-          if (INVALID_FAMILY_ID != max_family_id
-          && max_family_id_count > 0
-          && max_family_id_count != size)
+          for (iter = servers_.begin(); iter != servers_.end(); ++iter)
           {
-            for (iter = servers_.begin(); iter != servers_.end(); ++iter)
-            {
-              if (iter->family_id_ < max_family_id )
-              {
-                invalids.push_back((*iter));
-                insert_item(del_lans, iter->server_);
-              }
-            }
+            if (iter->family_id_ != info_.family_id_)
+              invalids.push_back((*iter));
           }
         }
         else
         {
-          if (INVALID_FAMILY_ID != max_family_id
-            && max_family_id_count > 0)
+          for (iter = servers_.begin(); iter != servers_.end(); ++iter)
           {
-            for (iter = servers_.begin(); iter != servers_.end(); ++iter)
+            if (INVALID_FAMILY_ID != iter->family_id_)
             {
-              iter->family_id_ = INVALID_FAMILY_ID;
               clean_familyinfo.push_back((*iter));
+              iter->family_id_ = INVALID_FAMILY_ID;
             }
           }
         }
-
-        if (size > 0 && size != max_version_count)
+        overage = servers_.size() - invalids.get_array_index();
+        if (overage > 0)
         {
-          info_.version_ = max_version;
           for (iter = servers_.begin(); iter != servers_.end(); ++iter)
           {
-            if (max_version != iter->version_ && !invalids.exist((*iter)))
-            {
+            if (max_version < iter->version_ && !invalids.exist((*iter)))
+              max_version = iter->version_;
+          }
+          info_.version_ = max_version;
+
+          for (iter = servers_.begin(); iter != servers_.end(); ++iter)
+          {
+            if (iter->version_ != max_version && !invalids.exist((*iter)))
               invalids.push_back((*iter));
-              insert_item(del_lans, iter->server_);
-            }
           }
         }
 
         overage = servers_.size() - invalids.get_array_index();
-        for (iter = servers_.begin(); iter != servers_.end(); ++iter)
+        for (iter = servers_.begin(); overage > 1 && iter != servers_.end(); ++iter)
         {
-          uint32_t lan = Func::get_lan(iter->server_, SYSPARAM_NAMESERVER.group_mask_);
-          uint32_t* result = query_item(lans, lan);
-          if (0U == (*result))
+          if (!invalids.exist((*iter)))
           {
-            *result = lan;
-          }
-          else
-          {
-            uint32_t* del_result = query_item(del_lans, lan);
-            if (0U == (*del_result) && !invalids.exist((*iter)) && overage-- > 1)
+            uint32_t lan = Func::get_lan(iter->server_, SYSPARAM_NAMESERVER.group_mask_);
+            uint32_t* result = query_item(lans, lan);
+            if (NULL != result)
             {
-              *del_result = lan;
-              invalids.push_back((*iter));
+              if (0U == (*result))
+                *result = lan;
+              else
+                invalids.push_back((*iter));
             }
           }
         }
@@ -419,22 +379,18 @@ namespace tfs
         REVERSE_SERVER_ITER it = servers_.rbegin();
         for (; it != servers_.rend() && overage > 0; ++it)
         {
-          uint32_t lan = Func::get_lan(it->server_, SYSPARAM_NAMESERVER.group_mask_);
-          uint32_t* del_result = query_item(del_lans, lan);
-          if (0U == (*del_result) && !invalids.exist((*iter)))
+          if (!invalids.exist((*it)))
           {
-            --overage;
-            *del_result = lan;
             invalids.push_back((*it));
+            --overage;
           }
         }
-        assert(servers_.size() - invalids.get_array_index() >= 1);
-        ret = (servers_.size() - invalids.get_array_index() >= 1);
+        assert(servers_.size() >= (uint64_t)invalids.get_array_index());
 
-        std::stringstream normal, abnormal;
+        std::stringstream all, abnormal;
         print_int64(invalids, abnormal);
-        print_int64(servers_, normal);
-        TBSYS_LOG(DEBUG, "block: %lu, resolve_version_conflict: normal %s, abnormal %s", id(), normal.str().c_str(), abnormal.str().c_str());
+        print_int64(servers_, all);
+        TBSYS_LOG(DEBUG, "block: %lu, resolve_version_conflict: all %s, abnormal %s", id(), all.str().c_str(), abnormal.str().c_str());
       }
       return ret;
     }
@@ -618,6 +574,13 @@ namespace tfs
         if (NULL != item)
           item->version_ += step;
       }
+    }
+
+    void BlockCollect::update_version(const uint64_t server, const int32_t version)
+    {
+      ServerItem* item = get_(server);
+      if (NULL != item)
+        item->version_ = version;
     }
 
     void BlockCollect::update_family_id(const uint64_t server, const int64_t family_id)

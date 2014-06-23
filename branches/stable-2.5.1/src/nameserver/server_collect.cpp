@@ -802,7 +802,7 @@ namespace tfs
           ret = true;
           remove_(block->id(), *issued_leases_);
         }
-        if (!block->is_full()
+        if (block->is_full()
             || !block->is_master(id())
             || !is_equal_group(block->id())
             || IS_VERFIFY_BLOCK(block->id()))

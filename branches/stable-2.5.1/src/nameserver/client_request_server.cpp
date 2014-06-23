@@ -707,12 +707,12 @@ namespace tfs
       return ret;
     }
 
+    // make replicates consistent as soon as posible
     int ClientRequestServer::resolve_block_version_conflict(const uint64_t block_id, const common::ArrayHelper<std::pair<uint64_t, common::BlockInfoV2> >& members)
     {
       int32_t ret = (INVALID_BLOCK_ID != block_id &&  !members.empty()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        //TODO
         BlockManager& block_manager = manager_.get_block_manager();
         ServerManager& server_manager = manager_.get_server_manager();
         BlockCollect* block = block_manager.get(block_id);
@@ -723,9 +723,7 @@ namespace tfs
           time_t now = Func::get_monotonic_time();
           ServerCollect* server = NULL;
           common::BlockInfoV2 info;
-          info.version_ = INVALID_VERSION;
-          uint64_t servers[MAX_REPLICATION_NUM];
-          ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
+          memset(&info, 0, sizeof(info));
           for (index = 0; index < members.get_array_index(); ++index)
           {
             std::pair<uint64_t, common::BlockInfoV2>* item = members.at(index);
@@ -742,35 +740,38 @@ namespace tfs
             std::pair<uint64_t, common::BlockInfoV2>* item = members.at(index);
             TBSYS_LOG(INFO, "resolve block version conflict: current block: %"PRI64_PREFIX"u, server: %s, version: %d",
               block->id(), tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
-            int32_t diff = __gnu_cxx::abs(item->second.version_ - info.version_);
-            if (diff <= VERSION_DIFF)
+            server = server_manager.get(item->first);
+            if (item->second.version_ >= info.version_)
             {
-              server = server_manager.get(item->first);
               if (NULL != server && block_manager.exist(block, server))
               {
-                helper.push_back(item->first);
+                block->update_version(item->first, item->second.version_);
+              }
+            }
+            else
+            {
+              if (block_manager.get_servers_size(block_id) > 1)
+              {
+                manager_.relieve_relation(block, server, now, true);
+                ServerItem it;
+                memset(&it, 0, sizeof(it));
+                it.server_ = item->first;
+                it.version_ = item->second.version_;
+                block_manager.push_to_delete_queue(block_id, it, GFactory::get_runtime_info().is_master());
+                TBSYS_LOG(INFO, "resolve block version conflict: relieve relation block: %"PRI64_PREFIX"u, server: %s, version: %d",
+                  block_id, tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
               }
             }
           }
-
-          for (index = 0; index < members.get_array_index(); ++index)
+          if (info.version_ > 0)
           {
-            std::pair<uint64_t, common::BlockInfoV2>* item = members.at(index);
-            if (!helper.exist(item->first)
-                && block_manager.get_servers_size(block_id) > 1)
-            {
-              server = server_manager.get(item->first);
-              manager_.relieve_relation(block, server, now, true);
-              ServerItem it;
-              memset(&it, 0, sizeof(it));
-              it.server_ = item->first;
-              it.version_ = item->second.version_;
-              block_manager.push_to_delete_queue(block_id, it, GFactory::get_runtime_info().is_master());
-              TBSYS_LOG(INFO, "resolve block version conflict: relieve relation block: %"PRI64_PREFIX"u, server: %s, version: %d",
-                block_id, tbsys::CNetUtil::addrToString(item->first).c_str(), item->second.version_);
-            }
+            block->set_version(info.version_);
+            block->update_info(info);
           }
-          block->update_info(info);//TODO
+          else
+          {
+            TBSYS_LOG(INFO, "block: %"PRI64_PREFIX"u, all server relation has been relieved or server exit, resolve version conflict fail", block_id);
+          }
         }
       }
       return ret;

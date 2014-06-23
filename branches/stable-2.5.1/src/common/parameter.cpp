@@ -229,8 +229,18 @@ namespace tfs
 
       max_marshalling_queue_timeout_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_MARSHALLING_QUEUE_TIMEOUT, 3600);
 
-      business_port_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BUSINESS_PORT_COUNT, 4);
-      heart_port_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_PORT_COUNT, 2);
+      business_port_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BUSINESS_PORT_COUNT, 1);
+      if (business_port_count_ <= 0)
+      {
+        TBSYS_LOG(ERROR, "%s in [%s] is invalid, value: %d", CONF_BUSINESS_PORT_COUNT, CONF_SN_NAMESERVER, business_port_count_);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
+      }
+      heart_port_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_PORT_COUNT, 1);
+      if (heart_port_count_ <= 0)
+      {
+        TBSYS_LOG(ERROR, "%s in [%s] is invalid, value: %d", CONF_HEART_PORT_COUNT, CONF_SN_NAMESERVER, heart_port_count_);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
+      }
       return TFS_SUCCESS;
     }
 
