@@ -39,7 +39,7 @@ namespace tfs
       int32_t iret = task_.serialize(output.get_free(), output.get_free_length(), pos);
       if (TFS_SUCCESS == iret)
       {
-        iret = output.pour(task_.length());
+        output.pour(task_.length());
       }
 
       return iret;
@@ -86,7 +86,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == iret)
       {
-        iret = output.pour(task_.length());
+        output.pour(task_.length());
       }
       return iret;
     }
