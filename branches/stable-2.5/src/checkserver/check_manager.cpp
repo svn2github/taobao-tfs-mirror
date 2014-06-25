@@ -69,8 +69,8 @@ namespace tfs
         BLOCK_MAP_ITER bit = all_blocks_[index].blocks_.begin();
         for ( ; bit != all_blocks_[index].blocks_.end(); bit++)
         {
-          // tbsys::gDelete(*bit);
-          delete(*bit);
+          BlockObject* block = *bit;
+          tbsys::gDelete(block);
         }
       }
 
@@ -96,6 +96,12 @@ namespace tfs
       for (int index = 0; index < MAX_BLOCK_CHUNK_NUMS; index++)
       {
         tbutil::Mutex::Lock lock(all_blocks_[index].mutex_);
+        BLOCK_MAP_ITER iter = all_blocks_[index].blocks_.begin();
+        for ( ; iter != all_blocks_[index].blocks_.end(); iter++)
+        {
+          BlockObject* block = *iter;
+          tbsys::gDelete(block);
+        }
         all_blocks_[index].blocks_.clear();
       }
     }
@@ -388,18 +394,19 @@ namespace tfs
           }
           else
           {
-            // block may already moved to other servers
-            // reliever block ==> server relationship
-            if (EXIT_NO_LOGICBLOCK_ERROR == iter->status_)
+            if (bit != all_blocks_[slot].blocks_.end())
             {
-              if (bit != all_blocks_[slot].blocks_.end())
+              int8_t old_status = (*bit)->get_status();
+              (*bit)->set_status(BLOCK_STATUS_FAIL);
+              if (old_status == BLOCK_STATUS_INIT);
               {
-                int8_t old_status = (*bit)->get_status();
-                (*bit)->set_status(BLOCK_STATUS_FAIL);
-                if (old_status == BLOCK_STATUS_INIT);
-                {
-                  all_blocks_[slot].fail_count_++;
-                }
+                all_blocks_[slot].fail_count_++;
+              }
+
+              // block may already moved to other servers
+              // reliever block ==> server relationship
+              if (EXIT_NO_LOGICBLOCK_ERROR == iter->status_)
+              {
                 (*bit)->remove_server(server_id);
               }
             }
