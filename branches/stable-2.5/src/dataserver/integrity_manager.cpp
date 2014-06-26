@@ -113,8 +113,8 @@ namespace tfs
                 }
                 //TODO: assert(EXIT_CHECK_CRC_ERROR != ret);
                 TBSYS_LOG_DW(ret, "check block %"PRI64_PREFIX"u integrity, ret: %d", *it, ret);
-                int32_t per_block_cost =
-                  ds_info.check_integrity_interval_days_ * 86400 / info->total_main_block_count_;
+                int64_t per_block_cost =
+                  static_cast<int64_t>(ds_info.check_integrity_interval_days_) * 86400 / info->total_main_block_count_;
                 interruptable_usleep(per_block_cost * 1000000);
               }
               else
