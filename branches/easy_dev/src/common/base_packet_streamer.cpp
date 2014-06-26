@@ -15,11 +15,14 @@
  */
 #include "base_packet.h"
 #include "base_packet_streamer.h"
+#include "easy_io.h"
 
 namespace tfs
 {
   namespace common
   {
+    easy_atomic32_t BasePacketStreamer::global_chid = 100;
+
     BasePacketStreamer::BasePacketStreamer()
     {
 
@@ -221,5 +224,150 @@ namespace tfs
       }
       return bret;
     }
+
+    uint64_t BasePacketStreamer::get_packet_id_handler(easy_connection_t *c, void *packet) {
+      UNUSED(c);
+      int32_t packet_id = 0;
+      if (packet != NULL) {
+        BasePacket *bp = (BasePacket*)packet;
+        packet_id = bp->getChannelId();
+      }
+      if (packet_id == 0) {
+        while (packet_id == 0 || packet_id == -1) {
+          packet_id = (int32_t)easy_atomic32_add_return(&global_chid, 1);
+        }
+      }
+      return packet_id;
+    }
+
+    void* BasePacketStreamer::decode_handler(easy_message_t *m)
+    {
+      // check if header complete
+      if (m->input->last - m->input->pos < TFS_PACKET_HEADER_V1_SIZE)
+      {
+        TBSYS_LOG(DEBUG, "packet header not complete");
+        return NULL;
+      }
+
+      assert(m->pool->tlock <= 1 && m->pool->flags <= 1); // why?
+
+      // decode packet header, get length and pcode
+      Stream input(m->input);
+      uint32_t flag = 0;
+      int32_t len = 0;
+      int16_t pcode = 0;
+      int16_t version = 0;
+      uint64_t id = 0;
+      uint32_t crc = 0;
+      input.get_int32(reinterpret_cast<int32_t*>(&flag));
+      input.get_int32(&len);
+      input.get_int16(&pcode);
+      input.get_int16(&version);
+      input.get_int64(reinterpret_cast<int64_t*>(&id));
+      input.get_int32(reinterpret_cast<int32_t*>(&crc));
+      if (flag != TFS_PACKET_FLAG_V1 || len < 0 || len > (1<<26) /* 64M */)
+      {
+        TBSYS_LOG(ERROR, "decoding failed: flag=%x, len=%d, pcode=%d",
+            flag, len, pcode);
+        m->status = EASY_ERROR;
+        return NULL;
+      }
+
+      // only received part of packet data
+      if (m->input->last - m->input->pos < len) {
+        TBSYS_LOG(DEBUG, "data in buffer not enough: data_len=%d, buf_len=%d, pcode=%d",
+            len, static_cast<int32_t>(m->input->last - m->input->pos), pcode);
+        m->next_read_len = len - (m->input->last - m->input->pos);
+        m->input->pos -= TFS_PACKET_HEADER_V1_SIZE;
+        return NULL;
+      }
+
+      BasePacket* bp = dynamic_cast<BasePacket*>(_factory->createPacket(pcode));
+      assert(NULL != bp);
+
+      tbnet::PacketHeader header;
+      header._chid = id;
+      header._pcode = pcode;
+      header._dataLen = len;
+      bp->setPacketHeader(&header);
+
+      TBSYS_LOG(INFO, "decode packet, pcode=%d, length=%d",
+          bp->getPCode(), (int32_t)bp->length());
+
+      char* start = m->input->pos;
+      if(TFS_SUCCESS != bp->deserialize(input))
+      {
+        TBSYS_LOG(ERROR, "decoding packet failed, pcode=%d", pcode);
+        tbsys::gDelete(bp);
+        m->status = EASY_ERROR;
+        return NULL;
+      }
+
+      if (start + len < m->input->pos)
+      {
+        TBSYS_LOG(ERROR, "decode pos not match, pcode=%d", pcode);
+        m->status = EASY_ERROR;
+        tbsys::gDelete(bp);
+        return NULL;
+      }
+      else if (start + len > m->input->pos)
+      {
+        int32_t unused = start + len - m->input->pos;
+        TBSYS_LOG(WARN, "some data are useless, pcode=%d, unused_length=%d",
+            pcode, unused);
+        input.drain(unused);
+      }
+
+      assert(m->pool->tlock <= 1 && m->pool->flags <= 1);
+      return bp;
+    }
+
+    int BasePacketStreamer::encode_handler(easy_request_t *r, void *packet)
+    {
+      BasePacket* bp = (BasePacket*)packet;
+      TBSYS_LOG(INFO, "encode packet, pcode=%d, length=%d",
+          bp->getPCode(), (int32_t)bp->length());
+      if (EASY_TYPE_CLIENT == r->ms->c->type)
+      {
+        uint32_t chid = ((easy_session_t*)r->ms)->packet_id;
+        bp->setChannelId(chid);
+      }
+      else
+      {
+        if (((easy_message_t*)r->ms)->status == EASY_MESG_DESTROY)
+        {
+          return EASY_ERROR;
+        }
+
+        if (r->retcode == EASY_ABORT)
+        {
+          r->ms->c->pool->ref--;
+          easy_atomic_dec(&r->ms->pool->ref);
+          r->retcode = EASY_OK;
+        }
+      }
+
+      easy_list_t list;
+      easy_list_init(&list);
+      Stream output(r->ms->pool, &list);
+
+      output.reserve(TFS_PACKET_HEADER_V1_SIZE + bp->length());
+      output.set_int32(TFS_PACKET_FLAG_V1);
+      output.set_int32(bp->length());
+      output.set_int16(bp->getPCode());
+      output.set_int16(TFS_PACKET_VERSION_V2);
+      output.set_int64(bp->getChannelId());
+      output.set_int32(0); // crc, place holder
+
+      if (TFS_SUCCESS != bp->serialize(output))
+      {
+        return EASY_ERROR;
+      }
+
+      easy_request_addbuf_list(r, &list);
+
+      return EASY_OK;
+    }
+
   }
 }

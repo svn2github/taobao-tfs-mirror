@@ -17,6 +17,7 @@
 #include "client_manager.h"
 #include "error_msg.h"
 #include "status_message.h"
+#include "easy_helper.h"
 
 namespace tfs
 {
@@ -55,6 +56,10 @@ namespace tfs
           tbsys::gDelete(transport_);
         }
         tbsys::gDelete(connmgr_);
+
+        easy_io_stop(&eio_);
+        easy_io_wait(&eio_);
+        easy_io_destroy(&eio_);
       }
     }
 
@@ -93,6 +98,8 @@ namespace tfs
               free_new_client_object(iter->second);
             }
             new_clients_.clear();
+
+            iret = easy_io_initialize();
           }
         }
       }
@@ -102,6 +109,35 @@ namespace tfs
     bool NewClientManager::is_init() const
     {
       return initialize_;
+    }
+
+    int NewClientManager::easy_io_initialize()
+    {
+      TBSYS_LOG(INFO, "client manager init easy eio");
+      int ret = TFS_SUCCESS;
+      EasyHelper::init_handler(&eio_handler_, NULL);
+      eio_handler_.get_packet_id = get_packet_id_cb;
+      eio_handler_.encode = encode_cb;
+      eio_handler_.decode = decode_cb;
+      eio_handler_.process = process_cb;
+      memset(&eio_, 0, sizeof(eio_));
+      easy_io_create(&eio_, 1);
+      eio_.do_signal = 0;
+      eio_.no_redispatch = 1;
+      eio_.tcp_nodelay = 1;
+      eio_.tcp_cork = 0;
+      // easy_eio_set_uthread_start(&eio, easy_helper::easy_set_thread_name<heartbeat_thread>, const_cast<char*>("hb_io"));
+      if (EASY_OK == easy_io_start(&eio_))
+      {
+        TBSYS_LOG(INFO, "eio start, pid=%d", getpid());
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "start eio failed");
+        ret = TFS_ERROR;
+        easy_io_destroy(&eio_);
+      }
+      return ret;
     }
 
     tbnet::IPacketHandler::HPRetCode NewClientManager::handlePacket(
@@ -311,6 +347,23 @@ namespace tfs
         }
       }
       return bret;
+    }
+
+    int NewClientManager::process_handler(easy_request_t *r)
+    {
+      // let NewClient free them
+      r->opacket = NULL;
+      BasePacket* packet = (BasePacket*)r->ipacket;
+      r->ipacket = NULL;
+      if (packet == NULL) {
+        TBSYS_LOG(ERROR, "easy client timeout");
+        easy_session_destroy(r->ms);
+        return EASY_ERROR; //~ destroy this connection
+      }
+      WaitId id = (*(reinterpret_cast<WaitId*>(&r->args)));
+      handlePacket(id, packet);
+      easy_session_destroy(r->ms);
+      return EASY_OK;
     }
   }
 }

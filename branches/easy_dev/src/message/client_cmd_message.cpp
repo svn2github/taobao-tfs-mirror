@@ -35,7 +35,7 @@ namespace tfs
       int32_t iret = info_.deserialize(input.get_data(), input.get_data_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {
-        input.pour(info_.length());
+        input.drain(info_.length());
       }
       return iret;
     }
@@ -45,7 +45,7 @@ namespace tfs
       return info_.length();
     }
 
-    int ClientCmdMessage::serialize(common::Stream& output) const 
+    int ClientCmdMessage::serialize(common::Stream& output) const
     {
       int64_t pos = 0;
       int32_t iret = info_.serialize(output.get_free(), output.get_free_length(), pos);

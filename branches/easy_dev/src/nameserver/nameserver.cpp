@@ -85,6 +85,7 @@ namespace tfs
             NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
             ngi.owner_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, get_port());
             ngi.heart_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, get_port() + 1);
+            ngi.easy_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, get_port() + 10);
             bool find_ip_in_dev = Func::is_local_addr(ip_addr_id);
             if (!find_ip_in_dev)
             {
@@ -95,21 +96,21 @@ namespace tfs
       }
 
       //start clientmanager
-      if (TFS_SUCCESS == ret)
-      {
-        NewClientManager::get_instance().destroy();
-        assert(NULL != get_packet_streamer());
-        assert(NULL != get_packet_factory());
-        BasePacketStreamer* packet_streamer = dynamic_cast<BasePacketStreamer*>(get_packet_streamer());
-        BasePacketFactory* packet_factory   = dynamic_cast<BasePacketFactory*>(get_packet_factory());
-        ret = NewClientManager::get_instance().initialize(packet_factory, packet_streamer,
-                NULL, &BaseService::golbal_async_callback_func, this);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "start client manager failed, must be exit!!!");
-          ret = EXIT_NETWORK_ERROR;
-        }
-      }
+      //if (TFS_SUCCESS == ret)
+      //{
+      //  NewClientManager::get_instance().destroy();
+      //  assert(NULL != get_packet_streamer());
+      //  assert(NULL != get_packet_factory());
+      //  BasePacketStreamer* packet_streamer = dynamic_cast<BasePacketStreamer*>(get_packet_streamer());
+      //  BasePacketFactory* packet_factory   = dynamic_cast<BasePacketFactory*>(get_packet_factory());
+      //  ret = NewClientManager::get_instance().initialize(packet_factory, packet_streamer,
+      //          NULL, &BaseService::golbal_async_callback_func, this);
+      //  if (TFS_SUCCESS != ret)
+      //  {
+      //    TBSYS_LOG(ERROR, "start client manager failed, must be exit!!!");
+      //    ret = EXIT_NETWORK_ERROR;
+      //  }
+      //}
 
       if (TFS_SUCCESS == ret)
       {
@@ -262,6 +263,81 @@ namespace tfs
         }
       }
       return hret;
+    }
+
+    int NameServer::handle(BasePacket* packet)
+    {
+      int32_t pcode = packet->getPCode();
+      int32_t ret = LOCAL_PACKET == pcode ? TFS_ERROR : common::TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
+        switch (pcode)
+        {
+          case SET_DATASERVER_MESSAGE:
+            ret = heart_manager_.keepalive(packet);
+            break;
+          case REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
+            ret = heart_manager_.report_block(packet);
+            break;
+          case GET_BLOCK_INFO_MESSAGE:
+            ret = open(msg);
+            break;
+          case GET_BLOCK_INFO_MESSAGE_V2:
+            ret = openv2(msg);
+            break;
+          case BATCH_GET_BLOCK_INFO_MESSAGE:
+            ret = batch_open(msg);
+            break;
+          case BATCH_GET_BLOCK_INFO_MESSAGE_V2:
+            ret = batch_openv2(msg);
+            break;
+          case BLOCK_WRITE_COMPLETE_MESSAGE:
+            ret = close(msg);
+            break;
+          case UPDATE_BLOCK_INFO_MESSAGE_V2:
+            ret = closev2(msg);
+            break;
+          case REPLICATE_BLOCK_MESSAGE:
+          case BLOCK_COMPACT_COMPLETE_MESSAGE:
+          case REQ_EC_MARSHALLING_COMMIT_MESSAGE:
+          case REQ_EC_REINSTATE_COMMIT_MESSAGE:
+          case REQ_EC_DISSOLVE_COMMIT_MESSAGE:
+            ret = layout_manager_.get_client_request_server().handle(msg);
+            break;
+          case SHOW_SERVER_INFORMATION_MESSAGE:
+            ret = show_server_information(msg);
+            break;
+          case STATUS_MESSAGE:
+            ret = ping(msg);
+            break;
+          case DUMP_PLAN_MESSAGE:
+            ret = dump_plan(msg);
+            break;
+          case CLIENT_CMD_MESSAGE:
+            ret = client_control_cmd(msg);
+            break;
+          case REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
+            ret = resolve_block_version_conflict(msg);
+            break;
+          case REQ_GET_FAMILY_INFO_MESSAGE:
+            ret = get_family_info(msg);
+            break;
+          case REPAIR_BLOCK_MESSAGE_V2:
+            ret = repair(msg);
+            break;
+          default:
+            ret = EXIT_UNKNOWN_MSGTYPE;
+            TBSYS_LOG(WARN, "unknown msg type: %d", pcode);
+            break;
+        }
+        if (common::TFS_SUCCESS != ret)
+        {
+          msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
+        }
+      }
+
+      return EASY_OK;
     }
 
     /** handle packet*/
@@ -432,7 +508,7 @@ namespace tfs
         int32_t  flag     = message->get_flag();
         int32_t  version  = 0;
         time_t now = Func::get_monotonic_time();
-        uint64_t ipport = msg->get_connection()->getServerId();
+        uint64_t ipport = msg->getPeerId();
         BlockMeta& meta = result_msg->get_block_meta();
         common::ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, meta.ds_);
 

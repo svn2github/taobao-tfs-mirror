@@ -39,6 +39,8 @@ namespace tfs
       int initialize(const int32_t keepalive_thread_count, const int32_t report_block_thread_count, const int32_t port);
       void wait_for_shut_down();
       void destroy();
+      int keepalive(tbnet::Packet* packet);
+      int report_block(tbnet::Packet* packet);
 
       /** handle single packet */
       virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
@@ -67,8 +69,6 @@ namespace tfs
       };
     private:
       DISALLOW_COPY_AND_ASSIGN(HeartManagement);
-      int keepalive(tbnet::Packet* packet);
-      int report_block(tbnet::Packet* packet);
       NameServer& manager_;
       common::BasePacketFactory* packet_factory_;
       common::BasePacketStreamer* streamer_;

@@ -115,25 +115,30 @@ namespace tfs
           WaitId id;
           id.seq_id_ = seq_id_;
           id.send_id_= send_id;
-          tbnet::Packet* send_msg = NewClientManager::get_instance().clone_packet(packet, 2, false);
-          if (NULL == send_msg)
-          {
-            TBSYS_LOG(ERROR, "clone message failure, pcode:%d", packet->getPCode());
-            ret = common::TFS_ERROR;
-            monitor_.lock();
-            destroy_send_id(id);
-            monitor_.unlock();
-          }
-          else
+          //tbnet::Packet* send_msg = NewClientManager::get_instance().clone_packet(packet, 2, false);
+          //if (NULL == send_msg)
+          //{
+          //  TBSYS_LOG(ERROR, "clone message failure, pcode:%d", packet->getPCode());
+          //  ret = common::TFS_ERROR;
+          //  monitor_.lock();
+          //  destroy_send_id(id);
+          //  monitor_.unlock();
+          //}
+          //else
           {
             //dynamic_cast<BasePacket*>(send_msg)->set_auto_free(true);
-            bool send_ok = NewClientManager::get_instance().connmgr_->sendPacket(server, send_msg,
-                NULL, reinterpret_cast<void*>(*(reinterpret_cast<int32_t*>(&id))));
-            if (!send_ok)
+            //save send msg, send packet will free by NewClient
+            if (source_msg_ != NULL)
+            {
+              source_msg_ = packet;
+            }
+            int send_ret = NewClientManager::get_instance().send_packet(server,
+                packet, reinterpret_cast<void*>(*(reinterpret_cast<int32_t*>(&id))));
+            if (EASY_OK != send_ret)
             {
               ret = common::EXIT_SENDMSG_ERROR;
               TBSYS_LOG(INFO, "cannot post packet, maybe send queue is full or disconnect.");
-              send_msg->free();
+              // send_msg->free();
               monitor_.lock();
               destroy_send_id(id);
               monitor_.unlock();
@@ -151,6 +156,7 @@ namespace tfs
     //post_packet is async version of send_packet. donot wait for response packet.
     int NewClient::async_post_request(const std::vector<uint64_t>& servers, tbnet::Packet* packet, callback_func func, bool save_source_msg)
     {
+      UNUSED(save_source_msg);
       int32_t ret = !servers.empty() && NULL != packet &&  NULL != func ? common::TFS_SUCCESS : common::EXIT_INVALID_ARGU;
       if (common::TFS_SUCCESS == ret)
       {
@@ -160,10 +166,10 @@ namespace tfs
         }
         assert (NULL == func || callback_ == func);
 
-        if (save_source_msg && NULL == source_msg_ )
-        {
-          source_msg_ = NewClientManager::get_instance().clone_packet(packet, TFS_PACKET_VERSION_V2, true);
-        }
+        // if (save_source_msg && NULL == source_msg_ )
+        // {
+        //  source_msg_ = NewClientManager::get_instance().clone_packet(packet, TFS_PACKET_VERSION_V2, true);
+        // }
 
         std::vector<uint64_t>::const_iterator iter = servers.begin();
         for (; iter != servers.end(); ++iter)

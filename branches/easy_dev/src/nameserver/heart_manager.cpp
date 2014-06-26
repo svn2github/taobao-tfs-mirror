@@ -503,6 +503,7 @@ namespace tfs
 
     int NameServerHeartManager::establish_peer_role_(NsRuntimeGlobalInformation& ngi)
     {
+      return TFS_SUCCESS;
       MasterAndSlaveHeartMessage msg;
       msg.set_ip_port(ngi.owner_ip_port_);
       msg.set_role(ngi.owner_role_);

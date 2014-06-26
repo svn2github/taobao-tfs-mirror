@@ -17,8 +17,10 @@
 #define TFS_COMMON_STREAM_H_
 
 #include "internal.h"
-#include "buffer.h"
+#include "databuffer.h"
+#include "error_msg.h"
 #include "serialization.h"
+
 namespace tfs
 {
   namespace common
@@ -31,6 +33,10 @@ namespace tfs
       Stream();
       explicit Stream(const int64_t length);
       virtual ~Stream();
+      Stream(easy_buf_t *pb);
+      Stream(easy_pool_t *p, easy_list_t *pl, uint32_t size = 0);
+
+      void reserve(const int64_t length);
 
       char* get_data() const;
       int64_t get_data_length() const;
@@ -38,10 +44,10 @@ namespace tfs
       char* get_free() const;
       int64_t get_free_length() const;
 
-      inline int drain(const int64_t length) { return buffer_.drain(length);}
-      inline int pour(const int64_t length) { return buffer_.pour(length);}
+      inline void drain(const int64_t length) { return buffer_.drain(length);}
+      inline void pour(const int64_t length) { return buffer_.pour(length);}
 
-      inline Buffer& get_buffer() { return buffer_;}
+      inline DataBuffer& get_buffer() { return buffer_;}
 
       int set_int8(const int8_t value);
       int set_int16(const int16_t value);
@@ -235,7 +241,7 @@ namespace tfs
     private:
 
       DISALLOW_COPY_AND_ASSIGN(Stream);
-      Buffer buffer_;
+      DataBuffer buffer_;
     };
   }//end namespace comon
 }//end namespace tfs

@@ -31,9 +31,20 @@ namespace tfs
       }
     }
 
+    Stream::Stream(easy_buf_t *pb): buffer_(pb) {
+    }
+
+    Stream::Stream(easy_pool_t *p, easy_list_t *pl, uint32_t size) : buffer_(p, pl, size) {
+    }
+
     Stream::~Stream()
     {
 
+    }
+
+    void Stream::reserve(const int64_t length)
+    {
+      buffer_.reserve(length);
     }
 
     char* Stream::get_data() const

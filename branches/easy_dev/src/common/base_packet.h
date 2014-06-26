@@ -23,13 +23,14 @@
 #include "func.h"
 #include "stream.h"
 #include "serialization.h"
+#include "easy_helper.h"
 
 namespace tfs
 {
   namespace common
   {
-    //old structure
-    #pragma pack(4)
+      //old structure
+#pragma pack(4)
     struct TfsPacketNewHeaderV0
     {
       uint32_t flag_;
@@ -452,6 +453,26 @@ namespace tfs
 
       static bool parse_special_ds(std::vector<uint64_t>& value, int32_t& version, uint32_t& lease);
 
+      // libeasy
+      void set_request(easy_request_t* request)
+      {
+        request_ = request;
+      }
+      easy_request_t* get_request()
+      {
+        return request_;
+      }
+      uint64_t getPeerId()
+      {
+        uint64_t id = 0;
+        if (NULL != request_)
+        {
+          id = EasyHelper::convert_addr(request_->ms->c->addr);
+          TBSYS_LOG(INFO, "peer id: %"PRI64_PREFIX"u", id);
+        }
+        return id;
+      }
+
   #ifdef TFS_GTEST
     public:
   #else
@@ -466,6 +487,7 @@ namespace tfs
       static const int16_t MAX_ERROR_MSG_LENGTH = 511; /** not include '\0'*/
       //bool auto_free_;
       bool dump_flag_;
+      easy_request_t* request_;
     };
   } /** common **/
 }/** tfs **/

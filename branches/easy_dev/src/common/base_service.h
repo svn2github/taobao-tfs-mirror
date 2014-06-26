@@ -16,6 +16,7 @@
 #ifndef TFS_COMMON_BASE_SERVICE_H_
 #define TFS_COMMON_BASE_SERVICE_H_
 
+#define EASY_MULTIPLICITY
 #include <tbnet.h>
 #include <tbsys.h>
 #include <Timer.h>
@@ -24,6 +25,7 @@
 #include "base_packet.h"
 #include "base_packet_factory.h"
 #include "base_packet_streamer.h"
+#include "easy_helper.h"
 
 namespace tfs
 {
@@ -32,7 +34,7 @@ namespace tfs
     class NewClient;
     class BaseService :  public BaseMain,
                          public tbnet::IServerAdapter,
-                         public tbnet::IPacketQueueHandler 
+                         public tbnet::IPacketQueueHandler
     {
     public:
       BaseService();
@@ -44,7 +46,7 @@ namespace tfs
       inline BasePacketFactory* get_packet_factory() { return packet_factory_;}
 
       /** get the packete streamer */
-      inline tbnet::IPacketStreamer* get_packet_streamer() { return  streamer_;}
+      inline BasePacketStreamer* get_packet_streamer() { return  streamer_;}
 
       /** get transport*/
       tbnet::Transport* get_transport() const { return transport_;}
@@ -109,6 +111,43 @@ namespace tfs
 
       /** initialize tbnet*/
       int initialize_network(const char* app_name);
+
+    // easy support
+    public:
+      virtual int handle(BasePacket* packet) = 0;
+
+    private:
+      static uint64_t get_packet_id_cb(easy_connection_t *c, void *packet)
+      {
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        return service->get_packet_streamer()->get_packet_id_handler(c, packet);
+      }
+
+      static void* decode_cb(easy_message_t *m)
+      {
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        return service->get_packet_streamer()->decode_handler(m);
+      }
+
+      static int encode_cb(easy_request_t *r, void *packet)
+      {
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        return service->get_packet_streamer()->encode_handler(r, packet);
+      }
+
+      static int process_cb(easy_request_t *r)
+      {
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        return service->process_handler(r);
+      }
+
+      int process_handler(easy_request_t *r);
+      int packet_handler(BasePacket* packet);
+
+    private:
+      easy_io_t eio_;
+      easy_io_handler_pt eio_handler_;
+      int easy_io_initialize();
 
     private:
       BasePacketFactory* packet_factory_;

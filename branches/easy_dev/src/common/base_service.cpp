@@ -20,6 +20,7 @@
 #include "base_service.h"
 #include "directory_op.h"
 #include "local_packet.h"
+#include "easy_helper.h"
 
 namespace tfs
 {
@@ -42,7 +43,6 @@ namespace tfs
       timer_(0),
       work_queue_size_(10240)
     {
-
     }
 
     BaseService::~BaseService()
@@ -69,6 +69,11 @@ namespace tfs
       destroy_packet_factory(packet_factory_);
       destroy_packet_streamer(streamer_);
       tbsys::gDelete(transport_);
+
+      easy_io_stop(&eio_);
+      easy_io_wait(&eio_);
+      easy_io_destroy(&eio_);
+
       return true;
     }
 
@@ -78,8 +83,9 @@ namespace tfs
       LocalPacket* packet = dynamic_cast<LocalPacket*>(packet_factory_->createPacket(LOCAL_PACKET));
       assert(NULL != packet);
       packet->set_new_client(client);
-      bool bret = main_workers_.push(packet, 0/*no limit*/, false/*no block*/);
-      assert(true == bret);
+      packet_handler(packet);
+      //bool bret = main_workers_.push(packet, 0/*no limit*/, false/*no block*/);
+      //assert(true == bret);
       return TFS_SUCCESS;
     }
 
@@ -93,6 +99,7 @@ namespace tfs
     {
       TBSYS_LOG(DEBUG, "packet code : %d", packet->getPCode());
       bool bret = NULL != connection && NULL != packet;
+
       if (bret)
       {
         if (!packet->isRegularPacket())
@@ -176,6 +183,64 @@ namespace tfs
       return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_IP_ADDR, NULL);
     }
 
+    int BaseService::easy_io_initialize()
+    {
+      TBSYS_LOG(INFO, "base service initialize easy io");
+      int ret = TFS_SUCCESS;
+      memset(&eio_, 0, sizeof(eio_));
+      if (!easy_eio_create(&eio_, get_work_thread_count()))
+      {
+        TBSYS_LOG(ERROR, "create eio failed");
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        eio_.do_signal = 0;
+        eio_.no_redispatch = 0;
+        eio_.no_reuseport = 1;
+        eio_.listen_all = 1;
+        eio_.tcp_nodelay = 1;
+        eio_.tcp_cork = 0;
+        eio_.affinity_enable = 1;
+
+        memset(&eio_handler_, 0, sizeof(eio_handler_));
+        EasyHelper::init_handler(&eio_handler_, NULL);
+        eio_handler_.get_packet_id = get_packet_id_cb;
+        eio_handler_.encode = encode_cb;
+        eio_handler_.decode = decode_cb;
+        eio_handler_.process = process_cb;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (NULL == easy_io_add_listen(&eio_, NULL, get_port() + 10, &eio_handler_))
+        {
+          TBSYS_LOG(ERROR, "listen on port %d failed", get_port() + 10);
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          TBSYS_LOG(INFO, "listen on port %d", get_port() + 10);
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (EASY_OK == easy_io_start(&eio_))
+        {
+          TBSYS_LOG(INFO, "server start, pid=%d", getpid());
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "start eio failed");
+          ret = TFS_ERROR;
+          easy_io_destroy(&eio_);
+        }
+      }
+
+      return ret;
+    }
+
     int BaseService::run(int argc , char*argv[])
     {
       //check ip, port, starrt tbnet
@@ -198,6 +263,12 @@ namespace tfs
         timer_ = new tbutil::Timer();
       }
 
+      // libeasy start
+      if (TFS_SUCCESS == iret)
+      {
+        iret = easy_io_initialize();
+      }
+
       if (TFS_SUCCESS == iret)
       {
         iret = initialize(argc, argv);
@@ -206,6 +277,7 @@ namespace tfs
           TBSYS_LOG(ERROR, "%s initialize user data failed, must be exit", argv[0]);
         }
       }
+
       return iret;
     }
 
@@ -281,5 +353,36 @@ namespace tfs
       }
       return iret;
     }
+
+    int BaseService::process_handler(easy_request_t *r)
+    {
+      BasePacket* bp = (BasePacket*)r->ipacket;
+      if (NULL == bp || r->ms->status == EASY_MESG_DESTROY)
+      {
+        TBSYS_LOG(ERROR, "timeout, null packet");
+        return EASY_ERROR;
+      }
+
+      bp->set_request(r);
+      bp->set_direction(DIRECTION_RECEIVE);
+      return packet_handler(bp);
+    }
+
+    int BaseService::packet_handler(BasePacket* packet)
+    {
+      TBSYS_LOG(INFO, "process packet, pcode=%d", packet->getPCode());
+
+      // special process LocalPacket
+      if (LOCAL_PACKET == packet->getPCode())
+      {
+        LocalPacket* local_packet = dynamic_cast<LocalPacket*>(packet);
+        local_packet->execute();
+        tbsys::gDelete(local_packet);
+        return EASY_OK;
+      }
+
+      return handle(packet);
+    }
+
   }/** common **/
 }/** tfs **/

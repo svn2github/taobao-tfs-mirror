@@ -77,6 +77,9 @@ namespace tfs
       LayoutManager& get_layout_manager() { return layout_manager_;}
       HeartManagement& get_heart_management() { return heart_manager_;}
 
+      // easy handle
+      int handle(common::BasePacket* packet);
+
    private:
       DISALLOW_COPY_AND_ASSIGN(NameServer);
       LayoutManager layout_manager_;

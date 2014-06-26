@@ -975,9 +975,10 @@ namespace tfs
         {
           last = *helper.at(index);
           assert(NULL != last);
-          CallDsReportBlockRequestMessage req;
-          req.set_server(ngi.heart_ip_port_);
-          post_msg_to_server(last->id(), &req, ns_async_callback);
+          CallDsReportBlockRequestMessage* req = new (std::nothrow) CallDsReportBlockRequestMessage();
+          assert(NULL != req);
+          req->set_server(ngi.easy_ip_port_);
+          post_msg_to_server(last->id(), req, ns_async_callback);
         }
         usleep(100);
       }
