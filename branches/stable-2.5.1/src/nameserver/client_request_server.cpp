@@ -134,7 +134,6 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        pserver->set_report_block_status(REPORT_BLOCK_FLAG_YES);
         pserver->set_next_report_block_time(now, random() % 0xFFFFFFF, true);
       }
       return ret;

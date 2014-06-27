@@ -174,7 +174,7 @@ namespace tfs
     bool ServerCollect::calc_regular_create_block_count(const double average_used_capacity,LayoutManager& manager, int32_t& count)
     {
       bool ret = (count > 0 && total_capacity_ > 0 && use_capacity_ >= 0
-                  && DATASERVER_DISK_TYPE_FULL == get_disk_type() && rb_status_ == REPORT_BLOCK_FLAG_YES);
+                  && DATASERVER_DISK_TYPE_FULL == get_disk_type() && rb_status_ != REPORT_BLOCK_FLAG_YES);
       if (!ret)
       {
         count = 0;
