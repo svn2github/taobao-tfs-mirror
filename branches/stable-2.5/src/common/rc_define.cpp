@@ -161,6 +161,10 @@ namespace tfs
       {
         ret = Serialization::set_int32(data, data_len, pos, use_remote_cache_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int16(data, data_len, pos, ns_max_connection_count_);
+      }
       return ret;
     }
 
@@ -199,13 +203,17 @@ namespace tfs
       {
         ret = Serialization::get_int32(data, data_len, pos, &use_remote_cache_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int16(data, data_len, pos, &ns_max_connection_count_);
+      }
       return ret;
     }
 
     int64_t BaseInfo::length() const
     {
       int64_t length = INT_SIZE + INT64_SIZE + Serialization::get_vint64_length(rc_server_infos_) + Serialization::get_list_length(cluster_infos_) + INT64_SIZE +
-        Serialization::get_string_length(ns_cache_info_) + Serialization::get_list_length(cluster_infos_for_update_) + INT_SIZE;
+        Serialization::get_string_length(ns_cache_info_) + Serialization::get_list_length(cluster_infos_for_update_) + INT_SIZE + INT16_SIZE;
       //TBSYS_LOG(DEBUG, "BaseInfo::length: %"PRI64_PREFIX"d, rc_server_infos_ length: %"PRI64_PREFIX"d, cluster_infos_ length: %"PRI64_PREFIX"d",
       //    length, Serialization::get_vint64_length(rc_server_infos_), Serialization::get_list_length(cluster_infos_));
       return length;
@@ -231,6 +239,7 @@ namespace tfs
         cluster_infos_for_update_[i].dump();
       }
       TBSYS_LOG(DEBUG, "use_remote_cache: %d", use_remote_cache_);
+      TBSYS_LOG(DEBUG, "ns_max_connection_count: %d", ns_max_connection_count_);
     }
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
