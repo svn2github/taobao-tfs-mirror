@@ -589,7 +589,7 @@ namespace tfs
           dump(TBSYS_LOG_LEVEL(INFO), "handle marshalling task failed, ret: %d,", ret);
         StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
                       ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
-        ret = msg->reply(reply_msg);
+        msg->reply(reply_msg);
       }
       return ret;
     }

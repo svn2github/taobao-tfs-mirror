@@ -759,6 +759,7 @@ namespace tfs
             case QUERY_EC_META_MESSAGE:
             case COMMIT_EC_META_MESSAGE:
             case GET_ALL_BLOCKS_HEADER_MESSAGE:
+            case NS_CLEAR_FAMILYINFO_MESSAGE:
               ret = client_request_server_.handle(packet);
               break;
             case REQ_CHECK_BLOCK_MESSAGE:

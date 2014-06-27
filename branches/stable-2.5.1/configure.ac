@@ -265,9 +265,9 @@ AC_CONFIG_FILES([Makefile
                  src/tools/dataserver/Makefile
                  src/tools/nameserver/Makefile
                  src/tools/cluster/Makefile
-                 src/tools/workers/Makefile
-                 tests/Makefile
-                 tests/batch/Makefile])
+                 src/tools/workers/Makefile])
+                 #tests/Makefile
+                 #tests/batch/Makefile])
                  #tests/rcserver/Makefile
                  #tests/kv_meta_server/Makefile
                  #tests/name_meta_server/Makefile

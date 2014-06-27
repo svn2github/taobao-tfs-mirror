@@ -308,8 +308,8 @@ namespace tfs
       max_sync_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_INTERVAL, 30);
       sync_fail_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_SYNC_FAIL_RETRY_INTERVAL, 300);
       max_bg_task_queue_size_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_BG_TASK_QUEUE_SIZE, 5);
-      business_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_BUSINESS_PORT_COUNT, 4);
-      heart_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_HEART_PORT_COUNT, 2);
+      business_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_BUSINESS_PORT_COUNT, 1);
+      heart_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_HEART_PORT_COUNT, 1);
 
       // example ==> 10.232.36.201:3100:1|10.232.36.202:3100:2|10.232.36.203:3100:1
       const char* cluster_version_str = config.getString(CONF_SN_DATASERVER, CONF_CLUSTER_VERSION_LIST, NULL);

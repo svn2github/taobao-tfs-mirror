@@ -1,7 +1,7 @@
 AM_CPPFLAGS=-I${top_srcdir}/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
 	    -I$(TBLIB_ROOT)/include/tbnet\
-			$(TAIR_CACHE_CPPFLAGS)
+			-I$(TAIR_CACHE_CPPFLAGS)
 
 AM_LDFLAGS=-lrt -lpthread -ldl -luuid $(TAIR_CACHE_LDFLAGS) 
 
