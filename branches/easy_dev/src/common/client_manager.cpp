@@ -302,7 +302,6 @@ namespace tfs
 
     void NewClientManager::free_new_client_object(NewClient* client)
     {
-      TBSYS_LOG(INFO, "delete client %p", client);
       tbsys::gDelete(client);
     }
 

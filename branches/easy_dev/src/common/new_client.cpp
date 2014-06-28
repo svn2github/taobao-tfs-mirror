@@ -27,7 +27,6 @@ namespace tfs
   {
     NewClient::NewClient(const uint32_t& seq_id)
     : callback_(NULL),
-      source_msg_(NULL),
       seq_id_(seq_id),
       generate_send_id_(0),
       complete_(false),
@@ -38,11 +37,18 @@ namespace tfs
 
     NewClient::~NewClient()
     {
-      if (NULL != source_msg_)
+      //if (NULL != source_msg_)
+      //{
+      //  source_msg_->free();
+      //  source_msg_ = NULL;
+      //}
+
+      std::vector<tbnet::Packet*>::iterator it = source_msg_.begin();
+      for (; it != source_msg_.end(); it++)
       {
-        source_msg_->free();
-        source_msg_ = NULL;
+        (*it)->free();
       }
+
       RESPONSE_MSG_MAP::iterator iter = success_response_.begin();
       for (; iter != success_response_.end(); ++iter)
       {
@@ -100,7 +106,7 @@ namespace tfs
     int NewClient::post_request(const uint64_t server, tbnet::Packet* packet, uint8_t& send_id)
     {
       assert(server > 0 && packet != NULL);
-      set_source_msg(packet);  // this interface maybe called directly
+      add_source_msg(packet);  // this interface maybe called directly
       int32_t ret = NULL != packet && server > 0 ? common::TFS_SUCCESS : common::EXIT_INVALID_ARGU;
       if (common::TFS_SUCCESS == ret)
       {
@@ -139,14 +145,6 @@ namespace tfs
               monitor_.lock();
               destroy_send_id(id);
               monitor_.unlock();
-            }
-            else
-            {
-              //save success send msg, send packet will free by NewClient
-              if (NULL == source_msg_)
-              {
-                source_msg_ = packet;
-              }
             }
           }
 #endif
@@ -316,7 +314,6 @@ namespace tfs
     {
       assert(server > 0 && NULL != message);
       NewClient* client = NewClientManager::get_instance().create_client();
-      client->set_source_msg(message);
       tbnet::Packet* rmsg = NULL;
       int iret = send_msg_to_server(server, client, message, rmsg, timeout);
       if (common::TFS_SUCCESS == iret)
@@ -336,7 +333,6 @@ namespace tfs
     {
       assert(server > 0 && NULL != client && NULL != msg && NULL == output);
       uint8_t send_id = 0;
-      client->set_source_msg(msg);
       int iret = client->post_request(server, msg, send_id);
       if (common::TFS_SUCCESS == iret)
       {
@@ -365,7 +361,6 @@ namespace tfs
                           NewClient::callback_func func, const bool save_msg)
     {
       assert(!servers.empty() && NULL != msg && NULL != func);
-      client->set_source_msg(msg);
       return client->async_post_request(servers, msg, func, save_msg);
     }
 
@@ -374,7 +369,6 @@ namespace tfs
     {
       assert(servers > 0 && NULL != msg && NULL != func);
       NewClient* client = NewClientManager::get_instance().create_client();
-      client->set_source_msg(msg);
       int iret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == iret)
       {

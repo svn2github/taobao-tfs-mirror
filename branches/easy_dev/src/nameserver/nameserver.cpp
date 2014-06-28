@@ -235,7 +235,7 @@ namespace tfs
             case REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
               heart_manager_.push(bpacket);
               break;*/
-            case MASTER_AND_SLAVE_HEART_MESSAGE:
+            case MASTER_AND_SLAVE_HEART_MESSAGE: // TODO, move to handle
             case HEARTBEAT_AND_NS_HEART_MESSAGE:
               master_slave_heart_manager_.push(bpacket, 0, false);
               break;
@@ -269,6 +269,14 @@ namespace tfs
     {
       int32_t pcode = packet->getPCode();
       int32_t ret = LOCAL_PACKET == pcode ? TFS_ERROR : common::TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        if (GFactory::get_runtime_info().is_master())
+          ret = do_master_msg_helper(packet);
+        else
+          ret = do_slave_msg_helper(packet);
+      }
+
       if (TFS_SUCCESS == ret)
       {
         common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
