@@ -198,7 +198,6 @@ namespace tfs
           }
           else
           {
-            //TBSYS_LOG(DEBUG, "add client id: %u", seq_id_);
             new_clients_.insert(std::make_pair(seq_id_, client));
           }
         }
@@ -229,7 +228,6 @@ namespace tfs
           {
             new_clients_.erase(iter);
             free_new_client_object(client);
-            //TBSYS_LOG(DEBUG, "erase client id: %u", id);
           }
           else
           {
@@ -304,6 +302,7 @@ namespace tfs
 
     void NewClientManager::free_new_client_object(NewClient* client)
     {
+      TBSYS_LOG(INFO, "delete client %p", client);
       tbsys::gDelete(client);
     }
 
@@ -351,16 +350,17 @@ namespace tfs
 
     int NewClientManager::process_handler(easy_request_t *r)
     {
-      // let NewClient free them
+      WaitId id = (*(reinterpret_cast<WaitId*>(&r->args)));
+      // let NewClient free opacket and ipacket
       r->opacket = NULL;
       BasePacket* packet = (BasePacket*)r->ipacket;
       r->ipacket = NULL;
       if (packet == NULL) {
-        TBSYS_LOG(ERROR, "easy client timeout");
+        TBSYS_LOG(WARN, "easy client timeout");
+        handlePacket(id, &tbnet::ControlPacket::TimeoutPacket);
         easy_session_destroy(r->ms);
         return EASY_ERROR; //~ destroy this connection
       }
-      WaitId id = (*(reinterpret_cast<WaitId*>(&r->args)));
       handlePacket(id, packet);
       easy_session_destroy(r->ms);
       return EASY_OK;

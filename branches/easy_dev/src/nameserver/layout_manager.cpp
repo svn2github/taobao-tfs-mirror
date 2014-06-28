@@ -975,10 +975,9 @@ namespace tfs
         {
           last = *helper.at(index);
           assert(NULL != last);
-          CallDsReportBlockRequestMessage* req = new (std::nothrow) CallDsReportBlockRequestMessage();
-          assert(NULL != req);
-          req->set_server(ngi.easy_ip_port_);
-          post_msg_to_server(last->id(), req, ns_async_callback);
+          create_msg_ref(CallDsReportBlockRequestMessage, req);
+          req.set_server(ngi.easy_ip_port_);
+          post_msg_to_server(last->id(), &req, ns_async_callback);
         }
         usleep(100);
       }
@@ -1046,8 +1045,6 @@ namespace tfs
         ret = NULL != client ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          NewBlockMessageV2 msg;
-          msg.set_block_id(block_id);
           uint8_t send_id = 0;
           std::string all_servers, success_servers;
           uint64_t send_msg_success[MAX_REPLICATION_NUM];
@@ -1057,6 +1054,8 @@ namespace tfs
 
           for (int64_t index = 0; index < servers.get_array_index() && TFS_SUCCESS == ret; ++index)
           {
+            create_msg_ref(NewBlockMessageV2, msg);
+            msg.set_block_id(block_id);
             uint64_t id= *servers.at(index);
             //send add new block message to dataserver
             ret = client->post_request(id, &msg, send_id);

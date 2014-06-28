@@ -51,6 +51,7 @@ namespace tfs
         inline RESPONSE_MSG_MAP* get_success_response() { return complete_ ? &success_response_ : NULL;}
         inline RESPONSE_MSG_MAP* get_fail_response() { return complete_ ? &fail_response_ : NULL;}
         inline tbnet::Packet* get_source_msg() { return source_msg_;}
+        inline void set_source_msg(tbnet::Packet* packet) { if (source_msg_ == NULL) source_msg_ = packet; }
         inline std::vector<SEND_SIGN_PAIR>& get_send_id_sign() { return send_id_sign_;}
 
       private:
@@ -80,6 +81,13 @@ namespace tfs
 
         bool async_wait();
     };
+
+    // these interface shouldn't pass invalid args
+    // if so, there must bug exsit, we should find it early.
+    // the caller should send a packet allocated on heap
+    // it will be freed when NewClient destruct
+    #define create_msg_ref(type, name) type& name = *(new type())
+    #define create_msg_ptr(type, name) type* name = new type()
     int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status,
                           const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
     int send_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, tbnet::Packet*& output/*not free*/,

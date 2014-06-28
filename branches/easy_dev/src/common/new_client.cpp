@@ -99,6 +99,8 @@ namespace tfs
 
     int NewClient::post_request(const uint64_t server, tbnet::Packet* packet, uint8_t& send_id)
     {
+      assert(server > 0 && packet != NULL);
+      set_source_msg(packet);  // this interface maybe called directly
       int32_t ret = NULL != packet && server > 0 ? common::TFS_SUCCESS : common::EXIT_INVALID_ARGU;
       if (common::TFS_SUCCESS == ret)
       {
@@ -127,11 +129,6 @@ namespace tfs
           //else
           {
             //dynamic_cast<BasePacket*>(send_msg)->set_auto_free(true);
-            //save send msg, send packet will free by NewClient
-            if (source_msg_ != NULL)
-            {
-              source_msg_ = packet;
-            }
             int send_ret = NewClientManager::get_instance().send_packet(server,
                 packet, reinterpret_cast<void*>(*(reinterpret_cast<int32_t*>(&id))));
             if (EASY_OK != send_ret)
@@ -142,6 +139,14 @@ namespace tfs
               monitor_.lock();
               destroy_send_id(id);
               monitor_.unlock();
+            }
+            else
+            {
+              //save success send msg, send packet will free by NewClient
+              if (NULL == source_msg_)
+              {
+                source_msg_ = packet;
+              }
             }
           }
 #endif
@@ -157,30 +162,28 @@ namespace tfs
     int NewClient::async_post_request(const std::vector<uint64_t>& servers, tbnet::Packet* packet, callback_func func, bool save_source_msg)
     {
       UNUSED(save_source_msg);
-      int32_t ret = !servers.empty() && NULL != packet &&  NULL != func ? common::TFS_SUCCESS : common::EXIT_INVALID_ARGU;
-      if (common::TFS_SUCCESS == ret)
+      assert(!servers.empty() && NULL != packet && NULL != func);
+      int ret = TFS_SUCCESS;
+      if (NULL == callback_)
       {
-        if (NULL == callback_)
-        {
-          callback_ = func;
-        }
-        assert (NULL == func || callback_ == func);
+        callback_ = func;
+      }
+      assert (NULL == func || callback_ == func);
 
-        // if (save_source_msg && NULL == source_msg_ )
-        // {
-        //  source_msg_ = NewClientManager::get_instance().clone_packet(packet, TFS_PACKET_VERSION_V2, true);
-        // }
+      // if (save_source_msg && NULL == source_msg_ )
+      // {
+      //  source_msg_ = NewClientManager::get_instance().clone_packet(packet, TFS_PACKET_VERSION_V2, true);
+      // }
 
-        std::vector<uint64_t>::const_iterator iter = servers.begin();
-        for (; iter != servers.end(); ++iter)
+      std::vector<uint64_t>::const_iterator iter = servers.begin();
+      for (; iter != servers.end(); ++iter)
+      {
+        uint8_t send_id = 0;
+        ret = post_request((*iter), packet, send_id);
+        if (common::TFS_SUCCESS != ret)
         {
-          uint8_t send_id = 0;
-          ret = post_request((*iter), packet, send_id);
-          if (common::TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "async post request fail, ret: %d", ret);
-            break;
-          }
+          TBSYS_LOG(ERROR, "async post request fail, ret: %d", ret);
+          break;
         }
       }
 
@@ -311,7 +314,9 @@ namespace tfs
 
     int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status, const int64_t timeout)
     {
+      assert(server > 0 && NULL != message);
       NewClient* client = NewClientManager::get_instance().create_client();
+      client->set_source_msg(message);
       tbnet::Packet* rmsg = NULL;
       int iret = send_msg_to_server(server, client, message, rmsg, timeout);
       if (common::TFS_SUCCESS == iret)
@@ -329,28 +334,26 @@ namespace tfs
 
     int send_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, tbnet::Packet*& output/*not free*/, const int64_t timeout)
     {
-      int32_t iret = NULL != client && server > 0 && NULL != msg && NULL == output ? common::TFS_SUCCESS : common::TFS_ERROR;
+      assert(server > 0 && NULL != client && NULL != msg && NULL == output);
+      uint8_t send_id = 0;
+      client->set_source_msg(msg);
+      int iret = client->post_request(server, msg, send_id);
       if (common::TFS_SUCCESS == iret)
       {
-        uint8_t send_id = 0;
-        iret = client->post_request(server, msg, send_id);
+        client->wait(timeout);
+        NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
+        NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
+        iret = NULL != sresponse && NULL != fresponse ? common::TFS_SUCCESS : common::TFS_ERROR;
         if (common::TFS_SUCCESS == iret)
         {
-          client->wait(timeout);
-          NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
-          NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
-          iret = NULL != sresponse && NULL != fresponse ? common::TFS_SUCCESS : common::TFS_ERROR;
+          iret = sresponse->empty() ? common::EXIT_TIMEOUT_ERROR : common::TFS_SUCCESS;
           if (common::TFS_SUCCESS == iret)
           {
-            iret = sresponse->empty() ? common::EXIT_TIMEOUT_ERROR : common::TFS_SUCCESS;
+            NewClient::RESPONSE_MSG_MAP_ITER  iter = sresponse->begin();
+            iret = NULL != iter->second.second? common::TFS_SUCCESS : common::TFS_ERROR;
             if (common::TFS_SUCCESS == iret)
             {
-              NewClient::RESPONSE_MSG_MAP_ITER  iter = sresponse->begin();
-              iret = NULL != iter->second.second? common::TFS_SUCCESS : common::TFS_ERROR;
-              if (common::TFS_SUCCESS == iret)
-              {
-                output = iter->second.second;
-              }
+              output = iter->second.second;
             }
           }
         }
@@ -361,31 +364,26 @@ namespace tfs
     int post_msg_to_server(const std::vector<uint64_t>& servers, NewClient* client, tbnet::Packet* msg,
                           NewClient::callback_func func, const bool save_msg)
     {
-      int32_t iret = !servers.empty() && NULL != client && NULL != msg  && NULL != func? common::TFS_SUCCESS : common::TFS_ERROR;
-      if (TFS_SUCCESS == iret)
-      {
-        iret = client->async_post_request(servers, msg, func, save_msg);
-      }
-      return iret;
+      assert(!servers.empty() && NULL != msg && NULL != func);
+      client->set_source_msg(msg);
+      return client->async_post_request(servers, msg, func, save_msg);
     }
 
     int post_msg_to_server(uint64_t servers, tbnet::Packet* msg,
                           NewClient::callback_func func, const bool save_msg)
     {
-      int32_t iret = servers > 0 && NULL != msg  && NULL != func? common::TFS_SUCCESS : common::TFS_ERROR;
+      assert(servers > 0 && NULL != msg && NULL != func);
+      NewClient* client = NewClientManager::get_instance().create_client();
+      client->set_source_msg(msg);
+      int iret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        NewClient* client = NewClientManager::get_instance().create_client();
-        iret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
-        if (TFS_SUCCESS == iret)
+        std::vector<uint64_t> tmp;
+        tmp.push_back(servers);
+        iret = client->async_post_request(tmp, msg, func, save_msg);
+        if (TFS_SUCCESS != iret)
         {
-          std::vector<uint64_t> tmp;
-          tmp.push_back(servers);
-          iret = client->async_post_request(tmp, msg, func, save_msg);
-          if (TFS_SUCCESS != iret)
-          {
-            NewClientManager::get_instance().destroy_client(client);
-          }
+          NewClientManager::get_instance().destroy_client(client);
         }
       }
       return iret;

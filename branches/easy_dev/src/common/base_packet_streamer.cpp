@@ -291,8 +291,8 @@ namespace tfs
       header._dataLen = len;
       bp->setPacketHeader(&header);
 
-      TBSYS_LOG(INFO, "decode packet, pcode=%d, length=%d",
-          bp->getPCode(), (int32_t)bp->length());
+      TBSYS_LOG(DEBUG, "decode packet, pcode=%d, length=%ld",
+          bp->getPCode(), bp->length());
 
       char* start = m->input->pos;
       if(TFS_SUCCESS != bp->deserialize(input))
@@ -325,8 +325,8 @@ namespace tfs
     int BasePacketStreamer::encode_handler(easy_request_t *r, void *packet)
     {
       BasePacket* bp = (BasePacket*)packet;
-      TBSYS_LOG(INFO, "encode packet, pcode=%d, length=%d",
-          bp->getPCode(), (int32_t)bp->length());
+      TBSYS_LOG(DEBUG, "encode packet, pcode=%d, length=%ld",
+          bp->getPCode(), bp->length());
       if (EASY_TYPE_CLIENT == r->ms->c->type)
       {
         uint32_t chid = ((easy_session_t*)r->ms)->packet_id;

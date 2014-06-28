@@ -370,7 +370,7 @@ namespace tfs
 
     int BaseService::packet_handler(BasePacket* packet)
     {
-      TBSYS_LOG(INFO, "process packet, pcode=%d", packet->getPCode());
+      TBSYS_LOG(DEBUG, "process packet, pcode=%d", packet->getPCode());
 
       // special process LocalPacket
       if (LOCAL_PACKET == packet->getPCode())
