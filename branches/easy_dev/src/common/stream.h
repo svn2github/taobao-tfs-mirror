@@ -17,7 +17,7 @@
 #define TFS_COMMON_STREAM_H_
 
 #include "internal.h"
-#include "databuffer.h"
+#include "easybuffer.h"
 #include "error_msg.h"
 #include "serialization.h"
 

@@ -14,8 +14,8 @@
  *     - add easy
  *
  */
-#ifndef TAIR_DATA_BUFFER_H
-#define TAIR_DATA_BUFFER_H
+#ifndef TFS_COMMON_DATA_BUFFER_H
+#define TFS_COMMON_DATA_BUFFER_H
 
 #include <byteswap.h>
 #include <easy_buf.h>
