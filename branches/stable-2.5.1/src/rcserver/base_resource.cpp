@@ -46,6 +46,8 @@ namespace tfs
       m_app_ip_turn_table_.clear();
       m_ns_caculate_ip_.clear();
       v_ns_cache_info_.clear();
+      v_option_kv_.clear();
+
       int ret = TFS_SUCCESS;
       ret = database_helper_.scan(v_resource_server_info_);
       if (TFS_SUCCESS != ret)
@@ -92,6 +94,16 @@ namespace tfs
           TBSYS_LOG(ERROR, "load ip_transfer_table error ret is %d", ret);
         }
       }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = database_helper_.scan(v_option_kv_);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "load tfs_config_option error ret is %d", ret);
+        }
+      }
+
       if (TFS_SUCCESS == ret)
       {
         ret = database_helper_.scan(m_app_ip_turn_table_);
@@ -410,7 +422,40 @@ namespace tfs
         }
 
       }
-
     }
-  }
+
+    int BaseResource::get_ns_max_connection_count(int16_t& ns_max_connection_count)
+    {
+      int ret = TFS_SUCCESS;
+      ns_max_connection_count = 0;
+
+      VOptionKV::const_iterator op_kv_it = v_option_kv_.begin();
+      for (; op_kv_it != v_option_kv_.end(); op_kv_it++)
+      {
+        if (strncasecmp(op_kv_it->key_, "ns_max_connection_count", 22) == 0)
+        {
+          ns_max_connection_count = atoi(op_kv_it->value_);
+        }
+      }
+
+      return ret;
+    }
+
+    int BaseResource::get_ns_connection_limit_enable(int8_t& ns_connection_limit_enable)
+    {
+      int ret = TFS_SUCCESS;
+      ns_connection_limit_enable = 0;
+
+      VOptionKV::const_iterator op_kv_it = v_option_kv_.begin();
+      for (; op_kv_it != v_option_kv_.end(); op_kv_it++)
+      {
+        if (strncasecmp(op_kv_it->key_, "ns_connection_limit_enable", 30) == 0)
+        {
+          ns_connection_limit_enable = atoi(op_kv_it->value_);
+        }
+      }
+
+      return ret;
+    }
+	}
 }

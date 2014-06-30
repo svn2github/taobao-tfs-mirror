@@ -276,6 +276,14 @@ EXIT:
         }
         if (TFS_SUCCESS == ret)
         {
+          ret = base_resource_manager_->get_ns_max_connection_count(base_info.ns_max_connection_count_);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = base_resource_manager_->get_ns_connection_limit_enable(base_info.ns_connection_limit_enable_);
+        }
+        if (TFS_SUCCESS == ret)
+        {
           base_info.report_interval_ = app_info.report_interval_;
           base_info.modify_time_ = modify_time;
           base_info.use_remote_cache_ = app_info.use_remote_cache_;

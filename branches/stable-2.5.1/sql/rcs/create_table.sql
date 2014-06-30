@@ -121,3 +121,9 @@ CREATE TABLE  t_cluster_cache_info (
   modify_time DATETIME,
   PRIMARY KEY (cache_server_addr)
 );
+
+CREATE TABLE t_config_option (
+  op_key varchar(128) NOT NULL,
+  op_value varchar(128) default NULL,
+  PRIMARY KEY  (op_key)
+);

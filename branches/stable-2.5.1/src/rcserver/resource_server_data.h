@@ -34,6 +34,8 @@ namespace tfs
     const int APP_KEY_LEN = 256;
     const int SESSION_ID_LEN = 256;
     const int CLIENT_VERSION_LEN = 64;
+    const int OPTION_KEY_LEN = 128;
+    const int OPTION_VALUE_LEN = 128;
 
     struct ResourceServerInfo
     {
@@ -145,6 +147,18 @@ namespace tfs
       }
     };
     typedef std::map<int32_t, AppInfo> MIdAppInfo;  //map<id, appinfo>
+
+    struct OptionKV
+    {
+      char key_[OPTION_KEY_LEN];
+      char value_[OPTION_VALUE_LEN];
+      OptionKV()
+      {
+        key_[0] = '\0';
+        value_[0] = '\0';
+      }
+    };
+    typedef std::vector<OptionKV> VOptionKV;
 
     struct AppStat
     {
