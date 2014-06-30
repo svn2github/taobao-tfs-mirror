@@ -440,5 +440,22 @@ namespace tfs
 
       return ret;
     }
+
+    int BaseResource::get_ns_connection_limit_enable(int8_t& ns_connection_limit_enable)
+    {
+      int ret = TFS_SUCCESS;
+      ns_connection_limit_enable = 0;
+
+      VOptionKV::const_iterator op_kv_it = v_option_kv_.begin();
+      for (; op_kv_it != v_option_kv_.end(); op_kv_it++)
+      {
+        if (strncasecmp(op_kv_it->key_, "ns_connection_limit_enable", 30) == 0)
+        {
+          ns_connection_limit_enable = atoi(op_kv_it->value_);
+        }
+      }
+
+      return ret;
+    }
 	}
 }

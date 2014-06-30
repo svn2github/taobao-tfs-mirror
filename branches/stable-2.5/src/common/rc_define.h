@@ -96,6 +96,7 @@ namespace tfs
       std::vector<ClusterData> cluster_infos_for_update_;
       int32_t use_remote_cache_;
       int16_t ns_max_connection_count_;
+      int8_t ns_connection_limit_enable_;
 
       BaseInfo& operator= (const BaseInfo& right)
       {
@@ -108,6 +109,7 @@ namespace tfs
         cluster_infos_for_update_ = right.cluster_infos_for_update_;
         use_remote_cache_ = right.use_remote_cache_;
         ns_max_connection_count_ = right.ns_max_connection_count_;
+        ns_connection_limit_enable_ = right.ns_connection_limit_enable_;
         return *this;
       }
     };

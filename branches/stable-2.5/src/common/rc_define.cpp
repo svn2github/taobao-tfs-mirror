@@ -163,6 +163,10 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::set_int8(data, data_len, pos, ns_connection_limit_enable_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::set_int16(data, data_len, pos, ns_max_connection_count_);
       }
       return ret;
@@ -205,6 +209,10 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::get_int8(data, data_len, pos, &ns_connection_limit_enable_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::get_int16(data, data_len, pos, &ns_max_connection_count_);
       }
       return ret;
@@ -213,7 +221,7 @@ namespace tfs
     int64_t BaseInfo::length() const
     {
       int64_t length = INT_SIZE + INT64_SIZE + Serialization::get_vint64_length(rc_server_infos_) + Serialization::get_list_length(cluster_infos_) + INT64_SIZE +
-        Serialization::get_string_length(ns_cache_info_) + Serialization::get_list_length(cluster_infos_for_update_) + INT_SIZE + INT16_SIZE;
+        Serialization::get_string_length(ns_cache_info_) + Serialization::get_list_length(cluster_infos_for_update_) + INT_SIZE + INT16_SIZE + INT8_SIZE;
       //TBSYS_LOG(DEBUG, "BaseInfo::length: %"PRI64_PREFIX"d, rc_server_infos_ length: %"PRI64_PREFIX"d, cluster_infos_ length: %"PRI64_PREFIX"d",
       //    length, Serialization::get_vint64_length(rc_server_infos_), Serialization::get_list_length(cluster_infos_));
       return length;

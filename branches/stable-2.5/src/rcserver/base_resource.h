@@ -54,6 +54,7 @@ namespace tfs
         int sort_ns_by_distance(const int32_t app_id, const std::string& app_ip,
         const common::BaseInfo& in_base_info, common::BaseInfo& out_base_info);
         int get_ns_max_connection_count(int16_t& ns_max_connection_count);
+        int get_ns_connection_limit_enable(int8_t& ns_connection_limit_enable);
 
       private:
         int64_t base_last_update_time_;
