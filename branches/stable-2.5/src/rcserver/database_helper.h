@@ -60,9 +60,6 @@ namespace tfs
         //ClusterRackDuplicateServer
         virtual int scan(VClusterRackDuplicateServer& outparam) = 0;
 
-        // tfs option key value
-        virtual int scan(VOptionKV& outparam) = 0;
-
         //BaseInfoUpdateTime
         virtual int select(BaseInfoUpdateTime& outparam) = 0;
 

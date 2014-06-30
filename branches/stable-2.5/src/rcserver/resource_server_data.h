@@ -148,18 +148,6 @@ namespace tfs
     };
     typedef std::map<int32_t, AppInfo> MIdAppInfo;  //map<id, appinfo>
 
-    struct OptionKV
-    {
-      char key_[OPTION_KEY_LEN];
-      char value_[OPTION_VALUE_LEN];
-      OptionKV()
-      {
-        key_[0] = '\0';
-        value_[0] = '\0';
-      }
-    };
-    typedef std::vector<OptionKV> VOptionKV;
-
     struct AppStat
     {
       int32_t id_;
