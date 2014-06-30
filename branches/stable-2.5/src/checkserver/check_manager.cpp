@@ -50,6 +50,7 @@ namespace tfs
           SERVER_SLOT_EXPAND_RATION_DEFAULT),
       server_helper_(server_helper),
       result_fp_(NULL),
+      less_block_fp_(NULL),
       group_count_(1),
       group_seq_(0),
       max_dispatch_num_(0),
@@ -389,8 +390,11 @@ namespace tfs
               }
             }
 
-            fprintf(result_fp_, "%-20"PRI64_PREFIX"u%-8d%-8d%-8d\n",
-                iter->block_id_, iter->more_, iter->diff_, iter->less_);
+            if (iter->more_ != 0 || iter->diff_ != 0 || iter->less_ != 0)
+            {
+              fprintf(result_fp_, "%-20"PRI64_PREFIX"u%-8d%-8d%-8d\n",
+                  iter->block_id_, iter->more_, iter->diff_, iter->less_);
+            }
           }
           else
           {
@@ -401,6 +405,13 @@ namespace tfs
               if (old_status == BLOCK_STATUS_INIT);
               {
                 all_blocks_[slot].fail_count_++;
+              }
+
+              // after retry, block still not exist in peer cluster
+              if (turn_ == SYSPARAM_CHECKSERVER.check_retry_turns_ &&
+                  (EXIT_NO_BLOCK == iter->status_ || EXIT_BLOCK_NOT_FOUND == iter->status_))
+              {
+                fprintf(less_block_fp_, "%"PRI64_PREFIX"u", iter->block_id_);
               }
 
               // block may already moved to other servers
@@ -458,9 +469,15 @@ namespace tfs
         // prepare check result file
         string result_file = server_.get_work_dir() +
           string("/logs/check_result.") + Func::time_to_str(now / 1000000, 1);
+        string less_block_file = server_.get_work_dir() +
+          string("/logs/less_block.") + Func::time_to_str(now / 1000000, 1);
         TBSYS_LOG(INFO, "check result file: %s", result_file.c_str());
+        TBSYS_LOG(INFO, "less block file: %s", less_block_file.c_str());
         result_fp_ = fopen(result_file.c_str(), "w+");
         assert(NULL != result_fp_);
+        less_block_fp_ = fopen(result_file.c_str(), "w+");
+        assert(NULL != less_block_fp_);
+
         fprintf(result_fp_, "%-20s%-8s%-8s%-8s\n", "BLOCKID", "MORE", "DIFF", "LESS");
 
         // prepare check param
@@ -479,6 +496,12 @@ namespace tfs
         {
           fclose(result_fp_);
           result_fp_ = NULL;
+        }
+
+        if (NULL != less_block_fp_)
+        {
+          fclose(less_block_fp_);
+          less_block_fp_ = NULL;
         }
 
         int32_t wait_time = SYSPARAM_CHECKSERVER.check_interval_ - TIMER_DURATION() / 1000000;

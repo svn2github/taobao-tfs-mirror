@@ -239,11 +239,6 @@ namespace tfs
           }
         }
       }
-      else if (EXIT_NO_BLOCK == ret || EXIT_BLOCK_NOT_FOUND == ret)
-      {
-        // block exist in peer cluster, we think the peer file list is empty
-        ret = TFS_SUCCESS;
-      }
       else
       {
         TBSYS_LOG(WARN, "read block %"PRI64_PREFIX"u index fail, peer ns: %s, ret: %d",
