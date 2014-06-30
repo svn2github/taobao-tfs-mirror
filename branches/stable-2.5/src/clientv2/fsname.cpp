@@ -28,7 +28,6 @@ namespace tfs
   namespace clientv2
   {
     static const char TFS_FILE_VERSION_CHAR_V2 = 'B';
-    static const TfsFileNameVersion CURRENT_TFS_FILE_NAME_VERSION = TFS_FILE_NAME_V1;
 
     static int32_t hash(const char *str)
     {
@@ -54,9 +53,10 @@ namespace tfs
       memset(&filev2_, 0, sizeof(FileBitsV2));
     }
 
-    FSName::FSName(const uint64_t block_id, const uint64_t file_id, const int32_t cluster_id) :
-      version_(CURRENT_TFS_FILE_NAME_VERSION), is_valid_(true), cluster_id_(cluster_id)
+    FSName::FSName(const uint64_t block_id, const uint64_t file_id, const int32_t cluster_id,
+        common::TfsFileNameVersion version) : is_valid_(true), cluster_id_(cluster_id)
     {
+      version_ = version;
       set_block_id(block_id);
       set_file_id(file_id);
       file_name_[0] = '\0';

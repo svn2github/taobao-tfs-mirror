@@ -17,25 +17,47 @@
 #include "clientv2/fsname.h"
 
 using namespace tfs::clientv2;
+using namespace tfs::common;
 
 int main(int argc, char** argv)
 {
-  if (argc < 3)
+  if (argc < 3 || argc > 6)
   {
-    printf("%s blockid fileid\n", argv[0]);
+    printf("Usgae: %s blockid fileid [ clusterid version suffix ]\n", argv[0]);
+    printf("\tparameter invalid, default: suffix is NULL, clusterid is 0, version is 2 (27 characters).\n");
     return -1;
   }
 
-  FSName fs_name;
-  uint32_t block_id = atoi(argv[1]);
+  TfsFileNameVersion version_id = TFS_FILE_NAME_V2;
+  uint64_t block_id = strtoull(argv[1], NULL, 10);
   uint64_t file_id = strtoull(argv[2], NULL, 10);
-  fs_name.set_block_id(block_id);
-  fs_name.set_file_id(file_id);
-  if (argc > 3)
+  int32_t cluster_id = 0;
+  int32_t version = 2;
+  if (argc >= 4)
   {
-    //printf("prefix : %s\n", argv[3]);
-    fs_name.set_suffix(argv[3]);
+    cluster_id = atoi(argv[3]);
   }
-  printf("blockid: %d, fileid: %" PRI64_PREFIX "u, name: %s\n", block_id, file_id, fs_name.get_name());
+  if (argc >= 5)
+  {
+    version = atoi(argv[4]);
+  }
+  std::string suffix;
+  if (argc >= 6)
+  {
+    suffix = std::string(argv[5]);
+  }
+  if (cluster_id < 0 || cluster_id > 9 || version < 1 || version > 2)
+  {
+    printf("parameter invalid, clusterid must be 0 ~ 9, version must be 1 or 2\n");
+    return -1;
+  }
+
+  if (1 == version)
+  {
+    version_id = TFS_FILE_NAME_V1;
+  }
+  FSName fs_name(block_id, file_id, cluster_id, version_id);
+  fs_name.set_suffix(suffix.c_str());
+  printf("blockid: %"PRI64_PREFIX "u, fileid: %"PRI64_PREFIX"u, name: %s\n", block_id, file_id, fs_name.get_name());
   return 0;
 }
