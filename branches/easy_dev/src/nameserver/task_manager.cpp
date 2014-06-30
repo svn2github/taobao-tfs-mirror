@@ -412,7 +412,7 @@ namespace tfs
      */
     int TaskManager::remove_block_from_dataserver_(const uint64_t server, const uint64_t block, const time_t now)
     {
-      RemoveBlockMessageV2 rbmsg;
+      create_msg_ref(RemoveBlockMessageV2, rbmsg);
       rbmsg.set_block_id(block);
       BlockInfoV2 info;
       info.block_id_ = block;

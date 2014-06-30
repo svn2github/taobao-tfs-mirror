@@ -161,6 +161,7 @@ namespace tfs
           iret = get_int32(data, data_len, pos, &length);
           if (TFS_SUCCESS == iret)
           {
+            real_str_buf_length = 0;
             if (length > 0)
             {
               iret = length <= str_buf_length ? TFS_SUCCESS : TFS_ERROR;

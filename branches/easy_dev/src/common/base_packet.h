@@ -468,7 +468,6 @@ namespace tfs
         if (NULL != request_)
         {
           id = EasyHelper::convert_addr(request_->ms->c->addr);
-          TBSYS_LOG(INFO, "peer id: %"PRI64_PREFIX"u", id);
         }
         return id;
       }

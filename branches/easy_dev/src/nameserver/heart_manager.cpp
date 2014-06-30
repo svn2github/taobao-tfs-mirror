@@ -504,7 +504,7 @@ namespace tfs
     int NameServerHeartManager::establish_peer_role_(NsRuntimeGlobalInformation& ngi)
     {
       return TFS_SUCCESS;
-      MasterAndSlaveHeartMessage msg;
+      create_msg_ref(MasterAndSlaveHeartMessage, msg);
       msg.set_ip_port(ngi.owner_ip_port_);
       msg.set_role(ngi.owner_role_);
       msg.set_status(ngi.owner_status_);
@@ -545,7 +545,7 @@ namespace tfs
     }
     int NameServerHeartManager::keepalive_(int32_t& sleep_time, NsKeepAliveType& type, NsRuntimeGlobalInformation& ngi, const time_t now)
     {
-      MasterAndSlaveHeartMessage msg;
+      create_msg_ref(MasterAndSlaveHeartMessage, msg);
       msg.set_ip_port(ngi.owner_ip_port_);
       msg.set_role(ngi.owner_role_);
       msg.set_status(ngi.owner_status_);

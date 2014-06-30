@@ -23,12 +23,8 @@ namespace tfs
 
     }
 
-    Stream::Stream(const int64_t length)
+    Stream::Stream(const int64_t length): buffer_(length)
     {
-      if (length > 0)
-      {
-        buffer_.expand(length);
-      }
     }
 
     Stream::Stream(easy_buf_t *pb): buffer_(pb) {
@@ -241,7 +237,7 @@ namespace tfs
       int32_t iret = Serialization::get_string(buffer_.get_data(), buffer_.get_data_length(), pos, buf_length, str, real_length);
       if (TFS_SUCCESS == iret)
       {
-        buffer_.drain(real_length);
+        buffer_.drain(INT_SIZE + (real_length == 0 ? real_length : real_length + 1));
       }
       return iret;
     }

@@ -5,17 +5,15 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  *
- * databuffer, wrapper of easy_buf_t
- *
- * Version: $Id: databuffer.hpp 1268 2012-12-20 07:53:05Z ganyu.hfl@taobao.com $
+ * easybuffer, wrapper of easy_buf_t
  *
  * Authors:
  *   gy <ganyu.hfl@taobao.com>
  *     - add easy
  *
  */
-#ifndef TFS_COMMON_DATA_BUFFER_H
-#define TFS_COMMON_DATA_BUFFER_H
+#ifndef TFS_COMMON_EASY_BUFFER_H
+#define TFS_COMMON_EASY_BUFFER_H
 
 #include <byteswap.h>
 #include <easy_buf.h>
@@ -27,26 +25,38 @@ namespace tfs
 {
 namespace common
 {
-class DataBuffer
+class EasyBuffer
 {
 public:
-  DataBuffer()
+  EasyBuffer()
   {
-    pool = NULL;
     l = NULL;
-    b = NULL;
     mark_end = NULL;
+    pool = easy_pool_create(0);
+    b = easy_buf_create(pool, 0);
+    alloc = true;
   }
 
-  DataBuffer(easy_buf_t *pb)
+  EasyBuffer(const int64_t length)
+  {
+    l = NULL;
+    mark_end = NULL;
+    pool = easy_pool_create(0);
+    b = easy_buf_create(pool, length);
+    alloc = true;
+  }
+
+
+  EasyBuffer(easy_buf_t *pb)
   {
     pool = NULL;
     l = NULL;
     b = pb;
     mark_end = NULL;
+    alloc = false;
   }
 
-  DataBuffer(easy_pool_t *p, easy_list_t *pl, uint32_t size = 0)
+  EasyBuffer(easy_pool_t *p, easy_list_t *pl, uint32_t size = 0)
   {
     pool = p;
     l = pl;
@@ -54,6 +64,16 @@ public:
     //~ (b->last - b->pos) would be aligned at EASY_POOL_PAGE_SIZE
     b = (size == 0) ? NULL : easy_buf_check_write_space(pool, l, size);
     mark_end = NULL;
+    alloc = false;
+  }
+
+  ~EasyBuffer()
+  {
+    if (alloc)
+    {
+      easy_buf_destroy(b);
+      easy_pool_destroy(pool);
+    }
   }
 
   void reserve(size_t size)
@@ -111,7 +131,7 @@ public:
     return reserve(need);
   }
 
-  // use for reading DataBuffer
+  // use for reading EasyBuffer
   bool setLastReadMark(uint32_t len) {
     if (b->pos + len > b->last) {
       return false;
@@ -363,6 +383,7 @@ private:
   easy_buf_t          *b;
   int                 wl;
   char                *mark_end;
+  bool alloc;
 };
 }
 }

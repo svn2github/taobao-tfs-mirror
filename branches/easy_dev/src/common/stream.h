@@ -47,7 +47,7 @@ namespace tfs
       inline void drain(const int64_t length) { return buffer_.drain(length);}
       inline void pour(const int64_t length) { return buffer_.pour(length);}
 
-      inline DataBuffer& get_buffer() { return buffer_;}
+      inline EasyBuffer& get_buffer() { return buffer_;}
 
       int set_int8(const int8_t value);
       int set_int16(const int16_t value);
@@ -241,7 +241,7 @@ namespace tfs
     private:
 
       DISALLOW_COPY_AND_ASSIGN(Stream);
-      DataBuffer buffer_;
+      EasyBuffer buffer_;
     };
   }//end namespace comon
 }//end namespace tfs
