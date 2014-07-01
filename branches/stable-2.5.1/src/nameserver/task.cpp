@@ -95,8 +95,8 @@ namespace tfs
 
     const char* Task::transform_status_to_str(const int8_t status) const
     {
-      return status == PLAN_STATUS_BEGIN ? "begin" : status == PLAN_STATUS_TIMEOUT ? "timeout" : status == PLAN_STATUS_END
-            ? "finish" : status == PLAN_STATUS_FAILURE ? "failure": status == PLAN_STATUS_PART_END ? "part-end": "unknow";
+      return status == PLAN_STATUS_NONE ? "add" : status == PLAN_STATUS_BEGIN ? "begin" : status == PLAN_STATUS_TIMEOUT ? "timeout" :
+          status == PLAN_STATUS_END ? "finish" : status == PLAN_STATUS_FAILURE ? "failure": status == PLAN_STATUS_PART_END ? "part-end": "unknow";
     }
 
     void Task::dump(tbnet::DataBuffer& stream)
@@ -539,11 +539,11 @@ namespace tfs
                 uint64_t server = base_info[index].server_;
                 pblock = bm.insert(block, now, false);
                 assert(NULL != pblock);
-                ret = bm.set_family_id(block, server, family_info.family_id_);
-                if (TFS_SUCCESS == ret)
-                  ret = (NULL != (pserver = sm.get(server))) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+                ret = (NULL != (pserver = sm.get(server))) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
                 if (TFS_SUCCESS == ret)
                   ret =  lm.build_relation(pblock, pserver, NULL, now, false);
+                if (TFS_SUCCESS == ret)
+                  ret = bm.set_family_id(block, server, family_info.family_id_);
                 if (TFS_SUCCESS == ret)
                   base_info[index].status_ = FAMILY_MEMBER_STATUS_OTHER;
               }
@@ -564,7 +564,12 @@ namespace tfs
                 for (index = DATA_MEMBER_NUM; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
                 {
                   if (FAMILY_MEMBER_STATUS_OTHER == base_info[index].status_)
-                    ret = lm.relieve_relation(pblock, pserver, now, true);
+                    ret = lm.relieve_relation(base_info[index].block_, base_info[index].server_, now, true);
+                  if (TFS_SUCCESS == ret)
+                  {
+                    bm.remove(pblock, base_info[index].block_);
+                    lm.get_gc_manager().insert(pblock, now);// remove invalid check block from dataserver after next report
+                  }
                 }
               }
               else
