@@ -45,6 +45,7 @@ namespace tfs
 #define CONF_OBJECT_DEAD_MAX_TIME                     "object_dead_max_time"
 
 #define CONF_PORT                                     "port"
+#define CONF_PORT_NUM                                 "port_num"
 #define CONF_THREAD_COUNT                             "thread_count"
 #define CONF_IP_ADDR                                  "ip_addr"
 #define CONF_DEV_NAME                                 "dev_name"

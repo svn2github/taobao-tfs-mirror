@@ -213,14 +213,19 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        if (NULL == easy_io_add_listen(&eio_, NULL, get_port() + 10, &eio_handler_))
+        // NS need listen two port, keep it for compatible
+        int32_t port_num = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_PORT_NUM, 1);
+        for (int index = 0; index < port_num && TFS_SUCCESS == ret; index++)
         {
-          TBSYS_LOG(ERROR, "listen on port %d failed", get_port() + 10);
-          ret = TFS_ERROR;
-        }
-        else
-        {
-          TBSYS_LOG(INFO, "listen on port %d", get_port() + 10);
+          if (NULL == easy_io_add_listen(&eio_, NULL, get_port() + 10 + index, &eio_handler_))
+          {
+            TBSYS_LOG(ERROR, "listen on port %d failed", get_port() + 10 + index);
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            TBSYS_LOG(INFO, "listen on port %d", get_port() + 10);
+          }
         }
       }
 
