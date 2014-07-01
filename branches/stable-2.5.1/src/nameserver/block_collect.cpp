@@ -475,8 +475,9 @@ namespace tfs
           ServerItem* result = get_(server);
           if (NULL != result)
           {
+            ServerItem new_item = *result;
             remove(server, now);
-            servers_.insert(servers_.begin(), *result);
+            servers_.insert(servers_.begin(), new_item);
             choose_master_ = BLOCK_CHOOSE_MASTER_COMPLETE_FLAG_YES;
           }
         }
@@ -529,8 +530,9 @@ namespace tfs
         if (update && !has_master_())
         {
           ServerItem* result = get_(server);
+          ServerItem new_item = *result;
           remove(server, now);
-          servers_.insert(servers_.begin(), *result);
+          servers_.insert(servers_.begin(), new_item);
           choose_master_ = BLOCK_CHOOSE_MASTER_COMPLETE_FLAG_YES;
         }
       }
