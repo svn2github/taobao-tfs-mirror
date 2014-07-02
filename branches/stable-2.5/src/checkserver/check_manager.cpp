@@ -469,16 +469,19 @@ namespace tfs
         // prepare check result file
         string result_file = server_.get_work_dir() +
           string("/logs/check_result.") + Func::time_to_str(now / 1000000, 1);
-        string less_block_file = server_.get_work_dir() +
-          string("/logs/less_block.") + Func::time_to_str(now / 1000000, 1);
-        TBSYS_LOG(INFO, "check result file: %s", result_file.c_str());
-        TBSYS_LOG(INFO, "less block file: %s", less_block_file.c_str());
         result_fp_ = fopen(result_file.c_str(), "w+");
         assert(NULL != result_fp_);
-        less_block_fp_ = fopen(result_file.c_str(), "w+");
-        assert(NULL != less_block_fp_);
+        TBSYS_LOG(INFO, "check result file: %s", result_file.c_str());
 
+        // add header
         fprintf(result_fp_, "%-20s%-8s%-8s%-8s\n", "BLOCKID", "MORE", "DIFF", "LESS");
+
+        // prepare less block file
+        string less_block_file = server_.get_work_dir() +
+          string("/logs/less_block.") + Func::time_to_str(now / 1000000, 1);
+        less_block_fp_ = fopen(less_block_file.c_str(), "w+");
+        assert(NULL != less_block_fp_);
+        TBSYS_LOG(INFO, "less block file: %s", less_block_file.c_str());
 
         // prepare check param
         seqno_ = now;
