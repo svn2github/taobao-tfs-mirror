@@ -69,23 +69,23 @@ namespace tfs
       assert(NULL != transport_);
       char spec[32];
       snprintf(spec, 32, "tcp::%d", port);
-      tbnet::IOComponent* com = transport_->listen(spec, streamer_, this);
-      int32_t ret = (NULL == com) ? EXIT_NETWORK_ERROR : TFS_SUCCESS;
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "listen port: %d fail", port);
-      }
-      else
-      {
-        transport_->start();
-      }
-      return ret;
+      //tbnet::IOComponent* com = transport_->listen(spec, streamer_, this);
+      //int32_t ret = (NULL == com) ? EXIT_NETWORK_ERROR : TFS_SUCCESS;
+      //if (TFS_SUCCESS != ret)
+      //{
+      //  TBSYS_LOG(ERROR, "listen port: %d fail", port);
+      //}
+      //else
+      //{
+      //  transport_->start();
+      //}
+      return TFS_SUCCESS;
     }
 
     void HeartManagement::wait_for_shut_down()
     {
-      if (NULL != transport_)
-        transport_->wait();
+      //if (NULL != transport_)
+      //  transport_->wait();
       keepalive_threads_.wait();
       report_block_threads_.wait();
     }

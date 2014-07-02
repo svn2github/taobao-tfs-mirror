@@ -52,8 +52,8 @@ namespace tfs
 
     bool BaseService::destroy()
     {
-      if (NULL != transport_)
-        transport_->stop();
+      //if (NULL != transport_)
+      //  transport_->stop();
       main_workers_.stop();
       destroy_service();
       NewClientManager::get_instance().destroy();
@@ -217,9 +217,9 @@ namespace tfs
         int32_t port_num = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_PORT_NUM, 1);
         for (int index = 0; index < port_num && TFS_SUCCESS == ret; index++)
         {
-          if (NULL == easy_io_add_listen(&eio_, NULL, get_port() + 10 + index, &eio_handler_))
+          if (NULL == easy_io_add_listen(&eio_, NULL, get_port() + index, &eio_handler_))
           {
-            TBSYS_LOG(ERROR, "listen on port %d failed", get_port() + 10 + index);
+            TBSYS_LOG(ERROR, "listen on port %d failed", get_port() + index);
             ret = TFS_ERROR;
           }
           else
@@ -331,16 +331,16 @@ namespace tfs
           {
             transport_ = new tbnet::Transport();
             streamer_->set_packet_factory(packet_factory_);
-            tbnet::IOComponent* com = transport_->listen(spec, streamer_, this);
-            if (NULL == com)
-            {
-              TBSYS_LOG(ERROR, "%s listen port: %d fail", app_name, port);
-              iret = EXIT_NETWORK_ERROR;
-            }
-            else
-            {
-              transport_->start();
-            }
+            //tbnet::IOComponent* com = transport_->listen(spec, streamer_, this);
+            //if (NULL == com)
+            //{
+            //  TBSYS_LOG(ERROR, "%s listen port: %d fail", app_name, port);
+            //  iret = EXIT_NETWORK_ERROR;
+            //}
+            //else
+            //{
+            //  transport_->start();
+            //}
           }
         }
       }
