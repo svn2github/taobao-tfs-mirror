@@ -85,7 +85,6 @@ namespace tfs
             NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
             ngi.owner_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, get_port());
             ngi.heart_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, get_port() + 1);
-            ngi.easy_ip_port_ = tbsys::CNetUtil::ipToAddr(local_ip, get_port() + 10);
             bool find_ip_in_dev = Func::is_local_addr(ip_addr_id);
             if (!find_ip_in_dev)
             {
@@ -283,10 +282,15 @@ namespace tfs
         switch (pcode)
         {
           case SET_DATASERVER_MESSAGE:
-            ret = heart_manager_.keepalive(packet);
-            break;
           case REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
-            ret = heart_manager_.report_block(packet);
+            ret = heart_manager_.handle(packet);
+            break;
+          case MASTER_AND_SLAVE_HEART_MESSAGE:
+          case HEARTBEAT_AND_NS_HEART_MESSAGE:
+            ret = master_slave_heart_manager_.handle(packet);
+            break;
+          case OPLOG_SYNC_MESSAGE:
+            ret = layout_manager_.get_oplog_sync_mgr().push(packet);
             break;
           case GET_BLOCK_INFO_MESSAGE:
             ret = open(msg);

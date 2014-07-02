@@ -133,7 +133,6 @@ namespace tfs
 
     struct NsRuntimeGlobalInformation
     {
-      uint64_t easy_ip_port_;
       uint64_t heart_ip_port_;
       uint64_t owner_ip_port_;
       uint64_t peer_ip_port_;

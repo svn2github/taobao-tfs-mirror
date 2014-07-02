@@ -41,6 +41,7 @@ namespace tfs
       void destroy();
       int keepalive(tbnet::Packet* packet);
       int report_block(tbnet::Packet* packet);
+      int handle(common::BasePacket* packet);
 
       /** handle single packet */
       virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
@@ -90,6 +91,7 @@ namespace tfs
         int destroy();
         int push(common::BasePacket* message, const int32_t max_queue_size = 0, const bool block = false);
         virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
+        int handle(common::BasePacket* packet);
       private:
         class CheckThreadHelper : public tbutil::Thread
         {

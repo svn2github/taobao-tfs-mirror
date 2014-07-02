@@ -51,7 +51,23 @@ namespace tfs
         inline RESPONSE_MSG_MAP* get_success_response() { return complete_ ? &success_response_ : NULL;}
         inline RESPONSE_MSG_MAP* get_fail_response() { return complete_ ? &fail_response_ : NULL;}
         inline tbnet::Packet* get_source_msg() { return *(source_msg_.begin()); }
-        inline void add_source_msg(tbnet::Packet* packet) { source_msg_.push_back(packet); }
+        inline void add_source_msg(tbnet::Packet* packet)
+        {
+          bool exist = false;
+          std::vector<tbnet::Packet*>::iterator it = source_msg_.begin();
+          for ( ; it != source_msg_.end(); it++)
+          {
+            if ((long)(*it) == (long)(packet))
+            {
+              exist = true;
+              break;
+            }
+          }
+          if (!exist)
+          {
+            source_msg_.push_back(packet);
+          }
+        }
         inline std::vector<SEND_SIGN_PAIR>& get_send_id_sign() { return send_id_sign_;}
 
       private:

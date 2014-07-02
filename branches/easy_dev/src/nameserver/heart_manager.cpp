@@ -98,6 +98,26 @@ namespace tfs
       report_block_threads_.stop(true);
     }
 
+    int HeartManagement::handle(common::BasePacket* packet)
+    {
+      assert(NULL != packet);
+      int32_t ret = TFS_SUCCESS;
+      if (packet->getPCode() == SET_DATASERVER_MESSAGE)
+      {
+        ret = keepalive(packet);
+      }
+      else if (packet->getPCode() == REQ_REPORT_BLOCKS_TO_NS_MESSAGE)
+      {
+        ret = report_block(packet);
+      }
+      else
+      {
+        // should dipatch packet to here
+        assert(false);
+      }
+      return ret;
+    }
+
     tbnet::IPacketHandler::HPRetCode HeartManagement::handlePacket(tbnet::Connection *connection, tbnet::Packet *packet)
     {
       tbnet::IPacketHandler::HPRetCode hret = tbnet::IPacketHandler::FREE_CHANNEL;
@@ -343,6 +363,26 @@ namespace tfs
           ret = keepalive_(message);
       }
       return bret;
+    }
+
+    int NameServerHeartManager::handle(common::BasePacket* packet)
+    {
+      assert(NULL != packet);
+      int32_t ret = TFS_SUCCESS;
+      if (packet->getPCode() == HEARTBEAT_AND_NS_HEART_MESSAGE)
+      {
+        ret = keepalive_in_heartbeat_(packet);
+      }
+      else if (packet->getPCode() ==  MASTER_AND_SLAVE_HEART_MESSAGE)
+      {
+        ret = keepalive_(packet);
+      }
+      else
+      {
+        // shuoldn't dispatch packet to here
+        assert(false);
+      }
+      return ret;
     }
 
     int NameServerHeartManager::keepalive_(common::BasePacket* message)

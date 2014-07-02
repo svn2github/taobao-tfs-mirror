@@ -263,7 +263,7 @@ namespace tfs
             ret = TFS_ERROR;
             //to send data to the slave & wait
             tbnet::Packet* rmsg = NULL;
-            OpLogSyncMessage request_msg;
+            create_msg_ref(OpLogSyncMessage, request_msg);
             request_msg.set_data(data, length);
             for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && ngi.has_valid_lease(now); ++i, rmsg = NULL)
             {
@@ -301,6 +301,18 @@ namespace tfs
         }
       }
       return bret;
+    }
+
+    int OpLogSyncManager::handle(common::BasePacket* packet)
+    {
+      assert(NULL != packet && OPLOG_SYNC_MESSAGE == packet->getPCode());
+      int32_t ret = GFactory::get_runtime_info().is_master() ? transfer_log_msg_(packet) : recv_log_(packet);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "%s log message failed, ret: %d",
+            GFactory::get_runtime_info().is_master() ? "transfer" : "recv", ret);
+      }
+      return ret;
     }
 
     int OpLogSyncManager::recv_log_(common::BasePacket* message)

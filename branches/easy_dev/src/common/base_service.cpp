@@ -224,7 +224,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(INFO, "listen on port %d", get_port() + 10);
+            TBSYS_LOG(INFO, "listen on port %d", get_port() + index);
           }
         }
       }

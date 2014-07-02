@@ -976,7 +976,7 @@ namespace tfs
           last = *helper.at(index);
           assert(NULL != last);
           create_msg_ref(CallDsReportBlockRequestMessage, req);
-          req.set_server(ngi.easy_ip_port_);
+          req.set_server(ngi.heart_ip_port_);
           post_msg_to_server(last->id(), &req, ns_async_callback);
         }
         usleep(100);
