@@ -80,7 +80,6 @@ namespace tfs
    private:
       DISALLOW_COPY_AND_ASSIGN(NameServer);
       LayoutManager layout_manager_;
-      NameServerHeartManager master_slave_heart_manager_;
       HeartManagement heart_manager_;
     protected:
       /** get log file path*/

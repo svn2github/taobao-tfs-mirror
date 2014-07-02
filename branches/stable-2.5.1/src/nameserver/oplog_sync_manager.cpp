@@ -677,7 +677,7 @@ namespace tfs
           }
           ngi.set_load_family_info_complete(complete);
         }
-        usleep(100000);
+        usleep(500000);
       }
       return TFS_SUCCESS;
     }

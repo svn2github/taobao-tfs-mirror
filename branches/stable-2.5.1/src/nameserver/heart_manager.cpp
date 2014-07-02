@@ -41,7 +41,8 @@ namespace tfs
       manager_(m),
       packet_factory_(NULL),
       keepalive_queue_header_(*this),
-      report_block_queue_header_(*this)
+      report_block_queue_header_(*this),
+      master_slave_heart_manager_(m.get_layout_manager())
     {
       for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
       {
@@ -88,6 +89,25 @@ namespace tfs
             TBSYS_LOG(ERROR, "listen port %d failed, ret: %d", base_port + index, ret);
         }
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = master_slave_heart_manager_.initialize();
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "initialize master and slave heart manager failed, must be exit, ret: %d", ret);
+        }
+        else
+        {
+          if (GFactory::get_runtime_info().is_master())
+          {
+            ret = master_slave_heart_manager_.establish_peer_role_(GFactory::get_runtime_info());
+            if (EXIT_ROLE_ERROR == ret)
+              TBSYS_LOG(INFO, "nameserve role error, must be exit, ret: %d", ret);
+            else
+              ret = TFS_SUCCESS;
+          }
+        }
+      }
       return ret;
     }
 
@@ -100,6 +120,7 @@ namespace tfs
         keepalive_threads_[index].wait();
         report_block_threads_[index].wait();
       }
+      master_slave_heart_manager_.wait_for_shut_down();
     }
 
     void HeartManagement::destroy()
@@ -111,6 +132,7 @@ namespace tfs
         keepalive_threads_[index].stop(true);
         report_block_threads_[index].stop(true);
       }
+      master_slave_heart_manager_.destroy();
     }
 
     tbnet::IPacketHandler::HPRetCode HeartManagement::handlePacket(tbnet::Connection *connection, tbnet::Packet *packet)
@@ -153,6 +175,10 @@ namespace tfs
           case REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
             ret = report_block_threads_[index].push(bpacket, SYSPARAM_NAMESERVER.report_block_queue_size_, false) ? TFS_SUCCESS : EXIT_QUEUE_FULL_ERROR;
           break;
+          case MASTER_AND_SLAVE_HEART_MESSAGE:
+          case HEARTBEAT_AND_NS_HEART_MESSAGE:
+            master_slave_heart_manager_.push(bpacket, 0, false);
+            break;
           default:
             ret  = EXIT_UNKNOWN_MSGTYPE;
             hret = tbnet::IPacketHandler::FREE_CHANNEL;

@@ -37,7 +37,6 @@ namespace tfs
   {
     NameServer::NameServer() :
       layout_manager_(*this),
-      master_slave_heart_manager_(layout_manager_),
       heart_manager_(*this)
     {
       for (int32_t index = 0; index < MAX_LISTEN_PORT_NUM; ++index)
@@ -183,30 +182,6 @@ namespace tfs
         }
       }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = master_slave_heart_manager_.initialize();
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "initialize master and slave heart manager failed, must be exit, ret: %d", ret);
-        }
-        else
-        {
-          if (GFactory::get_runtime_info().is_master())
-          {
-            ret = master_slave_heart_manager_.establish_peer_role_(GFactory::get_runtime_info());
-            if (EXIT_ROLE_ERROR == ret)
-            {
-              TBSYS_LOG(INFO, "nameserve role error, must be exit, ret: %d", ret);
-            }
-            else
-            {
-              ret = TFS_SUCCESS;
-            }
-          }
-        }
-      }
-
       //start heartbeat loop
       if (TFS_SUCCESS == ret)
       {
@@ -238,11 +213,9 @@ namespace tfs
 
         GFactory::destroy();
         heart_manager_.destroy();
-        master_slave_heart_manager_.destroy();
         layout_manager_.destroy();
 
         heart_manager_.wait_for_shut_down();
-        master_slave_heart_manager_.wait_for_shut_down();
         layout_manager_.wait_for_shut_down();
         GFactory::wait_for_shut_down();
       }
@@ -288,11 +261,7 @@ namespace tfs
             hret = tbnet::IPacketHandler::KEEP_CHANNEL;
             switch (pcode)
             {
-            case MASTER_AND_SLAVE_HEART_MESSAGE:
-            case HEARTBEAT_AND_NS_HEART_MESSAGE:
-              master_slave_heart_manager_.push(bpacket, 0, false);
-              break;
-            case OPLOG_SYNC_MESSAGE:
+           case OPLOG_SYNC_MESSAGE:
               layout_manager_.get_oplog_sync_mgr().push(bpacket, 0, false);
               break;
             default:

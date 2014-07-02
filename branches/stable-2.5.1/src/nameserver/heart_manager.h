@@ -31,6 +31,49 @@ namespace tfs
   namespace nameserver
   {
     class NameServer;
+    class HeartManagement;
+    class NameServerHeartManager: public tbnet::IPacketQueueHandler
+    {
+        friend class HeartManagement;
+     public:
+        explicit NameServerHeartManager(LayoutManager& manager);
+        virtual ~NameServerHeartManager();
+        int initialize();
+        int wait_for_shut_down();
+        int destroy();
+        int push(common::BasePacket* message, const int32_t max_queue_size = 0, const bool block = false);
+        virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
+      private:
+        class CheckThreadHelper : public tbutil::Thread
+        {
+          public:
+            explicit CheckThreadHelper(NameServerHeartManager& manager): manager_(manager) { start();}
+            virtual ~CheckThreadHelper() {}
+            void run();
+          private:
+            NameServerHeartManager& manager_;
+            DISALLOW_COPY_AND_ASSIGN(CheckThreadHelper);
+        };
+        typedef tbutil::Handle<CheckThreadHelper> CheckThreadHelperPtr;
+      private:
+        int keepalive_(common::BasePacket* message);
+        int keepalive_(int32_t& sleep_time, NsKeepAliveType& type, NsRuntimeGlobalInformation& ngi, const time_t now);
+        void check_();
+        bool check_vip_(const NsRuntimeGlobalInformation& ngi) const;
+        int ns_role_establish_(NsRuntimeGlobalInformation& ngi, const time_t now);
+        int establish_peer_role_(NsRuntimeGlobalInformation& ngi);
+        int ns_check_lease_expired_(NsRuntimeGlobalInformation& ngi, const time_t now);
+
+        void switch_role_master_to_slave_(NsRuntimeGlobalInformation& ngi, const time_t now);
+        void switch_role_salve_to_master_(NsRuntimeGlobalInformation& ngi, const time_t now);
+
+        int keepalive_in_heartbeat_(common::BasePacket* message);
+      private:
+        LayoutManager& manager_;
+        CheckThreadHelperPtr check_thread_;
+        tbnet::PacketQueueThread work_thread_;
+    };
+
     class HeartManagement: public tbnet::IServerAdapter
     {
     public:
@@ -80,49 +123,10 @@ namespace tfs
       tbnet::PacketQueueThread report_block_threads_[common::MAX_LISTEN_PORT_NUM];
       KeepAliveIPacketQueueHeaderHelper keepalive_queue_header_;
       ReportBlockIPacketQueueHeaderHelper report_block_queue_header_;
+      NameServerHeartManager master_slave_heart_manager_;
     };
 
-    class NameServerHeartManager: public tbnet::IPacketQueueHandler
-    {
-        friend class NameServer;
-     public:
-        explicit NameServerHeartManager(LayoutManager& manager);
-        virtual ~NameServerHeartManager();
-        int initialize();
-        int wait_for_shut_down();
-        int destroy();
-        int push(common::BasePacket* message, const int32_t max_queue_size = 0, const bool block = false);
-        virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
-      private:
-        class CheckThreadHelper : public tbutil::Thread
-        {
-          public:
-            explicit CheckThreadHelper(NameServerHeartManager& manager): manager_(manager) { start();}
-            virtual ~CheckThreadHelper() {}
-            void run();
-          private:
-            NameServerHeartManager& manager_;
-            DISALLOW_COPY_AND_ASSIGN(CheckThreadHelper);
-        };
-        typedef tbutil::Handle<CheckThreadHelper> CheckThreadHelperPtr;
-      private:
-        int keepalive_(common::BasePacket* message);
-        int keepalive_(int32_t& sleep_time, NsKeepAliveType& type, NsRuntimeGlobalInformation& ngi, const time_t now);
-        void check_();
-        bool check_vip_(const NsRuntimeGlobalInformation& ngi) const;
-        int ns_role_establish_(NsRuntimeGlobalInformation& ngi, const time_t now);
-        int establish_peer_role_(NsRuntimeGlobalInformation& ngi);
-        int ns_check_lease_expired_(NsRuntimeGlobalInformation& ngi, const time_t now);
 
-        void switch_role_master_to_slave_(NsRuntimeGlobalInformation& ngi, const time_t now);
-        void switch_role_salve_to_master_(NsRuntimeGlobalInformation& ngi, const time_t now);
-
-        int keepalive_in_heartbeat_(common::BasePacket* message);
-      private:
-        LayoutManager& manager_;
-        CheckThreadHelperPtr check_thread_;
-        tbnet::PacketQueueThread work_thread_;
-    };
   }/** end namespace nameserver **/
 }/** end namespace tfs **/
 #endif
