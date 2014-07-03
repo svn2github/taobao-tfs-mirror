@@ -192,7 +192,7 @@ namespace tfs
         assert(TFS_SUCCESS == rt);
         tbsys::gDelete((*iter));
       }
-      TBSYS_LOG(INFO, "scan family information %d, start_family_id: %"PRI64_PREFIX"d, chunk: %d, pkey: %s, start_key: %s, end_key: %s , infos.size(): %zd",
+      TBSYS_LOG(DEBUG, "scan family information %d, start_family_id: %"PRI64_PREFIX"d, chunk: %d, pkey: %s, start_key: %s, end_key: %s , infos.size(): %zd",
         ret, start_family_id, chunk, pkey, start_key, end_key, family_infos.size());
       return ret;
     };

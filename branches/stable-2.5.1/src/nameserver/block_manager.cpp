@@ -352,22 +352,22 @@ namespace tfs
       return (NULL != pblock && pblock->id() == block);
     }
 
-    int BlockManager::get_servers(ArrayHelper<uint64_t>& servers, const BlockCollect* block) const
+    int BlockManager::get_servers(ArrayHelper<uint64_t>& servers, const BlockCollect* block, const bool reset_buf) const
     {
       int32_t ret = (NULL == block) ? EXIT_NO_BLOCK : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
-        ret = get_servers_(servers, block);
+        ret = get_servers_(servers, block, reset_buf);
       }
       return ret;
     }
 
-    int BlockManager::get_servers(ArrayHelper<uint64_t>& servers, const uint64_t block) const
+    int BlockManager::get_servers(ArrayHelper<uint64_t>& servers, const uint64_t block, const bool reset_buf) const
     {
       RWLock::Lock lock(get_mutex_(block), READ_LOCKER);
       BlockCollect* pblock = get_(block);
-      return get_servers_(servers, pblock);
+      return get_servers_(servers, pblock, reset_buf);
     }
 
     int BlockManager::get_servers_size(const uint64_t block) const
@@ -847,12 +847,13 @@ namespace tfs
       return  block % MAX_BLOCK_CHUNK_NUMS;
     }
 
-    int BlockManager::get_servers_(ArrayHelper<uint64_t>& servers, const BlockCollect* block) const
+    int BlockManager::get_servers_(ArrayHelper<uint64_t>& servers, const BlockCollect* block, const bool reset_buf) const
     {
       int32_t ret = (NULL != block && servers.get_array_size() > 0)? TFS_SUCCESS : EXIT_NO_BLOCK;
       if (TFS_SUCCESS == ret)
       {
-        servers.clear();
+        if (reset_buf)
+          servers.clear();
         block->get_servers(servers);
         ret = servers.empty() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
       }

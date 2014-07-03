@@ -980,6 +980,7 @@ namespace tfs
                     add_new_block_helper_write_log_(block_id, news, now);
                     oplog_sync_mgr_.generation(block_id);
                   }
+                  block->set_create_flag(BLOCK_CREATE_FLAG_NO);
                 }//end send message to dataserver successful
                 else
                 {
@@ -994,8 +995,10 @@ namespace tfs
                   }
                 }
               }
-              get_gc_manager().insert(pobject, now);
             }//end elect dataserver successful
+            if (NULL != pobject)
+              get_gc_manager().insert(pobject, now);
+
           }//end if (count >0)
         }//end find or create block successful
       }//end if (bret)
@@ -1044,6 +1047,7 @@ namespace tfs
               {
                 add_new_block_helper_write_log_(block_id, helper, now);
               }
+              block->set_create_flag(BLOCK_CREATE_FLAG_NO);
             }//end send message to dataserver successful
             else
             {
@@ -1054,7 +1058,8 @@ namespace tfs
           {
             get_block_manager().remove(pobject, block_id);//rollback
           }
-          get_gc_manager().insert(pobject, now);
+          if (NULL != pobject)
+            get_gc_manager().insert(pobject, now);
         }
       }//end if (TFS_SUCCESS == ret) check parameter
       return TFS_SUCCESS == ret ? block : NULL;

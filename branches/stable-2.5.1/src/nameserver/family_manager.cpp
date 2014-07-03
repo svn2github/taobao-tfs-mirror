@@ -634,9 +634,7 @@ namespace tfs
           {
             std::pair<uint64_t, int32_t>* item = helper.at(index);
             assert(NULL != item);
-            uint64_t server = bm.get_master(item->first);
-            if (INVALID_SERVER_ID != server)
-              helper2.push_back(server);
+            bm.get_servers(helper2, item->first, false);
           }
 
           sm.choose_create_block_target_server(helper2, choose_result_helper, member_num);
@@ -683,10 +681,9 @@ namespace tfs
             helper2.clear();
             std::pair<uint64_t, int32_t>* item = helper.at(index);
             assert(NULL != item);
-            uint64_t server = bm.get_master(item->first);
-            if (INVALID_SERVER_ID != server)
+            bm.get_servers(helper2, item->first);
+            if (helper2.get_array_index() > 0)
             {
-              helper2.push_back(server);
               ret = manager_.get_server_manager().choose_replicate_target_server(target, helper2);
               if (TFS_SUCCESS == ret)
                 results.push_back(std::make_pair(target->id(), item->first));

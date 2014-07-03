@@ -87,8 +87,8 @@ namespace tfs
         bool scan(common::ArrayHelper<BlockCollect*>& result, uint64_t& begin, const int32_t count) const;
         int scan(common::SSMScanParameter& param, int32_t& next, bool& all_over,
             bool& cutover, const int32_t should) const;
-        int get_servers(common::ArrayHelper<uint64_t>& server, const uint64_t block) const;
-        int get_servers(common::ArrayHelper<uint64_t>& server, const BlockCollect* block) const;
+        int get_servers(common::ArrayHelper<uint64_t>& server, const uint64_t block, const bool reset_buf = true) const;
+        int get_servers(common::ArrayHelper<uint64_t>& server, const BlockCollect* block, const bool reset_buf = true) const;
         int get_servers_size(const uint64_t block) const;
         int get_servers_size(const BlockCollect* const pblock) const;
         uint64_t get_master(const uint64_t) const;
@@ -151,7 +151,7 @@ namespace tfs
 
         int32_t get_chunk_(const uint64_t block) const;
 
-        int get_servers_(common::ArrayHelper<uint64_t>& server, const BlockCollect* block) const;
+        int get_servers_(common::ArrayHelper<uint64_t>& server, const BlockCollect* block, const bool reset_buf = true) const;
 
         int update_relation_(const common::ArrayHelper<common::BlockInfoV2*>& blocks, const time_t now,
             std::vector<uint64_t>& cleanup_family_id_array, ServerCollect* server);
