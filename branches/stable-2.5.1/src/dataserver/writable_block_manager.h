@@ -88,6 +88,7 @@ namespace tfs
 
         // apply block helper function
         int apply_writable_block(const int32_t count);
+        int renew_writable_block();
         int apply_update_block(const int64_t block_id);
         int giveup_writable_block();
 
@@ -99,6 +100,7 @@ namespace tfs
         void remove_(const uint64_t block_id, const BlockType type);
         WritableBlock* get_(const uint64_t block_id);
         void apply_block_callback(message::DsApplyBlockResponseMessage* response);
+        void renew_block_callback(message::DsRenewBlockResponseMessage* response);
         void giveup_block_callback(message::DsGiveupBlockResponseMessage* response);
         int process_apply_update_block(message::DsApplyBlockForUpdateResponseMessage* response);
 

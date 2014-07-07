@@ -346,7 +346,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       DsApplyBlockMessage req_msg;
-      req_msg.set_count(count);
+      req_msg.set_size(count);
       req_msg.set_server_id(ds_info.information_.id_);
       ret = post_msg_to_server(ds_info.ns_vip_port_,&req_msg, ds_async_callback);
       TBSYS_LOG_DW(ret, "apply block, count: %d, ret: %d", count, ret);
@@ -395,6 +395,26 @@ namespace tfs
     }
 
     // asynchronized request to nameserver
+    int WritableBlockManager::renew_writable_block()
+    {
+      int ret = TFS_SUCCESS;
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      DsRenewBlockMessage req_msg;
+      req_msg.set_server_id(ds_info.information_.id_);
+      ArrayHelper<BlockInfoV2> blocks(MAX_WRITABLE_BLOCK_COUNT, req_msg.get_block_infos());
+      get_blocks(blocks, BLOCK_WRITABLE);
+      req_msg.set_size(blocks.get_array_index());
+
+      if (blocks.get_array_index() > 0)
+      {
+        ret = post_msg_to_server(ds_info.ns_vip_port_, &req_msg, ds_async_callback);
+      }
+      TBSYS_LOG_DW(ret, "renew block, size: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
+      return ret;
+    }
+
+
+    // asynchronized request to nameserver
     int WritableBlockManager::giveup_writable_block()
     {
       int ret = TFS_SUCCESS;
@@ -409,7 +429,7 @@ namespace tfs
       {
         ret = post_msg_to_server(ds_info.ns_vip_port_, &req_msg, ds_async_callback);
       }
-      TBSYS_LOG_DW(ret, "giveup block, count: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
+      TBSYS_LOG_DW(ret, "giveup block, size: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
       return ret;
     }
 
@@ -505,6 +525,45 @@ namespace tfs
           }
           TBSYS_LOG_DW(ret, "giveup block callback, ret: %d", ret);
         }
+        else if (DS_RENEW_BLOCK_MESSAGE == pcode)
+        {
+          if (sresponse->size() > 0)
+          {
+            NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
+            tbnet::Packet* packet = iter->second.second;
+            if (DS_RENEW_LEASE_RESPONSE_MESSAGE == packet->getPCode())
+            {
+              renew_block_callback(dynamic_cast<DsRenewBlockResponseMessage* >(packet));
+            }
+            else if (STATUS_MESSAGE == packet->getPCode())
+            {
+              StatusMessage* smsg = dynamic_cast<StatusMessage*>(packet);
+              ret = smsg->get_status();
+            }
+            else
+            {
+              ret = EXIT_UNKNOWN_MSGTYPE;
+            }
+          }
+          else
+          {
+            ret = EXIT_TIMEOUT_ERROR;
+          }
+
+          if (TFS_SUCCESS != ret)
+          {
+            // timeout, expire writable blocks in renew list
+            ret = EXIT_TIMEOUT_ERROR;
+            DsRenewBlockMessage* msg = dynamic_cast<DsRenewBlockMessage*>(source);
+            BlockInfoV2* infos = msg->get_block_infos();
+            int32_t size = msg->get_size();
+            for (int i = 0; i < size; i++)
+            {
+              expire_one_block(infos[i].block_id_);
+            }
+          }
+          TBSYS_LOG_DW(ret, "renew block callback, ret: %d", ret);
+        }
       }
 
       return TFS_SUCCESS;
@@ -540,6 +599,36 @@ namespace tfs
         }
         TBSYS_LOG(INFO, "apply block %"PRI64_PREFIX"u, replica: %d, ret %d",
             block_lease[index].block_id_, block_lease[index].size_, block_lease[index].result_);
+      }
+    }
+
+    void WritableBlockManager::renew_block_callback(DsRenewBlockResponseMessage* response)
+    {
+      assert(NULL != response);
+      ArrayHelper<BlockLease> leases(response->get_size(),
+          response->get_block_lease(), response->get_size());
+      for (int index = 0; index < response->get_size(); index++)
+      {
+        BlockLease& lease = *leases.at(index);
+        if (TFS_SUCCESS == lease.result_)
+        {
+          WritableBlock* block = get(lease.block_id_);
+          if (NULL != block)
+          {
+            // update replica information
+            RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
+            ArrayHelper<uint64_t> helper(lease.size_, lease.servers_, lease.size_);
+            block->set_servers(helper);
+          }
+        }
+        else  // move to expired list
+        {
+          expire_one_block(lease.block_id_);
+          TBSYS_LOG(INFO, "expire block %"PRI64_PREFIX"u because renew fail, ret: %d",
+              lease.block_id_, lease.result_);
+        }
+        TBSYS_LOG_DW(lease.result_, "renew block %"PRI64_PREFIX"u, replica: %d, ret: %d",
+            lease.block_id_, lease.size_, lease.result_);
       }
     }
 

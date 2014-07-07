@@ -65,8 +65,8 @@ namespace tfs
         // lease thread
         void run_lease(const int32_t who);
 
-        // apply & giveup block thread
-        void run_apply_and_giveup();
+        // apply, renew , giveup writable block
+        void run_writable_blocks();
 
       private:
         /*
@@ -147,6 +147,7 @@ namespace tfs
       private:
         DataService& service_;
         uint64_t ns_ip_port_[common::MAX_SINGLE_CLUSTER_NS_NUM];
+        int32_t master_index_;
         common::LeaseMeta lease_meta_[common::MAX_SINGLE_CLUSTER_NS_NUM];
         LeaseStatus lease_status_[common::MAX_SINGLE_CLUSTER_NS_NUM];
         time_t last_renew_time_[common::MAX_SINGLE_CLUSTER_NS_NUM];
