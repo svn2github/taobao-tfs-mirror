@@ -138,14 +138,14 @@ namespace tfs
               {
                 length -= TFS_PACKET_HEADER_DIFF_SIZE;
                 input->drainData(TFS_PACKET_HEADER_DIFF_SIZE);
-                uint32_t crc = Func::crc(TFS_PACKET_FLAG_V1, input->getData(), length);
-                bret = crc == crc_;
-                if (!bret)
-                {
-                  input->drainData(length);
-                  TBSYS_LOG(ERROR, "decode packet crc check error, header crc: %u, calc crc: %u",
-                      crc_, crc);
-                }
+                //uint32_t crc = Func::crc(TFS_PACKET_FLAG_V1, input->getData(), length);
+                //bret = crc == crc_;
+                //if (!bret)
+                //{
+                //  input->drainData(length);
+                //  TBSYS_LOG(ERROR, "decode packet crc check error, header crc: %u, calc crc: %u",
+                //      crc_, crc);
+                //}
               }
             }
           }
