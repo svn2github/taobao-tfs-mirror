@@ -148,6 +148,7 @@ namespace tfs
         DataService& service_;
         uint64_t ns_ip_port_[common::MAX_SINGLE_CLUSTER_NS_NUM];
         int32_t master_index_;
+        volatile bool need_renew_block_;
         common::LeaseMeta lease_meta_[common::MAX_SINGLE_CLUSTER_NS_NUM];
         LeaseStatus lease_status_[common::MAX_SINGLE_CLUSTER_NS_NUM];
         time_t last_renew_time_[common::MAX_SINGLE_CLUSTER_NS_NUM];

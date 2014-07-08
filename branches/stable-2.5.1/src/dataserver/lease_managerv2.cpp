@@ -47,6 +47,7 @@ namespace tfs
       }
 
       master_index_ = -1;
+      need_renew_block_ = false;
       apply_block_thread_ = 0;
     }
 
@@ -341,6 +342,19 @@ namespace tfs
             }
           }
 
+          if (master_index_ == who)
+          {
+            if (TFS_SUCCESS == ret)
+            {
+              need_renew_block_ = true;
+            }
+            else
+            {
+              need_renew_block_ = false;
+              get_writable_block_manager().expire_all_blocks();
+            }
+          }
+
           if (TFS_SUCCESS == ret)
           {
             if (is_master(who))
@@ -373,7 +387,6 @@ namespace tfs
       const int32_t GIVEUP_INTERVAL_S = 5;
       const int32_t DUMP_INTERVAL_S = 5;
       int64_t last_giveup_time = 0;
-      int64_t last_renew_time = 0;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       while (!ds_info.is_destroyed())
       {
@@ -394,11 +407,6 @@ namespace tfs
 
         if (has_valid_lease(now))
         {
-          if (last_renew_time == 0)
-          {
-            last_renew_time = last_renew_time_[master_index_];
-          }
-
           // giveup expired block
           if (expired > 0 && now > last_giveup_time + GIVEUP_INTERVAL_S)
           {
@@ -417,11 +425,10 @@ namespace tfs
           }
 
           // renew writable block
-          if (writable > 0 && master_index_ >= 0 &&
-              now > last_renew_time + lease_meta_[master_index_].lease_renew_time_)
+          if (writable > 0 && need_renew_block_)
           {
             get_writable_block_manager().renew_writable_block();
-            last_renew_time = now;
+            need_renew_block_ = false;
           }
         }
         else if (INVALID_SERVER_ID != ds_info.master_ns_ip_port_)
