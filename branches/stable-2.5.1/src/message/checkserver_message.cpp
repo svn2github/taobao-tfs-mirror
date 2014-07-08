@@ -95,7 +95,7 @@ namespace tfs
       int ret = param_.deserialize(input.get_data(), input.get_data_length(), pos);
       if (TFS_SUCCESS == ret)
       {
-        ret = input.drain(param_.length());
+        input.drain(param_.length());
       }
       return ret;
     }
