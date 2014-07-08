@@ -49,8 +49,6 @@ namespace tfs
     FSName::FSName() : version_(CURRENT_TFS_FILE_NAME_VERSION), is_valid_(true), cluster_id_(0)
     {
       file_name_[0] = '\0';
-      memset(&filev1_, 0, sizeof(FileBitsV1));
-      memset(&filev2_, 0, sizeof(FileBitsV2));
     }
 
     FSName::FSName(const uint64_t block_id, const uint64_t file_id, const int32_t cluster_id,

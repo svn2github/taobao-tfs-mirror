@@ -29,6 +29,10 @@ namespace tfs
       uint32_t block_id_;
       uint32_t seq_id_;
       uint32_t suffix_;
+
+      FileBitsV1(): block_id_(0), seq_id_(0), suffix_(0)
+      {
+      }
     };
 
     struct FileBitsV2
@@ -37,6 +41,11 @@ namespace tfs
       uint32_t seq_id_;
       uint32_t suffix_;
       char reserve_[2];
+
+      FileBitsV2(): block_id_(0), seq_id_(0), suffix_(0)
+      {
+        memset(reserve_, 0, sizeof(reserve_));
+      }
     };
 
     class FSName
