@@ -79,6 +79,7 @@ namespace tfs
 
       // easy handle
       int handle(common::BasePacket* packet);
+      bool is_slow_packet(common::BasePacket* packet);
 
    private:
       DISALLOW_COPY_AND_ASSIGN(NameServer);

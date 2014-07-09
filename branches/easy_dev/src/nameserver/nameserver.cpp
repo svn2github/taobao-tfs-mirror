@@ -264,10 +264,16 @@ namespace tfs
       return hret;
     }
 
+    bool NameServer::is_slow_packet(BasePacket* packet)
+    {
+      int32_t pcode = packet->getPCode();
+      return REQ_REPORT_BLOCKS_TO_NS_MESSAGE == pcode;
+    }
+
     int NameServer::handle(BasePacket* packet)
     {
       int32_t pcode = packet->getPCode();
-      int32_t ret = LOCAL_PACKET == pcode ? TFS_ERROR : common::TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         if (GFactory::get_runtime_info().is_master())

@@ -38,6 +38,9 @@ namespace tfs
 
       void reserve(const int64_t length);
 
+      void set_last_read_mark(const int64_t length);
+      void clear_last_read_mark();
+
       char* get_data() const;
       int64_t get_data_length() const;
 

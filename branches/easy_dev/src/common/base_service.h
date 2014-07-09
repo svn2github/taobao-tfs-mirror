@@ -98,6 +98,7 @@ namespace tfs
 
       /** get main work thread count*/
       int32_t get_work_thread_count() const;
+      int32_t get_slow_work_thread_count() const;
 
       /** get work queue size */
       int32_t get_work_queue_size() const;
@@ -115,6 +116,7 @@ namespace tfs
     // easy support
     public:
       virtual int handle(BasePacket* packet) = 0;
+      virtual bool is_slow_packet(BasePacket* packet) { UNUSED(packet); return false; }
 
     private:
       static uint64_t get_packet_id_cb(easy_connection_t *c, void *packet)
@@ -141,7 +143,14 @@ namespace tfs
         return service->process_handler(r);
       }
 
+      static int slow_request_cb(easy_request_t *r, void *args)
+      {
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        return service->slow_request_handler(r, args);
+      }
+
       int process_handler(easy_request_t *r);
+      int slow_request_handler(easy_request_t *r, void* args);
       int packet_handler(BasePacket* packet);
 
     private:
@@ -157,6 +166,7 @@ namespace tfs
       tbnet::Transport* transport_;
       tbnet::PacketQueueThread main_workers_;
       int32_t work_queue_size_;
+      easy_thread_pool_t *slow_task_queue_;
     };
   }
 }

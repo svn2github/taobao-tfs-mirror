@@ -126,7 +126,6 @@ namespace tfs
       eio_.no_redispatch = 1;
       eio_.tcp_nodelay = 1;
       eio_.tcp_cork = 0;
-      // easy_eio_set_uthread_start(&eio, easy_helper::easy_set_thread_name<heartbeat_thread>, const_cast<char*>("hb_io"));
       if (EASY_OK == easy_io_start(&eio_))
       {
         TBSYS_LOG(INFO, "eio start, pid=%d", getpid());
@@ -358,7 +357,8 @@ namespace tfs
         TBSYS_LOG(WARN, "easy client timeout");
         handlePacket(id, &tbnet::ControlPacket::TimeoutPacket);
         easy_session_destroy(r->ms);
-        return EASY_ERROR; //~ destroy this connection
+        return EASY_OK;
+        // return EASY_ERROR; //~ destroy this connection
       }
       handlePacket(id, packet);
       easy_session_destroy(r->ms);

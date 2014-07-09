@@ -96,6 +96,10 @@ public:
 
   int64_t get_data_length() const
   {
+    if (NULL != mark_end)
+    {
+      return mark_end - b->pos;
+    }
     return b->last - b->pos;
   }
 
@@ -116,8 +120,10 @@ public:
 
   void drain(const int64_t length)
   {
-    assert(b->last - b->pos >= length);
-    b->pos += length;
+    char* end = (NULL != mark_end) ? mark_end : b->last;
+    int64_t len = std::min(length, end - b->pos);
+    assert(b->last - b->pos >= len);
+    b->pos += len;
   }
 
   void pour(const int64_t length)
@@ -132,12 +138,15 @@ public:
   }
 
   // use for reading EasyBuffer
-  bool setLastReadMark(uint32_t len) {
-    if (b->pos + len > b->last) {
-      return false;
-    }
+  void set_last_read_mark(uint32_t len)
+  {
+    assert(b->pos + len <= b->last);
     mark_end = b->pos + len;
-    return true;
+  }
+
+  void clear_last_read_mark()
+  {
+    mark_end = NULL;
   }
 
   /*

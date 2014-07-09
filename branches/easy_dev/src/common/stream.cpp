@@ -43,6 +43,16 @@ namespace tfs
       buffer_.reserve(length);
     }
 
+    void Stream::set_last_read_mark(const int64_t length)
+    {
+      buffer_.set_last_read_mark(length);
+    }
+
+    void Stream::clear_last_read_mark()
+    {
+      buffer_.clear_last_read_mark();
+    }
+
     char* Stream::get_data() const
     {
       return buffer_.get_data();

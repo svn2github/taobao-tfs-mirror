@@ -41,7 +41,8 @@ namespace tfs
       packet_factory_(NULL),
       streamer_(NULL),
       timer_(0),
-      work_queue_size_(10240)
+      work_queue_size_(10240),
+      slow_task_queue_(NULL)
     {
     }
 
@@ -54,7 +55,7 @@ namespace tfs
     {
       //if (NULL != transport_)
       //  transport_->stop();
-      main_workers_.stop();
+      //main_workers_.stop();
       destroy_service();
       NewClientManager::get_instance().destroy();
       if (0 != timer_)
@@ -62,9 +63,9 @@ namespace tfs
         timer_->destroy();
       }
 
-      if (NULL != transport_)
-        transport_->wait();
-      main_workers_.wait();
+      //if (NULL != transport_)
+      //  transport_->wait();
+      //main_workers_.wait();
 
       destroy_packet_factory(packet_factory_);
       destroy_packet_streamer(streamer_);
@@ -173,6 +174,11 @@ namespace tfs
       return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_THREAD_COUNT, 8);
     }
 
+    int32_t BaseService::get_slow_work_thread_count() const
+    {
+      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_THREAD_COUNT, 8);
+    }
+
     int32_t BaseService::get_work_queue_size() const
     {
       return work_queue_size_;
@@ -231,6 +237,13 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        slow_task_queue_ = easy_request_thread_create(&eio_,
+            get_slow_work_thread_count(), slow_request_cb, this);
+        assert(NULL != slow_task_queue_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         if (EASY_OK == easy_io_start(&eio_))
         {
           TBSYS_LOG(INFO, "server start, pid=%d", getpid());
@@ -260,7 +273,7 @@ namespace tfs
       {
         int32_t thread_count = get_work_thread_count();
         main_workers_.setThreadParameter(thread_count, this, NULL);
-        main_workers_.start();
+        //main_workers_.start();
 
         work_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_TASK_MAX_QUEUE_SIZE, 10240);
         work_queue_size_ = std::max(work_queue_size_, 10240);
@@ -368,15 +381,30 @@ namespace tfs
         return EASY_ERROR;
       }
 
+      TBSYS_LOG(DEBUG, "process packet, pcode=%d", bp->getPCode());
+
       bp->set_request(r);
       bp->set_direction(DIRECTION_RECEIVE);
+
+      if (is_slow_packet(bp))
+      {
+        easy_thread_pool_push(slow_task_queue_, r, easy_hash_key((uint64_t)(long)r));
+        return EASY_AGAIN;
+      }
+
+      return packet_handler(bp);
+    }
+
+    int BaseService::slow_request_handler(easy_request_t *r, void* args)
+    {
+      UNUSED(args);
+      BasePacket* bp = (BasePacket*)r->ipacket;
+      TBSYS_LOG(DEBUG, "process slow packet, pcode=%d", bp->getPCode());
       return packet_handler(bp);
     }
 
     int BaseService::packet_handler(BasePacket* packet)
     {
-      TBSYS_LOG(DEBUG, "process packet, pcode=%d", packet->getPCode());
-
       // special process LocalPacket
       if (LOCAL_PACKET == packet->getPCode())
       {

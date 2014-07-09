@@ -265,6 +265,9 @@ namespace tfs
       input.get_int16(&version);
       input.get_int64(reinterpret_cast<int64_t*>(&id));
       input.get_int32(reinterpret_cast<int32_t*>(&crc));
+
+      TBSYS_LOG(DEBUG, "decode packet, pcode=%d, length=%d", pcode, len);
+
       if (flag != TFS_PACKET_FLAG_V1 || len < 0 || len > (1<<26) /* 64M */)
       {
         TBSYS_LOG(ERROR, "decoding failed: flag=%x, len=%d, pcode=%d",
@@ -282,6 +285,9 @@ namespace tfs
         return NULL;
       }
 
+      // mark one packet end position
+      input.set_last_read_mark(len);
+
       BasePacket* bp = dynamic_cast<BasePacket*>(_factory->createPacket(pcode));
       assert(NULL != bp);
 
@@ -291,18 +297,17 @@ namespace tfs
       header._dataLen = len;
       bp->setPacketHeader(&header);
 
-      TBSYS_LOG(DEBUG, "decode packet, pcode=%d, length=%ld",
-          bp->getPCode(), bp->length());
-
       char* start = m->input->pos;
       if(TFS_SUCCESS != bp->deserialize(input))
       {
         TBSYS_LOG(ERROR, "decoding packet failed, pcode=%d", pcode);
         tbsys::gDelete(bp);
+        input.clear_last_read_mark();
         m->status = EASY_ERROR;
         return NULL;
       }
 
+      input.clear_last_read_mark();
       if (start + len < m->input->pos)
       {
         TBSYS_LOG(ERROR, "decode pos not match, pcode=%d", pcode);
@@ -325,8 +330,9 @@ namespace tfs
     int BasePacketStreamer::encode_handler(easy_request_t *r, void *packet)
     {
       BasePacket* bp = (BasePacket*)packet;
-      TBSYS_LOG(DEBUG, "encode packet, pcode=%d, length=%ld",
-          bp->getPCode(), bp->length());
+      int32_t pcode = bp->getPCode();
+      int64_t length = bp->length();
+      TBSYS_LOG(DEBUG, "encode packet, pcode=%d, length=%ld", pcode, length);
       if (EASY_TYPE_CLIENT == r->ms->c->type)
       {
         uint32_t chid = ((easy_session_t*)r->ms)->packet_id;
