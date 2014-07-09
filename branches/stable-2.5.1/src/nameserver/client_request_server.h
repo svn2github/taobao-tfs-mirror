@@ -45,12 +45,12 @@ namespace tfs
         explicit ClientRequestServer(LayoutManager& manager);
         virtual ~ClientRequestServer(){}
         int apply(common::DataServerStatInfo& info, int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout);
-        int renew(const common::ArrayHelper<common::BlockInfoV2>& input,
-              common::DataServerStatInfo& info, common::ArrayHelper<common::BlockLease>& output,
-              int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_rety_timeout);
-        int giveup(const common::ArrayHelper<common::BlockInfoV2>& input,common::DataServerStatInfo& info);
+        int renew(common::DataServerStatInfo& info,int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_rety_timeout);
+        int giveup(common::DataServerStatInfo& info);
         int apply_block(const uint64_t server, common::ArrayHelper<common::BlockLease>& output);
         int apply_block_for_update(const uint64_t server, common::ArrayHelper<common::BlockLease>& output);
+        int renew_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input,
+            common::ArrayHelper<common::BlockLease>& output);
         int giveup_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input,common::ArrayHelper<common::BlockLease>& output);
         int report_block(std::vector<uint64_t>& expires, const uint64_t server, const time_t now,
             const common::ArrayHelper<common::BlockInfoV2>& blocks);

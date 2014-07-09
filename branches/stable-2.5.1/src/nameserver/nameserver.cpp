@@ -348,6 +348,9 @@ namespace tfs
             case DS_APPLY_BLOCK_MESSAGE:
               ret = apply_block(msg);
               break;
+            case DS_RENEW_BLOCK_MESSAGE:
+              ret = renew_block(msg);
+              break;
             case DS_APPLY_BLOCK_FOR_UPDATE_MESSAGE:
               ret = apply_block_for_update(msg);
               break;
@@ -690,7 +693,8 @@ namespace tfs
             && pcode != CLIENT_CMD_MESSAGE
             && pcode != CLIENT_NS_KEEPALIVE_MESSAGE
             && pcode != DS_GIVEUP_BLOCK_MESSAGE
-            && pcode != DS_APPLY_BLOCK_MESSAGE)
+            && pcode != DS_APPLY_BLOCK_MESSAGE
+            && pcode != DS_RENEW_BLOCK_MESSAGE)
           {
             ret = ngi.owner_status_ < NS_STATUS_INITIALIZED? common::TFS_ERROR : common::TFS_SUCCESS;
           }
@@ -783,7 +787,7 @@ namespace tfs
         TIMER_START();
         DsApplyBlockMessage* ab_msg = dynamic_cast<DsApplyBlockMessage*>(msg);
         uint64_t server   = ab_msg->get_server_id();
-        int32_t MAX_COUNT = ab_msg->get_count();
+        int32_t MAX_COUNT = ab_msg->get_size();
         MAX_COUNT = std::min(MAX_COUNT, MAX_WRITABLE_BLOCK_COUNT);
         DsApplyBlockResponseMessage* reply_msg = new (std::nothrow)DsApplyBlockResponseMessage();
         assert(NULL != reply_msg);
@@ -802,6 +806,38 @@ namespace tfs
         TBSYS_LOG(INFO, "dataserver: %s apply block %s consume times: %"PRI64_PREFIX"d(us), ret: %d, need: %d, actual: %"PRI64_PREFIX"d",
           tbsys::CNetUtil::addrToString(server).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(),
           ret, MAX_COUNT, output.get_array_index());
+      }
+      return ret;
+    }
+
+    int NameServer::renew_block(common::BasePacket* msg)
+    {
+      int32_t ret = ((NULL != msg) && (msg->getPCode() == DS_RENEW_BLOCK_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        TIMER_START();
+        DsRenewBlockMessage* ab_msg = dynamic_cast<DsRenewBlockMessage*>(msg);
+        uint64_t server   = ab_msg->get_server_id();
+        int32_t MAX_COUNT = ab_msg->get_size();
+        MAX_COUNT = std::min(MAX_COUNT, MAX_WRITABLE_BLOCK_COUNT);
+        DsRenewBlockResponseMessage* reply_msg = new (std::nothrow)DsRenewBlockResponseMessage();
+        assert(NULL != reply_msg);
+        ArrayHelper<BlockInfoV2> input(MAX_WRITABLE_BLOCK_COUNT, ab_msg->get_block_infos(), ab_msg->get_size());
+        ArrayHelper<BlockLease>  output(MAX_COUNT, reply_msg->get_block_lease());
+        ret = layout_manager_.get_client_request_server().renew_block(server, input, output);
+        if (TFS_SUCCESS == ret)
+        {
+          reply_msg->set_size(output.get_array_index());
+          ret = ab_msg->reply(reply_msg);
+        }
+        else
+        {
+          reply_msg->free();
+        }
+        TIMER_END();
+        TBSYS_LOG(INFO, "dataserver: %s renew block %s consume times: %"PRI64_PREFIX"d(us), ret: %d, input: %"PRI64_PREFIX"d, output: %"PRI64_PREFIX"d",
+          tbsys::CNetUtil::addrToString(server).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(),
+          ret, input.get_array_index(), output.get_array_index());
       }
       return ret;
     }

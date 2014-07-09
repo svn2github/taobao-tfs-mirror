@@ -54,9 +54,7 @@ namespace tfs
       return ret;
     }
 
-    int ClientRequestServer::renew(const common::ArrayHelper<BlockInfoV2>& input,
-          common::DataServerStatInfo& info, common::ArrayHelper<common::BlockLease>& output,
-          int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout)
+    int ClientRequestServer::renew(common::DataServerStatInfo& info, int32_t& expire_time, int32_t& next_renew_time, int32_t& renew_retry_times, int32_t& renew_retry_timeout)
     {
       TIMER_START();
       const time_t now = Func::get_monotonic_time();
@@ -66,29 +64,20 @@ namespace tfs
       {
         calc_lease_expire_time_(expire_time, next_renew_time, renew_retry_times, renew_retry_timeout);
       }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = server_manager.renew_block(info.id_,input, output);
-      }
       TIMER_END();
-      TBSYS_LOG(INFO, "dataserver: %s renew lease %s consume: %"PRI64_PREFIX"d, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u,lease_expired_time: %d, next_renew_time: %d, retry_times: %d, input block count: %"PRI64_PREFIX"d, output block count: %"PRI64_PREFIX"d",
+
+      TBSYS_LOG(INFO, "dataserver: %s renew lease %s consume: %"PRI64_PREFIX"d, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u,lease_expired_time: %d, next_renew_time: %d, retry_times: %d",
         CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(), ret, info.use_capacity_, info.total_capacity_,
-        expire_time, next_renew_time, renew_retry_times, input.get_array_index(), output.get_array_index());
+        expire_time, next_renew_time, renew_retry_times);
       return ret;
     }
 
-    int ClientRequestServer::giveup(const common::ArrayHelper<common::BlockInfoV2>& input,common::DataServerStatInfo& info)
+    int ClientRequestServer::giveup(common::DataServerStatInfo& info)
     {
       TIMER_START();
-      BlockLease lease_array[1024];
-      ArrayHelper<BlockLease> output(1024, lease_array);
       const time_t now = Func::get_monotonic_time();
       ServerManager& server_manager = manager_.get_server_manager();
-      int32_t ret = server_manager.giveup_block(info.id_, input, output);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = server_manager.giveup(now, info.id_);
-      }
+      int32_t ret =  server_manager.giveup(now, info.id_);
       TIMER_END();
       TBSYS_LOG(INFO, "dataserver: %s giveup lease %s,consume: %"PRI64_PREFIX"d, ret: %d: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u",
         CNetUtil::addrToString(info.id_).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(), ret, info.use_capacity_, info.total_capacity_);
@@ -99,6 +88,13 @@ namespace tfs
     {
       ServerManager& server_manager = manager_.get_server_manager();
       return server_manager.apply_block(server, output);
+    }
+
+    int ClientRequestServer::renew_block(const uint64_t server, const common::ArrayHelper<common::BlockInfoV2>& input,
+            common::ArrayHelper<common::BlockLease>& output)
+    {
+      ServerManager& server_manager = manager_.get_server_manager();
+      return server_manager.renew_block(server, input, output);
     }
 
     int ClientRequestServer::apply_block_for_update(const uint64_t server, common::ArrayHelper<common::BlockLease>& output)

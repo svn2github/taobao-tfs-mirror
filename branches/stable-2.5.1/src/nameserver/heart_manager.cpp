@@ -326,16 +326,13 @@ namespace tfs
         LeaseMeta& meta = reply_msg->get_lease_meta();
         meta.lease_id_ = info.id_;
         meta.ns_role_ = GFactory::get_runtime_info().get_role();
-        ArrayHelper<BlockInfoV2> input(MAX_WRITABLE_BLOCK_COUNT, msg->get_block_infos(), msg->get_size());
-        ArrayHelper<BlockLease>  output(MAX_WRITABLE_BLOCK_COUNT, reply_msg->get_block_lease());
         meta.max_block_size_ = SYSPARAM_NAMESERVER.max_block_size_;
         meta.max_write_file_count_ = SYSPARAM_NAMESERVER.max_write_file_count_;
         server_manager.calc_single_process_max_network_bandwidth(
               meta.max_mr_network_bandwith_, meta.max_rw_network_bandwith_, info);
-        ret = rs.renew(input, info, output, meta.lease_expire_time_,meta.lease_renew_time_, meta.renew_retry_times_, meta.renew_retry_timeout_);
+        ret = rs.renew(info, meta.lease_expire_time_,meta.lease_renew_time_, meta.renew_retry_times_, meta.renew_retry_timeout_);
         if (TFS_SUCCESS == ret)
         {
-          reply_msg->set_size(output.get_array_index());
           ret = msg->reply(reply_msg);
         }
         else
@@ -355,8 +352,7 @@ namespace tfs
         ClientRequestServer& rs       = layout_manager.get_client_request_server();
         DsGiveupLeaseMessage* msg = dynamic_cast<DsGiveupLeaseMessage*>(packet);
         DataServerStatInfo& info = msg->get_ds_stat();
-        ArrayHelper<BlockInfoV2> input(MAX_WRITABLE_BLOCK_COUNT, msg->get_block_infos(), msg->get_size());
-        ret = rs.giveup(input, info);
+        ret = rs.giveup(info);
         if (TFS_SUCCESS == ret)
         {
           ret = msg->reply(new (std::nothrow)StatusMessage(STATUS_MESSAGE_OK));

@@ -675,7 +675,7 @@ namespace tfs
       bool ret = (NULL != block );
       if (ret)
       {
-        RWLock::Lock lock(get_mutex_(block->id()), WRITE_LOCKER);
+        RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
         ret = block->resolve_invalid_copies(invalids, clean_familyinfo, now);
       }
       return ret;

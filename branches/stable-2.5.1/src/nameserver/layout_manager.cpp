@@ -776,7 +776,7 @@ namespace tfs
         }
         else
         {
-          usleep(500);
+          usleep(50000);
         }
       }
     }
@@ -1554,7 +1554,7 @@ namespace tfs
       ArrayHelper<ServerItem> invalids(MAX_REPLICATION_NUM, copies);
       ServerItem family_arrays[MAX_REPLICATION_NUM];
       common::ArrayHelper<ServerItem> clean_family_helper(MAX_REPLICATION_NUM, family_arrays);
-       NsRuntimeGlobalInformation& ngi = NsRuntimeGlobalInformation::instance();
+      NsRuntimeGlobalInformation& ngi = NsRuntimeGlobalInformation::instance();
       bool over = get_block_manager().scan(results, start, max_query_block_num);
       for (int64_t index = 0; index < results.get_array_index() && need > 0; ++index)
       {

@@ -102,6 +102,7 @@ namespace tfs
       int get_family_info(common::BasePacket* msg);
       //int repair(common::BasePacket* msg);
       int apply_block(common::BasePacket* msg);
+      int renew_block(common::BasePacket* msg);
       int apply_block_for_update(common::BasePacket* msg);
       int giveup_block(common::BasePacket* msg);
 

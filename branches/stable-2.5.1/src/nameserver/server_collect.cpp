@@ -442,6 +442,7 @@ namespace tfs
         BlockInfoV2* entry = input.at(index);
         result->block_id_ = entry->block_id_;
         int32_t& ret = result->result_;
+
         BlockCollect* pblock = block_manager.get(entry->block_id_);
         ret = (pblock != NULL) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
         if (TFS_SUCCESS == ret)
@@ -452,6 +453,11 @@ namespace tfs
         {
           ret = block_manager.renew_lease(id(), now, get() - now, false, *entry, pblock, invalid_helper, clean_family_helper);
           invalid_block_copies_(manager, invalid_helper, clean_family_helper, entry->block_id_);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          RWLock::Lock lock(mutex_, READ_LOCKER);
+          ret = exist_(pblock->id(), *issued_leases_) ? TFS_SUCCESS : EXIT_BLOCK_WRITING_ERROR;
         }
         if (TFS_SUCCESS == ret)
         {
@@ -669,8 +675,8 @@ namespace tfs
         hold_->expand_ratio(expand_ratio);
       if (writable_->need_expand(expand_ratio))
         writable_->expand_ratio(expand_ratio);
-      TBSYS_LOG(DEBUG, "%s expand, hold: %d, writable: %d",
-        tbsys::CNetUtil::addrToString(id()).c_str(), hold_->size(), writable_->size());
+      TBSYS_LOG(DEBUG, "%s expand, hold: %d, writable: %d, master: %d",
+        tbsys::CNetUtil::addrToString(id()).c_str(), hold_->size(), writable_->size(), issued_leases_->size());
       return TFS_SUCCESS;
     }
 
@@ -792,7 +798,6 @@ namespace tfs
       if (ret)
       {
         ret = false;
-        RWLock::Lock lock(mutex_, WRITE_LOCKER);
         if (!block->is_writable()
             || !block->is_master(id())
             || !is_equal_group(block->id())
@@ -800,6 +805,7 @@ namespace tfs
             || IS_VERFIFY_BLOCK(block->id()))
         {
           ret = true;
+          RWLock::Lock lock(mutex_, WRITE_LOCKER);
           remove_(block->id(), *issued_leases_);
         }
         if (block->is_full()
@@ -808,6 +814,7 @@ namespace tfs
             || IS_VERFIFY_BLOCK(block->id()))
         {
           ret = true;
+          RWLock::Lock lock(mutex_, WRITE_LOCKER);
           remove_(block->id(), *writable_);
         }
       }
