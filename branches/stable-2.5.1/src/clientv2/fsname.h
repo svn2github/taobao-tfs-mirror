@@ -23,6 +23,7 @@ namespace tfs
 {
   namespace clientv2
   {
+#pragma pack(1)
     struct FileBitsV1
     {
       uint32_t block_id_;
@@ -46,6 +47,7 @@ namespace tfs
         memset(reserve_, 0, sizeof(reserve_));
       }
     };
+#pragma pack()
 
     class FSName
     {
