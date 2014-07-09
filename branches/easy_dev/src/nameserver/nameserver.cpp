@@ -35,6 +35,8 @@ namespace tfs
 {
   namespace nameserver
   {
+    uint64_t request_counter = 0;
+    int64_t last_request_time_us = 0;
     NameServer::NameServer() :
       layout_manager_(*this),
       master_slave_heart_manager_(layout_manager_),
@@ -469,6 +471,12 @@ namespace tfs
 
     int NameServer::open(common::BasePacket* msg)
     {
+      if (atomic_inc(&request_counter) % 30000 == 0)
+      {
+        int64_t now = Func::get_monotonic_time_us();
+        TBSYS_LOG(INFO, "qps %ld", 30000000000L / (now - last_request_time_us));
+        last_request_time_us = now;
+      }
       int32_t ret = ((NULL != msg) && (msg->getPCode() == GET_BLOCK_INFO_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
@@ -477,16 +485,16 @@ namespace tfs
         uint64_t block_id = message->get_block_id();
         uint64_t lease_id = common::INVALID_LEASE_ID;
         int32_t  mode     = message->get_mode();
-        int32_t  flag     = 0;
+        //int32_t  flag     = 0;
         int32_t  version  = 0;
-        time_t now = Func::get_monotonic_time();
+        //time_t now = Func::get_monotonic_time();
         uint64_t ipport = msg->get_connection()->getServerId();
         uint64_t servers[MAX_REPLICATION_NUM];
         common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
         common::FamilyInfoExt family_info;  // unused in old version
 
-        ret = layout_manager_.get_client_request_server().open(block_id, lease_id, version, helper,
-              family_info, mode, now, flag);
+        //ret = layout_manager_.get_client_request_server().open(block_id, lease_id, version, helper,
+        //      family_info, mode, now, flag);
         if (TFS_SUCCESS == ret)
         {
           for (int64_t index = 0; index < helper.get_array_index(); ++index)
