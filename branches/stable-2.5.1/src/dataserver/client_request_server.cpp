@@ -139,10 +139,12 @@ namespace tfs
       {
         DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
         CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(message);
+        uint64_t server = msg->get_server();
+        msg->reply(new StatusMessage(STATUS_MESSAGE_OK));  // reply ns first
+
         ReportBlocksToNsRequestMessage req_msg;
         req_msg.set_server(info.information_.id_);
         int32_t block_count = 0;
-        uint64_t server = msg->get_server();
         BlockInfoV2* blocks_ext = NULL;
         TIMER_START();
         get_block_manager().get_all_block_info(blocks_ext, block_count);
