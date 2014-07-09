@@ -126,8 +126,12 @@ namespace tfs
       int32_t ret = (NULL != message) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+
         DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
         CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(message);
+        uint64_t ns_ip_port = msg->get_server();
+        message->reply(new StatusMessage(STATUS_MESSAGE_OK));  // reply ns first
+
         ReportBlocksToNsRequestMessage req_msg;
         req_msg.set_server(info.information_.id_);
         int32_t block_count = 0;
@@ -142,7 +146,7 @@ namespace tfs
 
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* message = NULL;
-        ret = send_msg_to_server(msg->get_server(), client, &req_msg, message);
+        ret = send_msg_to_server(ns_ip_port, client, &req_msg, message);
         if (TFS_SUCCESS == ret)
         {
           ret = message->getPCode() == RSP_REPORT_BLOCKS_TO_NS_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
