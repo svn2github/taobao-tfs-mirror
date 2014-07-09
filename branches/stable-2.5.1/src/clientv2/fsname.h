@@ -23,6 +23,7 @@ namespace tfs
 {
   namespace clientv2
   {
+    static const common::TfsFileNameVersion CURRENT_TFS_FILE_NAME_VERSION = common::TFS_FILE_NAME_V2;
 #pragma pack(1)
     struct FileBitsV1
     {
@@ -53,7 +54,8 @@ namespace tfs
     {
     public:
       FSName();
-      FSName(const uint64_t block_id, const uint64_t file_id, const int32_t cluster_id = 0);
+      FSName(const uint64_t block_id, const uint64_t file_id, const int32_t cluster_id = 0,
+          common::TfsFileNameVersion version = CURRENT_TFS_FILE_NAME_VERSION);
       FSName(const char *file_name, const char* suffix = NULL, const int32_t cluster_id = 0);
       virtual ~FSName();
 
