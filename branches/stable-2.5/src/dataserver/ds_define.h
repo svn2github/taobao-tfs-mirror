@@ -144,6 +144,7 @@ namespace tfs
       int32_t check_integrity_interval_days_;
       int8_t enable_old_interface_;
       int8_t enable_version_check_;
+      volatile bool is_reporting_block_;
       DsRuntimeGlobalInformation();
       static DsRuntimeGlobalInformation& instance();
     };
