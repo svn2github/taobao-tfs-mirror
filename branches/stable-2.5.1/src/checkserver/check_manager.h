@@ -386,6 +386,7 @@ namespace tfs
         SERVER_MAP all_servers_;
         BaseServerHelper* server_helper_;
         FILE* result_fp_;
+        FILE* less_block_fp_;
         int32_t group_count_;
         int32_t group_seq_;
         int64_t max_dispatch_num_;
