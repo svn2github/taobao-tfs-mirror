@@ -624,6 +624,7 @@ namespace tfs
       for (int index = 0; index < retry_times; index++)
       {
         ret = server_helper_->get_block_replicas(ns_id, block_id, servers);
+        ret = (servers.size() > 0) ? TFS_SUCCESS : EXIT_NO_DATASERVER;
         if (TFS_SUCCESS == ret)
         {
           break;
