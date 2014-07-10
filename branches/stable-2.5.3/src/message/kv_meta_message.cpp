@@ -24,6 +24,104 @@ namespace tfs
   {
     using namespace tfs::common;
 
+    //req_get_service_msg
+    ReqKvMetaGetServiceMessage::ReqKvMetaGetServiceMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_GET_SERVICE_MESSAGE;
+    }
+
+    ReqKvMetaGetServiceMessage::~ReqKvMetaGetServiceMessage(){}
+
+    int ReqKvMetaGetServiceMessage::serialize(Stream& output) const
+    {
+      int32_t iret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaGetServiceMessage::deserialize(Stream& input)
+    {
+      int32_t iret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaGetServiceMessage::length() const
+    {
+      return user_info_.length();
+    }
+
+    //rsp_get_service_msg
+    RspKvMetaGetServiceMessage::RspKvMetaGetServiceMessage()
+    {
+      _packetHeader._pcode = RSP_KVMETA_GET_SERVICE_MESSAGE;
+    }
+
+    RspKvMetaGetServiceMessage::~RspKvMetaGetServiceMessage(){}
+
+    int RspKvMetaGetServiceMessage::serialize(Stream& output) const
+    {
+      int32_t iret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = buckets_result_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(buckets_result_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int RspKvMetaGetServiceMessage::deserialize(Stream& input)
+    {
+      int32_t iret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = buckets_result_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(buckets_result_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t RspKvMetaGetServiceMessage::length() const
+    {
+      return buckets_result_.length();
+    }
+
+//-------------------------------------object part ---------------------------------------------
+
     // req_put_object_msg
     ReqKvMetaPutObjectMessage::ReqKvMetaPutObjectMessage()
     {

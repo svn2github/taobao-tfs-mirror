@@ -25,6 +25,57 @@ namespace tfs
   namespace message
   {
 
+    class ReqKvMetaGetServiceMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaGetServiceMessage();
+        virtual ~ReqKvMetaGetServiceMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
+      private:
+        common::UserInfo user_info_;
+    };
+
+    class RspKvMetaGetServiceMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaGetServiceMessage();
+        virtual ~RspKvMetaGetServiceMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const common::BucketsResult* get_buckets_result() const
+        {
+          return &buckets_result_;
+        }
+
+        common::BucketsResult* get_mutable_buckets_result()
+        {
+          return &buckets_result_;
+        }
+
+        void set_buckets_result(common::BucketsResult &buckets_result)
+        {
+          buckets_result_ = buckets_result;
+        }
+
+      private:
+        common::BucketsResult buckets_result_;
+    };
+
     class ReqKvMetaPutObjectMessage : public common::BasePacket
     {
       public:

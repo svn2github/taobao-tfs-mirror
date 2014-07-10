@@ -44,6 +44,8 @@ namespace tfs
         //int scan_metas();
         //int delete_metas();
 
+      /*----------------------------get service-----------------------------*/
+        int list_buckets(common::BucketsResult *buckets_result, const common::UserInfo &user_info);
 
       /*----------------------------object part-----------------------------*/
 
@@ -77,7 +79,7 @@ namespace tfs
             const std::string& start_key, const char delimiter, int32_t *limit,
             std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
             std::set<std::string>* s_common_prefix, int8_t* is_truncated);
-        int del_bucket(const std::string& bucket_name);
+        int del_bucket(const std::string& bucket_name, const common::UserInfo &user_info);
 
       public:
         int put_bucket_ex(const std::string &bucket_name, const common::BucketMetaInfo &bucket_meta_info,
@@ -99,6 +101,10 @@ namespace tfs
                         common::KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
 
       protected:
+        int get_bucket_list(const int64_t owner_id, std::set<std::string> *s_bucket_name, int64_t *version);
+        int put_bucket_list(const int64_t owner_id, const std::set<std::string> &s_bucket_name,
+            const int64_t version);
+
         int group_objects(const std::string &object_name, const std::string &v, const std::string &prefix,
             const char delimiter, std::vector<common::ObjectMetaInfo> *v_object_meta_info,
             std::vector<std::string> *v_object_name, std::set<std::string> *s_common_prefix);

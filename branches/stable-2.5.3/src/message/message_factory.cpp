@@ -339,6 +339,12 @@ namespace tfs
           case common::DEGRADE_READ_DATA_MESSAGE:
             packet = new (std::nothrow)DegradeReadDataMessage();
             break;
+          case common::REQ_KVMETA_GET_SERVICE_MESSAGE:
+            packet = new (std::nothrow)ReqKvMetaGetServiceMessage();
+            break;
+          case common::RSP_KVMETA_GET_SERVICE_MESSAGE:
+            packet = new (std::nothrow)RspKvMetaGetServiceMessage();
+            break;
           case common::REQ_KVMETA_GET_OBJECT_MESSAGE:
             packet = new (std::nothrow)ReqKvMetaGetObjectMessage();
             break;

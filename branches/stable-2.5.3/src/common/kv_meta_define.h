@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <string>
+#include <map>
 #include "define.h"
 #include "meta_define.h"
 
@@ -32,6 +33,7 @@ namespace tfs
       static const char DASH;
       static const char DEFAULT_CHAR;
       static const int32_t MAX_LIMIT;
+      static const int32_t MAX_BUCKETS_COUNT;
       static const int32_t VERSION_ERROR_RETRY_COUNT;
       static const int64_t MAX_VERSION;
     };
@@ -131,6 +133,17 @@ namespace tfs
       int64_t owner_id_;
     };
 
+    typedef std::map<std::string, BucketMetaInfo> MAP_BUCKET_INFO;
+    typedef std::map<std::string, BucketMetaInfo>::const_iterator MAP_BUCKET_INFO_ITER;
+    struct BucketsResult
+    {
+      BucketsResult();
+      int64_t length() const;
+      int serialize(char *data, const int64_t data_len, int64_t &pos) const;
+      int deserialize(const char *data, const int64_t data_len, int64_t &pos);
+      int64_t owner_id_;
+      MAP_BUCKET_INFO bucket_info_map_;
+    };
   }
 }
 

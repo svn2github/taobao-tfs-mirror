@@ -195,6 +195,9 @@ namespace tfs
         base_packet = dynamic_cast<BasePacket*>(packet);
         switch (base_packet->getPCode())
         {
+          case REQ_KVMETA_GET_SERVICE_MESSAGE:
+            ret = get_service(dynamic_cast<ReqKvMetaGetServiceMessage*>(base_packet));
+            break;
           case REQ_KVMETA_PUT_OBJECT_MESSAGE:
             ret = put_object(dynamic_cast<ReqKvMetaPutObjectMessage*>(base_packet));
             break;
@@ -242,6 +245,35 @@ namespace tfs
 
       // always return true. packet will be freed by caller
       return true;
+    }
+
+    int KvMetaService::get_service(ReqKvMetaGetServiceMessage *req_get_service_msg)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == req_get_service_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "KvMetaService::get_service fail, ret: %d", ret);
+      }
+
+      RspKvMetaGetServiceMessage *rsp = new RspKvMetaGetServiceMessage();
+      if (TFS_SUCCESS == ret)
+      {
+        const UserInfo &user_info = req_get_service_msg->get_user_info();
+        ret = meta_info_helper_.list_buckets(rsp->get_mutable_buckets_result(), user_info);
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = req_get_service_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "get service fail");
+        tbsys::gDelete(rsp);
+      }
+      else
+      {
+        ret = req_get_service_msg->reply(rsp);
+        stat_mgr_.update_entry(tfs_kv_meta_stat_, "get_service", 1);
+      }
+      return ret;
     }
 
     int KvMetaService::put_object(ReqKvMetaPutObjectMessage* req_put_object_msg)
@@ -476,7 +508,8 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = meta_info_helper_.del_bucket(del_bucket_msg->get_bucket_name());
+        const UserInfo &user_info = del_bucket_msg->get_user_info();
+        ret = meta_info_helper_.del_bucket(del_bucket_msg->get_bucket_name(), user_info);
       }
 
       if (TFS_SUCCESS != ret)

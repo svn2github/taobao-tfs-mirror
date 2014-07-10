@@ -1101,6 +1101,151 @@ namespace tfs
       return ret;
     }
 
+    int MetaInfoHelper::put_bucket_list(const int64_t owner_id, const set<string> &s_bucket_name,
+        const int64_t version)
+    {
+      //first pos put special char to differ from other keys
+      int32_t buff_size = 1 + INT64_SIZE;
+      char key_buff[buff_size];
+      int64_t pos = 0;
+      key_buff[pos++] = KvKey::PREFIX;
+      int ret = Serialization::int64_to_char(key_buff + pos, buff_size, owner_id);
+      pos = pos + INT64_SIZE;
+
+      KvKey key;
+      key.key_ = key_buff;
+      key.key_size_ = pos;
+      key.key_type_ = KvKey::KEY_TYPE_BUCKET;
+
+      char *kv_value_bucket_name_buff = NULL;
+      int64_t kv_value_buff_size = Serialization::get_sstring_length(s_bucket_name);
+      kv_value_bucket_name_buff = (char*) malloc(kv_value_buff_size);
+
+      if (NULL == kv_value_bucket_name_buff)
+      {
+        ret = TFS_ERROR;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        pos = 0;
+        ret = Serialization::set_sstring(kv_value_bucket_name_buff, kv_value_buff_size, pos, s_bucket_name);
+      }
+
+      KvMemValue value;
+      if (TFS_SUCCESS == ret)
+      {
+        value.set_data(kv_value_bucket_name_buff, pos);
+        ret = kv_engine_helper_->put_key(meta_info_name_area_, key, value, version);
+      }
+
+      if (NULL != kv_value_bucket_name_buff)
+      {
+        free(kv_value_bucket_name_buff);
+        kv_value_bucket_name_buff = NULL;
+      }
+
+      return ret;
+    }
+
+    int MetaInfoHelper::get_bucket_list(const int64_t owner_id, set<string> *s_bucket_name, int64_t *version)
+    {
+      //first pos put prefix char to differ from other keys
+      int32_t buff_size = 1 + INT64_SIZE;
+      char key_buff[buff_size];
+      int64_t pos = 0;
+      key_buff[pos++] = KvKey::PREFIX;
+      int ret = Serialization::int64_to_char(key_buff + pos, buff_size, owner_id);
+      pos = pos + INT64_SIZE;
+
+      KvKey key;
+      key.key_ = key_buff;
+      key.key_size_ = pos;
+      key.key_type_ = KvKey::KEY_TYPE_BUCKET;
+
+      KvValue *value = NULL;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = kv_engine_helper_->get_key(meta_info_name_area_, key, &value, version);
+      }
+      if (ret == EXIT_KV_RETURN_DATA_NOT_EXIST)
+      {
+        TBSYS_LOG(DEBUG, "owner: %"PRI64_PREFIX"d has not create any bucket", owner_id);
+        ret = EXIT_NO_BUCKETS;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        pos = 0;
+        ret = Serialization::get_sstring(value->get_data(), value->get_size(), pos, *s_bucket_name);
+      }
+
+      if (NULL != value)
+      {
+        value->free();
+      }
+
+      return ret;
+    }
+
+    int MetaInfoHelper::list_buckets(common::BucketsResult *buckets_result, const common::UserInfo &user_info)
+    {
+      int ret = NULL == buckets_result ? TFS_ERROR : TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        buckets_result->owner_id_ = user_info.owner_id_;
+      }
+
+      set<string> s_bucket_name;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_bucket_list(user_info.owner_id_, &s_bucket_name, NULL);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        buckets_result->bucket_info_map_.clear();
+        set<string>::iterator iter = s_bucket_name.begin();
+        for (; TFS_SUCCESS == ret && iter != s_bucket_name.end(); iter++)
+        {
+          BucketMetaInfo bucket_meta_info;
+          ret = head_bucket(*iter, &bucket_meta_info);
+
+          if (TFS_SUCCESS == ret)
+          {
+            if (user_info.owner_id_ == bucket_meta_info.owner_id_)
+            {
+              buckets_result->bucket_info_map_.insert(make_pair(*iter, bucket_meta_info));
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "bucket: %s has conflict owner_id: %"PRI64_PREFIX"d <=> %"PRI64_PREFIX"d",
+                  (*iter).c_str(), bucket_meta_info.owner_id_, user_info.owner_id_);
+              continue;
+            }
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "head bucket: %s fail, ret: %d", (*iter).c_str(), ret);
+            // TODO: maybe bucket is not exist any more, need update bucket list?
+            //if (EXIT_BUCKET_NOT_EXIST == ret)
+            //{
+            //  need_update = true;
+            //}
+            continue;
+          }
+        }
+      }
+      else if (EXIT_NO_BUCKETS == ret)
+      {
+        TBSYS_LOG(INFO, "owner: %"PRI64_PREFIX"d has not create any buckets", user_info.owner_id_);
+        ret = TFS_SUCCESS;
+      }
+
+      return ret;
+    }
+
     int MetaInfoHelper::list_objects(const KvKey& pkey, const std::string& prefix,
         const std::string& start_key, const char delimiter, int32_t *limit,
         std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
@@ -1401,11 +1546,72 @@ namespace tfs
         }
       }
 
+      // update bucket list
+      int64_t version = 0;
+      set<string> s_bucket_name;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_bucket_list(user_info.owner_id_, &s_bucket_name, &version);
+        if (TFS_SUCCESS == ret && static_cast<int32_t>(s_bucket_name.size()) >= KvDefine::MAX_BUCKETS_COUNT)
+        {
+          // FIXME: may need limit
+          //ret = EXIT_OVER_MAX_BUCKETS_COUNT;
+          TBSYS_LOG(WARN, "owner: %"PRI64_PREFIX"d has %zu buckets, over %d",
+              user_info.owner_id_, s_bucket_name.size(), KvDefine::MAX_BUCKETS_COUNT);
+        }
+        else if (EXIT_NO_BUCKETS == ret)
+        {
+          ret = TFS_SUCCESS;
+        }
+      }
+
       if (TFS_SUCCESS == ret)
       {
         bucket_meta_info.owner_id_ = user_info.owner_id_;
         int64_t ver = KvDefine::MAX_VERSION;
         ret = put_bucket_ex(bucket_name, bucket_meta_info, ver);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        s_bucket_name.insert(bucket_name);
+        if (0 == version)
+        {
+          version = KvDefine::MAX_VERSION;
+        }
+        int32_t retry = KvDefine::VERSION_ERROR_RETRY_COUNT;
+        do
+        {
+          ret = put_bucket_list(user_info.owner_id_, s_bucket_name, version);
+          if (EXIT_KV_RETURN_VERSION_ERROR == ret)
+          {
+            int iret = TFS_ERROR;
+            s_bucket_name.clear();
+            iret = get_bucket_list(user_info.owner_id_, &s_bucket_name, &version);
+            if (TFS_SUCCESS == iret || EXIT_NO_BUCKETS == iret)
+            {
+              if (TFS_SUCCESS == iret && static_cast<int32_t>(s_bucket_name.size()) >= KvDefine::MAX_BUCKETS_COUNT)
+              {
+                // FIXME: may need limit
+                //ret = EXIT_OVER_MAX_BUCKETS_COUNT;
+                TBSYS_LOG(WARN, "owner: %"PRI64_PREFIX"d has %zu buckets, over %d",
+                    user_info.owner_id_, s_bucket_name.size(), KvDefine::MAX_BUCKETS_COUNT);
+              }
+              s_bucket_name.insert(bucket_name);
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "get owner: %"PRI64_PREFIX"d's bucket list failed, ret: %d",
+                  user_info.owner_id_, iret);
+              break;
+            }
+          }
+        } while (EXIT_KV_RETURN_VERSION_ERROR == ret && retry--);
+        // retry still failed, roll back
+        if (TFS_SUCCESS != ret)
+        {
+          ret = del_bucket(bucket_name, user_info);
+        }
       }
 
       return ret;
@@ -1442,7 +1648,7 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::del_bucket(const string& bucket_name)
+    int MetaInfoHelper::del_bucket(const string& bucket_name, const UserInfo &user_info)
     {
       int ret = TFS_SUCCESS;
       KvKey pkey;
@@ -1469,6 +1675,34 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = kv_engine_helper_->delete_key(meta_info_name_area_, pkey);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t retry = KvDefine::VERSION_ERROR_RETRY_COUNT;
+        do
+        {
+          set<string> tmp_name_set;
+          int64_t version;
+          ret = get_bucket_list(user_info.owner_id_, &tmp_name_set, &version);
+          if (TFS_SUCCESS == ret)
+          {
+            if (tmp_name_set.find(bucket_name) == tmp_name_set.end())
+            {
+              TBSYS_LOG(WARN, "owner: %"PRI64_PREFIX"d does not have this bucket: %s", user_info.owner_id_, bucket_name.c_str());
+            }
+            else
+            {
+              tmp_name_set.erase(bucket_name);
+              ret = put_bucket_list(user_info.owner_id_, tmp_name_set, version);
+            }
+          }
+        } while (EXIT_KV_RETURN_VERSION_ERROR == ret && retry--);
+
+        if (TFS_SUCCESS != ret && EXIT_NO_BUCKETS != ret)
+        {
+          TBSYS_LOG(ERROR, "update owner: %"PRI64_PREFIX"d's bucket list failed, ret: %d", user_info.owner_id_, ret);
+        }
       }
 
       //delete for kv

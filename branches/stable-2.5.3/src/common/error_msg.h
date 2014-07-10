@@ -312,7 +312,10 @@ namespace tfs
     const int32_t EXIT_BUCKET_EXIST = -17007;// bucket already exist
     const int32_t EXIT_INVALID_KV_META_SERVER = -17008;// no kv meta server
     const int32_t EXIT_KV_RETURN_HAS_MORE_DATA = -17009; //tair return over 1M of get range once
-    const int32_t EXIT_REQ_OFFSET_NOT_FIND = -17100;//do direct scan offset but reqoffset not in scan
+    const int32_t EXIT_REQ_OFFSET_NOT_FIND = -17010;//do direct scan offset but reqoffset not in scan
+
+    const int32_t EXIT_OVER_MAX_BUCKETS_COUNT = -17011; //100 buckets per user
+    const int32_t EXIT_NO_BUCKETS = -17012;   // no buckets
 
     // life cycle manager related
     const int32_t EXIT_LIFE_CYCLE_INFO_EXIST = -18000;

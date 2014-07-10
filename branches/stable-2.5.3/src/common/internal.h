@@ -1534,6 +1534,10 @@ namespace tfs
       //UserInfo
       USER_INFO_OWNER_ID_TAG = 801,
 
+      //GetService
+      BUCKETS_RESULT_OWNER_ID_TAG = 1001,
+      BUCKETS_RESULT_BUCKET_INFO_MAP_TAG = 1002,
+
       // RemoteCache
       REMOTE_CACHE_KEY_NS_ADDR_TAG = 701,
       REMOTE_CACHE_KEY_BLOCK_ID_TAG = 702,
