@@ -142,6 +142,14 @@ namespace tfs
         uint64_t server = msg->get_server();
         msg->reply(new StatusMessage(STATUS_MESSAGE_OK));  // reply ns first
 
+        // ds is reporting block now, avoid reporting repeatly
+        if (info.is_reporting_block_)
+        {
+          return TFS_SUCCESS;
+        }
+
+        info.is_reporting_block_ = true;
+
         ReportBlocksToNsRequestMessage req_msg;
         req_msg.set_server(info.information_.id_);
         int32_t block_count = 0;
@@ -175,6 +183,8 @@ namespace tfs
         TIMER_END();
         TBSYS_LOG(INFO, "report block to %s %s, blocks size: %d, cost: %"PRI64_PREFIX"d, ret: %d",
             tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "succesful" : "failed", block_count, TIMER_DURATION(), ret);
+
+        info.is_reporting_block_ = false;  // report finish
       }
       return ret;
     }

@@ -340,6 +340,10 @@ namespace tfs
             {
               break;
             }
+            else if (EXIT_TIMEOUT_ERROR != ret)
+            {
+              usleep(SLEEP_TIME_US);
+            }
           }
 
           if (master_index_ == who)
