@@ -81,6 +81,9 @@ namespace tfs
       }
       rwmutex_.unlock();
 
+      if (EXIT_APPLY_LEASE_ALREADY_ISSUED == ret)
+        ret = common::TFS_SUCCESS;
+
       if (common::TFS_SUCCESS == ret)
       {
         assert(NULL != pserver);
