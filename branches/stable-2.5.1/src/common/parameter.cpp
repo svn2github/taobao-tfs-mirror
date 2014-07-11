@@ -363,7 +363,7 @@ namespace tfs
 
     int DataServerParameter::get_real_ds_port(const int ds_port, const std::string& index)
     {
-      return ds_port + ((atoi((index.c_str()))));
+      return ds_port + ((atoi(index.c_str()))- 1);
     }
 
     int FileSystemParameter::initialize(const std::string& index)
