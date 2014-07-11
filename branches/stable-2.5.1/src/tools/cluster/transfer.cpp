@@ -281,6 +281,10 @@ namespace tfs
             if (force_remove)
             {
               ret = NsRequester::remove_block(block, get_dest_addr(), tfs::nameserver::HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION);
+              if (EXIT_NO_DATASERVER == ret || EXIT_BLOCK_NOT_FOUND == ret || EXIT_NO_BLOCK == ret)
+              {
+                ret = TFS_SUCCESS;
+              }
               TBSYS_LOG(WARN, "remove block: %"PRI64_PREFIX"u from %s %s", block, get_dest_addr().c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
               for (int32_t index = 0; index < meta.size_; ++index)
               {
@@ -300,7 +304,7 @@ namespace tfs
             TBSYS_LOG(WARN, "remove block: %"PRI64_PREFIX"u from %s", block, get_dest_addr().c_str());
             ret = NsRequester::remove_block(block, get_dest_addr(), tfs::nameserver::HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION);
           }
-          if (EXIT_BLOCK_NOT_FOUND == ret)
+          if (EXIT_NO_DATASERVER == ret || EXIT_BLOCK_NOT_FOUND == ret || EXIT_NO_BLOCK == ret)
           {
             ret = TFS_SUCCESS;
           }
@@ -583,7 +587,7 @@ namespace tfs
         "             -- 1: sync block by file\n"
         "             -- 2: sync file\n"
         "             -- 3: compare block \n"
-        "-x           traffic threshold per thread, default 1024(kB/s)\n"
+        "-x           traffic threshold per thread, default 1048576(Byte/s)\n"
         "-t           thread count, optional, defaul 1\n"
         "-l           log level, optional, default info\n"
         "-p           output directory, optional, default ./logs\n"

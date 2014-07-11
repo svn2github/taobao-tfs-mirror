@@ -91,6 +91,7 @@ namespace tfs
     private:
       int open(common::BasePacket* msg);
       int batch_open(common::BasePacket* msg);
+      int update_block_info(common::BasePacket* msg);
       int show_server_information(common::BasePacket* msg);
       int resolve_block_version_conflict(common::BasePacket* msg);
       int ping(common::BasePacket* msg);

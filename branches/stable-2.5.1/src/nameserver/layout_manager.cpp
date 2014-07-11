@@ -242,6 +242,35 @@ namespace tfs
       return ret != TFS_SUCCESS ? ret : result;
     }
 
+    int LayoutManager::update_block_info(const BlockInfoV2& info, const uint64_t server, const time_t now, const bool addnew)
+    {
+      bool master = false;
+      bool writable = false;
+      BlockCollect* pblock = NULL;
+      ServerCollect* pserver = get_server_manager().get(server);
+      int32_t ret = (NULL != pserver) ? TFS_SUCCESS : EXIT_DATASERVER_NOT_FOUND;
+      if (addnew)
+      {
+        pblock = get_block_manager().insert(info.block_id_, now, true);
+        assert(NULL != pblock);
+      }
+      else
+      {
+        pblock = get_block_manager().get(info.block_id_);
+        ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_manager().build_relation(pblock, writable, master, server, &info, INVALID_FAMILY_ID, now, true);
+      }
+      if (TFS_SUCCESS == ret && addnew)
+      {
+        ret = get_server_manager().build_relation(pserver, pblock->id(), writable, master);
+      }
+      return ret;
+    }
+
     int LayoutManager::scan(SSMScanParameter& param)
     {
       int32_t start = (param.start_next_position_ & 0xFFFF0000) >> 16;

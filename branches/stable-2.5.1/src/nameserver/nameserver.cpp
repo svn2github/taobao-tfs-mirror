@@ -308,6 +308,9 @@ namespace tfs
             case BATCH_GET_BLOCK_INFO_MESSAGE_V2:
               ret = batch_open(msg);
               break;
+            case UPDATE_BLOCK_INFO_MESSAGE_V2:
+              ret = update_block_info(msg);
+              break;
             case REPLICATE_BLOCK_MESSAGE:
             case BLOCK_COMPACT_COMPLETE_MESSAGE:
             case REQ_EC_MARSHALLING_COMMIT_MESSAGE:
@@ -493,6 +496,26 @@ namespace tfs
                 "batch get get block information error, mode: %d, ret: %d", mode, ret);
           }
         }
+      }
+      return ret;
+    }
+
+    int NameServer::update_block_info(common::BasePacket* msg)
+    {
+      int32_t ret = ((NULL != msg) && (msg->getPCode() == UPDATE_BLOCK_INFO_MESSAGE_V2)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (common::TFS_SUCCESS == ret)
+      {
+        UpdateBlockInfoMessageV2* message = dynamic_cast<UpdateBlockInfoMessageV2*> (msg);
+        const BlockInfoV2 info = message->get_block_info();
+        const uint64_t server_id =  message->get_server_id();
+        const UpdateBlockInfoType type = message->get_type();
+        bool addnew = UPDATE_BLOCK_INFO_REPL == type ? true : false;
+        ret = layout_manager_.update_block_info(info, server_id, Func::get_monotonic_time(), addnew);
+        char buf[256] = {'\0'};
+        snprintf(buf, 256, "update block: %"PRI64_PREFIX"u information %s, server: %s, ret: %d",
+            info.block_id_, TFS_SUCCESS == ret ? "successful" : "failed", tbsys::CNetUtil::addrToString(server_id).c_str(), ret);
+        TBSYS_LOG_DW(ret, buf);
+        ret = message->reply(new StatusMessage(ret, buf));
       }
       return ret;
     }

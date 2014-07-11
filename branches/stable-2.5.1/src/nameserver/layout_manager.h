@@ -85,8 +85,7 @@ namespace tfs
       int build_relation(BlockCollect* block, ServerCollect* server, const common::BlockInfoV2* info, const int64_t now, const bool set);
       int relieve_relation(const uint64_t block, const uint64_t server, const time_t now, const bool print);
       int relieve_relation(BlockCollect* pblock, ServerCollect* pserver, const time_t now, const bool print);
-
-      //int update_block_info(const common::BlockInfoV2& info, const uint64_t server, const time_t now, const bool addnew);
+      int update_block_info(const common::BlockInfoV2& info, const uint64_t server, const time_t now, const bool addnew);
 
       //int repair(char* msg, const int32_t length, const uint64_t block_id,
       //    const uint64_t server, const int64_t family_id, const int32_t type, const time_t now);
