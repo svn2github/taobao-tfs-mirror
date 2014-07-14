@@ -92,6 +92,7 @@ namespace tfs
       int32_t report_interval_;
       int64_t modify_time_;
       int64_t meta_root_server_;
+      std::vector<int64_t> kvroot_server_infos_;
       std::string ns_cache_info_;
       std::vector<ClusterData> cluster_infos_for_update_;
       int32_t use_remote_cache_;
@@ -103,6 +104,7 @@ namespace tfs
         report_interval_ = right.report_interval_;
         modify_time_ = right.modify_time_;
         meta_root_server_ = right.meta_root_server_;
+        kvroot_server_infos_ = right.kvroot_server_infos_;
         ns_cache_info_ = right.ns_cache_info_;
         cluster_infos_for_update_ = right.cluster_infos_for_update_;
         use_remote_cache_ = right.use_remote_cache_;

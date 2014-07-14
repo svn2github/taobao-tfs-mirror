@@ -143,29 +143,64 @@ namespace tfs
       return update_time_in_db > base_last_update_time_;
     }
 
-    int BaseResource::get_meta_root_server(const int32_t app_id, int64_t& root_server) const
+    int BaseResource::get_meta_root_server(const int32_t app_id, int64_t& root_server,
+        std::vector<int64_t>& v_root_server) const
     {
+      UNUSED(app_id);
       int ret = TFS_SUCCESS;
       root_server = 0;
+
       VMetaRootServerInfo::const_iterator it = v_meta_root_server_info_.begin();
       for (; it != v_meta_root_server_info_.end(); it++)
       {
         if (1 != it->stat_) continue;
-        if (0 == it->app_id_)
-        {
-          if (0 == root_server)
-          {
-            root_server = tbsys::CNetUtil::strToAddr(it->addr_info_, 0);
-          }
-        }
-        if (app_id == it->app_id_)
-        {
-          root_server = tbsys::CNetUtil::strToAddr(it->addr_info_, 0);
-          break;
-        }
+        root_server = tbsys::CNetUtil::strToAddr(it->addr_info_, 0);
+        v_root_server.push_back(root_server);
       }
+
       return ret;
     }
+
+    int BaseResource::sort_krs_by_distance(const std::string& app_ip,
+            common::BaseInfo& out_base_info)
+    {
+      std::string krt_ip;
+      std::string caculate_krt_ip;
+      std::string caculate_app_ip;
+      uint32_t distance = 0;
+      std::multimap<int32_t,int64_t> dist_map;
+      std::multimap<int32_t,int64_t>::iterator itk;
+
+      std::vector<int64_t>::const_iterator it = out_base_info.kvroot_server_infos_.begin();
+
+      if (TFS_SUCCESS != IpReplaceHelper::replace_ip(v_ip_transfer_table_, app_ip, caculate_app_ip))
+      {
+        TBSYS_LOG(WARN, "can not get caculate ip :%s will use the original value", app_ip.c_str());
+        caculate_app_ip = app_ip;
+      }
+      for (; it != out_base_info.kvroot_server_infos_.end(); it++)
+      {
+        krt_ip = IpReplaceHelper::addrToStringNoPort(*it);
+
+        if (TFS_SUCCESS != IpReplaceHelper::replace_ip(v_ip_transfer_table_, krt_ip, caculate_krt_ip))
+        {
+          TBSYS_LOG(WARN, "can not get caculate ip :%s will use the original value", krt_ip.c_str());
+          caculate_krt_ip = krt_ip;
+        }
+        distance = IpReplaceHelper::calculate_distance(caculate_app_ip, caculate_krt_ip);
+        dist_map.insert(std::pair<int32_t,int64_t>(distance, *it));
+        TBSYS_LOG(DEBUG, "kvip %s, app_ip %s, distance %d", caculate_krt_ip.c_str(), caculate_app_ip.c_str(), distance);
+      }
+
+      out_base_info.kvroot_server_infos_.clear();
+      for (itk = dist_map.begin(); itk != dist_map.end(); ++itk)
+      {
+          out_base_info.kvroot_server_infos_.push_back(itk->second);
+      }
+
+      return TFS_SUCCESS;
+    }
+
     int BaseResource::get_resource_servers(std::vector<uint64_t>& resource_servers) const
     {
       int ret = TFS_SUCCESS;
