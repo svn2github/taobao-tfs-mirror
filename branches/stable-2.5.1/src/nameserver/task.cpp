@@ -115,7 +115,7 @@ namespace tfs
 
     int Task::log(const int32_t type, common::BasePacket* msg)
     {
-      int32_t ret = (type >= OPLOG_TYPE_BLOCK_OP && type <= OPLOG_TYPE_DISSOLVE_MSG && NULL != msg) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (type > OPLOG_TYPE_BLOCK_OP && type <= OPLOG_TYPE_DISSOLVE_MSG && NULL != msg) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         if (GFactory::get_runtime_info().is_master())
@@ -125,7 +125,7 @@ namespace tfs
           ret = msg->serialize(stream);
           assert(TFS_SUCCESS == ret);
           int32_t result = lm.get_oplog_sync_mgr().log(
-                      OPLOG_TYPE_REPLICATE_MSG, stream.get_data(), stream.get_data_length(), Func::get_monotonic_time());
+                      type, stream.get_data(), stream.get_data_length(), Func::get_monotonic_time());
           if (TFS_SUCCESS == ret)
             dump(TBSYS_LOG_LEVEL(INFO), "write %s oplog %s, ret: %d", transform_type_to_str(), TFS_SUCCESS == result ? "successful": "failed", result);
         }

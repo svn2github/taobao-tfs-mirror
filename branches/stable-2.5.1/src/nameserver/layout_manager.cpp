@@ -378,8 +378,9 @@ namespace tfs
       oplog.server_num_ = servers.get_array_index();
       memcpy(oplog.servers_, servers.get_base_address(), oplog.server_num_ * INT64_SIZE);
       int64_t size = oplog.length();
+      char* buf = new char[size];
+      memset(buf, 0, size);
       int64_t pos = 0;
-      char buf[size];
       int32_t ret = oplog.serialize(buf, size, pos);
       if (TFS_SUCCESS != ret)
       {
@@ -396,6 +397,7 @@ namespace tfs
           TBSYS_LOG(INFO, "write oplog failed, block: %"PRI64_PREFIX"u", info.block_id_);
         }
       }
+      tbsys::gDeleteA(buf);
       return ret;
     }
 
@@ -562,7 +564,7 @@ namespace tfs
         if (ngi.is_master())
         {
           while (((need = has_space_in_task_queue_()) <= 0) && (!ngi.is_destroyed()))
-            usleep(1000);
+            usleep(500000);
 
           now = Func::get_monotonic_time();
 
@@ -805,7 +807,7 @@ namespace tfs
         }
         else
         {
-          usleep(50000);
+          usleep(500000);
         }
       }
     }

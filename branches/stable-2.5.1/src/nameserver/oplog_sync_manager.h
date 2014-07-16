@@ -72,7 +72,7 @@ namespace tfs
       int replay_all_();
       common::BasePacket* malloc_(const int32_t type);
 
-      int scan_all_family_(const int32_t chunk, int64_t& start_family_id);
+      int scan_all_family_(const int32_t thseqno, const int32_t chunk, int64_t& start_family_id);
       int scan_all_family_log_();
       int load_all_family_info_(const int32_t thread_seqno, bool& load_complete);
 
@@ -94,13 +94,14 @@ namespace tfs
       typedef tbutil::Handle<LoadFamilyInfoThreadHelper> LoadFamilyInfoThreadHelperPtr;
 
     private:
+      static const int32_t DEFATUL_TAIR_INDEX = 0;
       LayoutManager& manager_;
       OpLog* oplog_;
       common::FileQueue* file_queue_;
       common::FileQueueThread* file_queue_thread_;
       BlockIdFactory id_factory_;
       tbutil::Mutex mutex_;
-      TairHelper* dbhelper_;
+      TairHelper* dbhelper_[MAX_LOAD_FAMILY_INFO_THREAD_NUM];
       tbnet::PacketQueueThread work_thread_;
       LoadFamilyInfoThreadHelperPtr load_family_info_thread_[MAX_LOAD_FAMILY_INFO_THREAD_NUM];
     };

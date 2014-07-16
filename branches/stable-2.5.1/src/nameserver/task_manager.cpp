@@ -520,6 +520,8 @@ namespace tfs
           SET_MASTER_INDEX(family_aid_info,1);
           uint64_t server[MAX_NUM];
           FamilyMemberInfo info[MAX_NUM];
+          memset(server, 0, sizeof(server));
+          memset(info, 0, sizeof(info));
           if (msg->getPCode() == BLOCK_COMPACT_COMPLETE_MESSAGE)
           {
             task= new (std::nothrow)CompactTask(*this, block, MAX_NUM, server);

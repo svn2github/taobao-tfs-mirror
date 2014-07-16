@@ -275,13 +275,14 @@ namespace tfs
       {
         lseek(fd_, 0, SEEK_SET);
         int64_t pos = 0;
-        char buf[oplog_rotate_header_.length()];
-        memset(buf, 0, sizeof(buf));
-        ret = oplog_rotate_header_.serialize(buf, oplog_rotate_header_.length(), pos);
+        const int32_t COUNT = oplog_rotate_header_.length();
+        char* buf = new char[COUNT];
+        memset(buf, 0, COUNT);
+        ret = oplog_rotate_header_.serialize(buf, COUNT, pos);
         if (common::TFS_SUCCESS == ret)
         {
-          int64_t length = ::write(fd_, buf, oplog_rotate_header_.length());
-          if (length != oplog_rotate_header_.length())
+          int64_t length = ::write(fd_, buf, COUNT);
+          if (length != COUNT)
           {
             TBSYS_LOG(WARN, "wirte data fail: file: %s, erros: %s...", path_.c_str(), strerror(errno));
             ::close( fd_);
@@ -295,8 +296,8 @@ namespace tfs
             else
             {
               lseek(fd_, 0, SEEK_SET);
-              length = ::write(fd_, buf, oplog_rotate_header_.length());
-              if (length != oplog_rotate_header_.length())
+              length = ::write(fd_, buf, COUNT);
+              if (length != COUNT)
               {
                 TBSYS_LOG(WARN, "wirte data fail: file: %s, erros: %s...", path_.c_str(), strerror(errno));
                 ret = common::EXIT_GENERAL_ERROR;
@@ -304,6 +305,7 @@ namespace tfs
             }
           }
         }
+        tbsys::gDeleteA(buf);
       }
       return ret;
     }

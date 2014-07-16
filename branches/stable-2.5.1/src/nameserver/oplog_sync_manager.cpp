@@ -38,10 +38,11 @@ namespace tfs
   namespace nameserver
   {
     OpLogSyncManager::OpLogSyncManager(LayoutManager& mm) :
-      manager_(mm), oplog_(NULL), file_queue_(NULL), file_queue_thread_(NULL),dbhelper_(NULL)
+      manager_(mm), oplog_(NULL), file_queue_(NULL), file_queue_thread_(NULL)
     {
       for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
       {
+        dbhelper_[index] = NULL;
         load_family_info_thread_[index] = 0;
       }
     }
@@ -51,9 +52,9 @@ namespace tfs
       tbsys::gDelete( file_queue_);
       tbsys::gDelete( file_queue_thread_);
       tbsys::gDelete( oplog_);
-      tbsys::gDelete( dbhelper_);
       for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
       {
+        tbsys::gDelete(dbhelper_[index]);
         load_family_info_thread_[index] = 0;
       }
     }
@@ -135,8 +136,11 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          dbhelper_ = new TairHelper(items[0], items[1], items[2], items[3], atoi(items[4].c_str()));
-          ret = dbhelper_->initialize();
+          for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && TFS_SUCCESS == ret; ++index)
+          {
+            dbhelper_[index] = new TairHelper(items[0], items[1], items[2], items[3], atoi(items[4].c_str()));
+            ret = dbhelper_[index]->initialize();
+          }
         }
         if (TFS_SUCCESS == ret)
         {
@@ -397,14 +401,19 @@ namespace tfs
         ret = (TFS_SUCCESS == ret) ? TFS_SUCCESS : EXIT_DESERIALIZE_ERROR;
         if (TFS_SUCCESS != ret)
         {
+          Func::hex_dump(data, data_len, true, TBSYS_LOG_LEVEL_DEBUG);
           oplog.dump(TBSYS_LOG_LEVEL_INFO);
-          TBSYS_LOG(INFO, "deserialize error, data: %s, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
+          TBSYS_LOG(INFO, "deserialize error, data: %p, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
         }
         if (TFS_SUCCESS == ret)
         {
           ret = oplog.server_num_ > 0 ? TFS_SUCCESS : EXIT_PLAY_LOG_ERROR;
           if (TFS_SUCCESS != ret)
-            TBSYS_LOG(INFO, "play log error, data: %s, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
+          {
+            Func::hex_dump(data, data_len, true, TBSYS_LOG_LEVEL_DEBUG);
+            oplog.dump(TBSYS_LOG_LEVEL_INFO);
+            TBSYS_LOG(INFO, "play log error, data: %p, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d, %d", data, data_len, pos, oplog.cmd_);
+          }
         }
         if (TFS_SUCCESS == ret)
         {
@@ -479,7 +488,7 @@ namespace tfs
           crc = Func::crc(crc, (data + pos), header.length_);
           if (crc != header.crc_)
           {
-            TBSYS_LOG(ERROR, "check crc: %u<>: %u error", header.crc_, crc);
+            TBSYS_LOG(ERROR, "check crc: %u<>: %u error, type: %d, length: %d", header.crc_, crc, header.type_, header.length_);
             ret = EXIT_CHECK_CRC_ERROR;
           }
           else
@@ -587,30 +596,30 @@ namespace tfs
 
     int OpLogSyncManager::create_family_id(int64_t& family_id)
     {
-      int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = NULL != dbhelper_[DEFATUL_TAIR_INDEX] ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = dbhelper_->create_family_id(family_id);
+        ret = dbhelper_[DEFATUL_TAIR_INDEX]->create_family_id(family_id);
       }
       return ret;
     }
 
     int OpLogSyncManager::create_family(common::FamilyInfo& family_info)
     {
-      int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = NULL != dbhelper_[DEFATUL_TAIR_INDEX] ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = dbhelper_->create_family(family_info);
+        ret = dbhelper_[DEFATUL_TAIR_INDEX]->create_family(family_info);
       }
       return ret;
     }
 
     int OpLogSyncManager::del_family(const int64_t family_id)
     {
-      int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = NULL != dbhelper_[DEFATUL_TAIR_INDEX] ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = dbhelper_->del_family(family_id, false, true, GFactory::get_runtime_info().owner_ip_port_);
+        ret = dbhelper_[DEFATUL_TAIR_INDEX]->del_family(family_id, false, true, GFactory::get_runtime_info().owner_ip_port_);
       }
       return ret;
     }
@@ -652,7 +661,7 @@ namespace tfs
             start_family_id = family_manager.get_max_family_id(chunk);
             do
             {
-              ret = scan_all_family_(chunk, start_family_id);
+              ret = scan_all_family_(thseqno, chunk, start_family_id);
             }
             while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry++ < 3);
           }
@@ -682,7 +691,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int OpLogSyncManager::scan_all_family_(const int32_t chunk, int64_t& start_family_id)
+    int OpLogSyncManager::scan_all_family_(const int32_t thseqno, const int32_t chunk, int64_t& start_family_id)
     {
       uint64_t id = INVALID_BLOCK_ID;
       std::vector<common::FamilyInfo> infos;
@@ -693,9 +702,13 @@ namespace tfs
       common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
       do
       {
+        TimeStat st1,st2;
         infos.clear();
-        assert(NULL != dbhelper_);
-        ret = dbhelper_->scan(infos, start_family_id, chunk, false,  GFactory::get_runtime_info().peer_ip_port_);
+        assert(NULL != dbhelper_[thseqno]);
+        st1.start();
+        ret = dbhelper_[thseqno]->scan(infos, start_family_id, chunk, false,  GFactory::get_runtime_info().peer_ip_port_);
+        st1.end();
+        st2.start();
         std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
         int64_t now = Func::get_monotonic_time();
         for (; iter != infos.end(); ++iter)
@@ -726,6 +739,8 @@ namespace tfs
         }
         if (!infos.empty())
           ++start_family_id;
+        st2.end();
+        TBSYS_LOG(INFO, "SCAN CONSUM: %ld, %ld, size: %zd", st1.duration(), st2.duration(), infos.size());
       }
       while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
       return ret;
@@ -740,8 +755,8 @@ namespace tfs
       do
       {
         infos.clear();
-        assert(NULL != dbhelper_);
-        ret = dbhelper_->scan(infos, start_family_id,DELETE_FAMILY_CHUNK_DEFAULT_VALUE, true,  GFactory::get_runtime_info().peer_ip_port_);
+        assert(NULL != dbhelper_[DEFATUL_TAIR_INDEX]);
+        ret = dbhelper_[DEFATUL_TAIR_INDEX]->scan(infos, start_family_id,DELETE_FAMILY_CHUNK_DEFAULT_VALUE, true,  GFactory::get_runtime_info().peer_ip_port_);
         std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
         for (; iter != infos.end(); ++iter)
         {
@@ -756,7 +771,7 @@ namespace tfs
           if (TFS_SUCCESS != rt)
             TBSYS_LOG(WARN, "del family information error,family id: %"PRI64_PREFIX"d, ret: %d", family.family_id_, rt);
           else
-            rt = dbhelper_->del_family(family.family_id_, true, false, GFactory::get_runtime_info().owner_ip_port_);
+            rt = dbhelper_[DEFATUL_TAIR_INDEX]->del_family(family.family_id_, true, false, GFactory::get_runtime_info().owner_ip_port_);
 
           TBSYS_LOG(DEBUG, "DEL FAMILY: %s, rt: %d", str.str().c_str(), rt);
         }
