@@ -804,7 +804,6 @@ namespace tfs
             || !block->has_valid_lease(now)
             || IS_VERFIFY_BLOCK(block->id()))
         {
-          ret = true;
           RWLock::Lock lock(mutex_, WRITE_LOCKER);
           remove_(block->id(), *issued_leases_);
         }

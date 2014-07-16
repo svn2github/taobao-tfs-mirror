@@ -384,7 +384,7 @@ namespace tfs
         {
           if (NULL != msg)
             msg->free();
-          TBSYS_LOG(INFO, "deserialize error, data: %s, length: %"PRI64_PREFIX"d offset: %"PRI64_PREFIX"d", data, data_len, pos);
+          TBSYS_LOG(INFO, "deserialize error, data: %p, length: %"PRI64_PREFIX"d offset: %"PRI64_PREFIX"d", data, data_len, pos);
         }
       }
       return ret;
