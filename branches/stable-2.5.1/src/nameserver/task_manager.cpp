@@ -552,9 +552,9 @@ namespace tfs
         {
           ret = task->handle_complete(msg);
           task->dump(TBSYS_LOG_LEVEL(INFO), "handle message complete, show result: %d,", ret);
-          task->dump_block(TBSYS_LOG_LEVEL(INFO), get_layout_manager().get_block_log());
           if (master)
           {
+            task->dump_block(TBSYS_LOG_LEVEL(INFO), get_layout_manager().get_block_log());
             remove(task);
           }
           else
