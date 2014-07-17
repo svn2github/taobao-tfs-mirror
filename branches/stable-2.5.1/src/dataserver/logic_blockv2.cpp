@@ -717,12 +717,14 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = BaseLogicBlock::read(buf, nbytes, offset, fileid, flag, logic_block_id);
+        if (nbytes == ret)
+        {
+          int iret = get_index_handle_()->update_block_statistic_info(OPER_READ, nbytes, nbytes, false);
+          ret = TFS_SUCCESS == iret ? ret : iret;
+        }
+        // nbytes != ret && ret >=0 happened only when linux file be truncate by other process
       }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = get_index_handle_()->update_block_statistic_info(OPER_READ, nbytes, nbytes, false);
-      }
       return ret;
     }
 
