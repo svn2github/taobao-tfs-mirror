@@ -284,7 +284,6 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
         switch (pcode)
         {
           case SET_DATASERVER_MESSAGE:
@@ -299,60 +298,61 @@ namespace tfs
             ret = layout_manager_.get_oplog_sync_mgr().handle(packet);
             break;
           case GET_BLOCK_INFO_MESSAGE:
-            ret = open(msg);
+            ret = open(packet);
             break;
           case GET_BLOCK_INFO_MESSAGE_V2:
-            ret = openv2(msg);
+            ret = openv2(packet);
             break;
           case BATCH_GET_BLOCK_INFO_MESSAGE:
-            ret = batch_open(msg);
+            ret = batch_open(packet);
             break;
           case BATCH_GET_BLOCK_INFO_MESSAGE_V2:
-            ret = batch_openv2(msg);
+            ret = batch_openv2(packet);
             break;
           case BLOCK_WRITE_COMPLETE_MESSAGE:
-            ret = close(msg);
+            ret = close(packet);
             break;
           case UPDATE_BLOCK_INFO_MESSAGE_V2:
-            ret = closev2(msg);
+            ret = closev2(packet);
             break;
           case REPLICATE_BLOCK_MESSAGE:
           case BLOCK_COMPACT_COMPLETE_MESSAGE:
           case REQ_EC_MARSHALLING_COMMIT_MESSAGE:
           case REQ_EC_REINSTATE_COMMIT_MESSAGE:
           case REQ_EC_DISSOLVE_COMMIT_MESSAGE:
-            ret = layout_manager_.get_client_request_server().handle(msg);
+            ret = layout_manager_.get_client_request_server().handle(packet);
             break;
           case SHOW_SERVER_INFORMATION_MESSAGE:
-            ret = show_server_information(msg);
+            ret = show_server_information(packet);
             break;
           case STATUS_MESSAGE:
-            ret = ping(msg);
+            ret = ping(packet);
             break;
           case DUMP_PLAN_MESSAGE:
-            ret = dump_plan(msg);
+            ret = dump_plan(packet);
             break;
           case CLIENT_CMD_MESSAGE:
-            ret = client_control_cmd(msg);
+            ret = client_control_cmd(packet);
             break;
           case REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
-            ret = resolve_block_version_conflict(msg);
+            ret = resolve_block_version_conflict(packet);
             break;
           case REQ_GET_FAMILY_INFO_MESSAGE:
-            ret = get_family_info(msg);
+            ret = get_family_info(packet);
             break;
           case REPAIR_BLOCK_MESSAGE_V2:
-            ret = repair(msg);
+            ret = repair(packet);
             break;
           default:
             ret = EXIT_UNKNOWN_MSGTYPE;
-            TBSYS_LOG(WARN, "unknown msg type: %d", pcode);
+            TBSYS_LOG(WARN, "unknown packet type: %d", pcode);
             break;
         }
-        if (common::TFS_SUCCESS != ret)
-        {
-          msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
-        }
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        packet->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
       }
 
       return EASY_OK;
@@ -898,7 +898,7 @@ namespace tfs
             && pcode != REQ_REPORT_BLOCKS_TO_NS_MESSAGE
             && pcode != CLIENT_CMD_MESSAGE)
           {
-            ret = ngi.owner_status_ < NS_STATUS_INITIALIZED? common::TFS_ERROR : common::TFS_SUCCESS;
+            ret = ngi.owner_status_ < NS_STATUS_INITIALIZED? common::EXIT_NOT_INIT_ERROR : common::TFS_SUCCESS;
           }
         }
       }
@@ -913,7 +913,7 @@ namespace tfs
         int32_t pcode = packet->getPCode();
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         ret = ngi.owner_status_ >= NS_STATUS_UNINITIALIZE //service status is valid, we'll receive message
-               && ngi.owner_status_ <= NS_STATUS_INITIALIZED ? common::TFS_SUCCESS : common::TFS_ERROR;
+               && ngi.owner_status_ <= NS_STATUS_INITIALIZED ? common::TFS_SUCCESS : common::EXIT_NOT_INIT_ERROR;
         if (common::TFS_SUCCESS == ret)
         {
           if (pcode != MASTER_AND_SLAVE_HEART_MESSAGE
@@ -925,7 +925,7 @@ namespace tfs
           {
             if (ngi.owner_status_ < NS_STATUS_INITIALIZED)
             {
-              ret = common::TFS_ERROR;
+              ret = common::EXIT_NOT_INIT_ERROR;
             }
             else
             {
@@ -940,7 +940,7 @@ namespace tfs
                 && pcode != SHOW_SERVER_INFORMATION_MESSAGE
                 && pcode != REQ_GET_FAMILY_INFO_MESSAGE)
               {
-                ret = common::TFS_ERROR;
+                ret = common::EXIT_NOT_INIT_ERROR;
               }
             }
           }
