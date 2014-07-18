@@ -375,5 +375,30 @@ namespace tfs
       return EASY_OK;
     }
 
+    // libeasy copy packet
+    BasePacket* BasePacketStreamer::clone_packet(BasePacket* src)
+    {
+      int32_t pcode = src->getPCode();
+      int64_t length = src->length();
+      BasePacket* dest = dynamic_cast<BasePacket*>(_factory->createPacket(pcode));
+      assert(NULL != dest);
+      Stream stream(length);
+      int ret = src->serialize(stream);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = dest->deserialize(stream);
+      }
+
+      TBSYS_LOG_DW(ret, "clone packet, ret=%d, pcode=%d, length=%ld", ret, pcode, length);
+
+      if (TFS_SUCCESS != ret)
+      {
+        tbsys::gDelete(dest);
+        dest = NULL;
+      }
+
+      return dest;
+    }
+
   }
 }

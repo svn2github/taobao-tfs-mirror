@@ -46,8 +46,8 @@ namespace tfs
         explicit NewClient(const uint32_t& seq_id);
         virtual ~NewClient();
         bool wait(const int64_t timeout_in_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT);
-        int post_request(const uint64_t server, tbnet::Packet* packet, uint8_t& send_id);
-        int async_post_request(const std::vector<uint64_t>& servers, tbnet::Packet* packet, callback_func func, bool save_source_msg = true);
+        int post_request(const uint64_t server, tbnet::Packet* packet, uint8_t& send_id, const bool clone_source = false);
+        int async_post_request(const std::vector<uint64_t>& servers, tbnet::Packet* packet, callback_func func, const bool clone_source = false);
         inline RESPONSE_MSG_MAP* get_success_response() { return complete_ ? &success_response_ : NULL;}
         inline RESPONSE_MSG_MAP* get_fail_response() { return complete_ ? &fail_response_ : NULL;}
         inline tbnet::Packet* get_source_msg() { return *(source_msg_.begin()); }
@@ -106,13 +106,15 @@ namespace tfs
     #define create_msg_ref(type, name) type& name = *(new type())
     #define create_msg_ptr(type, name) type* name = new type()
     int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status,
+                          bool clone_source = false,
                           const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
     int send_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, tbnet::Packet*& output/*not free*/,
+                          bool clone_source = false,
                           const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
     int post_msg_to_server(const std::vector<uint64_t>& servers, NewClient* client, tbnet::Packet* message, NewClient::callback_func func,
-                          bool save_source_msg = true);
+                          const bool clone_source = false);
     int post_msg_to_server(uint64_t servers, tbnet::Packet* message, NewClient::callback_func func,
-                          bool save_source_msg = true);
+                          const bool clone_source = false);
     int test_server_alive(const uint64_t server_id, const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
   } /* message */
 } /* tfs */

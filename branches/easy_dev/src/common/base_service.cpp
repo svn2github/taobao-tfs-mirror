@@ -176,7 +176,7 @@ namespace tfs
 
     int32_t BaseService::get_slow_work_thread_count() const
     {
-      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_THREAD_COUNT, 8);
+      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_SLOW_THREAD_COUNT, 8);
     }
 
     int32_t BaseService::get_work_queue_size() const

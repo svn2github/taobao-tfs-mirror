@@ -468,7 +468,7 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             int32_t status = STATUS_MESSAGE_ERROR;
-            ret = send_msg_to_server(info.value1_, message, status);
+            ret = send_msg_to_server(info.value1_, message, status, true); // will clone message
             if ((STATUS_MESSAGE_OK != status)
                 || (TFS_SUCCESS != ret))
             {

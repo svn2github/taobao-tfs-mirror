@@ -114,7 +114,7 @@ namespace tfs
         file_queue_thread_->initialize(1, OpLogSyncManager::sync_log_func);
         const int queue_thread_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OPLOGSYNC_THREAD_NUM, 1);
         work_thread_.setThreadParameter(queue_thread_num , this, NULL);
-        work_thread_.start();
+        // work_thread_.start();
       }
       if (TFS_SUCCESS == ret)
       {
@@ -163,7 +163,7 @@ namespace tfs
       {
         file_queue_thread_->wait();
       }
-      work_thread_.wait();
+      // work_thread_.wait();
 
       return id_factory_.destroy();
     }
@@ -174,7 +174,7 @@ namespace tfs
       {
         file_queue_thread_->destroy();
       }
-      work_thread_.stop();
+      // work_thread_.stop();
       return TFS_SUCCESS;
     }
 
@@ -263,10 +263,10 @@ namespace tfs
             ret = TFS_ERROR;
             //to send data to the slave & wait
             tbnet::Packet* rmsg = NULL;
-            create_msg_ref(OpLogSyncMessage, request_msg);
-            request_msg.set_data(data, length);
             for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && ngi.has_valid_lease(now); ++i, rmsg = NULL)
             {
+              create_msg_ref(OpLogSyncMessage, request_msg);
+              request_msg.set_data(data, length);
               NewClient* client = NewClientManager::get_instance().create_client();
               ret = send_msg_to_server(ngi.peer_ip_port_, client, &request_msg, rmsg);
               if (TFS_SUCCESS == ret)
@@ -358,7 +358,7 @@ namespace tfs
         int32_t status = STATUS_MESSAGE_ERROR;
         for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && STATUS_MESSAGE_OK != status; i++)
         {
-          ret = send_msg_to_server(GFactory::get_runtime_info().peer_ip_port_, msg, status);
+          ret = send_msg_to_server(GFactory::get_runtime_info().peer_ip_port_, msg, status, true); // will clone msg
         }
         ret = STATUS_MESSAGE_OK == status ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_ERROR != ret)
@@ -394,13 +394,9 @@ namespace tfs
         {
           msg->dump();
           BaseService* base = dynamic_cast<BaseService*>(BaseService::instance());
-          ret = base->push(msg) ? TFS_SUCCESS : TFS_ERROR;
-        }
-        if (TFS_SUCCESS != ret)
-        {
+          ret = base->handle(msg);
           if (NULL != msg)
-            msg->free();
-          TBSYS_LOG(INFO, "deserialize error, data: %s, length: %"PRI64_PREFIX"d offset: %"PRI64_PREFIX"d", data, data_len, pos);
+            tbsys::gDelete(msg);
         }
       }
       return ret;

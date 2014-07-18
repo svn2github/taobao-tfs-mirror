@@ -296,7 +296,7 @@ namespace tfs
             ret = master_slave_heart_manager_.handle(packet);
             break;
           case OPLOG_SYNC_MESSAGE:
-            ret = layout_manager_.get_oplog_sync_mgr().push(packet);
+            ret = layout_manager_.get_oplog_sync_mgr().handle(packet);
             break;
           case GET_BLOCK_INFO_MESSAGE:
             ret = open(msg);

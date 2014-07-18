@@ -34,7 +34,7 @@ namespace tfs
   {
     class NewClientManager : public tbnet::IPacketHandler
     {
-        friend int NewClient::post_request(const uint64_t server, tbnet::Packet* packet, uint8_t& send_id);
+        friend int NewClient::post_request(const uint64_t server, tbnet::Packet* packet, uint8_t& send_id, const bool clone_source);
         friend bool NewClient::async_wait();
         typedef __gnu_cxx::hash_map<uint32_t, NewClient*> NEWCLIENT_MAP;
         typedef NEWCLIENT_MAP::iterator NEWCLIENT_MAP_ITER;
