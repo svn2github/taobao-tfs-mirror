@@ -269,6 +269,12 @@ int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
           case CMD_SERVER_LIST:
             g_need_cmp ? (ret_param.type_ = BLOCK_CMP_SERVER) : (ret_param.type_ = BLOCK_TYPE_SERVER_LIST);
             break;
+          case CMD_BLOCK_STATUS:
+            ret_param.type_ = BLOCK_TYPE_BLOCK_STATUS;
+            break;
+          case CMD_BLOCK_FULL:
+            ret_param.type_ |= BLOCK_TYPE_BLOCK_FULL;// additional condition
+            break;
           case CMD_ALL:
             ret_param.type_ = BLOCK_CMP_ALL_INFO;
             break;
@@ -423,6 +429,9 @@ void init()
   g_sub_cmd_map["-writable"] = CmdInfo(CMD_BLOCK_WRITABLE, false);
   g_sub_cmd_map["-master"] = CmdInfo(CMD_BLOCK_MASTER, false);
   g_sub_cmd_map["-server"] = CmdInfo(CMD_SERVER_LIST, false);
+  g_sub_cmd_map["-status"] = CmdInfo(CMD_BLOCK_STATUS, false);
+  g_sub_cmd_map["-full"] = CmdInfo(CMD_BLOCK_FULL, false);
+
   g_sub_cmd_map["-all"] = CmdInfo(CMD_ALL, false);
   g_sub_cmd_map["-part"] = CmdInfo(CMD_PART, false);
   g_sub_cmd_map["-monitor"] = CmdInfo(CMD_FOR_MONITOR, false);
@@ -440,6 +449,8 @@ void init()
   g_sub_cmd_map["-w"] = CmdInfo(CMD_BLOCK_WRITABLE, false);
   g_sub_cmd_map["-m"] = CmdInfo(CMD_BLOCK_MASTER, false);
   g_sub_cmd_map["-s"] = CmdInfo(CMD_SERVER_LIST, false);
+  g_sub_cmd_map["-t"] = CmdInfo(CMD_BLOCK_STATUS, false);
+  g_sub_cmd_map["-u"] = CmdInfo(CMD_BLOCK_FULL, false);
   g_sub_cmd_map["-a"] = CmdInfo(CMD_ALL, false);
   g_sub_cmd_map["-p"] = CmdInfo(CMD_PART, false);
   g_sub_cmd_map["-f"] = CmdInfo(CMD_FOR_MONITOR, false);
@@ -456,6 +467,8 @@ void print_help()
     fprintf(stderr, "block [-n num] [-d block_id] [-s] [-c] [-i] [> filename]   show block info.\n"
         "  -n the number of one fetch, default 1024, optional.\n"
         "  -d block id, optional.\n"
+        "  -u list full block only, optional.\n"
+        "  -t print block status, optional.\n"
         "  -s print server list, optional.\n"
         "  -c execute times, default 1, it will always loop execute when it is 0, optional.\n"
         "  -i interval time, default 2, optional.\n"

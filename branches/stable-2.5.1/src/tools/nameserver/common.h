@@ -50,6 +50,8 @@ namespace tfs
       CMD_NUM = 2,
       CMD_BLOCK_INFO,
       CMD_BLOCK_ID,//CMD_BLOCK_ID, CMD_FAMILY_ID
+      CMD_BLOCK_STATUS,
+      CMD_BLOCK_FULL,
       CMD_SERVER_LIST,
       CMD_SERVER_INFO,
       CMD_SERVER_ID,
@@ -71,7 +73,9 @@ namespace tfs
     {
       BLOCK_TYPE_BLOCK_INFO = 1,
       BLOCK_TYPE_BLOCK_ID = 2,
-      BLOCK_TYPE_SERVER_LIST = 4
+      BLOCK_TYPE_SERVER_LIST = 4,
+      BLOCK_TYPE_BLOCK_STATUS = 8,
+      BLOCK_TYPE_BLOCK_FULL = 16,
     };
     enum SubServerType
     {
@@ -202,6 +206,12 @@ namespace tfs
       public:
         common::BlockInfoV2 info_;
         std::vector<ServerInfo> server_list_;
+        int64_t expire_time_;
+        int64_t last_leave_time_;
+        int8_t create_flag_;
+        int8_t in_replicate_queue_;
+        int8_t has_lease_;
+        int8_t choose_master_;
 
         BlockBase();
         virtual ~BlockBase();

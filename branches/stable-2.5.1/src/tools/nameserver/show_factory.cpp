@@ -139,6 +139,10 @@ namespace tfs
         {
           fprintf(fp, "FAMILY_ID   BLOCK_ID       SERVER_LIST (SERVER_ID  FAMILY_ID  VERSION) \n");
         }
+        if (type & SSM_CHILD_BLOCK_TYPE_STATUS)
+        {
+          fprintf(fp, "%-10s %-20s %-8s %-12s %-9s %-14s %-12s %s\n", "FAMILY_ID", "BLOCK_ID", "CREATE", "IN_REPLICATE", "HAS_LEASE", "CHOOSE_MASTER", "EXPIRE_TIME", "LAST_LEAVE_TIME");
+        }
       }
       if (print_type & MACHINE_TYPE)
       {
@@ -254,9 +258,16 @@ namespace tfs
       if (fp == NULL) { return; }
       if (type & BLOCK_TYPE_BLOCK_INFO)
       {
-        fprintf(fp, "%-10"PRI64_PREFIX"d %-20"PRI64_PREFIX"u %-8d %-8d %-10d %-8d %-10d %-8d %-10d %-6Zd", info_.family_id_, info_.block_id_, info_.version_, info_.file_count_, info_.size_,
+        fprintf(fp, "%-10"PRI64_PREFIX"d %-20"PRI64_PREFIX"u %-8d %-8d %-10d %-8d %-10d %-8d %-10d %-6Zd",
+            info_.family_id_, info_.block_id_, info_.version_, info_.file_count_, info_.size_,
             info_.del_file_count_, info_.del_size_, info_.update_file_count_,
             info_.update_size_, server_list_.size());
+      }
+      if (type & BLOCK_TYPE_BLOCK_STATUS)
+      {
+        fprintf(fp, "%-10"PRI64_PREFIX"d %-20"PRI64_PREFIX"u %-8d %-12d %-9d %-14d %-12"PRI64_PREFIX"d %-12"PRI64_PREFIX"d",
+            info_.family_id_, info_.block_id_, create_flag_, in_replicate_queue_, has_lease_,
+            choose_master_, expire_time_, last_leave_time_);
       }
       if (type & BLOCK_TYPE_SERVER_LIST)
       {

@@ -451,6 +451,14 @@ namespace tfs
         SSMScanParameter& param = msg.get_param();
         param.type_ = SSM_TYPE_BLOCK;//遍历ns上的block数据的类型
         param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;//TYPE_INFO只为取block_id, TYPE_SERVER为ds_list
+        if (worker->sub_type_ & BLOCK_TYPE_BLOCK_STATUS)
+        {
+          param.child_type_ |= SSM_CHILD_BLOCK_TYPE_STATUS;
+        }
+        if (worker->sub_type_ & BLOCK_TYPE_BLOCK_FULL) // additional condition: full block
+        {
+          param.child_type_ |= SSM_CHILD_BLOCK_TYPE_FULL;
+        }
 
         bool once = false;
         if (block_id > 0)
