@@ -459,7 +459,12 @@ start_ds_all()
     then
         fail_echo "No ds index info found"
     else
-        do_start "ds" "`get_index $ds_index_list`"
+        single_index_list=" `get_index $ds_index_list` "
+        do_start "ds" "$single_index_list"
+        if [[ "$single_index_list" =~ ".* 0 .*" ]] # need to start migrateserver if exist disk0
+        then
+           start_ms
+        fi
     fi
   else
     fail_echo "exist disk not be formated"
@@ -481,6 +486,12 @@ stop_ds_all()
     if [ "$dup_run_index" ]
     then
         fail_echo "more than one same dataserver [ "$dup_run_index" ] is running"
+    fi
+
+    ms_running=`ps -ef | egrep "${MS_CMD}" | grep -v grep`
+    if [ -n "$ms_running" ]
+    then
+        stop_ms
     fi
 
     if [ "$uniq_run_index" ]
@@ -528,10 +539,10 @@ check_ds()
 
 check_all_disks()
 {
-  use_percents=`df |egrep "disk[0-9]{1,2}"|awk '{print $5}'|egrep -o "[0-9]{1,2}"|sort|uniq`
+  use_percents=`df |egrep "disk[0-9]{1,2}"|awk '{print $5}'|egrep -o "[0-9]{1,3}"|sort|uniq`
   for per in $use_percents
   do
-    if [ $per -lt 95 ] # use ratio should 95%, or the disk format fail
+    if [ $per -lt 95 ] # use ratio should >= 95%, or the disk format failed or aborted
     then
       echo "fail"
       return
