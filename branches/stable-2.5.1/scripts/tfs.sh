@@ -450,24 +450,18 @@ stop_admin()
 
 start_ds_all()
 {
-  ret=`check_all_disks`
-  if [ "$ret" = "ok" ]
+  host=`hostname -i`
+  ds_index_list=`get_index_from_db $host`
+  if ! [ -n "$ds_index_list" ]
   then
-    host=`hostname -i`
-    ds_index_list=`get_index_from_db $host`
-    if ! [ -n "$ds_index_list" ]
-    then
-        fail_echo "No ds index info found"
-    else
-        single_index_list=" `get_index $ds_index_list` "
-        do_start "ds" "$single_index_list"
-        if [[ "$single_index_list" =~ ".* 0 .*" ]] # need to start migrateserver if exist disk0
-        then
-           start_ms
-        fi
-    fi
+      fail_echo "No ds index info found"
   else
-    fail_echo "exist disk not be formated"
+      single_index_list=" `get_index $ds_index_list` "
+      do_start "ds" "$single_index_list"
+      if [[ "$single_index_list" =~ ".* 0 .*" ]] # need to start migrateserver if exist disk0
+      then
+         start_ms
+      fi
   fi
 }
 
@@ -535,20 +529,6 @@ check_ds()
     then
         succ_echo "dataserver [ "$uniq_run_index" ] is running"
     fi
-}
-
-check_all_disks()
-{
-  use_percents=`df |egrep "disk[0-9]{1,2}"|awk '{print $5}'|egrep -o "[0-9]{1,3}"|sort|uniq`
-  for per in $use_percents
-  do
-    if [ $per -lt 95 ] # use ratio should >= 95%, or the disk format failed or aborted
-    then
-      echo "fail"
-      return
-    fi
-  done
-  echo "ok"
 }
 
 check_admin()
