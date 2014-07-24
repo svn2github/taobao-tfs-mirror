@@ -51,6 +51,7 @@ namespace tfs
 
         int head_object(const std::string &bucket_name,
                         const std::string &file_name,
+                        const common::UserInfo &user_info,
                         common::ObjectInfo *object_info_zero);
 
         int put_object(const std::string& bucket_name,
@@ -61,25 +62,41 @@ namespace tfs
         int get_object(const std::string& bucket_name,
                        const std::string& file_name,
                        const int64_t offset, const int64_t length,
+                       const common::UserInfo &user_info,
                        common::ObjectInfo *object_info, bool *still_have);
 
         int del_object(const std::string& bucket_name,
                        const std::string& file_name,
+                       const common::UserInfo &user_info,
                        common::ObjectInfo *object_info, bool* still_have);
 
         /*----------------------------bucket part-----------------------------*/
 
-        int head_bucket(const std::string& bucket_name, common::BucketMetaInfo *bucket_meta_info);
+        int head_bucket(const std::string& bucket_name, const common::UserInfo &user_info,
+                        common::BucketMetaInfo *bucket_meta_info);
+
         static int get_common_prefix(const char *key, const std::string &prefix, const char delimiter,
             bool *prefix_flag, bool *common_flag, int *common_end_pos);
 
         int put_bucket(const std::string& bucket_name, common::BucketMetaInfo& bucket_meta_info,
-                       const common::UserInfo &user_info);
+                       const common::UserInfo &user_info, const common::CANNED_ACL acl);
+
         int get_bucket(const std::string& bucket_name, const std::string& prefix,
             const std::string& start_key, const char delimiter, int32_t *limit,
+            const common::UserInfo &user_info,
             std::vector<common::ObjectMetaInfo>* v_object_meta_info, common::VSTRING* v_object_name,
             std::set<std::string>* s_common_prefix, int8_t* is_truncated);
+
         int del_bucket(const std::string& bucket_name, const common::UserInfo &user_info);
+
+        int put_bucket_acl(const std::string &bucket_name,
+            const common::MAP_INT64_INT &bucket_acl_map, const common::UserInfo &user_info);
+
+        int put_bucket_acl(const std::string &bucket_name, const common::CANNED_ACL acl,
+            const common::UserInfo &user_info);
+
+        int get_bucket_acl(const std::string &bucket_name,
+            common::MAP_INT64_INT *bucket_acl_map, const common::UserInfo &user_info, int64_t &owner_id);
 
       public:
         int put_bucket_ex(const std::string &bucket_name, const common::BucketMetaInfo &bucket_meta_info,
@@ -129,6 +146,13 @@ namespace tfs
         const std::string& file_name, const common::KvKey& start_key,
         common::ObjectInfo *object_info, int32_t& valid_result);
 
+        int do_canned_acl(const common::CANNED_ACL acl, common::MAP_INT64_INT &bucket_acl_map,
+                          const common::UserInfo &user_info);
+
+        int check_bucket_acl(const common::MAP_INT64_INT &bucket_acl_map, int64_t owner_id, common::PERMISSION per);
+        int check_bucket_acl(const std::string& bucket_name, const common::UserInfo &user_info, common::PERMISSION per);
+
+        int head_bucket_ex(const std::string& bucket_name, common::BucketMetaInfo *bucket_meta_info);
 
       protected:
         common::KvEngineHelper* kv_engine_helper_;

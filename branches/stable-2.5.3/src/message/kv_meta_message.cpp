@@ -579,6 +579,10 @@ namespace tfs
         }
       }
 
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(static_cast<int32_t>(canned_acl_));
+      }
       return iret;
     }
 
@@ -606,13 +610,17 @@ namespace tfs
         }
       }
 
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(reinterpret_cast<int32_t*>(&canned_acl_));
+      }
       return iret;
     }
 
     int64_t ReqKvMetaPutBucketMessage::length() const
     {
       return common::Serialization::get_string_length(bucket_name_)
-           + bucket_meta_info_.length() + user_info_.length();
+           + bucket_meta_info_.length() + user_info_.length() + INT_SIZE;
     }
 
     //req_get_bucket_msg
@@ -1146,6 +1154,233 @@ namespace tfs
       return Serialization::get_string_length(file_name_) + INT_SIZE;
     }
 
+    //about bucket acl
+    //put bucket acl
+    ReqKvMetaPutBucketAclMessage::ReqKvMetaPutBucketAclMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_PUT_BUCKET_ACL_MESSAGE;
+    }
+
+    ReqKvMetaPutBucketAclMessage::~ReqKvMetaPutBucketAclMessage(){}
+
+    int ReqKvMetaPutBucketAclMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        int32_t size = bucket_acl_map_.size();
+        iret = output.set_int32(size);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
+        for (; iter != bucket_acl_map_.end() && common::TFS_SUCCESS == iret; iter++)
+        {
+          iret = output.set_int64(iter->first);
+          if (common::TFS_SUCCESS == iret)
+          {
+            iret = output.set_int32(iter->second);
+          }
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(static_cast<int32_t>(canned_acl_));
+      }
+      return iret;
+    }
+
+    int ReqKvMetaPutBucketAclMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+      int32_t size = -1;
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&size);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        int64_t key;
+        int32_t value;
+        for (int32_t i = 0; i < size && common::TFS_SUCCESS == iret; i++)
+        {
+          iret = input.get_int64(&key);
+          if (common::TFS_SUCCESS == iret)
+          {
+            iret = input.get_int32(&value);
+          }
+
+          if (common::TFS_SUCCESS == iret)
+          {
+            bucket_acl_map_.insert(std::make_pair(key, value));
+          }
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(reinterpret_cast<int32_t*>(&canned_acl_));
+      }
+      return iret;
+    }
+
+    int64_t ReqKvMetaPutBucketAclMessage::length() const
+    {
+      return common::Serialization::get_string_length(bucket_name_)
+           + INT_SIZE + bucket_acl_map_.size()* (INT64_SIZE + INT_SIZE) + user_info_.length() + INT_SIZE;
+    }
+
+    //req get bucket acl
+    ReqKvMetaGetBucketAclMessage::ReqKvMetaGetBucketAclMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_GET_BUCKET_ACL_MESSAGE;
+    }
+
+    ReqKvMetaGetBucketAclMessage::~ReqKvMetaGetBucketAclMessage(){}
+
+    int ReqKvMetaGetBucketAclMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaGetBucketAclMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaGetBucketAclMessage::length() const
+    {
+      return common::Serialization::get_string_length(bucket_name_) + user_info_.length();
+    }
+
+    //rsp get bucket acl
+    RspKvMetaGetBucketAclMessage::RspKvMetaGetBucketAclMessage()
+    {
+      _packetHeader._pcode = RSP_KVMETA_GET_BUCKET_ACL_MESSAGE;
+    }
+
+    RspKvMetaGetBucketAclMessage::~RspKvMetaGetBucketAclMessage(){}
+
+    int RspKvMetaGetBucketAclMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        int32_t size = bucket_acl_map_.size();
+        iret = output.set_int32(size);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
+        for (; iter != bucket_acl_map_.end() && common::TFS_SUCCESS == iret; iter++)
+        {
+          iret = output.set_int64(iter->first);
+          if (common::TFS_SUCCESS == iret)
+          {
+            iret = output.set_int32(iter->second);
+          }
+        }
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int64(owner_id_);
+      }
+      return iret;
+    }
+
+    int RspKvMetaGetBucketAclMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+      int32_t size = -1;
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&size);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        int64_t key;
+        int32_t value;
+        for (int32_t i = 0; i < size && common::TFS_SUCCESS == iret; i++)
+        {
+          iret = input.get_int64(&key);
+          if (common::TFS_SUCCESS == iret)
+          {
+            iret = input.get_int32(&value);
+          }
+
+          if (common::TFS_SUCCESS == iret)
+          {
+            bucket_acl_map_.insert(std::make_pair(key, value));
+          }
+        }
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int64(&owner_id_);
+      }
+      return iret;
+    }
+
+    int64_t RspKvMetaGetBucketAclMessage::length() const
+    {
+      return common::Serialization::get_string_length(bucket_name_) +
+            INT_SIZE + bucket_acl_map_.size()* (INT64_SIZE + INT_SIZE) + INT64_SIZE;
+    }
 
   }
 }

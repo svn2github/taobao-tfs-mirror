@@ -26,6 +26,12 @@ namespace tfs
 {
   namespace common
   {
+    typedef std::map<std::string, std::string> MAP_STRING;
+    typedef std::map<std::string, int32_t> MAP_STRING_INT;
+    typedef std::map<std::string, int32_t>::const_iterator  MAP_STRING_INT_ITER;
+    typedef std::map<int64_t, int32_t> MAP_INT64_INT;
+    typedef std::map<int64_t, int32_t>::const_iterator MAP_INT64_INT_ITER;
+
     class KvDefine
     {
       public:
@@ -36,6 +42,26 @@ namespace tfs
       static const int32_t MAX_BUCKETS_COUNT;
       static const int32_t VERSION_ERROR_RETRY_COUNT;
       static const int64_t MAX_VERSION;
+    };
+
+    enum CANNED_ACL
+    {
+      PRIVATE  = 0,
+      PUBLIC_READ = 1,
+      PUBLIC_READ_WRITE = 2,
+      AUTHENTICATED_READ = 3, //0-3 use for bucket and object
+      BUCKET_OWNER_READ = 4,  //just for object
+      BUCKET_OWNER_FULL_CONTROL = 5, //just for object
+      LOG_DELIVERY_WRITE = 6 //just for bucket
+    };
+
+    enum PERMISSION
+    {
+      READ = 1,
+      WRITE = 2,
+      READ_ACP = 4,
+      WRITE_ACP = 8,
+      FULL_CONTROL = READ | WRITE | READ_ACP | WRITE_ACP
     };
 
     struct TfsFileInfo
@@ -121,6 +147,7 @@ namespace tfs
 
       int64_t create_time_;
       int64_t owner_id_;
+      MAP_INT64_INT bucket_acl_map_;
     };
 
     struct UserInfo

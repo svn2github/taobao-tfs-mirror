@@ -316,6 +316,7 @@ namespace tfs
 
     const int32_t EXIT_OVER_MAX_BUCKETS_COUNT = -17011; //100 buckets per user
     const int32_t EXIT_NO_BUCKETS = -17012;   // no buckets
+    const int32_t EXIT_BUCKET_PERMISSION_DENY = -17020; //not grant fit control
 
     // life cycle manager related
     const int32_t EXIT_LIFE_CYCLE_INFO_EXIST = -18000;

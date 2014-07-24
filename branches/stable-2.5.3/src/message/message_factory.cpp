@@ -396,6 +396,15 @@ namespace tfs
           case common::RSP_KV_RT_GET_TABLE_MESSAGE:
             packet = new (std::nothrow)GetTableFromKvRtsResponseMessage();
             break;
+          case common::REQ_KVMETA_PUT_BUCKET_ACL_MESSAGE:
+            packet = new ReqKvMetaPutBucketAclMessage();
+            break;
+          case common::REQ_KVMETA_GET_BUCKET_ACL_MESSAGE:
+            packet = new ReqKvMetaGetBucketAclMessage();
+            break;
+          case common::RSP_KVMETA_GET_BUCKET_ACL_MESSAGE:
+            packet = new RspKvMetaGetBucketAclMessage();
+            break;
           case common::REQ_KVMETA_SET_LIFE_CYCLE_MESSAGE:
             packet = new ReqKvMetaSetLifeCycleMessage();
             break;

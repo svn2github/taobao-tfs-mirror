@@ -31,6 +31,7 @@ namespace tfs
     const int32_t MESS_LIMIT = 10;
     const int64_t INT64_INFI = 0x7FFFFFFFFFFFFFFF;
     const int32_t GET_BUCKET_KV_SCAN_MAX_NUM = 20;//every time take 0.08s
+    const int32_t OTHER_ROLE = -1;
     enum
     {
       MODE_REQ_LIMIT = 1,
@@ -215,11 +216,16 @@ namespace tfs
 
     /*----------------------------object part-----------------------------*/
     int MetaInfoHelper::head_object(const string &bucket_name,
-        const string &file_name, ObjectInfo *object_info_zero)
+        const string &file_name, const common::UserInfo &user_info,
+        ObjectInfo *object_info_zero)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0 &&
           NULL != object_info_zero) ? TFS_SUCCESS : TFS_ERROR;
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_bucket_acl(bucket_name, user_info, READ);
+      }
       if (TFS_SUCCESS == ret)
       {
         ret = get_object_part(bucket_name, file_name, 0, object_info_zero, NULL);
@@ -399,7 +405,12 @@ namespace tfs
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_bucket_acl(bucket_name, user_info, WRITE);
+      }
       // check bucket whether exist
+      /*
       if (TFS_SUCCESS == ret)
       {
         BucketMetaInfo bucket_meta_info;
@@ -407,6 +418,7 @@ namespace tfs
         TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
             bucket_name.c_str(), file_name.c_str(), ret);
       }
+      */
 
       ObjectInfo object_info_zero;
       int64_t offset = 0;
@@ -619,12 +631,15 @@ namespace tfs
 
     int MetaInfoHelper::get_object(const std::string &bucket_name,
         const std::string &file_name, const int64_t offset,
-        const int64_t length,
+        const int64_t length, const common::UserInfo &user_info,
         common::ObjectInfo *object_info, bool* still_have)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0 && length > 0
           && offset >= 0 && object_info != NULL && still_have != NULL) ? TFS_SUCCESS : TFS_ERROR;
-      ret = TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_bucket_acl(bucket_name, user_info, READ);
+      }
       common::ObjectInfo object_info_zero;
       if (TFS_SUCCESS == ret)
       {
@@ -801,10 +816,14 @@ namespace tfs
     }
 
     int MetaInfoHelper::del_object(const std::string& bucket_name, const std::string& file_name,
-        common::ObjectInfo *object_info, bool* still_have)
+        const common::UserInfo &user_info, common::ObjectInfo *object_info, bool* still_have)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
       *still_have = false;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_bucket_acl(bucket_name, user_info, WRITE);
+      }
       //op key
       char *start_key_buff = NULL;
       if (TFS_SUCCESS == ret)
@@ -1210,7 +1229,7 @@ namespace tfs
         for (; TFS_SUCCESS == ret && iter != s_bucket_name.end(); iter++)
         {
           BucketMetaInfo bucket_meta_info;
-          ret = head_bucket(*iter, &bucket_meta_info);
+          ret = head_bucket_ex(*iter, &bucket_meta_info);
 
           if (TFS_SUCCESS == ret)
           {
@@ -1448,7 +1467,9 @@ namespace tfs
       return ret;
     }// end of func
 
-    int MetaInfoHelper::head_bucket(const std::string &bucket_name, common::BucketMetaInfo *bucket_meta_info)
+
+    int MetaInfoHelper::head_bucket_ex(const std::string &bucket_name,
+                                    common::BucketMetaInfo *bucket_meta_info)
     {
       int ret = TFS_SUCCESS;
 
@@ -1479,6 +1500,19 @@ namespace tfs
         value->free();
       }
 
+      return ret;
+    }
+
+    int MetaInfoHelper::head_bucket(const std::string &bucket_name, const common::UserInfo &user_info,
+                                    common::BucketMetaInfo *bucket_meta_info)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (TFS_SUCCESS == ret)
+      {
+        head_bucket_ex(bucket_name, bucket_meta_info);
+      }
+      ret = check_bucket_acl(bucket_meta_info->bucket_acl_map_, user_info.owner_id_, READ);
       return ret;
     }
 
@@ -1525,7 +1559,7 @@ namespace tfs
     }
 
     int MetaInfoHelper::put_bucket(const std::string& bucket_name, common::BucketMetaInfo& bucket_meta_info,
-        const common::UserInfo &user_info)
+        const common::UserInfo &user_info, const common::CANNED_ACL acl)
     {
       int64_t now_time = static_cast<int64_t>(time(NULL));
       bucket_meta_info.set_create_time(now_time);
@@ -1534,7 +1568,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         BucketMetaInfo tmp_bucket_meta_info;
-        ret = head_bucket(bucket_name, &tmp_bucket_meta_info);
+        ret = head_bucket_ex(bucket_name, &tmp_bucket_meta_info);
         if (TFS_SUCCESS == ret)
         {
           TBSYS_LOG(INFO, "bucket: %s has existed", bucket_name.c_str());
@@ -1567,6 +1601,8 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        //default PRIVATE:
+        ret = do_canned_acl(acl, bucket_meta_info.bucket_acl_map_, user_info);
         bucket_meta_info.owner_id_ = user_info.owner_id_;
         int64_t ver = KvDefine::MAX_VERSION;
         ret = put_bucket_ex(bucket_name, bucket_meta_info, ver);
@@ -1618,11 +1654,13 @@ namespace tfs
     }
 
     int MetaInfoHelper::get_bucket(const std::string& bucket_name, const std::string& prefix,
-        const std::string& start_key, const char delimiter, int32_t *limit,
+        const std::string& start_key, const char delimiter, int32_t *limit, const common::UserInfo &user_info,
         vector<ObjectMetaInfo>* v_object_meta_info, VSTRING* v_object_name, set<string>* s_common_prefix,
         int8_t* is_truncated)
     {
       int ret = TFS_SUCCESS;
+
+      ret = check_bucket_acl(bucket_name, user_info, READ);
 
       KvKey pkey;
       pkey.key_ = bucket_name.c_str();
@@ -1632,13 +1670,14 @@ namespace tfs
       TBSYS_LOG(DEBUG, "get bucket: %s, prefix: %s, start_key: %s, delimiter: %c",
                 bucket_name.c_str(), prefix.c_str(), start_key.c_str(), delimiter);
       // check bucket whether exist
+      /*
       if (TFS_SUCCESS == ret)
       {
         BucketMetaInfo bucket_meta_info;
         ret = head_bucket(bucket_name, &bucket_meta_info);
         TBSYS_LOG(INFO, "head bucket: %s, ret: %d", bucket_name.c_str(), ret);
       }
-
+      */
       if (TFS_SUCCESS == ret)
       {
         ret = list_objects(pkey, prefix, start_key, delimiter, limit,
@@ -1655,6 +1694,8 @@ namespace tfs
       pkey.key_ = bucket_name.c_str();
       pkey.key_size_ = bucket_name.length();
       pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
+
+      ret = check_bucket_acl(bucket_name, user_info, WRITE);
 
       int32_t limit = KvDefine::MAX_LIMIT;
       int32_t res_size = -1;
@@ -1716,6 +1757,201 @@ namespace tfs
       return ret;
     }
 
+    int MetaInfoHelper::check_bucket_acl(const common::MAP_INT64_INT &bucket_acl_map,
+        const int64_t user_id, const common::PERMISSION per)
+    {
+      bool has_permission = true;
+      int ret = TFS_SUCCESS;
+      MAP_INT64_INT_ITER iter = bucket_acl_map.find(user_id);
+      if (iter != bucket_acl_map.end())
+      {
+        TBSYS_LOG(DEBUG, "userid found is %"PRI64_PREFIX"d owner ,sec is %d", user_id,iter->second);
+        if (!(iter->second & per))
+        {
+          has_permission = false;
+        }
+      }
+      else
+      {
+        // -1 means others not include owner
+        iter = bucket_acl_map.find(OTHER_ROLE);
+        if (iter != bucket_acl_map.end() && (iter->second & per))
+        {
+          has_permission = true;
+        }
+        else
+        {
+          has_permission = false;
+        }
+      }
+
+      if (!has_permission)
+      {
+        ret = EXIT_BUCKET_PERMISSION_DENY;
+        TBSYS_LOG(ERROR, "user_id: %"PRI64_PREFIX"d get bucket have no %d acl", user_id, per);
+      }
+
+      return ret;
+    }
+
+    int MetaInfoHelper::do_canned_acl(const common::CANNED_ACL acl, common::MAP_INT64_INT &bucket_acl_map,
+          const common::UserInfo &user_info)
+    {
+        int ret = TFS_SUCCESS;
+        switch (acl)
+        {
+          case PRIVATE:
+            bucket_acl_map.insert(make_pair(user_info.owner_id_, FULL_CONTROL));
+            break;
+          case PUBLIC_READ:
+            bucket_acl_map.insert(make_pair(user_info.owner_id_, FULL_CONTROL));
+            bucket_acl_map.insert(make_pair(-1, READ));
+            break;
+          case PUBLIC_READ_WRITE:
+            break;
+          case AUTHENTICATED_READ:
+            break;
+          case BUCKET_OWNER_READ:
+            break;
+          case BUCKET_OWNER_FULL_CONTROL:
+            break;
+          case LOG_DELIVERY_WRITE:
+            break;
+          default:
+          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "unexpected error occur, canned_acl: %d", acl);
+          break;
+        }
+        return ret;
+    }
+
+    //about bucket acl
+    int MetaInfoHelper::put_bucket_acl(const string& bucket_name,
+        const MAP_INT64_INT &bucket_acl_map, const UserInfo &user_info)
+    {
+      int ret = TFS_SUCCESS;
+
+      BucketMetaInfo new_bucket_meta_info;
+      int64_t version = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = head_bucket_ex(bucket_name, &new_bucket_meta_info);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(INFO, "bucket: %s has not existed", bucket_name.c_str());
+          ret = EXIT_BUCKET_NOT_EXIST;
+        }
+      }
+
+      //check acl of bucket
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_bucket_acl(new_bucket_meta_info.bucket_acl_map_, user_info.owner_id_, WRITE_ACP);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        new_bucket_meta_info.bucket_acl_map_.clear();
+        new_bucket_meta_info.bucket_acl_map_ = bucket_acl_map;
+        ret = put_bucket_ex(bucket_name, new_bucket_meta_info, version);
+      }
+
+      return ret;
+    }
+
+    int MetaInfoHelper::put_bucket_acl(const string& bucket_name,
+        const CANNED_ACL acl, const UserInfo &user_info)
+    {
+      int ret = TFS_SUCCESS;
+
+      BucketMetaInfo new_bucket_meta_info;
+      int64_t version = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = head_bucket_ex(bucket_name, &new_bucket_meta_info);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(INFO, "bucket: %s has not existed", bucket_name.c_str());
+          ret = EXIT_BUCKET_NOT_EXIST;
+        }
+      }
+
+      //check acl of bucket
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_bucket_acl(new_bucket_meta_info.bucket_acl_map_, user_info.owner_id_, WRITE_ACP);
+      }
+
+      MAP_INT64_INT bucket_acl_map;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = do_canned_acl(acl, bucket_acl_map, user_info);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        new_bucket_meta_info.bucket_acl_map_.clear();
+        new_bucket_meta_info.bucket_acl_map_ = bucket_acl_map;
+        ret = put_bucket_ex(bucket_name, new_bucket_meta_info, version);
+      }
+
+      return ret;
+    }
+
+    int MetaInfoHelper::get_bucket_acl(const string& bucket_name,
+        common::MAP_INT64_INT *bucket_acl_map, const UserInfo &user_info, int64_t &owner_id)
+    {
+      int ret = TFS_SUCCESS;
+      BucketMetaInfo bucket_meta_info;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = head_bucket_ex(bucket_name, &bucket_meta_info);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(INFO, "bucket: %s has not existed", bucket_name.c_str());
+          ret = EXIT_BUCKET_NOT_EXIST;
+        }
+      }
+
+      //check acl of bucket
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_bucket_acl(bucket_meta_info.bucket_acl_map_, user_info.owner_id_, READ_ACP);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        *bucket_acl_map = bucket_meta_info.bucket_acl_map_;
+        owner_id = bucket_meta_info.owner_id_;
+      }
+
+      return ret;
+    }
+
+
+    int MetaInfoHelper::check_bucket_acl(const string& bucket_name, const UserInfo &user_info, common::PERMISSION per)
+    {
+      int ret = TFS_SUCCESS;
+      common::BucketMetaInfo bucket_meta_info;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = head_bucket_ex(bucket_name, &bucket_meta_info);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(INFO, "bucket: %s has not existed", bucket_name.c_str());
+          ret = EXIT_BUCKET_NOT_EXIST;
+        }
+      }
+
+      //check acl of bucket
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_bucket_acl(bucket_meta_info.bucket_acl_map_, user_info.owner_id_, per);
+      }
+
+      return ret;
+    }
   }// end for kvmetaserver
 }// end for tfs
 

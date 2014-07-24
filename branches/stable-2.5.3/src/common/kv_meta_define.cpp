@@ -498,7 +498,14 @@ namespace tfs
 
     int64_t BucketMetaInfo::length() const
     {
-      return INT64_SIZE * 2 + INT_SIZE * 3;
+      //create_time_ owner_id_
+      int64_t len = INT64_SIZE * 2 + INT_SIZE * 2;
+       //add bucket acl map
+      len += INT_SIZE * 2;//tag and and size
+      len += (INT64_SIZE+INT_SIZE) * bucket_acl_map_.size();
+      len += INT_SIZE; //end tag
+
+      return len;
     }
 
     int BucketMetaInfo::serialize(char *data, const int64_t data_len, int64_t &pos) const
@@ -519,6 +526,28 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int64(data, data_len, pos, owner_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKET_META_INFO_BUCKET_ACL_MAP_TAG);
+
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t size = bucket_acl_map_.size();
+          ret = Serialization::set_int32(data, data_len, pos, size);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
+          for (; iter != bucket_acl_map_.end() && TFS_SUCCESS == ret; iter++)
+          {
+            ret = Serialization::set_int64(data, data_len, pos, iter->first);
+            if (TFS_SUCCESS == ret)
+            {
+              ret = Serialization::set_int32(data, data_len, pos, iter->second);
+            }
+          }
+        }
       }
       if (TFS_SUCCESS == ret)
       {
@@ -545,6 +574,32 @@ namespace tfs
               break;
             case BUCKET_META_INFO_OWNER_ID_TAG:
               ret = Serialization::get_int64(data, data_len, pos, &owner_id_);
+              break;
+            case BUCKET_META_INFO_BUCKET_ACL_MAP_TAG:
+              if (TFS_SUCCESS == ret)
+              {
+                int32_t size = -1;
+                ret = Serialization::get_int32(data, data_len, pos, &size);
+
+                if (TFS_SUCCESS == ret)
+                {
+                  int64_t key;
+                  int32_t value;
+                  for (int32_t i = 0; i < size && TFS_SUCCESS == ret; i++)
+                  {
+                    ret = Serialization::get_int64(data, data_len, pos, &key);
+                    if (TFS_SUCCESS == ret)
+                    {
+                      ret = Serialization::get_int32(data, data_len, pos, &value);
+                    }
+
+                    if (TFS_SUCCESS == ret)
+                    {
+                      bucket_acl_map_.insert(std::make_pair(key, value));
+                    }
+                  }
+                }
+              }
               break;
             case END_TAG:
               ;

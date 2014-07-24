@@ -61,6 +61,8 @@ namespace tfs
       int get_file_lifecycle(message::ReqKvMetaGetLifeCycleMessage *get_lifecycle_msg);
       int rm_file_lifecycle(message::ReqKvMetaRmLifeCycleMessage *rm_lifecycle_msg);
 
+      int put_bucket_acl(message::ReqKvMetaPutBucketAclMessage *put_bucket_acl_msg);
+      int get_bucket_acl(message::ReqKvMetaGetBucketAclMessage *get_bucket_acl_msg);
     private:
       DISALLOW_COPY_AND_ASSIGN(KvMetaService);
 
