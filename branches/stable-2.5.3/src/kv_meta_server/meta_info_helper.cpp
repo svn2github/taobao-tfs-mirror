@@ -496,24 +496,9 @@ namespace tfs
       common::ObjectInfo object_info_zero;
       TBSYS_LOG(DEBUG, "will check coverage");
       //op key
-      char *start_key_buff = NULL;
-      if (TFS_SUCCESS == ret)
-      {
-        start_key_buff = (char*) malloc(KEY_BUFF_SIZE);
-      }
-      if (NULL == start_key_buff)
-      {
-        ret = EXIT_NO_MEMORY;
-      }
-      char *end_key_buff = NULL;
-      if (ret == TFS_SUCCESS)
-      {
-        end_key_buff = (char*) malloc(KEY_BUFF_SIZE);
-      }
-      if (NULL == end_key_buff)
-      {
-        ret = EXIT_NO_MEMORY;
-      }
+      char start_key_buff[KEY_BUFF_SIZE];
+      char end_key_buff[KEY_BUFF_SIZE];
+
       KvKey start_key;
       KvKey end_key;
       int64_t start_offset = offset;
@@ -604,17 +589,6 @@ namespace tfs
       }
       kv_value_values.clear();
       kv_value_keys.clear();
-
-      if (NULL != start_key_buff)
-      {
-        free(start_key_buff);
-        start_key_buff = NULL;
-      }
-      if (NULL != end_key_buff)
-      {
-        free(end_key_buff);
-        end_key_buff = NULL;
-      }
 
       return ret;
     }
