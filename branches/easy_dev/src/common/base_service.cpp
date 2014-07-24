@@ -223,14 +223,14 @@ namespace tfs
         int32_t port_num = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_PORT_NUM, 1);
         for (int index = 0; index < port_num && TFS_SUCCESS == ret; index++)
         {
-          if (NULL == easy_io_add_listen(&eio_, NULL, get_port() + index, &eio_handler_))
+          if (NULL == easy_io_add_listen(&eio_, NULL, get_listen_port() + index, &eio_handler_))
           {
-            TBSYS_LOG(ERROR, "listen on port %d failed", get_port() + index);
+            TBSYS_LOG(ERROR, "listen on port %d failed", get_listen_port() + index);
             ret = TFS_ERROR;
           }
           else
           {
-            TBSYS_LOG(INFO, "listen on port %d", get_port() + index);
+            TBSYS_LOG(INFO, "listen on port %d", get_listen_port() + index);
           }
         }
       }
