@@ -480,7 +480,7 @@ namespace tfs
         int32_t  flag     = 0;
         int32_t  version  = 0;
         time_t now = Func::get_monotonic_time();
-        uint64_t ipport = msg->get_connection()->getServerId();
+        uint64_t ipport = msg->getPeerId();
         uint64_t servers[MAX_REPLICATION_NUM];
         common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
         common::FamilyInfoExt family_info;  // unused in old version
@@ -958,7 +958,7 @@ namespace tfs
         int32_t mode = message->get_mode();
         int64_t family_id = message->get_family_id();
         int32_t family_aid_info = 0;
-        uint64_t ipport = msg->get_connection()->getServerId();
+        uint64_t ipport = msg->getPeerId();
         GetFamilyInfoResponseMessage* reply_msg = new GetFamilyInfoResponseMessage();
         ArrayHelper<std::pair<uint64_t, uint64_t> > members(MAX_MARSHALLING_NUM, reply_msg->get_members());
         ret = layout_manager_.get_client_request_server().open(family_aid_info, members, mode, family_id);
