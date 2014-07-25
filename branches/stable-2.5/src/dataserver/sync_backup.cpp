@@ -271,6 +271,7 @@ namespace tfs
                         ret = crc != file_stat.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS;//check crc
                         if (TFS_SUCCESS != ret)
                         {
+                          tfs_client_->set_write_status(dest_fd, WRITE_STATUS_FAIL);
                           TBSYS_LOG(WARN, "crc error. %s, blockid: %"PRI64_PREFIX"u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %"PRI64_PREFIX"d",
                               fsname.get_name(), block_id, file_id, crc, file_stat.crc_, total_length, file_stat.size_);
                         }
@@ -399,6 +400,7 @@ namespace tfs
               ret = crc != finfo.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS; // check crc
               if (TFS_SUCCESS != ret)
               {
+                tfs_client_->set_write_status(dest_fd, WRITE_STATUS_FAIL);
                 Func::hex_dump(data, 8, true, TBSYS_LOG_LEVEL_DEBUG);
                 TBSYS_LOG(WARN, "file crc error. %s, blockid: %"PRI64_PREFIX"u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
                   fsname.get_name(), block_id, file_id, crc, finfo.crc_, total_length, finfo.size_);

@@ -451,6 +451,11 @@ namespace tfs
       return (ret != TFS_SUCCESS) ? ret : done;
     }
 
+    void TfsFile::set_write_status(const WriteStatus& status)
+    {
+      file_.write_status_ = status;
+    }
+
     int TfsFile::close(const int32_t status)
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);

@@ -20,6 +20,7 @@
 
 #include "common/internal.h"
 #include "tfs_session_pool.h"
+#include "tfs_file.h"
 
 namespace tfs
 {
@@ -49,6 +50,9 @@ namespace tfs
           const std::map<uint64_t, int32_t>* version_map = NULL);
       int destroy();
       int set_option_flag(const int fd, const int opt_flag);
+      // if you detect errors during write
+      // you cat set write_status to tell client not to send close msg to ds
+      int set_write_status(const int fd, const WriteStatus& status);
       void set_log_level(const char* level);
       void set_log_file(const char* file);
 
