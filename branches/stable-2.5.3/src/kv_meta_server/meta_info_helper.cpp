@@ -400,93 +400,6 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::put_object(const std::string &bucket_name,
-        const std::string &file_name,
-        ObjectInfo &object_info, const UserInfo &user_info)
-    {
-      int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = check_bucket_acl(bucket_name, user_info, WRITE);
-      }
-      // check bucket whether exist
-      /*
-      if (TFS_SUCCESS == ret)
-      {
-        BucketMetaInfo bucket_meta_info;
-        ret = head_bucket(bucket_name, &bucket_meta_info);
-        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
-            bucket_name.c_str(), file_name.c_str(), ret);
-      }
-      */
-
-      ObjectInfo object_info_zero;
-      int64_t offset = 0;
-      if (object_info.v_tfs_file_info_.size() > 0)
-      {
-        offset = object_info.v_tfs_file_info_.front().offset_;
-      }
-
-      int64_t version = KvDefine::MAX_VERSION;
-      bool is_append = (-1 == offset);
-      // assume this is object info zero
-      if (is_append)
-      {
-        offset = 0;
-        if (!object_info.v_tfs_file_info_.empty())
-        {
-          object_info.v_tfs_file_info_[0].offset_ = 0;
-        }
-      }
-
-      /*trick for transfer data*/
-      if (-5 == object_info.meta_info_.max_tfs_file_size_)
-      {
-        object_info_zero.meta_info_.modify_time_ = object_info.meta_info_.modify_time_;
-        object_info_zero.meta_info_.max_tfs_file_size_ = -5;
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        uint64_t length = 0;
-        for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
-        {
-          length += object_info.v_tfs_file_info_[i].file_size_;
-        }
-
-        TBSYS_LOG(DEBUG, "will put object, bucekt: %s, object: %s, "
-            "offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
-            bucket_name.c_str(), file_name.c_str(), offset, length);
-
-        object_info_zero.has_meta_info_ = true;
-        object_info_zero.meta_info_.big_file_size_ = offset + length;
-        if (0 == offset)
-        {
-          object_info_zero.meta_info_.owner_id_ = user_info.owner_id_;
-          // identify old data
-          if (-5 == object_info.meta_info_.max_tfs_file_size_)
-          {
-            object_info_zero.meta_info_.create_time_ = object_info.meta_info_.create_time_;
-          }
-          else
-          {
-            object_info_zero.meta_info_.create_time_ = static_cast<int64_t>(time(NULL));
-          }
-
-          //TODO: check this
-          object_info_zero.has_customize_info_ = object_info.has_customize_info_;
-          object_info_zero.customize_info_ = object_info.customize_info_;
-
-          if (!object_info.v_tfs_file_info_.empty())
-          {
-            object_info_zero.v_tfs_file_info_.push_back(object_info.v_tfs_file_info_.front());
-          }
-        }
-
-      return ret;
-    }
-
 
     int MetaInfoHelper::check_object_overlap(const std::string &bucket_name,
         const std::string &file_name, const int64_t offset,
@@ -604,6 +517,11 @@ namespace tfs
       ObjectInfo object_info_zero;
 
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_bucket_acl(bucket_name, user_info, WRITE);
+      }
 
       // check bucket whether exist
       if (TFS_SUCCESS == ret)
