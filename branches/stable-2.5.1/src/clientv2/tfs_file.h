@@ -76,6 +76,7 @@ namespace tfs
         int close(const int32_t status);
         int unlink(const common::TfsUnlinkType action, int64_t& file_size);
 
+        void set_write_status(const WriteStatus& status);
         void set_option_flag(const int32_t flag);
         const char* get_file_name();
         void wrap_file_info(common::TfsFileStat& file_stat, const common::FileInfoV2& file_info);

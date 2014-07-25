@@ -448,6 +448,29 @@ namespace tfs
       return ret;
     }
 
+    int TfsClientImplV2::set_write_status(const int fd, const WriteStatus& status)
+    {
+      int ret = TFS_SUCCESS;
+      if (fd < 0)
+      {
+        ret = EXIT_PARAMETER_ERROR;
+      }
+      else
+      {
+        TfsFile* tfs_file = get_file(fd);
+        if (NULL == tfs_file)
+        {
+          ret = EXIT_INVALIDFD_ERROR;
+        }
+        else
+        {
+          tfs_file->set_write_status(status);
+        }
+      }
+      return ret;
+    }
+
+
     int TfsClientImplV2::stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix,
         const common::TfsStatType stat_type, const char* ns_addr)
     {
