@@ -59,6 +59,12 @@ namespace tfs
                        common::ObjectInfo &object_info,
                        const common::UserInfo &user_info);
 
+        int check_put_object_zero(common::ObjectInfo &object_info,
+                      common::ObjectInfo &object_info_zero,
+                      const common::UserInfo &user_info,
+                      int64_t &offset, int64_t &length,
+                      bool &is_append);
+
         int get_object(const std::string& bucket_name,
                        const std::string& file_name,
                        const int64_t offset, const int64_t length,
