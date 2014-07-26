@@ -472,12 +472,15 @@ namespace tfs
         return id;
       }
 
+      public:
+        Stream stream_;
+
   #ifdef TFS_GTEST
     public:
   #else
     protected:
   #endif
-      Stream stream_;
+      // Stream stream_;
       tbnet::Connection* connection_;
       uint64_t id_;
       uint32_t crc_;

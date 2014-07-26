@@ -332,7 +332,7 @@ namespace tfs
       BasePacket* bp = (BasePacket*)packet;
       int32_t pcode = bp->getPCode();
       int64_t length = bp->length();
-      TBSYS_LOG(DEBUG, "encode packet, pcode=%d, length=%ld", pcode, length);
+      TBSYS_LOG(DEBUG, "encode packet, pcode=%d, length=%ld, chid=%d", pcode, length, bp->getChannelId());
       if (EASY_TYPE_CLIENT == r->ms->c->type)
       {
         uint32_t chid = ((easy_session_t*)r->ms)->packet_id;
@@ -382,19 +382,27 @@ namespace tfs
       int64_t length = src->length();
       BasePacket* dest = dynamic_cast<BasePacket*>(_factory->createPacket(pcode));
       assert(NULL != dest);
-      Stream stream(length);
-      int ret = src->serialize(stream);
+      // Stream stream(length);
+      dest->stream_.expand(length);
+      int ret = src->serialize(dest->stream_);
       if (TFS_SUCCESS == ret)
       {
-        ret = dest->deserialize(stream);
+        ret = dest->deserialize(dest->stream_);
       }
 
-      TBSYS_LOG_DW(ret, "clone packet, ret=%d, pcode=%d, length=%ld", ret, pcode, length);
+      TBSYS_LOG_DW(ret, "clone packet, ret=%d, pcode=%d, length=%ld, src=%p, dest=%p",
+          ret, pcode, length, src, dest);
 
       if (TFS_SUCCESS != ret)
       {
         tbsys::gDelete(dest);
         dest = NULL;
+      }
+      else
+      {
+        dest->setChannelId(src->getChannelId());
+        dest->set_request(src->get_request());
+        dest->set_direction(src->get_direction());
       }
 
       return dest;

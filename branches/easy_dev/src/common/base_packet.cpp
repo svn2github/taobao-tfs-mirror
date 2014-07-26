@@ -174,20 +174,20 @@ namespace tfs
     {
       if (NULL == packet)
       {
-        return EASY_ERROR;
+        return TFS_ERROR;
       }
 
       // support local construct packet
       if (0 == getChannelId() || NULL == request_)
       {
         tbsys::gDelete(packet);  // reply fail, release packet memory
-        TBSYS_LOG(ERROR, "message : %d channel is null, reply message : %d", getPCode(), packet->getPCode());
-        return EASY_OK;          // if return EASY_ERROR, connection will be shutdown
+        TBSYS_LOG(WARN, "message : %d channel is null, reply message : %d", getPCode(), packet->getPCode());
+        return TFS_ERROR;
       }
 
       packet->setChannelId(getChannelId());
       request_->opacket = packet;
-      return EASY_OK;
+      return TFS_SUCCESS;
     }
 
     //int BasePacket::reply(BasePacket* packet)

@@ -83,7 +83,7 @@ namespace tfs
             if (own_transport_)
             {
               transport_ =  new tbnet::Transport();
-              transport_->start();
+              // transport_->start();
             }
             else
             {
