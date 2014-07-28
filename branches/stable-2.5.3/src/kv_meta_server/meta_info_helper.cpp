@@ -785,8 +785,8 @@ namespace tfs
           ret = EXIT_READ_OFFSET_ERROR;
         }
       }
-
-      if (TFS_SUCCESS == ret)
+      //if offset == big_file_size_ return TFS_SUCCESS
+      if (TFS_SUCCESS == ret && offset < object_info_zero.meta_info_.big_file_size_)
       {
         bool is_big_file = false;
 
@@ -859,7 +859,7 @@ namespace tfs
             int64_t last_offset = 0;
             ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_key, end_key, SCAN_LIMIT, scan_offset,
                 &kv_value_keys, &kv_value_values, &result_size, scan_type);
-            if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret && offset < object_info_zero.meta_info_.big_file_size_)
+            if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret)
             {
               //we should find pre record
               ret = scan_pre_record(bucket_name, file_name, start_key, object_info, valid_result);
@@ -1535,7 +1535,7 @@ namespace tfs
 
           if (loop)
           {
-            int32_t found;
+            int32_t found = -1;
             string new_object_name;
             const char next_delimiter = delimiter + 1;
             KvKey key;
@@ -1546,20 +1546,15 @@ namespace tfs
               if (prefix.empty())
               {
                 found = object_name.find(delimiter);
-                if (found != -1)
-                {
-                  new_object_name = object_name.substr(0, found);
-                  object_name = new_object_name + next_delimiter;
-                }
               }
               else
               {
                 found = object_name.find(delimiter, prefix.size());
-                if (found != -1)
-                {
-                  new_object_name = object_name.substr(0, found);
-                  object_name = new_object_name + next_delimiter;
-                }
+              }
+              if (found != -1)
+              {
+                new_object_name = object_name.substr(0, found);
+                object_name = new_object_name + next_delimiter;
               }
             }
 

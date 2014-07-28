@@ -19,7 +19,6 @@
 
 #include <malloc.h>
 #include "common/func.h"
-#include "common/tairengine_helper.h"
 #include "common/client_manager.h"
 #include "exp_server_manager.h"
 #include "message/expire_message.h"
