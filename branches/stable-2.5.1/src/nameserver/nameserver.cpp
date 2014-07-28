@@ -922,7 +922,7 @@ namespace tfs
           reply_msg->free();
         }
         TIMER_END();
-        TBSYS_LOG(INFO, "dataserver: %s giveup block %s consume times: %"PRI64_PREFIX"d(us), ret: %d, need: %d, actual: %"PRI64_PREFIX"d",
+        TBSYS_LOG(DEBUG, "dataserver: %s giveup block %s consume times: %"PRI64_PREFIX"d(us), ret: %d, need: %d, actual: %"PRI64_PREFIX"d",
           tbsys::CNetUtil::addrToString(server).c_str(),TFS_SUCCESS == ret ? "successful" : "failed", TIMER_DURATION(),
           ret, MAX_COUNT, output.get_array_index());
       }

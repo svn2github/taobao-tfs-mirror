@@ -103,7 +103,7 @@ namespace tfs
         }
         pserver->set_status(SERVICE_STATUS_ONLINE);
       }
-      TBSYS_LOG(DEBUG, "dataserver %s apply lease: %s, ret: %d", tbsys::CNetUtil::addrToString(pserver->id()).c_str(),
+      TBSYS_LOG(INFO, "dataserver %s apply lease: %s, ret: %d", tbsys::CNetUtil::addrToString(pserver->id()).c_str(),
         TFS_SUCCESS == ret ? "successful" : "failed", ret);
       return ret;
     }
@@ -143,7 +143,7 @@ namespace tfs
         pserver->callback(reinterpret_cast<void*>(&args), manager_);
         pserver->set_wait_free_phase(OBJECT_WAIT_FREE_PHASE_CLEAR);
       }
-      TBSYS_LOG(DEBUG, "dataserver %s giveup lease: %s, ret: %d", tbsys::CNetUtil::addrToString(server).c_str(),
+      TBSYS_LOG(INFO, "dataserver %s giveup lease: %s, ret: %d", tbsys::CNetUtil::addrToString(server).c_str(),
         TFS_SUCCESS == ret ? "successful" : "failed", ret);
       return ret;
     }

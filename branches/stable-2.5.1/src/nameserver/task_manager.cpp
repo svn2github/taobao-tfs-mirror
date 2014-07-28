@@ -774,7 +774,7 @@ namespace tfs
 
     bool TaskManager::is_insert_server_(const int32_t type, const int32_t data_member_num, const int32_t index) const
     {
-      bool insert = (PLAN_TYPE_EC_DISSOLVE != type);
+      bool insert = (PLAN_TYPE_EC_DISSOLVE != type && PLAN_TYPE_EC_REINSTATE != type);
       if (!insert)
       {
         const int32_t DATA_MEMBER_NUM = data_member_num / 2;
