@@ -1229,6 +1229,9 @@ namespace tfs
         ServerCollect* result= NULL;
         uint64_t servers[MAX_REPLICATION_NUM];
         ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
+        uint64_t result_servers[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> result_helper(MAX_REPLICATION_NUM, result_servers);
+
         ret = get_block_manager().need_balance(helper, block, now);
         if (ret)
         {
@@ -1249,10 +1252,15 @@ namespace tfs
             }
             else
             {
-              helper.clear();
-              helper.push_back(source->id());
-              helper.push_back(result->id());
-              ret = TFS_SUCCESS == get_task_manager().add(block->id(), helper, PLAN_TYPE_MOVE, now);
+              result_helper.push_back(source->id());
+              result_helper.push_back(result->id());
+              for (int64_t index = 0; index < helper.get_array_index(); ++index)
+              {
+                uint64_t server = *helper.at(index);
+                if (server != source->id())
+                  result_helper.push_back(server);
+              }
+              ret = TFS_SUCCESS == get_task_manager().add(block->id(), result_helper, PLAN_TYPE_MOVE, now);
             }
           }
         }

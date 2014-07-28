@@ -797,7 +797,7 @@ namespace tfs
 
       ECMeta ec_meta;
       // update source block version
-      if ((TFS_SUCCESS == ret) && (!repl_info_.is_move_))
+      if (TFS_SUCCESS == ret)
       {
         ec_meta.version_step_ = VERSION_INC_STEP_REPLICATE;
         for (int i = 0;  (i < repl_info_.source_num_) && (TFS_SUCCESS == ret); i++)
@@ -1432,6 +1432,7 @@ namespace tfs
 
         ECMeta ec_meta;
         ec_meta.family_id_ = family_id_;
+        ec_meta.version_step_ = VERSION_INC_STEP_REINSTATE;
         ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
       }
@@ -1479,6 +1480,7 @@ namespace tfs
         ECMeta ec_meta;
         ec_meta.family_id_ = family_id_;
         ec_meta.mars_offset_ = marshalling_len;
+        ec_meta.version_step_ = VERSION_INC_STEP_REINSTATE;
         ret = get_data_helper().commit_ec_meta(family_members_[i].server_,
             family_members_[i].block_, ec_meta, SWITCH_BLOCK_YES);
 

@@ -268,10 +268,13 @@ namespace tfs
             ServerCollect* source = sm.get(blocks.source_id_[0]);// find source dataserver
             if ((NULL != block) && (NULL != dest))
             {
+              const int32_t version = info.version_;
+              info.version_ -= VERSION_INC_STEP_REPLICATE;
               if (blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
               {
                 ret = STATUS_MESSAGE_ERROR;
                 int32_t result = lm.build_relation(block, dest, &info, now, false);
+
                 if (TFS_SUCCESS == result)
                 {
                   ret = STATUS_MESSAGE_OK;
@@ -285,18 +288,17 @@ namespace tfs
               }
               else
               {
-                const int32_t version = info.version_;
-                info.version_ -= VERSION_INC_STEP_REPLICATE;
                 //build relation between block and dest dataserver
                 ret = TFS_SUCCESS == lm.build_relation(block, dest, &info, now, false)
                   ? STATUS_MESSAGE_OK: STATUS_MESSAGE_ERROR;
-                if (STATUS_MESSAGE_OK == ret)
-                {
-                  uint64_t array[MAX_REPLICATION_NUM];
-                  common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, array);
-                  bm.get_servers(helper, block);
-                  bm.update_version(helper, info.block_id_, version, VERSION_INC_STEP_REPLICATE, info);
-                }
+              }
+
+              if (STATUS_MESSAGE_OK == ret || STATUS_MESSAGE_REMOVE == ret)
+              {
+                uint64_t array[MAX_REPLICATION_NUM];
+                common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, array);
+                bm.get_servers(helper, block);
+                bm.update_version(helper, info.block_id_, version, VERSION_INC_STEP_REPLICATE, info);
               }
             }
             this->log(OPLOG_TYPE_REPLICATE_MSG, message);
