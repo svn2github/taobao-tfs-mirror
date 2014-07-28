@@ -226,7 +226,7 @@ namespace tfs
     static const int32_t HTTP_BLANK_LENGTH = 1;
 
     static const int32_t VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO = 2;
-    static const int32_t CHECK_INTEGRITY_INTERVAL_DAYS_DEFAULT = 30;
+    static const int32_t CHECK_INTEGRITY_INTERVAL_DAYS_DEFAULT = 0;
 
     enum VersionStep
     {

@@ -741,12 +741,14 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = BaseLogicBlock::read(buf, nbytes, offset, fileid, flag, logic_block_id);
+        if (nbytes == ret)
+        {
+          int iret = get_index_handle_()->update_block_statistic_info(OPER_READ, nbytes, nbytes, false);
+          ret = TFS_SUCCESS == iret ? ret : iret;
+        }
+        // nbytes != ret && ret >=0 happened only when linux file be truncate by other process
       }
 
-      if (TFS_SUCCESS == ret)
-      {
-        ret = get_index_handle_()->update_block_statistic_info(OPER_READ, nbytes, nbytes, false);
-      }
       return ret;
     }
 
@@ -985,6 +987,10 @@ namespace tfs
                       ret, logic_block_id, fileid);
                   get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
                 }
+                else
+                {
+                  get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);
+                }
               }
             }
           }
@@ -1033,6 +1039,7 @@ namespace tfs
             if (TFS_SUCCESS == ret)
             {
               finfo->modify_time_ = time(NULL);
+              get_index_handle_()->update_block_statistic_info(oper_type, 0, finfo->size_, false);
             }
           }
         }

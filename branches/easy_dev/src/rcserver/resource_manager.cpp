@@ -244,6 +244,18 @@ EXIT:
       return ret;
     }
 
+    int ResourceManager::sort_krs_by_distance(const std::string& app_ip,
+            common::BaseInfo& out_base_info)
+    {
+      int ret = EXIT_NOT_INIT_ERROR;
+      if (have_inited_ && NULL != base_resource_manager_)
+      {
+        tbsys::CRLockGuard guard(resorce_mutex_);
+        ret = base_resource_manager_->sort_krs_by_distance(app_ip, out_base_info);
+      }
+      return ret;
+    }
+
     int ResourceManager::get_app_name(const int32_t app_id, std::string& app_name) const
     {
       int ret = EXIT_NOT_INIT_ERROR;
@@ -272,7 +284,8 @@ EXIT:
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = base_resource_manager_->get_meta_root_server(app_id, base_info.meta_root_server_);
+          ret = base_resource_manager_->get_meta_root_server(app_id, base_info.meta_root_server_,
+                base_info.kvroot_server_infos_);
         }
         if (TFS_SUCCESS == ret)
         {

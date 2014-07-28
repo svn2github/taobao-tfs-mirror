@@ -23,11 +23,17 @@ namespace tfs
 {
   namespace clientv2
   {
+    static const common::TfsFileNameVersion CURRENT_TFS_FILE_NAME_VERSION = common::TFS_FILE_NAME_V2;
+#pragma pack(1)
     struct FileBitsV1
     {
       uint32_t block_id_;
       uint32_t seq_id_;
       uint32_t suffix_;
+
+      FileBitsV1(): block_id_(0), seq_id_(0), suffix_(0)
+      {
+      }
     };
 
     struct FileBitsV2
@@ -36,13 +42,20 @@ namespace tfs
       uint32_t seq_id_;
       uint32_t suffix_;
       char reserve_[2];
+
+      FileBitsV2(): block_id_(0), seq_id_(0), suffix_(0)
+      {
+        memset(reserve_, 0, sizeof(reserve_));
+      }
     };
+#pragma pack()
 
     class FSName
     {
     public:
       FSName();
-      FSName(const uint64_t block_id, const uint64_t file_id, const int32_t cluster_id = 0);
+      FSName(const uint64_t block_id, const uint64_t file_id, const int32_t cluster_id = 0,
+          common::TfsFileNameVersion version = CURRENT_TFS_FILE_NAME_VERSION);
       FSName(const char *file_name, const char* suffix = NULL, const int32_t cluster_id = 0);
       virtual ~FSName();
 

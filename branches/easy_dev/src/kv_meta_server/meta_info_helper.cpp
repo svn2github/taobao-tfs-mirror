@@ -27,6 +27,7 @@ namespace tfs
     const int VALUE_BUFF_SIZE = 1024*1024;
     const int KV_VALUE_BUFF_SIZE = 1024*1024;
     const int32_t KEY_BUFF_SIZE = 512 + 8 + 8;
+    const int32_t SCAN_LIMIT_FOR_OVERLAP = 3;
     const int32_t SCAN_LIMIT = 20;
     const int32_t MESS_LIMIT = 10;
     const int64_t INT64_INFI = 0x7FFFFFFFFFFFFFFF;
@@ -492,6 +493,112 @@ namespace tfs
       return ret;
     }
 
+
+    int MetaInfoHelper::check_object_overlap(const std::string &bucket_name,
+        const std::string &file_name, const int64_t offset,
+        const int64_t length)
+    {
+      int ret = (!bucket_name.empty() && !file_name.empty()) ? TFS_SUCCESS : TFS_ERROR;
+      common::ObjectInfo object_info_zero;
+      TBSYS_LOG(DEBUG, "will check coverage");
+      //op key
+      char start_key_buff[KEY_BUFF_SIZE];
+      char end_key_buff[KEY_BUFF_SIZE];
+
+      KvKey start_key;
+      KvKey end_key;
+      int64_t start_offset = offset;
+      int64_t end_offset = offset + length - 1;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = serialize_key(bucket_name, file_name, start_offset,
+            &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = serialize_key(bucket_name, file_name, end_offset,
+            &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+      }
+
+      //op value
+
+      int32_t i;
+      int32_t scan_offset = 0;
+      short scan_type = CMD_RANGE_VALUE_ONLY;//only scan value
+      vector<KvValue*> kv_value_keys;
+      vector<KvValue*> kv_value_values;
+      common::ObjectInfo object_info;
+      int32_t valid_result = 0;
+      int32_t result_size = 0;
+
+      ret = kv_engine_helper_->scan_keys(meta_info_name_area_, start_key, end_key, SCAN_LIMIT_FOR_OVERLAP, scan_offset,
+          &kv_value_keys, &kv_value_values, &result_size, scan_type);
+
+      TBSYS_LOG(DEBUG, "scan overage frag result_size is: %d", result_size);
+      if (EXIT_KV_RETURN_DATA_NOT_EXIST == ret || TFS_SUCCESS == ret)
+      {
+        if (0 == result_size)
+        {
+          /* if offset == 0 no need find pre */
+          if (start_offset > 0)
+          {
+            //we should find pre record
+            ret = scan_pre_record(bucket_name, file_name, start_key, &object_info, valid_result);
+            /* this ret always return TFS_SUCCESS */
+            if (valid_result > 0)
+            {
+              if (object_info.v_tfs_file_info_[0].offset_ + object_info.v_tfs_file_info_[0].file_size_ > offset)
+              {
+                ret = EXIT_OBJECT_OVERLAP;
+                TBSYS_LOG(DEBUG, "pre frag overage ret is: %d", ret);
+              }
+              else
+              {
+                ret = TFS_SUCCESS;
+              }
+            }
+          }
+          else
+          {
+            ret = TFS_SUCCESS;
+          }
+        }
+        else if (1 == result_size) /* need judge kong file */
+        {
+          common::ObjectInfo tmp_object_info;
+          //value get
+          int64_t pos = 0;
+          tmp_object_info.deserialize(kv_value_values[0]->get_data(),
+              kv_value_values[0]->get_size(), pos);
+          /* is head frag && data is kong*/
+          if (tmp_object_info.has_meta_info_ && tmp_object_info.v_tfs_file_info_.size() == 0)
+          {
+            ret = TFS_SUCCESS;
+          }
+          else
+          {
+            ret = EXIT_OBJECT_OVERLAP;
+            TBSYS_LOG(DEBUG, "may be first frag overage ret is: %d", ret);
+          }
+        }
+        else /* has frag > 1 */
+        {
+          ret = EXIT_OBJECT_OVERLAP;
+          TBSYS_LOG(DEBUG, "overage ret is: %d", ret);
+        }
+      }
+
+      for(i = 0; i < result_size; ++i)//free kv
+      {
+        kv_value_values[i]->free();
+        kv_value_keys[i]->free();
+      }
+      kv_value_values.clear();
+      kv_value_keys.clear();
+
+      return ret;
+    }
+
     int MetaInfoHelper::put_object(const std::string &bucket_name,
         const std::string &file_name,
         ObjectInfo &object_info, const UserInfo &user_info)
@@ -517,6 +624,12 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = check_put_object_zero(object_info, object_info_zero, user_info, offset, length, is_append);
+      }
+
+      /* Ban overlap */
+      if (TFS_SUCCESS == ret && !is_append)
+      {
+        ret = check_object_overlap(bucket_name, file_name, offset, length);
       }
 
       if (TFS_SUCCESS == ret)

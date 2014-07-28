@@ -43,7 +43,6 @@ namespace tfs
 #define CONF_LOG_LEVEL                                "log_level"
 #define CONF_WORK_DIR                                 "work_dir"
 #define CONF_OBJECT_DEAD_MAX_TIME                     "object_dead_max_time"
-
 #define CONF_PORT                                     "port"
 #define CONF_PORT_NUM                                 "port_num"
 #define CONF_THREAD_COUNT                             "thread_count"

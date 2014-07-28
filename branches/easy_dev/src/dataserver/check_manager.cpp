@@ -227,6 +227,7 @@ namespace tfs
       vector<uint64_t> replicas;
       IndexDataV2 peer_index;
       int ret = get_data_helper().get_block_replicas(peer_ns, block_id, replicas);
+      ret = (replicas.size() > 0) ? TFS_SUCCESS : EXIT_NO_DATASERVER;
       if (TFS_SUCCESS == ret)
       {
         vector<uint64_t>::iterator iter = replicas.begin();
@@ -238,11 +239,6 @@ namespace tfs
             break;
           }
         }
-      }
-      else if (EXIT_NO_BLOCK == ret || EXIT_BLOCK_NOT_FOUND == ret)
-      {
-        // block exist in peer cluster, we think the peer file list is empty
-        ret = TFS_SUCCESS;
       }
       else
       {

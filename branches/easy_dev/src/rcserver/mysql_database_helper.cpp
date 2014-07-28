@@ -168,9 +168,7 @@ namespace tfs
       if (is_connected_)
       {
         char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "t_resource_server_info");
-        snprintf(sql, 1024, "select addr_info, stat, rem from %s", table);
+        snprintf(sql, 1024, "select addr_info, stat, rem from t_resource_server_info");
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -186,20 +184,17 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
+          mysql_free_result(mysql_ret);
           ret = TFS_ERROR;
-          goto error;
+        } else {
+          while(NULL != (row = mysql_fetch_row(mysql_ret)))
+          {
+            snprintf(tmp.addr_info_, ADDR_INFO_LEN, "%s", row[0]);
+            tmp.stat_ = atoi(row[1]);
+            snprintf(tmp.rem_, REM_LEN, "%s", row[2]);
+            outparam.push_back(tmp);
+          }
         }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          snprintf(tmp.addr_info_, ADDR_INFO_LEN, "%s", row[0]);
-          tmp.stat_ = atoi(row[1]);
-          snprintf(tmp.rem_, REM_LEN, "%s", row[2]);
-          outparam.push_back(tmp);
-        }
-
-error:
-        mysql_free_result(mysql_ret);
       }
       return ret;
     }
@@ -216,9 +211,7 @@ error:
       if (is_connected_)
       {
         char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "t_meta_root_info");
-        snprintf(sql, 1024, "select app_id, addr_info, stat, rem from %s", table);
+        snprintf(sql, 1024, "select app_id, addr_info, stat, rem from t_meta_root_info");
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -234,21 +227,18 @@ error:
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
+          mysql_free_result(mysql_ret);
           ret = TFS_ERROR;
-          goto error;
+        } else {
+          while(NULL != (row = mysql_fetch_row(mysql_ret)))
+          {
+            tmp.app_id_ = atoi(row[0]);
+            snprintf(tmp.addr_info_, ADDR_INFO_LEN, "%s", row[1]);
+            tmp.stat_ = atoi(row[2]);
+            snprintf(tmp.rem_, REM_LEN, "%s", row[3]);
+            outparam.push_back(tmp);
+          }
         }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          tmp.app_id_ = atoi(row[0]);
-          snprintf(tmp.addr_info_, ADDR_INFO_LEN, "%s", row[1]);
-          tmp.stat_ = atoi(row[2]);
-          snprintf(tmp.rem_, REM_LEN, "%s", row[3]);
-          outparam.push_back(tmp);
-        }
-
-error:
-        mysql_free_result(mysql_ret);
       }
       return ret;
     }
@@ -290,10 +280,8 @@ error:
       if (is_connected_)
       {
         char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "t_cluster_rack_info");
         snprintf(sql, 1024, "select cluster_rack_id, cluster_id, ns_vip, "
-            "cluster_stat, rem from %s", table);
+                 "cluster_stat, rem from t_cluster_rack_info");
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -310,26 +298,24 @@ error:
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
+          mysql_free_result(mysql_ret);
           ret = TFS_ERROR;
-          goto error;
+        } else {
+          while(NULL != (row = mysql_fetch_row(mysql_ret)))
+          {
+            tmp.cluster_rack_id_ = atoi(row[0]);
+            tmp.cluster_data_.cluster_id_ = row[1];
+            tmp.cluster_data_.ns_vip_ = row[2];
+            tmp.cluster_data_.cluster_stat_ = atoi(row[3]);
+            tmp.cluster_data_.access_type_ = -1;
+            snprintf(tmp.rem_, REM_LEN, "%s", row[4]);
+            outparam.push_back(tmp);
+          }
         }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          tmp.cluster_rack_id_ = atoi(row[0]);
-          tmp.cluster_data_.cluster_id_ = row[1];
-          tmp.cluster_data_.ns_vip_ = row[2];
-          tmp.cluster_data_.cluster_stat_ = atoi(row[3]);
-          tmp.cluster_data_.access_type_ = -1;
-          snprintf(tmp.rem_, REM_LEN, "%s", row[4]);
-          outparam.push_back(tmp);
-        }
-
-error:
-        mysql_free_result(mysql_ret);
       }
       return ret;
     }
+
     int MysqlDatabaseHelper::scan(VClusterRackGroup& outparam)
     {
       outparam.clear();
@@ -342,10 +328,8 @@ error:
       if (is_connected_)
       {
         char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "t_cluster_rack_group");
         snprintf(sql, 1024, "select cluster_group_id, cluster_rack_id, cluster_rack_access_type, "
-            "rem from %s", table);
+            "rem from t_cluster_rack_group");
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -362,24 +346,22 @@ error:
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
+          mysql_free_result(mysql_ret);
           ret = TFS_ERROR;
-          goto error;
+        } else {
+          while(NULL != (row = mysql_fetch_row(mysql_ret)))
+          {
+            tmp.cluster_group_id_ = atoi(row[0]);
+            tmp.cluster_rack_id_ = atoi(row[1]);
+            tmp.cluster_rack_access_type_ = atoi(row[2]);
+            snprintf(tmp.rem_, REM_LEN, "%s", row[3]);
+            outparam.push_back(tmp);
+          }
         }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          tmp.cluster_group_id_ = atoi(row[0]);
-          tmp.cluster_rack_id_ = atoi(row[1]);
-          tmp.cluster_rack_access_type_ = atoi(row[2]);
-          snprintf(tmp.rem_, REM_LEN, "%s", row[3]);
-          outparam.push_back(tmp);
-        }
-
-error:
-        mysql_free_result(mysql_ret);
       }
       return ret;
     }
+
     int MysqlDatabaseHelper::scan(IpReplaceHelper::VIpTransferItem& outparam)
     {
       outparam.clear();
@@ -392,9 +374,7 @@ error:
       if (is_connected_)
       {
         char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "t_caculate_ip_info");
-        snprintf(sql, 1024, "select source_ip, caculate_ip from %s", table);
+        snprintf(sql, 1024, "select source_ip, caculate_ip from t_caculate_ip_info");
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -404,40 +384,37 @@ error:
         }
 
         MYSQL_ROW row;
-
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
         if (mysql_ret == NULL)
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
+          mysql_free_result(mysql_ret);
           ret = TFS_ERROR;
-          goto error;
-        }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          IpReplaceHelper::IpTransferItem item;
-          int r = TFS_SUCCESS;
-          r = item.set_source_ip(row[0]);
-          if (TFS_SUCCESS != r)
+        } else {
+          while(NULL != (row = mysql_fetch_row(mysql_ret)))
           {
-            TBSYS_LOG(WARN, "read a invalid source ip from t_caculate_ip_info ip is %s", row[0]);
-            continue;
+            IpReplaceHelper::IpTransferItem item;
+            int r = TFS_SUCCESS;
+            r = item.set_source_ip(row[0]);
+            if (TFS_SUCCESS != r)
+            {
+              TBSYS_LOG(WARN, "read a invalid source ip from t_caculate_ip_info ip is %s", row[0]);
+              continue;
+            }
+            r = item.set_dest_ip(row[1]);
+            if (TFS_SUCCESS != r)
+            {
+              TBSYS_LOG(WARN, "read a invalid dest ip from t_caculate_ip_info ip is %s", row[1]);
+              continue;
+            }
+            outparam.push_back(item);
           }
-          r = item.set_dest_ip(row[1]);
-          if (TFS_SUCCESS != r)
-          {
-            TBSYS_LOG(WARN, "read a invalid dest ip from t_caculate_ip_info ip is %s", row[1]);
-            continue;
-          }
-          outparam.push_back(item);
         }
-
-error:
-        mysql_free_result(mysql_ret);
       }
       return ret;
     }
+
     int MysqlDatabaseHelper::scan(std::map<int32_t, IpReplaceHelper::VIpTransferItem>& outparam)
     {
       outparam.clear();
@@ -450,9 +427,7 @@ error:
       if (is_connected_)
       {
         char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "t_app_ip_replace");
-        snprintf(sql, 1024, "select app_id, source_ip, turn_ip from %s", table);
+        snprintf(sql, 1024, "select app_id, source_ip, turn_ip from t_app_ip_replace");
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -468,31 +443,29 @@ error:
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
+          mysql_free_result(mysql_ret);
           ret = TFS_ERROR;
-          goto error;
-        }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          IpReplaceHelper::IpTransferItem item;
-          int r = TFS_SUCCESS;
-          r = item.set_source_ip(row[1]);
-          if (TFS_SUCCESS != r)
+        } else {
+          while(NULL != (row = mysql_fetch_row(mysql_ret)))
           {
-            TBSYS_LOG(WARN, "read a invalid source ip from t_app_ip_replace ip is %s", row[1]);
-            continue;
+            IpReplaceHelper::IpTransferItem item;
+            int r = TFS_SUCCESS;
+            r = item.set_source_ip(row[1]);
+            if (TFS_SUCCESS != r)
+            {
+              TBSYS_LOG(WARN, "read a invalid source ip from t_app_ip_replace ip is %s", row[1]);
+              continue;
+            }
+            r = item.set_dest_ip(row[2]);
+            if (TFS_SUCCESS != r)
+            {
+              TBSYS_LOG(WARN, "read a invalid turn ip from t_app_ip_replace ip is %s", row[2]);
+              continue;
+            }
+            int32_t app_id = atoi(row[0]);
+            outparam[app_id].push_back(item);
           }
-          r = item.set_dest_ip(row[2]);
-          if (TFS_SUCCESS != r)
-          {
-            TBSYS_LOG(WARN, "read a invalid turn ip from t_app_ip_replace ip is %s", row[2]);
-            continue;
-          }
-          int32_t app_id = atoi(row[0]);
-          outparam[app_id].push_back(item);
         }
-error:
-        mysql_free_result(mysql_ret);
       }
       return ret;
     }
@@ -509,9 +482,7 @@ error:
       if (is_connected_)
       {
         char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "t_cluster_rack_duplicate_server");
-        snprintf(sql, 1024, "select cluster_rack_id, dupliate_server_addr from %s", table);
+        snprintf(sql, 1024, "select cluster_rack_id, dupliate_server_addr from t_cluster_rack_duplicate_server");
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -528,19 +499,16 @@ error:
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
+          mysql_free_result(mysql_ret);
           ret = TFS_ERROR;
-          goto error;
+        } else {
+          while(NULL != (row = mysql_fetch_row(mysql_ret)))
+          {
+            tmp.cluster_rack_id_ = atoi(row[0]);
+            snprintf(tmp.dupliate_server_addr_, ADDR_INFO_LEN, "%s", row[1]);
+            outparam.push_back(tmp);
+          }
         }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          tmp.cluster_rack_id_ = atoi(row[0]);
-          snprintf(tmp.dupliate_server_addr_, ADDR_INFO_LEN, "%s", row[1]);
-          outparam.push_back(tmp);
-        }
-
-error:
-        mysql_free_result(mysql_ret);
       }
       return ret;
     }
@@ -556,9 +524,7 @@ error:
       if (is_connected_)
       {
         char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "t_base_info_update_time");
-        snprintf(sql, 1024, "select UNIX_TIMESTAMP(base_last_update_time), UNIX_TIMESTAMP(app_last_update_time) from %s", table);
+        snprintf(sql, 1024, "select UNIX_TIMESTAMP(base_last_update_time), UNIX_TIMESTAMP(app_last_update_time) from t_base_info_update_time");
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -574,23 +540,20 @@ error:
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
+          mysql_free_result(mysql_ret);
           ret = TFS_ERROR;
-          goto error;
+        } else {
+          ret = TFS_ERROR;
+          while(NULL != (row = mysql_fetch_row(mysql_ret) ))
+          {
+            outparam.base_last_update_time_ = atoi(row[0]);
+            outparam.base_last_update_time_ *= 1000 * 1000;
+            outparam.app_last_update_time_ = atoi(row[1]);
+            outparam.app_last_update_time_ *= 1000 * 1000;
+            ret = TFS_SUCCESS;
+            break;
+          }
         }
-        ret = TFS_ERROR;
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret) ))
-        {
-          outparam.base_last_update_time_ = atoi(row[0]);
-          outparam.base_last_update_time_ *= 1000 * 1000;
-          outparam.app_last_update_time_ = atoi(row[1]);
-          outparam.app_last_update_time_ *= 1000 * 1000;
-          ret = TFS_SUCCESS;
-          break;
-        }
-
-error:
-        mysql_free_result(mysql_ret);
       }
       return ret;
     }
@@ -632,11 +595,9 @@ error:
       if (is_connected_)
       {
         char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "t_app_info");
         snprintf(sql, 1024, "select app_key, id, quto, cluster_group_id, "
             "app_name, app_owner, report_interval, "
-            "need_duplicate, rem, UNIX_TIMESTAMP(modify_time), use_remote_cache from %s", table);
+            "need_duplicate, rem, UNIX_TIMESTAMP(modify_time), use_remote_cache from t_app_info");
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -653,30 +614,27 @@ error:
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
+          mysql_free_result(mysql_ret);
           ret = TFS_ERROR;
-          goto error;
+        } else {
+          while(NULL != (row = mysql_fetch_row(mysql_ret)))
+          {
+            snprintf(tmp.key_, APP_KEY_LEN, "%s", row[0]);
+            tmp.id_ = atoi(row[1]);
+            tmp.quto_ = strtoll(row[2], NULL, 10);
+            tmp.cluster_group_id_ = atoi(row[3]);
+            snprintf(tmp.app_name_, REM_LEN, "%s", row[4]);
+            snprintf(tmp.app_owner_, REM_LEN, "%s", row[5]);
+            tmp.report_interval_ = atoi(row[6]);
+            tmp.need_duplicate_ = atoi(row[7]);
+            snprintf(tmp.rem_, REM_LEN, "%s", row[8]);
+            tmp.modify_time_ = atoi(row[9]);
+            tmp.use_remote_cache_ = atoi(row[10]);
+            tmp.modify_time_ *= 1000 * 1000;
+
+            outparam[tmp.id_] = tmp;
+          }
         }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          snprintf(tmp.key_, APP_KEY_LEN, "%s", row[0]);
-          tmp.id_ = atoi(row[1]);
-          tmp.quto_ = strtoll(row[2], NULL, 10);
-          tmp.cluster_group_id_ = atoi(row[3]);
-          snprintf(tmp.app_name_, REM_LEN, "%s", row[4]);
-          snprintf(tmp.app_owner_, REM_LEN, "%s", row[5]);
-          tmp.report_interval_ = atoi(row[6]);
-          tmp.need_duplicate_ = atoi(row[7]);
-          snprintf(tmp.rem_, REM_LEN, "%s", row[8]);
-          tmp.modify_time_ = atoi(row[9]);
-          tmp.use_remote_cache_ = atoi(row[10]);
-          tmp.modify_time_ *= 1000 * 1000;
-
-          outparam[tmp.id_] = tmp;
-        }
-
-error:
-        mysql_free_result(mysql_ret);
       }
       return ret;
     }
@@ -824,9 +782,7 @@ error:
       if (is_connected_)
       {
         char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "t_cluster_cache_info");
-        snprintf(sql, 1024, "select cache_server_addr from %s", table);
+        snprintf(sql, 1024, "select cache_server_addr from t_cluster_cache_info");
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -842,18 +798,15 @@ error:
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
+          mysql_free_result(mysql_ret);
           ret = TFS_ERROR;
-          goto error;
+        } else {
+          while(NULL != (row = mysql_fetch_row(mysql_ret)))
+          {
+            tmp = row[0];
+            outparam.push_back(tmp);
+          }
         }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          tmp = row[0];
-          outparam.push_back(tmp);
-        }
-
-error:
-        mysql_free_result(mysql_ret);
       }
       return ret;
     }

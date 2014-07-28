@@ -233,10 +233,6 @@ namespace tfs
           {
             name_meta_client_->initialize(rs_addr);
           }
-          else
-          {
-            name_meta_client_->initialize(base_info_.meta_root_server_);
-          }
           // TODO: set kv_rs_addr before here
           kv_meta_client_->set_tfs_cluster_manager(tfs_cluster_manager_);
           kv_meta_client_->initialize(kv_rs_addr_);

@@ -34,6 +34,8 @@ namespace tfs
     const int APP_KEY_LEN = 256;
     const int SESSION_ID_LEN = 256;
     const int CLIENT_VERSION_LEN = 64;
+    const int OPTION_KEY_LEN = 128;
+    const int OPTION_VALUE_LEN = 128;
 
     struct ResourceServerInfo
     {

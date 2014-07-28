@@ -161,6 +161,10 @@ namespace tfs
       {
         ret = Serialization::set_int32(data, data_len, pos, use_remote_cache_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_vint64(data, data_len, pos, kvroot_server_infos_);
+      }
       return ret;
     }
 
@@ -199,13 +203,17 @@ namespace tfs
       {
         ret = Serialization::get_int32(data, data_len, pos, &use_remote_cache_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_vint64(data, data_len, pos, kvroot_server_infos_);
+      }
       return ret;
     }
 
     int64_t BaseInfo::length() const
     {
       int64_t length = INT_SIZE + INT64_SIZE + Serialization::get_vint64_length(rc_server_infos_) + Serialization::get_list_length(cluster_infos_) + INT64_SIZE +
-        Serialization::get_string_length(ns_cache_info_) + Serialization::get_list_length(cluster_infos_for_update_) + INT_SIZE;
+        Serialization::get_string_length(ns_cache_info_) + Serialization::get_list_length(cluster_infos_for_update_) + INT_SIZE + Serialization::get_vint64_length(kvroot_server_infos_);
       //TBSYS_LOG(DEBUG, "BaseInfo::length: %"PRI64_PREFIX"d, rc_server_infos_ length: %"PRI64_PREFIX"d, cluster_infos_ length: %"PRI64_PREFIX"d",
       //    length, Serialization::get_vint64_length(rc_server_infos_), Serialization::get_list_length(cluster_infos_));
       return length;
@@ -225,6 +233,10 @@ namespace tfs
       TBSYS_LOG(DEBUG, "report_interval: %d", report_interval_);
       TBSYS_LOG(DEBUG, "modify_time: %"PRI64_PREFIX"d", modify_time_);
       TBSYS_LOG(DEBUG, "root_server: %s", tbsys::CNetUtil::addrToString(meta_root_server_).c_str());
+      for (size_t i = 0; i < kvroot_server_infos_.size(); ++i)
+      {
+        TBSYS_LOG(DEBUG, "kvroot_server %zd: %s", i, tbsys::CNetUtil::addrToString(kvroot_server_infos_[i]).c_str());
+      }
       TBSYS_LOG(DEBUG, "ns_cache_info: %s", ns_cache_info_.c_str());
       for (size_t i = 0; i < cluster_infos_for_update_.size(); ++i)
       {

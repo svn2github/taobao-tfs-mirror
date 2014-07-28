@@ -80,6 +80,10 @@ int main(int argc, char* argv[])
   string super_block_path = string(SYSPARAM_FILESYSPARAM.mount_name_) + SUPERBLOCK_NAME;
   BlockManager block_manager(super_block_path);
   ret = block_manager.format(SYSPARAM_FILESYSPARAM);
+  if (TFS_SUCCESS != ret)
+  {
+    ::unlink(super_block_path.c_str());
+  }
   printf("format filesystem %s!\n", TFS_SUCCESS == ret ? "successfully" : "failed");
 
   return 0;

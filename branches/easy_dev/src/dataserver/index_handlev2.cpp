@@ -428,6 +428,30 @@ namespace tfs
       return ret;
     }
 
+    int BaseIndexHandle::update_block_statistic_info(const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback)
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        ret = new_size >= 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          IndexHeaderV2* header = get_index_header_();
+          assert(NULL != header);
+          ret = update_block_statistic_info_(header, oper_type, new_size, old_size, rollback);
+          if (TFS_SUCCESS == ret)
+          {
+            int32_t real_new_size = rollback ? 0 - new_size : new_size;
+            if ((OPER_INSERT == oper_type) || (OPER_UPDATE == oper_type))
+            {
+              header->used_offset_ += real_new_size;
+            }
+          }
+        }
+      }
+      return ret;
+    }
+
     void BaseIndexHandle::get_prev_(common::FileInfoV2* prev, common::FileInfoV2* current, bool complete) const
     {
       assert(NULL != current);
@@ -958,29 +982,6 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::update_block_statistic_info(const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback)
-    {
-      int32_t ret = check_load();
-      if (TFS_SUCCESS == ret)
-      {
-        ret = new_size >= 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-        if (TFS_SUCCESS == ret)
-        {
-          IndexHeaderV2* header = get_index_header_();
-          assert(NULL != header);
-          ret = update_block_statistic_info_(header, oper_type, new_size, old_size, rollback);
-          if (TFS_SUCCESS == ret)
-          {
-            int32_t real_new_size = rollback ? 0 - new_size : new_size;
-            if ((OPER_INSERT == oper_type) || (OPER_UPDATE == oper_type))
-            {
-              header->used_offset_ += real_new_size;
-            }
-          }
-        }
-      }
-      return ret;
-    }
 
     BaseIndexHandle::iterator IndexHandle::begin()
     {

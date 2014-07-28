@@ -196,5 +196,13 @@ namespace tfs
       }
       return result;
     }
+    std::string IpReplaceHelper::addrToStringNoPort(uint64_t ipport)
+    {
+      char str[32];
+      uint32_t ip = (uint32_t)(ipport & 0xffffffff);
+      unsigned char *bytes = (unsigned char *) &ip;
+      sprintf(str, "%d.%d.%d.%d", bytes[0], bytes[1], bytes[2], bytes[3]);
+      return str;
+    }
   }
 }

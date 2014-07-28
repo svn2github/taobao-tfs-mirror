@@ -128,6 +128,17 @@ namespace tfs
       {
         DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
         CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(message);
+        uint64_t ns_ip_port = msg->get_server();
+        message->reply(new StatusMessage(STATUS_MESSAGE_OK));  // reply ns first
+
+        // ds is reporting block now, avoid reporting repeatly
+        if (info.is_reporting_block_)
+        {
+          return TFS_SUCCESS;
+        }
+
+        info.is_reporting_block_ = true;
+
         create_msg_ref(ReportBlocksToNsRequestMessage, req_msg);
         req_msg.set_server(info.information_.id_);
         int32_t block_count = 0;
@@ -142,7 +153,7 @@ namespace tfs
 
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* message = NULL;
-        ret = send_msg_to_server(msg->get_server(), client, &req_msg, message);
+        ret = send_msg_to_server(ns_ip_port, client, &req_msg, message);
         if (TFS_SUCCESS == ret)
         {
           ret = message->getPCode() == RSP_REPORT_BLOCKS_TO_NS_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
@@ -160,6 +171,8 @@ namespace tfs
           }
         }
         NewClientManager::get_instance().destroy_client(client);
+
+        info.is_reporting_block_ = false;  // report finish
       }
       return ret;
     }
@@ -1219,7 +1232,7 @@ namespace tfs
       }
       TIMER_END();
 
-      TBSYS_LOG(DEBUG, "read index fail. blockid: %"PRI64_PREFIX"u, "
+      TBSYS_LOG(DEBUG, "read index. blockid: %"PRI64_PREFIX"u, "
           "attach_block_id: %"PRI64_PREFIX"u, cost: %"PRI64_PREFIX"d, ret: %d",
           block_id, attach_block_id, TIMER_DURATION(), ret);
 

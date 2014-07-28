@@ -59,7 +59,8 @@ namespace tfs
       verify_index_reserved_space_ratio_(common::VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO),
       check_integrity_interval_days_(common::CHECK_INTEGRITY_INTERVAL_DAYS_DEFAULT),
       enable_old_interface_(common::ENABLE_OLD_INTERFACE_FLAG_NO),
-      enable_version_check_(common::ENABLE_VERSION_CHECK_FLAG_YES)
+      enable_version_check_(common::ENABLE_VERSION_CHECK_FLAG_YES),
+      is_reporting_block_(false)
     {
       memset(&information_, 0, sizeof(information_));
       information_.status_ = common::DATASERVER_STATUS_DEAD;
