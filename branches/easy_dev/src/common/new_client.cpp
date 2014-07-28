@@ -342,7 +342,7 @@ namespace tfs
 
     int send_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, tbnet::Packet*& output/*not free*/, const bool clone_source, const int64_t timeout)
     {
-      assert(server > 0 && NULL != client && NULL != msg && NULL == output);
+      assert(server > 0 && NULL != client && NULL != msg);
       uint8_t send_id = 0;
       int iret = client->post_request(server, msg, send_id, clone_source);
       if (common::TFS_SUCCESS == iret)

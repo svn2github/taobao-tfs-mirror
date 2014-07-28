@@ -56,7 +56,7 @@ namespace tfs
 
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       int ret = TFS_ERROR;
-      UpdateBlockInfoMessage ub_msg;
+      create_msg_ref(UpdateBlockInfoMessage, ub_msg);
       ub_msg.set_block_id(block_id);
       ub_msg.set_block(&blk);
       ub_msg.set_server_id(ds_info.information_.id_);
@@ -127,7 +127,7 @@ namespace tfs
       */
 
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      BlockWriteCompleteMessage bwc_msg;
+      create_msg_ref(BlockWriteCompleteMessage, bwc_msg);
       // bwc_msg.set_block(&tmpblk);
       bwc_msg.set_block(&blk);
       bwc_msg.set_server_id(ds_info.information_.id_);

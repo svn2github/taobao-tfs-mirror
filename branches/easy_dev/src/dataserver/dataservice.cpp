@@ -672,7 +672,7 @@ namespace tfs
             CloseFileMessage* message = dynamic_cast<CloseFileMessage*> (bpacket);
             CloseFileInfo close_file_info = message->get_close_file_info();
             int32_t lease_id = message->get_lease_id();
-            uint64_t peer_id = message->get_connection()->getPeerId();
+            uint64_t peer_id = message->getPeerId();
 
             //commit
             int32_t status = all_success ? TFS_SUCCESS : TFS_ERROR;
@@ -774,7 +774,7 @@ namespace tfs
               hret = tbnet::IPacketHandler::KEEP_CHANNEL;
             else
             {
-              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "peer: %s, local: %s. task message beyond max queue size, discard", tbsys::CNetUtil::addrToString(bpacket->get_connection()->getPeerId()).c_str(), get_ip_addr());
+              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "peer: %s, local: %s. task message beyond max queue size, discard", tbsys::CNetUtil::addrToString(bpacket->getPeerId()).c_str(), get_ip_addr());
               bpacket->free();
             }
           }
@@ -887,12 +887,116 @@ namespace tfs
       return bret;
     }
 
+    int DataService::handle(BasePacket* packet)
+    {
+      int ret = TFS_SUCCESS;
+      int32_t pcode = packet->getPCode();
+      switch (pcode)
+      {
+        case CREATE_FILENAME_MESSAGE:
+          ret = create_file_number(dynamic_cast<CreateFilenameMessage*>(packet));
+          break;
+        case WRITE_DATA_MESSAGE:
+          ret = write_data(dynamic_cast<WriteDataMessage*>(packet));
+          break;
+        case CLOSE_FILE_MESSAGE:
+          ret = close_write_file(dynamic_cast<CloseFileMessage*>(packet));
+          break;
+        case READ_DATA_MESSAGE_V2:
+          ret = read_data_extra(dynamic_cast<ReadDataMessageV2*>(packet), READ_VERSION_2);
+          break;
+        case READ_DATA_MESSAGE_V3:
+          ret = read_data_extra(dynamic_cast<ReadDataMessageV3*>(packet), READ_VERSION_3);
+          break;
+        case READ_DATA_MESSAGE:
+          ret = read_data(dynamic_cast<ReadDataMessage*>(packet));
+          break;
+        case FILE_INFO_MESSAGE:
+          ret = read_file_info(dynamic_cast<FileInfoMessage*>(packet));
+          break;
+        case UNLINK_FILE_MESSAGE:
+          ret = unlink_file(dynamic_cast<UnlinkFileMessage*>(packet));
+          break;
+        case LIST_BLOCK_MESSAGE:
+          ret = list_blocks(dynamic_cast<ListBlockMessage*>(packet));
+          break;
+        case REPLICATE_BLOCK_MESSAGE:
+        case COMPACT_BLOCK_MESSAGE:
+        case DS_COMPACT_BLOCK_MESSAGE:
+        case DS_REPLICATE_BLOCK_MESSAGE:
+        case RESP_DS_COMPACT_BLOCK_MESSAGE:
+        case RESP_DS_REPLICATE_BLOCK_MESSAGE:
+        case REQ_EC_MARSHALLING_MESSAGE:
+        case REQ_EC_REINSTATE_MESSAGE:
+        case REQ_EC_DISSOLVE_MESSAGE:
+          ret = task_manager_.handle(dynamic_cast<BaseTaskMessage*>(packet));
+          break;
+        case GET_BLOCK_INFO_MESSAGE_V2:
+          ret = get_block_info(dynamic_cast<GetBlockInfoMessageV2*>(packet));
+          break;
+        case GET_SERVER_STATUS_MESSAGE:
+          ret = get_server_status(dynamic_cast<GetServerStatusMessage*>(packet));
+          break;
+        case STATUS_MESSAGE:
+          ret = get_ping_status(dynamic_cast<StatusMessage*>(packet));
+          break;
+        case CLIENT_CMD_MESSAGE:
+          ret = client_command(dynamic_cast<ClientCmdMessage*>(packet));
+          break;
+        case REQ_CALL_DS_REPORT_BLOCK_MESSAGE:
+        case STAT_FILE_MESSAGE_V2:
+        case READ_FILE_MESSAGE_V2:
+        case WRITE_FILE_MESSAGE_V2:
+        case CLOSE_FILE_MESSAGE_V2:
+        case UNLINK_FILE_MESSAGE_V2:
+        case NEW_BLOCK_MESSAGE_V2:
+        case REMOVE_BLOCK_MESSAGE_V2:
+        case READ_RAWDATA_MESSAGE_V2:
+        case WRITE_RAWDATA_MESSAGE_V2:
+        case READ_INDEX_MESSAGE_V2:
+        case WRITE_INDEX_MESSAGE_V2:
+        case QUERY_EC_META_MESSAGE:
+        case COMMIT_EC_META_MESSAGE:
+          ret = client_request_server_.handle(packet);
+          break;
+        case REQ_CHECK_BLOCK_MESSAGE:
+        case REPORT_CHECK_BLOCK_MESSAGE:
+          ret = check_manager_.handle(packet);
+          break;
+        default:
+          TBSYS_LOG(ERROR, "unknown packet pcode: %d\n", pcode);
+          ret = TFS_ERROR;
+          break;
+      }
+
+      if (common::TFS_SUCCESS != ret)
+      {
+        common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
+        msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+      }
+      else
+      {
+        if (WRITE_FILE_MESSAGE_V2 == pcode ||
+            CLOSE_FILE_MESSAGE_V2 == pcode ||
+            UNLINK_FILE_MESSAGE_V2 == pcode)
+        {
+          // async request need wait
+          if (!packet->get_request()->opacket)
+          {
+            return EASY_AGAIN;
+          }
+        }
+      }
+
+      return EASY_OK;
+    }
+
     int DataService::create_file_number(CreateFilenameMessage* message)
     {
       DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
       if (ENABLE_OLD_INTERFACE_FLAG_NO == info.enable_old_interface_)
       {
-        uint64_t peer_id = message->get_connection()->getPeerId();
+        uint64_t peer_id = message->getPeerId();
         TBSYS_LOG(WARN, "received old write request from %s",
              tbsys::CNetUtil::addrToString(peer_id).c_str());
         return EXIT_NOT_SUPPORT_ERROR;
@@ -946,7 +1050,7 @@ namespace tfs
       DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
       if (ENABLE_OLD_INTERFACE_FLAG_NO == info.enable_old_interface_)
       {
-        uint64_t peer_id = message->get_connection()->getPeerId();
+        uint64_t peer_id = message->getPeerId();
         TBSYS_LOG(WARN, "received old write request from %s",
              tbsys::CNetUtil::addrToString(peer_id).c_str());
         return EXIT_NOT_SUPPORT_ERROR;
@@ -1048,7 +1152,7 @@ namespace tfs
       DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
       if (ENABLE_OLD_INTERFACE_FLAG_NO == info.enable_old_interface_)
       {
-        uint64_t peer_id = message->get_connection()->getPeerId();
+        uint64_t peer_id = message->getPeerId();
         TBSYS_LOG(WARN, "received old write request from %s",
             tbsys::CNetUtil::addrToString(peer_id).c_str());
         return EXIT_NOT_SUPPORT_ERROR;
@@ -1057,7 +1161,7 @@ namespace tfs
       TIMER_START();
       CloseFileInfo close_file_info = message->get_close_file_info();
       int32_t lease_id = message->get_lease_id();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       int32_t option_flag = message->get_option_flag();
       int32_t force_status = message->get_status();
 
@@ -1243,7 +1347,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       int32_t read_len = message->get_length();
       int32_t read_offset = message->get_offset();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       int8_t flag = message->get_flag();
 
       TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, resp: %p", block_id,
@@ -1302,7 +1406,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       int32_t read_len = message->get_length();
       int32_t read_offset = message->get_offset();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       int8_t flag = message->get_flag();
 
       FileInfo file_info;
@@ -1379,7 +1483,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       int32_t option_flag = message->get_option_flag();
       int32_t action = message->get_unlink_type();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       //is master
       bool is_master = false;
       if ((message->get_server() & 1) == 0)

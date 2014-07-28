@@ -429,7 +429,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      UpdateBlockInfoMessageV2 req_msg;
+      create_msg_ref(UpdateBlockInfoMessageV2, req_msg);
       req_msg.set_block_info(block_info);
       req_msg.set_type(type);
       req_msg.set_server_id(ds_info.information_.id_);
@@ -468,7 +468,7 @@ namespace tfs
          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
      Lease* lease = NULL;
-     ResolveBlockVersionConflictMessage req_msg;
+     create_msg_ref(ResolveBlockVersionConflictMessage, req_msg);
      if (TFS_SUCCESS == ret)
      {
        LeaseId lid(block_id, file_id, lease_id);

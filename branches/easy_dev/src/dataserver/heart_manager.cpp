@@ -137,7 +137,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
-        SetDataserverMessage req_msg;
+        create_msg_ref(SetDataserverMessage, req_msg);
         req_msg.set_dataserver_information(info);
         TBSYS_LOG(INFO, "KEEPALIVE, who: %d", who);
         tbnet::Packet* message = NULL;
@@ -145,7 +145,7 @@ namespace tfs
         ret = NULL != client ? TFS_SUCCESS : SEND_BLOCK_TO_NS_CREATE_NETWORK_CLIENT_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          ret = send_msg_to_server(ns_ip_port_[who], client, &req_msg, message, timeout);
+          ret = send_msg_to_server(ns_ip_port_[who], client, &req_msg, message, false, timeout);
           if (TFS_SUCCESS == ret)
           {
             ret = RESP_HEART_MESSAGE == message->getPCode() ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;

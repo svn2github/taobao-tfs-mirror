@@ -30,19 +30,22 @@ class EasyBuffer
 public:
   EasyBuffer()
   {
-    l = NULL;
+    easy_list_init(&list);
+    l = &list;
     mark_end = NULL;
     pool = easy_pool_create(0);
-    b = easy_buf_create(pool, 0);
+    b = NULL;
     alloc = true;
   }
 
   EasyBuffer(const int64_t length)
   {
-    l = NULL;
+    easy_list_init(&list);
+    l = &list;
     mark_end = NULL;
     pool = easy_pool_create(0);
-    b = easy_buf_create(pool, length);
+    b = NULL;
+    reserve(length);
     alloc = true;
   }
 
@@ -71,7 +74,6 @@ public:
   {
     if (alloc)
     {
-      easy_buf_destroy(b);
       easy_pool_destroy(pool);
     }
   }
@@ -86,7 +88,10 @@ public:
 
   void clear()
   {
-    b->last = b->pos;
+    if (b != NULL)
+    {
+      b->last = b->pos;
+    }
   }
 
   char* get_data() const
@@ -393,6 +398,7 @@ private:
   int                 wl;
   char                *mark_end;
   bool alloc;
+  easy_list_t         list;  // used when alloc easy_buf_t
 };
 }
 }

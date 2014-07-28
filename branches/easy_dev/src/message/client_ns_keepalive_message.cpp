@@ -75,6 +75,7 @@ namespace tfs
       if (TFS_SUCCESS == ret && input.get_data_length() > 0)
       {
         data_.writeBytes(input.get_data(), input.get_data_length());
+        input.drain(input.get_data_length());
       }
       return ret;
     }

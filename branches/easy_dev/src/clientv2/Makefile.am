@@ -1,6 +1,7 @@
 AM_CPPFLAGS=-fPIC -I${top_srcdir}/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
 	    -I$(TBLIB_ROOT)/include/tbnet\
+			-I$(EASY_ROOT)/include/easy\
 			$(TAIR_CACHE_CPPFLAGS)
 
 AM_LDFLAGS=-lrt -lpthread -ldl -luuid $(TAIR_CACHE_LDFLAGS) 
@@ -20,7 +21,8 @@ api_source_list = tfs_client_api_v2.cpp tfs_client_impl_v2.cpp tfs_file.cpp fsna
 ld_fg = $(AM_LDFLAGS) \
         $(top_srcdir)/src/requester/libtfsrequester.a \
         $(top_srcdir)/src/message/libtfsmessage.a \
-        $(top_srcdir)/src/common/libtfscommon.a
+        $(top_srcdir)/src/common/libtfscommon.a \
+				$(EASY_ROOT)/lib/libeasy.a
 
 libtfsclientv2_la_SOURCES = ${api_source_list}
 libtfsclientv2_la_LIBADD = ${ld_fg}

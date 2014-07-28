@@ -84,9 +84,9 @@ namespace tfs
       LocalPacket* packet = dynamic_cast<LocalPacket*>(packet_factory_->createPacket(LOCAL_PACKET));
       assert(NULL != packet);
       packet->set_new_client(client);
-      packet_handler(packet);
-      //bool bret = main_workers_.push(packet, 0/*no limit*/, false/*no block*/);
-      //assert(true == bret);
+      // packet_handler(packet);
+      bool bret = main_workers_.push(packet, 0/*no limit*/, false/*no block*/);
+      assert(true == bret);
       return TFS_SUCCESS;
     }
 
@@ -271,9 +271,10 @@ namespace tfs
       //start workthread
       if (TFS_SUCCESS == iret)
       {
-        int32_t thread_count = get_work_thread_count();
-        main_workers_.setThreadParameter(thread_count, this, NULL);
-        //main_workers_.start();
+        // int32_t thread_count = get_work_thread_count();
+        // main_workers_.setThreadParameter(thread_count, this, NULL);
+        main_workers_.setThreadParameter(1, this, NULL);  // one thread do callback
+        main_workers_.start();
 
         work_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_TASK_MAX_QUEUE_SIZE, 10240);
         work_queue_size_ = std::max(work_queue_size_, 10240);
@@ -406,13 +407,13 @@ namespace tfs
     int BaseService::packet_handler(BasePacket* packet)
     {
       // special process LocalPacket
-      if (LOCAL_PACKET == packet->getPCode())
-      {
-        LocalPacket* local_packet = dynamic_cast<LocalPacket*>(packet);
-        local_packet->execute();
-        tbsys::gDelete(local_packet);
-        return EASY_OK;
-      }
+      //if (LOCAL_PACKET == packet->getPCode())
+      //{
+      //  LocalPacket* local_packet = dynamic_cast<LocalPacket*>(packet);
+      //  local_packet->execute();
+      //  tbsys::gDelete(local_packet);
+      //  return EASY_OK;
+      //}
 
       return handle(packet);
     }

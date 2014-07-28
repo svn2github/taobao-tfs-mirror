@@ -134,43 +134,6 @@ namespace tfs
       char dest_addr_[common::MAX_SYNC_IPADDR_LENGTH];
     };
 
-    // this class will be removed after all cluster upgrade
-    class TfsOldMirrorBackup : public SyncBackup
-    {
-      public:
-        TfsOldMirrorBackup(SyncBase& sync_base, const char* src_addr, const char* dest_addr);
-        virtual ~TfsOldMirrorBackup();
-
-        bool init();
-        void destroy();
-        int do_sync(const SyncData* sf);
-
-        BlockManager& get_block_manager();
-
-      private:
-        DISALLOW_COPY_AND_ASSIGN(TfsOldMirrorBackup);
-
-      private:
-        int copy_file(const uint32_t block_id, const uint64_t file_id);
-        int remove_file(const uint32_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
-        int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
-        int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
-        int remote_stat_file(const char* ns_addr,
-            const uint32_t block_id, const uint64_t file_id, common::FileInfoV2& finfo);
-        int stat_file(const uint32_t block_id, const uint64_t file_id, common::FileInfoV2& finfo);
-
-        bool file_not_exist(int ret);
-
-      private:
-        SyncBase& sync_base_;
-        DoSyncMirrorThreadHelperPtr  do_sync_mirror_thread_;
-        DoFailSyncMirrorThreadHelperPtr  do_fail_sync_mirror_thread_;
-
-        client::TfsClientImpl* tfs_client_;
-        bool client_init_flag_;
-        char src_addr_[common::MAX_SYNC_IPADDR_LENGTH];
-        char dest_addr_[common::MAX_SYNC_IPADDR_LENGTH];
-    };
 
   }
 }

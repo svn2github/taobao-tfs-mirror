@@ -128,7 +128,7 @@ namespace tfs
       {
         DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
         CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(message);
-        ReportBlocksToNsRequestMessage req_msg;
+        create_msg_ref(ReportBlocksToNsRequestMessage, req_msg);
         req_msg.set_server(info.information_.id_);
         int32_t block_count = 0;
         BlockInfoV2* blocks_ext = NULL;
@@ -171,7 +171,7 @@ namespace tfs
       uint64_t attach_block_id = message->get_attach_block_id();
       uint64_t file_id = message->get_file_id();
       int32_t flag = message->get_flag();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       const FamilyInfoExt& family_info = message->get_family_info();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id)) ?
@@ -222,7 +222,7 @@ namespace tfs
       int32_t length = message->get_length();
       int32_t offset = message->get_offset();
       int8_t flag = message->get_flag();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       const FamilyInfoExt& family_info = message->get_family_info();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
@@ -347,12 +347,17 @@ namespace tfs
       VUINT64 servers = message->get_ds(); // will copy vector
       const char* data = message->get_data();
       uint64_t master_id = message->get_master_id();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       FamilyInfoExt& family_info = message->get_family_info();
       int64_t family_id = family_info.family_id_;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
       bool lease_ok = false;
+
+      if (is_master)
+      {
+        easy_request_sleeping(message->get_request());
+      }
 
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
@@ -409,7 +414,7 @@ namespace tfs
             message->set_block_id(family_info.get_block(servers[i]));
           }
           family_info.family_id_ = INVALID_FAMILY_ID; // not send family to slave
-          ret = post_msg_to_server(servers[i], message, ds_async_callback);
+          ret = post_msg_to_server(servers[i], message, ds_async_callback, true);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "post write to slave fail. blockid: %"PRI64_PREFIX"u, "
@@ -483,10 +488,15 @@ namespace tfs
       int64_t family_id = family_info.family_id_;
       bool tmp = message->get_tmp_flag(); // if true, we are writing a tmp block
       VUINT64 servers = message->get_ds(); // will copy vector
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
       bool lease_ok = false;
+
+      if (is_master)
+      {
+        easy_request_sleeping(message->get_request());
+      }
 
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
@@ -531,7 +541,7 @@ namespace tfs
             message->set_block_id(family_info.get_block(servers[i]));
           }
           family_info.family_id_ = INVALID_FAMILY_ID; // won't send family to slave
-          ret = post_msg_to_server(servers[i], message, ds_async_callback);
+          ret = post_msg_to_server(servers[i], message, ds_async_callback, true);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "post close to slave fail. blockid: %"PRI64_PREFIX"u, "
@@ -604,7 +614,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       uint64_t lease_id = message->get_lease_id();
       int32_t action = message->get_action();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       VUINT64 servers = message->get_ds(); // will copy vector
       int32_t version = message->get_version();
       uint64_t master_id = message->get_master_id();
@@ -613,6 +623,11 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
       bool lease_ok = false;
+
+      if (is_master)
+      {
+        easy_request_sleeping(message->get_request());
+      }
 
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
@@ -661,7 +676,7 @@ namespace tfs
             message->set_block_id(family_info.get_block(servers[i]));
           }
           family_info.family_id_ = INVALID_FAMILY_ID; // won't send family to slave
-          ret = post_msg_to_server(servers[i], message, ds_async_callback);
+          ret = post_msg_to_server(servers[i], message, ds_async_callback, true);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "post unlink to slave fail. blockid: %"PRI64_PREFIX"u, "
@@ -836,7 +851,7 @@ namespace tfs
       uint64_t lease_id = message->get_lease_id();
       uint32_t length = message->get_length();
       uint32_t offset = message->get_offset();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       int64_t file_size = 0;
       int64_t req_cost_time = 0;
       stringstream err_msg;
@@ -874,6 +889,8 @@ namespace tfs
           message->reply(resp_msg);
         }
 
+        easy_request_wakeup(message->get_request());
+
         if (TFS_SUCCESS != ret)
         {
           get_traffic_control().rw_stat(RW_STAT_TYPE_WRITE, ret, 0 == offset, length);
@@ -895,7 +912,7 @@ namespace tfs
       uint64_t attach_block_id = message->get_attach_block_id();
       uint64_t file_id = message->get_file_id();
       uint64_t lease_id = message->get_lease_id();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       int32_t option_flag = message->get_flag();
       bool tmp = message->get_tmp_flag();
       int64_t file_size = 0;
@@ -944,6 +961,7 @@ namespace tfs
         {
           message->reply(new StatusMessage(STATUS_MESSAGE_OK));
         }
+        easy_request_wakeup(message->get_request());
 
         get_traffic_control().rw_stat(RW_STAT_TYPE_WRITE, ret, true, file_size);
 
@@ -969,7 +987,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       uint64_t lease_id = message->get_lease_id();
       int32_t action = message->get_action();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       int64_t file_size = 0;
       int64_t req_cost_time = 0;
       stringstream err_msg;
@@ -1024,7 +1042,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       uint64_t lease_id = message->get_lease_id();
       int32_t action = message->get_action();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
       int32_t option_flag = message->get_flag();
       int64_t file_size = 0;
       int64_t req_cost_time = 0;
@@ -1072,6 +1090,7 @@ namespace tfs
           snprintf(ex_msg, 64, "%"PRI64_PREFIX"d", file_size);
           message->reply(new StatusMessage(STATUS_MESSAGE_OK, ex_msg));
         }
+        easy_request_wakeup(message->get_request());
 
         get_traffic_control().rw_stat(RW_STAT_TYPE_UNLINK, ret, true, 0);
 
@@ -1399,7 +1418,7 @@ namespace tfs
       ECMeta& ec_meta = message->get_ec_meta();
       int8_t switch_flag = message->get_switch_flag();
       int8_t unlock_flag = message->get_unlock_flag();
-      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint64_t peer_id = message->getPeerId();
 
       int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)

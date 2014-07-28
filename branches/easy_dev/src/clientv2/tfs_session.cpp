@@ -545,7 +545,7 @@ namespace tfs
        TBSYS_LOG(DEBUG, "query block from ns %s, blockid: %"PRI64_PREFIX"u, mode: %d",
            ns_addr_.c_str(), block_id, flag);
        int ret = TFS_SUCCESS;
-       GetBlockInfoMessageV2 gbi_message;
+       create_msg_ref(GetBlockInfoMessageV2, gbi_message);
        gbi_message.set_block_id(block_id);
        gbi_message.set_mode(flag);
 
@@ -619,7 +619,7 @@ namespace tfs
       int ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ClientNsKeepaliveMessage req_msg;
+        create_msg_ref(ClientNsKeepaliveMessage, req_msg);
         req_msg.set_flag(DS_TABLE_FULL);
 
         tbnet::Packet* ret_msg = NULL;

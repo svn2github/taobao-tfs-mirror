@@ -266,8 +266,6 @@ namespace tfs
       input.get_int64(reinterpret_cast<int64_t*>(&id));
       input.get_int32(reinterpret_cast<int32_t*>(&crc));
 
-      TBSYS_LOG(DEBUG, "decode packet, pcode=%d, length=%d", pcode, len);
-
       if (flag != TFS_PACKET_FLAG_V1 || len < 0 || len > (1<<26) /* 64M */)
       {
         TBSYS_LOG(ERROR, "decoding failed: flag=%x, len=%d, pcode=%d",
@@ -278,12 +276,14 @@ namespace tfs
 
       // only received part of packet data
       if (m->input->last - m->input->pos < len) {
-        TBSYS_LOG(DEBUG, "data in buffer not enough: data_len=%d, buf_len=%d, pcode=%d",
-            len, static_cast<int32_t>(m->input->last - m->input->pos), pcode);
+        //TBSYS_LOG(DEBUG, "data in buffer not enough: data_len=%d, buf_len=%d, pcode=%d",
+        //    len, static_cast<int32_t>(m->input->last - m->input->pos), pcode);
         m->next_read_len = len - (m->input->last - m->input->pos);
         m->input->pos -= TFS_PACKET_HEADER_V1_SIZE;
         return NULL;
       }
+
+      TBSYS_LOG(DEBUG, "decode packet, pcode=%d, length=%d", pcode, len);
 
       // mark one packet end position
       input.set_last_read_mark(len);
