@@ -29,6 +29,7 @@ namespace tfs
     const int32_t KvDefine::MAX_BUCKETS_COUNT = 100;
     const int32_t KvDefine::VERSION_ERROR_RETRY_COUNT = 3;
     const int64_t KvDefine::MAX_VERSION = (1L<<30) - 1;
+    const int64_t KvDefine::ADMIN_ID = 8;
 
     TfsFileInfo::TfsFileInfo()
       :cluster_id_(0), block_id_(0), file_id_(0), offset_(0), file_size_(0)

@@ -44,7 +44,10 @@ namespace tfs
           tfs_cluster_manager_ = tfs_cluster_manager;
         }
 
-        TfsRetType put_bucket(const char *bucket_name, const common::UserInfo &user_info);
+        TfsRetType put_bucket(const char *bucket_name, const common::UserInfo &user_info,
+            const common::CANNED_ACL acl = common::PRIVATE);
+        TfsRetType put_bucket_acl(const char *bucket_name, const common::UserInfo &user_info,
+            const common::CANNED_ACL acl);
         TfsRetType get_bucket(const char *bucket_name, const char *prefix,
             const char *start_key, const char delimiter, const int32_t limit,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,
@@ -78,8 +81,10 @@ namespace tfs
         TfsRetType rm_life_cycle(const int32_t file_type, const char *file_name);
 
 
-        int do_put_bucket(const char *bucket_name,
-            const common::BucketMetaInfo& bucket_meta_info, const common::UserInfo &user_info);
+        int do_put_bucket(const char *bucket_name, const common::BucketMetaInfo& bucket_meta_info,
+            const common::UserInfo &user_info, const common::CANNED_ACL acl);
+        int do_put_bucket_acl(const char *bucket_name,
+            const common::UserInfo &user_info, const common::CANNED_ACL acl);
         int do_get_bucket(const char *bucket_name, const char *prefix,
             const char *start_key, const char delimiter, const int32_t limit,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,

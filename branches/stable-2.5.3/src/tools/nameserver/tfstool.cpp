@@ -148,6 +148,9 @@ int cmd_get_bucket(const VSTRING& param);
 int cmd_del_bucket(const VSTRING& param);
 int cmd_head_bucket(const VSTRING& param);
 
+int cmd_put_bucket_acl(const VSTRING& param);
+//int cmd_get_bucket_acl(const VSTRING& param);
+
 int cmd_put_object(const VSTRING& param);
 int cmd_get_object(const VSTRING& param);
 int cmd_del_object(const VSTRING& param);
@@ -358,6 +361,7 @@ void init()
     break;
   case META_KV:
     g_cmd_map["put_bucket"] = CmdNode("put_bucket bucket_name owner_id [app_key]", "create a bucket", 2, 3, cmd_put_bucket);
+    g_cmd_map["put_bucket_acl"] = CmdNode("put_bucket_acl bucket_name user_id canned_acl [app_key]", "put bucket canned_acl", 3, 4, cmd_put_bucket_acl);
     g_cmd_map["get_bucket"] = CmdNode("get_bucket bucket_name [ prefix start_key delimiter limit app_key]", "get a bucket(list object)", 1, 6, cmd_get_bucket);
     g_cmd_map["del_bucket"] = CmdNode("del_bucket bucket_name [app_key]", "delete a bucket", 1, 2, cmd_del_bucket);
     g_cmd_map["head_bucket"] = CmdNode("head_bucket bucket_name [app_key]", "stat a bucket", 1, 2, cmd_head_bucket);
@@ -1198,7 +1202,46 @@ int cmd_put_bucket(const VSTRING& param)
   impl.destroy();
   if (TFS_SUCCESS == ret)
   {
-    ToolUtil::print_info(ret, "put bucket %s owner_id : %ld", bucket_name, owner_id);
+    ToolUtil::print_info(ret, "put bucket %s, owner_id: %"PRI64_PREFIX"d", bucket_name, owner_id);
+  }
+  return ret;
+}
+
+int cmd_put_bucket_acl(const VSTRING& param)
+{
+  const char* bucket_name = param[0].c_str();
+  int64_t user_id = strtoll(param[1].c_str(), NULL, 10);
+  CANNED_ACL acl = (CANNED_ACL)strtol(param[2].c_str(), NULL, 10);
+  char appkey[257];
+  int size = param.size();
+  if (size > 3)
+  {
+    strncpy(appkey, param[2].c_str(), 256);
+    appkey[256] = '\0';
+  }
+  else
+  {
+    strcpy(appkey, app_key);
+  }
+
+  UserInfo user_info;
+  user_info.owner_id_ = user_id;
+
+  RcClientImpl impl;
+  impl.set_kv_rs_addr(krs_addr);
+  int ret = impl.initialize(rc_addr, appkey, app_ip);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "rc client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.put_bucket_acl(bucket_name, user_info, acl);
+  }
+  impl.destroy();
+  if (TFS_SUCCESS == ret)
+  {
+    ToolUtil::print_info(ret, "put bucket acl for bucket: %s, user_id: %"PRI64_PREFIX"d, acl: %d", bucket_name, user_id, acl);
   }
   return ret;
 }
@@ -1253,6 +1296,7 @@ int cmd_get_bucket(const VSTRING& param)
   set<string> s_common_prefix;
   int8_t is_truncated = 0;
   UserInfo user_info;
+  user_info.owner_id_ = KvDefine::ADMIN_ID;
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);
@@ -1296,6 +1340,8 @@ int cmd_del_bucket(const VSTRING& param)
 {
   const char* bucket_name = param[0].c_str();
   UserInfo user_info;
+  user_info.owner_id_ = KvDefine::ADMIN_ID;
+
   char appkey[257];
   int size = param.size();
   if (size > 1)
@@ -1344,6 +1390,7 @@ int cmd_head_bucket(const VSTRING& param)
 
   BucketMetaInfo bucket_meta_info;
   UserInfo user_info;
+  user_info.owner_id_ = KvDefine::ADMIN_ID;
 
   RcClientImpl impl;
   impl.set_kv_rs_addr(krs_addr);

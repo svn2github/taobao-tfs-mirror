@@ -124,9 +124,11 @@ namespace tfs
                         common::KvKey *key, char *key_buff, const int32_t buff_size, int32_t key_type);
 
       protected:
-        int get_bucket_list(const int64_t owner_id, std::set<std::string> *s_bucket_name, int64_t *version);
-        int put_bucket_list(const int64_t owner_id, const std::set<std::string> &s_bucket_name,
+        int get_bucket_list(const int64_t owner_id, std::set<std::string> *s_bucket_list, int64_t *version);
+        int put_bucket_list(const int64_t owner_id, const std::set<std::string> &s_bucket_list,
             const int64_t version);
+        void dump_bucket_list(const int64_t owner_id, const std::set<std::string> &s_bucket_list);
+        void dump_acl_map(const common::MAP_INT64_INT acl_map);
 
         int group_objects(const std::string &object_name, const std::string &v, const std::string &prefix,
             const char delimiter, std::vector<common::ObjectMetaInfo> *v_object_meta_info,
@@ -153,8 +155,9 @@ namespace tfs
         common::ObjectInfo *object_info, int32_t& valid_result);
 
         int do_canned_acl(const common::CANNED_ACL acl, common::MAP_INT64_INT &bucket_acl_map,
-                          const common::UserInfo &user_info);
+                          const int64_t owner_id);
 
+        bool is_appid_uid_bucket_name(const std::string& bucket_name);
         int check_bucket_acl(const common::MAP_INT64_INT &bucket_acl_map, int64_t owner_id, common::PERMISSION per);
         int check_bucket_acl(const std::string& bucket_name, const common::UserInfo &user_info, common::PERMISSION per);
 

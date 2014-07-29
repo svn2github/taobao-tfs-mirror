@@ -42,6 +42,7 @@ namespace tfs
       static const int32_t MAX_BUCKETS_COUNT;
       static const int32_t VERSION_ERROR_RETRY_COUNT;
       static const int64_t MAX_VERSION;
+      static const int64_t ADMIN_ID;
     };
 
     enum CANNED_ACL

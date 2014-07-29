@@ -1172,6 +1172,17 @@ namespace tfs
         return ret;
       }
 
+      TfsRetType RcClientImpl::put_bucket_acl(const char *bucket_name,
+          const UserInfo &user_info, const CANNED_ACL acl)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->put_bucket_acl(bucket_name, user_info, acl);
+        }
+        return ret;
+      }
+
       TfsRetType RcClientImpl::get_bucket(const char *bucket_name, const char *prefix,
           const char *start_key, const char delimiter, const int32_t limit,
           vector<ObjectMetaInfo> *v_object_meta_info,

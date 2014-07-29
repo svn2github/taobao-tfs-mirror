@@ -131,7 +131,8 @@ namespace tfs
       return meta_server_id;
     }
 
-    TfsRetType KvMetaClientImpl::put_bucket(const char *bucket_name, const UserInfo &user_info)
+    TfsRetType KvMetaClientImpl::put_bucket(const char *bucket_name,
+        const UserInfo &user_info, const CANNED_ACL acl)
     {
        TfsRetType ret = TFS_ERROR;
 
@@ -147,8 +148,31 @@ namespace tfs
        if (TFS_SUCCESS == ret)
        {
          BucketMetaInfo bucket_meta_info;
+         bucket_meta_info.owner_id_ = user_info.owner_id_;
 
-         ret = do_put_bucket(bucket_name, bucket_meta_info, user_info);
+         ret = do_put_bucket(bucket_name, bucket_meta_info, user_info, acl);
+       }
+
+       return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::put_bucket_acl(const char *bucket_name,
+        const UserInfo &user_info, const CANNED_ACL acl)
+    {
+       TfsRetType ret = TFS_ERROR;
+
+       if (!is_valid_bucket_name(bucket_name))
+       {
+         TBSYS_LOG(ERROR, "bucket name is invalid");
+       }
+       else
+       {
+         ret = TFS_SUCCESS;
+       }
+
+       if (TFS_SUCCESS == ret)
+       {
+         ret = do_put_bucket_acl(bucket_name, user_info, acl);
        }
 
        return ret;
@@ -936,7 +960,8 @@ namespace tfs
     }
 
     /* ==========================================================*/
-    int KvMetaClientImpl::do_put_bucket(const char *bucket_name, const BucketMetaInfo& bucket_meta_info, const UserInfo &user_info)
+    int KvMetaClientImpl::do_put_bucket(const char *bucket_name,
+        const BucketMetaInfo& bucket_meta_info, const UserInfo &user_info, const CANNED_ACL acl)
     {
       int ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
@@ -944,7 +969,32 @@ namespace tfs
       do
       {
         meta_server_id = get_meta_server_id();
-        ret = KvMetaHelper::do_put_bucket(meta_server_id, bucket_name, bucket_meta_info, user_info);
+        ret = KvMetaHelper::do_put_bucket(meta_server_id, bucket_name, bucket_meta_info, user_info, acl);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    int KvMetaClientImpl::do_put_bucket_acl(const char *bucket_name,
+        const UserInfo &user_info, const CANNED_ACL acl)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_put_bucket_acl(meta_server_id, bucket_name, user_info, acl);
 
         if (EXIT_NETWORK_ERROR == ret)
         {
