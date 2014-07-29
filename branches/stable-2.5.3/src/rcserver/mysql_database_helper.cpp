@@ -513,50 +513,6 @@ namespace tfs
       return ret;
     }
 
-    int MysqlDatabaseHelper::scan(VOptionKV& outparam)
-    {
-      outparam.clear();
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      if (!is_connected_)
-      {
-        connect();
-      }
-      if (is_connected_)
-      {
-        char sql[1024];
-        snprintf(sql, 1024, "select op_key, op_value from t_config_option");
-        ret = mysql_query(&mysql_.mysql, sql);
-        if (ret)
-        {
-          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          return TFS_ERROR;
-        }
-
-        MYSQL_ROW row;
-		OptionKV tmp;
-
-        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL)
-        {
-          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          mysql_free_result(mysql_ret);
-          ret = TFS_ERROR;
-        } else {
-          while(NULL != (row = mysql_fetch_row(mysql_ret)))
-          {
-            snprintf(tmp.key_, OPTION_KEY_LEN, "%s", row[0]);
-            snprintf(tmp.value_, OPTION_VALUE_LEN, "%s", row[1]);
-            outparam.push_back(tmp);
-          }
-        }
-      }
-      return ret;
-    }
-
-
     int MysqlDatabaseHelper::select(BaseInfoUpdateTime& outparam)
     {
       tbutil::Mutex::Lock lock(mutex_);
