@@ -102,6 +102,8 @@ namespace tfs
 
         TfsRetType put_bucket(const char *bucket_name,
             const common::UserInfo &user_info);
+        TfsRetType put_bucket_acl(const char *bucket_name,
+            const common::UserInfo &user_info, const common::CANNED_ACL acl);
         TfsRetType get_bucket(const char *bucket_name, const char *prefix,
             const char *start_key, const char delimiter, const int32_t limit,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,
