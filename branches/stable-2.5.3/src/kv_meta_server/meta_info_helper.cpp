@@ -317,6 +317,33 @@ namespace tfs
       return ret;
     }
 
+    bool MetaInfoHelper::check_put_object_part(ObjectInfo &object_info, const int64_t offset, const bool is_append)
+    {
+      bool need_put_part = false;
+
+      if (object_info.v_tfs_file_info_.size() > 1
+          || 0 != offset)
+      {
+        need_put_part = true;
+      }
+      if (need_put_part)
+      {
+        if (is_append)
+        {
+          // update offsets
+          int64_t tmp_offset = offset;
+          for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
+          {
+            object_info.v_tfs_file_info_[i].offset_ = tmp_offset;
+            tmp_offset += object_info.v_tfs_file_info_[i].file_size_;
+          }
+        }
+
+      }
+
+      return need_put_part;
+    }
+
     int MetaInfoHelper::put_object_zero(const string &bucket_name,
         const string &file_name, ObjectInfo *object_info_zero,
         int64_t *offset, const int64_t length, int64_t version,
@@ -387,12 +414,12 @@ namespace tfs
 
               int64_t curr_file_size = curr_object_info_zero.meta_info_.big_file_size_;
               object_info_zero->meta_info_.big_file_size_ =
-                  curr_file_size > (*offset + length) ? curr_file_size : (*offset + length);
+                curr_file_size > (*offset + length) ? curr_file_size : (*offset + length);
             }
-            if (!object_info_zero->has_customize_info_)
+            if (!object_info_zero->has_user_metadata_)
             {
-              object_info_zero->has_customize_info_ = curr_object_info_zero.has_customize_info_;
-              object_info_zero->customize_info_ = curr_object_info_zero.customize_info_;
+              object_info_zero->has_user_metadata_ = curr_object_info_zero.has_user_metadata_;
+              object_info_zero->user_metadata_ = curr_object_info_zero.user_metadata_;
             }
           }
         }
@@ -401,9 +428,8 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::check_put_object_zero(ObjectInfo &object_info, ObjectInfo &object_info_zero, const UserInfo &user_info, int64_t &offset, int64_t &length, bool &is_append)
+    void MetaInfoHelper::check_put_object_zero(ObjectInfo &object_info, ObjectInfo &object_info_zero, const UserInfo &user_info, int64_t &offset, int64_t &length, bool &is_append)
     {
-      int ret = TFS_SUCCESS;
       //ObjectInfo object_info_zero;
       //int64_t offset = 0;
       if (object_info.v_tfs_file_info_.size() > 0)
@@ -429,45 +455,42 @@ namespace tfs
         object_info_zero.meta_info_.max_tfs_file_size_ = -5;
       }
 
-      if (TFS_SUCCESS == ret)
+      length = 0;
+      for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
       {
-        length = 0;
-        for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
+        length += object_info.v_tfs_file_info_[i].file_size_;
+      }
+
+      //TBSYS_LOG(DEBUG, "will put object, bucekt: %s, object: %s, "
+      //"offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
+      //bucket_name.c_str(), file_name.c_str(), offset, length);
+
+      object_info_zero.has_meta_info_ = true;
+      object_info_zero.meta_info_.big_file_size_ = offset + length;
+      if (0 == offset)
+      {
+        object_info_zero.meta_info_.owner_id_ = user_info.owner_id_;
+        // identify old data
+        if (-5 == object_info.meta_info_.max_tfs_file_size_)
         {
-          length += object_info.v_tfs_file_info_[i].file_size_;
+          object_info_zero.meta_info_.create_time_ = object_info.meta_info_.create_time_;
+        }
+        else
+        {
+          object_info_zero.meta_info_.create_time_ = static_cast<int64_t>(time(NULL));
         }
 
-        //TBSYS_LOG(DEBUG, "will put object, bucekt: %s, object: %s, "
-        //"offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
-        //bucket_name.c_str(), file_name.c_str(), offset, length);
+        //TODO: check this
+        //object_info_zero.has_user_metadata_ = object_info.has_user_metadata_;
+        //object_info_zero.user_metadata_ = object_info.user_metadata_;
 
-        object_info_zero.has_meta_info_ = true;
-        object_info_zero.meta_info_.big_file_size_ = offset + length;
-        if (0 == offset)
+        if (!object_info.v_tfs_file_info_.empty())
         {
-          object_info_zero.meta_info_.owner_id_ = user_info.owner_id_;
-          // identify old data
-          if (-5 == object_info.meta_info_.max_tfs_file_size_)
-          {
-            object_info_zero.meta_info_.create_time_ = object_info.meta_info_.create_time_;
-          }
-          else
-          {
-            object_info_zero.meta_info_.create_time_ = static_cast<int64_t>(time(NULL));
-          }
-
-          //TODO: check this
-          //object_info_zero.has_user_metadata_ = object_info.has_user_metadata_;
-          //object_info_zero.user_metadata_ = object_info.user_metadata_;
-
-          if (!object_info.v_tfs_file_info_.empty())
-          {
-            object_info_zero.v_tfs_file_info_.push_back(object_info.v_tfs_file_info_.front());
-          }
+          object_info_zero.v_tfs_file_info_.push_back(object_info.v_tfs_file_info_.front());
         }
       }
 
-      return ret;
+      return;
     }
 
 
@@ -599,7 +622,7 @@ namespace tfs
       /* check object zero info */
       if (TFS_SUCCESS == ret)
       {
-        ret = check_put_object_zero(object_info, object_info_zero, user_info, offset, length, is_append);
+        check_put_object_zero(object_info, object_info_zero, user_info, offset, length, is_append);
       }
 
       /* Ban overlap */
@@ -615,25 +638,10 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          bool need_put_part = false;
-          if (object_info.v_tfs_file_info_.size() > 1
-              || 0 != offset)
-          {
-            need_put_part = true;
-          }
+          bool need_put_part = check_put_object_part(object_info, offset, is_append);
+
           if (need_put_part)
           {
-            if (is_append)
-            {
-              // update offsets
-              int64_t tmp_offset = offset;
-              for (size_t i = 0; i < object_info.v_tfs_file_info_.size(); i++)
-              {
-                object_info.v_tfs_file_info_[i].offset_ = tmp_offset;
-                tmp_offset += object_info.v_tfs_file_info_[i].file_size_;
-              }
-            }
-
             ret = put_object_part(bucket_name, file_name, object_info);
             TBSYS_LOG(DEBUG, "put object part ret: %d, bucekt_name: %s, object_name: %s, "
                 "offset: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
@@ -843,12 +851,12 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             ret = serialize_key(bucket_name, file_name, start_offset,
-                  &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+                &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
           }
           if (TFS_SUCCESS == ret)
           {
             ret = serialize_key(bucket_name, file_name, end_offset,
-                  &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+                &end_key, end_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
           }
 
           //op value
@@ -879,7 +887,7 @@ namespace tfs
               //value get
               int64_t pos = 0;
               tmp_object_info.deserialize(kv_value_values[i]->get_data(),
-                                       kv_value_values[i]->get_size(), pos);
+                  kv_value_values[i]->get_size(), pos);
               if (tmp_object_info.v_tfs_file_info_.size() > 0)
               {
                 last_offset = tmp_object_info.v_tfs_file_info_[0].offset_;
@@ -910,7 +918,7 @@ namespace tfs
             {
               scan_offset = 1;
               ret = serialize_key(bucket_name, file_name, last_offset,
-                                  &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
+                  &start_key, start_key_buff, KEY_BUFF_SIZE, KvKey::KEY_TYPE_OBJECT);
             }
             else
             {
@@ -947,8 +955,9 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::del_object(const std::string& bucket_name, const std::string& file_name,
-        const common::UserInfo &user_info, common::ObjectInfo *object_info, bool* still_have)
+
+    int MetaInfoHelper::del_object(const std::string& bucket_name, const std::string& file_name, const common::UserInfo &user_info,
+        common::ObjectInfo *object_info, bool* still_have)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
       *still_have = false;
@@ -1083,9 +1092,10 @@ namespace tfs
       }
       return ret;
     }
+
     /*----------------------------bucket part-----------------------------*/
 
-     int MetaInfoHelper::get_common_prefix(const char *key, const string& prefix,
+    int MetaInfoHelper::get_common_prefix(const char *key, const string& prefix,
         const char delimiter, bool *prefix_flag, bool *common_flag, int *common_end_pos)
     {
       int ret = TFS_SUCCESS;
@@ -1132,8 +1142,8 @@ namespace tfs
     }
 
     int MetaInfoHelper::get_range(const KvKey &pkey, const string &start_key,
-          const int32_t offset, const int32_t limit, vector<KvValue*> *kv_value_keys,
-          vector<KvValue*> *kv_value_values, int32_t *result_size)
+        const int32_t offset, const int32_t limit, vector<KvValue*> *kv_value_keys,
+        vector<KvValue*> *kv_value_values, int32_t *result_size)
     {
       int ret = TFS_SUCCESS;
 
@@ -1819,7 +1829,8 @@ namespace tfs
       pkey.key_size_ = bucket_name.length();
       pkey.key_type_ = KvKey::KEY_TYPE_BUCKET;
 
-     // check bucket whether exist
+      TBSYS_LOG(DEBUG, "get bucket: %s, prefix: %s, start_key: %s, delimiter: %c",
+          bucket_name.c_str(), prefix.c_str(), start_key.c_str(), delimiter);
       /*
       if (TFS_SUCCESS == ret)
       {
@@ -1831,7 +1842,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = list_objects(pkey, prefix, start_key, delimiter, limit,
-          v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
+            v_object_meta_info, v_object_name, s_common_prefix, is_truncated);
       }
 
       return ret;

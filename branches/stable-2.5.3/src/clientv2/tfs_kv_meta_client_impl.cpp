@@ -449,7 +449,7 @@ namespace tfs
       {
         ObjectInfo object_info_null;
         object_info_null.has_meta_info_ = true;
-        object_info_null.has_customize_info_ = false;
+        object_info_null.has_user_metadata_ = false;
         object_info_null.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
 
         ret = do_put_object(bucket_name, object_name, object_info_null, user_info);
@@ -515,7 +515,7 @@ namespace tfs
               if (0 == iter->offset_)
               {
                 object_info.has_meta_info_ = true;
-                object_info.has_customize_info_ = false;
+                object_info.has_user_metadata_ = false;
                 object_info.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
                 TBSYS_LOG(DEBUG, "first object info, will put meta info.");
                 object_info.meta_info_.dump();
@@ -523,7 +523,7 @@ namespace tfs
               else
               {
                 object_info.has_meta_info_ = false;
-                object_info.has_customize_info_ = false;
+                object_info.has_user_metadata_ = false;
               }
               TfsFileInfo tmp_tfs_info;
               tmp_tfs_info.offset_ = iter->offset_;
@@ -572,7 +572,7 @@ namespace tfs
     int64_t KvMetaClientImpl::pread_object(const char *bucket_name,
         const char *object_name, void *buffer, const int64_t offset,
         int64_t length, ObjectMetaInfo *object_meta_info,
-        CustomizeInfo *customize_info, const UserInfo &user_info)
+        UserMetadata *user_metadata, const UserInfo &user_info)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
@@ -628,9 +628,9 @@ namespace tfs
             {
               *object_meta_info = object_info.meta_info_;
             }
-            if (NULL != customize_info)
+            if (NULL != user_metadata)
             {
-              *customize_info = object_info.customize_info_;
+              *user_metadata = object_info.user_metadata_;
             }
           }
 
@@ -737,7 +737,7 @@ namespace tfs
 
     TfsRetType KvMetaClientImpl::get_object(const char *bucket_name,
         const char *object_name, const char* local_file,
-        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info,
+        ObjectMetaInfo *object_meta_info, UserMetadata *user_metadata,
         const UserInfo &user_info)
     {
       TfsRetType ret = TFS_SUCCESS;
@@ -770,7 +770,7 @@ namespace tfs
         {
           cur_length = min(io_size, length);
           read_len = pread_object(bucket_name, object_name, buf, offset,
-              cur_length, object_meta_info, customize_info, user_info);
+              cur_length, object_meta_info, user_metadata, user_info);
           if (0 == offset)
           {
             length = object_meta_info->big_file_size_;

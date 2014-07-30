@@ -26,22 +26,26 @@ namespace tfs
 {
   namespace common
   {
+
     typedef std::map<std::string, std::string> MAP_STRING;
     typedef std::map<std::string, int32_t> MAP_STRING_INT;
     typedef std::map<std::string, int32_t>::const_iterator  MAP_STRING_INT_ITER;
     typedef std::map<int64_t, int32_t> MAP_INT64_INT;
     typedef std::map<int64_t, int32_t>::const_iterator MAP_INT64_INT_ITER;
 
+    typedef std::map<std::string, std::string>::const_iterator MAP_STRING_STRING_ITER;
+    const int32_t USER_METADATA_MAX_SIZE = 2048;
+
     class KvDefine
     {
       public:
-      static const char PERIOD;
-      static const char DASH;
-      static const char DEFAULT_CHAR;
-      static const int32_t MAX_LIMIT;
-      static const int32_t MAX_BUCKETS_COUNT;
-      static const int32_t VERSION_ERROR_RETRY_COUNT;
-      static const int64_t MAX_VERSION;
+        static const char PERIOD;
+        static const char DASH;
+        static const char DEFAULT_CHAR;
+        static const int32_t MAX_LIMIT;
+        static const int32_t MAX_BUCKETS_COUNT;
+        static const int32_t VERSION_ERROR_RETRY_COUNT;
+        static const int64_t MAX_VERSION;
       static const int64_t ADMIN_ID;
     };
 
@@ -104,15 +108,40 @@ namespace tfs
       int64_t owner_id_;
     };
 
-    struct CustomizeInfo
+    struct UserMetadata
     {
-      CustomizeInfo();
+      UserMetadata();
       int64_t length() const;
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       void dump() const;
 
-      std::string otag_;
+      const MAP_STRING& get_meta_data() const
+      {
+       return meta_data_;
+      }
+
+      MAP_STRING& get_mutable_meta_data()
+      {
+       return meta_data_;
+      }
+
+      void set_meta_data(const MAP_STRING& meta_data)
+      {
+       meta_data_ = meta_data;
+      }
+
+      void clear_meta_data()
+      {
+       meta_data_.clear();
+      }
+
+      const bool is_meta_data_excessed() const
+      {
+       return length() > USER_METADATA_MAX_SIZE;
+      }
+
+      MAP_STRING meta_data_;
     };
 
     struct ObjectInfo
@@ -122,16 +151,30 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       void dump() const;
+      const UserMetadata& get_user_metadata() const
+      {
+       return user_metadata_;
+      }
+ 
+      UserMetadata& get_mutable_user_metadata()
+      {
+       return user_metadata_;
+      }
+ 
+      void set_user_metadata(const UserMetadata& user_metadata)
+      {
+       user_metadata_ = user_metadata;
+      }
 
       bool has_meta_info_;
 
-      bool has_customize_info_;
+      bool has_user_metadata_;
 
       ObjectMetaInfo meta_info_;
 
       std::vector<TfsFileInfo> v_tfs_file_info_;
 
-      CustomizeInfo customize_info_;
+      UserMetadata user_metadata_;
     };
 
     struct BucketMetaInfo

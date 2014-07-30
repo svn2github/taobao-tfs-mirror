@@ -1249,14 +1249,14 @@ namespace tfs
 
       int64_t RcClientImpl::pread_object(const char *bucket_name, const char *object_name,
           void *buf, const int64_t offset, const int64_t length,
-          ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info,
+          ObjectMetaInfo *object_meta_info, UserMetadata *user_metadata,
           const UserInfo &user_info)
       {
         TfsRetType ret = check_init_stat();
         if (TFS_SUCCESS == ret)
         {
           ret = kv_meta_client_->pread_object(bucket_name, object_name,
-              buf, offset, length, object_meta_info, customize_info,
+              buf, offset, length, object_meta_info, user_metadata,
               user_info);
         }
         return ret;
@@ -1269,9 +1269,9 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ObjectMetaInfo object_meta_info;
-          CustomizeInfo customize_info;
+          UserMetadata user_metadata;
           ret = kv_meta_client_->get_object(bucket_name, object_name,
-              local_file, &object_meta_info, &customize_info, user_info);
+              local_file, &object_meta_info, &user_metadata, user_info);
         }
         return ret;
       }

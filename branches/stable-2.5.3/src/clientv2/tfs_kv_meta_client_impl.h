@@ -62,13 +62,13 @@ namespace tfs
             const common::UserInfo &user_info);
         int64_t pread_object(const char *bucket_name, const char *object_name,
             void *buffer, const int64_t offset, int64_t length,
-            common::ObjectMetaInfo *object_meta_info, common::CustomizeInfo *customize_info,
+            common::ObjectMetaInfo *object_meta_info, common::UserMetadata *user_metadata,
             const common::UserInfo &user_info);
         TfsRetType put_object(const char *bucket_name, const char *object_name,
             const char* local_file, const common::UserInfo &user_info);
         TfsRetType get_object(const char *bucket_name, const char *object_name,
             const char* local_file, common::ObjectMetaInfo *object_meta_info,
-            common::CustomizeInfo *customize_info, const common::UserInfo &user_info);
+            common::UserMetadata *user_metadata, const common::UserInfo &user_info);
         TfsRetType del_object(const char *bucket_name, const char *object_name,
             const common::UserInfo &user_info);
         TfsRetType head_object(const char *bucket_name, const char *object_name,

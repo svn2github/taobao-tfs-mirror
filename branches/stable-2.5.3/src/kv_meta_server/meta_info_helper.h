@@ -59,11 +59,14 @@ namespace tfs
                        common::ObjectInfo &object_info,
                        const common::UserInfo &user_info);
 
-        int check_put_object_zero(common::ObjectInfo &object_info,
-                      common::ObjectInfo &object_info_zero,
-                      const common::UserInfo &user_info,
-                      int64_t &offset, int64_t &length,
-                      bool &is_append);
+        void check_put_object_zero(common::ObjectInfo &object_info,
+                     common::ObjectInfo &object_info_zero,
+                     const common::UserInfo &user_info,
+                     int64_t &offset, int64_t &length,
+                     bool &is_append);
+
+        bool check_put_object_part(common::ObjectInfo &object_info,
+                     const int64_t offset, const bool is_append);
 
         int get_object(const std::string& bucket_name,
                        const std::string& file_name,
@@ -115,6 +118,7 @@ namespace tfs
                            const int64_t offset,
                            common::ObjectInfo *object_info,
                            int64_t *version);
+
         int deserialize_key(const char *key, const int32_t key_size, std::string *bucket_name, std::string *object_name,
             int64_t *offset, int64_t *version);
         int serialize_key(const std::string &bucket_name,
@@ -166,6 +170,14 @@ namespace tfs
         int check_object_overlap(const std::string &bucket_name,
             const std::string &file_name, const int64_t offset, const int64_t length);
 
+        int find_object(const std::string& bucket_name, const std::string& file_name,
+           std::vector<common::KvValue*>& kv_value_keys,
+           std::vector<common::KvValue*>& kv_value_values,
+           int32_t &result_size, bool* still_have);
+ 
+        int find_object_zero(const std::string& bucket_name, const std::string& file_name,
+             common::KvValue* kv_value, int64_t* version);
+ 
       protected:
         common::KvEngineHelper* kv_engine_helper_;
         int32_t meta_info_name_area_;

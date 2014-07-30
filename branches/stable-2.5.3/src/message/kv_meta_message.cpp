@@ -203,6 +203,87 @@ namespace tfs
         object_info_.length() + user_info_.length();
     }
 
+    ReqKvMetaPutObjectMetaDataMessage::ReqKvMetaPutObjectMetaDataMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_PUT_OBJECT_METADATA_MESSAGE;
+    }
+
+    ReqKvMetaPutObjectMetaDataMessage::~ReqKvMetaPutObjectMetaDataMessage(){}
+
+    int ReqKvMetaPutObjectMetaDataMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(object_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_metadata_.serialize(output.get_free(), output.get_free_length(), pos); 
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_metadata_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaPutObjectMetaDataMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(object_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_metadata_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_metadata_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaPutObjectMetaDataMessage::length() const
+    {
+      int64_t len = Serialization::get_string_length(bucket_name_) +
+        Serialization::get_string_length(object_name_) +
+        user_info_.length() + user_metadata_.length();
+
+      return len;
+    }
+
     //req_get_object_msg
     ReqKvMetaGetObjectMessage::ReqKvMetaGetObjectMessage()
     {
@@ -239,6 +320,7 @@ namespace tfs
           output.pour(user_info_.length());
         }
       }
+
       return iret;
     }
 
@@ -270,18 +352,20 @@ namespace tfs
           input.drain(user_info_.length());
         }
       }
+
       return iret;
     }
 
     int64_t ReqKvMetaGetObjectMessage::length() const
     {
       return Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(file_name_)
-                             + INT64_SIZE * 2 + user_info_.length();
+        + INT64_SIZE * 2 + user_info_.length();
+      //+ object_info_.length();
     }
 
     // rsp_get_object_msg
     RspKvMetaGetObjectMessage::RspKvMetaGetObjectMessage()
-    : still_have_(false)
+      : still_have_(false)
     {
       _packetHeader._pcode = RSP_KVMETA_GET_OBJECT_MESSAGE;
     }
@@ -326,11 +410,172 @@ namespace tfs
       return INT8_SIZE + object_info_.length();
     }
 
+    ReqKvMetaGetObjectMetaDataMessage::ReqKvMetaGetObjectMetaDataMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_GET_OBJECT_METADATA_MESSAGE;
+    }
+    ReqKvMetaGetObjectMetaDataMessage::~ReqKvMetaGetObjectMetaDataMessage(){}
+
+    int ReqKvMetaGetObjectMetaDataMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(object_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_metadata_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_metadata_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaGetObjectMetaDataMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(object_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_metadata_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_metadata_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaGetObjectMetaDataMessage::length() const
+    {
+      int64_t len = Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(object_name_)
+        + INT64_SIZE * 2 + user_info_.length() + user_metadata_.length();
+
+      return len;
+    }
+
+    RspKvMetaGetObjectMetaDataMessage::RspKvMetaGetObjectMetaDataMessage()
+    {
+      _packetHeader._pcode = RSP_KVMETA_GET_OBJECT_METADATA_MESSAGE;
+    }
+    RspKvMetaGetObjectMetaDataMessage::~RspKvMetaGetObjectMetaDataMessage(){}
+
+    int RspKvMetaGetObjectMetaDataMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(object_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_metadata_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_metadata_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int RspKvMetaGetObjectMetaDataMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(object_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_metadata_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_metadata_.length());
+        }
+      }
+
+      return iret;
+    }
+    int64_t RspKvMetaGetObjectMetaDataMessage::length() const
+    {
+      int64_t len = Serialization::get_string_length(bucket_name_) +
+        Serialization::get_string_length(object_name_) +
+        user_info_.length() + user_metadata_.length();
+
+      return len;
+    }
+
     //req_del_object_msg
     ReqKvMetaDelObjectMessage::ReqKvMetaDelObjectMessage()
     {
       _packetHeader._pcode = REQ_KVMETA_DEL_OBJECT_MESSAGE;
     }
+
     ReqKvMetaDelObjectMessage::~ReqKvMetaDelObjectMessage(){}
 
     int ReqKvMetaDelObjectMessage::serialize(Stream& output) const
@@ -385,7 +630,7 @@ namespace tfs
 
     // rsp_del_object_msg
     RspKvMetaDelObjectMessage::RspKvMetaDelObjectMessage()
-    : still_have_(false)
+      : still_have_(false)
     {
       _packetHeader._pcode = RSP_KVMETA_DEL_OBJECT_MESSAGE;
     }
@@ -428,6 +673,86 @@ namespace tfs
     int64_t RspKvMetaDelObjectMessage::length() const
     {
       return INT8_SIZE + object_info_.length();
+    }
+
+    ReqKvMetaDelObjectMetaDataMessage::ReqKvMetaDelObjectMetaDataMessage()
+    {
+      _packetHeader._pcode = REQ_KVMETA_DEL_OBJECT_METADATA_MESSAGE;
+    }
+
+    ReqKvMetaDelObjectMetaDataMessage::~ReqKvMetaDelObjectMetaDataMessage(){}
+
+    int ReqKvMetaDelObjectMetaDataMessage::serialize(Stream& output) const
+    {
+      int32_t iret = output.set_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = output.set_string(object_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+
+        iret = user_metadata_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          output.pour(user_metadata_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int ReqKvMetaDelObjectMetaDataMessage::deserialize(Stream& input)
+    {
+      int32_t iret = input.get_string(bucket_name_);
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = input.get_string(object_name_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_info_.length());
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = user_metadata_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (TFS_SUCCESS == iret)
+        {
+          input.drain(user_metadata_.length());
+        }
+      }
+
+      return iret;
+    }
+
+    int64_t ReqKvMetaDelObjectMetaDataMessage::length() const
+    {
+      int64_t len = Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(object_name_) + user_info_.length() + user_metadata_.length();
+
+      return len;
     }
 
     //req_head_object_msg
@@ -486,7 +811,7 @@ namespace tfs
       return Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(file_name_) + user_info_.length();
     }
 
-     //rsp_head_object_msg
+    //rsp_head_object_msg
     RspKvMetaHeadObjectMessage::RspKvMetaHeadObjectMessage()
     {
       _packetHeader._pcode = RSP_KVMETA_HEAD_OBJECT_MESSAGE;
@@ -544,7 +869,7 @@ namespace tfs
         + object_info_.length();
     }
 
-//-------------------------------------bucket part ---------------------------------------------
+    //-------------------------------------bucket part ---------------------------------------------
 
     //req_put_bucket_msg
     ReqKvMetaPutBucketMessage::ReqKvMetaPutBucketMessage()
