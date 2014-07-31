@@ -557,7 +557,7 @@ namespace tfs
         msg.set_lease_id(ngi.lease_id_);
         msg.set_flags(HEART_GET_PEER_ROLE_FLAG_YES);
         client = NewClientManager::get_instance().create_client();
-        ret = send_msg_to_server(ngi.peer_ip_port_, client, &msg, response, TIMEOUT_MS);
+        ret = send_msg_to_server(ngi.peer_ip_port_, client, &msg, response, false, TIMEOUT_MS);
         if (TFS_SUCCESS == ret)
         {
           ret = response->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
@@ -601,7 +601,7 @@ namespace tfs
         msg.set_lease_id(ngi.lease_id_);
         msg.set_type(type);
         client = NewClientManager::get_instance().create_client();
-        ret = send_msg_to_server(ngi.peer_ip_port_, client, &msg, response, MAX_TIMEOUT_TIME_MS);
+        ret = send_msg_to_server(ngi.peer_ip_port_, client, &msg, response, false, MAX_TIMEOUT_TIME_MS);
         if (TFS_SUCCESS == ret)
         {
           ret = response->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;

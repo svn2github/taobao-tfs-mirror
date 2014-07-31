@@ -551,7 +551,7 @@ namespace tfs
 
        tbnet::Packet* rsp = NULL;
        NewClient* client = NewClientManager::get_instance().create_client();
-       ret = send_msg_to_server(ns_id_, client, &gbi_message, rsp, ClientConfig::wait_timeout_);
+       ret = send_msg_to_server(ns_id_, client, &gbi_message, rsp, false, ClientConfig::wait_timeout_);
        if (TFS_SUCCESS == ret)
        {
          if (GET_BLOCK_INFO_RESP_MESSAGE_V2 == rsp->getPCode())

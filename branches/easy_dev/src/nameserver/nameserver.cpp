@@ -348,11 +348,11 @@ namespace tfs
             TBSYS_LOG(WARN, "unknown packet type: %d", pcode);
             break;
         }
-      }
 
-      if (TFS_SUCCESS != ret)
-      {
-        packet->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
+        if (TFS_SUCCESS != ret)
+        {
+          packet->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
+        }
       }
 
       return EASY_OK;

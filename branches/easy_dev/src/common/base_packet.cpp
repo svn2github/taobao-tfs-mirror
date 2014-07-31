@@ -180,8 +180,8 @@ namespace tfs
       // support local construct packet
       if (0 == getChannelId() || NULL == request_)
       {
-        tbsys::gDelete(packet);  // reply fail, release packet memory
         TBSYS_LOG(WARN, "message : %d channel is null, reply message : %d", getPCode(), packet->getPCode());
+        tbsys::gDelete(packet);  // reply fail, release packet memory
         return TFS_ERROR;
       }
 

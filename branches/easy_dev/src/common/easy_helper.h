@@ -55,28 +55,28 @@ namespace tfs
             void *packet,
             void *args,
             easy_io_handler_pt *handler,
-            int timeout = 2000,
+            int timeout = DEFAULT_NETWORK_CALL_TIMEOUT,
             int retry = 0);
         static int easy_async_send(easy_io_t *eio,
             const easy_addr_t &addr,
             void *packet,
             void *args,
             easy_io_handler_pt *handler,
-            int timeout = 2000,
+            int timeout = DEFAULT_NETWORK_CALL_TIMEOUT,
             int retry = 0);
         static void* easy_sync_send(easy_io_t *eio,
             uint64_t server_id,
             void *packet,
             void *args,
             easy_io_handler_pt *handler,
-            int timeout = 2000,
+            int timeout = DEFAULT_NETWORK_CALL_TIMEOUT,
             int retry = 0);
         static void* easy_sync_send(easy_io_t *eio,
             const easy_addr_t &addr,
             void *packet,
             void *args,
             easy_io_handler_pt *handler,
-            int timeout = 2000,
+            int timeout = DEFAULT_NETWORK_CALL_TIMEOUT,
             int retry = 0);
 
         template <typename T> //~ each group of ioth in T::eio base on the same index

@@ -579,7 +579,7 @@ namespace tfs
           msg.set_family_info(file_.family_info_);
         }
         server = file_.get_read_ds();
-        ret = send_msg_to_server(server, client, &msg, resp_msg, ClientConfig::wait_timeout_);
+        ret = send_msg_to_server(server, client, &msg, resp_msg, false, ClientConfig::wait_timeout_);
       }
 
       if (TFS_SUCCESS != ret)
@@ -658,7 +658,7 @@ namespace tfs
           msg.set_family_info(file_.family_info_);
         }
         server = file_.get_read_ds();
-        ret = send_msg_to_server(server, client, &msg, resp_msg, ClientConfig::wait_timeout_);
+        ret = send_msg_to_server(server, client, &msg, resp_msg, false, ClientConfig::wait_timeout_);
       }
 
       if (TFS_SUCCESS != ret)
@@ -733,7 +733,7 @@ namespace tfs
           msg.set_family_info(file_.family_info_);
         }
         server = file_.get_write_ds();
-        ret = send_msg_to_server(server, client, &msg, resp_msg, ClientConfig::wait_timeout_);
+        ret = send_msg_to_server(server, client, &msg, resp_msg, false, ClientConfig::wait_timeout_);
       }
 
       if (TFS_SUCCESS != ret)
@@ -807,7 +807,7 @@ namespace tfs
           msg.set_family_info(file_.family_info_);
         }
         server = file_.get_write_ds();
-        ret = send_msg_to_server(server, client, &msg, resp_msg, ClientConfig::wait_timeout_);
+        ret = send_msg_to_server(server, client, &msg, resp_msg, false, ClientConfig::wait_timeout_);
       }
 
       if (TFS_SUCCESS != ret)
@@ -870,7 +870,7 @@ namespace tfs
           msg.set_family_info(file_.family_info_);
         }
         server = file_.get_write_ds();
-        ret = send_msg_to_server(server, client, &msg, resp_msg, ClientConfig::wait_timeout_);
+        ret = send_msg_to_server(server, client, &msg, resp_msg, false, ClientConfig::wait_timeout_);
       }
 
       if (TFS_SUCCESS != ret)

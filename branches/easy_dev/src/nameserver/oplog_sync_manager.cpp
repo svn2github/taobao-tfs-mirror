@@ -393,11 +393,10 @@ namespace tfs
             && NULL != msg)
         {
           msg->dump();
-          BaseService* base = dynamic_cast<BaseService*>(BaseService::instance());
-          ret = base->handle(msg);
-          if (NULL != msg)
-            tbsys::gDelete(msg);
+          NameServer* service = dynamic_cast<NameServer*>(BaseMain::instance());
+          ret = service->handle(msg);
         }
+        tbsys::gDelete(msg);
       }
       return ret;
     }
