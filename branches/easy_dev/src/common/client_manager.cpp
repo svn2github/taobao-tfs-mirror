@@ -350,17 +350,20 @@ namespace tfs
     {
       WaitId id = (*(reinterpret_cast<WaitId*>(&r->args)));
       // let NewClient free opacket and ipacket
+      BasePacket* opacket = (BasePacket*)r->opacket;
       r->opacket = NULL;
-      BasePacket* packet = (BasePacket*)r->ipacket;
+      BasePacket* ipacket = (BasePacket*)r->ipacket;
       r->ipacket = NULL;
-      if (packet == NULL) {
-        TBSYS_LOG(WARN, "easy client timeout");
+      if (ipacket == NULL)
+      {
+        int32_t pcode = (NULL == opacket) ? 0: opacket->getPCode();
+        TBSYS_LOG(INFO, "easy client timeout, pcode=%d", pcode);
         handlePacket(id, &tbnet::ControlPacket::TimeoutPacket);
         easy_session_destroy(r->ms);
         return EASY_OK;
         // return EASY_ERROR; //~ destroy this connection
       }
-      handlePacket(id, packet);
+      handlePacket(id, ipacket);
       easy_session_destroy(r->ms);
       return EASY_OK;
     }
