@@ -72,6 +72,12 @@ AC_ARG_WITH([restful-root],
            TREST_ROOT=${withval})
 AC_SUBST([TREST_ROOT])
 
+AC_ARG_WITH([libeasy-root],
+           AS_HELP_STRING([--with-libeasy-root],
+           [restful client install path]),
+           EASY_ROOT=${withval})
+AC_SUBST([EASY_ROOT])
+
 AC_ARG_ENABLE([lifecycle],
            AS_HELP_STRING([--enable-lifecycle],
            [enable life cycle module use --with-restful-root to specify path]),

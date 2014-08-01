@@ -285,9 +285,6 @@ namespace tfs
 
       TBSYS_LOG(DEBUG, "decode packet, pcode=%d, length=%d", pcode, len);
 
-      // mark one packet end position
-      input.set_last_read_mark(len);
-
       BasePacket* bp = dynamic_cast<BasePacket*>(_factory->createPacket(pcode));
       assert(NULL != bp);
 
@@ -297,8 +294,14 @@ namespace tfs
       header._dataLen = len;
       bp->setPacketHeader(&header);
 
-      char* start = m->input->pos;
-      if(TFS_SUCCESS != bp->deserialize(input))
+      // copy raw data to BasePacket's stream
+      // because some Message hold the pointer
+      bp->stream_.reserve(len);
+      bp->stream_.set_bytes(m->input->pos, len);
+      m->input->pos += len;
+      assert(m->input->pos <= m->input->last);
+
+      if(TFS_SUCCESS != bp->deserialize(bp->stream_))
       {
         TBSYS_LOG(ERROR, "decoding packet failed, pcode=%d", pcode);
         tbsys::gDelete(bp);
@@ -307,20 +310,11 @@ namespace tfs
         return NULL;
       }
 
-      input.clear_last_read_mark();
-      if (start + len < m->input->pos)
+      // help to detect serialize/deserialize not match problem
+      if (bp->stream_.get_data_length() != 0)
       {
-        TBSYS_LOG(ERROR, "decode pos not match, pcode=%d", pcode);
-        m->status = EASY_ERROR;
-        tbsys::gDelete(bp);
-        return NULL;
-      }
-      else if (start + len > m->input->pos)
-      {
-        int32_t unused = start + len - m->input->pos;
-        TBSYS_LOG(WARN, "some data are useless, pcode=%d, unused_length=%d",
-            pcode, unused);
-        input.drain(unused);
+        TBSYS_LOG(DEBUG, "some data are useless, pcode=%d, unused_length=%ld",
+            pcode, bp->stream_.get_data_length());
       }
 
       assert(m->pool->tlock <= 1 && m->pool->flags <= 1);

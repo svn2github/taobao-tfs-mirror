@@ -12,6 +12,8 @@ Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
 BuildRequires: t-csrd-tbnet-devel = 1.0.8
+BuildRequires: t_libeasy = 1.0.17
+BuildRequires: t_libeasy-devel = 1.0.17
 BuildRequires: MySQL-devel-community = 5.1.48 
 BuildRequires: tair-devel = 2.3.2.3
 BuildRequires: boost-devel = 1.33.1 
@@ -33,6 +35,7 @@ Requires: ncurses-devel
 Requires: tfs-client-restful
 Requires: json-c-devel = 0.11
 Requires: json-c = 0.11
+Requires: t_libeasy = 1.0.17
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}
@@ -55,7 +58,7 @@ files for developing applications that use the %name package.
 chmod u+x build.sh
 ./build.sh init
 #./configure --prefix=%{_prefix}
-./configure --prefix=%{_prefix} --enable-uniquestore --enable-taircache --enable-lifecycle --with-tair-root=/opt/csr/tair-2.3 --with-restful-root=/home/admin/tfs/restful
+./configure --prefix=%{_prefix} --enable-uniquestore --enable-taircache --enable-lifecycle --with-tair-root=/opt/csr/tair-2.3 --with-restful-root=/home/admin/tfs/restful --with-libeasy-root=/usr/lib64
 make %{?_smp_mflags}
 
 %install
