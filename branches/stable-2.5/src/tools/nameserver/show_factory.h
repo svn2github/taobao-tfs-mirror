@@ -130,7 +130,7 @@ namespace tfs
         }
 
         int32_t deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset);
-        int get_members_ds_list(const uint64_t ns_ip);
+        void get_members_ds_list(const uint64_t ns_ip);
         void dump(const int8_t type, FILE* fp) const;
         int64_t family_id_;
         int32_t family_aid_info_;

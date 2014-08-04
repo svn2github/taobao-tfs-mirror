@@ -735,9 +735,8 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int FamilyShow::get_members_ds_list(const uint64_t ns_ip)
+    void FamilyShow::get_members_ds_list(const uint64_t ns_ip)
     {
-      int ret = TFS_SUCCESS;
       int32_t data_member_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_member_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_member_num + check_member_num;
@@ -745,7 +744,7 @@ namespace tfs
       {
         uint64_t block_id = members_[index].first;
         common::VUINT64 ds_list;
-        ret = ToolUtil::get_block_ds_list_v2(ns_ip, block_id, ds_list);
+        int ret = ToolUtil::get_block_ds_list_v2(ns_ip, block_id, ds_list);
         if (TFS_SUCCESS != ret || ds_list.empty())
         {
           fprintf(stderr, "get block: %"PRI64_PREFIX"u ds_list fail, ret: %d\n", block_id, ret);
@@ -756,7 +755,6 @@ namespace tfs
           members_[index].second = ds_list[0];
         }
       }
-      return ret;
     }
 
     void FamilyShow::dump(const int8_t type, FILE* fp) const
