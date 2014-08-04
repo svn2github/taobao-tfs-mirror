@@ -270,13 +270,13 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      create_msg_ref(DsCompactBlockMessage, req_cpt_msg);
-      req_cpt_msg.set_seqno(seqno_);
-      req_cpt_msg.set_block_id(block_id_);
-      req_cpt_msg.set_source_id(ds_info.information_.id_);
-      req_cpt_msg.set_expire_time(expire_time_);
       for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers_.size()); i++)
       {
+        create_msg_ref(DsCompactBlockMessage, req_cpt_msg);
+        req_cpt_msg.set_seqno(seqno_);
+        req_cpt_msg.set_block_id(block_id_);
+        req_cpt_msg.set_source_id(ds_info.information_.id_);
+        req_cpt_msg.set_expire_time(expire_time_);
         ret = get_data_helper().send_simple_request(servers_[i], &req_cpt_msg);
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to compact, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(servers_[i]).c_str(), ret);
