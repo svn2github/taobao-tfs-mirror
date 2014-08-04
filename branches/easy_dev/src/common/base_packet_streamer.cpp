@@ -353,6 +353,7 @@ namespace tfs
 
       output.reserve(TFS_PACKET_HEADER_V1_SIZE + bp->length());
       output.set_int32(TFS_PACKET_FLAG_V1);
+      char* len_pos = output.get_free();  // length() may not equal real data length
       output.set_int32(bp->length());
       output.set_int16(bp->getPCode());
       output.set_int16(TFS_PACKET_VERSION_V2);
@@ -362,6 +363,16 @@ namespace tfs
       if (TFS_SUCCESS != bp->serialize(output))
       {
         return EASY_ERROR;
+      }
+
+      // use real length to replace header length
+      if (bp->length() != output.get_data_length() - TFS_PACKET_HEADER_V1_SIZE)
+      {
+        // help to detect serialize problem
+        TBSYS_LOG(DEBUG, "length()=%ld not equals to serialize()=%ld",
+            bp->length(), output.get_data_length() - TFS_PACKET_HEADER_V1_SIZE);
+        int64_t pos = 0;
+        Serialization::set_int32(len_pos, INT_SIZE, pos, output.get_data_length() - TFS_PACKET_HEADER_V1_SIZE);
       }
 
       easy_request_addbuf_list(r, &list);

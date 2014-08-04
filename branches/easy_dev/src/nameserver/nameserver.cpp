@@ -267,7 +267,8 @@ namespace tfs
     bool NameServer::is_slow_packet(BasePacket* packet)
     {
       int32_t pcode = packet->getPCode();
-      return REQ_REPORT_BLOCKS_TO_NS_MESSAGE == pcode;
+      return REQ_REPORT_BLOCKS_TO_NS_MESSAGE == pcode ||
+             OPLOG_SYNC_MESSAGE == pcode;
     }
 
     int NameServer::handle(BasePacket* packet)

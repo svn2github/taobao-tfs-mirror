@@ -891,104 +891,121 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       int32_t pcode = packet->getPCode();
-      switch (pcode)
-      {
-        case CREATE_FILENAME_MESSAGE:
-          ret = create_file_number(dynamic_cast<CreateFilenameMessage*>(packet));
-          break;
-        case WRITE_DATA_MESSAGE:
-          ret = write_data(dynamic_cast<WriteDataMessage*>(packet));
-          break;
-        case CLOSE_FILE_MESSAGE:
-          ret = close_write_file(dynamic_cast<CloseFileMessage*>(packet));
-          break;
-        case READ_DATA_MESSAGE_V2:
-          ret = read_data_extra(dynamic_cast<ReadDataMessageV2*>(packet), READ_VERSION_2);
-          break;
-        case READ_DATA_MESSAGE_V3:
-          ret = read_data_extra(dynamic_cast<ReadDataMessageV3*>(packet), READ_VERSION_3);
-          break;
-        case READ_DATA_MESSAGE:
-          ret = read_data(dynamic_cast<ReadDataMessage*>(packet));
-          break;
-        case FILE_INFO_MESSAGE:
-          ret = read_file_info(dynamic_cast<FileInfoMessage*>(packet));
-          break;
-        case UNLINK_FILE_MESSAGE:
-          ret = unlink_file(dynamic_cast<UnlinkFileMessage*>(packet));
-          break;
-        case LIST_BLOCK_MESSAGE:
-          ret = list_blocks(dynamic_cast<ListBlockMessage*>(packet));
-          break;
-        case REPLICATE_BLOCK_MESSAGE:
-        case COMPACT_BLOCK_MESSAGE:
-        case DS_COMPACT_BLOCK_MESSAGE:
-        case DS_REPLICATE_BLOCK_MESSAGE:
-        case RESP_DS_COMPACT_BLOCK_MESSAGE:
-        case RESP_DS_REPLICATE_BLOCK_MESSAGE:
-        case REQ_EC_MARSHALLING_MESSAGE:
-        case REQ_EC_REINSTATE_MESSAGE:
-        case REQ_EC_DISSOLVE_MESSAGE:
-          ret = task_manager_.handle(dynamic_cast<BaseTaskMessage*>(packet));
-          break;
-        case GET_BLOCK_INFO_MESSAGE_V2:
-          ret = get_block_info(dynamic_cast<GetBlockInfoMessageV2*>(packet));
-          break;
-        case GET_SERVER_STATUS_MESSAGE:
-          ret = get_server_status(dynamic_cast<GetServerStatusMessage*>(packet));
-          break;
-        case STATUS_MESSAGE:
-          ret = get_ping_status(dynamic_cast<StatusMessage*>(packet));
-          break;
-        case CLIENT_CMD_MESSAGE:
-          ret = client_command(dynamic_cast<ClientCmdMessage*>(packet));
-          break;
-        case REQ_CALL_DS_REPORT_BLOCK_MESSAGE:
-        case STAT_FILE_MESSAGE_V2:
-        case READ_FILE_MESSAGE_V2:
-        case WRITE_FILE_MESSAGE_V2:
-        case CLOSE_FILE_MESSAGE_V2:
-        case UNLINK_FILE_MESSAGE_V2:
-        case NEW_BLOCK_MESSAGE_V2:
-        case REMOVE_BLOCK_MESSAGE_V2:
-        case READ_RAWDATA_MESSAGE_V2:
-        case WRITE_RAWDATA_MESSAGE_V2:
-        case READ_INDEX_MESSAGE_V2:
-        case WRITE_INDEX_MESSAGE_V2:
-        case QUERY_EC_META_MESSAGE:
-        case COMMIT_EC_META_MESSAGE:
-          ret = client_request_server_.handle(packet);
-          break;
-        case REQ_CHECK_BLOCK_MESSAGE:
-        case REPORT_CHECK_BLOCK_MESSAGE:
-          ret = check_manager_.handle(packet);
-          break;
-        default:
-          TBSYS_LOG(ERROR, "unknown packet pcode: %d\n", pcode);
-          ret = TFS_ERROR;
-          break;
-      }
 
-      if (common::TFS_SUCCESS != ret)
+      // dataserver not initialized or already destroyed, deny request
+      if (DsRuntimeGlobalInformation::instance().is_destroyed())
       {
-        common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
-        msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+        packet->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ACCESS_DENIED,
+            "you client %s access been denied. msgtype: %d", tbsys::CNetUtil::addrToString(
+              packet->getPeerId()).c_str(), packet->getPCode());
       }
       else
       {
-        if (WRITE_FILE_MESSAGE_V2 == pcode ||
-            CLOSE_FILE_MESSAGE_V2 == pcode ||
-            UNLINK_FILE_MESSAGE_V2 == pcode)
+        switch (pcode)
         {
-          // async request need wait
-          if (!packet->get_request()->opacket)
+          case CREATE_FILENAME_MESSAGE:
+            ret = create_file_number(dynamic_cast<CreateFilenameMessage*>(packet));
+            break;
+          case WRITE_DATA_MESSAGE:
+            ret = write_data(dynamic_cast<WriteDataMessage*>(packet));
+            break;
+          case CLOSE_FILE_MESSAGE:
+            ret = close_write_file(dynamic_cast<CloseFileMessage*>(packet));
+            break;
+          case READ_DATA_MESSAGE_V2:
+            ret = read_data_extra(dynamic_cast<ReadDataMessageV2*>(packet), READ_VERSION_2);
+            break;
+          case READ_DATA_MESSAGE_V3:
+            ret = read_data_extra(dynamic_cast<ReadDataMessageV3*>(packet), READ_VERSION_3);
+            break;
+          case READ_DATA_MESSAGE:
+            ret = read_data(dynamic_cast<ReadDataMessage*>(packet));
+            break;
+          case FILE_INFO_MESSAGE:
+            ret = read_file_info(dynamic_cast<FileInfoMessage*>(packet));
+            break;
+          case UNLINK_FILE_MESSAGE:
+            ret = unlink_file(dynamic_cast<UnlinkFileMessage*>(packet));
+            break;
+          case LIST_BLOCK_MESSAGE:
+            ret = list_blocks(dynamic_cast<ListBlockMessage*>(packet));
+            break;
+          case REPLICATE_BLOCK_MESSAGE:
+          case COMPACT_BLOCK_MESSAGE:
+          case DS_COMPACT_BLOCK_MESSAGE:
+          case DS_REPLICATE_BLOCK_MESSAGE:
+          case RESP_DS_COMPACT_BLOCK_MESSAGE:
+          case RESP_DS_REPLICATE_BLOCK_MESSAGE:
+          case REQ_EC_MARSHALLING_MESSAGE:
+          case REQ_EC_REINSTATE_MESSAGE:
+          case REQ_EC_DISSOLVE_MESSAGE:
+            ret = task_manager_.handle(dynamic_cast<BaseTaskMessage*>(packet));
+            break;
+          case GET_BLOCK_INFO_MESSAGE_V2:
+            ret = get_block_info(dynamic_cast<GetBlockInfoMessageV2*>(packet));
+            break;
+          case GET_SERVER_STATUS_MESSAGE:
+            ret = get_server_status(dynamic_cast<GetServerStatusMessage*>(packet));
+            break;
+          case STATUS_MESSAGE:
+            ret = get_ping_status(dynamic_cast<StatusMessage*>(packet));
+            break;
+          case CLIENT_CMD_MESSAGE:
+            ret = client_command(dynamic_cast<ClientCmdMessage*>(packet));
+            break;
+          case REQ_CALL_DS_REPORT_BLOCK_MESSAGE:
+          case STAT_FILE_MESSAGE_V2:
+          case READ_FILE_MESSAGE_V2:
+          case WRITE_FILE_MESSAGE_V2:
+          case CLOSE_FILE_MESSAGE_V2:
+          case UNLINK_FILE_MESSAGE_V2:
+          case NEW_BLOCK_MESSAGE_V2:
+          case REMOVE_BLOCK_MESSAGE_V2:
+          case READ_RAWDATA_MESSAGE_V2:
+          case WRITE_RAWDATA_MESSAGE_V2:
+          case READ_INDEX_MESSAGE_V2:
+          case WRITE_INDEX_MESSAGE_V2:
+          case QUERY_EC_META_MESSAGE:
+          case COMMIT_EC_META_MESSAGE:
+            ret = client_request_server_.handle(packet);
+            break;
+          case REQ_CHECK_BLOCK_MESSAGE:
+          case REPORT_CHECK_BLOCK_MESSAGE:
+            ret = check_manager_.handle(packet);
+            break;
+          default:
+            TBSYS_LOG(ERROR, "unknown packet pcode: %d\n", pcode);
+            ret = TFS_ERROR;
+            break;
+        }
+
+        if (common::TFS_SUCCESS != ret)
+        {
+          common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
+          msg->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, "execute message failed");
+        }
+        else
+        {
+          if (WRITE_FILE_MESSAGE_V2 == pcode ||
+              CLOSE_FILE_MESSAGE_V2 == pcode ||
+              UNLINK_FILE_MESSAGE_V2 == pcode)
           {
-            return EASY_AGAIN;
+            // async request need wait
+            if (!packet->get_request()->opacket)
+            {
+              return EASY_AGAIN;
+            }
           }
         }
       }
 
       return EASY_OK;
+    }
+
+    bool DataService::is_slow_packet(BasePacket* packet)
+    {
+      int32_t pcode = packet->getPCode();
+      return REQ_CALL_DS_REPORT_BLOCK_MESSAGE == pcode;
     }
 
     int DataService::create_file_number(CreateFilenameMessage* message)

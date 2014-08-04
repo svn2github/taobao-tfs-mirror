@@ -325,6 +325,8 @@ namespace tfs
         int64_t length = msg->get_length();
         int64_t offset = 0;
         time_t now = Func::get_monotonic_time();
+        int32_t count = 0;
+        TIMER_START();
         while ((offset < length)
             && (!GFactory::get_runtime_info().is_destroyed()))
         {
@@ -334,7 +336,11 @@ namespace tfs
           {
             break;
           }
+          count++;
         }
+        TIMER_END();
+        TBSYS_LOG(DEBUG, "replay log, count=%d, length=%"PRI64_PREFIX"d, cost=%"PRI64_PREFIX"d, ret=%d",
+            count, length, TIMER_DURATION(), ret);
         OpLogSyncResponeMessage* reply_msg = new (std::nothrow)OpLogSyncResponeMessage();
         reply_msg->set_complete_flag();
         msg->reply(reply_msg);
