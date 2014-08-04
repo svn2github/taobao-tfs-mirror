@@ -249,33 +249,33 @@ AC_CONFIG_FILES([Makefile
                  scripts/Makefile
                  scripts/ha/Makefile
                  src/Makefile
-                 src/adminserver/Makefile
-                 src/new_client/Makefile
                  src/clientv2/Makefile
                  src/requester/Makefile
                  src/common/Makefile
                  src/common/mysql_cluster/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
-                 src/monitor/Makefile
-                 src/nameserver/Makefile
-                 src/rcserver/Makefile
-                 src/name_meta_server/Makefile
-                 src/kv_meta_server/Makefile
-                 src/rootserver/Makefile
-                 src/life_cycle_manager/Makefile
-                 src/life_cycle_manager/root_manager/Makefile
-                 src/life_cycle_manager/expire_server/Makefile
-                 src/tools/Makefile
-                 src/tools/rcserver/Makefile
-                 src/tools/util/Makefile
-                 src/tools/dataserver/Makefile
-                 src/tools/nameserver/Makefile
-                 src/tools/adminserver/Makefile
-                 src/tools/cluster/Makefile
-                 src/tools/workers/Makefile
-                 src/checkserver/Makefile
-                 src/tools/metaserver/Makefile])
+                 src/nameserver/Makefile])
+                 #src/adminserver/Makefile
+                 #src/monitor/Makefile
+                 #src/new_client/Makefile
+                 #src/rcserver/Makefile
+                 #src/name_meta_server/Makefile
+                 #src/kv_meta_server/Makefile
+                 #src/rootserver/Makefile
+                 #src/life_cycle_manager/Makefile
+                 #src/life_cycle_manager/root_manager/Makefile
+                 #src/life_cycle_manager/expire_server/Makefile
+                 #src/tools/Makefile
+                 #src/tools/rcserver/Makefile
+                 #src/tools/util/Makefile
+                 #src/tools/dataserver/Makefile
+                 #src/tools/nameserver/Makefile
+                 #src/tools/adminserver/Makefile
+                 #src/tools/cluster/Makefile
+                 #src/tools/workers/Makefile
+                 #src/checkserver/Makefile
+                 #src/tools/metaserver/Makefile
                  #tests/Makefile
                  #tests/batch/Makefile
                  #tests/rcserver/Makefile
