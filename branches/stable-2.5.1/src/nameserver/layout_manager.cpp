@@ -604,9 +604,11 @@ namespace tfs
           }
           if (need > 0 && !report_time && reinsate_or_dissolve_queue_size <= 0 && replicate_queue_size <= 0 && max_marshalling_num > 0)
           {
-            int32_t rt = build_marshalling_(need, now);
-            if (TFS_SUCCESS == rt)
-              --max_marshalling_num;
+            int32_t rt = TFS_SUCCESS;
+            for (int32_t index = 0; index < max_marshalling_num && TFS_SUCCESS == rt; ++index)
+            {
+              rt = build_marshalling_(need, now);
+            }
           }
 
           if (loop >= MAX_LOOP_NUMS)
@@ -1227,12 +1229,31 @@ namespace tfs
       if (ret)
       {
         ServerCollect* result= NULL;
-        uint64_t servers[MAX_REPLICATION_NUM];
-        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
+        uint64_t servers[MAX_REPLICATION_NUM + MAX_MARSHALLING_NUM];
+        ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM + MAX_MARSHALLING_NUM, servers);
         uint64_t result_servers[MAX_REPLICATION_NUM];
         ArrayHelper<uint64_t> result_helper(MAX_REPLICATION_NUM, result_servers);
 
         ret = get_block_manager().need_balance(helper, block, now);
+        if (ret)
+        {
+          int32_t family_aid_info = 0;
+          int64_t family_id = block->get_family_id();
+          if (INVALID_FAMILY_ID != family_id)
+          {
+            std::pair<uint64_t, uint64_t> arrays[MAX_MARSHALLING_NUM];
+            common::ArrayHelper<std::pair<uint64_t, uint64_t> > members(MAX_MARSHALLING_NUM, arrays);
+            int32_t rt = get_family_manager().get_members(members, family_aid_info, family_id);
+            ret = (TFS_SUCCESS == rt);
+            for (int64_t index = 0; index < members.get_array_index() && ret; ++index)
+            {
+              std::pair<uint64_t, uint64_t>* item = members.at(index);
+              ret = INVALID_SERVER_ID != item->second;
+              if (ret)
+                helper.push_back(item->second);
+            }
+          }
+        }
         if (ret)
         {
           ret = helper.exist(source->id());
