@@ -21,7 +21,6 @@
 #define TFS_DATASERVER_SYNCBACKUP_H_
 
 #include "common/internal.h"
-#include "new_client/tfs_client_impl.h"
 #include "clientv2/tfs_client_impl_v2.h"
 #include <Memory.hpp>
 #include <TbThread.h>

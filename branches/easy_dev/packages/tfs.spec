@@ -99,4 +99,4 @@ rm  -f /etc/ld.so.conf.d/tfs-%{VERSION}.conf
 
 %files devel
 %{_prefix}/include
-%{_prefix}/lib/libtfsclient.*
+%{_prefix}/lib/libtfsclientv2.*
