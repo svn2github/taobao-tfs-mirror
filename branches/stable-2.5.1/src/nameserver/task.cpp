@@ -594,9 +594,13 @@ namespace tfs
         }
         if (TFS_SUCCESS != ret)
           dump(TBSYS_LOG_LEVEL(INFO), "handle marshalling task failed, ret: %d,", ret);
-        StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
-                      ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
-        msg->reply(reply_msg);
+
+        if (GFactory::get_runtime_info().is_master())
+        {
+          StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
+              ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
+          msg->reply(reply_msg);
+        }
       }
       return ret;
     }
@@ -787,9 +791,12 @@ namespace tfs
         }
         if (TFS_SUCCESS != ret)
           dump(TBSYS_LOG_LEVEL(INFO), "handle reistate task failed, ret: %d,", ret);
-        StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
-                      ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
-        ret = msg->reply(reply_msg);
+        if (GFactory::get_runtime_info().is_master())
+        {
+          StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
+              ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
+          ret = msg->reply(reply_msg);
+        }
       }
      return ret;
     }
@@ -919,9 +926,12 @@ namespace tfs
         }
         if (TFS_SUCCESS != ret)
           dump(TBSYS_LOG_LEVEL(INFO), "handle dissolve task failed, ret: %d,", ret);
-        StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
-                      ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
-        ret = msg->reply(reply_msg);
+        if (GFactory::get_runtime_info().is_master())
+        {
+          StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
+              ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
+          ret = msg->reply(reply_msg);
+        }
       }
       return ret;
     }
