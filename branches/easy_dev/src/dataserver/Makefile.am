@@ -13,7 +13,7 @@ LDADD=$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
       $(TAIR_CACHE_LDFLAGS)\
       $(TBLIB_ROOT)/lib/libtbnet.a\
       $(TBLIB_ROOT)/lib/libtbsys.a\
-			$(EASY_ROOT)/lib/libeasy.a
+			$(EASY_ROOT)/lib64/libeasy.a
 
 noinst_LIBRARIES = libdataserver.a
 

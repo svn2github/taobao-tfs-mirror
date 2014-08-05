@@ -22,7 +22,7 @@ ld_fg = $(AM_LDFLAGS) \
         $(top_srcdir)/src/requester/libtfsrequester.a \
         $(top_srcdir)/src/message/libtfsmessage.a \
         $(top_srcdir)/src/common/libtfscommon.a \
-				$(EASY_ROOT)/lib/libeasy.a
+				$(EASY_ROOT)/lib64/libeasy.a
 
 libtfsclientv2_la_SOURCES = ${api_source_list}
 libtfsclientv2_la_LIBADD = ${ld_fg}

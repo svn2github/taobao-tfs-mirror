@@ -5,14 +5,6 @@ AM_CPPFLAGS =-fPIC -I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl
 
-LDADD=$(top_builddir)/src/message/libtfsmessage.a\
-      $(top_builddir)/src/common/libtfscommon.a\
-      $(UNIQUE_STORE_LDFLAGS)\
-      $(TAIR_CACHE_LDFLAGS)\
-      $(TBLIB_ROOT)/lib/libtbnet.a\
-      $(TBLIB_ROOT)/lib/libtbsys.a\
-			$(EASY_ROOT)/lib/libeasy.a
-
 noinst_LIBRARIES = libtfsrequester.a libtfssyncutil.a
 
 libtfsrequester_a_SOURCES=ns_requester.cpp ds_requester.cpp misc_requester.cpp \
