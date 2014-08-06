@@ -1739,22 +1739,24 @@ namespace tfs
         }
       }
 
-      // update bucket list
-      int64_t version = 0;
       set<string> s_bucket_list;
-      if (TFS_SUCCESS == ret)
+      int64_t version = 0;
+      if (!is_appid_uid_bucket_name(bucket_name))
       {
-        ret = get_bucket_list(user_info.owner_id_, &s_bucket_list, &version);
-        if (TFS_SUCCESS == ret && static_cast<int32_t>(s_bucket_list.size()) >= KvDefine::MAX_BUCKETS_COUNT)
+        // update bucket list
+        if (TFS_SUCCESS == ret)
         {
-          // FIXME: may need limit
-          //ret = EXIT_OVER_MAX_BUCKETS_COUNT;
-          TBSYS_LOG(WARN, "owner: %"PRI64_PREFIX"d has %zu buckets, over %d",
-              user_info.owner_id_, s_bucket_list.size(), KvDefine::MAX_BUCKETS_COUNT);
-        }
-        else if (EXIT_NO_BUCKETS == ret)
-        {
-          ret = TFS_SUCCESS;
+          ret = get_bucket_list(user_info.owner_id_, &s_bucket_list, &version);
+          if (TFS_SUCCESS == ret && static_cast<int32_t>(s_bucket_list.size()) >= KvDefine::MAX_BUCKETS_COUNT)
+          {
+            ret = EXIT_OVER_MAX_BUCKETS_COUNT;
+            TBSYS_LOG(ERROR, "owner: %"PRI64_PREFIX"d has %zu buckets, over %d",
+                user_info.owner_id_, s_bucket_list.size(), KvDefine::MAX_BUCKETS_COUNT);
+          }
+          else if (EXIT_NO_BUCKETS == ret)
+          {
+            ret = TFS_SUCCESS;
+          }
         }
       }
 
@@ -1767,45 +1769,51 @@ namespace tfs
         ret = put_bucket_ex(bucket_name, bucket_meta_info, ver);
       }
 
-      if (TFS_SUCCESS == ret)
+      if (!is_appid_uid_bucket_name(bucket_name))
       {
-        s_bucket_list.insert(bucket_name);
-        if (0 == version)
+        if (TFS_SUCCESS == ret)
         {
-          version = KvDefine::MAX_VERSION;
-        }
-        int32_t retry = KvDefine::VERSION_ERROR_RETRY_COUNT;
-        do
-        {
-          ret = put_bucket_list(user_info.owner_id_, s_bucket_list, version);
-          if (EXIT_KV_RETURN_VERSION_ERROR == ret)
+          s_bucket_list.insert(bucket_name);
+          if (0 == version)
           {
-            int iret = TFS_ERROR;
-            s_bucket_list.clear();
-            iret = get_bucket_list(user_info.owner_id_, &s_bucket_list, &version);
-            if (TFS_SUCCESS == iret || EXIT_NO_BUCKETS == iret)
-            {
-              if (TFS_SUCCESS == iret && static_cast<int32_t>(s_bucket_list.size()) >= KvDefine::MAX_BUCKETS_COUNT)
-              {
-                // FIXME: may need limit
-                //ret = EXIT_OVER_MAX_BUCKETS_COUNT;
-                TBSYS_LOG(WARN, "owner: %"PRI64_PREFIX"d has %zu buckets, over %d",
-                    user_info.owner_id_, s_bucket_list.size(), KvDefine::MAX_BUCKETS_COUNT);
-              }
-              s_bucket_list.insert(bucket_name);
-            }
-            else
-            {
-              TBSYS_LOG(ERROR, "get owner: %"PRI64_PREFIX"d's bucket list failed, ret: %d",
-                  user_info.owner_id_, iret);
-              break;
-            }
+            version = KvDefine::MAX_VERSION;
           }
-        } while (EXIT_KV_RETURN_VERSION_ERROR == ret && retry--);
-        // retry still failed, roll back
-        if (TFS_SUCCESS != ret)
-        {
-          ret = del_bucket(bucket_name, user_info);
+          int32_t retry = KvDefine::VERSION_ERROR_RETRY_COUNT;
+          do
+          {
+            ret = put_bucket_list(user_info.owner_id_, s_bucket_list, version);
+            if (EXIT_KV_RETURN_VERSION_ERROR == ret)
+            {
+              int iret = TFS_ERROR;
+              s_bucket_list.clear();
+              iret = get_bucket_list(user_info.owner_id_, &s_bucket_list, &version);
+              if (TFS_SUCCESS == iret || EXIT_NO_BUCKETS == iret)
+              {
+                if (TFS_SUCCESS == iret && static_cast<int32_t>(s_bucket_list.size()) >= KvDefine::MAX_BUCKETS_COUNT)
+                {
+                  ret = EXIT_OVER_MAX_BUCKETS_COUNT;
+                  TBSYS_LOG(ERROR, "owner: %"PRI64_PREFIX"d has %zu buckets, over %d",
+                      user_info.owner_id_, s_bucket_list.size(), KvDefine::MAX_BUCKETS_COUNT);
+                  break;
+                }
+                else
+                {
+                  s_bucket_list.insert(bucket_name);
+                }
+              }
+              else
+              {
+                TBSYS_LOG(ERROR, "get owner: %"PRI64_PREFIX"d's bucket list failed, ret: %d",
+                    user_info.owner_id_, iret);
+                break;
+              }
+            }
+          } while (EXIT_KV_RETURN_VERSION_ERROR == ret && retry--);
+          // retry still failed, roll back
+          if (TFS_SUCCESS != ret)
+          {
+            del_bucket(bucket_name, user_info);
+          }
         }
       }
 
