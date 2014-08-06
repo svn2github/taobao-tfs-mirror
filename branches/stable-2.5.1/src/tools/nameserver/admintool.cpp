@@ -210,7 +210,7 @@ int cmd_batch_file(const VSTRING& param)
       }
       if (++count % 100 == 0)
       {
-        fprintf(stdout, "total: %d, %d errors.\r", count, error_count);
+        fprintf(stdout, "total: %d, %d errors.\n", count, error_count);
         fflush(stdout);
       }
       if (TFS_CLIENT_QUIT == ret)

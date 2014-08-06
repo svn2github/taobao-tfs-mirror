@@ -144,6 +144,7 @@ namespace tfs
         int64_t file_size_;
         int64_t del_file_count_;
         int64_t del_file_size_;
+        std::set<uint64_t> family_set_;
     };
 /*
     static inline uint64_t get_addr(const std::string& ns_ip_port)

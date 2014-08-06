@@ -653,12 +653,7 @@ namespace tfs
               }
               if (once && (type & BLOCK_TYPE_SERVER_LIST))
               {
-                ret = family.get_members_ds_list(ns_ip_);
-                if (TFS_SUCCESS != ret)
-                {
-                  put_file_handle(fp);
-                  return ret;
-                }
+                family.get_members_ds_list(ns_ip_);
               }
               family.dump(type, fp);
               ++family_count;
