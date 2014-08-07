@@ -168,6 +168,7 @@ namespace tfs
     const int32_t EXIT_VERIYF_BLOCK_CANNOT_APPLY_LESAE  = -5066;
     const int32_t EXIT_MARSHALLING_CANNOT_COMPACT = -5067;
     const int32_t EXIT_LOAD_BLOCK_ERROR = -5068;
+    const int32_t EXIT_CANNOT_MIGRATE_BLOCK_ERROR = -5069;
 
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
