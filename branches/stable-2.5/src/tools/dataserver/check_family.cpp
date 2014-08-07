@@ -65,7 +65,7 @@ class CheckFamily : public BaseWorker
         }
       }
 
-      if(ret != TFS_SUCCESS)
+      if(ret != TFS_SUCCESS && ret != EXIT_CHECK_CRC_ERROR)
       {
         TBSYS_LOG(ERROR, "check family fail, family id: %"PRI64_PREFIX"d, ret: %d", family_id, ret);
         fprintf(result_fp, "%-11"PRI64_PREFIX"d%-11d%-14d%-10d\n", family_id, 0, 0, ret);
@@ -240,7 +240,7 @@ int CheckFamily::encode_and_compare()
     }
   }
 
-  if(ret == TFS_SUCCESS)
+  if(ret == TFS_SUCCESS || ret == EXIT_CHECK_CRC_ERROR)
   {
     fprintf(result_fp, "%-11"PRI64_PREFIX"d%-11d%-14d%-10d\n",
         ec_metas_[data_num_].family_id_, has_error, offset, ret);
