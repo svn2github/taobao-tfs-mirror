@@ -24,15 +24,6 @@ namespace tfs
 {
   namespace migrateserver
   {
-    struct AccessRatio
-    {
-      int32_t last_access_time_ratio;
-      int32_t read_ratio;
-      int32_t write_ratio;
-      int32_t update_ratio;
-      int32_t unlink_ratio;
-    };
-
     class MigrateManager
     {
       struct MigrateEntry
@@ -60,14 +51,11 @@ namespace tfs
       typedef tbutil::Handle<WorkThreadHelper> WorkThreadHelperPtr;
       typedef std::multimap<int64_t, std::pair<uint64_t, uint64_t> > BLOCK_MAP;
       typedef BLOCK_MAP::iterator BLOCK_MAP_ITER;
-      typedef BLOCK_MAP::const_iterator CONST_BLOCK_MAP_ITER;
-      typedef BLOCK_MAP::const_reverse_iterator CONST_BLOCK_MAP_REVERSE_ITER;
       typedef std::map<uint64_t, common::DataServerStatInfo> SERVER_MAP;
       typedef SERVER_MAP::iterator SERVER_MAP_ITER;
       typedef SERVER_MAP::const_iterator CONST_SERVER_MAP_ITER;
       public:
-      explicit MigrateManager(const uint64_t ns_vip_port, const double balance_percent,
-        const int64_t hot_time_range, AccessRatio& full_disk_ratio, AccessRatio& system_disk_ratio);
+      explicit MigrateManager();
       virtual ~MigrateManager();
       int initialize();
       int destroy();
@@ -85,10 +73,11 @@ namespace tfs
       void get_all_servers_(common::ArrayHelper<std::pair<uint64_t, int32_t> >& servers) const;
 
       void calc_system_disk_migrate_info_(MigrateEntry& entry) const;
-      int choose_migrate_entry_(MigrateEntry& output) const;
+      int choose_migrate_entry_(MigrateEntry& output);
       int do_migrate_(MigrateEntry& current);
       bool choose_move_dest_server_(const uint64_t source_addr, uint64_t& dest_addr) const;
       void statistic_all_server_info_(int64_t& total_capacity, int64_t& use_capacity) const;
+      void get_ns_config_parameter_();
       private:
       tbutil::Mutex mutex_;
       SERVER_MAP servers_;
@@ -96,10 +85,13 @@ namespace tfs
       WorkThreadHelperPtr work_thread_;
       uint64_t ns_vip_port_;
       double balance_percent_;
+      double penalty_percent_;
       int64_t hot_time_range_;
       int32_t max_block_size_;
-      AccessRatio full_disk_access_ratio_;
-      AccessRatio system_disk_access_ratio_;
+      int32_t migrate_complete_wait_time_;
+      int64_t update_statistic_interval_;
+      common::AccessRatio full_disk_access_ratio_;
+      common::AccessRatio system_disk_access_ratio_;
     };
   }/** end namespace syncserver **/
 }/** end namesapce tfs **/

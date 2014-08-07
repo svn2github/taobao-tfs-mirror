@@ -45,42 +45,21 @@ namespace tfs
       UNUSED(argc);
       UNUSED(argv);
       srandom(time(NULL));
-      const char* ipaddr = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_IP_ADDR, "");
-      const int32_t port = TBSYS_CONFIG.getInt(CONF_SN_MIGRATESERVER, CONF_PORT, 0);
-      int32_t ret = (NULL != ipaddr && port > 1024 && port < 65535) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
+
+      // load config file
+      int32_t ret = SYSPARAM_MIGRATESERVER.initialize();
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "%s not set (nameserver vip) ipaddr: %s or port: %d, must be exit", argv[0], NULL == ipaddr ? "null" : ipaddr, port);
+        TBSYS_LOG(ERROR, "load migrateserver parameter failed: %d", ret);
+        ret = EXIT_GENERAL_ERROR;
       }
-      if (TFS_SUCCESS == ret)
+      else
       {
-        const uint64_t ns_vip_port = tbsys::CNetUtil::strToAddr(ipaddr, port);
-        const char* percent = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_BALANCE_PERCENT, "0.05");
-        const double balance_percent = strtod(percent, NULL);
-        const int32_t TWO_MONTH = 2 * 31 * 86400;
-        const int64_t hot_time_range = TBSYS_CONFIG.getInt(CONF_SN_MIGRATESERVER, CONF_HOT_TIME_RANGE, TWO_MONTH);
-        const char* str_system_disk_access_ratio = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_SYSTEM_DISK_ACCESS_RATIO, "");
-        const char* str_full_disk_access_ratio = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_FULL_DISK_ACCESS_RATIO, "");
-        std::vector<string> ratios[2];
-        Func::split_string(str_full_disk_access_ratio, ':', ratios[0]);
-        Func::split_string(str_system_disk_access_ratio, ':', ratios[1]);
-        ret = (5U == ratios[0].size() && 5U == ratios[1].size()) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
-        if (TFS_SUCCESS == ret)
-        {
-          AccessRatio ar[2];
-          for (int32_t i = 0; i < 2; ++i)
-          {
-            ar[i].last_access_time_ratio = atoi(ratios[i][0].c_str());
-            ar[i].read_ratio = atoi(ratios[i][1].c_str());
-            ar[i].write_ratio = atoi(ratios[i][2].c_str());
-            ar[i].update_ratio = atoi(ratios[i][3].c_str());
-            ar[i].unlink_ratio = atoi(ratios[i][4].c_str());
-          }
-          manager_ = new (std::nothrow)MigrateManager(ns_vip_port, balance_percent, hot_time_range, ar[0], ar[1]);
-          assert(NULL != manager_);
-          ret = manager_->initialize();
-        }
+        manager_ = new (std::nothrow)MigrateManager();
+        assert(NULL != manager_);
+        ret = manager_->initialize();
       }
+
       if (TFS_SUCCESS == ret)
       {
         timeout_thread_  = new (std::nothrow)TimeoutThreadHelper(*this);

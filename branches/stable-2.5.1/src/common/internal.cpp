@@ -1326,7 +1326,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[62] = {
+    const char* dynamic_parameter_str[63] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1388,7 +1388,8 @@ namespace tfs
         "between_ns_and_ds_lease_expire_time",
         "between_ns_and_ds_lease_safe_time",
         "between_ns_and_ds_lease_retry_times",
-        "between_ns_and_ds_lease_retry_expire_time"
+        "between_ns_and_ds_lease_retry_expire_time",
+        "migrate_complete_wait_time_",
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
@@ -2981,7 +2982,11 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; i < 3; i++)
+        Serialization::set_int32(data, data_len, pos, migrate_complete_wait_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; i < 2; i++)
         {
           Serialization::set_int32(data, data_len, pos, reserve_[i]);
         }
@@ -3014,7 +3019,11 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; i < 3; i++)
+        Serialization::get_int32(data, data_len, pos, &migrate_complete_wait_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; i < 2; i++)
         {
           Serialization::get_int32(data, data_len, pos, &reserve_[i]);
         }

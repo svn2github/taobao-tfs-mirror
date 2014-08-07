@@ -513,6 +513,8 @@ namespace tfs
         for (int64_t index = 0; index < helper.get_array_index(); ++index)
         {
           pserver = *helper.at(index);
+          if (DATASERVER_DISK_TYPE_SYSTEM == pserver->get_disk_type())
+            continue;
           assert(NULL != pserver);
           server = pserver->id();
           has_move = pserver->is_alive()

@@ -1104,7 +1104,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[62];
+    extern const char* dynamic_parameter_str[63];
 
 #pragma pack (1)
     struct FileInfoV2//30
@@ -1432,9 +1432,11 @@ namespace tfs
       int32_t group_count_;
       int32_t replica_num_;
       int32_t business_port_num_;
-      int32_t reserve_[3];
+      int32_t migrate_complete_wait_time_;
+      int32_t reserve_[2];
 
-      ClusterConfig():cluster_id_(0), group_seq_(0), group_count_(1), replica_num_(0), business_port_num_(0)
+      ClusterConfig():cluster_id_(0), group_seq_(0), group_count_(1), replica_num_(0), business_port_num_(0),
+          migrate_complete_wait_time_(300)
       {
       }
 
@@ -1471,6 +1473,15 @@ namespace tfs
       ~ServerStat() {}
       int serialize(tbnet::DataBuffer& output, int32_t& length);
       int deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset);
+    };
+
+    struct AccessRatio
+    {
+      int32_t last_access_time_ratio;
+      int32_t read_ratio;
+      int32_t write_ratio;
+      int32_t update_ratio;
+      int32_t unlink_ratio;
     };
 
 

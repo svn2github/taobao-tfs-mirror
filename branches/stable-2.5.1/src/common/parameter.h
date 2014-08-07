@@ -95,6 +95,7 @@ namespace tfs
       int32_t business_port_count_;
       int32_t heart_port_count_;
       double  balance_percent_;
+      int32_t migrate_complete_wait_time_;
 
       NameServerParameter()
       {
@@ -271,6 +272,26 @@ namespace tfs
       }
     };
 
+
+    struct MigrateServerParameter
+    {
+      uint64_t ns_vip_port_;
+      double balance_percent_;
+      double penalty_percent_;
+      int32_t update_statistic_interval_;
+      int64_t hot_time_range_;
+      AccessRatio full_disk_access_ratio_;
+      AccessRatio system_disk_access_ratio_;
+
+      int initialize(void);
+
+      static MigrateServerParameter ms_parameter_;
+      static MigrateServerParameter& instance()
+      {
+        return ms_parameter_;
+      }
+    };
+
     struct KvMetaParameter
     {
       std::string conn_str_;
@@ -359,6 +380,7 @@ namespace tfs
 #define SYSPARAM_NAMEMETASERVER NameMetaServerParameter::instance()
 #define SYSPARAM_RTSERVER RtServerParameter::instance()
 #define SYSPARAM_CHECKSERVER CheckServerParameter::instance()
+#define SYSPARAM_MIGRATESERVER MigrateServerParameter::instance()
 #define SYSPARAM_KVMETA KvMetaParameter::instance()
 #define SYSPARAM_KVRTSERVER KvRtServerParameter::instance()
 #define SYSPARAM_EXPIRESERVER ExpireServerParameter::instance()

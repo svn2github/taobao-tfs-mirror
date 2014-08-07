@@ -124,6 +124,8 @@ namespace tfs
 #define CONF_MAX_MARSHALLING_QUEUE_TIMEOUT            "max_marshalling_queue_timeout"
 #define CONF_TAIR_ADDR                                "tair_addr"
 
+#define CONF_MIGRATE_COMPLETE_WAIT_TIME               "migrate_complete_wait_time"
+
   //dataserver
 #define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
 #define CONF_DATA_THREAD_COUNT                        "data_thread_count"
@@ -172,6 +174,8 @@ namespace tfs
 #define CONF_HOT_TIME_RANGE                           "hot_time_range"
 #define CONF_FULL_DISK_ACCESS_RATIO                   "system_disk_access_ratio"
 #define CONF_SYSTEM_DISK_ACCESS_RATIO                 "full_disk_access_ratio"
+#define CONF_UPDATE_STATISTIC_INTERVAL                "update_statistic_interval"
+#define CONF_PENALTY_PERCENT                          "penalty_percent"
 
 //rc
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"

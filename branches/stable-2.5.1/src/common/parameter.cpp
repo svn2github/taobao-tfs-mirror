@@ -38,6 +38,7 @@ namespace tfs
     NameMetaServerParameter NameMetaServerParameter::meta_parameter_;
     RtServerParameter RtServerParameter::rt_parameter_;
     CheckServerParameter CheckServerParameter::cs_parameter_;
+    MigrateServerParameter MigrateServerParameter::ms_parameter_;
     KvMetaParameter KvMetaParameter::kv_meta_parameter_;
     KvRtServerParameter KvRtServerParameter::kv_rt_parameter_;
     ExpireServerParameter ExpireServerParameter::expire_server_parameter_;
@@ -228,6 +229,9 @@ namespace tfs
       max_check_member_num_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_CHECK_MEMBER_NUM, 1);
 
       max_marshalling_queue_timeout_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_MARSHALLING_QUEUE_TIMEOUT, 3600);
+
+      // used by migrateserver
+      migrate_complete_wait_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MIGRATE_COMPLETE_WAIT_TIME, 120);
 
       business_port_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BUSINESS_PORT_COUNT, 1);
       if (business_port_count_ <= 0)
@@ -698,6 +702,52 @@ namespace tfs
         }
       }
 
+      return ret;
+    }
+
+    int MigrateServerParameter::initialize(void)
+    {
+      const char* ipaddr = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_IP_ADDR, "");
+      const int32_t port = TBSYS_CONFIG.getInt(CONF_SN_MIGRATESERVER, CONF_PORT, 0);
+      int32_t ret = (NULL != ipaddr && port > 1024 && port < 65535) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "migrateserver not set (nameserver vip) ipaddr: %s or port: %d, must be exit", NULL == ipaddr ? "null" : ipaddr, port);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ns_vip_port_ = tbsys::CNetUtil::strToAddr(ipaddr, port);
+
+        const char* percent = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_BALANCE_PERCENT, "0.05");
+        balance_percent_ = strtod(percent, NULL);
+        const char* penalty = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_PENALTY_PERCENT, "0.8");
+        penalty_percent_ = strtod(penalty, NULL);
+
+        update_statistic_interval_ = TBSYS_CONFIG.getInt(CONF_SN_MIGRATESERVER, CONF_UPDATE_STATISTIC_INTERVAL, 3600);
+        const int32_t TWO_MONTH = 2 * 31 * 86400;
+        hot_time_range_ = TBSYS_CONFIG.getInt(CONF_SN_MIGRATESERVER, CONF_HOT_TIME_RANGE, TWO_MONTH);
+
+        const char* str_full_disk_access_ratio = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_FULL_DISK_ACCESS_RATIO, "");
+        const char* str_system_disk_access_ratio = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_SYSTEM_DISK_ACCESS_RATIO, "");
+        std::vector<std::string> ratios[2];
+        Func::split_string(str_full_disk_access_ratio, ':', ratios[0]);
+        Func::split_string(str_system_disk_access_ratio, ':', ratios[1]);
+        ret = (5U == ratios[0].size() && 5U == ratios[1].size()) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          AccessRatio* ar[2];
+          ar[0] = &full_disk_access_ratio_;
+          ar[1] = &system_disk_access_ratio_;
+          for (int32_t i = 0; i < 2; ++i)
+          {
+            ar[i]->last_access_time_ratio = atoi(ratios[i][0].c_str());
+            ar[i]->read_ratio = atoi(ratios[i][1].c_str());
+            ar[i]->write_ratio = atoi(ratios[i][2].c_str());
+            ar[i]->update_ratio = atoi(ratios[i][3].c_str());
+            ar[i]->unlink_ratio = atoi(ratios[i][4].c_str());
+          }
+        }
+      }
       return ret;
     }
 
