@@ -437,6 +437,14 @@ namespace tfs
       int32_t ret = ((NULL == buf) || (buf_length <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
+        if (info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
+        {
+          int64_t total = family_manager.get_reinstate_or_dissolve_queue_size() + block_manager.get_emergency_replicate_queue_size();
+          ret = total > 0 ? EXIT_CANNOT_MIGRATE_BLOCK_ERROR: TFS_SUCCESS;
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
         pblock = block_manager.get(info.value3_);
         ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
         if (TFS_SUCCESS != ret)
@@ -515,10 +523,22 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         helper.clear();
-        helper.push_back(source->id());
-        helper.push_back(target->id());
+        ret = block_manager.get_servers(helper, pblock);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        uint64_t result_servers[MAX_REPLICATION_NUM];
+        ArrayHelper<uint64_t> result_helper(MAX_REPLICATION_NUM, result_servers);
+        result_helper.push_back(source->id());
+        result_helper.push_back(target->id());
+        for (int64_t index = 0; index < helper.get_array_index(); ++index)
+        {
+          uint64_t server = *helper.at(index);
+          if (server != source->id())
+            result_helper.push_back(server);
+        }
         PlanType type = (info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO) ? PLAN_TYPE_REPLICATE : PLAN_TYPE_MOVE ;
-        ret = task_manager.add(info.value3_, helper, type, now);
+        ret = task_manager.add(info.value3_, result_helper, type, now);
         if (TFS_SUCCESS != ret)
         {
           snprintf(buf, buf_length, "add %s task failed, block: %"PRI64_PREFIX"u",
