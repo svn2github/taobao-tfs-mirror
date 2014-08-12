@@ -6,10 +6,10 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -luuid -lz -lsnappy
 
-bin_PROGRAMS = admintool tfstool ssm check_replication repair_file_tool stat_tool gen_compact_blk_order 
-if WITH_TAIR_CACHE
-bin_PROGRAMS += remote_block_cache_tool
-endif
+#bin_PROGRAMS = admintool tfstool ssm check_replication repair_file_tool stat_tool gen_compact_blk_order 
+#if WITH_TAIR_CACHE
+#bin_PROGRAMS += remote_block_cache_tool
+#endif
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/dataserver/libdataserver.a\
