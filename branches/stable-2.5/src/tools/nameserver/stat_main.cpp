@@ -220,7 +220,12 @@ int main(int argc,char** argv)
   }
 
   gstreamer.set_packet_factory(&gfactory);
-  NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
+  int ret = NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "initialize NewClientManager fail, ret: %d", ret);
+    return ret;
+  }
 
   StatInfo stat_info;
   V_BLOCK_SIZE_RANGE v_block_size_range;
@@ -243,7 +248,12 @@ int main(int argc,char** argv)
   }
 
   // do stat
-  block_process(ns_id, stat_info, v_block_size_range, v_del_block_range, s_big_block, top_num, s_topn_block);
+  ret = block_process(ns_id, stat_info, v_block_size_range, v_del_block_range, s_big_block, top_num, s_topn_block);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "scan all blocks from ns fail, ret: %d", ret);
+    return ret;
+  }
 
   // print info to log file
   fprintf(fp, "--------------------------block file info-------------------------------\n");

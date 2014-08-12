@@ -144,6 +144,8 @@ namespace tfs
         int64_t file_size_;
         int64_t del_file_count_;
         int64_t del_file_size_;
+        int64_t replicate_count_;
+        int64_t data_block_count_;
         std::set<uint64_t> family_set_;
     };
 /*
