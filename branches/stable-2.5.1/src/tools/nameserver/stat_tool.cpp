@@ -124,7 +124,8 @@ void BlockBase::dump() const
 
 // stat info stat
 StatInfo::StatInfo()
-  : block_count_(0), file_count_(0), file_size_(0), del_file_count_(0), del_file_size_(0)
+  : block_count_(0), file_count_(0), file_size_(0), del_file_count_(0), del_file_size_(0),
+    replicate_count_(0), data_block_count_(0)
 {
 }
 StatInfo::~StatInfo()
@@ -147,7 +148,15 @@ void StatInfo::add(const BlockBase& block_base)
   file_size_ += block_base.info_.size_;
   del_file_count_ += block_base.info_.del_file_count_;
   del_file_size_ += block_base.info_.del_size_;
-  family_set_.insert(block_base.info_.family_id_);
+  replicate_count_ += block_base.server_list_.size();
+  if (!IS_VERFIFY_BLOCK(block_base.info_.block_id_))
+  {
+    data_block_count_ += 1;
+  }
+  if (INVALID_FAMILY_ID != block_base.info_.family_id_)
+  {
+    family_set_.insert(block_base.info_.family_id_);
+  }
 }
 
 void StatInfo::dump(FILE* fp) const
@@ -156,5 +165,8 @@ void StatInfo::dump(FILE* fp) const
       " del_file_count: %"PRI64_PREFIX"d, del_file_size: %"PRI64_PREFIX"d, del_avg_file_size: %.2f, del_ratio: %.2f%%\n",
       file_count_, file_size_, div(file_size_, file_count_),
       del_file_count_, del_file_size_, div(del_file_size_, del_file_count_), div(del_file_size_ * 100, file_size_));
-  fprintf(fp, "block_count: %"PRI64_PREFIX"d, avg_block_size: %.2f, family_count: %zd\n", block_count_, div(file_size_, block_count_), family_set_.size());
+  fprintf(fp, "block_count: %"PRI64_PREFIX"d, avg_block_size: %.2f, family_count: %zd, "
+      "replicates: %"PRI64_PREFIX"d, data_blocks: %"PRI64_PREFIX"d, avg_replicate_count: %.3f\n",
+      block_count_, div(file_size_, block_count_), family_set_.size(),
+      replicate_count_, data_block_count_, div(replicate_count_, data_block_count_));
 }
