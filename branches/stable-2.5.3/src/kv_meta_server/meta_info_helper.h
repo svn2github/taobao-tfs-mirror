@@ -68,16 +68,32 @@ namespace tfs
         bool check_put_object_part(common::ObjectInfo &object_info,
                      const int64_t offset, const bool is_append);
 
+        int put_object_metadata(const std::string& bucket_name,
+                       const std::string& file_name,
+                       const common::UserInfo &user_info,
+                       const common::UserMetadata &user_metadata);
+
         int get_object(const std::string& bucket_name,
                        const std::string& file_name,
                        const int64_t offset, const int64_t length,
                        const common::UserInfo &user_info,
                        common::ObjectInfo *object_info, bool *still_have);
 
+        int get_object_metadata(const std::string &bucket_name,
+                      const std::string &file_name,
+                      const common::UserInfo &user_info,
+                      const common::UserMetadata& user_metadata,
+                      common::MAP_STRING &object_tag_map);
+
         int del_object(const std::string& bucket_name,
                        const std::string& file_name,
                        const common::UserInfo &user_info,
                        common::ObjectInfo *object_info, bool* still_have);
+
+        int del_object_metadata(const std::string& bucket_name,
+                      const std::string& file_name,
+                      const common::UserInfo &user_info,
+                      const common::UserMetadata& user_metadata);
 
         /*----------------------------bucket part-----------------------------*/
 
@@ -170,14 +186,6 @@ namespace tfs
         int check_object_overlap(const std::string &bucket_name,
             const std::string &file_name, const int64_t offset, const int64_t length);
 
-        int find_object(const std::string& bucket_name, const std::string& file_name,
-           std::vector<common::KvValue*>& kv_value_keys,
-           std::vector<common::KvValue*>& kv_value_values,
-           int32_t &result_size, bool* still_have);
- 
-        int find_object_zero(const std::string& bucket_name, const std::string& file_name,
-             common::KvValue* kv_value, int64_t* version);
- 
       protected:
         common::KvEngineHelper* kv_engine_helper_;
         int32_t meta_info_name_area_;
