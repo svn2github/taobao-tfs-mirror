@@ -367,11 +367,6 @@ namespace tfs
       bool is_master = (master_id == ds_info.information_.id_);
       bool lease_ok = false;
 
-      if (is_master)
-      {
-        easy_request_sleeping(message->get_request());
-      }
-
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
           (INVALID_BLOCK_ID == attach_block_id) ||
@@ -452,6 +447,7 @@ namespace tfs
       {
         if (lease_ok)
         {
+          easy_request_sleeping(message->get_request());
           write_file_callback(message);
         }
         else
@@ -484,7 +480,7 @@ namespace tfs
           length, offset, version, is_master ? "master": "slave",
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(), ret);
 
-      return TFS_SUCCESS;
+      return (is_master && lease_ok) ? EASY_AGAIN : TFS_SUCCESS;
     }
 
     int ClientRequestServer::close_file(CloseFileMessageV2* message)
@@ -505,11 +501,6 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
       bool lease_ok = false;
-
-      if (is_master)
-      {
-        easy_request_sleeping(message->get_request());
-      }
 
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
@@ -588,6 +579,7 @@ namespace tfs
       {
         if (lease_ok)
         {
+          easy_request_sleeping(message->get_request());
           close_file_callback(message);
         }
         else
@@ -616,7 +608,7 @@ namespace tfs
          is_master ? "master" : "slave", tbsys::CNetUtil::addrToString(peer_id).c_str(),
          TIMER_DURATION(), ret);
 
-      return TFS_SUCCESS;
+      return (is_master && lease_ok) ? EASY_AGAIN : TFS_SUCCESS;
     }
 
     int ClientRequestServer::unlink_file(UnlinkFileMessageV2* message)
@@ -636,11 +628,6 @@ namespace tfs
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       bool is_master = (master_id == ds_info.information_.id_);
       bool lease_ok = false;
-
-      if (is_master)
-      {
-        easy_request_sleeping(message->get_request());
-      }
 
       int ret = TFS_SUCCESS;
       if ((INVALID_BLOCK_ID == block_id) ||
@@ -713,6 +700,7 @@ namespace tfs
       {
         if (lease_ok)
         {
+          easy_request_sleeping(message->get_request());
           unlink_file_callback(message);
         }
         else
@@ -741,7 +729,7 @@ namespace tfs
           TFS_SUCCESS == ret ? "success" : "fail", block_id, attach_block_id, file_id, lease_id, action, version,
           is_master ? "master" : "slave", tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION(), ret);
 
-      return TFS_SUCCESS;
+      return (is_master && lease_ok) ? EASY_AGAIN : TFS_SUCCESS;
     }
 
     int ClientRequestServer::new_block(NewBlockMessageV2* message)
@@ -824,6 +812,11 @@ namespace tfs
           {
             get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
           }
+          iter = fresponse->begin();
+          for ( ; iter != fresponse->end(); iter++)
+          {
+            get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
+          }
           write_file_callback(msg);
         }
         else if (CLOSE_FILE_MESSAGE_V2 == pcode)
@@ -837,6 +830,11 @@ namespace tfs
           {
             get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
           }
+          iter = fresponse->begin();
+          for ( ; iter != fresponse->end(); iter++)
+          {
+            get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
+          }
           close_file_callback(msg);
         }
         else if (UNLINK_FILE_MESSAGE_V2 == pcode)
@@ -847,6 +845,11 @@ namespace tfs
           uint64_t lease_id = msg->get_lease_id();
           NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
           for ( ; iter != sresponse->end(); iter++)
+          {
+            get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
+          }
+          iter = fresponse->begin();
+          for ( ; iter != fresponse->end(); iter++)
           {
             get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
           }

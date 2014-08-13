@@ -204,7 +204,6 @@ namespace tfs
         eio_.do_signal = 0;
         eio_.no_redispatch = 0;
         eio_.no_reuseport = 1;
-        eio_.listen_all = 1;
         eio_.tcp_nodelay = 1;
         eio_.tcp_cork = 0;
         eio_.affinity_enable = 1;

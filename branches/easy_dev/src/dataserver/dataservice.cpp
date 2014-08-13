@@ -979,23 +979,15 @@ namespace tfs
             break;
         }
 
+        if (EASY_AGAIN == ret)
+        {
+          return EASY_AGAIN;
+        }
+
         if (common::TFS_SUCCESS != ret)
         {
           common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
           msg->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, "execute message failed");
-        }
-        else
-        {
-          if (WRITE_FILE_MESSAGE_V2 == pcode ||
-              CLOSE_FILE_MESSAGE_V2 == pcode ||
-              UNLINK_FILE_MESSAGE_V2 == pcode)
-          {
-            // async request need wait
-            if (!packet->get_request()->opacket)
-            {
-              return EASY_AGAIN;
-            }
-          }
         }
       }
 

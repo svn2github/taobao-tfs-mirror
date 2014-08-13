@@ -32,7 +32,8 @@ namespace tfs {
 
     int EasyHelper::on_disconnect_cb(easy_connection_t *c)
     {
-      TBSYS_LOG(INFO, "disconnect: %s", easy_connection_to_str(c).c_str());
+      TBSYS_LOG(INFO, "disconnect: %s, c->pool->ref: %ld, c->doing_request_count: %d",
+          easy_connection_to_str(c).c_str(), c->pool->ref, c->doing_request_count);
       return EASY_OK;
     }
 
