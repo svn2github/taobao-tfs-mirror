@@ -387,7 +387,7 @@ namespace tfs
       if (ret)
       {
         const char* str = type == PLAN_TYPE_EC_DISSOLVE ? "dissolve" : type == PLAN_TYPE_EC_REINSTATE ? "reinstate" : "unknow";
-        TBSYS_LOG(DEBUG, "family %"PRI64_PREFIX"d mybe lack of backup, we'll %s", family->get_family_id(), str);
+        TBSYS_LOG(DEBUG, "family %"PRI64_PREFIX"d maybe lack of backup, we'll %s", family->get_family_id(), str);
         family->set_in_reinstate_or_dissolve_queue(FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES);
         tbutil::Mutex::Lock lock(reinstate_or_dissolve_queue_mutex_);
         reinstate_or_dissolve_queue_.push_back(family->get_family_id());

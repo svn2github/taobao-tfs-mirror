@@ -1274,15 +1274,21 @@ namespace tfs
             }
             else
             {
-              result_helper.push_back(source->id());
-              result_helper.push_back(result->id());
-              for (int64_t index = 0; index < helper.get_array_index(); ++index)
+              helper.clear();
+              int32_t rt = get_block_manager().get_servers(helper, block);
+              if (TFS_SUCCESS == rt && helper.get_array_index() > 0)
               {
-                uint64_t server = *helper.at(index);
-                if (server != source->id())
-                  result_helper.push_back(server);
+                result_helper.clear();
+                result_helper.push_back(source->id());
+                result_helper.push_back(result->id());
+                for (int64_t index = 0; index < helper.get_array_index(); ++index)
+                {
+                  uint64_t server = *helper.at(index);
+                  if (server != source->id())
+                    result_helper.push_back(server);
+                }
+                ret = TFS_SUCCESS == get_task_manager().add(block->id(), result_helper, PLAN_TYPE_MOVE, now);
               }
-              ret = TFS_SUCCESS == get_task_manager().add(block->id(), result_helper, PLAN_TYPE_MOVE, now);
             }
           }
         }
