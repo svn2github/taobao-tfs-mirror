@@ -97,8 +97,10 @@ namespace tfs
       const char* const get_dev() const;
 
       /** get main work thread count*/
-      int32_t get_work_thread_count() const;
-      int32_t get_slow_work_thread_count() const;
+      int32_t get_work_thread_count() const;       // handle normal request
+      int32_t get_slow_work_thread_count() const;  // handle slow request
+      int32_t get_heart_thread_count() const;      // handle heartbeat request
+      int32_t get_io_thread_count() const;         // handle io(event) request
 
       /** get work queue size */
       int32_t get_work_queue_size() const;
@@ -116,7 +118,11 @@ namespace tfs
     // easy support
     public:
       virtual int handle(BasePacket* packet) = 0;
-      virtual bool is_slow_packet(BasePacket* packet) { UNUSED(packet); return false; }
+      virtual EasyThreadType select_thread(BasePacket* packet)
+      {
+        UNUSED(packet);
+        return EASY_WORK_THREAD;  // default handle by work thread
+      }
 
     private:
       static uint64_t get_packet_id_cb(easy_connection_t *c, void *packet)
@@ -143,20 +149,15 @@ namespace tfs
         return service->process_handler(r);
       }
 
-      static int slow_request_cb(easy_request_t *r, void *args)
+      static int worker_request_cb(easy_request_t *r, void *args)
       {
         BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
-        return service->slow_request_handler(r, args);
+        return service->worker_request_handler(r, args);
       }
 
       int process_handler(easy_request_t *r);
-      int slow_request_handler(easy_request_t *r, void* args);
+      int worker_request_handler(easy_request_t *r, void* args);
       int packet_handler(BasePacket* packet);
-
-    private:
-      easy_io_t eio_;
-      easy_io_handler_pt eio_handler_;
-      int easy_io_initialize();
 
     private:
       BasePacketFactory* packet_factory_;
@@ -166,7 +167,17 @@ namespace tfs
       tbnet::Transport* transport_;
       tbnet::PacketQueueThread main_workers_;
       int32_t work_queue_size_;
-      easy_thread_pool_t *slow_task_queue_;
+
+    private:
+      easy_io_t eio_;
+      easy_io_handler_pt eio_handler_;
+      easy_thread_pool_t *work_task_queue_;
+      easy_thread_pool_t *slow_work_task_queue_;
+      int easy_io_initialize();
+
+      // only ns need heart eio
+      easy_io_t heart_eio_;
+      easy_io_handler_pt heart_eio_handler_;
     };
   }
 }

@@ -264,11 +264,18 @@ namespace tfs
       return hret;
     }
 
-    bool NameServer::is_slow_packet(BasePacket* packet)
+    EasyThreadType NameServer::select_thread(BasePacket* packet)
     {
       int32_t pcode = packet->getPCode();
-      return REQ_REPORT_BLOCKS_TO_NS_MESSAGE == pcode ||
-             OPLOG_SYNC_MESSAGE == pcode;
+      if (pcode == SET_DATASERVER_MESSAGE)
+      {
+        return EASY_IO_THREAD;
+      }
+      else if (pcode == REQ_REPORT_BLOCKS_TO_NS_MESSAGE)
+      {
+        return EASY_SLOW_WORK_THREAD;
+      }
+      return EASY_WORK_THREAD;
     }
 
     int NameServer::handle(BasePacket* packet)

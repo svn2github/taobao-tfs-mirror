@@ -255,9 +255,9 @@ AC_CONFIG_FILES([Makefile
                  src/common/mysql_cluster/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
-                 src/nameserver/Makefile])
+                 src/nameserver/Makefile
+                 src/monitor/Makefile])
                  #src/adminserver/Makefile
-                 #src/monitor/Makefile
                  #src/new_client/Makefile
                  #src/rcserver/Makefile
                  #src/name_meta_server/Makefile

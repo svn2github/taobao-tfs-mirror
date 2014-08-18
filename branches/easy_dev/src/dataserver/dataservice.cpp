@@ -994,10 +994,21 @@ namespace tfs
       return EASY_OK;
     }
 
-    bool DataService::is_slow_packet(BasePacket* packet)
+    EasyThreadType DataService::select_thread(BasePacket* packet)
     {
       int32_t pcode = packet->getPCode();
-      return REQ_CALL_DS_REPORT_BLOCK_MESSAGE == pcode;
+      if (pcode == WRITE_FILE_MESSAGE_V2 ||
+          pcode == CLOSE_FILE_MESSAGE_V2 ||
+          pcode == UNLINK_FILE_MESSAGE_V2)
+      {
+        // need async process, must handle by io thread
+        return EASY_IO_THREAD;
+      }
+      else if (pcode == REQ_CALL_DS_REPORT_BLOCK_MESSAGE)
+      {
+        return EASY_SLOW_WORK_THREAD;
+      }
+      return EASY_WORK_THREAD;
     }
 
     int DataService::create_file_number(CreateFilenameMessage* message)

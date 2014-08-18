@@ -100,7 +100,7 @@ namespace tfs
 
       // libeasy handle packet
       int handle(common::BasePacket* packet);
-      bool is_slow_packet(common::BasePacket* packet);
+      virtual common::EasyThreadType select_thread(common::BasePacket* packet);
 
       bool check_response(common::NewClient* client);
       int callback(common::NewClient* client);

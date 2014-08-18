@@ -10,4 +10,4 @@ else
 #					tools
 endif
 
-SUBDIRS = common message requester clientv2 dataserver nameserver
+SUBDIRS = common message requester clientv2 dataserver nameserver monitor

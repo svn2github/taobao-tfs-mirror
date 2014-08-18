@@ -42,7 +42,8 @@ namespace tfs
       streamer_(NULL),
       timer_(0),
       work_queue_size_(10240),
-      slow_task_queue_(NULL)
+      work_task_queue_(NULL),
+      slow_work_task_queue_(NULL)
     {
     }
 
@@ -70,6 +71,13 @@ namespace tfs
       destroy_packet_factory(packet_factory_);
       destroy_packet_streamer(streamer_);
       tbsys::gDelete(transport_);
+
+      if (get_heart_thread_count() != 0)
+      {
+        easy_io_stop(&heart_eio_);
+        easy_io_wait(&heart_eio_);
+        easy_io_destroy(&heart_eio_);
+      }
 
       easy_io_stop(&eio_);
       easy_io_wait(&eio_);
@@ -179,6 +187,16 @@ namespace tfs
       return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_SLOW_THREAD_COUNT, 8);
     }
 
+    int32_t BaseService::get_heart_thread_count() const
+    {
+      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_HEART_THREAD_COUNT, 0);
+    }
+
+    int32_t BaseService::get_io_thread_count() const
+    {
+      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_IO_THREAD_COUNT, 8);
+    }
+
     int32_t BaseService::get_work_queue_size() const
     {
       return work_queue_size_;
@@ -194,7 +212,7 @@ namespace tfs
       TBSYS_LOG(INFO, "base service initialize easy io");
       int ret = TFS_SUCCESS;
       memset(&eio_, 0, sizeof(eio_));
-      if (!easy_eio_create(&eio_, get_work_thread_count()))
+      if (!easy_eio_create(&eio_, get_io_thread_count()))
       {
         TBSYS_LOG(ERROR, "create eio failed");
         ret = TFS_ERROR;
@@ -218,27 +236,29 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        // NS need listen two port, keep it for compatible
-        int32_t port_num = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_PORT_NUM, 1);
-        for (int index = 0; index < port_num && TFS_SUCCESS == ret; index++)
+        if (NULL == easy_io_add_listen(&eio_, NULL, get_listen_port(), &eio_handler_))
         {
-          if (NULL == easy_io_add_listen(&eio_, NULL, get_listen_port() + index, &eio_handler_))
-          {
-            TBSYS_LOG(ERROR, "listen on port %d failed", get_listen_port() + index);
-            ret = TFS_ERROR;
-          }
-          else
-          {
-            TBSYS_LOG(INFO, "listen on port %d", get_listen_port() + index);
-          }
+          TBSYS_LOG(ERROR, "listen on port %d failed", get_listen_port());
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          TBSYS_LOG(INFO, "listen on port %d success", get_listen_port());
         }
       }
 
       if (TFS_SUCCESS == ret)
       {
-        slow_task_queue_ = easy_request_thread_create(&eio_,
-            get_slow_work_thread_count(), slow_request_cb, this);
-        assert(NULL != slow_task_queue_);
+        work_task_queue_ = easy_request_thread_create(&eio_,
+            get_work_thread_count(), worker_request_cb, this);
+        assert(NULL != work_task_queue_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        slow_work_task_queue_ = easy_request_thread_create(&eio_,
+            get_slow_work_thread_count(), worker_request_cb, this);
+        assert(NULL != slow_work_task_queue_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -251,7 +271,59 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "start eio failed");
           ret = TFS_ERROR;
-          easy_io_destroy(&eio_);
+        }
+      }
+
+      // when heart_thread_num is nonzero, heart eio will start
+      if (TFS_SUCCESS == ret && get_heart_thread_count() != 0)
+      {
+        memset(&heart_eio_, 0, sizeof(heart_eio_));
+        if (!easy_eio_create(&heart_eio_, get_heart_thread_count()))
+        {
+          TBSYS_LOG(ERROR, "create heart_eio failed");
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          heart_eio_.do_signal = 0;
+          heart_eio_.no_redispatch = 0;
+          heart_eio_.no_reuseport = 1;
+          heart_eio_.tcp_nodelay = 1;
+          heart_eio_.tcp_cork = 0;
+          heart_eio_.affinity_enable = 1;
+
+          memset(&heart_eio_handler_, 0, sizeof(heart_eio_handler_));
+          EasyHelper::init_handler(&heart_eio_handler_, NULL);
+          heart_eio_handler_.get_packet_id = get_packet_id_cb;
+          heart_eio_handler_.encode = encode_cb;
+          heart_eio_handler_.decode = decode_cb;
+          heart_eio_handler_.process = process_cb;
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          if (NULL == easy_io_add_listen(&heart_eio_, NULL, get_listen_port() + 1, &heart_eio_handler_))
+          {
+            TBSYS_LOG(ERROR, "listen on port %d failed", get_listen_port() + 1);
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            TBSYS_LOG(INFO, "listen on port %d success", get_listen_port() + 1);
+          }
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          if (EASY_OK == easy_io_start(&heart_eio_))
+          {
+            TBSYS_LOG(INFO, "heart start, pid=%d", getpid());
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "start heart eio failed");
+            ret = TFS_ERROR;
+          }
         }
       }
 
@@ -386,16 +458,23 @@ namespace tfs
       bp->set_request(r);
       bp->set_direction(DIRECTION_RECEIVE);
 
-      if (is_slow_packet(bp))
+      EasyThreadType type = select_thread(bp);
+      if (type == EASY_WORK_THREAD)
       {
-        easy_thread_pool_push(slow_task_queue_, r, easy_hash_key((uint64_t)(long)r));
+        easy_thread_pool_push(work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
+        return EASY_AGAIN;
+      }
+      else if(type == EASY_SLOW_WORK_THREAD)
+      {
+        easy_thread_pool_push(slow_work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
         return EASY_AGAIN;
       }
 
+      // directly handle by io thread
       return packet_handler(bp);
     }
 
-    int BaseService::slow_request_handler(easy_request_t *r, void* args)
+    int BaseService::worker_request_handler(easy_request_t *r, void* args)
     {
       UNUSED(args);
       BasePacket* bp = (BasePacket*)r->ipacket;
