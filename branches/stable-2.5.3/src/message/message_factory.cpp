@@ -591,17 +591,11 @@ namespace tfs
           case common::NS_CLEAR_FAMILYINFO_MESSAGE:
             packet = new CleanFamilyInfoMessage();
             break;
-          case common::REQ_KVMETA_PUT_OBJECT_METADATA_MESSAGE:
-            packet = new ReqKvMetaPutObjectMetaDataMessage();
+          case common::REQ_KVMETA_PUT_OBJECT_USER_METADATA_MESSAGE:
+            packet = new ReqKvMetaPutObjectUserMetadataMessage();
             break;
-          case common::REQ_KVMETA_GET_OBJECT_METADATA_MESSAGE:
-            packet = new ReqKvMetaGetObjectMetaDataMessage();
-            break;
-          case common::RSP_KVMETA_GET_OBJECT_METADATA_MESSAGE:
-            packet = new RspKvMetaGetObjectMetaDataMessage();
-            break;
-          case common::REQ_KVMETA_DEL_OBJECT_METADATA_MESSAGE:
-            packet = new ReqKvMetaDelObjectMetaDataMessage();
+          case common::REQ_KVMETA_DEL_OBJECT_USER_METADATA_MESSAGE:
+            packet = new ReqKvMetaDelObjectUserMetadataMessage();
             break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);

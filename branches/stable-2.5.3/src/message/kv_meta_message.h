@@ -132,11 +132,11 @@ namespace tfs
         common::UserInfo user_info_;
     };
 
-    class ReqKvMetaPutObjectMetaDataMessage : public common::BasePacket
+    class ReqKvMetaPutObjectUserMetadataMessage : public common::BasePacket
     {
       public:
-        ReqKvMetaPutObjectMetaDataMessage();
-        virtual ~ReqKvMetaPutObjectMetaDataMessage();
+        ReqKvMetaPutObjectUserMetadataMessage();
+        virtual ~ReqKvMetaPutObjectUserMetadataMessage();
         virtual int serialize(common::Stream& output) const;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -289,118 +289,6 @@ namespace tfs
         common::ObjectInfo object_info_;
     };
 
-    class RspKvMetaGetObjectMetaDataMessage : public common::BasePacket
-    {
-      public:
-        RspKvMetaGetObjectMetaDataMessage();
-        virtual ~RspKvMetaGetObjectMetaDataMessage();
-        virtual int serialize(common::Stream& output) const;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
-
-        const std::string& get_bucket_name() const
-        {
-          return bucket_name_;
-        }
-
-        const std::string& get_object_name() const
-        {
-          return object_name_;
-        }
-
-        const common::UserInfo& get_user_info() const
-        {
-          return user_info_;
-        }
-
-        const common::UserMetadata& get_user_metadata() const
-        {
-          return user_metadata_;
-        }
-
-        void set_bucket_name(const std::string& bucket_name)
-        {
-          bucket_name_ = bucket_name;
-        }
-
-        void set_object_name(const std::string& object_name)
-        {
-          object_name_ = object_name;
-        }
-
-        void set_user_info(const common::UserInfo& user_info)
-        {
-          user_info_ = user_info;
-        }
-
-        void set_user_metadata(const common::UserMetadata& user_metadata)
-        {
-          user_metadata_ = user_metadata;
-        }
-
-      private:
-        std::string bucket_name_;
-        std::string object_name_;
-        common::UserInfo user_info_;
-        common::UserMetadata user_metadata_;
-    };
-
-    class ReqKvMetaGetObjectMetaDataMessage : public common::BasePacket
-    {
-      public:
-        ReqKvMetaGetObjectMetaDataMessage();
-        virtual ~ReqKvMetaGetObjectMetaDataMessage();
-        virtual int serialize(common::Stream& output) const;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
-
-        const std::string& get_bucket_name() const
-        {
-          return bucket_name_;
-        }
-
-        const std::string& get_object_name() const
-        {
-          return object_name_;
-        }
-
-        const common::UserInfo& get_user_info() const
-        {
-          return user_info_;
-        }
-
-        const common::UserMetadata&  get_user_metadata() const
-        {
-          return user_metadata_;
-        }
-
-        void set_bucket_name(const std::string& bucket_name)
-        {
-          bucket_name_ = bucket_name;
-        }
-
-        void set_object_name(const std::string& object_name)
-        {
-          object_name_ = object_name;
-        }
-
-        void set_user_info(const common::UserInfo& user_info)
-        {
-          user_info_ = user_info;
-        }
-
-        void set_user_metadata(const common::UserMetadata& user_metadata)
-        {
-          user_metadata_ = user_metadata;
-        }
-
-      private:
-        std::string bucket_name_;
-        std::string object_name_;
-        common::UserInfo user_info_;
-        common::UserMetadata user_metadata_;
-    };
-
     class ReqKvMetaDelObjectMessage : public common::BasePacket
     {
       public:
@@ -480,11 +368,11 @@ namespace tfs
         common::ObjectInfo object_info_;
     };
 
-    class ReqKvMetaDelObjectMetaDataMessage : public common::BasePacket
+    class ReqKvMetaDelObjectUserMetadataMessage : public common::BasePacket
     {
       public:
-        ReqKvMetaDelObjectMetaDataMessage();
-        virtual ~ReqKvMetaDelObjectMetaDataMessage();
+        ReqKvMetaDelObjectUserMetadataMessage();
+        virtual ~ReqKvMetaDelObjectUserMetadataMessage();
         virtual int serialize(common::Stream& output) const;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -504,11 +392,6 @@ namespace tfs
           return user_info_;
         }
 
-        const common::UserMetadata& get_user_metadata() const
-        {
-          return user_metadata_;
-        }
-
         void set_bucket_name(const std::string& bucket_name)
         {
           bucket_name_ = bucket_name;
@@ -524,17 +407,10 @@ namespace tfs
           user_info_ = user_info;
         }
 
-        void set_user_metadata(const common::UserMetadata& user_metadata)
-        {
-          user_metadata_ = user_metadata;
-        }
-
       private:
         std::string bucket_name_;
         std::string object_name_;
         common::UserInfo user_info_;
-        common::UserMetadata user_metadata_;
-
     };
 
     class ReqKvMetaHeadObjectMessage : public common::BasePacket

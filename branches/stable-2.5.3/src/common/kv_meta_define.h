@@ -116,32 +116,32 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       void dump() const;
 
-      const MAP_STRING& get_meta_data() const
+      const MAP_STRING& get_metadata() const
       {
-       return meta_data_;
+        return metadata_;
       }
 
-      MAP_STRING& get_mutable_meta_data()
+      MAP_STRING& get_mutable_metadata()
       {
-       return meta_data_;
+        return metadata_;
       }
 
-      void set_meta_data(const MAP_STRING& meta_data)
+      void set_metadata(const MAP_STRING& metadata)
       {
-       meta_data_ = meta_data;
+        metadata_ = metadata;
       }
 
-      void clear_meta_data()
+      void clear_metadata()
       {
-       meta_data_.clear();
+        metadata_.clear();
       }
 
-      const bool is_meta_data_excessed() const
+      const bool is_exceed_metadata_size() const
       {
-       return length() > USER_METADATA_MAX_SIZE;
+        return length() > USER_METADATA_MAX_SIZE;
       }
 
-      MAP_STRING meta_data_;
+      MAP_STRING metadata_;
     };
 
     struct ObjectInfo
@@ -155,12 +155,12 @@ namespace tfs
       {
        return user_metadata_;
       }
- 
+
       UserMetadata& get_mutable_user_metadata()
       {
        return user_metadata_;
       }
- 
+
       void set_user_metadata(const UserMetadata& user_metadata)
       {
        user_metadata_ = user_metadata;

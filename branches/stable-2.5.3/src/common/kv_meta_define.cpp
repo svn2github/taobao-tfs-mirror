@@ -274,8 +274,8 @@ namespace tfs
     int64_t UserMetadata::length() const
     {
       int64_t len = INT_SIZE;
-      MAP_STRING_STRING_ITER iter = meta_data_.begin();
-      for (; iter != meta_data_.end(); iter++)
+      MAP_STRING_STRING_ITER iter = metadata_.begin();
+      for (; iter != metadata_.end(); iter++)
       {
         len += common::Serialization::get_string_length(iter->first);
         len += common::Serialization::get_string_length(iter->second);
@@ -286,14 +286,14 @@ namespace tfs
 
     void UserMetadata::dump() const
     {
-      TBSYS_LOG(DEBUG, "UserMetadata: [meta_count: %"PRI64_PREFIX"d]", meta_data_.size());
+      TBSYS_LOG(DEBUG, "UserMetadata: [meta_count: %zd]", metadata_.size());
 
-      if (meta_data_.size() > 0)
+      if (metadata_.size() > 0)
       {
-        MAP_STRING_STRING_ITER iter = meta_data_.begin();
-        for (; iter != meta_data_.end(); iter++)
+        MAP_STRING_STRING_ITER iter = metadata_.begin();
+        for (; iter != metadata_.end(); iter++)
         {
-          TBSYS_LOG(DEBUG, "UserMetadata: [key: %s value: %s]",iter->first.c_str(), iter->second.c_str());
+          TBSYS_LOG(DEBUG, "UserMetadata: [key: %s, value: %s]",iter->first.c_str(), iter->second.c_str());
         }
       }
     }
@@ -304,13 +304,13 @@ namespace tfs
 
       if (TFS_SUCCESS == ret) {
 
-        int32_t meta_count = static_cast<int32_t>(meta_data_.size());
+        int32_t meta_count = static_cast<int32_t>(metadata_.size());
         ret = Serialization::set_int32(data, data_len, pos, meta_count);
 
         if (TFS_SUCCESS == ret && meta_count > 0)
         {
-          MAP_STRING_STRING_ITER iter = meta_data_.begin();
-          for (; iter != meta_data_.end() && TFS_SUCCESS == ret; iter++)
+          MAP_STRING_STRING_ITER iter = metadata_.begin();
+          for (; iter != metadata_.end() && TFS_SUCCESS == ret; iter++)
           {
             ret = Serialization::set_string(data, data_len, pos, iter->first);
             if (TFS_SUCCESS == ret)
@@ -346,7 +346,7 @@ namespace tfs
 
           if (TFS_SUCCESS == ret)
           {
-            meta_data_.insert(std::make_pair(key, value));
+            metadata_.insert(std::make_pair(key, value));
           }
         }
       }

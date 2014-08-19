@@ -318,7 +318,7 @@ namespace tfs
     const int32_t EXIT_NO_BUCKETS = -17012;   // no buckets
     const int32_t EXIT_BUCKET_PERMISSION_DENY = -17020; //not grant fit control
 
-    const int32_t EXIT_KV_METADATA_LENNTH_EXCEED = -17101;
+    const int32_t EXIT_EXCEED_USER_METADATA_MAX_SIZE = -17101;
     const int32_t EXIT_KV_STORE_CAN_NOT_CONNECT = -17102;
 
     // life cycle manager related

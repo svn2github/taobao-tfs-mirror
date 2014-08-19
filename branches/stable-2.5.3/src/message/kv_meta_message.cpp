@@ -203,14 +203,14 @@ namespace tfs
         object_info_.length() + user_info_.length();
     }
 
-    ReqKvMetaPutObjectMetaDataMessage::ReqKvMetaPutObjectMetaDataMessage()
+    ReqKvMetaPutObjectUserMetadataMessage::ReqKvMetaPutObjectUserMetadataMessage()
     {
-      _packetHeader._pcode = REQ_KVMETA_PUT_OBJECT_METADATA_MESSAGE;
+      _packetHeader._pcode = REQ_KVMETA_PUT_OBJECT_USER_METADATA_MESSAGE;
     }
 
-    ReqKvMetaPutObjectMetaDataMessage::~ReqKvMetaPutObjectMetaDataMessage(){}
+    ReqKvMetaPutObjectUserMetadataMessage::~ReqKvMetaPutObjectUserMetadataMessage(){}
 
-    int ReqKvMetaPutObjectMetaDataMessage::serialize(Stream& output) const
+    int ReqKvMetaPutObjectUserMetadataMessage::serialize(Stream& output) const
     {
       int32_t iret = output.set_string(bucket_name_);
 
@@ -233,7 +233,7 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         int64_t pos = 0;
-        iret = user_metadata_.serialize(output.get_free(), output.get_free_length(), pos); 
+        iret = user_metadata_.serialize(output.get_free(), output.get_free_length(), pos);
         if (TFS_SUCCESS == iret)
         {
           output.pour(user_metadata_.length());
@@ -243,7 +243,7 @@ namespace tfs
       return iret;
     }
 
-    int ReqKvMetaPutObjectMetaDataMessage::deserialize(Stream& input)
+    int ReqKvMetaPutObjectUserMetadataMessage::deserialize(Stream& input)
     {
       int32_t iret = input.get_string(bucket_name_);
 
@@ -275,7 +275,7 @@ namespace tfs
       return iret;
     }
 
-    int64_t ReqKvMetaPutObjectMetaDataMessage::length() const
+    int64_t ReqKvMetaPutObjectUserMetadataMessage::length() const
     {
       int64_t len = Serialization::get_string_length(bucket_name_) +
         Serialization::get_string_length(object_name_) +
@@ -410,166 +410,6 @@ namespace tfs
       return INT8_SIZE + object_info_.length();
     }
 
-    ReqKvMetaGetObjectMetaDataMessage::ReqKvMetaGetObjectMetaDataMessage()
-    {
-      _packetHeader._pcode = REQ_KVMETA_GET_OBJECT_METADATA_MESSAGE;
-    }
-    ReqKvMetaGetObjectMetaDataMessage::~ReqKvMetaGetObjectMetaDataMessage(){}
-
-    int ReqKvMetaGetObjectMetaDataMessage::serialize(Stream& output) const
-    {
-      int32_t iret = output.set_string(bucket_name_);
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = output.set_string(object_name_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-
-        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (TFS_SUCCESS == iret)
-        {
-          output.pour(user_info_.length());
-        }
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-
-        iret = user_metadata_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (TFS_SUCCESS == iret)
-        {
-          output.pour(user_metadata_.length());
-        }
-      }
-
-      return iret;
-    }
-
-    int ReqKvMetaGetObjectMetaDataMessage::deserialize(Stream& input)
-    {
-      int32_t iret = input.get_string(bucket_name_);
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_string(object_name_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (TFS_SUCCESS == iret)
-        {
-          input.drain(user_info_.length());
-        }
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-        iret = user_metadata_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (TFS_SUCCESS == iret)
-        {
-          input.drain(user_metadata_.length());
-        }
-      }
-
-      return iret;
-    }
-
-    int64_t ReqKvMetaGetObjectMetaDataMessage::length() const
-    {
-      int64_t len = Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(object_name_)
-        + INT64_SIZE * 2 + user_info_.length() + user_metadata_.length();
-
-      return len;
-    }
-
-    RspKvMetaGetObjectMetaDataMessage::RspKvMetaGetObjectMetaDataMessage()
-    {
-      _packetHeader._pcode = RSP_KVMETA_GET_OBJECT_METADATA_MESSAGE;
-    }
-    RspKvMetaGetObjectMetaDataMessage::~RspKvMetaGetObjectMetaDataMessage(){}
-
-    int RspKvMetaGetObjectMetaDataMessage::serialize(Stream& output) const
-    {
-      int32_t iret = output.set_string(bucket_name_);
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = output.set_string(object_name_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-
-        iret = user_info_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (TFS_SUCCESS == iret)
-        {
-          output.pour(user_info_.length());
-        }
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-
-        iret = user_metadata_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (TFS_SUCCESS == iret)
-        {
-          output.pour(user_metadata_.length());
-        }
-      }
-
-      return iret;
-    }
-
-    int RspKvMetaGetObjectMetaDataMessage::deserialize(Stream& input)
-    {
-      int32_t iret = input.get_string(bucket_name_);
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = input.get_string(object_name_);
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-        iret = user_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (TFS_SUCCESS == iret)
-        {
-          input.drain(user_info_.length());
-        }
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-        iret = user_metadata_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (TFS_SUCCESS == iret)
-        {
-          input.drain(user_metadata_.length());
-        }
-      }
-
-      return iret;
-    }
-    int64_t RspKvMetaGetObjectMetaDataMessage::length() const
-    {
-      int64_t len = Serialization::get_string_length(bucket_name_) +
-        Serialization::get_string_length(object_name_) +
-        user_info_.length() + user_metadata_.length();
-
-      return len;
-    }
-
     //req_del_object_msg
     ReqKvMetaDelObjectMessage::ReqKvMetaDelObjectMessage()
     {
@@ -675,14 +515,14 @@ namespace tfs
       return INT8_SIZE + object_info_.length();
     }
 
-    ReqKvMetaDelObjectMetaDataMessage::ReqKvMetaDelObjectMetaDataMessage()
+    ReqKvMetaDelObjectUserMetadataMessage::ReqKvMetaDelObjectUserMetadataMessage()
     {
-      _packetHeader._pcode = REQ_KVMETA_DEL_OBJECT_METADATA_MESSAGE;
+      _packetHeader._pcode = REQ_KVMETA_DEL_OBJECT_USER_METADATA_MESSAGE;
     }
 
-    ReqKvMetaDelObjectMetaDataMessage::~ReqKvMetaDelObjectMetaDataMessage(){}
+    ReqKvMetaDelObjectUserMetadataMessage::~ReqKvMetaDelObjectUserMetadataMessage(){}
 
-    int ReqKvMetaDelObjectMetaDataMessage::serialize(Stream& output) const
+    int ReqKvMetaDelObjectUserMetadataMessage::serialize(Stream& output) const
     {
       int32_t iret = output.set_string(bucket_name_);
 
@@ -702,21 +542,10 @@ namespace tfs
         }
       }
 
-      if (TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-
-        iret = user_metadata_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (TFS_SUCCESS == iret)
-        {
-          output.pour(user_metadata_.length());
-        }
-      }
-
       return iret;
     }
 
-    int ReqKvMetaDelObjectMetaDataMessage::deserialize(Stream& input)
+    int ReqKvMetaDelObjectUserMetadataMessage::deserialize(Stream& input)
     {
       int32_t iret = input.get_string(bucket_name_);
 
@@ -735,23 +564,12 @@ namespace tfs
         }
       }
 
-      if (TFS_SUCCESS == iret)
-      {
-        int64_t pos = 0;
-        iret = user_metadata_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (TFS_SUCCESS == iret)
-        {
-          input.drain(user_metadata_.length());
-        }
-      }
-
       return iret;
     }
 
-    int64_t ReqKvMetaDelObjectMetaDataMessage::length() const
+    int64_t ReqKvMetaDelObjectUserMetadataMessage::length() const
     {
-      int64_t len = Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(object_name_) + user_info_.length() + user_metadata_.length();
-
+      int64_t len = Serialization::get_string_length(bucket_name_) + Serialization::get_string_length(object_name_) + user_info_.length();
       return len;
     }
 

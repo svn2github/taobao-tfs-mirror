@@ -26,7 +26,7 @@ namespace tfs
     const int TFS_INFO_BUFF_SIZE = 128;
     const int VALUE_BUFF_SIZE = 1024*1024;
     const int KV_VALUE_BUFF_SIZE = 1024*1024;
-    const int32_t KEY_BUFF_SIZE = 512 + 8 + 8;
+    const int32_t KEY_BUFF_SIZE = 64 + 512 + 8 + 8 + 8; // bucket_name(64) object_name(512) offset(8) version(8) delimiter(8)
     const int32_t SCAN_LIMIT_FOR_OVERLAP = 3;
     const int32_t SCAN_LIMIT = 20;
     const int32_t MESS_LIMIT = 10;
@@ -231,6 +231,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = get_object_part(bucket_name, file_name, 0, object_info_zero, NULL);
+        object_info_zero->dump();
       }
 
       return ret;
@@ -480,9 +481,8 @@ namespace tfs
           object_info_zero.meta_info_.create_time_ = static_cast<int64_t>(time(NULL));
         }
 
-        //TODO: check this
-        //object_info_zero.has_user_metadata_ = object_info.has_user_metadata_;
-        //object_info_zero.user_metadata_ = object_info.user_metadata_;
+        object_info_zero.has_user_metadata_ = object_info.has_user_metadata_;
+        object_info_zero.user_metadata_ = object_info.user_metadata_;
 
         if (!object_info.v_tfs_file_info_.empty())
         {
@@ -492,7 +492,6 @@ namespace tfs
 
       return;
     }
-
 
     int MetaInfoHelper::check_object_overlap(const std::string &bucket_name,
         const std::string &file_name, const int64_t offset,
@@ -659,23 +658,27 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::put_object_metadata(const std::string &bucket_name,
+    int MetaInfoHelper::put_object_user_metadata(const std::string &bucket_name,
         const std::string &file_name, const common::UserInfo &user_info,
         const common::UserMetadata &user_metadata)
     {
       int32_t ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
 
-      if (user_metadata.is_meta_data_excessed())
+      if (user_metadata.is_exceed_metadata_size())
       {
-        ret = EXIT_KV_METADATA_LENNTH_EXCEED;
+        ret = EXIT_EXCEED_USER_METADATA_MAX_SIZE;
       }
 
       if (TFS_SUCCESS == ret)
       {
         BucketMetaInfo bucket_meta_info;
-        ret = head_bucket(bucket_name, user_info, &bucket_meta_info);
-        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
-            bucket_name.c_str(), file_name.c_str(), ret);
+        ret = head_bucket_ex(bucket_name, &bucket_meta_info);
+
+        //check acl of bucket
+        if (TFS_SUCCESS == ret)
+        {
+          ret = check_bucket_acl(bucket_meta_info.bucket_acl_map_, user_info.owner_id_, WRITE_ACP);
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -692,15 +695,10 @@ namespace tfs
                 ret, bucket_name.c_str(), file_name.c_str());
             break;
           }
+          object_info_zero.dump();
 
           object_info_zero.has_user_metadata_ = true;
-
-          common::MAP_STRING& meta_data_zero = object_info_zero.get_mutable_user_metadata().get_mutable_meta_data();
-          MAP_STRING_STRING_ITER it = user_metadata.get_meta_data().begin();
-          for (; it != user_metadata.get_meta_data().end(); ++ it)
-          {
-            meta_data_zero[it->first] = it->second;
-          }
+          object_info_zero.set_user_metadata(user_metadata);
 
           ret = put_object_ex(bucket_name, file_name, 0, object_info_zero, lock_version);
 
@@ -709,7 +707,7 @@ namespace tfs
             TBSYS_LOG(INFO, "put object zero version conflict, bucket: %s, object: %s",
                 bucket_name.c_str(), file_name.c_str());
           }
-          else if (TFS_ERROR == ret)
+          else if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "put object zero fail, ret: %d, bucket: %s, object: %s",
                 ret, bucket_name.c_str(), file_name.c_str());
@@ -770,6 +768,7 @@ namespace tfs
 
       return ret;
     }
+
     int MetaInfoHelper::scan_pre_record(const std::string &bucket_name,
         const std::string& file_name, const KvKey& start_key,
         common::ObjectInfo *object_info, int32_t& valid_result)
@@ -847,9 +846,6 @@ namespace tfs
         int64_t version = 0;
         int64_t offset_zero = 0;
         ret = get_object_part(bucket_name, file_name, offset_zero, &object_info_zero, &version);
-        TBSYS_LOG(DEBUG, "version: %"PRI64_PREFIX"d", version);
-        *object_info = object_info_zero;
-        *still_have = false;
         if (EXIT_OBJECT_NOT_EXIST == ret)
         {
           TBSYS_LOG(ERROR, "object %s %s not exist", bucket_name.c_str(), file_name.c_str());
@@ -857,6 +853,9 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
+        *object_info = object_info_zero;
+        *still_have = false;
+
         if (offset > object_info_zero.meta_info_.big_file_size_)
         {
           TBSYS_LOG(ERROR, "object %s %s req offset is out of big_file_size_", bucket_name.c_str(), file_name.c_str());
@@ -1016,56 +1015,8 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::get_object_metadata(const std::string &bucket_name,
-        const std::string &file_name, const common::UserInfo &user_info, const common::UserMetadata &user_metadata,
-        common::MAP_STRING &object_tag_map)
-    {
-      int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
-
-      if (TFS_SUCCESS == ret)
-      {
-        BucketMetaInfo bucket_meta_info;
-        ret = head_bucket(bucket_name, user_info, &bucket_meta_info);
-        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
-            bucket_name.c_str(), file_name.c_str(), ret);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        common::ObjectInfo object_info_zero;
-        ret = get_object_part(bucket_name, file_name, 0, &object_info_zero, NULL);
-
-        if (EXIT_OBJECT_NOT_EXIST == ret)
-        {
-          TBSYS_LOG(ERROR, "object %s %s not exist", bucket_name.c_str(), file_name.c_str());
-        }
-        if (TFS_SUCCESS == ret)
-        {
-          common::MAP_STRING& meta_data_map = object_info_zero.get_mutable_user_metadata().get_mutable_meta_data();
-          if (user_metadata.get_meta_data().size() == 0)
-          {
-            object_tag_map = meta_data_map;
-          }
-          else
-          {
-            if (meta_data_map.size() > 0)
-            {
-              MAP_STRING_STRING_ITER it = user_metadata.get_meta_data().begin();
-              for (; it != user_metadata.get_meta_data().end() ; ++it)
-              {
-                if (meta_data_map.find(it->first) != meta_data_map.end())
-                {
-                  object_tag_map.insert(make_pair<string, string>(it->first, meta_data_map[it->first]));
-                }
-              }
-            }
-          }
-        }
-      }
-      return ret;
-    }
-
-    int MetaInfoHelper::del_object(const std::string& bucket_name, const std::string& file_name, const common::UserInfo &user_info,
+    int MetaInfoHelper::del_object(const std::string& bucket_name,
+        const std::string& file_name, const common::UserInfo &user_info,
         common::ObjectInfo *object_info, bool* still_have)
     {
       int ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
@@ -1202,15 +1153,21 @@ namespace tfs
       return ret;
     }
 
-    int MetaInfoHelper::del_object_metadata(const std::string& bucket_name, const std::string& file_name, const common::UserInfo &user_info, const common::UserMetadata& user_metadata)
+    int MetaInfoHelper::del_object_user_metadata(const std::string& bucket_name,
+        const std::string& file_name, const common::UserInfo &user_info)
     {
       int32_t ret = (bucket_name.size() > 0 && file_name.size() > 0) ? TFS_SUCCESS : TFS_ERROR;
+
       if (TFS_SUCCESS == ret)
       {
         BucketMetaInfo bucket_meta_info;
-        ret = head_bucket(bucket_name, user_info, &bucket_meta_info);
-        TBSYS_LOG(DEBUG, "head bucket, bucket: %s, object: %s, ret: %d",
-            bucket_name.c_str(), file_name.c_str(), ret);
+        ret = head_bucket_ex(bucket_name, &bucket_meta_info);
+
+        //check acl of bucket
+        if (TFS_SUCCESS == ret)
+        {
+          ret = check_bucket_acl(bucket_meta_info.bucket_acl_map_, user_info.owner_id_, WRITE_ACP);
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -1219,7 +1176,8 @@ namespace tfs
         ObjectInfo object_info_zero;
         int32_t retry = KvDefine::VERSION_ERROR_RETRY_COUNT;
 
-        do {
+        do
+        {
           ret = get_object_part(bucket_name, file_name, 0, &object_info_zero, &lock_version);
           if (TFS_SUCCESS != ret)
           {
@@ -1229,26 +1187,9 @@ namespace tfs
           }
 
           UserMetadata& exist_user_metadata = object_info_zero.get_mutable_user_metadata();
-          if(exist_user_metadata.get_meta_data().size() > 0)
+          if(exist_user_metadata.get_metadata().size() > 0)
           {
-            const MAP_STRING& metadata = user_metadata.get_meta_data();
-            if (metadata.size() == 0)
-            {
-              exist_user_metadata.clear_meta_data();
-            }
-            else if (metadata.size() != 0)
-            {
-              common::MAP_STRING& meta_data_map = exist_user_metadata.get_mutable_meta_data();
-
-              MAP_STRING_STRING_ITER it = user_metadata.get_meta_data().begin();
-              for (; it != user_metadata.get_meta_data().end() ; ++it)
-              {
-                if (meta_data_map.find(it->first) != meta_data_map.end())
-                {
-                  meta_data_map.erase(it->first);
-                }
-              }
-            }
+            exist_user_metadata.clear_metadata();
 
             ret = put_object_ex(bucket_name, file_name, 0, object_info_zero, lock_version);
             if (EXIT_KV_RETURN_VERSION_ERROR == ret)
@@ -1256,19 +1197,17 @@ namespace tfs
               TBSYS_LOG(INFO, "put object zero version conflict, bucket: %s, object: %s",
                   bucket_name.c_str(), file_name.c_str());
             }
-            else if (TFS_ERROR == ret)
+            else if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(WARN, "put object zero fail, ret: %d, bucket: %s, object: %s",
                   ret, bucket_name.c_str(), file_name.c_str());
             }
           }
-        }while (retry-- && EXIT_KV_RETURN_VERSION_ERROR == ret);
+        } while (retry-- && EXIT_KV_RETURN_VERSION_ERROR == ret);
       }
 
       return ret;
     }
-
-    /*----------------------------bucket part-----------------------------*/
 
     /*----------------------------bucket part-----------------------------*/
 
@@ -1638,7 +1577,7 @@ namespace tfs
           first_loop = false;
         }
         /* if is dir need skip the lastone at lasttime */
-        if (start_key[start_key.length() - 1] == delimiter)
+        if (start_key.length() > 1 && start_key[start_key.length() - 1] == delimiter)
         {
           const char next_delimiter = delimiter + 1;
           temp_start_key = start_key.substr(0, start_key.length() - 1) + next_delimiter;
@@ -1793,7 +1732,7 @@ namespace tfs
 
 
     int MetaInfoHelper::head_bucket_ex(const std::string &bucket_name,
-                                    common::BucketMetaInfo *bucket_meta_info)
+        common::BucketMetaInfo *bucket_meta_info)
     {
       int ret = TFS_SUCCESS;
 
@@ -2214,29 +2153,24 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
 
-      BucketMetaInfo new_bucket_meta_info;
+      BucketMetaInfo bucket_meta_info;
       int64_t version = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = head_bucket_ex(bucket_name, &new_bucket_meta_info);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(INFO, "bucket: %s has not existed", bucket_name.c_str());
-          ret = EXIT_BUCKET_NOT_EXIST;
-        }
+        ret = head_bucket_ex(bucket_name, &bucket_meta_info);
       }
 
       //check acl of bucket
       if (TFS_SUCCESS == ret)
       {
-        ret = check_bucket_acl(new_bucket_meta_info.bucket_acl_map_, user_info.owner_id_, WRITE_ACP);
+        ret = check_bucket_acl(bucket_meta_info.bucket_acl_map_, user_info.owner_id_, WRITE_ACP);
       }
 
       if (TFS_SUCCESS == ret)
       {
-        new_bucket_meta_info.bucket_acl_map_.clear();
-        new_bucket_meta_info.bucket_acl_map_ = bucket_acl_map;
-        ret = put_bucket_ex(bucket_name, new_bucket_meta_info, version);
+        bucket_meta_info.bucket_acl_map_.clear();
+        bucket_meta_info.bucket_acl_map_ = bucket_acl_map;
+        ret = put_bucket_ex(bucket_name, bucket_meta_info, version);
       }
 
       return ret;
@@ -2250,36 +2184,30 @@ namespace tfs
       TBSYS_LOG(DEBUG, "put bucket acl for bucket:%s, user_id:%"PRI64_PREFIX"d, acl:%d",
           bucket_name.c_str(), user_info.owner_id_, acl);
 
-      BucketMetaInfo new_bucket_meta_info;
+      BucketMetaInfo bucket_meta_info;
       int64_t version = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = head_bucket_ex(bucket_name, &new_bucket_meta_info);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(INFO, "bucket: %s has not existed", bucket_name.c_str());
-          ret = EXIT_BUCKET_NOT_EXIST;
-        }
+        ret = head_bucket_ex(bucket_name, &bucket_meta_info);
       }
 
       //check acl of bucket
       if (TFS_SUCCESS == ret)
       {
-        ret = check_bucket_acl(new_bucket_meta_info.bucket_acl_map_, user_info.owner_id_, WRITE_ACP);
-      }
-
-      MAP_INT64_INT bucket_acl_map;
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = do_canned_acl(acl, bucket_acl_map, new_bucket_meta_info.owner_id_);
+        ret = check_bucket_acl(bucket_meta_info.bucket_acl_map_, user_info.owner_id_, WRITE_ACP);
       }
 
       if (TFS_SUCCESS == ret)
       {
-        new_bucket_meta_info.bucket_acl_map_.clear();
-        new_bucket_meta_info.bucket_acl_map_ = bucket_acl_map;
-        ret = put_bucket_ex(bucket_name, new_bucket_meta_info, version);
+        MAP_INT64_INT bucket_acl_map;
+        ret = do_canned_acl(acl, bucket_acl_map, bucket_meta_info.owner_id_);
+
+        if (TFS_SUCCESS == ret)
+        {
+          bucket_meta_info.bucket_acl_map_.clear();
+          bucket_meta_info.bucket_acl_map_ = bucket_acl_map;
+          ret = put_bucket_ex(bucket_name, bucket_meta_info, version);
+        }
       }
 
       return ret;
@@ -2297,11 +2225,6 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = head_bucket_ex(bucket_name, &bucket_meta_info);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(INFO, "bucket: %s has not existed", bucket_name.c_str());
-          ret = EXIT_BUCKET_NOT_EXIST;
-        }
       }
 
       //check acl of bucket
@@ -2309,6 +2232,7 @@ namespace tfs
       {
         ret = check_bucket_acl(bucket_meta_info.bucket_acl_map_, user_info.owner_id_, READ_ACP);
       }
+
       if (TFS_SUCCESS == ret)
       {
         *bucket_acl_map = bucket_meta_info.bucket_acl_map_;
@@ -2323,7 +2247,8 @@ namespace tfs
       return string::npos != bucket_name.find(APPID_UID_BUCKET_NAME_DELIMITER);
     }
 
-    int MetaInfoHelper::check_bucket_acl(const string& bucket_name, const UserInfo &user_info, common::PERMISSION per)
+    int MetaInfoHelper::check_bucket_acl(const string& bucket_name,
+        const UserInfo &user_info, common::PERMISSION per)
     {
       int ret = TFS_SUCCESS;
       if (!is_appid_uid_bucket_name(bucket_name))
@@ -2332,11 +2257,6 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = head_bucket_ex(bucket_name, &bucket_meta_info);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(INFO, "bucket: %s not existed", bucket_name.c_str());
-            ret = EXIT_BUCKET_NOT_EXIST;
-          }
         }
 
         //check acl of bucket

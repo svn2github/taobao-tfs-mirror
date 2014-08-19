@@ -68,7 +68,7 @@ namespace tfs
         bool check_put_object_part(common::ObjectInfo &object_info,
                      const int64_t offset, const bool is_append);
 
-        int put_object_metadata(const std::string& bucket_name,
+        int put_object_user_metadata(const std::string& bucket_name,
                        const std::string& file_name,
                        const common::UserInfo &user_info,
                        const common::UserMetadata &user_metadata);
@@ -79,21 +79,14 @@ namespace tfs
                        const common::UserInfo &user_info,
                        common::ObjectInfo *object_info, bool *still_have);
 
-        int get_object_metadata(const std::string &bucket_name,
-                      const std::string &file_name,
-                      const common::UserInfo &user_info,
-                      const common::UserMetadata& user_metadata,
-                      common::MAP_STRING &object_tag_map);
-
         int del_object(const std::string& bucket_name,
                        const std::string& file_name,
                        const common::UserInfo &user_info,
                        common::ObjectInfo *object_info, bool* still_have);
 
-        int del_object_metadata(const std::string& bucket_name,
+        int del_object_user_metadata(const std::string& bucket_name,
                       const std::string& file_name,
-                      const common::UserInfo &user_info,
-                      const common::UserMetadata& user_metadata);
+                      const common::UserInfo &user_info);
 
         /*----------------------------bucket part-----------------------------*/
 
