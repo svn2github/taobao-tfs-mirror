@@ -1250,7 +1250,7 @@ namespace tfs
             {
               std::pair<uint64_t, uint64_t>* item = members.at(index);
               ret = INVALID_SERVER_ID != item->second;
-              if (ret)
+              if (ret && !helper.exist(item->second))
                 helper.push_back(item->second);
             }
           }

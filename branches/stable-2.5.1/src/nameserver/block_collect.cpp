@@ -387,10 +387,13 @@ namespace tfs
         }
         assert(servers_.size() >= (uint64_t)invalids.get_array_index());
 
-        std::stringstream all, abnormal;
-        print_int64(invalids, abnormal);
-        print_int64(servers_, all);
-        TBSYS_LOG(DEBUG, "block: %lu, resolve_version_conflict: all %s, abnormal %s", id(), all.str().c_str(), abnormal.str().c_str());
+        if (invalids.get_array_index() > 0)
+        {
+          std::stringstream all, abnormal;
+          print_int64(invalids, abnormal);
+          print_int64(servers_, all);
+          TBSYS_LOG(INFO, "block: %lu, resolve_version_conflict: all %s, abnormal %s", id(), all.str().c_str(), abnormal.str().c_str());
+        }
       }
       return ret;
     }

@@ -464,7 +464,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        if (INVALID_SERVER_ID != info.value1_)
+        if (INVALID_SERVER_ID != info.value1_ && helper.exist(info.value1_))
           source = server_manager.get(info.value1_);
         else
           server_manager.choose_replicate_source_server(source, helper);
@@ -486,11 +486,12 @@ namespace tfs
           snprintf(buf, buf_length, " get family members failed: ret: %d block: %"PRI64_PREFIX"u, family_id: %"PRI64_PREFIX"d", ret, info.value3_, pblock->get_family_id());
         else
         {
-          for (int64_t index = 0; index < mem_helper.get_array_index(); ++index)
+          for (int64_t index = 0; index < mem_helper.get_array_index() && TFS_SUCCESS == ret; ++index)
           {
             std::pair<uint64_t, uint64_t>* item = mem_helper.at(index);
             assert(NULL != item);
-            if (!helper.exist(item->second))
+            ret = INVALID_SERVER_ID != item->second ? TFS_SUCCESS : EXIT_CANNOT_MIGRATE_BLOCK_ERROR;
+            if (TFS_SUCCESS == ret && !helper.exist(item->second))
               helper.push_back(item->second);
           }
         }
@@ -620,7 +621,7 @@ namespace tfs
     int ClientRequestServer::handle_control_delete_family(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
       TBSYS_LOG(INFO, "handle control remove family: %"PRI64_PREFIX"u, flag: %"PRI64_PREFIX"u",
-          info.value3_, info.value1_);
+          info.value3_, info.value4_);
 
       int32_t ret = (info.value3_ == INVALID_FAMILY_ID) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       FamilyManager& family_manager = manager_.get_family_manager();
