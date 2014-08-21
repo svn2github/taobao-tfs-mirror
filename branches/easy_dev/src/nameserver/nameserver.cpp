@@ -526,6 +526,7 @@ namespace tfs
       int32_t ret = ((NULL != msg) && (msg->getPCode() == GET_BLOCK_INFO_MESSAGE_V2)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
+        TIMER_START();
         GetBlockInfoMessageV2* message = dynamic_cast<GetBlockInfoMessageV2*> (msg);
         GetBlockInfoRespMessageV2* result_msg = new (std::nothrow)GetBlockInfoRespMessageV2();
         uint64_t block_id = message->get_block_id();
@@ -562,6 +563,9 @@ namespace tfs
                   block_id, mode, ret,tbsys::CNetUtil::addrToString(ipport).c_str());
           }
         }
+        TIMER_END();
+        TBSYS_LOG(TRACE, "openv2 block: %"PRI64_PREFIX"u mode: %d cost: %ld",
+          block_id, mode, TIMER_DURATION());
       }
       return ret;
     }
