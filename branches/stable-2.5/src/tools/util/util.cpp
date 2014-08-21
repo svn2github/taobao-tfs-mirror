@@ -27,7 +27,7 @@
 #include "message/block_info_message_v2.h"
 #include "new_client/tfs_client_impl.h"
 #include "clientv2/tfs_client_impl_v2.h"
-#include "new_client/fsname.h"
+#include "clientv2/fsname.h"
 #include "util.h"
 #include "tool_util.h"
 
