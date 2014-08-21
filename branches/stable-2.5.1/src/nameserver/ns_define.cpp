@@ -119,6 +119,7 @@ namespace tfs
     {
       lease_id_ = common::INVALID_LEASE_ID;
       lease_expired_time_ = 0;
+      load_family_info_complete_ = false;
       if (startup)//startup
       {
         startup_time_ = now;

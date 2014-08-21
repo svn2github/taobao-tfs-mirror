@@ -645,48 +645,71 @@ namespace tfs
       return result;
     }
 
-    int OpLogSyncManager::load_all_family_info_(const int32_t thseqno, bool& load_complete)
+    int OpLogSyncManager::load_family_info_(const int32_t thseqno)
     {
       int32_t ret = TAIR_RETURN_SUCCESS, retry = 0;
       int64_t start_family_id = INVALID_FAMILY_ID;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       FamilyManager& family_manager = manager_.get_family_manager();
+      for (int32_t chunk = thseqno; chunk < MAX_FAMILY_CHUNK_NUM && !ngi.is_destroyed() && TFS_SUCCESS == ret; chunk +=MAX_LOAD_FAMILY_INFO_THREAD_NUM)
+      {
+        retry = 0;
+        start_family_id = family_manager.get_max_family_id(chunk);
+        do
+        {
+          ret = scan_all_family_(thseqno, chunk, start_family_id);
+        }
+        while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry++ < 3);
+        ret = (TAIR_RETURN_DATA_NOT_EXIST == ret || TAIR_RETURN_SUCCESS) ? TFS_SUCCESS : ret;
+      }
+      return ret;
+    }
+
+    int OpLogSyncManager::load_family_log_(const int32_t thseqno)
+    {
+      int32_t ret = TAIR_RETURN_SUCCESS, retry = 0;
+      if (0 == thseqno)
+      {
+        retry = 0;
+        do
+        {
+          ret = scan_all_family_log_();
+        }
+        while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry++ < 3);
+      }
+      ret = (TAIR_RETURN_DATA_NOT_EXIST == ret || TAIR_RETURN_SUCCESS) ? TFS_SUCCESS : ret;
+      return ret;
+    }
+
+    int OpLogSyncManager::load_all_family_info_(const int32_t thseqno, bool& load_complete)
+    {
+      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
-        if (!load_complete || !ngi.is_master())
+        if (!ngi.load_family_info_complete())
         {
-          for (int32_t chunk = thseqno; chunk < MAX_FAMILY_CHUNK_NUM; chunk +=MAX_LOAD_FAMILY_INFO_THREAD_NUM)
-          {
-            retry = 0;
-            start_family_id = family_manager.get_max_family_id(chunk);
-            do
-            {
-              ret = scan_all_family_(thseqno, chunk, start_family_id);
-            }
-            while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry++ < 3);
-          }
-          if (0 == thseqno)
-          {
-            retry = 0;
-            do
-            {
-              ret = scan_all_family_log_();
-            }
-            while (TAIR_RETURN_DATA_NOT_EXIST != ret && TAIR_RETURN_SUCCESS != ret && retry++ < 3);
-          }
-          if (!load_complete)
-            load_complete = true;
+          load_family_info_(thseqno);
+          load_family_log_(thseqno);
+          load_complete = true;
         }
-        if (0 == thseqno && !ngi.load_family_info_complete())
+        else
         {
-          bool  complete = true;
-          for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && complete; ++index)
+          if (!ngi.is_master())
           {
-            complete = load_family_info_thread_[index]->load_complete();
+            load_family_info_(thseqno);
+            load_family_log_(thseqno);
           }
-          ngi.set_load_family_info_complete(complete);
         }
-        usleep(500000);
+       if (0 == thseqno && !ngi.load_family_info_complete())
+       {
+         bool  complete = true;
+         for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && complete; ++index)
+         {
+           complete = load_family_info_thread_[index]->load_complete();
+         }
+         ngi.set_load_family_info_complete(complete);
+       }
+       usleep(500000);
       }
       return TFS_SUCCESS;
     }

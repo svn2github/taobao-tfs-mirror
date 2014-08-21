@@ -74,6 +74,8 @@ namespace tfs
 
       int scan_all_family_(const int32_t thseqno, const int32_t chunk, int64_t& start_family_id);
       int scan_all_family_log_();
+      int load_family_info_(const int32_t thread_seqno);
+      int load_family_log_(const int32_t thread_seqno);
       int load_all_family_info_(const int32_t thread_seqno, bool& load_complete);
 
       class LoadFamilyInfoThreadHelper: public tbutil::Thread
