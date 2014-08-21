@@ -1,3 +1,3 @@
 AUTOMAKE_OPTIONS=foreign
 
-SUBDIRS = util dataserver rcserver workers
+SUBDIRS = util nameserver dataserver rcserver workers cluster
