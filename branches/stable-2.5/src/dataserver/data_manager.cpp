@@ -109,8 +109,8 @@ namespace tfs
     int DataManager::update_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
         tbnet::Packet* packet)
     {
-      int ret = ((INVALID_BLOCK_ID == block_id) && (INVALID_FILE_ID == file_id) ||
-          (INVALID_LEASE_ID == lease_id) || (NULL == packet)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
+          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       if (TFS_SUCCESS == ret)
       {
@@ -120,7 +120,7 @@ namespace tfs
         ret = lease_manager_.get(lid, now_us, lease);
         if (TFS_SUCCESS == ret)
         {
-          if (SLAVE_DS_RESP_MESSAGE != packet->getPCode())
+          if (NULL == packet || SLAVE_DS_RESP_MESSAGE != packet->getPCode())
           {
             ret = lease->update_member_info();
           }

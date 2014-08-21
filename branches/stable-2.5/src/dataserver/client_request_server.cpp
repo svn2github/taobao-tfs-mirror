@@ -810,6 +810,11 @@ namespace tfs
           {
             get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
           }
+          iter = fresponse->begin();
+          for ( ; iter != fresponse->end(); iter++)
+          {
+            get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
+          }
           write_file_callback(msg);
         }
         else if (CLOSE_FILE_MESSAGE_V2 == pcode)
@@ -823,6 +828,11 @@ namespace tfs
           {
             get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
           }
+          iter = fresponse->begin();
+          for ( ; iter != fresponse->end(); iter++)
+          {
+            get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
+          }
           close_file_callback(msg);
         }
         else if (UNLINK_FILE_MESSAGE_V2 == pcode)
@@ -833,6 +843,11 @@ namespace tfs
           uint64_t lease_id = msg->get_lease_id();
           NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
           for ( ; iter != sresponse->end(); iter++)
+          {
+            get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
+          }
+          iter = fresponse->begin();
+          for ( ; iter != fresponse->end(); iter++)
           {
             get_data_manager().update_lease(block_id, file_id, lease_id, iter->second.second);
           }
