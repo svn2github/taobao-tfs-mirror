@@ -262,7 +262,7 @@ namespace tfs
         tbnet::Packet* packet)
     {
       int ret = ((INVALID_BLOCK_ID != block_id) && (INVALID_FILE_ID != file_id) &&
-          (INVALID_OP_ID != op_id) && (NULL != packet)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+          (INVALID_OP_ID != op_id)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
 
       if (TFS_SUCCESS == ret)
       {
@@ -271,7 +271,7 @@ namespace tfs
         ret = get(oid, op_meta);
         if (TFS_SUCCESS == ret)
         {
-          if (SLAVE_DS_RESP_MESSAGE != packet->getPCode())
+          if (NULL == packet || SLAVE_DS_RESP_MESSAGE != packet->getPCode())
           {
             op_meta->update_member();
           }
