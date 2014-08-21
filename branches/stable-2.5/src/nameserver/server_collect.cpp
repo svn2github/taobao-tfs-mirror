@@ -120,7 +120,8 @@ namespace tfs
              ||(EXIT_ELEMENT_EXIST == ret))
             && (writable)
             && (master)
-            && (is_equal_group(block)))
+            && (is_equal_group(block))
+            && !IS_VERFIFY_BLOCK(block))
         {
           ret = writable_->insert_unique(result, block);
         }
