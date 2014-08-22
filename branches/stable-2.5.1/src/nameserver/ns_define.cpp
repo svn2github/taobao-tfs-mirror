@@ -158,7 +158,7 @@ namespace tfs
 
     bool NsRuntimeGlobalInformation::in_report_block_time(const int64_t now) const
     {
-      bool report_time = in_min_range(time(NULL), SYSPARAM_NAMESERVER.report_block_time_lower_, SYSPARAM_NAMESERVER.safe_mode_time_);
+      bool report_time = in_min_range(time(NULL), SYSPARAM_NAMESERVER.report_block_time_lower_, (SYSPARAM_NAMESERVER.safe_mode_time_ + 59) / 60);
       return ((report_time) || ((switch_time_ +  SYSPARAM_NAMESERVER.safe_mode_time_) > now));
     }
 

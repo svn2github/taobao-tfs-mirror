@@ -1389,7 +1389,7 @@ namespace tfs
         "between_ns_and_ds_lease_safe_time",
         "between_ns_and_ds_lease_retry_times",
         "between_ns_and_ds_lease_retry_expire_time",
-        "migrate_complete_wait_time_",
+        "migrate_complete_wait_time",
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
