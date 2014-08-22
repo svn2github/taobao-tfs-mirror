@@ -1200,6 +1200,16 @@ namespace tfs
         ret = get_block_manager().get_marshalling_offset(ec_meta.mars_offset_, block_id);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        uint32_t crc = 0;
+        ret = get_block_manager().get_data_crc(crc, block_id);
+        if (TFS_SUCCESS == ret)
+        {
+          ec_meta.data_crc_ = crc;
+        }
+      }
+
       return ret;
     }
 
@@ -1260,6 +1270,12 @@ namespace tfs
         if ((TFS_SUCCESS == ret) && (ec_meta.version_step_ > 0))
         {
           ret = logic_block->update_block_version(ec_meta.version_step_);
+        }
+
+        // commit block crc
+        if ((TFS_SUCCESS == ret) && (ec_meta.data_crc_ >= 0))
+        {
+          ret = logic_block->set_data_crc(ec_meta.data_crc_);
         }
 
         if (TFS_SUCCESS != ret)

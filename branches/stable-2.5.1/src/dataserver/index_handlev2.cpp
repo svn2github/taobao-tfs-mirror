@@ -216,6 +216,30 @@ namespace tfs
       return ret;
     }
 
+    int BaseIndexHandle::get_data_crc(uint32_t& crc) const
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        IndexHeaderV2* header = get_index_header_();
+        assert(NULL != header);
+        crc = header->data_crc_;
+      }
+      return ret;
+    }
+
+    int BaseIndexHandle::set_data_crc(const uint32_t crc)
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        IndexHeaderV2* header = get_index_header_();
+        assert(NULL != header);
+        header->data_crc_ = crc;
+      }
+      return ret;
+    }
+
     int BaseIndexHandle::get_family_id(int64_t& family_id) const
     {
       family_id = INVALID_FAMILY_ID;

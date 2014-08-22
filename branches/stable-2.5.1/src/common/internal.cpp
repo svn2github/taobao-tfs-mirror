@@ -2029,10 +2029,15 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; (TFS_SUCCESS == ret) && (i < 27); i++)
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 23); i++)
         {
           ret = Serialization::set_int8(data, data_len, pos, reserve_[i]);
         }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+         ret = Serialization::set_int32(data, data_len, pos, data_crc_);
       }
 
       return ret;
@@ -2091,10 +2096,16 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; (TFS_SUCCESS == ret) && (i < 27); i++)
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 23); i++)
         {
           ret = Serialization::get_int8(data, data_len, pos, &reserve_[i]);
         }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos,
+            reinterpret_cast<int32_t* >(&data_crc_));
       }
 
       return ret;
@@ -2188,6 +2199,19 @@ namespace tfs
         ret = Serialization::get_int32(data, data_len, pos, &version_step_);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &data_crc_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; TFS_SUCCESS == ret && i < 4; i++)
+        {
+          ret = Serialization::get_int32(data, data_len, pos, &reserve_[i]);
+        }
+      }
+
       return ret;
     }
 
@@ -2214,12 +2238,25 @@ namespace tfs
         ret = Serialization::set_int32(data, data_len, pos, version_step_);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, data_crc_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; TFS_SUCCESS == ret && i < 4; i++)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, reserve_[i]);
+        }
+      }
+
       return ret;
     }
 
     int64_t ECMeta::length() const
     {
-      return INT64_SIZE + INT_SIZE * 3;
+      return INT64_SIZE * 2 + INT_SIZE * 7;
     }
 
     int FileInfoV2::serialize(char* data, const int64_t data_len, int64_t& pos) const
