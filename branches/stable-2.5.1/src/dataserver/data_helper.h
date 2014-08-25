@@ -89,6 +89,8 @@ namespace tfs
             common::VUINT64& servers);
         int get_block_info(const uint64_t ns_id, const uint64_t block_id, common::BlockInfoV2& info);
 
+        int check_integrity(const uint64_t block_id);
+
       private:
         int new_remote_block_ex(const uint64_t server_id, const uint64_t block_id,
             const bool tmp = false, const uint64_t family_id = common::INVALID_FAMILY_ID ,
@@ -146,6 +148,10 @@ namespace tfs
             const int32_t timeout_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT);
         int async_query_ec_meta(const common::FamilyInfoExt& family_info, const int* erased,
             common::ECMeta* ec_metas, const int32_t timeout_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT);
+
+        int check_integrity(BaseLogicBlock* src);
+        int calc_big_file_crc(BaseLogicBlock* src,
+            const common::FileInfoV2& finfo, uint32_t& crc);
 
       private:
         DataService& service_;

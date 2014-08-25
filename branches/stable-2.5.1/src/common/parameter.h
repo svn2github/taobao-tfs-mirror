@@ -96,6 +96,7 @@ namespace tfs
       int32_t heart_port_count_;
       double  balance_percent_;
       int32_t migrate_complete_wait_time_;
+      int32_t check_integrity_interval_days_;
 
       NameServerParameter()
       {

@@ -216,6 +216,34 @@ namespace tfs
       return ret;
     }
 
+    int BaseIndexHandle::get_last_check_time(int32_t& timestamp) const
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        IndexHeaderV2* header = get_index_header_();
+        assert(NULL != header);
+        timestamp = header->last_check_time_;
+      }
+      return ret;
+    }
+
+    int BaseIndexHandle::set_last_check_time(const int32_t timestamp)
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        ret = timestamp >= 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          IndexHeaderV2* header = get_index_header_();
+          assert(NULL != header);
+          header->last_check_time_ = timestamp;
+        }
+      }
+      return ret;
+    }
+
     int BaseIndexHandle::get_data_crc(uint32_t& crc) const
     {
       int32_t ret = check_load();
@@ -796,6 +824,7 @@ namespace tfs
           IndexHeaderV2* pheader = get_index_header_();
           assert(NULL != pheader);
           pheader->info_ = header.info_;
+          pheader->last_check_time_ = 0;
           pheader->throughput_.last_update_time_ = time(NULL);
           pheader->throughput_ = header.throughput_;
           pheader->marshalling_offset_ = header.marshalling_offset_;
@@ -832,6 +861,7 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             pheader->info_ = header.info_;
+            pheader->last_check_time_ = 0;
             pheader->seq_no_ = header.seq_no_;
             pheader->throughput_.last_update_time_ = time(NULL);
             pheader->marshalling_offset_ = header.marshalling_offset_;

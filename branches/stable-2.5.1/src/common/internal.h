@@ -231,6 +231,7 @@ namespace tfs
 
     static const int32_t VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO = 2;
     static const int32_t BLOCK_VERSION_INIT_VALUE = 0;
+    static const int32_t CHECK_INTEGRITY_INTERVAL_DAYS_DEFAULT = 0;
 
     static const int32_t MAX_LISTEN_PORT_NUM = 64;
 
@@ -1207,7 +1208,8 @@ namespace tfs
       };
       uint16_t used_file_info_bucket_size_;
       int8_t  max_index_num_;
-      int8_t  reserve_[23];
+      int8_t  reserve_[19];
+      int32_t last_check_time_;
       uint32_t data_crc_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -1331,7 +1333,7 @@ namespace tfs
       int32_t max_block_size_;
       int32_t max_write_file_count_;
 			int32_t verify_index_reserved_space_ratio_;
-			int32_t enable_old_interface_;
+			int32_t check_integrity_interval_days_;
 			int32_t enable_version_check_;
       int32_t reserve_[4];
 

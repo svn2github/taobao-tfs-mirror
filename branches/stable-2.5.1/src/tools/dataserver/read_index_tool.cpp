@@ -43,6 +43,7 @@ void dump_index_header(const IndexHeaderV2& header)
   printf("available offset:          %d\n", header.avail_offset_);
   printf("hash slot(index num):      %d\n", header.file_info_bucket_size_);
   printf("used hash slot:            %d\n", header.used_file_info_bucket_size_);
+  printf("last check time:           %d\n", header.last_check_time_);
   printf("data crc:                  %u\n", header.data_crc_);
   printf("\n");
 }

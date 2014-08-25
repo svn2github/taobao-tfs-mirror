@@ -152,8 +152,8 @@ namespace tfs
       int32_t max_block_size_;
       int32_t max_write_file_count_;
       int32_t verify_index_reserved_space_ratio_;
+      int32_t check_integrity_interval_days_;
       common::DataServerLiveStatus status_;
-      int8_t enable_old_interface_;
       int8_t enable_version_check_;
       volatile bool is_reporting_block_;
       DsRuntimeGlobalInformation();

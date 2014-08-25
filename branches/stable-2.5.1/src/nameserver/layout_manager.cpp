@@ -462,7 +462,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.write_file_check_copies_complete_,
           &SYSPARAM_NAMESERVER.choose_target_server_retry_max_nums_,
           &SYSPARAM_NAMESERVER.max_marshalling_num_,
-          &SYSPARAM_NAMESERVER.enable_old_interface_,
+          &SYSPARAM_NAMESERVER.check_integrity_interval_days_,
           &SYSPARAM_NAMESERVER.enable_version_check_,
           &SYSPARAM_NAMESERVER.marshalling_visit_time_,
           &SYSPARAM_NAMESERVER.client_keepalive_interval_,

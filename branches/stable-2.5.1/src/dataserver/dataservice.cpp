@@ -45,10 +45,12 @@ namespace tfs
         client_request_server_(*this),
         writable_block_manager_(*this),
         check_manager_(*this),
+        integrity_manager_(*this),
         migrate_manager_(NULL),
         timeout_thread_(0),
         task_thread_(0),
-        check_thread_(0)
+        check_thread_(0),
+        check_integrity_thread_(0)
     {
 
     }
@@ -305,6 +307,8 @@ namespace tfs
         assert(0 != timeout_thread_);
         check_thread_ = new (std::nothrow)RunCheckThreadHelper(*this);
         assert(0 != check_thread_);
+        check_integrity_thread_ = new (std::nothrow)CheckIntegrityThreadHelper(*this);
+        assert(0 != check_integrity_thread_);
       }
 
       // sync mirror should init after bootstrap
@@ -504,6 +508,11 @@ namespace tfs
         check_thread_->join();
       }
 
+      if (0 != check_integrity_thread_)
+      {
+        check_integrity_thread_->join();
+      }
+
       return TFS_SUCCESS;
     }
 
@@ -623,6 +632,11 @@ namespace tfs
     void DataService::run_check_()
     {
       check_manager_.run_check();
+    }
+
+    void DataService::CheckIntegrityThreadHelper::run()
+    {
+      service_.integrity_manager_.run_check();
     }
 
     int DataService::callback(common::NewClient* client)

@@ -1378,7 +1378,7 @@ namespace tfs
         "write_file_check_copies_complete",
         "choose_target_server_retry_max_nums",
         "max_marshalling_num",
-        "enable_old_interface",
+        "check_integrity_interval_days",
         "enable_version_check",
         "marshalling_visit_time",
         "client_keepalive_interval",
@@ -1389,7 +1389,7 @@ namespace tfs
         "between_ns_and_ds_lease_safe_time",
         "between_ns_and_ds_lease_retry_times",
         "between_ns_and_ds_lease_retry_expire_time",
-        "migrate_complete_wait_time",
+        "migrate_complete_wait_time"
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
@@ -2029,10 +2029,15 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; (TFS_SUCCESS == ret) && (i < 23); i++)
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 19); i++)
         {
           ret = Serialization::set_int8(data, data_len, pos, reserve_[i]);
         }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, last_check_time_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -2096,10 +2101,16 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; (TFS_SUCCESS == ret) && (i < 23); i++)
+        for (int i = 0; (TFS_SUCCESS == ret) && (i < 19); i++)
         {
           ret = Serialization::get_int8(data, data_len, pos, &reserve_[i]);
         }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos,
+            reinterpret_cast<int32_t* >(&last_check_time_));
       }
 
       if (TFS_SUCCESS == ret)
@@ -2652,7 +2663,7 @@ namespace tfs
 			}
 			if (TFS_SUCCESS == ret)
 			{
-				ret = Serialization::get_int32(data, data_len, pos,&enable_old_interface_);
+				ret = Serialization::get_int32(data, data_len, pos, &check_integrity_interval_days_);
 			}
 
 			if (TFS_SUCCESS == ret)
@@ -2730,7 +2741,7 @@ namespace tfs
       }
 			if (TFS_SUCCESS == ret)
 			{
-        ret = Serialization::set_int32(data, data_len, pos,enable_old_interface_);
+        ret = Serialization::set_int32(data, data_len, pos, check_integrity_interval_days_);
       }
 
       if (TFS_SUCCESS == ret)

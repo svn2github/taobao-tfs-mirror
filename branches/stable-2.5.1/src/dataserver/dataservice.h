@@ -41,7 +41,7 @@
 #include "block_manager.h"
 #include "writable_block_manager.h"
 #include "migrate_manager.h"
-
+#include "integrity_manager.h"
 
 namespace tfs
 {
@@ -186,6 +186,22 @@ namespace tfs
       };
       typedef tbutil::Handle<RunCheckThreadHelper> RunCheckThreadHelperPtr;
 
+      class CheckIntegrityThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit CheckIntegrityThreadHelper(DataService& service):
+            service_(service)
+        {
+          start();
+        }
+          virtual ~CheckIntegrityThreadHelper(){}
+          void run();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(CheckIntegrityThreadHelper);
+          DataService& service_;
+      };
+      typedef tbutil::Handle<CheckIntegrityThreadHelper> CheckIntegrityThreadHelperPtr;
+
      private:
       DISALLOW_COPY_AND_ASSIGN(DataService);
 
@@ -199,10 +215,12 @@ namespace tfs
       ClientRequestServer client_request_server_;
       WritableBlockManager writable_block_manager_;
       CheckManager check_manager_;
+      IntegrityManager integrity_manager_;
       MigrateManager* migrate_manager_;
       TimeoutThreadHelperPtr  timeout_thread_;
       RunTaskThreadHelperPtr  task_thread_;
       RunCheckThreadHelperPtr check_thread_;
+      CheckIntegrityThreadHelperPtr check_integrity_thread_;
       std::vector<SyncBase*> sync_mirror_;
     };
   }/** end namespace dataserver **/
