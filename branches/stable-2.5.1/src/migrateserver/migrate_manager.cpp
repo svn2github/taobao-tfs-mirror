@@ -30,8 +30,11 @@ namespace tfs
 {
   namespace migrateserver
   {
+    static const int64_t MAX_WEIGTH = 0x7FFFFFFFFFFFFFFF;
+
     MigrateManager::MigrateManager() :
       work_thread_(0),
+      not_full_block_count_(0),
       max_block_size_(0),
       migrate_complete_wait_time_(120),
       update_statistic_interval_(3600)
@@ -146,8 +149,9 @@ namespace tfs
         if (now >= last_get_index_time + update_statistic_interval_)
         {
           helper.clear();
-          blocks_[0].clear(); // system disk's cold blocks list
-          blocks_[1].clear(); // data disk's cool blocks list
+          blocks_[0].clear(); // system disk's hot blocks list
+          blocks_[1].clear(); // data disk's cold blocks list
+          not_full_block_count_ = 0;
 
           get_all_servers_(helper);
           for (index = 0; index < helper.get_array_index(); ++index)
@@ -230,7 +234,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t MigrateManager::calc_block_weight_(const common::IndexHeaderV2& iheader, const int32_t type) const
+    int64_t MigrateManager::calc_block_weight_(const common::IndexHeaderV2& iheader, const int32_t type)
     {
       int64_t weights = -1;
       const int64_t now = time(NULL);
@@ -238,24 +242,31 @@ namespace tfs
       const ThroughputV2 &th = iheader.throughput_;
       bool calc = false;
       if (common::DATASERVER_DISK_TYPE_SYSTEM == type)
-      { // the hot block who can be migrated out of system disk
-        if (iheader.info_.last_access_time_ + hot_time_range_/2 > now)
+      { // the hot block can be migrated out of system disk
+        if (!is_full(iheader.info_))
+        {
+          weights = MAX_WEIGTH; //compacted cold block migrate back to full disk for re-write firstly
+          ++not_full_block_count_;
+        }
+        else if (iheader.info_.last_access_time_ + hot_time_range_/2 > now)
         {
           calc = true;
         }
       }
       else
-      { // the cold block who can be migrated into system disk
+      { // the cold block can be migrated into system disk
         if (iheader.info_.last_access_time_ + hot_time_range_ < now && is_full(iheader.info_))
         {
           calc = true;
         }
       }
+
       if (calc)
       {
         weights = iheader.info_.last_access_time_ * ar.last_access_time_ratio +
             th.read_visit_count_ * ar.read_ratio + th.write_visit_count_ * ar.write_ratio +
             th.update_visit_count_ * ar.update_ratio + th.unlink_visit_count_* ar.unlink_ratio;
+        assert(MAX_WEIGTH != weights);// happened only statistic occur bug
       }
       return weights;
     }
@@ -291,7 +302,11 @@ namespace tfs
           {
             double curr_ratio = static_cast<double>(info.use_capacity_) / static_cast<double>(info.total_capacity_);
 
-            if (curr_ratio < avg_ratio - balance_percent_)
+            if (not_full_block_count_ > 0)
+            {
+              entry.source_addr_ = info.id_;
+            }
+            else if (curr_ratio < avg_ratio - balance_percent_)
             {
               entry.dest_addr_ = info.id_;
             }
@@ -307,9 +322,10 @@ namespace tfs
                   "full disk min block: %"PRI64_PREFIX"u(%"PRI64_PREFIX"u)", blocks_[0].rbegin()->second.second, system_disk_max_weight,
                   blocks_[1].begin()->second.second, full_disk_min_weight);
             }
-            TBSYS_LOG(DEBUG, "dataserver count: %zd, system disk curr_ratio: %.3lf%% , [%.3lf%%, %.3lf%%], will do migrate: %s",
-                servers_.size(), curr_ratio * 100.0, (avg_ratio - balance_percent_) * 100.0, avg_ratio * 100.0,
-                (entry.dest_addr_ != INVALID_SERVER_ID || entry.source_addr_ != INVALID_SERVER_ID) ?  "yes":"no");
+            TBSYS_LOG(DEBUG, "dataserver count: %zd, system disk curr_ratio: %.3lf%%, [%.3lf%%, %.3lf%%], "
+                "will do migrate: %s, not full block count: %"PRI64_PREFIX"d", servers_.size(),
+                curr_ratio * 100.0, (avg_ratio - balance_percent_) * 100.0, avg_ratio * 100.0,
+                (entry.dest_addr_ != INVALID_SERVER_ID || entry.source_addr_ != INVALID_SERVER_ID) ?  "yes":"no", not_full_block_count_);
           }
         }
       }
@@ -342,6 +358,14 @@ namespace tfs
             ret = choose_move_dest_server_(entry.source_addr_, entry.dest_addr_) ? TFS_SUCCESS : EXIT_CHOOSE_MIGRATE_DEST_SERVER_ERROR;
             if (TFS_SUCCESS == ret)
             {
+              if (MAX_WEIGTH == (*iter).first)
+              {
+                assert(not_full_block_count_ > 0);
+                --not_full_block_count_;
+                TBSYS_LOG(DEBUG, "will migrate not full block: %"PRI64_PREFIX"u, from: %s to : %s",
+                    entry.block_id_, tbsys::CNetUtil::addrToString(entry.source_addr_).c_str(),
+                    tbsys::CNetUtil::addrToString(entry.dest_addr_).c_str());
+              }
               blocks_[index].erase(iter);
             }
           }
@@ -397,7 +421,7 @@ namespace tfs
         while (retry_times-- > 0 && TFS_SUCCESS != ret
             && EXIT_CANNOT_MIGRATE_BLOCK_ERROR != ret);
       }
-      TBSYS_LOG(INFO, "send migrate message %s, ret: %d, error msg: %s, block: %"PRI64_PREFIX"u, source: %s, dest: %s , ns_vip: %s",
+      TBSYS_LOG(INFO, "send migrate message %s, ret: %d, error msg: %s, block: %"PRI64_PREFIX"u, source: %s, dest: %s, ns_vip: %s",
           TFS_SUCCESS == ret ? "successful" : "failed", ret, msg, current.block_id_, tbsys::CNetUtil::addrToString(current.source_addr_).c_str(),
           tbsys::CNetUtil::addrToString(current.dest_addr_).c_str(), tbsys::CNetUtil::addrToString(ns_vip_port_).c_str());
       return ret;

@@ -69,7 +69,7 @@ namespace tfs
         return ((info.size_ + common::BLOCK_RESERVER_LENGTH) >= max_block_size_
           || info.file_count_ >= common::MAX_SINGLE_BLOCK_FILE_COUNT);
       }
-      inline int64_t calc_block_weight_(const common::IndexHeaderV2& iheader, const int32_t type) const;
+      inline int64_t calc_block_weight_(const common::IndexHeaderV2& iheader, const int32_t type);
       void get_all_servers_(common::ArrayHelper<std::pair<uint64_t, int32_t> >& servers) const;
 
       void calc_system_disk_migrate_info_(MigrateEntry& entry) const;
@@ -84,6 +84,7 @@ namespace tfs
       BLOCK_MAP  blocks_[2];// 0-system disk, 1-full disk
       WorkThreadHelperPtr work_thread_;
       uint64_t ns_vip_port_;
+      int64_t not_full_block_count_; // not full block need to migrate back for reuse
       double balance_percent_;
       double penalty_percent_;
       int64_t hot_time_range_;
