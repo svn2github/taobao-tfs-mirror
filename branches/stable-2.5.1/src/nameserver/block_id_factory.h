@@ -42,7 +42,7 @@ namespace tfs
         static const uint16_t SKIP_BLOCK_NUMBER;
         static const uint64_t MAX_BLOCK_ID;
         uint64_t global_id_;
-        int32_t  count_;
+        uint64_t last_flush_id_;
         int32_t  fd_;
     };
   }/** nameserver **/

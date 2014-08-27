@@ -1012,7 +1012,10 @@ namespace tfs
                   if (TFS_SUCCESS == ret)
                   {
                     add_new_block_helper_write_log_(block_id, news, now);
-                    oplog_sync_mgr_.generation(block_id);
+                    if (!GFactory::get_runtime_info().is_master())
+                    {
+                      oplog_sync_mgr_.update(block_id);
+                    }
                   }
                   block->set_create_flag(BLOCK_CREATE_FLAG_NO);
                 }//end send message to dataserver successful
