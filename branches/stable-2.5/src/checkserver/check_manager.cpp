@@ -93,7 +93,15 @@ namespace tfs
     void CheckManager::clear()
     {
       seqno_ = 0;
-      all_servers_.clear();
+      {
+        SERVER_MAP_ITER iter = all_servers_.begin();
+        for ( ; iter != all_servers_.end(); iter++)
+        {
+          ServerObject* server = *iter;
+          tbsys::gDelete(server);
+        }
+        all_servers_.clear();
+      }
       for (int index = 0; index < MAX_BLOCK_CHUNK_NUMS; index++)
       {
         tbutil::Mutex::Lock lock(all_blocks_[index].mutex_);
