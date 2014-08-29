@@ -184,6 +184,30 @@ namespace tfs
       return bret;
     }
 
+    int KvRootServer::handle(common::BasePacket* packet)
+    {
+      assert(NULL != packet);
+      int ret = TFS_SUCCESS;
+      int32_t pcode = packet->getPCode();
+      switch (pcode)
+      {
+        case REQ_KV_RT_GET_TABLE_MESSAGE:
+          ret = get_tables(packet);
+          break;
+        default:
+          ret = EXIT_UNKNOWN_MSGTYPE;
+          TBSYS_LOG(ERROR, "unknown msg type: %d", pcode);
+          break;
+      }
+
+      if (common::TFS_SUCCESS != ret)
+      {
+        packet->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
+      }
+
+      return EASY_OK;
+    }
+
 		bool KvRootServer::KeepAliveIPacketQueueHandlerHelper::handlePacketQueue(tbnet::Packet *packet, void *args)
     {
       UNUSED(args);

@@ -262,6 +262,75 @@ namespace tfs
       return true;
     }
 
+    int KvMetaService::handle(common::BasePacket* packet)
+    {
+      assert(NULL != packet);
+      int ret = TFS_SUCCESS;
+      int32_t pcode = packet->getPCode();
+      switch (pcode)
+      {
+        case REQ_KVMETA_GET_SERVICE_MESSAGE:
+          ret = get_service(dynamic_cast<ReqKvMetaGetServiceMessage*>(packet));
+          break;
+        case REQ_KVMETA_PUT_OBJECT_MESSAGE:
+          ret = put_object(dynamic_cast<ReqKvMetaPutObjectMessage*>(packet));
+          break;
+        case REQ_KVMETA_GET_OBJECT_MESSAGE:
+          ret = get_object(dynamic_cast<ReqKvMetaGetObjectMessage*>(packet));
+          break;
+        case REQ_KVMETA_DEL_OBJECT_MESSAGE:
+          ret = del_object(dynamic_cast<ReqKvMetaDelObjectMessage*>(packet));
+          break;
+        case REQ_KVMETA_HEAD_OBJECT_MESSAGE:
+          ret = head_object(dynamic_cast<ReqKvMetaHeadObjectMessage*>(packet));
+          break;
+        case REQ_KVMETA_PUT_OBJECT_USER_METADATA_MESSAGE:
+          ret = put_object_user_metadata(dynamic_cast<ReqKvMetaPutObjectUserMetadataMessage*>(packet));
+          break;
+        case REQ_KVMETA_DEL_OBJECT_USER_METADATA_MESSAGE:
+          ret = del_object_user_metadata(dynamic_cast<ReqKvMetaDelObjectUserMetadataMessage*>(packet));
+          break;
+        case REQ_KVMETA_PUT_BUCKET_MESSAGE:
+          ret = put_bucket(dynamic_cast<ReqKvMetaPutBucketMessage*>(packet));
+          break;
+        case REQ_KVMETA_GET_BUCKET_MESSAGE:
+          ret = get_bucket(dynamic_cast<ReqKvMetaGetBucketMessage*>(packet));
+          break;
+        case REQ_KVMETA_DEL_BUCKET_MESSAGE:
+          ret = del_bucket(dynamic_cast<ReqKvMetaDelBucketMessage*>(packet));
+          break;
+        case REQ_KVMETA_HEAD_BUCKET_MESSAGE:
+          ret = head_bucket(dynamic_cast<ReqKvMetaHeadBucketMessage*>(packet));
+          break;
+        case REQ_KVMETA_SET_LIFE_CYCLE_MESSAGE:
+          ret = set_file_lifecycle(dynamic_cast<ReqKvMetaSetLifeCycleMessage*>(packet));
+          break;
+        case REQ_KVMETA_GET_LIFE_CYCLE_MESSAGE:
+          ret = get_file_lifecycle(dynamic_cast<ReqKvMetaGetLifeCycleMessage*>(packet));
+          break;
+        case REQ_KVMETA_RM_LIFE_CYCLE_MESSAGE:
+          ret = rm_file_lifecycle(dynamic_cast<ReqKvMetaRmLifeCycleMessage*>(packet));
+          break;
+        case REQ_KVMETA_PUT_BUCKET_ACL_MESSAGE:
+          ret = put_bucket_acl(dynamic_cast<ReqKvMetaPutBucketAclMessage*>(packet));
+          break;
+        case REQ_KVMETA_GET_BUCKET_ACL_MESSAGE:
+          ret = get_bucket_acl(dynamic_cast<ReqKvMetaGetBucketAclMessage*>(packet));
+          break;
+        default:
+          ret = EXIT_UNKNOWN_MSGTYPE;
+          TBSYS_LOG(ERROR, "unknown msg type: %d", pcode);
+          break;
+      }
+
+      if (ret != TFS_SUCCESS)
+      {
+        packet->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
+      }
+
+      return EASY_OK;
+    }
+
     int KvMetaService::get_service(ReqKvMetaGetServiceMessage *req_get_service_msg)
     {
       int ret = TFS_SUCCESS;

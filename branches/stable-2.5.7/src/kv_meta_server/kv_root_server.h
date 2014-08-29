@@ -67,6 +67,9 @@ namespace tfs
       /** handle packet*/
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
 
+      // libeasy handle packet
+      int handle(common::BasePacket* packet);
+
     private:
       DISALLOW_COPY_AND_ASSIGN(KvRootServer);
 

@@ -48,6 +48,9 @@ namespace tfs
       virtual int initialize(int argc, char* argv[]);
       virtual int destroy_service();
 
+      // libeasy handle packet
+      int handle(common::BasePacket* packet);
+
       int get_service(message::ReqKvMetaGetServiceMessage *get_service_msg);
       int put_object(message::ReqKvMetaPutObjectMessage* put_object_msg);
       int put_object_user_metadata(message::ReqKvMetaPutObjectUserMetadataMessage *req_put_object_user_metadata_msg);
