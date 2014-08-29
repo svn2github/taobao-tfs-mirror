@@ -263,6 +263,33 @@ namespace tfs
       return bret;
     }
 
+    int MigrateService::handle(common::BasePacket* packet)
+    {
+      assert(NULL != packet);
+      int ret = TFS_SUCCESS;
+      int32_t pcode = packet->getPCode();
+      if (TFS_SUCCESS == ret)
+      {
+        switch (pcode)
+        {
+          case REQ_MIGRATE_DS_HEARTBEAT_MESSAGE:
+            ret = keepalive_(dynamic_cast<common::BasePacket*>(packet));
+            break;
+          default:
+            ret = EXIT_UNKNOWN_MSGTYPE;
+            break;
+        }
+      }
+
+      if (common::TFS_SUCCESS != ret)
+      {
+        common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
+        msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
+      }
+
+      return EASY_OK;
+    }
+
     void MigrateService::TimeoutThreadHelper::run()
     {
       service_.timeout_();

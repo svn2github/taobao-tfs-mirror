@@ -199,15 +199,15 @@ namespace tfs
       int32_t ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        GetAllBlocksHeaderMessage req_msg;
         do
         {
+          create_msg_ref(GetAllBlocksHeaderMessage, req_msg);
           NewClient* client = NewClientManager::get_instance().create_client();
           ret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
           if (TFS_SUCCESS == ret)
           {
             tbnet::Packet* result = NULL;
-            ret = send_msg_to_server(server, client, &req_msg, result, TIMEOUT_MS);
+            ret = send_msg_to_server(server, client, &req_msg, result, false, TIMEOUT_MS);
             if (TFS_SUCCESS == ret)
             {
               ret = GET_ALL_BLOCKS_HEADER_RESP_MESSAGE == result->getPCode() ? TFS_SUCCESS : EXIT_GET_ALL_BLOCK_HEADER_ERROR;
@@ -386,23 +386,23 @@ namespace tfs
           && current.dest_addr_ != INVALID_SERVER_ID) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ClientCmdMessage req_msg;
-        req_msg.set_value1(current.source_addr_);
-        req_msg.set_value2(current.dest_addr_);
-        req_msg.set_value3(current.block_id_);
-        req_msg.set_value4(REPLICATE_BLOCK_MOVE_FLAG_YES);
-        req_msg.set_value5(MOVE_BLOCK_NO_CHECK_RACK_FLAG_YES);
-        req_msg.set_cmd(CLIENT_CMD_IMMEDIATELY_REPL);
         int32_t retry_times = 3;
         const int32_t TIMEOUT_MS = 2000;
         do
         {
+          create_msg_ref(ClientCmdMessage, req_msg);
+          req_msg.set_value1(current.source_addr_);
+          req_msg.set_value2(current.dest_addr_);
+          req_msg.set_value3(current.block_id_);
+          req_msg.set_value4(REPLICATE_BLOCK_MOVE_FLAG_YES);
+          req_msg.set_value5(MOVE_BLOCK_NO_CHECK_RACK_FLAG_YES);
+          req_msg.set_cmd(CLIENT_CMD_IMMEDIATELY_REPL);
           NewClient* client = NewClientManager::get_instance().create_client();
           ret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
           if (TFS_SUCCESS == ret)
           {
             tbnet::Packet* result = NULL;
-            ret = send_msg_to_server(ns_vip_port_, client, &req_msg, result, TIMEOUT_MS);
+            ret = send_msg_to_server(ns_vip_port_, client, &req_msg, result, false, TIMEOUT_MS);
             if (TFS_SUCCESS == ret)
             {
               ret = STATUS_MESSAGE == result->getPCode() ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
@@ -471,7 +471,7 @@ namespace tfs
       int ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ClientNsKeepaliveMessage req_msg;
+        create_msg_ref(ClientNsKeepaliveMessage, req_msg);
         req_msg.set_flag(DS_TABLE_NONE);
 
         tbnet::Packet* ret_msg = NULL;
