@@ -85,6 +85,7 @@ namespace tfs
       //StatInfoHelper stat_info_helper_;
 
       HeartManager heart_manager_;
+      volatile bool is_inited_;
     };
   }
 }

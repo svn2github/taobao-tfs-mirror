@@ -101,6 +101,7 @@ namespace tfs
 
       KeepAliveIPacketQueueHandlerHelper rt_ms_heartbeat_handler_;
       KvMetaServerManager manager_;
+      volatile bool is_inited_;
     };
   }/** kvrootserver **/
 }/** tfs **/

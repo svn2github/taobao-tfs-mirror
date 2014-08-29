@@ -30,7 +30,7 @@ namespace tfs
     using namespace std;
 
     RcService::RcService() :
-      resource_manager_(NULL), session_manager_(NULL)
+      resource_manager_(NULL), session_manager_(NULL), is_inited_(false)
     {
     }
 
@@ -102,24 +102,31 @@ namespace tfs
       assert(NULL != packet);
       int ret = TFS_SUCCESS;
       int32_t pcode = packet->getPCode();
-      switch (pcode)
+      if (!is_inited_)
       {
-        case REQ_RC_LOGIN_MESSAGE:
-          ret = req_login(packet);
-          break;
-        case REQ_RC_KEEPALIVE_MESSAGE:
-          ret = req_keep_alive(packet);
-          break;
-        case REQ_RC_LOGOUT_MESSAGE:
-          ret = req_logout(packet);
-          break;
-        case REQ_RC_REQ_STAT_MESSAGE:
-          ret = req_stat(packet);
-          break;
-        default:
-          ret = EXIT_UNKNOWN_MSGTYPE;
-          TBSYS_LOG(ERROR, "unknown msg type: %d", packet->getPCode());
-          break;
+        ret = EXIT_NOT_INIT_ERROR;
+      }
+      else
+      {
+        switch (pcode)
+        {
+          case REQ_RC_LOGIN_MESSAGE:
+            ret = req_login(packet);
+            break;
+          case REQ_RC_KEEPALIVE_MESSAGE:
+            ret = req_keep_alive(packet);
+            break;
+          case REQ_RC_LOGOUT_MESSAGE:
+            ret = req_logout(packet);
+            break;
+          case REQ_RC_REQ_STAT_MESSAGE:
+            ret = req_stat(packet);
+            break;
+          default:
+            ret = EXIT_UNKNOWN_MSGTYPE;
+            TBSYS_LOG(ERROR, "unknown msg type: %d", packet->getPCode());
+            break;
+        }
       }
 
       if (ret != TFS_SUCCESS)
@@ -133,6 +140,11 @@ namespace tfs
 
     int RcService::initialize(int argc, char* argv[])
     {
+      if (is_inited_)
+      {
+        return TFS_SUCCESS;
+      }
+
       UNUSED(argc);
       UNUSED(argv);
       int ret = TFS_SUCCESS;
@@ -178,7 +190,6 @@ namespace tfs
 
     int RcService::destroy_service()
     {
-      is_inited_ = false;
       int ret = TFS_SUCCESS;
       is_inited_ = false;
       if (NULL != session_manager_)
