@@ -59,6 +59,9 @@ namespace tfs
         // override
         bool handlePacketQueue(tbnet::Packet* packet, void* args);
 
+        // libeasy handle packet
+        int handle(common::BasePacket* packet);
+
       private:
         // override
         int initialize(int argc, char* argv[]);

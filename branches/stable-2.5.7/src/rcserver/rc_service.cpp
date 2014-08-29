@@ -97,6 +97,40 @@ namespace tfs
       return true;
     }
 
+    int RcService::handle(common::BasePacket* packet)
+    {
+      assert(NULL != packet);
+      int ret = TFS_SUCCESS;
+      int32_t pcode = packet->getPCode();
+      switch (pcode)
+      {
+        case REQ_RC_LOGIN_MESSAGE:
+          ret = req_login(packet);
+          break;
+        case REQ_RC_KEEPALIVE_MESSAGE:
+          ret = req_keep_alive(packet);
+          break;
+        case REQ_RC_LOGOUT_MESSAGE:
+          ret = req_logout(packet);
+          break;
+        case REQ_RC_REQ_STAT_MESSAGE:
+          ret = req_stat(packet);
+          break;
+        default:
+          ret = EXIT_UNKNOWN_MSGTYPE;
+          TBSYS_LOG(ERROR, "unknown msg type: %d", packet->getPCode());
+          break;
+      }
+
+      if (ret != TFS_SUCCESS)
+      {
+        packet->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+      }
+
+      return EASY_OK;
+    }
+
+
     int RcService::initialize(int argc, char* argv[])
     {
       UNUSED(argc);
