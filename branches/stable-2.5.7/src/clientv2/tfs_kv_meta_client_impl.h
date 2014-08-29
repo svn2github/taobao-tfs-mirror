@@ -44,7 +44,10 @@ namespace tfs
           tfs_cluster_manager_ = tfs_cluster_manager;
         }
 
-        TfsRetType put_bucket(const char *bucket_name, const common::UserInfo &user_info);
+        TfsRetType put_bucket(const char *bucket_name, const common::UserInfo &user_info,
+            const common::CANNED_ACL acl = common::PRIVATE);
+        TfsRetType put_bucket_acl(const char *bucket_name, const common::UserInfo &user_info,
+            const common::CANNED_ACL acl);
         TfsRetType get_bucket(const char *bucket_name, const char *prefix,
             const char *start_key, const char delimiter, const int32_t limit,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,
@@ -59,13 +62,13 @@ namespace tfs
             const common::UserInfo &user_info);
         int64_t pread_object(const char *bucket_name, const char *object_name,
             void *buffer, const int64_t offset, int64_t length,
-            common::ObjectMetaInfo *object_meta_info, common::CustomizeInfo *customize_info,
+            common::ObjectMetaInfo *object_meta_info, common::UserMetadata *user_metadata,
             const common::UserInfo &user_info);
         TfsRetType put_object(const char *bucket_name, const char *object_name,
             const char* local_file, const common::UserInfo &user_info);
         TfsRetType get_object(const char *bucket_name, const char *object_name,
             const char* local_file, common::ObjectMetaInfo *object_meta_info,
-            common::CustomizeInfo *customize_info, const common::UserInfo &user_info);
+            common::UserMetadata *user_metadata, const common::UserInfo &user_info);
         TfsRetType del_object(const char *bucket_name, const char *object_name,
             const common::UserInfo &user_info);
         TfsRetType head_object(const char *bucket_name, const char *object_name,
@@ -78,8 +81,10 @@ namespace tfs
         TfsRetType rm_life_cycle(const int32_t file_type, const char *file_name);
 
 
-        int do_put_bucket(const char *bucket_name,
-            const common::BucketMetaInfo& bucket_meta_info, const common::UserInfo &user_info);
+        int do_put_bucket(const char *bucket_name, const common::BucketMetaInfo& bucket_meta_info,
+            const common::UserInfo &user_info, const common::CANNED_ACL acl);
+        int do_put_bucket_acl(const char *bucket_name,
+            const common::UserInfo &user_info, const common::CANNED_ACL acl);
         int do_get_bucket(const char *bucket_name, const char *prefix,
             const char *start_key, const char delimiter, const int32_t limit,
             std::vector<common::ObjectMetaInfo> *v_object_meta_info,

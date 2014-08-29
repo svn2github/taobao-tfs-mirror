@@ -1172,6 +1172,17 @@ namespace tfs
         return ret;
       }
 
+      TfsRetType RcClientImpl::put_bucket_acl(const char *bucket_name,
+          const UserInfo &user_info, const CANNED_ACL acl)
+      {
+        TfsRetType ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          ret = kv_meta_client_->put_bucket_acl(bucket_name, user_info, acl);
+        }
+        return ret;
+      }
+
       TfsRetType RcClientImpl::get_bucket(const char *bucket_name, const char *prefix,
           const char *start_key, const char delimiter, const int32_t limit,
           vector<ObjectMetaInfo> *v_object_meta_info,
@@ -1238,14 +1249,14 @@ namespace tfs
 
       int64_t RcClientImpl::pread_object(const char *bucket_name, const char *object_name,
           void *buf, const int64_t offset, const int64_t length,
-          ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info,
+          ObjectMetaInfo *object_meta_info, UserMetadata *user_metadata,
           const UserInfo &user_info)
       {
         TfsRetType ret = check_init_stat();
         if (TFS_SUCCESS == ret)
         {
           ret = kv_meta_client_->pread_object(bucket_name, object_name,
-              buf, offset, length, object_meta_info, customize_info,
+              buf, offset, length, object_meta_info, user_metadata,
               user_info);
         }
         return ret;
@@ -1258,9 +1269,9 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ObjectMetaInfo object_meta_info;
-          CustomizeInfo customize_info;
+          UserMetadata user_metadata;
           ret = kv_meta_client_->get_object(bucket_name, object_name,
-              local_file, &object_meta_info, &customize_info, user_info);
+              local_file, &object_meta_info, &user_metadata, user_info);
         }
         return ret;
       }

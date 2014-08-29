@@ -48,18 +48,23 @@ namespace tfs
       virtual int initialize(int argc, char* argv[]);
       virtual int destroy_service();
 
+      int get_service(message::ReqKvMetaGetServiceMessage *get_service_msg);
       int put_object(message::ReqKvMetaPutObjectMessage* put_object_msg);
+      int put_object_user_metadata(message::ReqKvMetaPutObjectUserMetadataMessage *req_put_object_user_metadata_msg);
       int get_object(message::ReqKvMetaGetObjectMessage* get_object_msg);
       int put_bucket(message::ReqKvMetaPutBucketMessage* put_bucket_msg);
       int get_bucket(message::ReqKvMetaGetBucketMessage* get_bucket_msg);
       int del_bucket(message::ReqKvMetaDelBucketMessage* del_bucket_msg);
       int del_object(message::ReqKvMetaDelObjectMessage* del_object_msg);
+      int del_object_user_metadata(message::ReqKvMetaDelObjectUserMetadataMessage* req_del_object_user_metadata_msg);
       int head_object(message::ReqKvMetaHeadObjectMessage *head_object_msg);
       int head_bucket(message::ReqKvMetaHeadBucketMessage *head_bucket_msg);
       int set_file_lifecycle(message::ReqKvMetaSetLifeCycleMessage *set_lifecycle_msg);
       int get_file_lifecycle(message::ReqKvMetaGetLifeCycleMessage *get_lifecycle_msg);
       int rm_file_lifecycle(message::ReqKvMetaRmLifeCycleMessage *rm_lifecycle_msg);
 
+      int put_bucket_acl(message::ReqKvMetaPutBucketAclMessage *put_bucket_acl_msg);
+      int get_bucket_acl(message::ReqKvMetaGetBucketAclMessage *get_bucket_acl_msg);
     private:
       DISALLOW_COPY_AND_ASSIGN(KvMetaService);
 

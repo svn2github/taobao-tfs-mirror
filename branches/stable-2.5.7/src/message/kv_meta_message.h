@@ -25,6 +25,57 @@ namespace tfs
   namespace message
   {
 
+    class ReqKvMetaGetServiceMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaGetServiceMessage();
+        virtual ~ReqKvMetaGetServiceMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
+      private:
+        common::UserInfo user_info_;
+    };
+
+    class RspKvMetaGetServiceMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaGetServiceMessage();
+        virtual ~RspKvMetaGetServiceMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const common::BucketsResult* get_buckets_result() const
+        {
+          return &buckets_result_;
+        }
+
+        common::BucketsResult* get_mutable_buckets_result()
+        {
+          return &buckets_result_;
+        }
+
+        void set_buckets_result(common::BucketsResult &buckets_result)
+        {
+          buckets_result_ = buckets_result;
+        }
+
+      private:
+        common::BucketsResult buckets_result_;
+    };
+
     class ReqKvMetaPutObjectMessage : public common::BasePacket
     {
       public:
@@ -79,6 +130,62 @@ namespace tfs
         std::string file_name_;
         common::ObjectInfo object_info_;
         common::UserInfo user_info_;
+    };
+
+    class ReqKvMetaPutObjectUserMetadataMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaPutObjectUserMetadataMessage();
+        virtual ~ReqKvMetaPutObjectUserMetadataMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        const std::string& get_object_name() const
+        {
+          return object_name_;
+        }
+
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        const common::UserMetadata& get_user_metadata() const
+        {
+          return user_metadata_;
+        }
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        void set_object_name(const std::string& object_name)
+        {
+          object_name_ = object_name;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
+        void set_user_metadata(const common::UserMetadata& user_metadata)
+        {
+          user_metadata_ = user_metadata;
+        }
+
+      private:
+        std::string bucket_name_;
+        std::string object_name_;
+        common::UserInfo user_info_;
+        common::UserMetadata user_metadata_;
     };
 
     class ReqKvMetaGetObjectMessage : public common::BasePacket
@@ -139,6 +246,7 @@ namespace tfs
         {
           user_info_ = user_info;
         }
+
       private:
         std::string bucket_name_;
         std::string file_name_;
@@ -220,7 +328,6 @@ namespace tfs
           user_info_ = user_info;
         }
 
-
       private:
         std::string bucket_name_;
         std::string file_name_;
@@ -259,6 +366,51 @@ namespace tfs
       private:
         bool still_have_;
         common::ObjectInfo object_info_;
+    };
+
+    class ReqKvMetaDelObjectUserMetadataMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaDelObjectUserMetadataMessage();
+        virtual ~ReqKvMetaDelObjectUserMetadataMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        const std::string& get_object_name() const
+        {
+          return object_name_;
+        }
+
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        void set_object_name(const std::string& object_name)
+        {
+          object_name_ = object_name;
+        }
+
+        void set_user_info(const common::UserInfo& user_info)
+        {
+          user_info_ = user_info;
+        }
+
+      private:
+        std::string bucket_name_;
+        std::string object_name_;
+        common::UserInfo user_info_;
     };
 
     class ReqKvMetaHeadObjectMessage : public common::BasePacket
@@ -359,6 +511,16 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
+        const common::CANNED_ACL get_canned_acl() const
+        {
+          return canned_acl_;
+        }
+
+        void set_canned_acl(const common::CANNED_ACL canned_acl)
+        {
+          canned_acl_ = canned_acl;
+        }
+
         void set_bucket_name(const std::string& bucket_name)
         {
           bucket_name_ = bucket_name;
@@ -398,6 +560,7 @@ namespace tfs
         std::string bucket_name_;
         common::BucketMetaInfo bucket_meta_info_;
         common::UserInfo user_info_;
+        common::CANNED_ACL canned_acl_;
     };
 
     class ReqKvMetaGetBucketMessage : public common::BasePacket
@@ -816,6 +979,151 @@ namespace tfs
       private:
         int32_t file_type_;
         std::string file_name_;
+    };
+
+    //about bucket acl
+    class ReqKvMetaPutBucketAclMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaPutBucketAclMessage();
+        virtual ~ReqKvMetaPutBucketAclMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        const common::CANNED_ACL get_canned_acl() const
+        {
+          return canned_acl_;
+        }
+
+        void set_canned_acl(const common::CANNED_ACL canned_acl)
+        {
+          canned_acl_ = canned_acl;
+        }
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        void set_bucket_acl_map(const common::MAP_INT64_INT &bucket_acl_map)
+        {
+          bucket_acl_map_ = bucket_acl_map;
+        }
+
+        const common::MAP_INT64_INT* get_bucket_acl_map() const
+        {
+          return &bucket_acl_map_;
+        }
+
+        common::MAP_INT64_INT* get_mutable_bucket_acl_map()
+        {
+          return &bucket_acl_map_;
+        }
+
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo &user_info)
+        {
+          user_info_ = user_info;
+        }
+
+      private:
+        std::string bucket_name_;
+        common::MAP_INT64_INT bucket_acl_map_;
+        common::UserInfo user_info_;
+        common::CANNED_ACL canned_acl_;
+    };
+
+    class ReqKvMetaGetBucketAclMessage : public common::BasePacket
+    {
+      public:
+        ReqKvMetaGetBucketAclMessage();
+        virtual ~ReqKvMetaGetBucketAclMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        const common::UserInfo& get_user_info() const
+        {
+          return user_info_;
+        }
+
+        void set_user_info(const common::UserInfo &user_info)
+        {
+          user_info_ = user_info;
+        }
+
+        private:
+        std::string bucket_name_;
+        common::UserInfo user_info_;
+    };
+
+    class RspKvMetaGetBucketAclMessage : public common::BasePacket
+    {
+      public:
+        RspKvMetaGetBucketAclMessage();
+        virtual ~RspKvMetaGetBucketAclMessage();
+        virtual int serialize(common::Stream& output) const;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_bucket_name(const std::string& bucket_name)
+        {
+          bucket_name_ = bucket_name;
+        }
+
+        const std::string& get_bucket_name() const
+        {
+          return bucket_name_;
+        }
+
+        void set_bucket_acl_map(const common::MAP_INT64_INT &bucket_acl_map)
+        {
+          bucket_acl_map_ = bucket_acl_map;
+        }
+
+        const common::MAP_INT64_INT* get_bucket_acl_map() const
+        {
+          return &bucket_acl_map_;
+        }
+
+        common::MAP_INT64_INT* get_mutable_bucket_acl_map()
+        {
+          return &bucket_acl_map_;
+        }
+
+        void set_owner_id(const int64_t owner_id)
+        {
+          owner_id_ = owner_id;
+        }
+
+        const int64_t get_owner_id() const
+        {
+          return owner_id_;
+        }
+      private:
+        std::string bucket_name_;
+        common::MAP_INT64_INT bucket_acl_map_;
+        int64_t owner_id_;
     };
 
   }

@@ -131,7 +131,8 @@ namespace tfs
       return meta_server_id;
     }
 
-    TfsRetType KvMetaClientImpl::put_bucket(const char *bucket_name, const UserInfo &user_info)
+    TfsRetType KvMetaClientImpl::put_bucket(const char *bucket_name,
+        const UserInfo &user_info, const CANNED_ACL acl)
     {
        TfsRetType ret = TFS_ERROR;
 
@@ -147,8 +148,31 @@ namespace tfs
        if (TFS_SUCCESS == ret)
        {
          BucketMetaInfo bucket_meta_info;
+         bucket_meta_info.owner_id_ = user_info.owner_id_;
 
-         ret = do_put_bucket(bucket_name, bucket_meta_info, user_info);
+         ret = do_put_bucket(bucket_name, bucket_meta_info, user_info, acl);
+       }
+
+       return ret;
+    }
+
+    TfsRetType KvMetaClientImpl::put_bucket_acl(const char *bucket_name,
+        const UserInfo &user_info, const CANNED_ACL acl)
+    {
+       TfsRetType ret = TFS_ERROR;
+
+       if (!is_valid_bucket_name(bucket_name))
+       {
+         TBSYS_LOG(ERROR, "bucket name is invalid");
+       }
+       else
+       {
+         ret = TFS_SUCCESS;
+       }
+
+       if (TFS_SUCCESS == ret)
+       {
+         ret = do_put_bucket_acl(bucket_name, user_info, acl);
        }
 
        return ret;
@@ -425,7 +449,7 @@ namespace tfs
       {
         ObjectInfo object_info_null;
         object_info_null.has_meta_info_ = true;
-        object_info_null.has_customize_info_ = false;
+        object_info_null.has_user_metadata_ = false;
         object_info_null.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
 
         ret = do_put_object(bucket_name, object_name, object_info_null, user_info);
@@ -491,7 +515,7 @@ namespace tfs
               if (0 == iter->offset_)
               {
                 object_info.has_meta_info_ = true;
-                object_info.has_customize_info_ = false;
+                object_info.has_user_metadata_ = false;
                 object_info.meta_info_.max_tfs_file_size_ = MAX_SEGMENT_SIZE;
                 TBSYS_LOG(DEBUG, "first object info, will put meta info.");
                 object_info.meta_info_.dump();
@@ -499,7 +523,7 @@ namespace tfs
               else
               {
                 object_info.has_meta_info_ = false;
-                object_info.has_customize_info_ = false;
+                object_info.has_user_metadata_ = false;
               }
               TfsFileInfo tmp_tfs_info;
               tmp_tfs_info.offset_ = iter->offset_;
@@ -548,7 +572,7 @@ namespace tfs
     int64_t KvMetaClientImpl::pread_object(const char *bucket_name,
         const char *object_name, void *buffer, const int64_t offset,
         int64_t length, ObjectMetaInfo *object_meta_info,
-        CustomizeInfo *customize_info, const UserInfo &user_info)
+        UserMetadata *user_metadata, const UserInfo &user_info)
     {
       int64_t ret = EXIT_GENERAL_ERROR;
       if (!is_valid_bucket_name(bucket_name) || !is_valid_object_name(object_name))
@@ -604,9 +628,9 @@ namespace tfs
             {
               *object_meta_info = object_info.meta_info_;
             }
-            if (NULL != customize_info)
+            if (NULL != user_metadata)
             {
-              *customize_info = object_info.customize_info_;
+              *user_metadata = object_info.user_metadata_;
             }
           }
 
@@ -713,7 +737,7 @@ namespace tfs
 
     TfsRetType KvMetaClientImpl::get_object(const char *bucket_name,
         const char *object_name, const char* local_file,
-        ObjectMetaInfo *object_meta_info, CustomizeInfo *customize_info,
+        ObjectMetaInfo *object_meta_info, UserMetadata *user_metadata,
         const UserInfo &user_info)
     {
       TfsRetType ret = TFS_SUCCESS;
@@ -746,7 +770,7 @@ namespace tfs
         {
           cur_length = min(io_size, length);
           read_len = pread_object(bucket_name, object_name, buf, offset,
-              cur_length, object_meta_info, customize_info, user_info);
+              cur_length, object_meta_info, user_metadata, user_info);
           if (0 == offset)
           {
             length = object_meta_info->big_file_size_;
@@ -936,7 +960,8 @@ namespace tfs
     }
 
     /* ==========================================================*/
-    int KvMetaClientImpl::do_put_bucket(const char *bucket_name, const BucketMetaInfo& bucket_meta_info, const UserInfo &user_info)
+    int KvMetaClientImpl::do_put_bucket(const char *bucket_name,
+        const BucketMetaInfo& bucket_meta_info, const UserInfo &user_info, const CANNED_ACL acl)
     {
       int ret = TFS_SUCCESS;
       uint64_t meta_server_id = 0;
@@ -944,7 +969,32 @@ namespace tfs
       do
       {
         meta_server_id = get_meta_server_id();
-        ret = KvMetaHelper::do_put_bucket(meta_server_id, bucket_name, bucket_meta_info, user_info);
+        ret = KvMetaHelper::do_put_bucket(meta_server_id, bucket_name, bucket_meta_info, user_info, acl);
+
+        if (EXIT_NETWORK_ERROR == ret)
+        {
+          fail_count_++;
+        }
+        if (need_update_table(ret))
+        {
+          update_table_from_rootserver();
+        }
+      }
+      while ((EXIT_NETWORK_ERROR == ret || EXIT_INVALID_KV_META_SERVER == ret) && --retry);
+
+      return ret;
+    }
+
+    int KvMetaClientImpl::do_put_bucket_acl(const char *bucket_name,
+        const UserInfo &user_info, const CANNED_ACL acl)
+    {
+      int ret = TFS_SUCCESS;
+      uint64_t meta_server_id = 0;
+      int32_t retry = ClientConfig::meta_retry_count_;
+      do
+      {
+        meta_server_id = get_meta_server_id();
+        ret = KvMetaHelper::do_put_bucket_acl(meta_server_id, bucket_name, user_info, acl);
 
         if (EXIT_NETWORK_ERROR == ret)
         {

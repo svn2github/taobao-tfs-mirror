@@ -26,8 +26,10 @@ namespace tfs
     const char KvDefine::DASH = '-';
     const char KvDefine::DEFAULT_CHAR = 7;
     const int32_t KvDefine::MAX_LIMIT = 1000;
+    const int32_t KvDefine::MAX_BUCKETS_COUNT = 100;
     const int32_t KvDefine::VERSION_ERROR_RETRY_COUNT = 3;
     const int64_t KvDefine::MAX_VERSION = (1L<<30) - 1;
+    const int64_t KvDefine::ADMIN_ID = 8;
 
     TfsFileInfo::TfsFileInfo()
       :cluster_id_(0), block_id_(0), file_id_(0), offset_(0), file_size_(0)
@@ -219,7 +221,7 @@ namespace tfs
 
     int ObjectMetaInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
 
       while (TFS_SUCCESS == ret)
       {
@@ -266,66 +268,86 @@ namespace tfs
 
 
     //customizeinfo
-    CustomizeInfo::CustomizeInfo()
+    UserMetadata::UserMetadata()
     { }
 
-    int64_t CustomizeInfo::length() const
+    int64_t UserMetadata::length() const
     {
-      return Serialization::get_string_length(otag_) + INT_SIZE * 2;
+      int64_t len = INT_SIZE;
+      MAP_STRING_STRING_ITER iter = metadata_.begin();
+      for (; iter != metadata_.end(); iter++)
+      {
+        len += common::Serialization::get_string_length(iter->first);
+        len += common::Serialization::get_string_length(iter->second);
+      }
+
+      return len;
     }
 
-    void CustomizeInfo::dump() const
+    void UserMetadata::dump() const
     {
-      // TODO
+      TBSYS_LOG(DEBUG, "UserMetadata: [meta_count: %zd]", metadata_.size());
+
+      if (metadata_.size() > 0)
+      {
+        MAP_STRING_STRING_ITER iter = metadata_.begin();
+        for (; iter != metadata_.end(); iter++)
+        {
+          TBSYS_LOG(DEBUG, "UserMetadata: [key: %s, value: %s]",iter->first.c_str(), iter->second.c_str());
+        }
+      }
     }
 
-    int CustomizeInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    int UserMetadata::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int32(data, data_len, pos, CUSTOMIZE_INFO_OTAG_TAG);
+
+      if (TFS_SUCCESS == ret) {
+
+        int32_t meta_count = static_cast<int32_t>(metadata_.size());
+        ret = Serialization::set_int32(data, data_len, pos, meta_count);
+
+        if (TFS_SUCCESS == ret && meta_count > 0)
+        {
+          MAP_STRING_STRING_ITER iter = metadata_.begin();
+          for (; iter != metadata_.end() && TFS_SUCCESS == ret; iter++)
+          {
+            ret = Serialization::set_string(data, data_len, pos, iter->first);
+            if (TFS_SUCCESS == ret)
+            {
+              ret = Serialization::set_string(data, data_len, pos, iter->second);
+            }
+          }
+        }
       }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_string(data, data_len, pos, otag_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
-      }
+
       return ret;
     }
 
-    int CustomizeInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    int UserMetadata::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
 
-      while (TFS_SUCCESS == ret)
+      int32_t meta_count = 0;
+
+      ret = Serialization::get_int32(data, data_len, pos, &meta_count);
+
+      if (TFS_SUCCESS == ret && meta_count > 0)
       {
-        int32_t type_tag = 0;
-        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
-
-        if (TFS_SUCCESS == ret)
+        std::string key;
+        std::string value;
+        for (int32_t i = 0; i < meta_count && TFS_SUCCESS == ret; i++)
         {
-          switch (type_tag)
+          ret = Serialization::get_string(data, data_len, pos, key);
+          if (TFS_SUCCESS == ret)
           {
-            case CUSTOMIZE_INFO_OTAG_TAG:
-              ret = Serialization::get_string(data, data_len, pos, otag_);
-              break;
-            case END_TAG:
-              ;
-              break;
-            default:
-              TBSYS_LOG(ERROR, "customize info: %d can't self-interpret", type_tag);
-              ret = TFS_ERROR;
-              break;
+            ret = Serialization::get_string(data, data_len, pos, value);
           }
-        }
 
-        if (END_TAG == type_tag)
-        {
-          break;
+          if (TFS_SUCCESS == ret)
+          {
+            metadata_.insert(std::make_pair(key, value));
+          }
         }
       }
 
@@ -334,7 +356,7 @@ namespace tfs
 
     //object meta info
     ObjectInfo::ObjectInfo()
-      : has_meta_info_(false), has_customize_info_(false)
+      : has_meta_info_(false), has_user_metadata_(false)
     {v_tfs_file_info_.clear();}
 
     int64_t ObjectInfo::length() const
@@ -342,21 +364,21 @@ namespace tfs
       return (INT8_SIZE * 2 + INT_SIZE +
           (v_tfs_file_info_.size() * (INT64_SIZE * 4 + INT_SIZE + 6 * INT_SIZE)) +
           (has_meta_info_ ? (INT_SIZE + meta_info_.length()) : 0) +
-          (has_customize_info_ ? (INT_SIZE + customize_info_.length()) : 0) +
+          (has_user_metadata_ ? (INT_SIZE + user_metadata_.length()) : 0) +
           4 * INT_SIZE);
     }
 
     void ObjectInfo::dump() const
     {
       TBSYS_LOG(DEBUG, "ObjectInfo: [has_meta_info: %d, "
-          "has_customize_info: %d]",  has_meta_info_, has_customize_info_);
+          "has_user_metadata: %d]",  has_meta_info_, has_user_metadata_);
       if (has_meta_info_)
       {
         meta_info_.dump();
       }
-      if (has_customize_info_)
+      if (has_user_metadata_)
       {
-        customize_info_.dump();
+        user_metadata_.dump();
       }
       for (size_t i = 0; i < v_tfs_file_info_.size(); i++)
       {
@@ -401,18 +423,18 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, OBJECT_INFO_HAS_CUSTOMIZE_INFO_TAG);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_INFO_HAS_USER_METADATA_TAG);
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int8(data, data_len, pos, has_customize_info_);
+        ret = Serialization::set_int8(data, data_len, pos, has_user_metadata_);
       }
-      if (TFS_SUCCESS == ret && has_customize_info_)
+      if (TFS_SUCCESS == ret && has_user_metadata_)
       {
-        ret = Serialization::set_int32(data, data_len, pos, OBJECT_INFO_CUSTOMIZE_INFO_TAG);
+        ret = Serialization::set_int32(data, data_len, pos, OBJECT_INFO_USER_METADATA_TAG);
         if (TFS_SUCCESS == ret)
         {
-          ret = customize_info_.serialize(data, data_len, pos);
+          ret = user_metadata_.serialize(data, data_len, pos);
         }
       }
       if (TFS_SUCCESS == ret)
@@ -425,7 +447,7 @@ namespace tfs
 
     int ObjectInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
 
       while (TFS_SUCCESS == ret)
       {
@@ -457,19 +479,13 @@ namespace tfs
               ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&has_meta_info_));
               break;
             case OBJECT_INFO_META_INFO_TAG:
-              if (has_meta_info_)
-              {
-                ret = meta_info_.deserialize(data, data_len, pos);
-              }
+              ret = meta_info_.deserialize(data, data_len, pos);
               break;
-            case OBJECT_INFO_HAS_CUSTOMIZE_INFO_TAG:
-              ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&has_customize_info_));
+            case OBJECT_INFO_HAS_USER_METADATA_TAG:
+              ret = Serialization::get_int8(data, data_len, pos, reinterpret_cast<int8_t*>(&has_user_metadata_));
               break;
-            case OBJECT_INFO_CUSTOMIZE_INFO_TAG:
-              if (has_customize_info_)
-              {
-                ret = customize_info_.deserialize(data, data_len, pos);
-              }
+            case OBJECT_INFO_USER_METADATA_TAG:
+              ret = user_metadata_.deserialize(data, data_len, pos);
               break;
             case END_TAG:
               ;
@@ -497,7 +513,14 @@ namespace tfs
 
     int64_t BucketMetaInfo::length() const
     {
-      return INT64_SIZE * 2 + INT_SIZE * 3;
+      //create_time_ owner_id_
+      int64_t len = INT64_SIZE * 2 + INT_SIZE * 2;
+       //add bucket acl map
+      len += INT_SIZE * 2;//tag and and size
+      len += (INT64_SIZE+INT_SIZE) * bucket_acl_map_.size();
+      len += INT_SIZE; //end tag
+
+      return len;
     }
 
     int BucketMetaInfo::serialize(char *data, const int64_t data_len, int64_t &pos) const
@@ -518,6 +541,28 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int64(data, data_len, pos, owner_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKET_META_INFO_BUCKET_ACL_MAP_TAG);
+
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t size = bucket_acl_map_.size();
+          ret = Serialization::set_int32(data, data_len, pos, size);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          MAP_INT64_INT_ITER iter = bucket_acl_map_.begin();
+          for (; iter != bucket_acl_map_.end() && TFS_SUCCESS == ret; iter++)
+          {
+            ret = Serialization::set_int64(data, data_len, pos, iter->first);
+            if (TFS_SUCCESS == ret)
+            {
+              ret = Serialization::set_int32(data, data_len, pos, iter->second);
+            }
+          }
+        }
       }
       if (TFS_SUCCESS == ret)
       {
@@ -545,6 +590,32 @@ namespace tfs
             case BUCKET_META_INFO_OWNER_ID_TAG:
               ret = Serialization::get_int64(data, data_len, pos, &owner_id_);
               break;
+            case BUCKET_META_INFO_BUCKET_ACL_MAP_TAG:
+              if (TFS_SUCCESS == ret)
+              {
+                int32_t size = -1;
+                ret = Serialization::get_int32(data, data_len, pos, &size);
+
+                if (TFS_SUCCESS == ret)
+                {
+                  int64_t key;
+                  int32_t value;
+                  for (int32_t i = 0; i < size && TFS_SUCCESS == ret; i++)
+                  {
+                    ret = Serialization::get_int64(data, data_len, pos, &key);
+                    if (TFS_SUCCESS == ret)
+                    {
+                      ret = Serialization::get_int32(data, data_len, pos, &value);
+                    }
+
+                    if (TFS_SUCCESS == ret)
+                    {
+                      bucket_acl_map_.insert(std::make_pair(key, value));
+                    }
+                  }
+                }
+              }
+              break;
             case END_TAG:
               ;
               break;
@@ -566,7 +637,7 @@ namespace tfs
 
     //userinfo
     UserInfo::UserInfo()
-    :owner_id_(0)
+      :owner_id_(0)
     {}
     int64_t UserInfo::length() const
     {
@@ -623,6 +694,131 @@ namespace tfs
         }
       }
 
+      return ret;
+    }
+
+    //BucketsResult
+    BucketsResult::BucketsResult()
+      :owner_id_(0)
+    {}
+
+    int64_t BucketsResult::length() const
+    {
+      int64_t len = INT64_SIZE;
+
+      //owner_id_tag
+      len += INT_SIZE;
+
+      //buckets_result_tag + map_size + end_tag
+      len += 3 * INT_SIZE;
+
+      MAP_BUCKET_INFO_ITER iter = bucket_info_map_.begin();
+      for (; iter != bucket_info_map_.end(); iter++)
+      {
+        len += common::Serialization::get_string_length(iter->first);
+        len += (iter->second).length();
+      }
+
+      return len;
+    }
+
+    int BucketsResult::serialize(char *data, const int64_t data_len, int64_t &pos) const
+    {
+      int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKETS_RESULT_OWNER_ID_TAG);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, owner_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, BUCKETS_RESULT_BUCKET_INFO_MAP_TAG);
+        if (TFS_SUCCESS == ret)
+        {
+          int32_t size = bucket_info_map_.size();
+          ret = Serialization::set_int32(data, data_len, pos, size);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          MAP_BUCKET_INFO_ITER iter = bucket_info_map_.begin();
+          for (; iter != bucket_info_map_.end() && TFS_SUCCESS == ret; iter++)
+          {
+            ret = Serialization::set_string(data, data_len, pos, iter->first);
+            if (TFS_SUCCESS == ret)
+            {
+              (iter->second).serialize(data, data_len, pos);
+            }
+          }
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, END_TAG);
+      }
+
+      return ret;
+    }
+
+    int BucketsResult::deserialize(const char *data, const int64_t data_len, int64_t &pos)
+    {
+      int ret = NULL != data/* && data_len - pos >= length()*/ ? TFS_SUCCESS : TFS_ERROR;
+
+      while (TFS_SUCCESS == ret)
+      {
+        int32_t type_tag = 0;
+        ret = Serialization::get_int32(data, data_len, pos, &type_tag);
+
+        if (TFS_SUCCESS == ret)
+        {
+          switch (type_tag)
+          {
+            case BUCKETS_RESULT_OWNER_ID_TAG:
+              ret = Serialization::get_int64(data, data_len, pos, &owner_id_);
+              break;
+            case BUCKETS_RESULT_BUCKET_INFO_MAP_TAG:
+              int32_t size;
+              ret = Serialization::get_int32(data, data_len, pos, &size);
+
+              if (TFS_SUCCESS == ret)
+              {
+                std::string key;
+                BucketMetaInfo value;
+                for (int32_t i = 0; i < size && TFS_SUCCESS == ret; i++)
+                {
+                  ret = Serialization::get_string(data, data_len, pos, key);
+                  if (TFS_SUCCESS == ret)
+                  {
+                    ret = value.deserialize(data, data_len, pos);
+                  }
+
+                  if (TFS_SUCCESS == ret)
+                  {
+                    bucket_info_map_.insert(std::make_pair(key, value));
+                  }
+                }
+              }
+              break;
+            case END_TAG:
+              ;
+              break;
+            default:
+              TBSYS_LOG(ERROR, "buckets result: %d can't self-interpret", type_tag);
+              ret = TFS_ERROR;
+              break;
+          }
+        }
+
+        if (END_TAG == type_tag)
+        {
+          break;
+        }
+      }
       return ret;
     }
 

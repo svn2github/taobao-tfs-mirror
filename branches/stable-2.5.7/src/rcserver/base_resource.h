@@ -53,8 +53,6 @@ namespace tfs
         int get_last_modify_time(int64_t& last_modify_time) const;
         int sort_ns_by_distance(const int32_t app_id, const std::string& app_ip,
         const common::BaseInfo& in_base_info, common::BaseInfo& out_base_info);
-        int get_ns_max_connection_count(int16_t& ns_max_connection_count);
-        int get_ns_connection_limit_enable(int8_t& ns_connection_limit_enable);
 
       private:
         int64_t base_last_update_time_;
@@ -63,7 +61,6 @@ namespace tfs
         VClusterRackInfo v_cluster_rack_info_;
         VClusterRackGroup v_cluster_rack_group_;
         VClusterRackDuplicateServer v_cluster_rack_duplicate_server_;
-        VOptionKV  v_option_kv_;
       private:
         //vector<pair<tair_info, tair_caculate_ip> >
         typedef std::vector<std::pair<std::string, std::string> > VNsCacheInfo;

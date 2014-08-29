@@ -59,6 +59,12 @@ namespace tfs
           TBSYS_LOG(ERROR, "MysqlEngineHelper fail. ");
           ret = TFS_ERROR;
         }
+        if (TFS_SUCCESS == ret)
+        {
+          MysqlDatabaseHelper* database_ = data_base_pool_->get();
+          ret = database_->connect();
+          database_->close();
+        }
       }
       return ret;
     }

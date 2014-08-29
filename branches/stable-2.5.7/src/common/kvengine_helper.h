@@ -28,6 +28,8 @@ namespace tfs
 {
   namespace common
   {
+    //key of get service is like this
+    //  prefix\owner_id
     //key of object is like this
     //  bucketname\filename\offset\version_id
     //key of bucket is like this
@@ -39,6 +41,7 @@ namespace tfs
       KvKey();
 
       static const char DELIMITER;
+      static const char PREFIX;
 
       const char* key_; //no malloc no free
       int32_t key_size_;

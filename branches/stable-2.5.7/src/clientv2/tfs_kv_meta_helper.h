@@ -29,7 +29,9 @@ namespace tfs
     {
     public:
       static int do_put_bucket(const uint64_t server_id, const char *bucket_name, const common::BucketMetaInfo& bucket_meta_info,
-                               const common::UserInfo &user_info);
+                               const common::UserInfo &user_info, const common::CANNED_ACL acl);
+      static int do_put_bucket_acl(const uint64_t server_id, const char *bucket_name,
+                               const common::UserInfo &user_info, const common::CANNED_ACL acl);
       static int get_table(const uint64_t server_id, common::KvMetaTable& table);
       // TODO: parameter
       static int do_get_bucket(const uint64_t server_id, const char *bucket_name,

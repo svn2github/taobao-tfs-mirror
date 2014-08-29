@@ -10,7 +10,7 @@ AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -luuid -lz $(TAIR_CACHE_LDFLAGS)
 bin_PROGRAMS = admintool tfstool ssm repair_file_tool stat_tool gen_compact_blk_order # import_family_info export_family_info
 
 if WITH_TAIR_CACHE
-bin_PROGRAMS += remote_block_cache_tool
+#bin_PROGRAMS += remote_block_cache_tool
 endif
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
@@ -34,7 +34,7 @@ ssm_SOURCES = main.cpp show.cpp show_factory.cpp metacmp.cpp cmp_factory.cpp com
 
 admintool_SOURCES = admintool.cpp
 if WITH_TAIR_CACHE
-remote_block_cache_tool_SOURCES=remote_block_cache_tool.cpp
+#remote_block_cache_tool_SOURCES=remote_block_cache_tool.cpp
 endif
 
 repair_file_tool_SOURCES=repair_file_tool.cpp

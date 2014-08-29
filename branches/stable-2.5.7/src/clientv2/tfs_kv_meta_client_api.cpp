@@ -56,6 +56,12 @@ namespace tfs
       return impl_->put_bucket(bucket_name, user_info);
     }
 
+    TfsRetType KvMetaClient::put_bucket_acl(const char *bucket_name,
+        const common::UserInfo &user_info, const common::CANNED_ACL acl)
+    {
+      return impl_->put_bucket_acl(bucket_name, user_info, acl);
+    }
+
     TfsRetType KvMetaClient::get_bucket(const char *bucket_name, const char *prefix,
         const char *start_key, const char delimiter, const int32_t limit,
         vector<common::ObjectMetaInfo> *v_object_meta_info,
@@ -97,11 +103,11 @@ namespace tfs
     int64_t KvMetaClient::pread_object(const char *bucket_name,
         const char *object_name, void *buf, const int64_t offset,
         const int64_t length, common::ObjectMetaInfo *object_meta_info,
-        common::CustomizeInfo *customize_info,
+        common::UserMetadata *user_metadata,
         const common::UserInfo &user_info)
     {
       return impl_->pread_object(bucket_name, object_name, buf, offset,
-          length, object_meta_info, customize_info, user_info);
+          length, object_meta_info, user_metadata, user_info);
     }
 
     TfsRetType KvMetaClient::get_object(const char *bucket_name,
