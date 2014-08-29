@@ -2,16 +2,18 @@
 AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
             -I$(TBLIB_ROOT)/include/tbnet\
+						-I$(EASY_ROOT)/include/easy\
 						  $(MYSQL_CFLAGS)
 
 #AM_LDFLAGS=-lz -lrt -lpthread -ldl -lgcov
-AM_LDFLAGS=-lz -lrt -lpthread -ldl 
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -lssl
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
 			$(top_builddir)/src/common/mysql_cluster/libkvengine_mysql.a \
 			$(MYSQL_LDFLAGS)\
       $(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a
+      $(TBLIB_ROOT)/lib/libtbsys.a \
+			$(EASY_ROOT)/lib64/libeasy.a
 
 noinst_LIBRARIES=librootserver.a
 

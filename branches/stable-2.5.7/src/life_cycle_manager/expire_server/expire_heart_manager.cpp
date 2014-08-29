@@ -91,19 +91,19 @@ namespace tfs
       base_info.start_time_ = start_time_;
       base_info.task_status_ =
         available_thread_count_ - ref_clean_helper_.get_running_threads_count();
-      ReqRtsEsHeartMessage msg;
-      msg.set_es(base_info);
 
-      NewClient* client = NULL;
       int32_t retry_count = 0;
       int32_t iret = TFS_SUCCESS;
-      tbnet::Packet* response = NULL;
       do
       {
+        create_msg_ref(ReqRtsEsHeartMessage, msg);
+        msg.set_es(base_info);
+        NewClient* client = NULL;
+        tbnet::Packet* response = NULL;
         ++retry_count;
         client = NewClientManager::get_instance().create_client();
         tbutil::Time start = tbutil::Time::now();
-        iret = send_msg_to_server(server, client, &msg, response, MAX_TIMEOUT_MS);
+        iret = send_msg_to_server(server, client, &msg, response, false, MAX_TIMEOUT_MS);
         tbutil::Time end = tbutil::Time::now();
         if (TFS_SUCCESS == iret)
         {

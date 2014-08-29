@@ -46,6 +46,9 @@ namespace tfs
       virtual int initialize(int argc, char* argv[]);
       virtual int destroy_service();
 
+      // libeasy handle packet
+      int handle(common::BasePacket* packet);
+
       //clean task
 
     private:

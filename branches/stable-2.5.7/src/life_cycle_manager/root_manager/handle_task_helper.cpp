@@ -114,20 +114,19 @@ namespace tfs
 
     int HandleTaskHelper::assign(const uint64_t es_id, const ExpireTaskInfo &del_task)
     {
-      NewClient* client = NULL;
       int32_t retry_count = 0;
       int32_t iret = TFS_SUCCESS;
-      tbnet::Packet* rsp = NULL;
-
-      message::ReqCleanTaskFromRtsMessage msg;
-      msg.set_task(del_task);
 
       do
       {
+        create_msg_ref(message::ReqCleanTaskFromRtsMessage, msg);
+        msg.set_task(del_task);
+        NewClient* client = NULL;
+        tbnet::Packet* rsp = NULL;
         ++retry_count;
         client = NewClientManager::get_instance().create_client();
         tbutil::Time start = tbutil::Time::now();
-        iret = send_msg_to_server(es_id, client, &msg, rsp, MAX_TIMEOUT_MS);
+        iret = send_msg_to_server(es_id, client, &msg, rsp, false, MAX_TIMEOUT_MS);
         tbutil::Time end = tbutil::Time::now();
         if (TFS_SUCCESS == iret)
         {

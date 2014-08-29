@@ -187,6 +187,30 @@ namespace tfs
       return true;
     }
 
+    int ExpireService::handle(common::BasePacket* packet)
+    {
+      assert(NULL != packet);
+      int ret = TFS_SUCCESS;
+      int32_t pcode = packet->getPCode();
+      switch (pcode)
+      {
+        case REQ_EXPIRE_CLEAN_TASK_MESSAGE:
+          ret = do_clean_task(dynamic_cast<ReqCleanTaskFromRtsMessage*>(packet));
+          break;
+        default:
+          ret = EXIT_UNKNOWN_MSGTYPE;
+          TBSYS_LOG(ERROR, "unknown msg type: %d", packet->getPCode());
+          break;
+      }
+
+      if (ret != TFS_SUCCESS)
+      {
+        packet->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
+      }
+
+      return EASY_OK;
+    }
+
     int ExpireService::do_clean_task(ReqCleanTaskFromRtsMessage* req_clean_task_msg)
     {
       //we will give a resp to rootserver first,
@@ -247,21 +271,20 @@ namespace tfs
         //tbutil::Time end = tbutil::Time::now();
         //TBSYS_LOG(INFO, "put_object cost: %"PRI64_PREFIX"d", (int64_t)(end - start).toMilliSeconds());
 
-        // send finish msg
-        ReqFinishTaskFromEsMessage req_finish_task_msg;
-        //req_finish_task_msg.set_reserve(0);
-        req_finish_task_msg.set_es_id(local_ipport_id_);
-        req_finish_task_msg.set_task(task);
-
-        NewClient* client = NULL;
         int32_t retry_count = 0;
         int32_t iret = TFS_SUCCESS;
-        tbnet::Packet* response = NULL;
         do
         {
+          // send finish msg
+          create_msg_ref(ReqFinishTaskFromEsMessage, req_finish_task_msg);
+          //req_finish_task_msg.set_reserve(0);
+          req_finish_task_msg.set_es_id(local_ipport_id_);
+          req_finish_task_msg.set_task(task);
+          NewClient* client = NULL;
+          tbnet::Packet* response = NULL;
           ++retry_count;
           client = NewClientManager::get_instance().create_client();
-          iret = send_msg_to_server(expireroot_ipport_id_, client, &req_finish_task_msg, response, MAX_TIMEOUT_MS);
+          iret = send_msg_to_server(expireroot_ipport_id_, client, &req_finish_task_msg, response, false, MAX_TIMEOUT_MS);
           if (TFS_SUCCESS != iret)
           {
             TBSYS_LOG(ERROR, "EXIT_NETWORK_ERROR ret: %d",iret);

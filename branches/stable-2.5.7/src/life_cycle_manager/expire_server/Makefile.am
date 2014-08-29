@@ -2,9 +2,10 @@ AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
             -I$(TBLIB_ROOT)/include/tbnet \
 						  $(MYSQL_CFLAGS)\
-						-I$(TREST_ROOT)/include
+						-I$(TREST_ROOT)/include\
+						-I$(EASY_ROOT)/include/easy
 
-AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid -ljson -lcurl -lidn
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid -ljson -lcurl -lidn -lssl
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
@@ -12,7 +13,8 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 			$(MYSQL_LDFLAGS)\
       $(TBLIB_ROOT)/lib/libtbnet.a \
       $(TBLIB_ROOT)/lib/libtbsys.a \
-      $(TREST_ROOT)/lib/libtfs_cpp_restful_client.a
+      $(TREST_ROOT)/lib/libtfs_cpp_restful_client.a \
+			$(EASY_ROOT)/lib64/libeasy.a
 			
 noinst_LIBRARIES=libexpireserver.a
 
