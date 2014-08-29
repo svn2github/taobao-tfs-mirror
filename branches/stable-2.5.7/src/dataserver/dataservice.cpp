@@ -703,7 +703,7 @@ namespace tfs
               hret = tbnet::IPacketHandler::KEEP_CHANNEL;
             else
             {
-              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "peer: %s, local: %s. task message beyond max queue size, discard", tbsys::CNetUtil::addrToString(bpacket->get_connection()->getPeerId()).c_str(), get_ip_addr());
+              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),EXIT_WORK_QUEUE_FULL, "peer: %s, local: %s. task message beyond max queue size, discard", tbsys::CNetUtil::addrToString(bpacket->getPeerId()).c_str(), get_ip_addr());
               bpacket->free();
             }
           }
@@ -794,6 +794,110 @@ namespace tfs
       }
       return bret;
     }
+
+    int DataService::handle(BasePacket* packet)
+    {
+      int ret = TFS_SUCCESS;
+      int32_t pcode = packet->getPCode();
+
+      // dataserver not initialized or already destroyed, deny request
+      if (DsRuntimeGlobalInformation::instance().is_destroyed())
+      {
+        packet->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ACCESS_DENIED,
+            "you client %s access been denied. msgtype: %d", tbsys::CNetUtil::addrToString(
+              packet->getPeerId()).c_str(), packet->getPCode());
+      }
+      else
+      {
+        switch (pcode)
+        {
+          case LIST_BLOCK_MESSAGE:
+            ret = list_blocks(dynamic_cast<ListBlockMessage*>(packet));
+            break;
+          case REPLICATE_BLOCK_MESSAGE:
+          case COMPACT_BLOCK_MESSAGE:
+          case DS_COMPACT_BLOCK_MESSAGE:
+          case DS_REPLICATE_BLOCK_MESSAGE:
+          case RESP_DS_COMPACT_BLOCK_MESSAGE:
+          case RESP_DS_REPLICATE_BLOCK_MESSAGE:
+          case REQ_EC_MARSHALLING_MESSAGE:
+          case REQ_EC_REINSTATE_MESSAGE:
+          case REQ_EC_DISSOLVE_MESSAGE:
+          case NS_REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
+            ret = task_manager_.handle(dynamic_cast<BaseTaskMessage*>(packet));
+            break;
+          case GET_BLOCK_INFO_MESSAGE_V2:
+            ret = get_block_info(dynamic_cast<GetBlockInfoMessageV2*>(packet));
+            break;
+          case GET_SERVER_STATUS_MESSAGE:
+            ret = get_server_status(dynamic_cast<GetServerStatusMessage*>(packet));
+            break;
+          case STATUS_MESSAGE:
+            ret = get_ping_status(dynamic_cast<StatusMessage*>(packet));
+            break;
+          case CLIENT_CMD_MESSAGE:
+            ret = client_command(dynamic_cast<ClientCmdMessage*>(packet));
+            break;
+          case REQ_CALL_DS_REPORT_BLOCK_MESSAGE:
+          case STAT_FILE_MESSAGE_V2:
+          case READ_FILE_MESSAGE_V2:
+          case WRITE_FILE_MESSAGE_V2:
+          case CLOSE_FILE_MESSAGE_V2:
+          case UNLINK_FILE_MESSAGE_V2:
+          case NEW_BLOCK_MESSAGE_V2:
+          case REMOVE_BLOCK_MESSAGE_V2:
+          case READ_RAWDATA_MESSAGE_V2:
+          case WRITE_RAWDATA_MESSAGE_V2:
+          case READ_INDEX_MESSAGE_V2:
+          case WRITE_INDEX_MESSAGE_V2:
+          case QUERY_EC_META_MESSAGE:
+          case COMMIT_EC_META_MESSAGE:
+          case GET_ALL_BLOCKS_HEADER_MESSAGE:
+          case NS_CLEAR_FAMILYINFO_MESSAGE:
+            ret = client_request_server_.handle(packet);
+            break;
+          case REQ_CHECK_BLOCK_MESSAGE:
+          case REPORT_CHECK_BLOCK_MESSAGE:
+            ret = check_manager_.handle(packet);
+            break;
+          default:
+            TBSYS_LOG(WARN, "unkown packet pcode: %d\n", pcode);
+            ret = EXIT_UNKNOWN_MSGTYPE;
+            break;
+        }
+
+        if (EASY_AGAIN == ret)
+        {
+          return EASY_AGAIN;
+        }
+
+        if (common::TFS_SUCCESS != ret)
+        {
+          common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
+          msg->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, "execute message failed");
+        }
+      }
+
+      return EASY_OK;
+    }
+
+    EasyThreadType DataService::select_thread(BasePacket* packet)
+    {
+      int32_t pcode = packet->getPCode();
+      if (pcode == WRITE_FILE_MESSAGE_V2 ||
+          pcode == CLOSE_FILE_MESSAGE_V2 ||
+          pcode == UNLINK_FILE_MESSAGE_V2)
+      {
+        // need async process, must handle by io thread
+        return EASY_IO_THREAD;
+      }
+      else if (pcode == REQ_CALL_DS_REPORT_BLOCK_MESSAGE)
+      {
+        return EASY_SLOW_WORK_THREAD;
+      }
+      return EASY_WORK_THREAD;
+    }
+
 
     int DataService::list_blocks(ListBlockMessage* message)
     {

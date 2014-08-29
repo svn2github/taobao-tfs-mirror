@@ -17,6 +17,7 @@
 #ifndef TFS_COMMON_CLIENT_MANAGER_H_
 #define TFS_COMMON_CLIENT_MANAGER_H_
 
+#define EASY_MULTIPLICITY
 #include <tbnet.h>
 #include <Mutex.h>
 #include <ext/hash_map>
@@ -25,6 +26,7 @@
 #include "base_packet_streamer.h"
 #include "new_client.h"
 #include "internal.h"
+#include "easy_helper.h"
 
 namespace tfs
 {
@@ -32,7 +34,7 @@ namespace tfs
   {
     class NewClientManager : public tbnet::IPacketHandler
     {
-        friend int NewClient::post_request(const uint64_t server, tbnet::Packet* packet, uint8_t& send_id);
+        friend int NewClient::post_request(const uint64_t server, tbnet::Packet* packet, uint8_t& send_id, const bool clone_source);
         friend bool NewClient::async_wait();
         typedef __gnu_cxx::hash_map<uint32_t, NewClient*> NEWCLIENT_MAP;
         typedef NEWCLIENT_MAP::iterator NEWCLIENT_MAP_ITER;
@@ -60,6 +62,48 @@ namespace tfs
 
         static NewClient* malloc_new_client_object(const uint32_t seq_id);
         static void free_new_client_object(NewClient* client);
+
+      // easy support
+      public:
+        BasePacketStreamer* get_packet_streamer()
+        {
+          return streamer_;
+        }
+
+        static uint64_t get_packet_id_cb(easy_connection_t *c, void *packet)
+        {
+          NewClientManager& manager = NewClientManager::get_instance();
+          return manager.get_packet_streamer()->get_packet_id_handler(c, packet);
+        }
+
+        static void* decode_cb(easy_message_t *m)
+        {
+          NewClientManager& manager = NewClientManager::get_instance();
+          return manager.get_packet_streamer()->decode_handler(m);
+        }
+
+        static int encode_cb(easy_request_t *r, void *packet)
+        {
+          NewClientManager& manager = NewClientManager::get_instance();
+          return manager.get_packet_streamer()->encode_handler(r, packet);
+        }
+
+        static int process_cb(easy_request_t *r)
+        {
+          NewClientManager& manager = NewClientManager::get_instance();
+          return manager.process_handler(r);
+        }
+
+        int process_handler(easy_request_t *r);
+        int send_packet(uint64_t server_id, tbnet::Packet *packet, void *args, int32_t timeout = 3000)
+        {
+          return EasyHelper::easy_async_send(&eio_, server_id, packet, args, &eio_handler_, timeout);
+        }
+
+      private:
+        easy_io_t eio_;
+        easy_io_handler_pt eio_handler_;
+        int easy_io_initialize();
 
       private:
         bool handlePacket(const WaitId& id, tbnet::Packet* response);

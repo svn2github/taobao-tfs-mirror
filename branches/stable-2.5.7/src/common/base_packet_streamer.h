@@ -37,6 +37,14 @@ namespace tfs
       virtual bool getPacketInfo(tbnet::DataBuffer* input, tbnet::PacketHeader* header, bool* broken);
       virtual tbnet::Packet* decode(tbnet::DataBuffer* input, tbnet::PacketHeader* header);
       virtual bool encode(tbnet::Packet* packet, tbnet::DataBuffer* output);
+
+    public:
+      // easy support
+      uint64_t get_packet_id_handler(easy_connection_t *c, void *packet);
+      void* decode_handler(easy_message_t *m);
+      int encode_handler(easy_request_t *r, void *packet);
+      BasePacket* clone_packet(BasePacket* src);
+      static easy_atomic32_t global_chid;
     };
   }
 }

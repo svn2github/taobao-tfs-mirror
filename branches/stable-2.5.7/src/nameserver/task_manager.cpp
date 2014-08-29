@@ -414,7 +414,7 @@ namespace tfs
     int TaskManager::clean_familyinfo_from_dataserver(const uint64_t block, const ServerItem& item, const time_t now)
     {
       UNUSED(now);
-      CleanFamilyInfoMessage cfmsg;
+      create_msg_ref(CleanFamilyInfoMessage, cfmsg);
       cfmsg.set_block(block);
       cfmsg.set_family_id(item.family_id_);
       int32_t ret = post_msg_to_server(item.server_, &cfmsg, ns_async_callback);
@@ -435,7 +435,7 @@ namespace tfs
      */
     int TaskManager::remove_block_from_dataserver_(const uint64_t block, const ServerItem& item, const time_t now)
     {
-      RemoveBlockMessageV2 rbmsg;
+      create_msg_ref(RemoveBlockMessageV2, rbmsg);
       rbmsg.set_block_id(block);
       BlockInfoV2 info;
       info.block_id_ = block;

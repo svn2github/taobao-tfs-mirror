@@ -207,7 +207,7 @@ namespace tfs
     {
       UNUSED(status);
       int ret = TFS_SUCCESS;
-      DsCommitCompactBlockCompleteToNsMessage cmit_cpt_msg;
+      create_msg_ref(DsCommitCompactBlockCompleteToNsMessage, cmit_cpt_msg);
       cmit_cpt_msg.set_seqno(seqno_);
       cmit_cpt_msg.set_block_info(info_);
       cmit_cpt_msg.set_result(result_);
@@ -223,7 +223,7 @@ namespace tfs
     int CompactTask::report_to_ds(const int status)
     {
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      RespDsCompactBlockMessage resp_cpt_msg;
+      create_msg_ref(RespDsCompactBlockMessage, resp_cpt_msg);
       resp_cpt_msg.set_seqno(seqno_);
       resp_cpt_msg.set_ds_id(ds_info.information_.id_);
       resp_cpt_msg.set_status(status);
@@ -260,13 +260,13 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      DsCompactBlockMessage req_cpt_msg;
-      req_cpt_msg.set_seqno(seqno_);
-      req_cpt_msg.set_block_id(block_id_);
-      req_cpt_msg.set_source_id(ds_info.information_.id_);
-      req_cpt_msg.set_expire_time(expire_time_);
       for (uint32_t i = 0; (TFS_SUCCESS == ret) && (i < servers_.size()); i++)
       {
+        create_msg_ref(DsCompactBlockMessage, req_cpt_msg);
+        req_cpt_msg.set_seqno(seqno_);
+        req_cpt_msg.set_block_id(block_id_);
+        req_cpt_msg.set_source_id(ds_info.information_.id_);
+        req_cpt_msg.set_expire_time(expire_time_);
         ret = get_data_helper().send_simple_request(servers_[i], &req_cpt_msg);
         TBSYS_LOG(DEBUG, "task seqno(%"PRI64_PREFIX"d) request %s to compact, ret: %d",
             seqno_, tbsys::CNetUtil::addrToString(servers_[i]).c_str(), ret);
@@ -529,7 +529,7 @@ namespace tfs
       int ret = get_block_manager().get_block_info(info, repl_info_.block_id_, false);
       if (TFS_SUCCESS == ret)
       {
-        ReplicateBlockMessage req_rb_msg;
+        create_msg_ref(ReplicateBlockMessage, req_rb_msg);
         req_rb_msg.set_seqno(seqno_);
         req_rb_msg.set_repl_block(repl_info_);
         req_rb_msg.set_status(status);
@@ -592,7 +592,7 @@ namespace tfs
     int ReplicateTask::report_to_ds(const int status)
     {
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      RespDsReplicateBlockMessage resp_repl_msg;
+      create_msg_ref(RespDsReplicateBlockMessage, resp_repl_msg);
       resp_repl_msg.set_seqno(seqno_);
       resp_repl_msg.set_ds_id(ds_info.information_.id_);
       resp_repl_msg.set_status(status);
@@ -809,7 +809,7 @@ namespace tfs
     int MarshallingTask::report_to_ns(const int status)
     {
       int ret = TFS_SUCCESS;
-      ECMarshallingCommitMessage cmit_msg;
+      create_msg_ref(ECMarshallingCommitMessage, cmit_msg);
       cmit_msg.set_seqno(seqno_);
       cmit_msg.set_status(status);
       cmit_msg.set_family_id(family_id_);
@@ -1483,7 +1483,7 @@ namespace tfs
     int ReinstateTask::report_to_ns(const int status)
     {
       int ret = TFS_SUCCESS;
-      ECReinstateCommitMessage cmit_msg;
+      create_msg_ref(ECReinstateCommitMessage, cmit_msg);
       cmit_msg.set_seqno(seqno_);
       cmit_msg.set_status(status);
       cmit_msg.set_family_id(family_id_);
@@ -1615,7 +1615,7 @@ namespace tfs
         }
       }
 
-      ECDissolveCommitMessage cmit_msg;
+      create_msg_ref(ECDissolveCommitMessage, cmit_msg);
       cmit_msg.set_seqno(seqno_);
       cmit_msg.set_status(final_status);
       cmit_msg.set_family_id(family_id_);
@@ -1656,7 +1656,7 @@ namespace tfs
           continue;  // lost block, can't to replicate
         }
 
-        DsReplicateBlockMessage repl_msg;
+        create_msg_ref(DsReplicateBlockMessage, repl_msg);
         ReplBlock repl_block;
         repl_block.block_id_ = family_members_[i].block_;
         repl_block.source_id_[0] = family_members_[i].server_;
@@ -1755,7 +1755,7 @@ namespace tfs
     int ResolveVersionConflictTask::report_to_ns(const int32_t status)
     {
       UNUSED(status);
-      ResolveBlockVersionConflictMessage req_msg;
+      create_msg_ref(ResolveBlockVersionConflictMessage, req_msg);
       req_msg.set_seqno(get_seqno());
       req_msg.set_block(block_id_);
       int ret = req_msg.set_members(members_, size_);

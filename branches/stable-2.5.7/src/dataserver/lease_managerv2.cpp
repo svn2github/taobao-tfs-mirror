@@ -138,7 +138,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      DsApplyLeaseMessage req_msg;
+      create_msg_ref(DsApplyLeaseMessage, req_msg);
       req_msg.set_ds_stat(ds_info.information_);
 
       tbnet::Packet* ret_msg = NULL;
@@ -213,7 +213,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      DsRenewLeaseMessage req_msg;
+      create_msg_ref(DsRenewLeaseMessage, req_msg);
       req_msg.set_ds_stat(ds_info.information_);
 
       tbnet::Packet* ret_msg = NULL;
@@ -259,7 +259,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      DsGiveupLeaseMessage req_msg;
+      create_msg_ref(DsGiveupLeaseMessage, req_msg);
       req_msg.set_ds_stat(ds_info.information_);
 
       // ds will exit, aync giveup all blocks

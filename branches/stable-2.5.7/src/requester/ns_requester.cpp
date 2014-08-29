@@ -128,7 +128,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ClientCmdMessage msg;
+        create_msg_ref(ClientCmdMessage, msg);
         msg.set_cmd(CLIENT_CMD_SET_PARAM);
         msg.set_value3(key_index);
         msg.set_value4(0);
@@ -169,7 +169,7 @@ namespace tfs
     {
       ds_list.clear();
       int ret = TFS_SUCCESS;
-      ShowServerInformationMessage msg;
+      create_msg_ref(ShowServerInformationMessage, msg);
       SSMScanParameter& param = msg.get_param();
       param.type_ = SSM_TYPE_SERVER;
       param.child_type_ = SSM_CHILD_SERVER_TYPE_INFO;
@@ -236,7 +236,7 @@ namespace tfs
         {
           int32_t index = random() % servers.size();
           uint64_t server = servers[index];
-          GetServerStatusMessage req_msg;
+          create_msg_ref(GetServerStatusMessage, req_msg);
           if (0 == version)
           {
             req_msg.set_status_type(GSS_BLOCK_FILE_INFO);
@@ -305,7 +305,7 @@ namespace tfs
 
     int NsRequester::remove_block(const uint64_t block, const std::string& addr, const int32_t flag)
     {
-      ClientCmdMessage req;
+      create_msg_ref(ClientCmdMessage, req);
       req.set_cmd(CLIENT_CMD_EXPBLK);
       req.set_value3(block);
       req.set_value4(flag);
@@ -350,7 +350,7 @@ namespace tfs
         TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        GetBlockInfoMessageV2 gbi_message;
+        create_msg_ref(GetBlockInfoMessageV2, gbi_message);
         gbi_message.set_block_id(block_id);
         gbi_message.set_mode(T_READ);
         gbi_message.set_flag(flag);

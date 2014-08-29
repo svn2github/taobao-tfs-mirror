@@ -157,7 +157,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != block_ && NULL != servers_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ReplicateBlockMessage msg;
+        create_msg_ref(ReplicateBlockMessage, msg);
         ReplBlock block;
         block.block_id_ = block_;
         int32_t source_index = 0;
@@ -333,7 +333,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != block_ && NULL != servers_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        NsRequestCompactBlockMessage msg;
+        create_msg_ref(NsRequestCompactBlockMessage, msg);
         msg.set_seqno(seqno_);
         msg.set_block_id(block_);
         msg.set_expire_time(SYSPARAM_NAMESERVER.compact_task_expired_time_ - MAX_TASK_RESERVE_TIME);
@@ -430,7 +430,7 @@ namespace tfs
               ? common::TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ECMarshallingMessage msg;
+        create_msg_ref(ECMarshallingMessage, msg);
         msg.set_seqno(seqno_);
         msg.set_family_id(family_id_);
         msg.set_family_member_info(family_members_, family_aid_info_);
@@ -691,7 +691,7 @@ namespace tfs
                     && index >= 0 && index < MAX_MARSHALLING_NUM) ? common::TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ECReinstateMessage msg;
+        create_msg_ref(ECReinstateMessage, msg);
         msg.set_seqno(seqno_);
         msg.set_family_id(family_id_);
         msg.set_family_member_info(family_members_, family_aid_info_);
@@ -821,7 +821,7 @@ namespace tfs
                       ? common::TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ECDissolveMessage msg;
+        create_msg_ref(ECDissolveMessage, msg);
         msg.set_seqno(seqno_);
         msg.set_family_id(family_id_);
         msg.set_family_member_info(family_members_, family_aid_info_);

@@ -2,14 +2,16 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
             -I$(TBLIB_ROOT)/include/tbnet\
+						-I$(EASY_ROOT)/include/easy\
 	    			$(TAIR_STORE_CPPFLAGS)
 
-AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic $(TAIR_STORE_LDFLAGS) ${TCMALLOC_LDFLAGS}
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic -lssl $(TAIR_STORE_LDFLAGS) ${TCMALLOC_LDFLAGS}
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
       $(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a
+      $(TBLIB_ROOT)/lib/libtbsys.a \
+			$(EASY_ROOT)/lib64/libeasy.a
 
 noinst_LIBRARIES=libnameserver.a
 

@@ -569,7 +569,7 @@ namespace tfs
       }
       else
       {
-        StatFileMessageV2 msg;
+        create_msg_ref(StatFileMessageV2, msg);
         msg.set_block_id(fsname_.get_block_id());
         msg.set_attach_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
@@ -579,7 +579,7 @@ namespace tfs
           msg.set_family_info(file_.family_info_);
         }
         server = file_.get_read_ds();
-        ret = send_msg_to_server(server, client, &msg, resp_msg, ClientConfig::wait_timeout_);
+        ret = send_msg_to_server(server, client, &msg, resp_msg, false, ClientConfig::wait_timeout_);
       }
 
       if (TFS_SUCCESS != ret)
@@ -646,7 +646,7 @@ namespace tfs
           real_flag |= READ_DATA_OPTION_WITH_FINFO;
         }
 
-        ReadFileMessageV2 msg;
+        create_msg_ref(ReadFileMessageV2, msg);
         msg.set_block_id(fsname_.get_block_id());
         msg.set_attach_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
@@ -658,7 +658,7 @@ namespace tfs
           msg.set_family_info(file_.family_info_);
         }
         server = file_.get_read_ds();
-        ret = send_msg_to_server(server, client, &msg, resp_msg, ClientConfig::wait_timeout_);
+        ret = send_msg_to_server(server, client, &msg, resp_msg, false, ClientConfig::wait_timeout_);
       }
 
       if (TFS_SUCCESS != ret)
@@ -716,7 +716,7 @@ namespace tfs
       }
       else
       {
-        WriteFileMessageV2 msg;
+        create_msg_ref(WriteFileMessageV2, msg);
         msg.set_block_id(fsname_.get_block_id());
         msg.set_attach_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
@@ -733,7 +733,7 @@ namespace tfs
           msg.set_family_info(file_.family_info_);
         }
         server = file_.get_write_ds();
-        ret = send_msg_to_server(server, client, &msg, resp_msg, ClientConfig::wait_timeout_);
+        ret = send_msg_to_server(server, client, &msg, resp_msg, false, ClientConfig::wait_timeout_);
       }
 
       if (TFS_SUCCESS != ret)
@@ -792,7 +792,7 @@ namespace tfs
       }
       else
       {
-        CloseFileMessageV2 msg;
+        create_msg_ref(CloseFileMessageV2, msg);
         msg.set_block_id(fsname_.get_block_id());
         msg.set_attach_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
@@ -807,7 +807,7 @@ namespace tfs
           msg.set_family_info(file_.family_info_);
         }
         server = file_.get_write_ds();
-        ret = send_msg_to_server(server, client, &msg, resp_msg, ClientConfig::wait_timeout_);
+        ret = send_msg_to_server(server, client, &msg, resp_msg, false, ClientConfig::wait_timeout_);
       }
 
       if (TFS_SUCCESS != ret)
@@ -854,7 +854,7 @@ namespace tfs
       }
       else
       {
-        UnlinkFileMessageV2 msg;
+        create_msg_ref(UnlinkFileMessageV2, msg);
         msg.set_block_id(fsname_.get_block_id());
         msg.set_attach_block_id(fsname_.get_block_id());
         msg.set_file_id(fsname_.get_file_id());
@@ -870,7 +870,7 @@ namespace tfs
           msg.set_family_info(file_.family_info_);
         }
         server = file_.get_write_ds();
-        ret = send_msg_to_server(server, client, &msg, resp_msg, ClientConfig::wait_timeout_);
+        ret = send_msg_to_server(server, client, &msg, resp_msg, false, ClientConfig::wait_timeout_);
       }
 
       if (TFS_SUCCESS != ret)

@@ -60,7 +60,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int32_t status = EXIT_GENERAL_ERROR;
-        ret = send_msg_to_server(server_id, message, status, timeout);
+        ret = send_msg_to_server(server_id, message, status, false, timeout);
         if (TFS_SUCCESS == ret)
         {
           ret = status;
@@ -480,7 +480,7 @@ namespace tfs
       }
       else
       {
-        NewBlockMessageV2 req_msg;
+        create_msg_ref(NewBlockMessageV2, req_msg);
         req_msg.set_block_id(block_id);
         req_msg.set_tmp_flag(tmp);
         req_msg.set_family_id(family_id);
@@ -503,7 +503,7 @@ namespace tfs
       }
       else
       {
-        RemoveBlockMessageV2 req_msg;
+        create_msg_ref(RemoveBlockMessageV2, req_msg);
         req_msg.set_block_id(block_id);
         req_msg.set_tmp_flag(tmp);
 
@@ -531,7 +531,7 @@ namespace tfs
         }
         else
         {
-          ReadRawdataMessageV2 req_msg;
+          create_msg_ref(ReadRawdataMessageV2, req_msg);
           tbnet::Packet* ret_msg = NULL;
           req_msg.set_block_id(block_id);
           req_msg.set_length(length);
@@ -575,7 +575,7 @@ namespace tfs
       }
       else
       {
-        WriteRawdataMessageV2 req_msg;
+        create_msg_ref(WriteRawdataMessageV2, req_msg);
         req_msg.set_block_id(block_id);
         req_msg.set_length(length);
         req_msg.set_offset(offset);
@@ -599,7 +599,7 @@ namespace tfs
       }
       else
       {
-        ReadIndexMessageV2 req_msg;
+        create_msg_ref(ReadIndexMessageV2, req_msg);
         tbnet::Packet* ret_msg = NULL;
 
         req_msg.set_block_id(block_id);
@@ -650,7 +650,7 @@ namespace tfs
       }
       else
       {
-        WriteIndexMessageV2 req_msg;
+        create_msg_ref(WriteIndexMessageV2, req_msg);
         req_msg.set_block_id(block_id);
         req_msg.set_attach_block_id(attach_block_id);
         req_msg.set_index_data(index_data);
@@ -674,7 +674,7 @@ namespace tfs
       }
       else
       {
-        QueryEcMetaMessage req_msg;
+        create_msg_ref(QueryEcMetaMessage, req_msg);
         tbnet::Packet* ret_msg = NULL;
         req_msg.set_block_id(block_id);
         req_msg.set_lock_time(lock_time);
@@ -722,7 +722,7 @@ namespace tfs
       }
       else
       {
-        CommitEcMetaMessage req_msg;
+        create_msg_ref(CommitEcMetaMessage, req_msg);
         req_msg.set_block_id(block_id);
         req_msg.set_ec_meta(ec_meta);
         req_msg.set_switch_flag(switch_flag);
@@ -752,7 +752,7 @@ namespace tfs
         }
         else
         {
-          StatFileMessageV2 req_msg;
+          create_msg_ref(StatFileMessageV2, req_msg);
           tbnet::Packet* ret_msg = NULL;
           req_msg.set_block_id(block_id);
           req_msg.set_attach_block_id(attach_block_id);
@@ -806,7 +806,7 @@ namespace tfs
         }
         else
         {
-          ReadFileMessageV2 req_msg;
+          create_msg_ref(ReadFileMessageV2, req_msg);
           tbnet::Packet* ret_msg = NULL;
           req_msg.set_block_id(block_id);
           req_msg.set_attach_block_id(attach_block_id);
@@ -854,7 +854,7 @@ namespace tfs
       }
       else
       {
-        WriteFileMessageV2 req_msg;
+        create_msg_ref(WriteFileMessageV2, req_msg);
         tbnet::Packet* ret_msg = NULL;
 
         vector<uint64_t> dslist;
@@ -901,7 +901,7 @@ namespace tfs
     {
       vector<uint64_t> dslist;
       dslist.push_back(server_id);
-      CloseFileMessageV2 req_msg;
+      create_msg_ref(CloseFileMessageV2, req_msg);
       req_msg.set_ds(dslist);
       req_msg.set_block_id(block_id);
       req_msg.set_attach_block_id(attach_block_id);
@@ -923,7 +923,7 @@ namespace tfs
       dslist.push_back(server_id);
 
       // prepare unlink
-      UnlinkFileMessageV2 req_msg;
+      create_msg_ref(UnlinkFileMessageV2, req_msg);
       req_msg.set_ds(dslist);
       req_msg.set_block_id(block_id);
       req_msg.set_attach_block_id(attach_block_id);
@@ -1247,7 +1247,7 @@ namespace tfs
       NewClient* client = NewClientManager::get_instance().create_client();
       if (NULL != client)
       {
-        GetBlockInfoMessageV2 msg;
+        create_msg_ref(GetBlockInfoMessageV2, msg);
         msg.set_block_id(block_id);
         msg.set_mode(T_READ);
         ret = send_msg_to_server(ns_id, client, &msg, resp_msg);
@@ -1318,7 +1318,7 @@ namespace tfs
           if (read_infos[index].first > 0)
           {
             uint8_t send_id = 0;
-            ReadRawdataMessageV2 req_msg;
+            create_msg_ref(ReadRawdataMessageV2, req_msg);
             req_msg.set_block_id(family_info.members_[index].first);
             req_msg.set_length(read_infos[index].first);
             req_msg.set_offset(read_infos[index].second);
@@ -1392,7 +1392,7 @@ namespace tfs
           }
 
           uint8_t send_id = 0;
-          QueryEcMetaMessage req_msg;
+          create_msg_ref(QueryEcMetaMessage, req_msg);
           req_msg.set_block_id(family_info.members_[index].first);
           ret = new_client->post_request(family_info.members_[index].second, &req_msg, send_id);
         }

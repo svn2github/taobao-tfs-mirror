@@ -1,6 +1,7 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
 	    -I$(TBLIB_ROOT)/include/tbsys \
 	    -I$(TBLIB_ROOT)/include/tbnet\
+			-I$(EASY_ROOT)/include/easy\
 	    -fPIC
 
 AM_LDFLAGS=-lrt -lpthread -ldl

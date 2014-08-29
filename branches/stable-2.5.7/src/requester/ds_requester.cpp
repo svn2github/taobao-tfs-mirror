@@ -34,7 +34,7 @@ namespace tfs
       int ret = INVALID_SERVER_ID != ds_id ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ReadIndexMessageV2 req_msg;
+        create_msg_ref(ReadIndexMessageV2, req_msg);
         tbnet::Packet* ret_msg = NULL;
 
         req_msg.set_block_id(block_id);
@@ -86,7 +86,7 @@ namespace tfs
         TIMER_START();
         while (remainder_retrys > 0)
         {
-          ReadRawdataMessageV2 rrd_msg;
+          create_msg_ref(ReadRawdataMessageV2, rrd_msg);
           rrd_msg.set_block_id(block);
           rrd_msg.set_offset(cur_offset);
           rrd_msg.set_length(read_size);
@@ -166,7 +166,7 @@ namespace tfs
         uint64_t file_id, TfsFileStat& file_stat, const int32_t flag)
     {
       int32_t ret = TFS_SUCCESS;
-      StatFileMessageV2 sf_msg;
+      create_msg_ref(StatFileMessageV2, sf_msg);
       sf_msg.set_block_id(block_id);
       sf_msg.set_attach_block_id(attach_block_id);
       sf_msg.set_file_id(file_id);
@@ -209,7 +209,7 @@ namespace tfs
         const uint64_t file_id, char* data, const int32_t offset, const int32_t length, const int32_t flag)
     {
       int32_t ret = TFS_SUCCESS;
-      ReadFileMessageV2 rd_msg;
+      create_msg_ref(ReadFileMessageV2, rd_msg);
       rd_msg.set_block_id(block_id);
       rd_msg.set_attach_block_id(attach_block_id);
       rd_msg.set_file_id(file_id);
@@ -255,7 +255,7 @@ namespace tfs
     int DsRequester::list_block(const uint64_t ds_id, vector<BlockInfoV2>& block_infos)
     {
       int ret = TFS_SUCCESS;
-      ListBlockMessage req_lb_msg;
+      create_msg_ref(ListBlockMessage, req_lb_msg);
       req_lb_msg.set_block_type(LB_INFOS);
 
       NewClient* client = NewClientManager::get_instance().create_client();
@@ -346,7 +346,7 @@ namespace tfs
         do
         {
           length = std::min(total_len, traffic);
-          WriteRawdataMessageV2 req;
+          create_msg_ref(WriteRawdataMessageV2, req);
           req.set_block_id(block);
           req.set_offset(offset);
           req.set_length(length);
@@ -400,7 +400,7 @@ namespace tfs
 
     int DsRequester::write_raw_index(const common::IndexDataV2& index_data, const uint64_t block, const uint64_t server)
     {
-      WriteIndexMessageV2 req;
+      create_msg_ref(WriteIndexMessageV2, req);
       req.set_block_id(index_data.header_.info_.block_id_);
       req.set_attach_block_id(index_data.header_.info_.block_id_);
       req.set_index_data(index_data);
@@ -445,7 +445,7 @@ namespace tfs
 
     int DsRequester::remove_block(const uint64_t block, const std::string& addr, const bool tmp)
     {
-      RemoveBlockMessageV2 req;
+      create_msg_ref(RemoveBlockMessageV2, req);
       req.set_block_id(block);
       req.set_tmp_flag(tmp);
 

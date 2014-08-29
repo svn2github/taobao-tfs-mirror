@@ -30,7 +30,8 @@ namespace tfs
       direction_(DIRECTION_SEND),
       version_(TFS_PACKET_VERSION_V2),
       //auto_free_(true),
-      dump_flag_(false)
+      dump_flag_(false),
+      request_(NULL)
     {
 
     }
@@ -179,69 +180,89 @@ namespace tfs
 
     int BasePacket::reply(BasePacket* packet)
     {
-      int32_t iret = NULL != packet ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      if (NULL == packet)
       {
-        if (0 == getChannelId())
-        {
-          TBSYS_LOG(ERROR, "message : %d channel is null, reply message : %d", getPCode(), packet->getPCode());
-          iret = EXIT_CHANNEL_ID_INVALID;
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          if (((direction_ & DIRECTION_RECEIVE) && _expireTime > 0)
-                && (tbsys::CTimeUtil::getTime() > _expireTime))
-          {
-            TBSYS_LOG(ERROR, "message : %d, timeout for response, reply message : %d", getPCode(), packet->getPCode());
-            iret = EXIT_DATA_PACKET_TIMEOUT;
-          }
-        }
-
-        if (TFS_SUCCESS == iret)
-        {
-          packet->setChannelId(getChannelId());
-          packet->set_id(id_ + 1);
-          packet->set_version(version_);
-
-          packet->stream_.clear();
-          packet->stream_.expand(packet->length());
-          iret = packet->serialize(packet->stream_);
-          //TBSYS_LOG(DEBUG, "reply, pcode: %d, %d", getPCode(), packet->getPCode());
-          //Func::hex_dump(packet->stream_.get_data(), packet->stream_.get_data_length());
-          if (TFS_SUCCESS == iret)
-          {
-            //recalculate crc
-            if (version_ >= TFS_PACKET_VERSION_V1)
-            {
-              packet->crc_ = common::Func::crc(TFS_PACKET_FLAG_V1, packet->stream_.get_data(), packet->stream_.get_data_length());
-            }
-            if (is_enable_dump())
-            {
-              dump();
-              packet->dump();
-            }
-            //post message
-            bool bret= connection_->postPacket(packet);
-            iret = bret ? TFS_SUCCESS : EXIT_SENDMSG_ERROR;
-            if (TFS_SUCCESS != iret)
-            {
-              TBSYS_LOG(ERROR, "post packet failure, server: %s, pcode:%d",
-                  tbsys::CNetUtil::addrToString(connection_->getServerId()).c_str(), packet->getPCode());
-            }
-          }
-          else
-          {
-            iret = EXIT_SERIALIZE_ERROR;
-            TBSYS_LOG(ERROR, "reply message failure, %d:%d, iret: %d", getPCode(), packet->getPCode(), iret);
-          }
-        }
-        if (TFS_SUCCESS != iret)
-        {
-          packet->free();
-        }
+        return TFS_ERROR;
       }
-      return iret;
+
+      // support local construct packet
+      if (0 == getChannelId() || NULL == request_)
+      {
+        TBSYS_LOG(WARN, "message : %d channel is null, reply message : %d", getPCode(), packet->getPCode());
+        tbsys::gDelete(packet);  // reply fail, release packet memory
+        return TFS_ERROR;
+      }
+
+      packet->setChannelId(getChannelId());
+      request_->opacket = packet;
+      return TFS_SUCCESS;
     }
+
+    //int BasePacket::reply(BasePacket* packet)
+    //{
+    //  int32_t iret = NULL != packet ? TFS_SUCCESS : TFS_ERROR;
+    //  if (TFS_SUCCESS == iret)
+    //  {
+    //    if (0 == getChannelId())
+    //    {
+    //      TBSYS_LOG(ERROR, "message : %d channel is null, reply message : %d", getPCode(), packet->getPCode());
+    //      iret = EXIT_CHANNEL_ID_INVALID;
+    //    }
+    //    if (TFS_SUCCESS == iret)
+    //    {
+    //      if (((direction_ & DIRECTION_RECEIVE) && _expireTime > 0)
+    //            && (tbsys::CTimeUtil::getTime() > _expireTime))
+    //      {
+    //        TBSYS_LOG(ERROR, "message : %d, timeout for response, reply message : %d", getPCode(), packet->getPCode());
+    //        iret = EXIT_DATA_PACKET_TIMEOUT;
+    //      }
+    //    }
+
+    //    if (TFS_SUCCESS == iret)
+    //    {
+    //      packet->setChannelId(getChannelId());
+    //      packet->set_id(id_ + 1);
+    //      packet->set_version(version_);
+
+    //      packet->stream_.clear();
+    //      packet->stream_.expand(packet->length());
+    //      iret = packet->serialize(packet->stream_);
+    //      //TBSYS_LOG(DEBUG, "reply, pcode: %d, %d", getPCode(), packet->getPCode());
+    //      //Func::hex_dump(packet->stream_.get_data(), packet->stream_.get_data_length());
+    //      if (TFS_SUCCESS == iret)
+    //      {
+    //        //recalculate crc
+    //        if (version_ >= TFS_PACKET_VERSION_V1)
+    //        {
+    //          packet->crc_ = common::Func::crc(TFS_PACKET_FLAG_V1, packet->stream_.get_data(), packet->stream_.get_data_length());
+    //        }
+    //        if (is_enable_dump())
+    //        {
+    //          dump();
+    //          packet->dump();
+    //        }
+    //        //post message
+    //        bool bret= connection_->postPacket(packet);
+    //        iret = bret ? TFS_SUCCESS : EXIT_SENDMSG_ERROR;
+    //        if (TFS_SUCCESS != iret)
+    //        {
+    //          TBSYS_LOG(ERROR, "post packet failure, server: %s, pcode:%d",
+    //              tbsys::CNetUtil::addrToString(connection_->getServerId()).c_str(), packet->getPCode());
+    //        }
+    //      }
+    //      else
+    //      {
+    //        iret = EXIT_SERIALIZE_ERROR;
+    //        TBSYS_LOG(ERROR, "reply message failure, %d:%d, iret: %d", getPCode(), packet->getPCode(), iret);
+    //      }
+    //    }
+    //    if (TFS_SUCCESS != iret)
+    //    {
+    //      packet->free();
+    //    }
+    //  }
+    //  return iret;
+    //}
 
     int BasePacket::reply_error_packet(const int32_t level, const char* file, const int32_t line,
                const char* function, pthread_t thid, const int32_t error_code, const char* fmt, ...)
@@ -257,12 +278,7 @@ namespace tfs
       StatusMessage* packet = dynamic_cast<StatusMessage*>(service->get_packet_factory()->createPacket(STATUS_MESSAGE));
       msgstr[MAX_ERROR_MSG_LENGTH] = '\0';
       packet->set_message(error_code, msgstr);
-      int32_t iret = reply(packet);
-      if (TFS_SUCCESS != iret)
-      {
-        TBSYS_LOG(ERROR, "reply message: %d failed, error code: %d", getPCode(), error_code);
-      }
-      return iret;
+      return reply(packet);
     }
 
     // parse for version & lease

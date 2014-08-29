@@ -41,7 +41,8 @@ namespace tfs
         client = NewClientManager::get_instance().create_client();
         if (NULL != client)
         {
-          StatusMessage msg(STATUS_MESSAGE_PING);
+          create_msg_ref(StatusMessage, msg);
+          msg.set_message(STATUS_MESSAGE_PING);
           tbnet::Packet* rsp_msg = NULL;
           if (TFS_SUCCESS == send_msg_to_server(ip_port, client, &msg, rsp_msg, TIMEOUT))
           {

@@ -63,6 +63,9 @@ namespace tfs
       int create_family(common::FamilyInfo& family_info);
       int del_family(const int64_t family_id);
 
+      // handle libeasy packet
+      int handle(common::BasePacket* packet);
+
     private:
       DISALLOW_COPY_AND_ASSIGN( OpLogSyncManager);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);

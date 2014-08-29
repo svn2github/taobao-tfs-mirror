@@ -57,7 +57,7 @@ namespace tfs
 
     int MigrateManager::do_migrate_heartbeat_(const int32_t timeout_ms)
     {
-      MigrateDsHeartMessage req_msg;
+      create_msg_ref(MigrateDsHeartMessage, req_msg);
       NewClient* client = NewClientManager::get_instance().create_client();
       int32_t ret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == ret)

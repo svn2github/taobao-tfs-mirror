@@ -41,7 +41,7 @@ namespace tfs
         client = NewClientManager::get_instance().create_client();
         if (NULL != client)
         {
-          HeartBeatAndNSHeartMessage heart_msg;
+          create_msg_ref(HeartBeatAndNSHeartMessage, heart_msg);
           heart_msg.set_ns_switch_flag_and_status(switch_flag, 0);
           tbnet::Packet* rsp_msg = NULL;
           if (TFS_SUCCESS == send_msg_to_server(ip_port, client, &heart_msg, rsp_msg, TIMEOUT))

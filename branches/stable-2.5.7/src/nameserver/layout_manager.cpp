@@ -796,8 +796,8 @@ namespace tfs
           ServerCollect* pserver = *helper.at(index);
           assert(NULL != pserver);
           now = Func::get_monotonic_time();
-          CallDsReportBlockRequestMessage req;
-          req.set_server(ngi.choose_report_block_ipport_addr(pserver->id()));
+          create_msg_ref(CallDsReportBlockRequestMessage, req);
+          req.set_server(ngi.owner_ip_port_);
           post_msg_to_server(pserver->id(), &req, ns_async_callback);
           now = Func::get_monotonic_time();
           pserver->set_report_block_expire_time(now);
@@ -856,8 +856,6 @@ namespace tfs
         ret = NULL != client ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          NewBlockMessageV2 msg;
-          msg.set_block_id(block_id);
           uint8_t send_id = 0;
           std::string all_servers, success_servers;
           uint64_t send_msg_success[MAX_REPLICATION_NUM];
@@ -867,6 +865,8 @@ namespace tfs
 
           for (int64_t index = 0; index < servers.get_array_index() && TFS_SUCCESS == ret; ++index)
           {
+            create_msg_ref(NewBlockMessageV2, msg);
+            msg.set_block_id(block_id);
             uint64_t id= *servers.at(index);
             //send add new block message to dataserver
             ret = client->post_request(id, &msg, send_id);

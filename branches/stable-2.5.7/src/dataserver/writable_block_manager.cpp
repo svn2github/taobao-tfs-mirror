@@ -345,7 +345,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      DsApplyBlockMessage req_msg;
+      create_msg_ref(DsApplyBlockMessage, req_msg);
       req_msg.set_size(count);
       req_msg.set_server_id(ds_info.information_.id_);
       ret = post_msg_to_server(ds_info.ns_vip_port_,&req_msg, ds_async_callback);
@@ -358,7 +358,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      DsApplyBlockForUpdateMessage req_msg;
+      create_msg_ref(DsApplyBlockForUpdateMessage, req_msg);
       req_msg.set_block_id(block_id);
       req_msg.set_server_id(ds_info.information_.id_);
 
@@ -399,7 +399,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      DsRenewBlockMessage req_msg;
+      create_msg_ref(DsRenewBlockMessage, req_msg);
       req_msg.set_server_id(ds_info.information_.id_);
       ArrayHelper<BlockInfoV2> blocks(MAX_WRITABLE_BLOCK_COUNT, req_msg.get_block_infos());
       get_blocks(blocks, BLOCK_WRITABLE);
@@ -419,7 +419,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      DsGiveupBlockMessage req_msg;
+      create_msg_ref(DsGiveupBlockMessage, req_msg);
       req_msg.set_server_id(ds_info.information_.id_);
       ArrayHelper<BlockInfoV2> blocks(MAX_WRITABLE_BLOCK_COUNT, req_msg.get_block_infos());
       get_blocks(blocks, BLOCK_EXPIRED);

@@ -122,7 +122,7 @@ namespace tfs
         file_queue_thread_->initialize(1, OpLogSyncManager::sync_log_func);
         const int queue_thread_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OPLOGSYNC_THREAD_NUM, 1);
         work_thread_.setThreadParameter(queue_thread_num , this, NULL);
-        work_thread_.start();
+        // work_thread_.start();
       }
       if (TFS_SUCCESS == ret)
       {
@@ -159,7 +159,7 @@ namespace tfs
       {
         file_queue_thread_->wait();
       }
-      work_thread_.wait();
+      // work_thread_.wait();
 
       for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
       {
@@ -175,7 +175,7 @@ namespace tfs
       {
         file_queue_thread_->destroy();
       }
-      work_thread_.stop();
+      // work_thread_.stop();
       return TFS_SUCCESS;
     }
 
@@ -268,10 +268,10 @@ namespace tfs
             ret = TFS_ERROR;
             //to send data to the slave & wait
             tbnet::Packet* rmsg = NULL;
-            OpLogSyncMessage request_msg;
-            request_msg.set_data(data, length);
-            for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && ngi.has_valid_lease(now); ++i, rmsg = NULL)
+           for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && ngi.has_valid_lease(now); ++i, rmsg = NULL)
             {
+              create_msg_ref(OpLogSyncMessage, request_msg);
+              request_msg.set_data(data, length);
               NewClient* client = NewClientManager::get_instance().create_client();
               ret = send_msg_to_server(ngi.sync_log_peer_ip_port_, client, &request_msg, rmsg);
               if (TFS_SUCCESS == ret)
@@ -308,6 +308,18 @@ namespace tfs
       return bret;
     }
 
+    int OpLogSyncManager::handle(common::BasePacket* packet)
+    {
+      assert(NULL != packet && OPLOG_SYNC_MESSAGE == packet->getPCode());
+      int32_t ret = GFactory::get_runtime_info().is_master() ? transfer_log_msg_(packet) : recv_log_(packet);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "%s log message failed, ret: %d",
+            GFactory::get_runtime_info().is_master() ? "transfer" : "recv", ret);
+      }
+      return ret;
+    }
+
     int OpLogSyncManager::recv_log_(common::BasePacket* message)
     {
       int32_t ret = (NULL != message && message->getPCode() == OPLOG_SYNC_MESSAGE ) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -318,6 +330,8 @@ namespace tfs
         int64_t length = msg->get_length();
         int64_t offset = 0;
         time_t now = Func::get_monotonic_time();
+        int32_t count = 0;
+        TIMER_START();
         while ((offset < length)
             && (!GFactory::get_runtime_info().is_destroyed()))
         {
@@ -327,7 +341,11 @@ namespace tfs
           {
             break;
           }
+          count++;
         }
+        TIMER_END();
+        TBSYS_LOG(TRACE, "replay log, count=%d, length=%"PRI64_PREFIX"d, cost=%"PRI64_PREFIX"d, ret=%d",
+            count, length, TIMER_DURATION(), ret);
         OpLogSyncResponeMessage* reply_msg = new (std::nothrow)OpLogSyncResponeMessage();
         reply_msg->set_complete_flag();
         msg->reply(reply_msg);
@@ -351,7 +369,7 @@ namespace tfs
         int32_t status = STATUS_MESSAGE_ERROR;
         for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && STATUS_MESSAGE_OK != status; i++)
         {
-          ret = send_msg_to_server(GFactory::get_runtime_info().sync_log_peer_ip_port_, msg, status);
+          ret = send_msg_to_server(GFactory::get_runtime_info().sync_log_peer_ip_port_, msg, status, true);
         }
         ret = STATUS_MESSAGE_OK == status ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_ERROR != ret)
@@ -377,15 +395,10 @@ namespace tfs
             && NULL != msg)
         {
           msg->dump();
-          BaseService* base = dynamic_cast<BaseService*>(BaseService::instance());
-          ret = base->push(msg) ? TFS_SUCCESS : TFS_ERROR;
+          NameServer* service = dynamic_cast<NameServer*>(BaseMain::instance());
+          ret = service->handle(msg);
         }
-        if (TFS_SUCCESS != ret)
-        {
-          if (NULL != msg)
-            msg->free();
-          TBSYS_LOG(INFO, "deserialize error, data: %p, length: %"PRI64_PREFIX"d offset: %"PRI64_PREFIX"d", data, data_len, pos);
-        }
+        tbsys::gDelete(msg);
       }
       return ret;
     }

@@ -23,17 +23,34 @@ namespace tfs
 
     }
 
-    Stream::Stream(const int64_t length)
+    Stream::Stream(const int64_t length): buffer_(length)
     {
-      if (length > 0)
-      {
-        buffer_.expand(length);
-      }
+    }
+
+    Stream::Stream(easy_buf_t *pb): buffer_(pb) {
+    }
+
+    Stream::Stream(easy_pool_t *p, easy_list_t *pl, uint32_t size) : buffer_(p, pl, size) {
     }
 
     Stream::~Stream()
     {
 
+    }
+
+    void Stream::reserve(const int64_t length)
+    {
+      buffer_.reserve(length);
+    }
+
+    void Stream::set_last_read_mark(const int64_t length)
+    {
+      buffer_.set_last_read_mark(length);
+    }
+
+    void Stream::clear_last_read_mark()
+    {
+      buffer_.clear_last_read_mark();
     }
 
     char* Stream::get_data() const
@@ -230,7 +247,7 @@ namespace tfs
       int32_t iret = Serialization::get_string(buffer_.get_data(), buffer_.get_data_length(), pos, buf_length, str, real_length);
       if (TFS_SUCCESS == iret)
       {
-        buffer_.drain(real_length);
+        buffer_.drain(INT_SIZE + (real_length == 0 ? real_length : real_length + 1));
       }
       return iret;
     }

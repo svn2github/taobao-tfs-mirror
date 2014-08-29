@@ -51,6 +51,9 @@ namespace tfs
 
 #define CONF_PORT                                     "port"
 #define CONF_THREAD_COUNT                             "thread_count"
+#define CONF_SLOW_THREAD_COUNT                        "slow_thread_count"
+#define CONF_IO_THREAD_COUNT                          "io_thread_count"
+#define CONF_HEART_THREAD_COUNT                       "heart_thread_count"
 #define CONF_IP_ADDR                                  "ip_addr"
 #define CONF_DEV_NAME                                 "dev_name"
 #define CONF_BLOCK_MAX_SIZE                           "block_max_size"

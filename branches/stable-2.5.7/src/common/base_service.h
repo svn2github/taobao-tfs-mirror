@@ -16,6 +16,7 @@
 #ifndef TFS_COMMON_BASE_SERVICE_H_
 #define TFS_COMMON_BASE_SERVICE_H_
 
+#define EASY_MULTIPLICITY
 #include <tbnet.h>
 #include <tbsys.h>
 #include <Timer.h>
@@ -24,6 +25,7 @@
 #include "base_packet.h"
 #include "base_packet_factory.h"
 #include "base_packet_streamer.h"
+#include "easy_helper.h"
 
 namespace tfs
 {
@@ -44,7 +46,7 @@ namespace tfs
       inline BasePacketFactory* get_packet_factory() { return packet_factory_;}
 
       /** get the packete streamer */
-      inline tbnet::IPacketStreamer* get_packet_streamer() { return  streamer_;}
+      inline BasePacketStreamer* get_packet_streamer() { return  streamer_;}
 
       /** get transport*/
       tbnet::Transport* get_transport() const { return transport_;}
@@ -95,7 +97,10 @@ namespace tfs
       const char* const get_dev() const;
 
       /** get main work thread count*/
-      int32_t get_work_thread_count() const;
+      int32_t get_work_thread_count() const;       // handle normal request
+      int32_t get_slow_work_thread_count() const;  // handle slow request
+      int32_t get_heart_thread_count() const;      // handle heartbeat request
+      int32_t get_io_thread_count() const;         // handle io(event) request
 
       /** get work queue size */
       int32_t get_work_queue_size() const;
@@ -110,6 +115,50 @@ namespace tfs
       /** initialize tbnet*/
       int initialize_network(const char* app_name);
 
+    // easy support
+    public:
+      virtual int handle(BasePacket* packet) = 0;
+      virtual EasyThreadType select_thread(BasePacket* packet)
+      {
+        UNUSED(packet);
+        return EASY_WORK_THREAD;  // default handle by work thread
+      }
+
+    private:
+      static uint64_t get_packet_id_cb(easy_connection_t *c, void *packet)
+      {
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        return service->get_packet_streamer()->get_packet_id_handler(c, packet);
+      }
+
+      static void* decode_cb(easy_message_t *m)
+      {
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        return service->get_packet_streamer()->decode_handler(m);
+      }
+
+      static int encode_cb(easy_request_t *r, void *packet)
+      {
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        return service->get_packet_streamer()->encode_handler(r, packet);
+      }
+
+      static int process_cb(easy_request_t *r)
+      {
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        return service->process_handler(r);
+      }
+
+      static int worker_request_cb(easy_request_t *r, void *args)
+      {
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        return service->worker_request_handler(r, args);
+      }
+
+      int process_handler(easy_request_t *r);
+      int worker_request_handler(easy_request_t *r, void* args);
+      int packet_handler(BasePacket* packet);
+
     private:
       BasePacketFactory* packet_factory_;
       BasePacketStreamer* streamer_;
@@ -118,6 +167,17 @@ namespace tfs
       tbnet::Transport* transport_;
       tbnet::PacketQueueThread main_workers_;
       int32_t work_queue_size_;
+
+    private:
+      easy_io_t eio_;
+      easy_io_handler_pt eio_handler_;
+      easy_thread_pool_t *work_task_queue_;
+      easy_thread_pool_t *slow_work_task_queue_;
+      int easy_io_initialize();
+
+      // only ns need heart eio
+      easy_io_t heart_eio_;
+      easy_io_handler_pt heart_eio_handler_;
     };
   }
 }

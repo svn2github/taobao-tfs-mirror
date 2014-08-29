@@ -17,6 +17,7 @@
 #include "client_manager.h"
 #include "error_msg.h"
 #include "status_message.h"
+#include "easy_helper.h"
 
 namespace tfs
 {
@@ -54,6 +55,10 @@ namespace tfs
           tbsys::gDelete(transport_);
         }
         tbsys::gDelete(connmgr_);
+
+        easy_io_stop(&eio_);
+        easy_io_wait(&eio_);
+        easy_io_destroy(&eio_);
       }
     }
 
@@ -77,7 +82,7 @@ namespace tfs
             if (own_transport_)
             {
               transport_ =  new tbnet::Transport();
-              transport_->start();
+              // transport_->start();
             }
             else
             {
@@ -92,6 +97,8 @@ namespace tfs
               free_new_client_object(iter->second);
             }
             new_clients_.clear();
+
+            iret = easy_io_initialize();
           }
         }
       }
@@ -101,6 +108,34 @@ namespace tfs
     bool NewClientManager::is_init() const
     {
       return initialize_;
+    }
+
+    int NewClientManager::easy_io_initialize()
+    {
+      TBSYS_LOG(INFO, "client manager init easy eio");
+      int ret = TFS_SUCCESS;
+      EasyHelper::init_handler(&eio_handler_, NULL);
+      eio_handler_.get_packet_id = get_packet_id_cb;
+      eio_handler_.encode = encode_cb;
+      eio_handler_.decode = decode_cb;
+      eio_handler_.process = process_cb;
+      memset(&eio_, 0, sizeof(eio_));
+      easy_io_create(&eio_, 1);
+      eio_.do_signal = 0;
+      eio_.no_redispatch = 1;
+      eio_.tcp_nodelay = 1;
+      eio_.tcp_cork = 0;
+      if (EASY_OK == easy_io_start(&eio_))
+      {
+        TBSYS_LOG(INFO, "eio start, pid=%d", getpid());
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "start eio failed");
+        ret = TFS_ERROR;
+        easy_io_destroy(&eio_);
+      }
+      return ret;
     }
 
     tbnet::IPacketHandler::HPRetCode NewClientManager::handlePacket(
@@ -161,7 +196,6 @@ namespace tfs
           }
           else
           {
-            //TBSYS_LOG(DEBUG, "add client id: %u", seq_id_);
             new_clients_.insert(std::make_pair(seq_id_, client));
           }
         }
@@ -192,7 +226,6 @@ namespace tfs
           {
             new_clients_.erase(iter);
             free_new_client_object(client);
-            //TBSYS_LOG(DEBUG, "erase client id: %u", id);
           }
           else
           {
@@ -310,6 +343,28 @@ namespace tfs
         }
       }
       return bret;
+    }
+
+    int NewClientManager::process_handler(easy_request_t *r)
+    {
+      WaitId id = (*(reinterpret_cast<WaitId*>(&r->args)));
+      // let NewClient free opacket and ipacket
+      BasePacket* opacket = (BasePacket*)r->opacket;
+      r->opacket = NULL;
+      BasePacket* ipacket = (BasePacket*)r->ipacket;
+      r->ipacket = NULL;
+      if (ipacket == NULL)
+      {
+        int32_t pcode = (NULL == opacket) ? 0: opacket->getPCode();
+        TBSYS_LOG(INFO, "easy client timeout, pcode=%d", pcode);
+        handlePacket(id, &tbnet::ControlPacket::TimeoutPacket);
+        easy_session_destroy(r->ms);
+        return EASY_OK;
+        // return EASY_ERROR; //~ destroy this connection
+      }
+      handlePacket(id, ipacket);
+      easy_session_destroy(r->ms);
+      return EASY_OK;
     }
   }
 }

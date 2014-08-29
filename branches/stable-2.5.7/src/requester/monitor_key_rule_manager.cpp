@@ -107,7 +107,7 @@ namespace tfs
         {
           int32_t retry = 2;
           int32_t ret = TFS_SUCCESS;
-          message::ReqRcKeepAliveByMonitorKeyClientMessage req;
+          create_msg_ref(message::ReqRcKeepAliveByMonitorKeyClientMessage, req);
           req.set_addr(addr_);
           req.set_service_type(service_type_);
           req.set_version(version_);

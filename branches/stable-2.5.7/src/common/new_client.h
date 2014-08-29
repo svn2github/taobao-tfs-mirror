@@ -46,11 +46,28 @@ namespace tfs
         explicit NewClient(const uint32_t& seq_id);
         virtual ~NewClient();
         bool wait(const int64_t timeout_in_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT);
-        int post_request(const uint64_t server, tbnet::Packet* packet, uint8_t& send_id);
-        int async_post_request(const std::vector<uint64_t>& servers, tbnet::Packet* packet, callback_func func, bool save_source_msg = true);
+        int post_request(const uint64_t server, tbnet::Packet* packet, uint8_t& send_id, const bool clone_source = false);
+        int async_post_request(const std::vector<uint64_t>& servers, tbnet::Packet* packet, callback_func func, const bool clone_source = false);
         inline RESPONSE_MSG_MAP* get_success_response() { return complete_ ? &success_response_ : NULL;}
         inline RESPONSE_MSG_MAP* get_fail_response() { return complete_ ? &fail_response_ : NULL;}
-        inline tbnet::Packet* get_source_msg() { return source_msg_;}
+        inline tbnet::Packet* get_source_msg() { return *(source_msg_.begin()); }
+        inline void add_source_msg(tbnet::Packet* packet)
+        {
+          bool exist = false;
+          std::vector<tbnet::Packet*>::iterator it = source_msg_.begin();
+          for ( ; it != source_msg_.end(); it++)
+          {
+            if ((long)(*it) == (long)(packet))
+            {
+              exist = true;
+              break;
+            }
+          }
+          if (!exist)
+          {
+            source_msg_.push_back(packet);
+          }
+        }
         inline std::vector<SEND_SIGN_PAIR>& get_send_id_sign() { return send_id_sign_;}
 
       private:
@@ -61,7 +78,8 @@ namespace tfs
         RESPONSE_MSG_MAP fail_response_;
         std::vector<SEND_SIGN_PAIR> send_id_sign_;
         callback_func callback_;
-        tbnet::Packet* source_msg_;
+        // tbnet::Packet* source_msg_;
+        std::vector<tbnet::Packet*> source_msg_;
         const uint32_t seq_id_;
         uint8_t generate_send_id_;
         static const uint8_t MAX_SEND_ID = 0xFF - 1;
@@ -80,13 +98,23 @@ namespace tfs
 
         bool async_wait();
     };
+
+    // these interface shouldn't pass invalid args
+    // if so, there must bug exsit, we should find it early.
+    // the caller should send a packet allocated on heap
+    // it will be freed when NewClient destruct
+    #define create_msg_ref(type, name) type& name = *(new type())
+    #define create_msg_ptr(type, name) type* name = new type()
     int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status,
+                          bool clone_source = false,
                           const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
     int send_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, tbnet::Packet*& output/*not free*/,
+                          bool clone_source = false,
                           const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
     int post_msg_to_server(const std::vector<uint64_t>& servers, NewClient* client, tbnet::Packet* message, NewClient::callback_func func,
-                          bool save_source_msg = true);
-    int post_msg_to_server(uint64_t server, tbnet::Packet* message, NewClient::callback_func func, bool save_source_msg = true);
+                          const bool clone_source = false);
+    int post_msg_to_server(uint64_t servers, tbnet::Packet* message, NewClient::callback_func func,
+                          const bool clone_source = false);
     int test_server_alive(const uint64_t server_id, const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
   } /* message */
 } /* tfs */

@@ -20,6 +20,7 @@
 #include "base_service.h"
 #include "directory_op.h"
 #include "local_packet.h"
+#include "easy_helper.h"
 
 namespace tfs
 {
@@ -40,9 +41,10 @@ namespace tfs
       packet_factory_(NULL),
       streamer_(NULL),
       timer_(0),
-      work_queue_size_(10240)
+      work_queue_size_(10240),
+      work_task_queue_(NULL),
+      slow_work_task_queue_(NULL)
     {
-
     }
 
     BaseService::~BaseService()
@@ -52,9 +54,9 @@ namespace tfs
 
     bool BaseService::destroy()
     {
-      if (NULL != transport_)
-        transport_->stop();
-      main_workers_.stop();
+      //if (NULL != transport_)
+      //  transport_->stop();
+      //main_workers_.stop();
       destroy_service();
       NewClientManager::get_instance().destroy();
       if (0 != timer_)
@@ -62,13 +64,25 @@ namespace tfs
         timer_->destroy();
       }
 
-      if (NULL != transport_)
-        transport_->wait();
-      main_workers_.wait();
+      //if (NULL != transport_)
+      //  transport_->wait();
+      //main_workers_.wait();
 
       destroy_packet_factory(packet_factory_);
       destroy_packet_streamer(streamer_);
       tbsys::gDelete(transport_);
+
+      if (get_heart_thread_count() != 0)
+      {
+        easy_io_stop(&heart_eio_);
+        easy_io_wait(&heart_eio_);
+        easy_io_destroy(&heart_eio_);
+      }
+
+      easy_io_stop(&eio_);
+      easy_io_wait(&eio_);
+      easy_io_destroy(&eio_);
+
       return true;
     }
 
@@ -78,6 +92,7 @@ namespace tfs
       LocalPacket* packet = dynamic_cast<LocalPacket*>(packet_factory_->createPacket(LOCAL_PACKET));
       assert(NULL != packet);
       packet->set_new_client(client);
+      // packet_handler(packet);
       bool bret = main_workers_.push(packet, 0/*no limit*/, false/*no block*/);
       assert(true == bret);
       return TFS_SUCCESS;
@@ -93,6 +108,7 @@ namespace tfs
     {
       TBSYS_LOG(DEBUG, "packet code : %d", packet->getPCode());
       bool bret = NULL != connection && NULL != packet;
+
       if (bret)
       {
         if (!packet->isRegularPacket())
@@ -166,6 +182,21 @@ namespace tfs
       return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_THREAD_COUNT, 8);
     }
 
+    int32_t BaseService::get_slow_work_thread_count() const
+    {
+      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_SLOW_THREAD_COUNT, 8);
+    }
+
+    int32_t BaseService::get_heart_thread_count() const
+    {
+      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_HEART_THREAD_COUNT, 0);
+    }
+
+    int32_t BaseService::get_io_thread_count() const
+    {
+      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_IO_THREAD_COUNT, 8);
+    }
+
     int32_t BaseService::get_work_queue_size() const
     {
       return work_queue_size_;
@@ -174,6 +205,129 @@ namespace tfs
     const char* BaseService::get_ip_addr() const
     {
       return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_IP_ADDR, NULL);
+    }
+
+    int BaseService::easy_io_initialize()
+    {
+      TBSYS_LOG(INFO, "base service initialize easy io");
+      int ret = TFS_SUCCESS;
+      memset(&eio_, 0, sizeof(eio_));
+      if (!easy_eio_create(&eio_, get_io_thread_count()))
+      {
+        TBSYS_LOG(ERROR, "create eio failed");
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        eio_.do_signal = 0;
+        eio_.no_redispatch = 0;
+        eio_.no_reuseport = 1;
+        eio_.tcp_nodelay = 1;
+        eio_.tcp_cork = 0;
+        eio_.affinity_enable = 1;
+
+        memset(&eio_handler_, 0, sizeof(eio_handler_));
+        EasyHelper::init_handler(&eio_handler_, NULL);
+        eio_handler_.get_packet_id = get_packet_id_cb;
+        eio_handler_.encode = encode_cb;
+        eio_handler_.decode = decode_cb;
+        eio_handler_.process = process_cb;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (NULL == easy_io_add_listen(&eio_, NULL, get_listen_port(), &eio_handler_))
+        {
+          TBSYS_LOG(ERROR, "listen on port %d failed", get_listen_port());
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          TBSYS_LOG(INFO, "listen on port %d success", get_listen_port());
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        work_task_queue_ = easy_request_thread_create(&eio_,
+            get_work_thread_count(), worker_request_cb, this);
+        assert(NULL != work_task_queue_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        slow_work_task_queue_ = easy_request_thread_create(&eio_,
+            get_slow_work_thread_count(), worker_request_cb, this);
+        assert(NULL != slow_work_task_queue_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (EASY_OK == easy_io_start(&eio_))
+        {
+          TBSYS_LOG(INFO, "server start, pid=%d", getpid());
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "start eio failed");
+          ret = TFS_ERROR;
+        }
+      }
+
+      // when heart_thread_num is nonzero, heart eio will start
+      if (TFS_SUCCESS == ret && get_heart_thread_count() != 0)
+      {
+        memset(&heart_eio_, 0, sizeof(heart_eio_));
+        if (!easy_eio_create(&heart_eio_, get_heart_thread_count()))
+        {
+          TBSYS_LOG(ERROR, "create heart_eio failed");
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          heart_eio_.do_signal = 0;
+          heart_eio_.no_redispatch = 0;
+          heart_eio_.no_reuseport = 1;
+          heart_eio_.tcp_nodelay = 1;
+          heart_eio_.tcp_cork = 0;
+          heart_eio_.affinity_enable = 1;
+
+          memset(&heart_eio_handler_, 0, sizeof(heart_eio_handler_));
+          EasyHelper::init_handler(&heart_eio_handler_, NULL);
+          heart_eio_handler_.get_packet_id = get_packet_id_cb;
+          heart_eio_handler_.encode = encode_cb;
+          heart_eio_handler_.decode = decode_cb;
+          heart_eio_handler_.process = process_cb;
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          if (NULL == easy_io_add_listen(&heart_eio_, NULL, get_listen_port() + 1, &heart_eio_handler_))
+          {
+            TBSYS_LOG(ERROR, "listen on port %d failed", get_listen_port() + 1);
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            TBSYS_LOG(INFO, "listen on port %d success", get_listen_port() + 1);
+          }
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          if (EASY_OK == easy_io_start(&heart_eio_))
+          {
+            TBSYS_LOG(INFO, "heart start, pid=%d", getpid());
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "start heart eio failed");
+            ret = TFS_ERROR;
+          }
+        }
+      }
+
+      return ret;
     }
 
     int BaseService::run(int argc , char*argv[])
@@ -188,14 +342,21 @@ namespace tfs
       //start workthread
       if (TFS_SUCCESS == iret)
       {
-        int32_t thread_count = get_work_thread_count();
-        main_workers_.setThreadParameter(thread_count, this, NULL);
+        // int32_t thread_count = get_work_thread_count();
+        // main_workers_.setThreadParameter(thread_count, this, NULL);
+        main_workers_.setThreadParameter(1, this, NULL);  // one thread do callback
         main_workers_.start();
 
         work_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_TASK_MAX_QUEUE_SIZE, 10240);
         work_queue_size_ = std::max(work_queue_size_, 10240);
         work_queue_size_ = std::min(work_queue_size_, 40960);
         timer_ = new tbutil::Timer();
+      }
+
+      // libeasy start
+      if (TFS_SUCCESS == iret)
+      {
+        iret = easy_io_initialize();
       }
 
       if (TFS_SUCCESS == iret)
@@ -206,6 +367,7 @@ namespace tfs
           TBSYS_LOG(ERROR, "%s initialize user data failed, must be exit", argv[0]);
         }
       }
+
       return iret;
     }
 
@@ -254,16 +416,16 @@ namespace tfs
           {
             transport_ = new tbnet::Transport();
             streamer_->set_packet_factory(packet_factory_);
-            tbnet::IOComponent* com = transport_->listen(spec, streamer_, this);
-            if (NULL == com)
-            {
-              TBSYS_LOG(ERROR, "%s listen port: %d fail", app_name, port);
-              iret = EXIT_NETWORK_ERROR;
-            }
-            else
-            {
-              transport_->start();
-            }
+            //tbnet::IOComponent* com = transport_->listen(spec, streamer_, this);
+            //if (NULL == com)
+            //{
+            //  TBSYS_LOG(ERROR, "%s listen port: %d fail", app_name, port);
+            //  iret = EXIT_NETWORK_ERROR;
+            //}
+            //else
+            //{
+            //  transport_->start();
+            //}
           }
         }
       }
@@ -281,5 +443,58 @@ namespace tfs
       }
       return iret;
     }
+
+    int BaseService::process_handler(easy_request_t *r)
+    {
+      BasePacket* bp = (BasePacket*)r->ipacket;
+      if (NULL == bp || r->ms->status == EASY_MESG_DESTROY)
+      {
+        TBSYS_LOG(ERROR, "timeout, null packet");
+        return EASY_ERROR;
+      }
+
+      TBSYS_LOG(DEBUG, "process packet, pcode=%d", bp->getPCode());
+
+      bp->set_request(r);
+      bp->set_direction(DIRECTION_RECEIVE);
+
+      EasyThreadType type = select_thread(bp);
+      if (type == EASY_WORK_THREAD)
+      {
+        easy_thread_pool_push(work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
+        return EASY_AGAIN;
+      }
+      else if(type == EASY_SLOW_WORK_THREAD)
+      {
+        easy_thread_pool_push(slow_work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
+        return EASY_AGAIN;
+      }
+
+      // directly handle by io thread
+      return packet_handler(bp);
+    }
+
+    int BaseService::worker_request_handler(easy_request_t *r, void* args)
+    {
+      UNUSED(args);
+      BasePacket* bp = (BasePacket*)r->ipacket;
+      TBSYS_LOG(DEBUG, "process slow packet, pcode=%d", bp->getPCode());
+      return packet_handler(bp);
+    }
+
+    int BaseService::packet_handler(BasePacket* packet)
+    {
+      // special process LocalPacket
+      //if (LOCAL_PACKET == packet->getPCode())
+      //{
+      //  LocalPacket* local_packet = dynamic_cast<LocalPacket*>(packet);
+      //  local_packet->execute();
+      //  tbsys::gDelete(local_packet);
+      //  return EASY_OK;
+      //}
+
+      return handle(packet);
+    }
+
   }/** common **/
 }/** tfs **/

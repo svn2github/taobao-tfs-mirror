@@ -1490,6 +1490,14 @@ namespace tfs
     };
 
 
+    // libeasy thread type
+    enum EasyThreadType
+    {
+      EASY_IO_THREAD,
+      EASY_WORK_THREAD,
+      EASY_SLOW_WORK_THREAD
+    };
+
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;

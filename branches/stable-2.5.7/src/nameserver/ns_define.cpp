@@ -70,12 +70,12 @@ namespace tfs
 
     void NsRuntimeGlobalInformation::destroy()
     {
-      memset(this, 0, sizeof(*this));
-      owner_role_ = NS_ROLE_SLAVE;
-      peer_role_ = NS_ROLE_SLAVE;
       destroy_flag_ = true;
-      owner_status_ = NS_STATUS_NONE;
-      peer_status_ = NS_STATUS_NONE;
+      //memset(this, 0, sizeof(*this));
+      //owner_role_ = NS_ROLE_SLAVE;
+      //peer_role_ = NS_ROLE_SLAVE;
+      //owner_status_ = NS_STATUS_NONE;
+      //peer_status_ = NS_STATUS_NONE;
     }
 
     uint64_t NsRuntimeGlobalInformation::choose_report_block_ipport_addr(const uint64_t server) const

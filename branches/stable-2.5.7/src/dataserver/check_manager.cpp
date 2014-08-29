@@ -151,7 +151,7 @@ namespace tfs
     void CheckManager::do_check(const CheckParam& param)
     {
       DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
-      ReportCheckBlockResponseMessage rsp_msg;
+      create_msg_ref(ReportCheckBlockResponseMessage, rsp_msg);
       rsp_msg.set_seqno(param.seqno_);
       rsp_msg.set_server_id(info.information_.id_);
       check_block(param, rsp_msg.get_result());

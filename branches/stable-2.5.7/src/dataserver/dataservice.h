@@ -111,6 +111,10 @@ namespace tfs
       inline ClientRequestServer& get_client_request_server() { return client_request_server_; }
       inline std::vector<SyncBase*>& get_sync_mirror() { return sync_mirror_; }
 
+      // libeasy handle packet
+      int handle(common::BasePacket* packet);
+      virtual common::EasyThreadType select_thread(common::BasePacket* packet);
+
       protected:
       virtual const char* get_log_file_path();
       virtual const char* get_pid_file_path();
