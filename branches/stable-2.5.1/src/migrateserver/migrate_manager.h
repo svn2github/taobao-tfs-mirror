@@ -93,6 +93,7 @@ namespace tfs
       int64_t update_statistic_interval_;
       common::AccessRatio full_disk_access_ratio_;
       common::AccessRatio system_disk_access_ratio_;
+      bool need_migrate_back_;
     };
   }/** end namespace syncserver **/
 }/** end namesapce tfs **/

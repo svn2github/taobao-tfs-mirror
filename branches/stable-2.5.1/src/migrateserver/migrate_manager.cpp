@@ -37,7 +37,8 @@ namespace tfs
       not_full_block_count_(0),
       max_block_size_(0),
       migrate_complete_wait_time_(120),
-      update_statistic_interval_(3600)
+      update_statistic_interval_(3600),
+      need_migrate_back_(false)
     {
     }
 
@@ -55,6 +56,10 @@ namespace tfs
       hot_time_range_ = SYSPARAM_MIGRATESERVER.hot_time_range_;
       full_disk_access_ratio_ = SYSPARAM_MIGRATESERVER.full_disk_access_ratio_;
       system_disk_access_ratio_ = SYSPARAM_MIGRATESERVER.system_disk_access_ratio_;
+      if (SYSPARAM_MIGRATESERVER.need_migrate_back_ > 0)
+      {
+        need_migrate_back_ = true;
+      }
 
       int32_t ret = requester::NsRequester::get_max_block_size(ns_vip_port_, max_block_size_);
       if (TFS_SUCCESS != ret)
@@ -310,7 +315,7 @@ namespace tfs
             {
               entry.dest_addr_ = info.id_;
             }
-            else if (!blocks_[0].empty() && !blocks_[1].empty())
+            else if (need_migrate_back_ && !blocks_[0].empty() && !blocks_[1].empty())
             {
               uint64_t system_disk_max_weight = static_cast<uint64_t>(blocks_[0].rbegin()->first * penalty_percent_);
               uint64_t full_disk_min_weight = blocks_[1].begin()->first;
