@@ -71,6 +71,9 @@ namespace tfs
         /** handle packet*/
         virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
 
+        // libeasy handle packet
+        int handle(common::BasePacket* packet);
+
         void run_check()
         {
           check_manager_.run_check();

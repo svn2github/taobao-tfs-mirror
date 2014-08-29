@@ -165,6 +165,30 @@ namespace tfs
       return bret;
     }
 
+    int CheckServer::handle(common::BasePacket* packet)
+    {
+      assert(NULL != packet);
+      int ret = TFS_SUCCESS;
+      int32_t pcode = packet->getPCode();
+      switch (pcode)
+      {
+        case REPORT_CHECK_BLOCK_RESPONSE_MESSAGE:
+          ret = check_manager_.handle(packet);
+          break;
+        default:
+          ret = EXIT_UNKNOWN_MSGTYPE;
+          TBSYS_LOG(ERROR, "unknown msg type: %d", pcode);
+          break;
+      }
+
+      if (common::TFS_SUCCESS != ret)
+      {
+        packet->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
+      }
+
+      return EASY_OK;
+    }
+
     void CheckServer::RunCheckThreadHelper::run()
     {
       service_.run_check();

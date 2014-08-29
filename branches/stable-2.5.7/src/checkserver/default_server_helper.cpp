@@ -55,7 +55,7 @@ namespace tfs
         NewClient* client = NewClientManager::get_instance().create_client();
         if (NULL != client)
         {
-          CheckBlockRequestMessage msg;
+          create_msg_ref(CheckBlockRequestMessage, msg);
           msg.set_time_range(range);
           msg.set_group_count(group_count);
           msg.set_group_seq(group_seq);
@@ -101,7 +101,7 @@ namespace tfs
         NewClient* client = NewClientManager::get_instance().create_client();
         if (NULL != client)
         {
-          ReportCheckBlockMessage msg;
+          create_msg_ref(ReportCheckBlockMessage, msg);
           msg.set_param(param);
           ret = send_msg_to_server(ds_id, client, &msg, resp_msg);
           if (TFS_SUCCESS == ret)
@@ -162,7 +162,7 @@ namespace tfs
         NewClient* client = NewClientManager::get_instance().create_client();
         if (NULL != client)
         {
-          ClientCmdMessage msg;
+          create_msg_ref(ClientCmdMessage, msg);
           msg.set_cmd(CLIENT_CMD_SET_PARAM);
           msg.set_value3(param_index);
           msg.set_value4(0);
