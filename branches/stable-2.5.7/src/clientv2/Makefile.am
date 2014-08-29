@@ -1,10 +1,10 @@
-AM_CPPFLAGS=-fPIC -I${top_srcdir}/src\
+AM_CPPFLAGS=-I${top_srcdir}/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
 	    -I$(TBLIB_ROOT)/include/tbnet\
-			-I$(EASY_ROOT)/include/easy\
-			$(TAIR_CACHE_CPPFLAGS)
+			-I$(EASY_ROOT)/include/easy \
+			-I$(TAIR_CACHE_CPPFLAGS)
 
-AM_LDFLAGS=-lrt -lpthread -ldl -luuid $(TAIR_CACHE_LDFLAGS) 
+AM_LDFLAGS=-lrt -lpthread -ldl -luuid -lssl $(TAIR_CACHE_LDFLAGS) 
 
 if WITH_TAIR_CACHE
 tair_cache_source=tair_cache_helper.cpp tair_cache_helper.h
@@ -16,6 +16,12 @@ api_source_list = tfs_client_api_v2.cpp tfs_client_impl_v2.cpp tfs_file.cpp fsna
 									tfs_session.cpp tfs_session_pool.cpp client_config.cpp \
 									tfs_client_api_v2.h tfs_client_impl_v2.h tfs_file.h fsname.h encode.h \
 									tfs_session.h tfs_session_pool.h lru.h client_config.h \
+									tfs_meta_manager.cpp tfs_kv_meta_client_impl.cpp tfs_kv_meta_client_api.cpp \
+									tfs_kv_meta_helper.cpp tfs_cluster_manager.cpp tfs_rc_helper.cpp \
+									tfs_rc_client_api.cpp tfs_rc_client_api_impl.cpp \
+									tfs_meta_manager.h tfs_kv_meta_client_impl.h tfs_kv_meta_client_api.h \
+									tfs_kv_meta_helper.h tfs_cluster_manager.h tfs_rc_helper.h \
+									tfs_rc_client_api.h tfs_rc_client_api_impl.h\
                   $(tair_cache_source)
 
 ld_fg = $(AM_LDFLAGS) \
@@ -37,7 +43,7 @@ libtfsclientv2_la_LIBADD = ${ld_fg}
 #bin_PROGRAMS = test_tfs_client
 #test_tfs_client_SOURCES  = test_tfs_client.cpp ${api_source_list}
 
-include_HEADERS = tfs_client_api_v2.h 
+include_HEADERS = tfs_client_api_v2.h tfs_rc_client_api.h tfs_kv_meta_client_api.h
 
 # hardcode to extract static library in destinate static library
 # consider libtool compatibility,do change in destinate directory

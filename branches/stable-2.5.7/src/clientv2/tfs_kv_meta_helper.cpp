@@ -30,7 +30,7 @@ using namespace std;
 int KvMetaHelper::get_table(const uint64_t server_id,
     KvMetaTable &table)
 {
-  GetTableFromKvRtsMessage req_gtfkr_msg;
+  create_msg_ref(GetTableFromKvRtsMessage, req_gtfkr_msg);
 
   tbnet::Packet* rsp = NULL;
   NewClient *client = NewClientManager::get_instance().create_client();
@@ -74,7 +74,7 @@ int KvMetaHelper::do_put_bucket(const uint64_t server_id, const char *bucket_nam
   }
   else
   {
-    ReqKvMetaPutBucketMessage req_pb_msg;
+    create_msg_ref(ReqKvMetaPutBucketMessage, req_pb_msg);
     req_pb_msg.set_bucket_name(bucket_name);
     req_pb_msg.set_bucket_meta_info(bucket_meta_info);
     req_pb_msg.set_user_info(user_info);
@@ -126,7 +126,7 @@ int KvMetaHelper::do_put_bucket_acl(const uint64_t server_id, const char *bucket
   }
   else
   {
-    ReqKvMetaPutBucketAclMessage req_pba_msg;
+    create_msg_ref(ReqKvMetaPutBucketAclMessage, req_pba_msg);
     req_pba_msg.set_bucket_name(bucket_name);
     req_pba_msg.set_user_info(user_info);
     req_pba_msg.set_canned_acl(acl);
@@ -180,7 +180,7 @@ int KvMetaHelper::do_get_bucket(const uint64_t server_id, const char *bucket_nam
   }
   else
   {
-    ReqKvMetaGetBucketMessage req_gb_msg;
+    create_msg_ref(ReqKvMetaGetBucketMessage, req_gb_msg);
     req_gb_msg.set_bucket_name(bucket_name);
     req_gb_msg.set_prefix(NULL == prefix ? "" : string(prefix));
     req_gb_msg.set_start_key(NULL == start_key ? "" : string(start_key));
@@ -241,7 +241,7 @@ int KvMetaHelper::do_del_bucket(const uint64_t server_id, const char *bucket_nam
   }
   else
   {
-    ReqKvMetaDelBucketMessage req_db_msg;
+    create_msg_ref(ReqKvMetaDelBucketMessage, req_db_msg);
     req_db_msg.set_bucket_name(bucket_name);
     req_db_msg.set_user_info(user_info);
 
@@ -291,7 +291,7 @@ int KvMetaHelper::do_head_bucket(const uint64_t server_id, const char *bucket_na
   }
   else
   {
-    ReqKvMetaHeadBucketMessage req_hb_msg;
+    create_msg_ref(ReqKvMetaHeadBucketMessage, req_hb_msg);
     req_hb_msg.set_bucket_name(bucket_name);
     req_hb_msg.set_user_info(user_info);
 
@@ -347,7 +347,7 @@ int KvMetaHelper::do_put_object(const uint64_t server_id, const char *bucket_nam
   }
   else
   {
-    ReqKvMetaPutObjectMessage req_po_msg;
+    create_msg_ref(ReqKvMetaPutObjectMessage, req_po_msg);
     req_po_msg.set_bucket_name(bucket_name);
     req_po_msg.set_file_name(object_name);
     req_po_msg.set_object_info(object_info);
@@ -400,7 +400,7 @@ const int64_t offset, const int64_t length, ObjectInfo *object_info, bool *still
   }
   else
   {
-    ReqKvMetaGetObjectMessage req_go_msg;
+    create_msg_ref(ReqKvMetaGetObjectMessage, req_go_msg);
     req_go_msg.set_bucket_name(bucket_name);
     req_go_msg.set_file_name(object_name);
     req_go_msg.set_offset(offset);
@@ -460,7 +460,7 @@ int KvMetaHelper::do_del_object(const uint64_t server_id, const char *bucket_nam
   }
   else
   {
-    ReqKvMetaDelObjectMessage req_do_msg;
+    create_msg_ref(ReqKvMetaDelObjectMessage, req_do_msg);
     req_do_msg.set_bucket_name(bucket_name);
     req_do_msg.set_file_name(object_name);
     req_do_msg.set_user_info(user_info);
@@ -518,7 +518,7 @@ int KvMetaHelper::do_head_object(const uint64_t server_id, const char *bucket_na
   }
   else
   {
-    ReqKvMetaHeadObjectMessage req_ho_msg;
+    create_msg_ref(ReqKvMetaHeadObjectMessage, req_ho_msg);
     req_ho_msg.set_bucket_name(bucket_name);
     req_ho_msg.set_file_name(object_name);
     req_ho_msg.set_user_info(user_info);
@@ -575,7 +575,7 @@ int KvMetaHelper::do_set_life_cycle(const uint64_t server_id,
   }
   else
   {
-    ReqKvMetaSetLifeCycleMessage req_set_lifecycle_msg;
+    create_msg_ref(ReqKvMetaSetLifeCycleMessage, req_set_lifecycle_msg);
     req_set_lifecycle_msg.set_file_type(file_type);
     req_set_lifecycle_msg.set_file_name(file_name);
     req_set_lifecycle_msg.set_invalid_time_s(invalid_time_s);
@@ -626,7 +626,7 @@ int KvMetaHelper::do_get_life_cycle(const uint64_t server_id, const int32_t file
   }
   else
   {
-    ReqKvMetaGetLifeCycleMessage req_glc_msg;
+    create_msg_ref(ReqKvMetaGetLifeCycleMessage, req_glc_msg);
     req_glc_msg.set_file_type(file_type);
     req_glc_msg.set_file_name(file_name);
 
@@ -681,7 +681,7 @@ int KvMetaHelper::do_rm_life_cycle(const uint64_t server_id, const int32_t file_
   }
   else
   {
-    ReqKvMetaRmLifeCycleMessage req_rlc_msg;
+    create_msg_ref(ReqKvMetaRmLifeCycleMessage, req_rlc_msg);
     req_rlc_msg.set_file_type(file_type);
     req_rlc_msg.set_file_name(file_name);
 

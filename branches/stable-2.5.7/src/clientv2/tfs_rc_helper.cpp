@@ -31,7 +31,7 @@ using namespace std;
 int RcHelper::login(const uint64_t rc_ip, const string& app_key, const uint64_t app_ip,
     string& session_id, BaseInfo& base_info)
 {
-  ReqRcLoginMessage req_login_msg;
+  create_msg_ref(ReqRcLoginMessage, req_login_msg);
   req_login_msg.set_app_key(app_key.c_str());
   req_login_msg.set_app_ip(app_ip);
 
@@ -73,7 +73,7 @@ int RcHelper::login(const uint64_t rc_ip, const string& app_key, const uint64_t 
 int RcHelper::keep_alive(const uint64_t rc_ip, const common::KeepAliveInfo& ka_info,
     bool& update_flag, common::BaseInfo& base_info)
 {
-  ReqRcKeepAliveMessage req_ka_msg;
+  create_msg_ref(ReqRcKeepAliveMessage, req_ka_msg);
   req_ka_msg.set_ka_info(ka_info);
 
   tbnet::Packet* rsp = NULL;
@@ -115,7 +115,7 @@ int RcHelper::keep_alive(const uint64_t rc_ip, const common::KeepAliveInfo& ka_i
 
 int RcHelper::logout(const uint64_t rc_ip, const common::KeepAliveInfo& ka_info)
 {
-  ReqRcLogoutMessage req_logout_msg;
+  create_msg_ref(ReqRcLogoutMessage, req_logout_msg);
   req_logout_msg.set_ka_info(ka_info);
 
   tbnet::Packet* rsp = NULL;
@@ -147,7 +147,7 @@ int RcHelper::logout(const uint64_t rc_ip, const common::KeepAliveInfo& ka_info)
 
 int RcHelper::reload(const uint64_t rc_ip, const common::ReloadType reload_type)
 {
-  ReqRcReloadMessage req_reload_msg;
+  create_msg_ref(ReqRcReloadMessage, req_reload_msg);
   req_reload_msg.set_reload_type(reload_type);
 
   tbnet::Packet* rsp = NULL;
