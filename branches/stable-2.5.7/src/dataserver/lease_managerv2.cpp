@@ -221,7 +221,7 @@ namespace tfs
       ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = send_msg_to_server(ns_ip_port_[who], new_client, &req_msg, ret_msg, false, timeout_ms);
+        ret = send_msg_to_server(ns_ip_port_[who], new_client, &req_msg, ret_msg, timeout_ms);
         if (TFS_SUCCESS == ret)
         {
           if (DS_RENEW_LEASE_RESPONSE_MESSAGE == ret_msg->getPCode())

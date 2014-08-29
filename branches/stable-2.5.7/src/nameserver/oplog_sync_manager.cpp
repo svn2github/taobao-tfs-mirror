@@ -369,7 +369,7 @@ namespace tfs
         int32_t status = STATUS_MESSAGE_ERROR;
         for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && STATUS_MESSAGE_OK != status; i++)
         {
-          ret = send_msg_to_server(GFactory::get_runtime_info().sync_log_peer_ip_port_, msg, status, true);
+          ret = send_msg_to_server(GFactory::get_runtime_info().sync_log_peer_ip_port_, msg, status, DEFAULT_NETWORK_CALL_TIMEOUT, true);
         }
         ret = STATUS_MESSAGE_OK == status ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_ERROR != ret)

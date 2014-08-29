@@ -108,7 +108,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           tbnet::Packet* result = NULL;
-          ret = send_msg_to_server(dest_addr_, client, &req_msg, result, false, timeout_ms);
+          ret = send_msg_to_server(dest_addr_, client, &req_msg, result, timeout_ms);
           if (TFS_SUCCESS == ret)
           {
             ret = RSP_SYNC_FILE_ENTRY_MESSAGE == result->getPCode() ? TFS_SUCCESS : EXIT_SEND_SYNC_FILE_ENTRY_MSG_ERROR;

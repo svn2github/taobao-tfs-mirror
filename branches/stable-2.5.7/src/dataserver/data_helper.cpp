@@ -60,7 +60,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int32_t status = EXIT_GENERAL_ERROR;
-        ret = send_msg_to_server(server_id, message, status, false, timeout);
+        ret = send_msg_to_server(server_id, message, status, timeout);
         if (TFS_SUCCESS == ret)
         {
           ret = status;

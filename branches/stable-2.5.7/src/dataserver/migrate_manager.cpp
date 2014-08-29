@@ -65,7 +65,7 @@ namespace tfs
         tbnet::Packet* result = NULL;
         DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
         req_msg.set_dataserver_information(info);
-        ret = send_msg_to_server(dest_addr_, client, &req_msg, result, false, timeout_ms);
+        ret = send_msg_to_server(dest_addr_, client, &req_msg, result, timeout_ms);
         if (TFS_SUCCESS == ret)
         {
           ret = RSP_MIGRATE_DS_HEARTBEAT_MESSAGE == result->getPCode() ? TFS_SUCCESS : EXIT_MIGRATE_DS_HEARTBEAT_ERROR;

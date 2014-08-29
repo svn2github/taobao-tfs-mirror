@@ -321,12 +321,12 @@ namespace tfs
       return bret;
     }
 
-    int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status, const bool clone_source, const int64_t timeout)
+    int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status, const int64_t timeout, const bool clone_source)
     {
       assert(server > 0 && NULL != message);
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* rmsg = NULL;
-      int iret = send_msg_to_server(server, client, message, rmsg, clone_source, timeout);
+      int iret = send_msg_to_server(server, client, message, rmsg, timeout, clone_source);
       if (common::TFS_SUCCESS == iret)
       {
         iret = rmsg->getPCode() == STATUS_MESSAGE ? common::TFS_SUCCESS : common::TFS_ERROR;
@@ -340,7 +340,7 @@ namespace tfs
       return iret;
     }
 
-    int send_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, tbnet::Packet*& output/*not free*/, const bool clone_source, const int64_t timeout)
+    int send_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, tbnet::Packet*& output/*not free*/, const int64_t timeout, const bool clone_source)
     {
       assert(server > 0 && NULL != client && NULL != msg);
       uint8_t send_id = 0;

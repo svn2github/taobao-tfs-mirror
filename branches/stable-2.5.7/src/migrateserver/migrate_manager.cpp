@@ -207,7 +207,7 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             tbnet::Packet* result = NULL;
-            ret = send_msg_to_server(server, client, &req_msg, result, false, TIMEOUT_MS);
+            ret = send_msg_to_server(server, client, &req_msg, result, TIMEOUT_MS);
             if (TFS_SUCCESS == ret)
             {
               ret = GET_ALL_BLOCKS_HEADER_RESP_MESSAGE == result->getPCode() ? TFS_SUCCESS : EXIT_GET_ALL_BLOCK_HEADER_ERROR;
@@ -402,7 +402,7 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             tbnet::Packet* result = NULL;
-            ret = send_msg_to_server(ns_vip_port_, client, &req_msg, result, false, TIMEOUT_MS);
+            ret = send_msg_to_server(ns_vip_port_, client, &req_msg, result, TIMEOUT_MS);
             if (TFS_SUCCESS == ret)
             {
               ret = STATUS_MESSAGE == result->getPCode() ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;

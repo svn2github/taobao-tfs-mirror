@@ -126,7 +126,7 @@ namespace tfs
         ++retry_count;
         client = NewClientManager::get_instance().create_client();
         tbutil::Time start = tbutil::Time::now();
-        iret = send_msg_to_server(es_id, client, &msg, rsp, false, MAX_TIMEOUT_MS);
+        iret = send_msg_to_server(es_id, client, &msg, rsp, MAX_TIMEOUT_MS);
         tbutil::Time end = tbutil::Time::now();
         if (TFS_SUCCESS == iret)
         {

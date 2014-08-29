@@ -284,7 +284,7 @@ namespace tfs
           tbnet::Packet* response = NULL;
           ++retry_count;
           client = NewClientManager::get_instance().create_client();
-          iret = send_msg_to_server(expireroot_ipport_id_, client, &req_finish_task_msg, response, false, MAX_TIMEOUT_MS);
+          iret = send_msg_to_server(expireroot_ipport_id_, client, &req_finish_task_msg, response, MAX_TIMEOUT_MS);
           if (TFS_SUCCESS != iret)
           {
             TBSYS_LOG(ERROR, "EXIT_NETWORK_ERROR ret: %d",iret);

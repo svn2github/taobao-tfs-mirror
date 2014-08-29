@@ -277,7 +277,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int32_t status = STATUS_MESSAGE_ERROR;
-        ret = send_msg_to_server(info.value1_, message, status, true);  // forward will clone source msg
+        ret = send_msg_to_server(info.value1_, message, status, DEFAULT_NETWORK_CALL_TIMEOUT, true);  // forward will clone source msg
         if ((STATUS_MESSAGE_OK != status) || (TFS_SUCCESS != ret))
         {
            snprintf(buf, buf_length, "send load block: %"PRI64_PREFIX"u  msg to server: %s failed, ret: %d, status: %d",

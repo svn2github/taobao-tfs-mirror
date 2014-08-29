@@ -106,11 +106,11 @@ namespace tfs
     #define create_msg_ref(type, name) type& name = *(new type())
     #define create_msg_ptr(type, name) type* name = new type()
     int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status,
-                          bool clone_source = false,
-                          const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
+                          const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/,
+                          bool clone_source = false);
     int send_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, tbnet::Packet*& output/*not free*/,
-                          bool clone_source = false,
-                          const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
+                          const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/,
+                          bool clone_source = false);
     int post_msg_to_server(const std::vector<uint64_t>& servers, NewClient* client, tbnet::Packet* message, NewClient::callback_func func,
                           const bool clone_source = false);
     int post_msg_to_server(uint64_t servers, tbnet::Packet* message, NewClient::callback_func func,
