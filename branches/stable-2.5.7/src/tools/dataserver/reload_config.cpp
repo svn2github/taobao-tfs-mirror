@@ -36,7 +36,7 @@ int reload_config(const uint64_t server_ip, const int32_t flag)
   printf("server_ip: %s,  flag: %u\n", tbsys::CNetUtil::addrToString(server_ip).c_str(), flag);
 
   int ret_status = TFS_ERROR;
-  ReloadConfigMessage req_rc_msg;
+  create_msg_ref(ReloadConfigMessage, req_rc_msg);
 
   req_rc_msg.set_switch_cluster_flag(flag);
 

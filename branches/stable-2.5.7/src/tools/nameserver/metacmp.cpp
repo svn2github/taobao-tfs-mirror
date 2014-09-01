@@ -109,7 +109,7 @@ namespace tfs
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::DataBuffer data;
       uint64_t ns_ip = (role == Master_Server_Role) ? master_ns_ip_ : slave_ns_ip_;
-      ShowServerInformationMessage msg;
+      create_msg_ref(ShowServerInformationMessage, msg);
       SSMScanParameter& input_param = msg.get_param();
       input_param = param;
 

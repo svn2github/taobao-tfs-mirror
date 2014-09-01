@@ -60,7 +60,7 @@ int block_process(const uint64_t ns_id, StatInfo& file_stat_info,
     param.data_.clear();
     tbnet::Packet*ret_msg = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
-    ret = send_msg_to_server(ns_id, client, &msg, ret_msg);
+    ret = send_msg_to_server(ns_id, client, &msg, ret_msg, DEFAULT_NETWORK_CALL_TIMEOUT, true);
     if (TFS_SUCCESS != ret || ret_msg == NULL)
     {
       TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);

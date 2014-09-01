@@ -376,7 +376,7 @@ int TranBlock::read_index()
 int TranBlock::read_index(uint64_t ds_ip_addr, FileInfoV2Set& file_set)
 {
   IndexDataV2 index_data;
-  ReadIndexMessageV2 rdindex_msg;
+  create_msg_ref(ReadIndexMessageV2, rdindex_msg);
   rdindex_msg.set_attach_block_id(src_block_id_);
   rdindex_msg.set_block_id(src_block_id_);
 
@@ -447,7 +447,7 @@ int TranBlock::read_data()
     TIMER_START();
     while (remainder_retrys > 0)
     {
-      ReadRawdataMessageV2 rrd_msg;
+      create_msg_ref(ReadRawdataMessageV2, rrd_msg);
       rrd_msg.set_block_id(src_block_id_);
       rrd_msg.set_offset(cur_offset_);
       rrd_msg.set_length(read_size);
@@ -663,7 +663,7 @@ int TranBlock::write_data()
     {
       cur_len = std::min(static_cast<int64_t>(block_len), TRAN_BUFFER_SIZE);
 
-      WriteRawdataMessageV2 req;
+      create_msg_ref(WriteRawdataMessageV2, req);
       req.set_block_id(src_block_id_);
       req.set_offset(cur_write_offset);
       req.set_length(cur_len);
@@ -735,7 +735,7 @@ int TranBlock::write_data()
 
 int TranBlock::write_index()
 {
-  WriteIndexMessageV2 req_msg;
+  create_msg_ref(WriteIndexMessageV2, req_msg);
   req_msg.set_block_id(dest_index_data_.header_.info_.block_id_);
   req_msg.set_attach_block_id(dest_index_data_.header_.info_.block_id_);
   req_msg.set_index_data(dest_index_data_);
@@ -886,7 +886,7 @@ int TranBlock::check_integrity()
 int TranBlock::rm_block_from_ns()
 {
   int ret = TFS_SUCCESS;
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
   req_cc_msg.set_value3(src_block_id_);
   req_cc_msg.set_value4(tfs::nameserver::HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION);
@@ -929,7 +929,7 @@ int TranBlock::rm_block_from_ns()
 int TranBlock::rm_block_from_ds(uint64_t ds_id)
 {
   int ret = TFS_SUCCESS;
-  RemoveBlockMessageV2 req_rb_msg;
+  create_msg_ref(RemoveBlockMessageV2, req_rb_msg);
   req_rb_msg.set_block_id(src_block_id_);
   req_rb_msg.set_tmp_flag(false);
   NewClient* client = NewClientManager::get_instance().create_client();

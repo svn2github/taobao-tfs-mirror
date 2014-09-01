@@ -71,7 +71,7 @@ namespace tfs
         {
           int32_t index = random() % servers.size();
           uint64_t server = servers[index];
-          GetServerStatusMessage req_msg;
+          create_msg_ref(GetServerStatusMessage, req_msg);
           if (0 == version)
           {
             req_msg.set_status_type(GSS_BLOCK_FILE_INFO);

@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
         while (iter != result.end())
         {
           server = iter->first;
-          ListBlockMessage req_msg;
+          create_msg_ref(ListBlockMessage, req_msg);
           req_msg.set_block_type(LB_BLOCK);
           NewClient* client = NewClientManager::get_instance().create_client();
           if (NULL != client)

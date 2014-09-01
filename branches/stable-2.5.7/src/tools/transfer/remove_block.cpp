@@ -65,7 +65,7 @@ int remove_block(const string& ns_ip, const string& file_path, const string& out
         {
           count++;
           tbnet::Packet* ret_msg= NULL;
-          ClientCmdMessage ns_req_msg;
+          create_msg_ref(ClientCmdMessage, ns_req_msg);
           ns_req_msg.set_cmd(CLIENT_CMD_EXPBLK);
           ns_req_msg.set_value3(block_id);
           ns_req_msg.set_value4(1);

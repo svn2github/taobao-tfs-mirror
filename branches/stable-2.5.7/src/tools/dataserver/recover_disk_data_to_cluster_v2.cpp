@@ -129,7 +129,7 @@ int copy_file(BlockManager& block_manager, const uint64_t block_id, const FileIn
 int rm_no_replicate_block_from_ns(const char* ns_addr, const uint64_t block_id)
 {
   int ret = TFS_SUCCESS;
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
   req_cc_msg.set_value3(block_id);
   req_cc_msg.set_value4(tfs::nameserver::HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION);

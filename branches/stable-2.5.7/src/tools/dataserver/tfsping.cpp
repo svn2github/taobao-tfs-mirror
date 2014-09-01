@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
   rb_msg.set_repl_block(&repl_block);
   rb_msg.set_expire_time(240);
 */
-  NsRequestCompactBlockMessage cb_msg;
+  create_msg_ref(NsRequestCompactBlockMessage, cb_msg);
   cb_msg.set_seqno(atoi(argv[1]));
   cb_msg.set_block_id(atoi(argv[2]));
   vector<uint64_t> servers;

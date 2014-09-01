@@ -58,7 +58,7 @@ int remove_block(const uint32_t block_id)
   int ret = block_id > 0 ? TFS_SUCCESS : TFS_ERROR;
   if (TFS_SUCCESS == ret)
   {
-    ClientCmdMessage req_cc_msg;
+    create_msg_ref(ClientCmdMessage, req_cc_msg);
     req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
     req_cc_msg.set_value3(block_id);
 
@@ -203,7 +203,7 @@ int get_file_list(const string& ns_addr, const uint32_t block_id, BLOCK_FILE_INF
 {
   int ret = TFS_ERROR;
   VUINT64 ds_list;
-  GetBlockInfoMessage gbi_message;
+  create_msg_ref(GetBlockInfoMessage, gbi_message);
   gbi_message.set_block_id(block_id);
 
   tbnet::Packet* rsp = NULL;
@@ -219,7 +219,7 @@ int get_file_list(const string& ns_addr, const uint32_t block_id, BLOCK_FILE_INF
       {
         uint64_t ds_id = ds_list[0];
         TBSYS_LOG(INFO, "ds_ip: %s", tbsys::CNetUtil::addrToString(ds_id).c_str());
-        GetServerStatusMessage req_gss_msg;
+        create_msg_ref(GetServerStatusMessage, req_gss_msg);
         req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
         req_gss_msg.set_return_row(block_id);
 

@@ -213,7 +213,7 @@ namespace tfs
           param.data_.clear();
           tbnet::Packet* ret_msg = NULL;
           NewClient* client = NewClientManager::get_instance().create_client();
-          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
+          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg, DEFAULT_NETWORK_CALL_TIMEOUT, true); // clone msg
           if (TFS_SUCCESS != ret || ret_msg == NULL)
           {
             TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
@@ -336,7 +336,7 @@ namespace tfs
           param.data_.clear();
           tbnet::Packet*ret_msg = NULL;
           NewClient* client = NewClientManager::get_instance().create_client();
-          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
+          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg, DEFAULT_NETWORK_CALL_TIMEOUT, true); // clone msg
           if (TFS_SUCCESS != ret || ret_msg == NULL)
           {
             TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
@@ -481,7 +481,7 @@ namespace tfs
           param.data_.clear();
           tbnet::Packet*ret_msg = NULL;
           NewClient* client = NewClientManager::get_instance().create_client();
-          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
+          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg, DEFAULT_NETWORK_CALL_TIMEOUT, true); // clone msg
           if (TFS_SUCCESS != ret || ret_msg == NULL)
           {
             TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
@@ -612,7 +612,7 @@ namespace tfs
           param.data_.clear();
           tbnet::Packet*ret_msg = NULL;
           NewClient* client = NewClientManager::get_instance().create_client();
-          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
+          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg, DEFAULT_NETWORK_CALL_TIMEOUT, true); // clone msg
           if (TFS_SUCCESS != ret || ret_msg == NULL)
           {
             TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);

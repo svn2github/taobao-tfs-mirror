@@ -91,7 +91,7 @@ int compare_block(const string& ns_ip, const string& file_path, const string& ou
             {
               ret_msg = NULL;
               TBSYS_LOG(INFO, "server ===> %s", tbsys::CNetUtil::addrToString((*iter)).c_str());
-              ret = send_msg_to_server((*iter), client, &req_msg, ret_msg);
+              ret = send_msg_to_server((*iter), client, &req_msg, ret_msg, DEFAULT_NETWORK_CALL_TIMEOUT, true);
               if (TFS_SUCCESS != ret)
               {
                 TBSYS_LOG(ERROR, "compacre block: %u failed, ret: %d", block_id, ret);

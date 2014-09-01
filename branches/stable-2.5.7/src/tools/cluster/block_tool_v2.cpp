@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
 int list_block(const uint64_t ds_id, VUINT64& block_vec)
 {
   int ret = TFS_ERROR;
-  ListBlockMessage req_lb_msg;
+  create_msg_ref(ListBlockMessage, req_lb_msg);
   req_lb_msg.set_block_type(LB_BLOCK);
 
   NewClient* client = NewClientManager::get_instance().create_client();
@@ -199,7 +199,7 @@ int check_family(const int64_t family_id, const uint64_t ns_id, const uint64_t d
   int32_t family_aid_info = 0;
 
   // get family info
-  GetFamilyInfoMessage gfi_message;
+  create_msg_ref(GetFamilyInfoMessage, gfi_message);
   gfi_message.set_family_id(family_id);
   gfi_message.set_mode(T_READ);
   tbnet::Packet* rsp = NULL;

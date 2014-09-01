@@ -1,9 +1,10 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
 	    -I$(TBLIB_ROOT)/include/tbnet\
+			-I$(EASY_ROOT)/include/easy\
 			-DUSE_NEW_CLIENT
 
-AM_LDFLAGS=-lrt -lpthread -ldl -luuid -lz
+AM_LDFLAGS=-lrt -lpthread -ldl -luuid -lz -lssl
 
 bin_PROGRAMS = #split_block_tool transfer_blockv2 compare_crcv2
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
@@ -16,7 +17,7 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
   $(TAIR_CACHE_LDFLAGS) \
 	$(TBLIB_ROOT)/lib/libtbnet.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a\
-	-lz
+	$(EASY_ROOT)/lib64/libeasy.a\
 
 #transfer_block_SOURCES = transfer_block.cpp block_console.cpp block_console.h 
 #split_block_tool_SOURCES = split_block_tool.cpp

@@ -65,7 +65,7 @@ namespace tfs
       int32_t num_row = ds_task.num_row_;
       int ret_status = TFS_ERROR;
 
-      GetServerStatusMessage req_gss_msg;
+      create_msg_ref(GetServerStatusMessage, req_gss_msg);
 
       req_gss_msg.set_status_type(GSS_MAX_VISIT_COUNT);
       req_gss_msg.set_return_row(num_row);
@@ -110,7 +110,7 @@ namespace tfs
       uint64_t server_id = ds_task.server_id_;
       int ret_status = TFS_ERROR;
 
-      StatusMessage s_msg;
+      create_msg_ref(StatusMessage, s_msg);
       if (TFS_SUCCESS == send_msg_to_server(server_id, &s_msg, ret_status))
       {
         printf("ping dataserver success.\n");
@@ -129,7 +129,7 @@ namespace tfs
       uint64_t server_id = ds_task.server_id_;
       uint32_t block_id = ds_task.block_id_;
 
-      NewBlockMessage req_nb_msg;
+      create_msg_ref(NewBlockMessage, req_nb_msg);
       req_nb_msg.add_new_id(block_id);
       int ret_status = TFS_ERROR;
 
@@ -162,7 +162,7 @@ namespace tfs
       uint64_t server_id = ds_task.server_id_;
       uint64_t block_id = ds_task.block_id_;
 
-      RemoveBlockMessageV2 req_rb_msg;
+      create_msg_ref(RemoveBlockMessageV2, req_rb_msg);
       req_rb_msg.set_block_id(block_id);
       req_rb_msg.set_tmp_flag(false);
 
@@ -259,7 +259,7 @@ namespace tfs
       int32_t type = ds_task.list_block_type_;
 
       int ret_status = TFS_ERROR;
-      ListBlockMessage req_lb_msg;
+      create_msg_ref(ListBlockMessage, req_lb_msg);
       int32_t xtype = type;
 
       if (xtype & 1)
@@ -317,7 +317,7 @@ namespace tfs
       uint64_t server_id = ds_task.server_id_;
       uint64_t block_id = ds_task.block_id_;
 
-      GetBlockInfoMessageV2 req_gbi_msg;
+      create_msg_ref(GetBlockInfoMessageV2, req_gbi_msg);
       req_gbi_msg.set_block_id(block_id);
 
       int ret_status = TFS_ERROR;
@@ -381,7 +381,7 @@ namespace tfs
       uint64_t server_id = ds_task.server_id_;
       uint32_t block_id = ds_task.block_id_;
 
-      ResetBlockVersionMessage req_rbv_msg;
+      create_msg_ref(ResetBlockVersionMessage, req_rbv_msg);
       req_rbv_msg.set_block_id(block_id);
 
       int ret_status = TFS_ERROR;
@@ -415,7 +415,7 @@ namespace tfs
       uint32_t block_id = ds_task.block_id_;
       uint64_t new_file_id = ds_task.new_file_id_;
 
-      CreateFilenameMessage req_cf_msg;
+      create_msg_ref(CreateFilenameMessage, req_cf_msg);
       req_cf_msg.set_block_id(block_id);
       req_cf_msg.set_file_id(new_file_id);
 
@@ -457,7 +457,7 @@ namespace tfs
 
       FileInfoV2 file_info;
 
-      ReadFileMessageV2 rd_message;
+      create_msg_ref(ReadFileMessageV2, rd_message);
       rd_message.set_block_id(block_id);
       rd_message.set_attach_block_id(attach_block_id);
       rd_message.set_file_id(file_id);
@@ -536,7 +536,7 @@ namespace tfs
       int32_t read_len = MAX_READ_SIZE;
       static int32_t offset = 4;
 
-      ReadFileMessageV2 rd_message;
+      create_msg_ref(ReadFileMessageV2, rd_message);
       rd_message.set_block_id(block_id);
       rd_message.set_attach_block_id(attach_block_id);
       rd_message.set_file_id(file_id);
@@ -726,7 +726,7 @@ namespace tfs
       int32_t option_flag = ds_task.option_flag_;
       int32_t is_master = ds_task.is_master_;
 
-      UnlinkFileMessage req_uf_msg;
+      create_msg_ref(UnlinkFileMessage, req_uf_msg);
       req_uf_msg.set_block_id(block_id);
       req_uf_msg.set_file_id(file_id);
       req_uf_msg.set_unlink_type(unlink_type);
@@ -775,7 +775,7 @@ namespace tfs
         VUINT64 ds_list;
         ds_list.push_back(ds_task.server_id_);
 
-        UnlinkFileMessageV2 msg;
+        create_msg_ref(UnlinkFileMessageV2, msg);
         msg.set_block_id(ds_task.block_id_);
         msg.set_attach_block_id(ds_task.block_id_);
         msg.set_file_id(ds_task.new_file_id_);
@@ -835,7 +835,7 @@ namespace tfs
       uint64_t file_id = ds_task.new_file_id_;
       int32_t mode = ds_task.mode_;
 
-      FileInfoMessage req_fi_msg;
+      create_msg_ref(FileInfoMessage, req_fi_msg);
       req_fi_msg.set_block_id(block_id);
       req_fi_msg.set_file_id(file_id);
       req_fi_msg.set_mode(mode);
@@ -931,7 +931,7 @@ namespace tfs
       uint64_t attach_block_id = ds_task.attach_block_id_;
       int32_t mode = ds_task.mode_;
 
-      GetServerStatusMessage req_gss_msg;
+      create_msg_ref(GetServerStatusMessage, req_gss_msg);
       req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO_V2);
       req_gss_msg.set_return_row(block_id);
       req_gss_msg.set_from_row(attach_block_id);
@@ -1001,7 +1001,7 @@ namespace tfs
 
     int DsLib::check_file_info(DsTask& ds_task)
     {
-      GetServerStatusMessage req_gss_msg;
+      create_msg_ref(GetServerStatusMessage, req_gss_msg);
       req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO_V2);
       req_gss_msg.set_return_row(ds_task.block_id_);
       req_gss_msg.set_from_row(ds_task.attach_block_id_);
@@ -1055,7 +1055,7 @@ namespace tfs
       uint64_t new_file_id = ds_task.new_file_id_;
 
       int ret_status = TFS_ERROR;
-      RenameFileMessage req_rf_msg;
+      create_msg_ref(RenameFileMessage, req_rf_msg);
 
       req_rf_msg.set_block_id(block_id);
       req_rf_msg.set_file_id(old_file_id);
@@ -1078,7 +1078,7 @@ namespace tfs
     {
 
       int ret = TFS_ERROR;
-      CreateFilenameMessage req_cf_msg;
+      create_msg_ref(CreateFilenameMessage, req_cf_msg);
       req_cf_msg.set_block_id(block_id);
       req_cf_msg.set_file_id(file_id);
 
@@ -1139,7 +1139,7 @@ namespace tfs
       ds_list.push_back(server_ip);
 
       int ret = TFS_ERROR;
-      WriteDataMessage req_wd_msg;
+      create_msg_ref(WriteDataMessage, req_wd_msg);
       req_wd_msg.set_file_number(file_num);
       req_wd_msg.set_block_id(block_id);
       req_wd_msg.set_file_id(file_id);
@@ -1183,7 +1183,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
       VUINT64 ds_list;
       ds_list.push_back(server_ip);
-      WriteFileMessageV2 msg;
+      create_msg_ref(WriteFileMessageV2, msg);
       msg.set_block_id(block_id);
       msg.set_attach_block_id(block_id);
       msg.set_file_id(file_id);
@@ -1256,7 +1256,7 @@ namespace tfs
       ds_list.push_back(server_ip);
 
       int ret = TFS_ERROR;
-      CloseFileMessage req_cf_msg;
+      create_msg_ref(CloseFileMessage, req_cf_msg);
       req_cf_msg.set_file_number(file_num);
       req_cf_msg.set_block_id(block_id);
       req_cf_msg.set_file_id(file_id);
@@ -1303,7 +1303,7 @@ namespace tfs
       ds_list.clear();
       ds_list.push_back(server_ip);
 
-      CloseFileMessageV2 msg;
+      create_msg_ref(CloseFileMessageV2, msg);
       msg.set_block_id(block_id);
       msg.set_attach_block_id(block_id);
       msg.set_file_id(file_id);
@@ -1362,7 +1362,7 @@ namespace tfs
       int error_flag = ds_task.option_flag_;
       VUINT64 failed_servers = ds_task.failed_servers_;
 
-      CrcErrorMessage crc_message;
+      create_msg_ref(CrcErrorMessage, crc_message);
       crc_message.set_block_id(block_id);
       crc_message.set_file_id(file_id);
       crc_message.set_error_flag(static_cast<CheckDsBlockType> (error_flag));
@@ -1410,7 +1410,7 @@ namespace tfs
       NewClient* client = NewClientManager::get_instance().create_client();
       if (NULL != client)
       {
-        GetAllBlocksHeaderMessage message;
+        create_msg_ref(GetAllBlocksHeaderMessage, message);
         tbnet::Packet* rmsg = NULL;
         ret = send_msg_to_server(server_id, client, &message, rmsg);
         if (common::TFS_SUCCESS == ret)
@@ -1482,7 +1482,7 @@ namespace tfs
       }
       printf("server ip: %s,type: %d\n", tbsys::CNetUtil::addrToString(server_id).c_str(), type);
 
-      ListBitMapMessage req_lbm_msg;
+      create_msg_ref(ListBitMapMessage, req_lbm_msg);
       int ret_status = TFS_ERROR;
       req_lbm_msg.set_bitmap_type(type);
 

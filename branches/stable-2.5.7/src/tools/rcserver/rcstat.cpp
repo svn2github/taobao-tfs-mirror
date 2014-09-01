@@ -301,7 +301,7 @@ namespace tfs
         server_id = Func::get_host_ip(rc_ip.c_str());
 
         tbnet::Packet *ret_msg = NULL;
-        ReqRcStatMessage req_rcstat_msg;
+        create_msg_ref(ReqRcStatMessage, req_rcstat_msg);
         NewClient* client = NewClientManager::get_instance().create_client();
 
         req_rcstat_msg.set_app_id(app_id_);

@@ -503,17 +503,17 @@ int do_monitor(const VSTRING& param, int32_t type)
     ip_port = Func::str_to_addr(ip, port);
   }
 
-  AdminCmdMessage admin_msg(type);
+  AdminCmdMessage* admin_msg = new AdminCmdMessage(type);
   for (size_t i = 1; i < param.size(); i++)
   {
-    admin_msg.set_index(param[i]);
+    admin_msg->set_index(param[i]);
   }
 
   NewClient* client = NewClientManager::get_instance().create_client();
   if (NULL != client)
   {
     tbnet::Packet* message = NULL;
-    if (TFS_SUCCESS == (ret = send_msg_to_server(ip_port, client, &admin_msg, message)))
+    if (TFS_SUCCESS == (ret = send_msg_to_server(ip_port, client, admin_msg, message)))
     {
       if (STATUS_MESSAGE == message->getPCode())
       {

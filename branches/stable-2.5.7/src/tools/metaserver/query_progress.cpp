@@ -58,7 +58,7 @@ int main(int argc, char **argv)
   printf("root_id: %"PRI64_PREFIX"d, es_id: %"PRI64_PREFIX"d, spec_time: %d, type: %d\n", root_id, local_id, spec_time, type);
 
   int32_t percent = 0;
-  ReqQueryProgressMessage req_qp_msg;
+  create_msg_ref(ReqQueryProgressMessage, req_qp_msg);
   req_qp_msg.set_es_id(local_id);
   req_qp_msg.set_es_num(0);
   req_qp_msg.set_task_time(spec_time);

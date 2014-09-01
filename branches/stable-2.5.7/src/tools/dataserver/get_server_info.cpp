@@ -31,7 +31,7 @@ int get_ds_info(const uint64_t server_ip)
 {
 
   int ret_status = TFS_ERROR;
-  GetDataServerInformationMessage req_gdi_msg;
+  create_msg_ref(GetDataServerInformationMessage, req_gdi_msg);
 
   req_gdi_msg.set_flag(ERROR_BIT_MAP);
 

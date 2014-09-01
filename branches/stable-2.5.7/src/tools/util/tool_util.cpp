@@ -40,12 +40,12 @@ namespace tfs
       }
       else
       {
-        GetBlockInfoMessage gbi_message(flag);
-        gbi_message.set_block_id(block_id);
+        GetBlockInfoMessage* gbi_message = new GetBlockInfoMessage(flag);
+        gbi_message->set_block_id(block_id);
 
         tbnet::Packet* rsp = NULL;
         NewClient* client = NewClientManager::get_instance().create_client();
-        ret = send_msg_to_server(server_id, client, &gbi_message, rsp);
+        ret = send_msg_to_server(server_id, client, gbi_message, rsp);
 
         if (rsp != NULL)
         {
@@ -80,7 +80,7 @@ namespace tfs
       }
       else
       {
-        GetBlockInfoMessageV2 gbi_message;
+        create_msg_ref(GetBlockInfoMessageV2, gbi_message);
         gbi_message.set_block_id(block_id);
         gbi_message.set_mode(flag);
 
@@ -119,7 +119,7 @@ namespace tfs
     // copy from DsLib::get_block_info
     int ToolUtil::get_block_info(const uint64_t ds_id, const uint64_t block_id, BlockInfoV2& block_info)
     {
-      GetBlockInfoMessageV2 req_gbi_msg;
+      create_msg_ref(GetBlockInfoMessageV2, req_gbi_msg);
       req_gbi_msg.set_block_id(block_id);
 
       NewClient* client = NewClientManager::get_instance().create_client();
@@ -188,7 +188,7 @@ namespace tfs
           (INVALID_BLOCK_ID != block_id) &&
           (INVALID_FILE_ID != file_id))
       {
-        FileInfoMessage fi_msg;
+        create_msg_ref(FileInfoMessage, fi_msg);
         fi_msg.set_block_id(block_id);
         fi_msg.set_file_id(file_id);
         fi_msg.set_mode(flag);
@@ -245,7 +245,7 @@ namespace tfs
           (offset >= 0) &&
           (NULL != data))
       {
-        ReadDataMessage rd_msg;
+        create_msg_ref(ReadDataMessage, rd_msg);
         rd_msg.set_block_id(block_id);
         rd_msg.set_file_id(file_id);
         rd_msg.set_length(length);
@@ -317,7 +317,7 @@ namespace tfs
         NewClient* client = NewClientManager::get_instance().create_client();
         if (NULL != client)
         {
-          GetServerStatusMessage req_gss_msg;
+          create_msg_ref(GetServerStatusMessage, req_gss_msg);
           req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
           req_gss_msg.set_return_row(block_id);
 
@@ -371,7 +371,7 @@ namespace tfs
         NewClient* client = NewClientManager::get_instance().create_client();
         if (NULL != client)
         {
-          GetServerStatusMessage req_gss_msg;
+          create_msg_ref(GetServerStatusMessage, req_gss_msg);
           req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO_V2);
           req_gss_msg.set_return_row(block_id);
           req_gss_msg.set_from_row(attach_block_id);
@@ -412,7 +412,7 @@ namespace tfs
     int ToolUtil::get_all_blocks_meta(const uint64_t ns_id, const VUINT64& blocks, std::vector<BlockMeta>& blocks_meta, const bool need_check_block)
     {
       int ret = TFS_SUCCESS;
-      BatchGetBlockInfoMessageV2 bgbi_message;
+      create_msg_ref(BatchGetBlockInfoMessageV2, bgbi_message);
       uint64_t* pblocks = bgbi_message.get_block_ids();
       bgbi_message.set_mode(T_READ);
       bgbi_message.set_flag(F_FAMILY_INFO);//需要获取到family info
@@ -489,7 +489,7 @@ namespace tfs
       family_members.clear();
 
       // get family info
-      GetFamilyInfoMessage gfi_message;
+      create_msg_ref(GetFamilyInfoMessage, gfi_message);
       gfi_message.set_family_id(family_id);
       gfi_message.set_mode(T_READ);
       tbnet::Packet* rsp = NULL;

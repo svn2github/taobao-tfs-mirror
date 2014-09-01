@@ -197,7 +197,7 @@ int SyncByBlockWorker::get_src_one_ds(uint64_t& src_ds_id)
 int SyncByBlockWorker::read_index(const uint64_t src_ds_id)
 {
   IndexDataV2 index_data;
-  ReadIndexMessageV2 rdindex_msg;
+  create_msg_ref(ReadIndexMessageV2, rdindex_msg);
   rdindex_msg.set_attach_block_id(block_id_);
   rdindex_msg.set_block_id(block_id_);
 
@@ -263,7 +263,7 @@ int SyncByBlockWorker::read_data(const uint64_t src_ds_id)
     TIMER_START();
     while (remainder_retrys > 0)
     {
-      ReadRawdataMessageV2 rrd_msg;
+      create_msg_ref(ReadRawdataMessageV2, rrd_msg);
       rrd_msg.set_block_id(block_id_);
       rrd_msg.set_offset(cur_offset);
       rrd_msg.set_length(read_size);

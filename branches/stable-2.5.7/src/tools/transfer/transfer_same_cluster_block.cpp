@@ -57,7 +57,7 @@ static int read_data(const Record& rd, ReadDataStruct& info)
   if (TFS_SUCCESS == ret)
   {
     FSName name(rd.name);
-    ReadDataMessageV2 req_msg;
+    create_msg_ref(ReadDataMessageV2 req_msg);
     req_msg.set_block_id(name.get_block_id());
     req_msg.set_file_id(name.get_file_id());
     req_msg.set_offset(info.offset);

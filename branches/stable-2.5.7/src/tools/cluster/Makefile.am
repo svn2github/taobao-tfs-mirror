@@ -1,10 +1,11 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
 	    -I$(TBLIB_ROOT)/include/tbnet\
+			-I$(EASY_ROOT)/include/easy\
       $(READLINE_INCLUDE)\
 		  -I$(TREST_ROOT)/include
 
-AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -ljson -lcurl
+AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -ljson -lcurl -lssl
 
 bin_PROGRAMS = transfer split_item_tool transfer_from_filesystem
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
@@ -16,7 +17,8 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(TAIR_CACHE_LDFLAGS)\
 	$(TBLIB_ROOT)/lib/libtbnet.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a\
-	$(TREST_ROOT)/lib/libtfs_cpp_restful_client.a
+	$(TREST_ROOT)/lib/libtfs_cpp_restful_client.a\
+	$(EASY_ROOT)/lib64/libeasy.a
 
 transfer_SOURCES=transfer.cpp transfer.h
 

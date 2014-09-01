@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
 int list_block(TfsClient* tfs_client, const uint64_t ds_id)
 {
   int ret_status = TFS_ERROR;
-  ListBlockMessage req_lb_msg;
+  create_msg_ref(ListBlockMessage, req_lb_msg);
   req_lb_msg.set_block_type(1);
 
   NewClient* client = NewClientManager::get_instance().create_client();

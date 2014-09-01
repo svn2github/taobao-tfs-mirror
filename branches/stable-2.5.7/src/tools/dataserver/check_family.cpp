@@ -7,8 +7,8 @@
 #include "common/error_msg.h"
 #include "common/version.h"
 #include "common/func.h"
-#include "common/base_packet_streamer.h"
 #include "common/base_packet.h"
+#include "common/base_packet_streamer.h"
 #include "message/message_factory.h"
 #include "tools/util/tool_util.h"
 #include "tools/util/ds_lib.h"
@@ -93,7 +93,7 @@ int CheckFamily::read_raw_data(const uint64_t server_id, const uint64_t block_id
   }
   else
   {
-    ReadRawdataMessageV2 req_msg;
+    create_msg_ref(ReadRawdataMessageV2, req_msg);
     tbnet::Packet* ret_msg = NULL;
     req_msg.set_block_id(block_id);
     req_msg.set_length(length);

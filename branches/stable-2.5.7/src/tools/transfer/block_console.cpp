@@ -353,7 +353,7 @@ int TranBlock::get_src_ds()
 
 int TranBlock::read_index()
 {
-  GetServerStatusMessage gfl_msg;
+  create_msg_ref(GetServerStatusMessage, gfl_msg);
   gfl_msg.set_status_type(GSS_BLOCK_FILE_INFO);
   gfl_msg.set_return_row(src_block_info_.block_id_);
 
@@ -440,7 +440,7 @@ int TranBlock::read_data()
     TIMER_START();
     while (remainder_retrys > 0)
     {
-      ReadRawDataMessage rrd_msg;
+      create_msg_ref(ReadRawDataMessage, rrd_msg);
       rrd_msg.set_block_id(src_block_info_.block_id_);
       rrd_msg.set_offset(cur_offset_);
       rrd_msg.set_length(read_size);
@@ -671,7 +671,7 @@ int TranBlock::write_data()
     {
       cur_len = std::min(static_cast<int64_t>(block_len), TRAN_BUFFER_SIZE);
 
-      WriteRawdataMessageV2 req;
+      create_msg_ref(WriteRawdataMessageV2, req);
       req.set_block_id(src_block_info_.block_id_);
       req.set_offset(cur_write_offset);
       req.set_length(cur_len);
@@ -744,7 +744,7 @@ int TranBlock::write_data()
 
 int TranBlock::write_index()
 {
-  WriteIndexMessageV2 req_msg;
+  create_msg_ref(WriteIndexMessageV2, req_msg);
   req_msg.set_block_id(dest_index_data_.header_.info_.block_id_);
   req_msg.set_attach_block_id(dest_index_data_.header_.info_.block_id_);
   req_msg.set_index_data(dest_index_data_);
@@ -887,7 +887,7 @@ int TranBlock::check_integrity()
 int TranBlock::rm_block_from_ns(uint64_t ds_id)
 {
   int ret = TFS_SUCCESS;
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
   req_cc_msg.set_value1(ds_id);
   req_cc_msg.set_value3(src_block_info_.block_id_);
@@ -931,7 +931,7 @@ int TranBlock::rm_block_from_ns(uint64_t ds_id)
 int TranBlock::rm_block_from_ds(uint64_t ds_id)
 {
   int ret = TFS_SUCCESS;
-  RemoveBlockMessageV2 req_rb_msg;
+  create_msg_ref(RemoveBlockMessageV2, req_rb_msg);
   req_rb_msg.set_block_id(src_block_info_.block_id_);
   req_rb_msg.set_tmp_flag(false);
   NewClient* client = NewClientManager::get_instance().create_client();
@@ -972,7 +972,7 @@ int TranBlock::rm_block_from_ds(uint64_t ds_id)
 int TranBlock::rm_block_from_ds_v2(uint64_t ds_id)
 {
   int ret = TFS_SUCCESS;
-  RemoveBlockMessageV2 req_rb_msg;
+  create_msg_ref(RemoveBlockMessageV2, req_rb_msg);
   req_rb_msg.set_block_id(src_block_info_.block_id_);
   req_rb_msg.set_tmp_flag(false);
   NewClient* client = NewClientManager::get_instance().create_client();

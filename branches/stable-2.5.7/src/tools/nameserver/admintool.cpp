@@ -237,7 +237,7 @@ int cmd_batch_file(const VSTRING& param)
 int cmd_get_bpr(const VSTRING& param)
 {
   UNUSED(param);
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_GET_BALANCE_PERCENT);
 
   tbnet::Packet* ret_message = NULL;
@@ -282,7 +282,7 @@ int cmd_set_bpr(const VSTRING& param)
     }
     else
     {
-      ClientCmdMessage req_cc_msg;
+      create_msg_ref(ClientCmdMessage, req_cc_msg);
       req_cc_msg.set_cmd(CLIENT_CMD_SET_BALANCE_PERCENT);
       req_cc_msg.set_value3(value3);
       req_cc_msg.set_value4(value4);
@@ -395,7 +395,7 @@ int cmd_set_run_param(const VSTRING& param)
     value = atoi(param[2].c_str());
   }
 
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_SET_PARAM);
   req_cc_msg.set_value3(index);
   req_cc_msg.set_value4(value);
@@ -498,7 +498,7 @@ int cmd_remove_block(const VSTRING& param)
     return TFS_ERROR;
   }
 
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
   req_cc_msg.set_value1(server_id);
   req_cc_msg.set_value3(block_id);
@@ -536,7 +536,7 @@ int cmd_remove_family(const VSTRING& param)
   if (param.size() == 2)
     flag = atoi(param[1].c_str());
 
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_DELETE_FAMILY);
   req_cc_msg.set_value3(family_id);
   req_cc_msg.set_value4(flag);
@@ -586,7 +586,7 @@ int cmd_load_block(const VSTRING& param)//Discarded function
     return TFS_ERROR;
   }
 
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_LOADBLK);
   req_cc_msg.set_value1(server_id);
   req_cc_msg.set_value3(block_id);
@@ -609,7 +609,7 @@ int cmd_compact_block(const VSTRING& param)
     return TFS_ERROR;
   }
 
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_COMPACT);
   req_cc_msg.set_value3(block_id);
 
@@ -813,7 +813,7 @@ int cmd_replicate_block(const VSTRING& param)
     flag = REPLICATE_BLOCK_MOVE_FLAG_YES;
   }
 
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_IMMEDIATELY_REPL);
   req_cc_msg.set_value1(src_id);
   req_cc_msg.set_value2(dest_id);
@@ -837,7 +837,7 @@ int cmd_repair_group_block(const VSTRING&)//Discarded function
   //   return TFS_ERROR;
   // }
 
-  //   ClientCmdMessage req_cc_msg;
+  //   create_msg_ref(ClientCmdMessage, req_cc_msg);
   //   req_cc_msg.set_cmd(CLIENT_CMD_REPAIR_GROUP);
   //   req_cc_msg.set_value3(block_id);
   //   req_cc_msg.set_value4(0);
@@ -890,7 +890,7 @@ int cmd_access_stat_info(const VSTRING& param)//Discarded function
 
     tbnet::Packet* ret_message = NULL;
     NewClient* client = NewClientManager::get_instance().create_client();
-    send_msg_to_server(server_id, client, &req_gss_msg, ret_message);
+    send_msg_to_server(server_id, client, &req_gss_msg, ret_message, DEFAULT_NETWORK_CALL_TIMEOUT, true); // clone msg
 
     if (ret_message == NULL)
     {
@@ -1018,7 +1018,7 @@ int cmd_access_control_flag(const VSTRING& param)//Discarded function
     return TFS_ERROR;
   }
 
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_SET_PARAM);
   req_cc_msg.set_value3(op_type); // param type == 1 as set acl flag.
   req_cc_msg.set_value1(v1); // ns_id as flag
@@ -1033,7 +1033,7 @@ int cmd_access_control_flag(const VSTRING& param)//Discarded function
 int cmd_rotate_log(const VSTRING& param)
 {
   UNUSED(param);
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_ROTATE_LOG);
   int32_t status = TFS_ERROR;
 
@@ -1419,7 +1419,7 @@ int cmd_dump_plan(const VSTRING& param)
     server_id = Func::get_host_ip(param[0].c_str());
   }
 
-  DumpPlanMessage req_dp_msg;
+  create_msg_ref(DumpPlanMessage, req_dp_msg);
   tbnet::Packet* ret_message = NULL;
 
   NewClient* client = NewClientManager::get_instance().create_client();
@@ -1534,7 +1534,7 @@ int cmd_clear_system_table(const VSTRING& param)
     return TFS_ERROR;
   }
 
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_CLEAR_SYSTEM_TABLE);
   req_cc_msg.set_value3(value);
 
@@ -1550,7 +1550,7 @@ int cmd_clear_system_table(const VSTRING& param)
 int cmd_set_all_server_report_block(const VSTRING& param)
 {
   UNUSED(param);
-  ClientCmdMessage req_cc_msg;
+  create_msg_ref(ClientCmdMessage, req_cc_msg);
   req_cc_msg.set_cmd(CLIENT_CMD_SET_ALL_SERVER_REPORT_BLOCK);
   int status = TFS_ERROR;
 

@@ -79,7 +79,7 @@ int compare_block(const string& ns_ip, const string& file_path, const string& ou
             NewClient* client = NULL;
             tbnet::Packet* ret_msg= NULL;
             FILE_INFO_LIST file_list;
-            GetServerStatusMessage req_msg;
+            create_msg_ref(GetServerStatusMessage, req_msg);
             req_msg.set_status_type(GSS_BLOCK_FILE_INFO);
             req_msg.set_return_row(block_id);
             const uint32_t size = ds_list.size();

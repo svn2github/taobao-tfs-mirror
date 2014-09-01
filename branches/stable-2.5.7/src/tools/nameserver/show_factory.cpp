@@ -34,7 +34,7 @@ namespace tfs
       for (uint32_t i = 0; i < ds_list.size(); ++i)
       {
         uint64_t ds_id = ds_list[i];
-        ListBlockMessage req_lb_msg;
+        create_msg_ref(ListBlockMessage, req_lb_msg);
         req_lb_msg.set_block_type(LB_BLOCK);
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* ret_msg = NULL;
