@@ -1,0 +1,101 @@
+S3twins 项目
+项目目标:
+	经过三到四期的建设, 发布一个兼容amazone S3 接口的存储系统
+简介: amazone的S3 是一个已经成为业内标准的简单存储系统, 采用restful 和 soap 两种api. 对用户按照使用收费, 业内知名的drop box等都是构筑在S3上的应用.
+S3做为一套可以很好服务各种互联网用户的存储系统, 其功能非常丰富. 比如权限控制, 比如多样的标签, 比如付费方式等. 这里不做详细介绍. 先规划三期
+一期先快速的实现基本的自定义文件名的存储功能
+二期加入权限, 除了IAM之外的bucket权限, acl, 签名查询都要搞
+三期逐步加入特殊功能, 以及控制台等 按照对我们实用性的顺序添加.
+
+总体设计
+
+
+client  --- meta_kv_server   ------- kv_store
+   \ 
+    \
+	 \  TFS
+	 
+	 
+客户端需要连接 meta_kv_server 来完成所有元信息的处理 比如 把自定的文件名转换成 tfs 文件名. 取得文件的tag信息, 取得文件的元信息等
+
+meta_kv_server 负责各种元信息的相关逻辑. 其本身不缓存, 直接使用后端的 kv_store.  kv_store 提供基本的 get put delete gets delets 服务外, 还要支持乐观锁和一定范围的scan. kv_stroe 可能采用tair或者ob. 前期先用tair.
+ 
+我们一期存储这些信息的时候要留有后期扩展的余地. 比如object的信息, 后期可能会有tag信息等
+我们的bucket_name, 和 object_name 可以使用的字符集不做限制. 长度限制在256(?)个字符之内
+
+kv_store存储结构初步想法
+我们有几种信息要存到kv_stroe里
+1 user的相关信息, 包括密钥, access_key, 权限, 拥有的 bucket等
+2 bucket的信息, 包括bucket的名字, 所有者, 权限等等
+3 object的信息
+
+一期第一个迭代我们先关注object的存储
+一个object的信息 key是 bucket_name\object_name\offset\version_id(这种key设置是否合适, 大家有没有更好的建议?) values包括 create_time modify_time, length, tfs, etag(一个全局唯一值)
+	这里一个问题, 因为我们不限制bucket_name和object_name的字符集, 那么怎么区分出分隔符?
+	offset和version_id两个字段, 在第一期迭代可以全部填0
+	
+一期第一个迭代, 我们要实现对object的put, get, 功能, 以及指定prefix 和终结符下的scan功能
+	对应于S3的 put object, get object, get bucket 这几个接口, 我们关注于数据存储和访问, 其它的权限之类的先不看
+	
+
+
+
+
+
+
+附录:
+具体api 
+在服务层面一个 get service 用途 ListAllMyBuckets http://docs.amazonwebservices.com/AmazonS3/latest/API/RESTServiceGET.html
+在bucket层面 http://docs.amazonwebservices.com/AmazonS3/latest/API/RESTBucketOps.html
+deleteBucket, 删除桶, 注意: 桶下的元素必须都已经被删除了		1
+DELETE Bucket cors  注意 cross-original (跨域资源共享协议)       3
+DELETE Bucket lifecycle                                         2-3
+DELETE Bucket policy											2
+DELETE Bucket website                                     		3
+GET Bucket (List Objects)										1
+GET Bucket acl                                                  2
+GET Bucket cors													3
+GET Bucket lifecycle											2-3
+GET Bucket policy												2
+GET Bucket location												无效, 作假
+GET Bucket logging												3
+GET Bucket notification											暂不考虑
+GET Bucket tagging												1
+GET Bucket Object versions										多版本是否支持
+GET Bucket requestPayment										3+
+GET Bucket versioning											多版本
+GET Bucket website												3
+HEAD Bucket														exist and permission
+List Multipart Uploads											1
+PUT Bucket														1
+PUT Bucket acl													2
+PUT Bucket cors													3
+PUT Bucket lifecycle											2-3
+PUT Bucket policy												2
+PUT Bucket logging												3
+PUT Bucket notification											无效
+PUT Bucket tagging												1
+PUT Bucket requestPayment										3+
+PUT Bucket versioning											多版本
+PUT Bucket website												3
+
+DELETE Object	注意多版本的用法								1
+GET Object		注意躲版本										1
+GET Object ACL													2
+GET Object torrent												3+
+HEAD Object		元信息											1
+OPTIONS object	跨域访问										3+
+POST Object														1
+POST Object restore												3+
+PUT Object														1
+PUT Object acl													2
+PUT Object - Copy												2
+Initiate Multipart Upload										1
+Upload Part														1
+Upload Part - Copy												1
+Complete Multipart Upload										1
+Abort Multipart Upload											1
+List Parts														1
+
+
+./configure --with-tair-root=/home/daoan/tair_bin --enable-kvmeta
