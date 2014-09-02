@@ -230,12 +230,15 @@ namespace tfs
               }
             }
           }
+          if (TFS_SUCCESS != ret)
+          {
+            family_to_tasks_.erase(family_id);
+          }
         }
 
         if (TFS_SUCCESS != ret)
         {
           task->dump(TBSYS_LOG_LEVEL(INFO), "add task failed, rollback, ret: %d", ret);
-          family_to_tasks_.erase(family_id);
           pending_queue_.erase(task);
           tbsys::gDelete(task);
         }

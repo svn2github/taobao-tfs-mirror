@@ -748,6 +748,7 @@ namespace tfs
             ar[i]->unlink_ratio = atoi(ratios[i][4].c_str());
           }
         }
+        need_migrate_back_ = TBSYS_CONFIG.getInt(CONF_SN_MIGRATESERVER, CONF_NEED_MIGRATE_BACK, 0);
       }
       return ret;
     }

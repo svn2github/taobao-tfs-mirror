@@ -283,6 +283,7 @@ namespace tfs
       int64_t hot_time_range_;
       AccessRatio full_disk_access_ratio_;
       AccessRatio system_disk_access_ratio_;
+      bool need_migrate_back_;
 
       int initialize(void);
 

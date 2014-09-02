@@ -179,6 +179,7 @@ namespace tfs
 #define CONF_SYSTEM_DISK_ACCESS_RATIO                 "full_disk_access_ratio"
 #define CONF_UPDATE_STATISTIC_INTERVAL                "update_statistic_interval"
 #define CONF_PENALTY_PERCENT                          "penalty_percent"
+#define CONF_NEED_MIGRATE_BACK                        "need_migrate_back"
 
 //rc
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"
