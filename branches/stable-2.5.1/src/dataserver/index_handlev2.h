@@ -72,6 +72,7 @@ namespace tfs
         int remove_self(const uint64_t logic_block_id);
         int check_load() const;
         int statistic_visit(common::ThroughputV2& throughput, const bool reset = false);
+        int update_block_statistic_info(const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback = false);
       protected:
         virtual int remmap_(const double threshold, const int32_t max_hash_bucket, const int32_t advise_per_mmap_size = 0) const = 0;
         virtual common::FileInfoV2*  get_file_infos_array_() const = 0;
@@ -122,7 +123,6 @@ namespace tfs
         int traverse(std::vector<common::FileInfo>& infos, const uint64_t logic_block_id ) const;
         int get_attach_blocks(common::ArrayHelper<uint64_t>& blocks) const;
         int get_index_num(int32_t& index_num) const;
-        int update_block_statistic_info(const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback = false);
         iterator begin();
         iterator end();
       protected:

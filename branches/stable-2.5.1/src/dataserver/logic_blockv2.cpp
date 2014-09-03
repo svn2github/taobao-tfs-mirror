@@ -967,6 +967,10 @@ namespace tfs
                       ret, logic_block_id, fileid);
                   get_index_handle_()->update_block_statistic_info_(data, index.size_, update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, true);
                 }
+                else
+                {
+                  get_index_handle_()->update_block_statistic_info(update ? OPER_UPDATE : OPER_INSERT, new_finfo.size_, old_finfo.size_, false);
+                }
               }
             }
           }
@@ -1015,6 +1019,7 @@ namespace tfs
             if (TFS_SUCCESS == ret)
             {
               finfo->modify_time_ = time(NULL);
+              get_index_handle_()->update_block_statistic_info(oper_type, 0, finfo->size_, false);
             }
           }
         }
