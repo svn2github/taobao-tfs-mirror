@@ -161,6 +161,7 @@ namespace tfs
         }
         resource_manager_->sort_ns_by_distance(app_id, common::Func::addr_to_str(session_ip, false),
             base_info_befor_sort, base_info);
+        resource_manager_->sort_krs_by_distance(common::Func::addr_to_str(session_ip, false), base_info);
 
       }
       else
@@ -219,6 +220,7 @@ namespace tfs
           {
             resource_manager_->sort_ns_by_distance(app_id,
                 Func::addr_to_str(session_ip, false), base_info_befor_sort, base_info);
+            resource_manager_->sort_krs_by_distance(common::Func::addr_to_str(session_ip, false), base_info);
           }
           if ((ret = update_session_info(app_id, session_id, keep_alive_info, KA_FLAG)) != TFS_SUCCESS)
           {
