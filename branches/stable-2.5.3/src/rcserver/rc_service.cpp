@@ -30,7 +30,7 @@ namespace tfs
     using namespace std;
 
     RcService::RcService() :
-      resource_manager_(NULL), session_manager_(NULL)
+      resource_manager_(NULL), session_manager_(NULL), is_inited_(false)
     {
     }
 
@@ -144,7 +144,6 @@ namespace tfs
 
     int RcService::destroy_service()
     {
-      is_inited_ = false;
       int ret = TFS_SUCCESS;
       is_inited_ = false;
       if (NULL != session_manager_)
