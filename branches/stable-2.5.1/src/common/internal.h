@@ -1375,7 +1375,8 @@ namespace tfs
     enum CheckFlag
     {
       CHECK_FLAG_NONE = 0,
-      CHECK_FLAG_SYNC
+      CHECK_FLAG_SYNC = 1,
+      CHECK_FLAG_SYNC_LESS = 2
     };
 
     struct CheckParam

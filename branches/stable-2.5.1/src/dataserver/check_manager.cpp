@@ -231,6 +231,15 @@ namespace tfs
       {
         ret = (replicas.size() > 0) ? TFS_SUCCESS : EXIT_NO_DATASERVER;
       }
+      else if (EXIT_NO_BLOCK == ret || EXIT_BLOCK_NOT_FOUND == ret)
+      {
+        // less block in slave cluster will auto synced
+        if (flag & CHECK_FLAG_SYNC_LESS)
+        {
+          ret = TFS_SUCCESS;
+        }
+      }
+
       if (TFS_SUCCESS == ret)
       {
         vector<uint64_t>::iterator iter = replicas.begin();
