@@ -489,7 +489,19 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         bool check = update ? true : is_writable();
-        ret = check && is_master(server) && check_copies_complete() ? TFS_SUCCESS : EXIT_CANNOT_APPLY_LEASE;
+        if (check)
+        {
+          if (update &&
+              SYSPARAM_NAMESERVER.enable_incomplete_update_ == ENABLE_INCOMPLETE_UPDATE_YES)
+          {
+            check = is_master(server);
+          }
+          else
+          {
+            check = is_master(server) && check_copies_complete();
+          }
+        }
+        ret = check ? TFS_SUCCESS : EXIT_CANNOT_APPLY_LEASE;
       }
       if (TFS_SUCCESS == ret)
       {
