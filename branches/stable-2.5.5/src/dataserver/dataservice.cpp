@@ -238,21 +238,21 @@ namespace tfs
       }
 
       //start clientmanager
-      if (TFS_SUCCESS == ret)
-      {
-        NewClientManager::get_instance().destroy();
-        assert(NULL != get_packet_streamer());
-        assert(NULL != get_packet_factory());
-        BasePacketStreamer* packet_streamer = dynamic_cast<BasePacketStreamer*>(get_packet_streamer());
-        BasePacketFactory* packet_factory   = dynamic_cast<BasePacketFactory*>(get_packet_factory());
-        ret = NewClientManager::get_instance().initialize(packet_factory, packet_streamer,
-                NULL, &BaseService::golbal_async_callback_func, this);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "start client manager failed, must be exit!!!");
-          ret = EXIT_NETWORK_ERROR;
-        }
-      }
+      //if (TFS_SUCCESS == ret)
+      //{
+      //  NewClientManager::get_instance().destroy();
+      //  assert(NULL != get_packet_streamer());
+      //  assert(NULL != get_packet_factory());
+      //  BasePacketStreamer* packet_streamer = dynamic_cast<BasePacketStreamer*>(get_packet_streamer());
+      //  BasePacketFactory* packet_factory   = dynamic_cast<BasePacketFactory*>(get_packet_factory());
+      //  ret = NewClientManager::get_instance().initialize(packet_factory, packet_streamer,
+      //          NULL, &BaseService::golbal_async_callback_func, this);
+      //  if (TFS_SUCCESS != ret)
+      //  {
+      //    TBSYS_LOG(ERROR, "start client manager failed, must be exit!!!");
+      //    ret = EXIT_NETWORK_ERROR;
+      //  }
+      //}
 
       if (TFS_SUCCESS == ret)
       {
