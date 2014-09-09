@@ -513,10 +513,10 @@ namespace tfs
         for (int64_t index = 0; index < helper.get_array_index(); ++index)
         {
           pserver = *helper.at(index);
-          if (DATASERVER_DISK_TYPE_SYSTEM == pserver->get_disk_type())
-            continue;
           assert(NULL != pserver);
           server = pserver->id();
+          if (DATASERVER_DISK_TYPE_SYSTEM == pserver->get_disk_type())
+            continue;
           has_move = pserver->is_alive()
             && !manager_.get_task_manager().exist_server(pserver->id())
             && manager_.get_task_manager().has_space_do_task_in_machine(pserver->id());
@@ -854,7 +854,7 @@ namespace tfs
       {
         servers.push_back((*iter));
       }
-      return servers.get_array_index() < servers.get_array_size();
+      return servers.get_array_index() < servers.get_array_size() || iter == table.end();
     }
 
     int ServerManager::in_apply_block_safe_mode_time_() const
