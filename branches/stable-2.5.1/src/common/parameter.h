@@ -97,6 +97,7 @@ namespace tfs
       double  balance_percent_;
       int32_t migrate_complete_wait_time_;
       int32_t check_integrity_interval_days_;
+      int32_t enable_incomplete_update_;
 
       NameServerParameter()
       {

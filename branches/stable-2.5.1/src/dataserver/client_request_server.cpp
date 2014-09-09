@@ -610,8 +610,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = get_op_manager().prepare_op(attach_block_id,
-            file_id, lease_id, OP_TYPE_UNLINK, is_master, family_info, servers,
-            TFS_FILE_OP_NO_LEASE);
+            file_id, lease_id, OP_TYPE_UNLINK, is_master, family_info, servers);
         if (TFS_SUCCESS == ret)
         {
           prepare_ok = true;

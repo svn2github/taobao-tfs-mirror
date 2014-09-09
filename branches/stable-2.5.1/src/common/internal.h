@@ -1105,7 +1105,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[63];
+    extern const char* dynamic_parameter_str[64];
 
 #pragma pack (1)
     struct FileInfoV2//30
@@ -1423,6 +1423,12 @@ namespace tfs
     {
       ENABLE_VERSION_CHECK_FLAG_NO = 0,
       ENABLE_VERSION_CHECK_FLAG_YES = 1
+    };
+
+    enum EnableUpdateWithSingleCopyFlag
+    {
+      ENABLE_INCOMPLETE_UPDATE_NO = 0,
+      ENABLE_INCOMPLETE_UPDATE_YES = 1
     };
 
     enum DeleteFamilyFlag
