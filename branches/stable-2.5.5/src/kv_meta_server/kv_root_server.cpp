@@ -205,6 +205,9 @@ namespace tfs
       {
         switch (pcode)
         {
+          case REQ_KV_RT_MS_KEEPALIVE_MESSAGE:
+            ret = kv_ms_keepalive(dynamic_cast<BasePacket*>(packet));
+            break;
           case REQ_KV_RT_GET_TABLE_MESSAGE:
             ret = get_tables(packet);
             break;

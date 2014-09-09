@@ -438,17 +438,21 @@ namespace tfs
      */
     int TaskManager::remove_block_from_dataserver_(const uint64_t block, const ServerItem& item, const time_t now)
     {
-      create_msg_ref(RemoveBlockMessageV2, rbmsg);
-      rbmsg.set_block_id(block);
-      BlockInfoV2 info;
-      info.block_id_ = block;
-      uint64_t servers[1];
-      common::ArrayHelper<uint64_t> helper(1,servers);
-      helper.push_back(item.server_);
-      manager_.block_oplog_write_helper(OPLOG_RELIEVE_RELATION, info, helper, now);
-      std::vector<uint64_t> targets;
-      targets.push_back(item.server_);
-      int32_t ret = post_msg_to_server(item.server_, &rbmsg, ns_async_callback);
+      int32_t ret = INVALID_BLOCK_ID != block && INVALID_SERVER_ID != item.server_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        create_msg_ref(RemoveBlockMessageV2, rbmsg);
+        rbmsg.set_block_id(block);
+        BlockInfoV2 info;
+        info.block_id_ = block;
+        uint64_t servers[1];
+        common::ArrayHelper<uint64_t> helper(1,servers);
+        helper.push_back(item.server_);
+        manager_.block_oplog_write_helper(OPLOG_RELIEVE_RELATION, info, helper, now);
+        std::vector<uint64_t> targets;
+        targets.push_back(item.server_);
+        ret = post_msg_to_server(item.server_, &rbmsg, ns_async_callback);
+      }
       return ret;
     }
 
