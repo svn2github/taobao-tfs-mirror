@@ -3,7 +3,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbnet\
             $(READLINE_INCLUDE)
 
-AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
+AM_LDFLAGS=-lrt -lpthread -ldl -ljemalloc $(READLINE_LIB)
 
 bin_PROGRAMS = checkserver
 
