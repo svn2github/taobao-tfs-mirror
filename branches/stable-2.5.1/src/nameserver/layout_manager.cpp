@@ -560,8 +560,8 @@ namespace tfs
         rotate_(current);
 
         now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
-          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
+        while (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
+          Func::sleep(1, ngi.destroy_flag_);
 
         if (ngi.is_master())
         {

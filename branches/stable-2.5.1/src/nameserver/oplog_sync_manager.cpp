@@ -691,6 +691,7 @@ namespace tfs
           load_family_info_(thseqno);
           load_family_log_(thseqno);
           load_complete = true;
+          TBSYS_LOG(INFO, "thread %d load family complete on startup or switch", thseqno);
         }
         else
         {
@@ -698,6 +699,7 @@ namespace tfs
           {
             load_family_info_(thseqno);
             load_family_log_(thseqno);
+            TBSYS_LOG(INFO, "thread %d load family complete on slave", thseqno);
           }
         }
        if (0 == thseqno && !ngi.load_family_info_complete())
@@ -723,15 +725,14 @@ namespace tfs
       FamilyManager& family_manager = manager_.get_family_manager();
       std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
       common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
+      int32_t times = 0;
+      int32_t size = 0;
+      TIMER_START();
       do
       {
-        TimeStat st1,st2;
         infos.clear();
         assert(NULL != dbhelper_[thseqno]);
-        st1.start();
         ret = dbhelper_[thseqno]->scan(infos, start_family_id, chunk, false,  GFactory::get_runtime_info().peer_ip_port_);
-        st1.end();
-        st2.start();
         std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
         int64_t now = Func::get_monotonic_time();
         for (; iter != infos.end(); ++iter)
@@ -762,10 +763,13 @@ namespace tfs
         }
         if (!infos.empty())
           ++start_family_id;
-        st2.end();
-        TBSYS_LOG(INFO, "SCAN CONSUM: %ld, %ld, size: %zd", st1.duration(), st2.duration(), infos.size());
+        times++;
+        size += infos.size();
       }
       while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
+      TIMER_DURATION();
+      TBSYS_LOG(DEBUG, "SCAN FAMILY chunk: %d, scan_times: %d, size: %d, cost: %ld",
+          chunk, times, size, TIMER_DURATION());
       return ret;
     }
 

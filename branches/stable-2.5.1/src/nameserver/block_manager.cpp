@@ -567,7 +567,7 @@ namespace tfs
     bool BlockManager::need_replicate(const BlockCollect* block) const
     {
       RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
-      return (NULL != block) ? (block->get_servers_size() < SYSPARAM_NAMESERVER.max_replication_ && !block->is_in_family()) : false;
+      return (NULL != block) ? (block->get_servers_size() < SYSPARAM_NAMESERVER.max_replication_ && !IS_VERFIFY_BLOCK(block->id()) && !block->is_in_family()) : false;
     }
 
     bool BlockManager::need_replicate(const BlockCollect* block, const time_t now) const
