@@ -14,6 +14,7 @@ bin_PROGRAMS = clear_file_system\
                reverse_name\
 							 check_down_disk_data\
                check_super_block \
+               view_local_key \
 							 safe_remove_block
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
@@ -63,7 +64,7 @@ safe_remove_block_SOURCES = safe_remove_block.cpp
 
 #synctool_SOURCES = sync_tool.cpp # for test syncserver
 
-#view_local_key_SOURCES = view_local_key.cpp
+view_local_key_SOURCES = view_local_key.cpp
 
 #read_block_prefix_SOURCES = read_block_prefix.cpp
 
