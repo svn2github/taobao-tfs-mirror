@@ -767,7 +767,7 @@ namespace tfs
         size += infos.size();
       }
       while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
-      TIMER_DURATION();
+      TIMER_END();
       TBSYS_LOG(DEBUG, "SCAN FAMILY chunk: %d, scan_times: %d, size: %d, cost: %ld",
           chunk, times, size, TIMER_DURATION());
       return ret;
