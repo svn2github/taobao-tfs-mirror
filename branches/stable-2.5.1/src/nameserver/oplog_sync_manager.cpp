@@ -725,6 +725,7 @@ namespace tfs
       FamilyManager& family_manager = manager_.get_family_manager();
       std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
       common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
+      const uint32_t limit = RANGE_DEFAULT_LIMIT; // tair default limit 1000
       int32_t times = 0;
       int32_t size = 0;
       TIMER_START();
@@ -732,7 +733,7 @@ namespace tfs
       {
         infos.clear();
         assert(NULL != dbhelper_[thseqno]);
-        ret = dbhelper_[thseqno]->scan(infos, start_family_id, chunk, false,  GFactory::get_runtime_info().peer_ip_port_);
+        ret = dbhelper_[thseqno]->scan(infos, start_family_id, chunk, false,  GFactory::get_runtime_info().peer_ip_port_, limit);
         std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
         int64_t now = Func::get_monotonic_time();
         for (; iter != infos.end(); ++iter)
@@ -766,7 +767,7 @@ namespace tfs
         times++;
         size += infos.size();
       }
-      while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
+      while (TAIR_HAS_MORE_DATA == ret || (TAIR_RETURN_SUCCESS == ret && infos.size() == limit));
       TIMER_END();
       TBSYS_LOG(DEBUG, "SCAN FAMILY chunk: %d, scan_times: %d, size: %d, cost: %ld",
           chunk, times, size, TIMER_DURATION());
@@ -779,11 +780,12 @@ namespace tfs
       std::vector<common::FamilyInfo> infos;
       int32_t ret = TAIR_RETURN_SUCCESS, rt = TFS_SUCCESS;
       FamilyManager& family_manager = manager_.get_family_manager();
+      const uint32_t limit = RANGE_DEFAULT_LIMIT; // tair default limit 1000
       do
       {
         infos.clear();
         assert(NULL != dbhelper_[DEFATUL_TAIR_INDEX]);
-        ret = dbhelper_[DEFATUL_TAIR_INDEX]->scan(infos, start_family_id,DELETE_FAMILY_CHUNK_DEFAULT_VALUE, true,  GFactory::get_runtime_info().peer_ip_port_);
+        ret = dbhelper_[DEFATUL_TAIR_INDEX]->scan(infos, start_family_id,DELETE_FAMILY_CHUNK_DEFAULT_VALUE, true,  GFactory::get_runtime_info().peer_ip_port_, limit);
         std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
         for (; iter != infos.end(); ++iter)
         {
@@ -805,7 +807,7 @@ namespace tfs
         if (!infos.empty())
           ++start_family_id;
       }
-      while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
+      while (TAIR_HAS_MORE_DATA == ret || (TAIR_RETURN_SUCCESS == ret && infos.size() == limit));
       return ret;
     }
 

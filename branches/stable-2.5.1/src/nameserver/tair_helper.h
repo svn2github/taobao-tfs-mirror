@@ -48,7 +48,7 @@ namespace tfs
       int del_family(const int64_t family_id, const bool del, const bool log, const uint64_t own_ipport);
       int query_family(common::FamilyInfo& family_info);
       int scan(std::vector<common::FamilyInfo>& family_infos, const int64_t start_family_id,
-          const int32_t chunk, const bool del, const uint64_t peer_ipport);
+          const int32_t chunk, const bool del, const uint64_t peer_ipport, const int32_t limit);
     private:
       int put_(const char* pkey, const char* skey, const char* value, const int32_t value_len);
       int get_(const char* pkey, const char* skey, char* value, const int32_t value_len);
