@@ -531,7 +531,7 @@ namespace tfs
           {
             NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
             tbnet::Packet* packet = iter->second.second;
-            if (DS_RENEW_LEASE_RESPONSE_MESSAGE == packet->getPCode())
+            if (DS_RENEW_BLOCK_RESPONSE_MESSAGE == packet->getPCode())
             {
               renew_block_callback(dynamic_cast<DsRenewBlockResponseMessage* >(packet));
             }
@@ -553,7 +553,6 @@ namespace tfs
           if (TFS_SUCCESS != ret)
           {
             // timeout, expire writable blocks in renew list
-            ret = EXIT_TIMEOUT_ERROR;
             DsRenewBlockMessage* msg = dynamic_cast<DsRenewBlockMessage*>(source);
             BlockInfoV2* infos = msg->get_block_infos();
             int32_t size = msg->get_size();
