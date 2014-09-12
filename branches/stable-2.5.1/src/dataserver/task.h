@@ -177,7 +177,7 @@ namespace tfs
         /**
          * @brief get all blocks in task
          */
-        virtual bool get_involved_blocks(common::ArrayHelper<uint64_t>& blocks)
+        virtual bool get_involved_blocks(common::ArrayHelper<uint64_t>& blocks) const
         {
           blocks.clear();
           return true;

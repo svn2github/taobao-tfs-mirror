@@ -656,7 +656,8 @@ namespace tfs
             ret = client_request_server_.callback(client);
           }
           else if (DS_APPLY_BLOCK_MESSAGE == pcode ||
-              DS_GIVEUP_BLOCK_MESSAGE == pcode)
+              DS_GIVEUP_BLOCK_MESSAGE == pcode ||
+              DS_RENEW_BLOCK_MESSAGE == pcode)
           {
             ret = writable_block_manager_.callback(client);
           }
