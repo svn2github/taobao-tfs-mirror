@@ -560,8 +560,11 @@ namespace tfs
         rotate_(current);
 
         now = Func::get_monotonic_time();
-        while (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
+        while (!ngi.is_destroyed() && (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete()))
+        {
           Func::sleep(1, ngi.destroy_flag_);
+          now = Func::get_monotonic_time();
+        }
 
         if (ngi.is_master())
         {
@@ -645,8 +648,12 @@ namespace tfs
       while (!ngi.is_destroyed())
       {
         now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
-          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ * 4, ngi.destroy_flag_);
+        while (!ngi.is_destroyed() && (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete()))
+        {
+          Func::sleep(1, ngi.destroy_flag_);
+          now = Func::get_monotonic_time();
+        }
+
 
         if (ngi.is_master())
         {
@@ -753,8 +760,11 @@ namespace tfs
       while (!ngi.is_destroyed())
       {
         int64_t now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
-          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ , ngi.destroy_flag_);
+        while (!ngi.is_destroyed() && (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete()))
+        {
+          Func::sleep(1, ngi.destroy_flag_);
+          now = Func::get_monotonic_time();
+        }
 
         now = Func::get_monotonic_time();
         while (ngi.in_report_block_time(now) && !ngi.is_destroyed())

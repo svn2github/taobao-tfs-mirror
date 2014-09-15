@@ -692,6 +692,22 @@ namespace tfs
           load_family_log_(thseqno);
           load_complete = true;
           TBSYS_LOG(INFO, "thread %d load family complete on startup or switch", thseqno);
+
+          while (!ngi.is_destroyed() && !ngi.load_family_info_complete())
+          {
+            bool  complete = true;
+            for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && complete; ++index)
+            {
+              complete = load_family_info_thread_[index]->load_complete();
+            }
+            ngi.set_load_family_info_complete(complete);
+            if (complete)
+            {
+              TBSYS_LOG(INFO, "all threads load complete");
+              break;
+            }
+            usleep(1000000);
+          }
         }
         else
         {
@@ -702,16 +718,6 @@ namespace tfs
             TBSYS_LOG(INFO, "thread %d load family complete on slave", thseqno);
           }
         }
-       if (0 == thseqno && !ngi.load_family_info_complete())
-       {
-         bool  complete = true;
-         for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && complete; ++index)
-         {
-           complete = load_family_info_thread_[index]->load_complete();
-         }
-         ngi.set_load_family_info_complete(complete);
-       }
-       usleep(500000);
       }
       return TFS_SUCCESS;
     }

@@ -555,7 +555,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         bool check = update ? true : is_writable();
-        ret = check && is_master(server) && check_copies_complete() ? TFS_SUCCESS : EXIT_CANNOT_APPLY_LEASE;
+        ret = check && is_master(server) && check_copies_complete() ? TFS_SUCCESS : EXIT_CANNOT_RENEW_LEASE;
       }
       if (TFS_SUCCESS == ret)
       {
