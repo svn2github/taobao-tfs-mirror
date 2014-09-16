@@ -718,6 +718,7 @@ namespace tfs
             TBSYS_LOG(INFO, "thread %d load family complete on slave", thseqno);
           }
         }
+        usleep(1000000);
       }
       return TFS_SUCCESS;
     }
