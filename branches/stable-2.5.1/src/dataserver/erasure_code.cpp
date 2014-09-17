@@ -18,8 +18,11 @@
 #include <stdlib.h>
 
 #include "ds_define.h"
+extern "C"
+{
 #include "galois.h"
 #include "jerasure.h"
+}
 #include "erasure_code.h"
 #include "tbsys.h"
 #include "common/error_msg.h"

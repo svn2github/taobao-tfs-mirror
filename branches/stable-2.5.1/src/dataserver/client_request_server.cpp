@@ -175,6 +175,7 @@ namespace tfs
             for (; iter != cleanup_family_id_array.end(); ++iter)
             {
               service_.get_block_manager().set_family_id(INVALID_FAMILY_ID, (*iter));
+              TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u clear family id", *iter);
             }
           }
         }

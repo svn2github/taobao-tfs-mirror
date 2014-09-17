@@ -1334,6 +1334,8 @@ namespace tfs
           // compactible with old family
           if (index_data.header_.data_crc_ != 0)
           {
+            TBSYS_LOG(INFO, "check integrity when recovery block %"PRI64_PREFIX"u, crc %u:%ld",
+                family_members_[i].block_, index_data.header_.data_crc_, crc_[i]);
             assert(index_data.header_.data_crc_ == crc_[i]);
           }
           ec_metas[i].mars_offset_ = index_data.header_.marshalling_offset_;
