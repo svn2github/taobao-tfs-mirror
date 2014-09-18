@@ -51,6 +51,7 @@ public class TFS_Restful_WebRootServer_Test extends BaseCase {
 
 		/* set base url */
 		TFS tfsServer = tfs_NginxA01;
+		//
 		String url = "http://10.232.4.35:3800";
 		String urlWebRoot = url +  "/tfs.list";
 		try {
