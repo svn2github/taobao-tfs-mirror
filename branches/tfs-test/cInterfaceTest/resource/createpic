@@ -1,9 +1,0 @@
-dd if=/dev/zero of=1b.jpg bs=1b count=1
-dd if=/dev/zero of=1k.jpg bs=10K count=1
-dd if=/dev/zero of=100k.jpg bs=100K count=1
-dd if=/dev/zero of=2m.jpg bs=2M count=1
-dd if=/dev/zero of=3m.jpg bs=3M count=1
-dd if=/dev/zero of=6m.jpg bs=6M count=1
-dd if=/dev/zero of=100m.jpg bs=100M count=1
-dd if=/dev/zero of=1g.jpg bs=1G count=1
-                                                                                    

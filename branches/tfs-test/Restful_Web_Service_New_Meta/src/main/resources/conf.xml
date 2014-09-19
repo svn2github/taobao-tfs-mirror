@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
-<beans default-autowire="byName">
-	<bean id="RestfulWebServer" class="Tool.RestfulWebServer">
-		<property name="restful_web_server" value="10.232.4.35:8032" />
-		<property name="tfs_app_key" value="tfsNginxA01" />
-	</bean>
-</beans>
