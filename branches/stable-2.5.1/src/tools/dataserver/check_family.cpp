@@ -32,7 +32,7 @@ class CheckFamily : public BaseWorker
 {
   public:
     CheckFamily():
-      data_num_(0), check_num_(0), member_num_(0), data_helper_(service)
+      mars_type_(0), data_num_(0), check_num_(0), member_num_(0), data_helper_(service)
     {
     }
 
@@ -51,6 +51,7 @@ class CheckFamily : public BaseWorker
 
       if(ret == TFS_SUCCESS)
       {
+        mars_type_ =  GET_MARSHALLING_TYPE(family_aid_info);
         data_num_ = GET_DATA_MEMBER_NUM(family_aid_info);
         check_num_ = GET_CHECK_MEMBER_NUM(family_aid_info);
         member_num_ = data_num_ + check_num_;
@@ -76,6 +77,7 @@ class CheckFamily : public BaseWorker
   private:
     vector<pair<uint64_t, uint64_t> > members_;
     vector<ECMeta> ec_metas_;
+    int8_t mars_type_;
     int32_t data_num_;
     int32_t check_num_;
     int32_t member_num_;
@@ -141,20 +143,25 @@ int CheckFamily::encode_and_compare()
   char* data[member_num_];
   memset(data, 0, member_num_ * sizeof(char*));
 
+  int encode_unit = 0;
+  int encode_unit_speed = 0;
   int32_t marshalling_len = ec_metas_[data_num_].mars_offset_;
   vector<ECMeta>::iterator min_ele = min_element(ec_metas_.begin(), ec_metas_.begin() + data_num_, ECMeta::m_compare);
   int32_t min_len = min_ele->mars_offset_;
   min_len /= check_size_speed;
   min_len *= check_size_speed;
 
-  int encode_unit = ErasureCode::ws_ * ErasureCode::ps_;
-  int encode_unit_speed = 2 * encode_unit;
-  if(0 != (marshalling_len % encode_unit))
+  int ret = encoder.config(data_num_, check_num_, mars_type_);
+  if(ret == TFS_SUCCESS)
   {
-    marshalling_len = (marshalling_len / encode_unit + 1) * encode_unit;
+    encode_unit = encoder.get_coding_unit();
+    encode_unit_speed = 2 * encode_unit;
+    if(0 != (marshalling_len % encode_unit))
+    {
+      marshalling_len = (marshalling_len / encode_unit + 1) * encode_unit;
+    }
   }
 
-  int ret = encoder.config(data_num_, check_num_);
   if(ret == TFS_SUCCESS)
   {
     for(int32_t i = 0; i < member_num_; ++i)
