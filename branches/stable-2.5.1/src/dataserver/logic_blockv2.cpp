@@ -172,10 +172,22 @@ namespace tfs
       return index_handle_->get_block_info(info);
     }
 
+    int BaseLogicBlock::get_block_info_in_memory(BlockInfoV2& info) const
+    {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return index_handle_->get_block_info_in_memory(info);
+    }
+
     int BaseLogicBlock::get_index_header(IndexHeaderV2& header) const
     {
       RWLock::Lock lock(mutex_, READ_LOCKER);
       return index_handle_->get_index_header(header);
+    }
+
+    int BaseLogicBlock::get_index_header_in_memory(IndexHeaderV2& header) const
+    {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return index_handle_->get_index_header_in_memory(header);
     }
 
     int BaseLogicBlock::set_index_header(const common::IndexHeaderV2& header)

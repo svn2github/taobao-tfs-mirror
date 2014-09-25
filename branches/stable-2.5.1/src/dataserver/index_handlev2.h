@@ -52,7 +52,9 @@ namespace tfs
         int update_block_info(const common::BlockInfoV2& info) const;
         int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT);
         int get_block_info(common::BlockInfoV2& info) const;
+        int get_block_info_in_memory(common::BlockInfoV2& info) const;
         int get_index_header(common::IndexHeaderV2& header) const;
+        int get_index_header_in_memory(common::IndexHeaderV2& header) const;
         int set_index_header(const common::IndexHeaderV2& header);
         virtual int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const;
         int update_used_offset(const int32_t size);
@@ -90,6 +92,14 @@ namespace tfs
         int insert_file_info_(common::FileInfoV2& info, char* buf, const int32_t nbytes, const bool update) const;
         bool is_load_;
         mutable common::MMapFileOperation file_op_;
+
+        // many online server have limted memory so that index swaped out to disk frequently
+        // when report block to ns, it brings a lot of disk seeks
+        // to eliminate the impact of report, we keep a in-mem-copy of IndexHeaderV2 in memory
+        // the BlockInfoV2 & ThroughputV2 in mem_header_ are kept consistent with their in-disk-copy
+        // the other members in IndexHeaderV2 are not synced to in-mem-copy for simplicity
+        mutable common::IndexHeaderV2 mem_header_;
+
       private:
         DISALLOW_COPY_AND_ASSIGN(BaseIndexHandle);
     };

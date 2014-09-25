@@ -56,7 +56,9 @@ namespace tfs
       int update_block_info(const common::BlockInfoV2& info) const;
       int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT);
       int get_block_info(common::BlockInfoV2& info) const;
+      int get_block_info_in_memory(common::BlockInfoV2& info) const;
       int get_index_header(common::IndexHeaderV2& header) const;
+      int get_index_header_in_memory(common::IndexHeaderV2& header) const;
       int set_index_header(const common::IndexHeaderV2& header);
       int flush();
       virtual int check_block_intact() { return common::TFS_SUCCESS;}
