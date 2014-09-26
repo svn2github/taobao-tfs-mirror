@@ -85,52 +85,21 @@ void DelBlockRange::dump(FILE* fp) const
   }
 }
 
-/*
-BlockBase::BlockBase()
-{
-  memset(&info_, 0, sizeof(info_));
-  server_list_.clear();
-}
-BlockBase::~BlockBase()
-{
-}
-int32_t BlockBase::deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const int8_t)
-{
-  if (input.getDataLen() <= 0 || offset >= length)
-  {
-    return TFS_ERROR;
-  }
-  int32_t len = input.getDataLen();
-  input.readBytes(&info_, sizeof(info_));
-
-  int8_t server_size = input.readInt8();
-  while (server_size > 0)
-  {
-    ServerInfo server_info;
-    server_info.server_id_ = input.readInt64();
-    server_list_.push_back(server_info);
-    server_size--;
-  }
-  offset += (len - input.getDataLen());
-  return TFS_SUCCESS;
-}
-
-void BlockBase::dump() const
-{
-  TBSYS_LOG(INFO, "block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %u, copys: %Zd",
-      info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_, info_.seq_no_, server_list_.size());
-}
-*/
 
 // stat info stat
 StatInfo::StatInfo()
   : block_count_(0), file_count_(0), file_size_(0), del_file_count_(0), del_file_size_(0),
-    replicate_count_(0), data_block_count_(0)
+    replicate_count_(0), data_block_count_(0), family_count_(0), total_file_size_(0)
 {
 }
 StatInfo::~StatInfo()
 {
 }
+void StatInfo::set_family_count(const int64_t family_count)
+{
+  family_count_ = family_count;
+}
+
 float StatInfo::div(const int64_t a, const int64_t b)
 {
   float ret = 0;
@@ -141,7 +110,7 @@ float StatInfo::div(const int64_t a, const int64_t b)
   return ret;
 }
 
-void StatInfo::add(const BlockBase& block_base)
+void StatInfo::add(const BlockBase& block_base, const float ratio)
 {
   block_count_++;
   file_count_ += block_base.info_.file_count_;
@@ -153,20 +122,17 @@ void StatInfo::add(const BlockBase& block_base)
   {
     data_block_count_ += 1;
   }
-  if (INVALID_FAMILY_ID != block_base.info_.family_id_)
-  {
-    family_set_.insert(block_base.info_.family_id_);
-  }
+  total_file_size_ += static_cast<int>((block_base.info_.size_ - block_base.info_.del_size_) * ratio);
 }
 
 void StatInfo::dump(FILE* fp) const
 {
-  fprintf(fp, "file_count: %"PRI64_PREFIX"d, file_size: %"PRI64_PREFIX"d, avg_file_size: %.2f,"
+  fprintf(fp, "user_file_count: %"PRI64_PREFIX"d, user_file_size: %"PRI64_PREFIX"d, avg_file_size: %.2f,"
       " del_file_count: %"PRI64_PREFIX"d, del_file_size: %"PRI64_PREFIX"d, del_avg_file_size: %.2f, del_ratio: %.2f%%\n",
       file_count_, file_size_, div(file_size_, file_count_),
       del_file_count_, del_file_size_, div(del_file_size_, del_file_count_), div(del_file_size_ * 100, file_size_));
-  fprintf(fp, "block_count: %"PRI64_PREFIX"d, avg_block_size: %.2f, family_count: %zd, "
-      "replicates: %"PRI64_PREFIX"d, data_blocks: %"PRI64_PREFIX"d, avg_replicate_count: %.3f\n",
-      block_count_, div(file_size_, block_count_), family_set_.size(),
-      replicate_count_, data_block_count_, div(replicate_count_, data_block_count_));
+  fprintf(fp, "block_count: %"PRI64_PREFIX"d, avg_block_size: %.2f, family_count: %"PRI64_PREFIX"d, "
+      "replicates: %"PRI64_PREFIX"d, data_blocks: %"PRI64_PREFIX"d, avg_replicate_count: %.3f, total_file_size: %"PRI64_PREFIX"d\n",
+      block_count_, div(file_size_, block_count_), family_count_,
+      replicate_count_, data_block_count_, div(replicate_count_, data_block_count_), total_file_size_);
 }

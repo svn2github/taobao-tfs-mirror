@@ -38,7 +38,7 @@ remote_block_cache_tool_SOURCES=remote_block_cache_tool.cpp
 endif
 
 repair_file_tool_SOURCES=repair_file_tool.cpp
-stat_tool_SOURCES=stat_main.cpp stat_tool.cpp stat_tool.h common.cpp common.h
+stat_tool_SOURCES=stat_main.cpp stat_tool.cpp stat_tool.h common.cpp common.h show_factory.h show_factory.cpp
 gen_compact_blk_order_SOURCES = gen_compact_blk_order.cpp common.cpp common.h
 #import_family_info_SOURCES = import_family_info.cpp
 #export_family_info_SOURCES = export_family_info.cpp
