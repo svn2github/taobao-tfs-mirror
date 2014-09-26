@@ -40,7 +40,6 @@
 #include "check_manager.h"
 #include "block_manager.h"
 #include "writable_block_manager.h"
-#include "migrate_manager.h"
 #include "integrity_manager.h"
 
 namespace tfs
@@ -216,7 +215,6 @@ namespace tfs
       WritableBlockManager writable_block_manager_;
       CheckManager check_manager_;
       IntegrityManager integrity_manager_;
-      MigrateManager* migrate_manager_;
       TimeoutThreadHelperPtr  timeout_thread_;
       RunTaskThreadHelperPtr  task_thread_;
       RunCheckThreadHelperPtr check_thread_;

@@ -65,7 +65,7 @@
 #include "ds_lease_message.h"
 #include "get_dataserver_all_blocks_header.h"
 #include "sync_file_entry_message.h"
-#include "migrate_ds_heart_message.h"
+#include "get_dataserver_stat_info_message.h"
 #include "expire_message.h"
 #include "client_ns_keepalive_message.h"
 

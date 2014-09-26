@@ -27,6 +27,7 @@
 #include "common/config_item.h"
 #include "common/directory_op.h"
 #include "clientv2/fsname.h"
+#include "message/get_dataserver_stat_info_message.h"
 
 namespace tfs
 {
@@ -46,7 +47,6 @@ namespace tfs
         writable_block_manager_(*this),
         check_manager_(*this),
         integrity_manager_(*this),
-        migrate_manager_(NULL),
         timeout_thread_(0),
         task_thread_(0),
         check_thread_(0),
@@ -57,7 +57,6 @@ namespace tfs
 
     DataService::~DataService()
     {
-      tbsys::gDelete(migrate_manager_);
       tbsys::gDelete(lease_manager_);
       tbsys::gDelete(block_manager_);
       timeout_thread_ = 0;
@@ -354,36 +353,6 @@ namespace tfs
       }
       */
 
-      // init migrate
-      if (TFS_SUCCESS == ret)
-      {
-        const char* str_dest_addr = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_MIGRATE_SERVER_ADDR, NULL);
-        uint64_t migrate_addr = common::INVALID_SERVER_ID;
-        if (NULL != str_dest_addr)
-        {
-          std::vector<string> vec;
-          common::Func::split_string(str_dest_addr, ':', vec);
-          ret = vec.size() == 2U ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
-          if (TFS_SUCCESS == ret)
-          {
-            migrate_addr = tbsys::CNetUtil::strToAddr(vec[0].c_str(), atoi(vec[1].c_str()));
-          }
-        }
-        if (TFS_SUCCESS == ret && INVALID_SERVER_ID != migrate_addr)
-        {
-          DsRuntimeGlobalInformation& instance = DsRuntimeGlobalInformation::instance();
-          migrate_manager_ = new (std::nothrow)MigrateManager(migrate_addr, instance.information_.id_);
-          assert(NULL != migrate_manager_);
-          ret = migrate_manager_->initialize();
-        }
-
-        if (INVALID_SERVER_ID != migrate_addr)
-        {
-          TBSYS_LOG(INFO, "start migrate heartbeat %s, migrate serveraddr: %s",
-            TFS_SUCCESS == ret ? "successful" : "failed", NULL != str_dest_addr ? str_dest_addr : "null");
-        }
-      }
-
       return ret;
     }
 
@@ -485,9 +454,6 @@ namespace tfs
       vector<SyncBase*>::iterator iter = sync_mirror_.begin();
       for (; iter != sync_mirror_.end(); iter++)
         (*iter)->stop();
-
-      if (NULL != migrate_manager_)
-        migrate_manager_->destroy();
 
       if (NULL != lease_manager_)
          lease_manager_->destroy();
@@ -913,6 +879,14 @@ namespace tfs
         {
           ret = message->reply(reply_msg);
         }
+      }
+      else if (GSS_DATASEVER_INFO == type)
+      {
+        GetDsStatInfoMessage* resp_msg = new (std::nothrow) GetDsStatInfoMessage();
+        assert(NULL != resp_msg);
+        DataServerStatInfo& info = DsRuntimeGlobalInformation::instance().information_;
+        resp_msg->set_dataserver_information(info);
+        ret = message->reply(resp_msg);
       }
       return ret;
     }

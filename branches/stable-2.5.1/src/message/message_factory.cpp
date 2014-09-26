@@ -537,11 +537,8 @@ namespace tfs
           case common::RSP_SYNC_FILE_ENTRY_MESSAGE:
             packet = new (std::nothrow)SyncFileEntryResponseMessage();
             break;
-          case common::REQ_MIGRATE_DS_HEARTBEAT_MESSAGE:
-            packet = new (std::nothrow)MigrateDsHeartMessage();
-            break;
-          case common::RSP_MIGRATE_DS_HEARTBEAT_MESSAGE:
-            packet = new (std::nothrow)MigrateDsHeartResponseMessage();
+          case common::DS_STAT_INFO_MESSAGE:
+            packet = new (std::nothrow)GetDsStatInfoMessage();
             break;
           case common::REPORT_CHECK_BLOCK_RESPONSE_MESSAGE:
             packet = new ReportCheckBlockResponseMessage();

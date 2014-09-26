@@ -22,6 +22,8 @@
 #include "message/client_cmd_message.h"
 #include "message/get_dataserver_all_blocks_header.h"
 #include "message/client_ns_keepalive_message.h"
+#include "message/get_dataserver_stat_info_message.h"
+#include "message/server_status_message.h"
 #include "requester/ns_requester.h"
 
 using namespace tfs::common;
@@ -34,6 +36,8 @@ namespace tfs
 
     MigrateManager::MigrateManager() :
       work_thread_(0),
+      ds_base_port_(3200),
+      max_full_ds_count_(12),
       not_full_block_count_(0),
       max_block_size_(0),
       migrate_complete_wait_time_(120),
@@ -50,6 +54,8 @@ namespace tfs
     int MigrateManager::initialize()
     {
       ns_vip_port_ = SYSPARAM_MIGRATESERVER.ns_vip_port_;
+      ds_base_port_ = SYSPARAM_MIGRATESERVER.ds_base_port_;
+      max_full_ds_count_ = SYSPARAM_MIGRATESERVER.max_full_ds_count_;
       balance_percent_ = SYSPARAM_MIGRATESERVER.balance_percent_;
       penalty_percent_ = SYSPARAM_MIGRATESERVER.penalty_percent_;
       update_statistic_interval_ = SYSPARAM_MIGRATESERVER.update_statistic_interval_;
@@ -85,63 +91,69 @@ namespace tfs
     }
 
 
-    int MigrateManager::keepalive(const common::DataServerStatInfo& server)
+    int MigrateManager::get_dataserver_info(const uint64_t server, DataServerStatInfo& info)
     {
-      int32_t ret = (INVALID_SERVER_ID  == server.id_) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      const int32_t MAX_TIMEOUT_MS = 1000;
+      GetServerStatusMessage req_msg;
+      req_msg.set_status_type(GSS_DATASEVER_INFO);
+      NewClient* client = NewClientManager::get_instance().create_client();
+      int32_t ret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        tbutil::Mutex::Lock lock(mutex_);
-        SERVER_MAP_ITER iter = servers_.find(server.id_);
-        if (servers_.end() != iter)
+        tbnet::Packet* result = NULL;
+        ret = send_msg_to_server(server, client, &req_msg, result, MAX_TIMEOUT_MS);
+        if (TFS_SUCCESS == ret)
         {
-          iter->second = server;
-          iter->second.last_update_time_ = Func::get_monotonic_time();
+          ret = DS_STAT_INFO_MESSAGE == result->getPCode() ? TFS_SUCCESS : EXIT_MIGRATE_DS_HEARTBEAT_ERROR;
         }
-        else
+        if (TFS_SUCCESS == ret)
         {
-          std::pair<SERVER_MAP_ITER, bool> res =
-              servers_.insert(SERVER_MAP::value_type(server.id_, server));
-          res.first->second.last_update_time_ = Func::get_monotonic_time();
+          GetDsStatInfoMessage* rsp = dynamic_cast<GetDsStatInfoMessage*>(result);
+          info = rsp->get_dataserver_information();
         }
       }
+
+      NewClientManager::get_instance().destroy_client(client);
+      TBSYS_LOG(INFO, "get ds: %s info %s, total_capacity: %"PRI64_PREFIX"d, use_capacity: %"PRI64_PREFIX"d, block_count: %d, disk type: %d",
+         tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "success" : "fail",
+         info.total_capacity_, info.use_capacity_, info.block_count_, info.type_);
       return ret;
     }
 
-    void MigrateManager::timeout(const int64_t now)
+    void MigrateManager::get_alive_dataservers_()
     {
-      const int32_t MAX_TIMEOUT_TIME = 60;//60s
-      tbutil::Mutex::Lock lock(mutex_);
-      SERVER_MAP_ITER iter = servers_.begin();
-      while (iter != servers_.end())
+      // check all disk & full dataserver alive or not
+      servers_.clear();
+      char buf[8] = {'\0'};
+      for (int32_t index = 0; index < max_full_ds_count_; ++index)
       {
-        if (now - iter->second.last_update_time_ > MAX_TIMEOUT_TIME)
+        snprintf(buf, sizeof(buf), "%d", index);
+        int32_t port = SYSPARAM_DATASERVER.get_real_ds_port(ds_base_port_, std::string(buf));
+        uint64_t server_id = Func::str_to_addr("127.0.0.1", port);
+        DataServerStatInfo info;
+        memset(&info, 0, sizeof(info));
+        int iret = get_dataserver_info(server_id, info);
+        if (TFS_SUCCESS == iret && INVALID_SERVER_ID != info.id_)
         {
-          TBSYS_LOG(INFO, "dataserver %s heart beat timeout, will remove it",
-              tbsys::CNetUtil::addrToString(iter->first).c_str());
-          servers_.erase(iter++);
-        }
-        else
-        {
-          ++iter;
+          servers_.insert(SERVER_MAP::value_type(info.id_, info));
         }
       }
     }
 
     void MigrateManager::run_()
     {
-      int64_t index  = 0;
       int64_t last_get_index_time = 0;
       int64_t last_get_ns_parameter_time = 0;
       const int32_t MAX_SLEEP_TIME = 30;//30s
-      const int32_t MAX_ARRAY_SIZE = 128;
       const int32_t WAIT_REPLICACTE_AND_REINSTATE_TIME = 300;// 5 min
       const int32_t MAX_UPDATE_INTERVAL = 300;// 5 min
-      std::pair<uint64_t, int32_t> array[MAX_ARRAY_SIZE];
-      common::ArrayHelper<std::pair<uint64_t, int32_t> >helper(MAX_ARRAY_SIZE, array);
-      migrateserver::MsRuntimeGlobalInformation& mrgi= migrateserver::MsRuntimeGlobalInformation::instance();
+      MsRuntimeGlobalInformation& mrgi= MsRuntimeGlobalInformation::instance();
       Func::sleep(MAX_SLEEP_TIME, mrgi.is_destroy_);// wait for ds to report finish
       while (!mrgi.is_destroyed())
       {
+        // get all alive servers info
+        get_alive_dataservers_();
+
         int64_t now = Func::get_monotonic_time();
         // update sleep interval after migrate one block successfully
         if (now >= last_get_ns_parameter_time + MAX_UPDATE_INTERVAL)
@@ -153,21 +165,20 @@ namespace tfs
         // update all blocks statistic info
         if (now >= last_get_index_time + update_statistic_interval_)
         {
-          helper.clear();
           blocks_[0].clear(); // system disk's hot blocks list
           blocks_[1].clear(); // data disk's cold blocks list
           not_full_block_count_ = 0;
 
-          get_all_servers_(helper);
-          for (index = 0; index < helper.get_array_index(); ++index)
+          CONST_SERVER_MAP_ITER iter = servers_.begin();
+          for (; iter != servers_.end(); ++iter)
           {
-            std::pair<uint64_t, int32_t>* item = helper.at(index);
-            get_index_header_(item->first, item->second);
+            const common::DataServerStatInfo& info = iter->second;
+            get_index_header_(info.id_, info.type_);
           }
           last_get_index_time = now;
-          TBSYS_LOG(INFO, "update %"PRI64_PREFIX"d dataservers blocks statistic info,"
+          TBSYS_LOG(INFO, "update %zd dataservers blocks statistic info,"
               " full disks'cold blocks count: %zd, system disks' blocks count: %zd",
-              helper.get_array_index(), blocks_[1].size(), blocks_[0].size());
+              servers_.size(), blocks_[1].size(), blocks_[0].size());
         }
 
         MigrateEntry entry;
@@ -204,6 +215,7 @@ namespace tfs
       int32_t ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        TIMER_START();
         GetAllBlocksHeaderMessage req_msg;
         do
         {
@@ -235,6 +247,10 @@ namespace tfs
             NewClientManager::get_instance().destroy_client(client);
           }
         } while (retry_times-- > 0 && TFS_SUCCESS != ret);
+
+        TIMER_END();
+        TBSYS_LOG(INFO, "get all index header from dataserver: %s %s, cost: %"PRI64_PREFIX"d, remainder retry times: %d",
+            tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "success" : "fail", TIMER_DURATION(), retry_times);
       }
       return ret;
     }
@@ -253,7 +269,7 @@ namespace tfs
           weights = MAX_WEIGTH; //compacted cold block migrate back to full disk for re-write firstly
           ++not_full_block_count_;
         }
-        else if (iheader.info_.last_access_time_ + hot_time_range_/2 > now)
+        else if (iheader.info_.last_access_time_ + hot_time_range_/2 > now) // exist access recently
         {
           calc = true;
         }
@@ -276,19 +292,6 @@ namespace tfs
       return weights;
     }
 
-    void MigrateManager::get_all_servers_(common::ArrayHelper<std::pair<uint64_t, int32_t> >& servers) const
-    {
-      tbutil::Mutex::Lock lock(mutex_);
-      CONST_SERVER_MAP_ITER iter = servers_.begin();
-      for (; iter != servers_.end(); ++iter)
-      {
-        if (iter->second.id_ != INVALID_SERVER_ID)
-        {
-          servers.push_back(std::make_pair(iter->second.id_, iter->second.type_));
-        }
-      }
-    }
-
     void MigrateManager::calc_system_disk_migrate_info_(MigrateEntry& entry) const
     {
       memset(&entry, 0, sizeof(entry));
@@ -297,13 +300,11 @@ namespace tfs
       if (total_capacity > 0 && use_capacity > 0)
       {
         double avg_ratio = static_cast<double>(use_capacity)/static_cast<double>(total_capacity);
-        tbutil::Mutex::Lock lock(mutex_);
         CONST_SERVER_MAP_ITER iter = servers_.begin();
         for (; iter != servers_.end(); ++iter)
         {
           const common::DataServerStatInfo& info = iter->second;
-          if (INVALID_SERVER_ID != info.id_ && common::DATASERVER_DISK_TYPE_SYSTEM == info.type_
-              && info.total_capacity_ > 0)
+          if (common::DATASERVER_DISK_TYPE_SYSTEM == info.type_ && info.total_capacity_ > 0)
           {
             double curr_ratio = static_cast<double>(info.use_capacity_) / static_cast<double>(info.total_capacity_);
 
@@ -328,9 +329,10 @@ namespace tfs
                   blocks_[1].begin()->second.second, full_disk_min_weight);
             }
             TBSYS_LOG(DEBUG, "dataserver count: %zd, system disk curr_ratio: %.3lf%%, [%.3lf%%, %.3lf%%], "
-                "will do migrate: %s, not full block count: %"PRI64_PREFIX"d", servers_.size(),
-                curr_ratio * 100.0, (avg_ratio - balance_percent_) * 100.0, avg_ratio * 100.0,
-                (entry.dest_addr_ != INVALID_SERVER_ID || entry.source_addr_ != INVALID_SERVER_ID) ?  "yes":"no", not_full_block_count_);
+                "will do migrate: %s, not full block count: %"PRI64_PREFIX"d, full/system disk block array count: %zd/%zd",
+                servers_.size(), curr_ratio * 100.0, (avg_ratio - balance_percent_) * 100.0, avg_ratio * 100.0,
+                (entry.dest_addr_ != INVALID_SERVER_ID || entry.source_addr_ != INVALID_SERVER_ID) ?  "yes":"no",
+                not_full_block_count_, blocks_[1].size(), blocks_[0].size());
           }
         }
       }
@@ -354,6 +356,7 @@ namespace tfs
             entry.block_id_ = (*iter).second.second;
             entry.source_addr_ = (*iter).second.first;
             blocks_[index].erase(iter);
+            ret = servers_.find(entry.source_addr_) != servers_.end() ? TFS_SUCCESS : EXIT_DATASERVER_NOT_FOUND;
           }
           else
           {
@@ -380,6 +383,7 @@ namespace tfs
           ret = EXIT_NO_BLOCK_NEED_MIGRATE_ERROR;
         }
       }
+      TBSYS_LOG(DEBUG, "choose migrate entry %s, ret: %d", TFS_SUCCESS == ret ? "success" : "fail", ret);
       return ret;
     }
 
@@ -435,7 +439,6 @@ namespace tfs
     bool MigrateManager::choose_move_dest_server_(const uint64_t source_addr, uint64_t& dest_addr) const
     {
       dest_addr = INVALID_SERVER_ID;
-      tbutil::Mutex::Lock lock(mutex_);
       VUINT64 server_ids;
       CONST_SERVER_MAP_ITER iter = servers_.begin();
       for (; iter != servers_.end(); ++iter)
@@ -457,16 +460,12 @@ namespace tfs
 
     void MigrateManager::statistic_all_server_info_(int64_t& total_capacity, int64_t& use_capacity) const
     {
-      tbutil::Mutex::Lock lock(mutex_);
       total_capacity = 0, use_capacity = 0;
       CONST_SERVER_MAP_ITER iter = servers_.begin();
       for (; iter != servers_.end(); ++iter)
       {
-        if (iter->second.id_ != INVALID_SERVER_ID)
-        {
-          total_capacity += iter->second.total_capacity_;
-          use_capacity   += iter->second.use_capacity_;
-        }
+        total_capacity += iter->second.total_capacity_;
+        use_capacity   += iter->second.use_capacity_;
       }
     }
 
