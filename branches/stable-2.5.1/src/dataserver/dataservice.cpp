@@ -50,7 +50,8 @@ namespace tfs
         timeout_thread_(0),
         task_thread_(0),
         check_thread_(0),
-        check_integrity_thread_(0)
+        check_integrity_thread_(0),
+        last_crash_time_(0)
     {
 
     }
@@ -270,6 +271,33 @@ namespace tfs
           TBSYS_LOG(ERROR, "load all blocks failed, ret: %d", ret);
       }
 
+      // after load blocks
+      if (TFS_SUCCESS == ret)
+      {
+        // we create a file when ds start
+        // unlink it when ds normally exit
+        // if it already exist when start, ds may have crashed last time
+        running_path_ = get_real_work_dir() + string("/running");
+        if (access(running_path_.c_str(), F_OK) == 0)
+        {
+          last_crash_time_ = 0;
+          std::vector<IndexHeaderV2> headers;
+          get_block_manager().get_all_block_header(headers);
+          std::vector<IndexHeaderV2>::iterator it = headers.begin();
+          for ( ; it != headers.end(); it++)
+          {
+            if (it->throughput_.last_update_time_ > last_crash_time_)
+            {
+              last_crash_time_ = it->throughput_.last_update_time_;
+            }
+          }
+        }
+        else
+        {
+          mknod(running_path_.c_str(), 0644, S_IFREG);
+        }
+      }
+
       // init lease manager
       if (TFS_SUCCESS == ret)
       {
@@ -478,6 +506,8 @@ namespace tfs
       {
         check_integrity_thread_->join();
       }
+
+      unlink(running_path_.c_str());
 
       return TFS_SUCCESS;
     }

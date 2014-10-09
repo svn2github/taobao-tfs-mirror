@@ -52,13 +52,86 @@ namespace tfs
       return service_.get_data_helper();
     }
 
+    bool IntegrityManager::check_one(const uint64_t block_id, const bool force)
+    {
+      bool checked = false;
+      int ret = TFS_SUCCESS;
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      int32_t now = time(NULL);
+      int32_t last_check_time = 0;
+      get_block_manager().get_last_check_time(last_check_time, block_id);
+      if (force ||
+          last_check_time + ds_info.check_integrity_interval_days_ * 86400 < now)
+      {
+        checked = true;
+        TIMER_START();
+        ret = get_data_helper().check_integrity(block_id);
+        TIMER_END();
+        if (TFS_SUCCESS == ret)
+        {
+          now = time(NULL);
+          get_block_manager().set_last_check_time(now, block_id);
+        }
+        TBSYS_LOG(INFO, "check block %"PRI64_PREFIX"u integrity, cost: %ld, ret: %d",
+            block_id, TIMER_DURATION(), ret);
+      }
+      return checked;
+    }
+
+    int IntegrityManager::get_dirty_expire_time()
+    {
+      int expire = 30;
+      char buf[32];
+      FileOperation op("/proc/sys/vm/dirty_expire_centisecs", O_RDONLY);
+      int size = op.pread(buf, 32, 0);
+      if (size > 0 && size < 32)  // has a valid value in file
+      {
+        buf[size] = '\0';
+        expire = atoi(buf) / 100;
+      }
+      TBSYS_LOG(INFO, "dirty page expire time: %d seconds", expire);
+      return expire;
+    }
+
+    void IntegrityManager::check_for_crash(const int32_t crash_time)
+    {
+      DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
+      int32_t expire_time = get_dirty_expire_time();
+      std::vector<uint64_t> blocks;
+      std::vector<IndexHeaderV2> headers;
+      get_block_manager().get_all_block_header(headers);
+
+      std::vector<IndexHeaderV2>::iterator it = headers.begin();
+      for ( ; it != headers.end(); it++)
+      {
+        if (it->throughput_.last_update_time_ + expire_time >= crash_time &&
+            !IS_VERFIFY_BLOCK(it->info_.block_id_) &&
+            it->used_offset_ > 0)
+        {
+          blocks.push_back(it->info_.block_id_);
+        }
+      }
+
+      std::vector<uint64_t>::iterator bit = blocks.begin();
+      for ( ; bit != blocks.end() && !ds_info.is_destroyed(); bit++)
+      {
+        // force check these blocks, one per minute
+        check_one(*bit, true);
+        interruptable_usleep(60 * 1000000);
+      }
+    }
+
     void IntegrityManager::run_check()
     {
+      if (service_.get_last_crash_time() > 0)
+      {
+        check_for_crash(service_.get_last_crash_time());
+      }
+
       // ds usually has replicate or reinstate task after starup
       // so it begin check block after 30mins (time taken for upgrade a cluster)
       interruptable_usleep(30 * 60 * 1000000);
 
-      int ret = TFS_SUCCESS;
       int32_t MIN_SLEEP_TIME_US = 1000000;
       std::vector<uint64_t> blocks;
       SuperBlockInfo* info = NULL;
@@ -68,7 +141,7 @@ namespace tfs
       while (!ds_info.is_destroyed())
       {
         // check_integrity_interval_day: 0 means stop check
-        while (!ds_info.check_integrity_interval_days_ && !ds_info.is_destroyed())
+        while (ds_info.check_integrity_interval_days_ <= 0 && !ds_info.is_destroyed())
         {
           interruptable_usleep(MIN_SLEEP_TIME_US);
         }
@@ -80,7 +153,7 @@ namespace tfs
           std::vector<uint64_t>::iterator it = blocks.begin();
           for ( ; it != blocks.end() &&
               !ds_info.is_destroyed() &&
-              ds_info.check_integrity_interval_days_; it++)
+              ds_info.check_integrity_interval_days_ > 0; it++)
           {
             // TODO, verify check block's raw data
             if (IS_VERFIFY_BLOCK(*it))
@@ -95,26 +168,10 @@ namespace tfs
 
             if (!ds_info.is_destroyed())
             {
-              int32_t now = time(NULL);
-              int32_t last_check_time = 0;
-              get_block_manager().get_last_check_time(last_check_time, *it);
-              if (last_check_time +
-                  ds_info.check_integrity_interval_days_ * 86400 < now)
+              if(check_one(*it))
               {
-                ret = get_data_helper().check_integrity(*it);
-                if (TFS_SUCCESS == ret)
-                {
-                  now = time(NULL);
-                  get_block_manager().set_last_check_time(now, *it);
-                }
-                else if (EXIT_NO_LOGICBLOCK_ERROR == ret)
-                {
-                  ret = TFS_SUCCESS;
-                }
-                //TODO: assert(EXIT_CHECK_CRC_ERROR != ret);
-                TBSYS_LOG(INFO, "check block %"PRI64_PREFIX"u integrity, ret: %d", *it, ret);
-                int64_t per_block_cost =
-                  static_cast<int64_t>(ds_info.check_integrity_interval_days_) * 86400 / (info->used_main_block_count_ + 1);
+                int64_t per_block_cost = static_cast<int64_t>(ds_info.check_integrity_interval_days_) * 86400 /
+                  (info->used_main_block_count_ + 1);
                 interruptable_usleep(per_block_cost * 1000000);
               }
               else

@@ -40,6 +40,9 @@ namespace tfs
 
      private:
         bool should_check_now();
+        void check_for_crash(const int32_t crash_time);
+        bool check_one(const uint64_t block_id, const bool force = false);
+        int get_dirty_expire_time();
 
      private:
         DISALLOW_COPY_AND_ASSIGN(IntegrityManager);

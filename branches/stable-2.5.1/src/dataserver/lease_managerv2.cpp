@@ -389,8 +389,10 @@ namespace tfs
     void LeaseManager::run_writable_blocks()
     {
       const int32_t SLEEP_TIME_US = 1 * 1000 * 1000;
+      const int32_t APPLY_INTERVAL_S = 3;
       const int32_t GIVEUP_INTERVAL_S = 5;
       const int32_t DUMP_INTERVAL_S = 5;
+      int64_t last_apply_time = 0;
       int64_t last_giveup_time = 0;
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
       while (!ds_info.is_destroyed())
@@ -423,9 +425,10 @@ namespace tfs
           if (ds_info.information_.type_ == DATASERVER_DISK_TYPE_FULL)
           {
             int32_t need = ds_info.max_write_file_count_ - writable;
-            if (need > 0)
+            if (need > 0 && now > last_apply_time + APPLY_INTERVAL_S)
             {
               get_writable_block_manager().apply_writable_block(need);
+              last_apply_time = now;
             }
           }
 

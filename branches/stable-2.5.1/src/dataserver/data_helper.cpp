@@ -1451,7 +1451,7 @@ namespace tfs
 
     int DataHelper::check_integrity(const uint64_t block_id)
     {
-      int ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
+      int ret = (INVALID_BLOCK_ID != block_id && !IS_VERFIFY_BLOCK(block_id)) ? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         BaseLogicBlock* src = get_block_manager().get(block_id);

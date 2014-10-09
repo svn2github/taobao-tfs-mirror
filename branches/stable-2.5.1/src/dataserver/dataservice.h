@@ -100,6 +100,7 @@ namespace tfs
       std::string get_real_work_dir();
 
       // common interfaces
+      inline int32_t get_last_crash_time() { return last_crash_time_; }
       inline BlockManager& get_block_manager() { return *block_manager_;}
       inline OpManager& get_op_manager() { return op_manager_; }
       inline LeaseManager& get_lease_manager() { return *lease_manager_; }
@@ -220,6 +221,8 @@ namespace tfs
       RunCheckThreadHelperPtr check_thread_;
       CheckIntegrityThreadHelperPtr check_integrity_thread_;
       std::vector<SyncBase*> sync_mirror_;
+      std::string running_path_;
+      int32_t last_crash_time_;
     };
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

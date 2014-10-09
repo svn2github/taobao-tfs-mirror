@@ -366,12 +366,12 @@ namespace tfs
         memset(&throughput, 0, sizeof(throughput));
         IndexHeaderV2* header = get_index_header_();
         assert(NULL != header);
-        throughput = header->throughput_;
+        throughput = mem_header_.throughput_; // use mem header to reduce io
         if (reset)
         {
           memset(&header->throughput_, 0, sizeof(header->throughput_));
           header->throughput_.last_statistics_time_ = time(NULL);
-          mem_header_.throughput_.last_statistics_time_ = time(NULL);
+          mem_header_.throughput_ = header->throughput_;
         }
       }
       return ret;
@@ -794,8 +794,8 @@ namespace tfs
             memset((data + INDEX_HEADER_V2_LENGTH), 0, file_size - INDEX_HEADER_V2_LENGTH);
             int64_t length = file_op_.pwrite(data, file_size, 0);
             ret = (length == file_size) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
-            if (TFS_SUCCESS == ret)
-              ret = file_op_.fdatasync();
+            //if (TFS_SUCCESS == ret)
+            //  ret = file_op_.fdatasync();
             tbsys::gDeleteA(data);
           }
         }
@@ -808,7 +808,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           is_load_ = true;
-          ret = flush();
+          //ret = flush();
         }
 
         // create data index, sync IndexHeaderV2 to in memory copy
@@ -864,14 +864,9 @@ namespace tfs
 
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "index corrupt. logic blockid: %"PRI64_PREFIX"u, header blockid: %"PRI64_PREFIX"u, file size: %"PRI64_PREFIX"d, header file size : %"PRI64_PREFIX"d, bucket size: %d",
+          TBSYS_LOG(WARN, "index corrupt. logic blockid: %"PRI64_PREFIX"u, header blockid: %"PRI64_PREFIX"u, file size: %"PRI64_PREFIX"d, header file size : %"PRI64_PREFIX"d, bucket size: %d",
               logic_block_id, header->info_.block_id_, file_size, size, header->file_info_bucket_size_);
         }
-
-        assert(INVALID_BLOCK_ID != logic_block_id);
-        assert(logic_block_id == header->info_.block_id_);
-        assert(header->file_info_bucket_size_ > 0);
-        assert(file_size >= size);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -1239,8 +1234,8 @@ namespace tfs
             memset((data + INDEX_HEADER_V2_LENGTH), 0, file_size - INDEX_HEADER_V2_LENGTH);
             int64_t length = file_op_.pwrite(data, file_size, 0);
             ret = (length == file_size) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
-            if (TFS_SUCCESS == ret)
-              ret = file_op_.fdatasync();
+            //if (TFS_SUCCESS == ret)
+            //  ret = file_op_.fdatasync();
             tbsys::gDeleteA(data);
           }
         }
@@ -1257,7 +1252,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           is_load_ = true;
-          ret = flush();
+          //ret = flush();
         }
 
         // create parity index, sync IndexHeaderV2 to in memory copy
@@ -1285,7 +1280,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         file_size = file_op_.size();
-        ret = file_size <= 0 ? EXIT_FILE_OP_ERROR : TFS_SUCCESS;
+        ret = file_size <= 0 ? EXIT_INDEX_CORRUPT_ERROR : TFS_SUCCESS;
       }
       if (TFS_SUCCESS == ret)
       {
