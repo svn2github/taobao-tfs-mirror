@@ -51,6 +51,7 @@ namespace tfs
       balance_thread_(0),
       timeout_thread_(0),
       redundant_thread_(0),
+      load_bitmap_thread_(0),
       last_rotate_log_time_(0),
       plan_run_flag_(PLAN_RUN_FLAG_REPLICATE),
       manager_(manager),
@@ -104,6 +105,7 @@ namespace tfs
       balance_thread_ = 0;
       timeout_thread_ = 0;
       redundant_thread_ = 0;
+      load_bitmap_thread_ = 0;
     }
 
     int LayoutManager::initialize()
@@ -123,6 +125,7 @@ namespace tfs
         balance_thread_  = new BuildBalanceThreadHelper(*this);
         timeout_thread_  = new TimeoutThreadHelper(*this);
         redundant_thread_= new RedundantThreadHelper(*this);
+        load_bitmap_thread_ = new LoadBitmapThreadHelper(*this);
       }
 
       if (TFS_SUCCESS == ret)
@@ -130,7 +133,15 @@ namespace tfs
         gc_manager_.initialize(SYSPARAM_NAMESERVER.object_wait_free_time_, SYSPARAM_NAMESERVER.object_wait_clear_time_);
       }
 
-      init_block_logger_();
+      if (TFS_SUCCESS == ret)
+      {
+        ret = block_manager_.init_bitmap();
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        init_block_logger_();
+      }
       return ret;
     }
 
@@ -163,6 +174,10 @@ namespace tfs
       if (redundant_thread_ != 0)
       {
         redundant_thread_->join();
+      }
+      if (load_bitmap_thread_ != 0)
+      {
+        load_bitmap_thread_->join();
       }
       oplog_sync_mgr_.wait_for_shut_down();
     }
@@ -737,6 +752,50 @@ namespace tfs
         get_gc_manager().gc(now);
 
         usleep(100000);
+      }
+    }
+
+    void LayoutManager::load_bitmap_()
+    {
+      const int32_t MAX_SLEEP_TIME_US  = 500000;
+      const int32_t LOAD_BITMAP_INTERVAL_TIME = 7 * 24 * 3600; // one week
+      const int32_t MAX_SCAN_BLOCK_NUMS = MAX_BLOCK_CHUNK_NUMS;
+      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+      while (!ngi.is_destroyed())
+      {
+        int64_t now = Func::get_monotonic_time();
+        while (!ngi.is_destroyed() && (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete()))
+        {
+          Func::sleep(1, ngi.destroy_flag_);
+          now = Func::get_monotonic_time();
+        }
+
+        bool finished = false;
+        uint64_t start_blockid = 0;
+        uint64_t check_max_blockid = oplog_sync_mgr_.get_max_blockid();// just lower 56 bit valid, ignore verify block
+        assert(check_max_blockid > 0);
+        // speed control: sleep per scan MAX_SCAN_BLOCK_NUMS blocks
+        int64_t interval = static_cast<int64_t>(1000000 * ((1.0f * MAX_SCAN_BLOCK_NUMS * 24 * 3600) / check_max_blockid)); // us
+        int32_t sleep_wait_time = std::min(MAX_SLEEP_TIME_US, static_cast<int32_t>(interval));
+        while (!ngi.is_destroyed() && !finished)
+        {
+          uint64_t end_blockid = std::min(start_blockid + MAX_SCAN_BLOCK_NUMS, check_max_blockid + 1);// not include end
+          int iret = block_manager_.check_and_set_bitmap(start_blockid, end_blockid);
+          if (TFS_SUCCESS != iret)
+          {
+            TBSYS_LOG(WARN, "check and set bitmap fail, start blockid: %"PRI64_PREFIX"u, ret: %d", start_blockid, iret);
+          }
+          finished = (end_blockid > check_max_blockid);
+
+          TBSYS_LOG(INFO, "current start_blockid: %"PRI64_PREFIX"u, end_blockid: %"PRI64_PREFIX"u,"
+              " check max_blockid: %"PRI64_PREFIX"u, finished: %s, sleep time: %d", start_blockid, end_blockid,
+              check_max_blockid, finished ? "true" : "false", sleep_wait_time);
+          start_blockid = end_blockid;
+          usleep(sleep_wait_time);
+        }
+
+        Func::sleep(LOAD_BITMAP_INTERVAL_TIME, ngi.destroy_flag_);
+        //TODO: exit after scanning several circles
       }
     }
 
@@ -1788,5 +1847,20 @@ namespace tfs
       }
     }
 
+    void LayoutManager::LoadBitmapThreadHelper::run()
+    {
+      try
+      {
+        manager_.load_bitmap_();
+      }
+      catch(std::exception& e)
+      {
+        TBSYS_LOG(ERROR, "catch exception: %s", e.what());
+      }
+      catch(...)
+      {
+        TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
+      }
+    }
   } /** nameserver **/
 }/** tfs **/

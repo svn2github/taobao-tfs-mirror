@@ -33,6 +33,7 @@ namespace tfs
         uint64_t generation(const bool verify);
         int update(const uint64_t id);
         uint64_t skip(const int32_t num = SKIP_BLOCK_NUMBER);
+        inline uint64_t get_id() { return global_id_; }
       private:
         int flush_(const uint64_t id) const;
         DISALLOW_COPY_AND_ASSIGN(BlockIdFactory);

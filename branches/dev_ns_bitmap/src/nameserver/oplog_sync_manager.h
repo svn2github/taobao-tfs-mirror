@@ -57,6 +57,7 @@ namespace tfs
       int replay_helper_do_oplog(const time_t now, const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
 
       inline uint64_t generation(const bool verify) { return id_factory_.generation(verify);}
+      inline uint64_t get_max_blockid() { return id_factory_.get_id();}
 
       int create_family_id(int64_t& family_id);
       int create_family(common::FamilyInfo& family_info);

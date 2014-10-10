@@ -635,6 +635,22 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int ClientRequestServer::handle_control_reset_block_bitmap(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
+    {
+      uint64_t block_id = static_cast<uint64_t>(info.value1_);
+      int ret = INVALID_BLOCK_ID != block_id ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = manager_.get_block_manager().clear_bitmap_by_blockid(block_id);
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        snprintf(buf, buf_length, "reset block: %"PRI64_PREFIX"u to bitmap fail, ret: %d", block_id, ret);
+      }
+      TBSYS_LOG(INFO, "handle control handle_control_clear_block_bitmap block: %"PRI64_PREFIX"u, ret: %d",  info.value1_, ret);
+      return ret;
+    }
+
     int ClientRequestServer::handle_control_cmd(const ClientCmdInformation& info, common::BasePacket* msg, const int64_t buf_length, char* buf)
     {
       time_t now = Func::get_monotonic_time();
@@ -676,6 +692,9 @@ namespace tfs
           break;
         case CLIENT_CMD_SET_ALL_SERVER_REPORT_BLOCK:
           ret = handle_control_set_all_server_report_block(info, buf_length, buf);
+          break;
+        case CLIENT_CMD_RESET_BLOCK_BITMAP:
+          ret = handle_control_reset_block_bitmap(info, buf_length, buf);
           break;
         default:
           snprintf(buf, buf_length, "unknow client cmd: %d", info.cmd_);

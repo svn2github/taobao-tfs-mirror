@@ -15,6 +15,7 @@
  */
 
 #include "common/lock.h"
+#include "common/base_service.h"
 #include "global_factory.h"
 #include "block_manager.h"
 #include "server_collect.h"
@@ -32,7 +33,8 @@ namespace tfs
     static const float   MAX_BLOCK_CHUNK_SLOT_EXPAND_RATION_DEFAULT = 0.1;
     BlockManager::BlockManager(LayoutManager& manager):
       manager_(manager),
-      last_traverse_block_(0)
+      last_traverse_block_(0),
+      bitmap_(NULL)
     {
       for (int32_t i = 0; i < MAX_BLOCK_CHUNK_NUMS; i++)
       {
@@ -54,6 +56,7 @@ namespace tfs
         }
         tbsys::gDelete(blocks_[i]);
       }
+      tbsys::gDelete(bitmap_);
     }
 
     #ifdef TFS_GTEST
@@ -68,15 +71,36 @@ namespace tfs
 
     BlockCollect* BlockManager::insert(const uint64_t block, const time_t now, const bool set)
     {
-      RWLock::Lock lock(get_mutex_(block), WRITE_LOCKER);
-      return insert_(block, now, set);
+      get_mutex_(block).wrlock();
+      BlockCollect* pblock = insert_(block, now, set);
+      get_mutex_(block).unlock();
+      if (set && NULL != pblock && !IS_VERFIFY_BLOCK(block))
+      {
+        int iret = set_bitmap_by_blockid_(block);
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u set bitmap fail, ret: %d", block, iret);
+        }
+      }
+      return pblock;
     }
 
     bool BlockManager::remove(BlockCollect*& object, const uint64_t block)
     {
       object = NULL;
-      RWLock::Lock lock(get_mutex_(block), WRITE_LOCKER);
+      get_mutex_(block).wrlock();
       object = remove_(block);
+      get_mutex_(block).unlock();
+
+      // rollback after new block also need remove during safe_mode_time
+      if (NULL != object && !IS_VERFIFY_BLOCK(block))
+      {
+        int iret = clear_bitmap_by_blockid_(block);
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u reset bitmap fail, ret: %d", block, iret);
+        }
+      }
       return true;
     }
 
@@ -111,6 +135,92 @@ namespace tfs
       return result;
     }
 
+    int BlockManager::set_bitmap_by_blockid_(const uint64_t block_id)
+    {
+      int ret = (INVALID_BLOCK_ID == block_id || IS_VERFIFY_BLOCK(block_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = bitmap_->set(GET_REAL_BLOCKID(block_id));
+      }
+      return ret;
+    }
+
+    int BlockManager::init_bitmap()
+    {
+      assert(NULL == bitmap_);
+      TIMER_START();
+      int ret = TFS_SUCCESS;
+      uint64_t max_blockid = manager_.get_oplog_sync_mgr().get_max_blockid();
+      int32_t first_map_size = ALIGN(ALIGN(max_blockid, 8) / 8, SSD_BLOCK_SIZE);
+      MMapOption mmap_option;
+      mmap_option.first_mmap_size_ = first_map_size;
+      mmap_option.max_mmap_size_ = MAX_BITMAP_MAP_SIZE;// bimap file can't more then 1G byte
+      mmap_option.per_mmap_size_ = SSD_BLOCK_SIZE;
+      char filename[256];
+      BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+      snprintf(filename, 256, "%s/nameserver/bitmap_0", service->get_work_dir());// cluster_id tmp set 0
+      bitmap_ = new MBitMapOperation(std::string(filename));
+      assert(NULL != bitmap_);
+      ret = bitmap_->mmap(mmap_option); // init all bit filled by zero
+      TIMER_END();
+      TBSYS_LOG(INFO, "init bitmap file: %s %s, ret: %d, len: %d, cost: %"PRI64_PREFIX"d",
+          filename, TFS_SUCCESS == ret ? "succ" : "fail", ret, first_map_size, TIMER_DURATION());
+      return ret;
+    }
+
+    int BlockManager::clear_bitmap_by_blockid(const uint64_t block_id)
+    {
+      int ret = (INVALID_BLOCK_ID == block_id || IS_VERFIFY_BLOCK(block_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = exist(block_id) ? EXIT_BLOCK_ALREADY_EXIST : TFS_SUCCESS;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = clear_bitmap_by_blockid_(block_id);
+      }
+      return ret;
+    }
+
+    int BlockManager::clear_bitmap_by_blockid_(const uint64_t block_id)
+    {
+      int ret = (INVALID_BLOCK_ID == block_id || IS_VERFIFY_BLOCK(block_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = bitmap_->reset(GET_REAL_BLOCKID(block_id));
+      }
+      return ret;
+    }
+
+    int BlockManager::check_and_set_bitmap(uint64_t start_blockid, const uint64_t end_blockid)
+    {
+      assert(end_blockid > start_blockid);
+      assert(0 == (start_blockid % 8));
+      uint64_t align_size = ALIGN(end_blockid, 8) / 8;
+      int ret = bitmap_->check_and_ensure_size(align_size);
+      if (TFS_SUCCESS == ret)
+      {
+        while (start_blockid < end_blockid)
+        {
+          if (bitmap_->test(start_blockid))
+          {
+            if (!exist(start_blockid))
+            {
+              TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u is still not reported to ns", start_blockid);// warn
+            }
+          }
+          else
+          {
+            if (exist(start_blockid))
+            {
+              bitmap_->set(start_blockid);
+            }
+          }
+          ++start_blockid;
+        }
+      }
+      return ret;
+    }
 
     BlockCollect* BlockManager::get(const uint64_t block) const
     {

@@ -81,6 +81,7 @@ namespace tfs
         int handle_control_clear_system_table(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
         int handle_control_delete_family(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf);
         int handle_control_set_all_server_report_block(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf);
+        int handle_control_reset_block_bitmap(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf);
 
         bool is_discard(void);
 

@@ -26,6 +26,7 @@
 #include "common/array_helper.h"
 #include "common/tfs_vector.h"
 #include "block_collect.h"
+#include "bit_map.h"
 
 #ifdef TFS_GTEST
 #include <gtest/gtest.h>
@@ -135,6 +136,11 @@ namespace tfs
         void timeout(const time_t now);
         void set_task_expired_time(const uint64_t block, const int64_t now, const int32_t step);
         void update_version(common::ArrayHelper<uint64_t>& helper, const uint64_t , const int32_t version, const int32_t step, const common::BlockInfoV2& info);
+        int clear_bitmap_by_blockid(const uint64_t block_id);
+        int check_and_set_bitmap(uint64_t start_blockid, const uint64_t end_blockid);
+
+        int init_bitmap();
+
       private:
         DISALLOW_COPY_AND_ASSIGN(BlockManager);
         common::RWLock& get_mutex_(const uint64_t block) const;
@@ -155,6 +161,8 @@ namespace tfs
 
         int update_relation_(const common::ArrayHelper<common::BlockInfoV2*>& blocks, const time_t now,
             std::vector<uint64_t>& cleanup_family_id_array, ServerCollect* server);
+        int set_bitmap_by_blockid_(const uint64_t block_id);
+        int clear_bitmap_by_blockid_(const uint64_t block_id);
 
       private:
         LayoutManager& manager_;
@@ -170,6 +178,8 @@ namespace tfs
 
         tbutil::Mutex emergency_replicate_queue_mutex_;
         std::deque<uint64_t> emergency_replicate_queue_;
+
+        MBitMapOperation* bitmap_;
     };
   }/** nameserver **/
 }/** tfs **/

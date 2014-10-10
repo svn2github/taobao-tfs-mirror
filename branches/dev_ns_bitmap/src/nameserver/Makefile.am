@@ -16,13 +16,13 @@ noinst_LIBRARIES=libnameserver.a
 NAMESERVER_SOURCE_LIST_HEADER=block_collect.h block_id_factory.h block_manager.h client_request_server.h\
 global_factory.h heart_manager.h layout_manager.h nameserver.h ns_define.h\
 oplog.h oplog_sync_manager.h server_collect.h server_manager.h task.h task_manager.h\
-family_collect.h family_manager.h tair_helper.h
+family_collect.h family_manager.h tair_helper.h bit_map.h
 
 
 NAMSERVER_SOURCE_LIST=ns_define.cpp block_collect.cpp block_manager.cpp  server_collect.cpp server_manager.cpp\
 	task.cpp task_manager.cpp family_collect.cpp family_manager.cpp block_id_factory.cpp global_factory.cpp \
 	oplog.cpp oplog_sync_manager.cpp heart_manager.cpp  layout_manager.cpp client_request_server.cpp\
-	tair_helper.cpp  nameserver.cpp $(NAMESERVER_SOURCE_LIST_HEADER)
+	tair_helper.cpp bit_map.cpp nameserver.cpp $(NAMESERVER_SOURCE_LIST_HEADER)
 
 libnameserver_a_SOURCES=$(NAMSERVER_SOURCE_LIST)
 libnameserver_a_LIBFLAGS=$(AM_LDFLAGS)

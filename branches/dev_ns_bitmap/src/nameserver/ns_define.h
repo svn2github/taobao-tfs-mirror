@@ -184,6 +184,8 @@ namespace tfs
     static const int32_t MAX_PROCESS_NUMS = MAX_SERVER_NUMS * 12;
     static const int32_t MAX_BLOCK_CHUNK_NUMS = 10240 * 4;
     static const int32_t MAX_WRITE_FILE_COUNT = 256;
+    static const int32_t SSD_BLOCK_SIZE = 512 * 1024;
+    static const int32_t MAX_BITMAP_MAP_SIZE = 1024 * 1024 * 1024;
 
     static const uint64_t GB = 1 * 1024 * 1024 * 1024;
     static const uint64_t MB = 1 * 1024 * 1024;

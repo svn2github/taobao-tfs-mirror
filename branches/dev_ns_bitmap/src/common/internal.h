@@ -54,7 +54,11 @@
 #define CHECK_BLOCK_SIZE(x) (x >= MIN_BLOCK_SIZE && x <= MAX_BLOCK_SIZE)
 #define CHECK_EXT_BLOCK_SIZE(x) (x >= MIN_EXT_BLOCK_SIZE && x <= MAX_EXT_BLOCK_SIZE)
 
+// 64 bit blockid: 1~56 real blockid, 60~63 cluster id, 64 verify bit
 #define IS_VERFIFY_BLOCK(x) (x >> 63)
+#define GET_CLUSTER_ID(x) ((x >> 59) & 0x0F)
+#define GET_REAL_BLOCKID(x) ((x) & 0xFFFFFFFFFFFFFF)
+#define ALIGN(x, y) (((x)+(y)-1) & (~((y)-1)))
 
 // Macros used for overriding file flag in unlink call
 // the 5-7bit is used as flag
@@ -394,7 +398,8 @@ namespace tfs
       CLIENT_CMD_SET_BALANCE_PERCENT,
       CLIENT_CMD_CLEAR_SYSTEM_TABLE,
       CLIENT_CMD_DELETE_FAMILY,
-      CLIENT_CMD_SET_ALL_SERVER_REPORT_BLOCK
+      CLIENT_CMD_SET_ALL_SERVER_REPORT_BLOCK,
+      CLIENT_CMD_RESET_BLOCK_BITMAP
     };
 
     enum PlanType

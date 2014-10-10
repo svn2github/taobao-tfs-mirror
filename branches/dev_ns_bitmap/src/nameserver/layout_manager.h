@@ -117,6 +117,8 @@ namespace tfs
       void redundant_();
       void check_all_server_lease_timeout_();
       void regular_create_block_for_servers();
+      void load_bitmap_();
+      bool check_and_set_bitmap_(uint64_t& start_blockid);
 
       int add_new_block_helper_write_log_(const uint64_t block_id, const common::ArrayHelper<uint64_t>& server, const time_t now);
       int add_new_block_helper_send_msg_(const uint64_t block_id, const common::ArrayHelper<uint64_t>& servers);
@@ -239,6 +241,19 @@ namespace tfs
           DISALLOW_COPY_AND_ASSIGN(RedundantThreadHelper);
       };
       typedef tbutil::Handle<RedundantThreadHelper> RedundantThreadHelperPtr;
+
+      class LoadBitmapThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit LoadBitmapThreadHelper(LayoutManager& manager):
+            manager_(manager) {start(THREAD_STATCK_SIZE);}
+          virtual ~LoadBitmapThreadHelper() {}
+          void run();
+        private:
+          LayoutManager& manager_;
+          DISALLOW_COPY_AND_ASSIGN(LoadBitmapThreadHelper);
+      };
+      typedef tbutil::Handle<LoadBitmapThreadHelper> LoadBitmapThreadHelperPtr;
      private:
       BuildPlanThreadHelperPtr build_plan_thread_;
       RunPlanThreadHelperPtr run_plan_thread_;
@@ -247,6 +262,7 @@ namespace tfs
       BuildBalanceThreadHelperPtr balance_thread_;
       TimeoutThreadHelperPtr timeout_thread_;
       RedundantThreadHelperPtr redundant_thread_;
+      LoadBitmapThreadHelperPtr load_bitmap_thread_;
 
       time_t  zonesec_;
       time_t  last_rotate_log_time_;
