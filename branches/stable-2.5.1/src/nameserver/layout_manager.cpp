@@ -519,7 +519,8 @@ namespace tfs
       uint64_t block_id = oplog_sync_mgr_.generation(verify);
       while (true)
       {
-        if (!get_block_manager().exist(block_id))
+        if (!get_block_manager().exist(block_id) &&
+            (verify || static_cast<int>(block_id % SYSPARAM_NAMESERVER.group_count_) == SYSPARAM_NAMESERVER.group_seq_))
           break;
         block_id = oplog_sync_mgr_.generation(verify);
       }
