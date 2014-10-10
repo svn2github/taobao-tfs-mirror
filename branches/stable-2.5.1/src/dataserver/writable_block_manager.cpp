@@ -410,7 +410,7 @@ namespace tfs
       {
         ret = post_msg_to_server(ds_info.ns_vip_port_, &req_msg, ds_async_callback);
       }
-      TBSYS_LOG_IW(ret, "renew block, size: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
+      TBSYS_LOG_IW(ret, "renew block, count: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
       return ret;
     }
 
@@ -430,7 +430,7 @@ namespace tfs
       {
         ret = post_msg_to_server(ds_info.ns_vip_port_, &req_msg, ds_async_callback);
       }
-      TBSYS_LOG_IW(ret, "giveup block, size: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
+      TBSYS_LOG_IW(ret, "giveup block, count: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
       return ret;
     }
 

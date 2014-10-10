@@ -105,7 +105,6 @@ namespace tfs
       for ( ; it != headers.end(); it++)
       {
         if (it->throughput_.last_update_time_ + expire_time >= crash_time &&
-            !IS_VERFIFY_BLOCK(it->info_.block_id_) &&
             it->used_offset_ > 0)
         {
           blocks.push_back(it->info_.block_id_);
@@ -155,12 +154,6 @@ namespace tfs
               !ds_info.is_destroyed() &&
               ds_info.check_integrity_interval_days_ > 0; it++)
           {
-            // TODO, verify check block's raw data
-            if (IS_VERFIFY_BLOCK(*it))
-            {
-              continue;
-            }
-
             while (!should_check_now() && !ds_info.is_destroyed())
             {
               interruptable_usleep(MIN_SLEEP_TIME_US);

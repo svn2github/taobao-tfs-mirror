@@ -621,11 +621,6 @@ namespace tfs
           ret = (length == ret) ? TFS_SUCCESS : ret;
           if (TFS_SUCCESS == ret)
           {
-            if (0 == read_offset)
-            {
-              TBSYS_LOG(DEBUG, "write file : blockid: %lu, fileid: %lu, size: %d, crc: %u, offset: %d", id(), new_finfo.id_, file_size, new_finfo.crc_, new_finfo.offset_);
-              Func::hex_dump(data, 10, true, TBSYS_LOG_LEVEL_DEBUG);
-            }
             assert(NULL != data);
             read_offset += length;
             ret = read_offset > new_finfo.size_  ? EXIT_WRITE_OFFSET_ERROR : TFS_SUCCESS;
