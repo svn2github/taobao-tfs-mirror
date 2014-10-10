@@ -564,6 +564,17 @@ namespace tfs
       return ((NULL != block) && (INVALID_SERVER_ID != server)) ? block->remove(server, now) : EXIT_PARAMETER_ERROR;
     }
 
+    bool BlockManager::need_reinstate(const BlockCollect* block) const
+    {
+      bool need = false;
+      if (NULL != block)
+      {
+        RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+        need = block->is_in_family() && block->get_servers_size() == 0;
+      }
+      return need;
+    }
+
     bool BlockManager::need_replicate(const BlockCollect* block) const
     {
       RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
