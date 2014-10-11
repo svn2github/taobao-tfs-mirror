@@ -94,8 +94,10 @@ AC_ARG_WITH([jerasure-root],
            [jerasure installation path, need by erasure code]),
            JERASURE_ROOT=${withval})
 if  test -z "${JERASURE_ROOT}"; then
-  ERASURE_ROOT="/usr/local"
+  JERASURE_ROOT="/usr/local"
 fi
+
+AC_SUBST([JERASURE_ROOT])
 
 if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
   AC_MSG_ERROR([TAIR_ROOT is not work! expect TAIR_ROOT/include and TAIR_ROOT/lib directory])
