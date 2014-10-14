@@ -485,8 +485,12 @@ namespace tfs
             manager_.get_server_manager().build_relation(server, block->id(), writable, master);
           }
 
-          if (TFS_SUCCESS != ret)
+          if (TFS_SUCCESS != ret && NULL != server)
+          {
+            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u server %s build relation, ret: %d",
+                block_id, tbsys::CNetUtil::addrToString(server->id()).c_str(), ret);
             ret = TFS_SUCCESS;
+          }
         }
       }
       return ret;
@@ -564,10 +568,21 @@ namespace tfs
       return ((NULL != block) && (INVALID_SERVER_ID != server)) ? block->remove(server, now) : EXIT_PARAMETER_ERROR;
     }
 
+    bool BlockManager::need_reinstate(const BlockCollect* block) const
+    {
+      bool need = false;
+      if (NULL != block)
+      {
+        RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+        need = block->is_in_family() && block->get_servers_size() == 0;
+      }
+      return need;
+    }
+
     bool BlockManager::need_replicate(const BlockCollect* block) const
     {
       RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
-      return (NULL != block) ? (block->get_servers_size() < SYSPARAM_NAMESERVER.max_replication_ && !block->is_in_family()) : false;
+      return (NULL != block) ? (block->get_servers_size() < SYSPARAM_NAMESERVER.max_replication_ && !IS_VERFIFY_BLOCK(block->id()) && !block->is_in_family()) : false;
     }
 
     bool BlockManager::need_replicate(const BlockCollect* block, const time_t now) const

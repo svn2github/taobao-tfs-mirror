@@ -42,6 +42,7 @@ namespace tfs
         IndexHeaderV2* header = get_index_header_();
         assert(NULL != header);
         header->info_ = info;
+        mem_header_.info_ = info;
       }
       return ret;
     }
@@ -57,6 +58,7 @@ namespace tfs
           IndexHeaderV2* header = get_index_header_();
           assert(NULL != header);
           header->info_.version_ += step;
+          mem_header_.info_.version_ += step;
         }
       }
       return ret;
@@ -74,6 +76,16 @@ namespace tfs
       return ret;
     }
 
+    int BaseIndexHandle::get_block_info_in_memory(BlockInfoV2& info) const
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        info = mem_header_.info_;
+      }
+      return ret;
+    }
+
     int BaseIndexHandle::get_index_header(common::IndexHeaderV2& pheader) const
     {
       int32_t ret = check_load();
@@ -86,6 +98,16 @@ namespace tfs
       return ret;
     }
 
+    int BaseIndexHandle::get_index_header_in_memory(common::IndexHeaderV2& pheader) const
+    {
+      int32_t ret = check_load();
+      if (TFS_SUCCESS == ret)
+      {
+        pheader = mem_header_;
+      }
+      return ret;
+    }
+
     int BaseIndexHandle::set_index_header(const common::IndexHeaderV2& pheader)
     {
       int32_t ret = check_load();
@@ -94,6 +116,7 @@ namespace tfs
         IndexHeaderV2* header = get_index_header_();
         assert(NULL != header);
         *header = pheader;
+        mem_header_ = pheader;
       }
       return ret;
     }
@@ -289,6 +312,7 @@ namespace tfs
         IndexHeaderV2* header = get_index_header_();
         assert(NULL != header);
         header->info_.family_id_ = family_id;
+        mem_header_.info_.family_id_ = family_id;
       }
       return ret;
     }
@@ -342,11 +366,12 @@ namespace tfs
         memset(&throughput, 0, sizeof(throughput));
         IndexHeaderV2* header = get_index_header_();
         assert(NULL != header);
-        throughput = header->throughput_;
+        throughput = mem_header_.throughput_; // use mem header to reduce io
         if (reset)
         {
           memset(&header->throughput_, 0, sizeof(header->throughput_));
           header->throughput_.last_statistics_time_ = time(NULL);
+          mem_header_.throughput_ = header->throughput_;
         }
       }
       return ret;
@@ -387,16 +412,29 @@ namespace tfs
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
+        // this function maybe called when add/unlink file in attached block
+        // block header is not changed in this case, mem_header shounldn't sync
+        bool need_sync = (header == get_index_header_());
         ret = (new_size >= 0  && NULL != header) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
         if (TFS_SUCCESS == ret && !rollback)
         {
           if (OPER_INSERT == oper_type || OPER_UPDATE == oper_type)
+          {
             header->info_.version_ += VERSION_INC_STEP_DEFAULT;
+            if (need_sync)
+            {
+              mem_header_.info_.version_ += VERSION_INC_STEP_DEFAULT;
+            }
+          }
         }
         if (TFS_SUCCESS == ret)
         {
           time_t now = time(NULL);
           header->info_.last_access_time_ = now;
+          if (need_sync)
+          {
+            mem_header_.info_.last_access_time_ = now;
+          }
           int32_t file_count = rollback ? -1 : 1;
           int32_t real_new_size = rollback ? 0 - new_size : new_size;
           int32_t real_old_size = rollback ? 0 - old_size : old_size;
@@ -407,6 +445,15 @@ namespace tfs
             header->throughput_.last_update_time_  = now;
             header->throughput_.write_visit_count_ += file_count;
             header->throughput_.write_bytes_ += real_new_size;
+
+            if (need_sync)
+            {
+              mem_header_.info_.file_count_ += file_count;
+              mem_header_.info_.size_       += real_new_size;
+              mem_header_.throughput_.last_update_time_  = now;
+              mem_header_.throughput_.write_visit_count_ += file_count;
+              mem_header_.throughput_.write_bytes_ += real_new_size;
+            }
           }
 
           if (OPER_DELETE == oper_type)
@@ -416,6 +463,15 @@ namespace tfs
             header->throughput_.last_update_time_  = now;
             header->throughput_.unlink_visit_count_ += file_count;
             header->throughput_.unlink_bytes_ += real_old_size;
+
+            if (need_sync)
+            {
+              mem_header_.info_.del_file_count_ += file_count;
+              mem_header_.info_.del_size_       += real_old_size;
+              mem_header_.throughput_.last_update_time_  = now;
+              mem_header_.throughput_.unlink_visit_count_ += file_count;
+              mem_header_.throughput_.unlink_bytes_ += real_old_size;
+            }
           }
           if (OPER_UNDELETE == oper_type)
           {
@@ -424,6 +480,15 @@ namespace tfs
             header->throughput_.last_update_time_  = now;
             header->throughput_.unlink_visit_count_ -= file_count;
             header->throughput_.unlink_bytes_ -= real_old_size;
+
+            if (need_sync)
+            {
+              mem_header_.info_.del_file_count_ -= file_count;
+              mem_header_.info_.del_size_       -= real_old_size;
+              mem_header_.throughput_.last_update_time_  = now;
+              mem_header_.throughput_.unlink_visit_count_ -= file_count;
+              mem_header_.throughput_.unlink_bytes_ -= real_old_size;
+            }
           }
           if (OPER_UPDATE == oper_type)
           {
@@ -440,12 +505,35 @@ namespace tfs
             header->throughput_.write_bytes_ += real_new_size;
             header->throughput_.update_bytes_ += real_new_size;
             header->throughput_.update_visit_count_ += file_count;
+
+            if (need_sync)
+            {
+              mem_header_.info_.del_file_count_ += file_count;
+              mem_header_.info_.file_count_     += file_count;;
+              mem_header_.info_.del_size_       += real_old_size;
+              mem_header_.info_.size_           += real_new_size;
+              mem_header_.info_.update_size_    += real_new_size;
+              mem_header_.info_.update_file_count_ += file_count;
+              mem_header_.throughput_.last_update_time_  = now;
+              mem_header_.throughput_.unlink_visit_count_ += file_count;
+              mem_header_.throughput_.unlink_bytes_ += real_old_size;
+              mem_header_.throughput_.write_visit_count_ += file_count;
+              mem_header_.throughput_.write_bytes_ += real_new_size;
+              mem_header_.throughput_.update_bytes_ += real_new_size;
+              mem_header_.throughput_.update_visit_count_ += file_count;
+            }
           }
 
           if (OPER_READ == oper_type)
           {
             header->throughput_.read_bytes_ += real_new_size;
             header->throughput_.read_visit_count_ += file_count;
+
+            if (need_sync)
+            {
+              mem_header_.throughput_.read_bytes_ += real_new_size;
+              mem_header_.throughput_.read_visit_count_ += file_count;
+            }
           }
         }
       }
@@ -706,8 +794,8 @@ namespace tfs
             memset((data + INDEX_HEADER_V2_LENGTH), 0, file_size - INDEX_HEADER_V2_LENGTH);
             int64_t length = file_op_.pwrite(data, file_size, 0);
             ret = (length == file_size) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
-            if (TFS_SUCCESS == ret)
-              ret = file_op_.fdatasync();
+            //if (TFS_SUCCESS == ret)
+            //  ret = file_op_.fdatasync();
             tbsys::gDeleteA(data);
           }
         }
@@ -720,9 +808,16 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           is_load_ = true;
-          ret = flush();
+          //ret = flush();
         }
 
+        // create data index, sync IndexHeaderV2 to in memory copy
+        if (TFS_SUCCESS == ret)
+        {
+          IndexHeaderV2* header = get_index_header_();
+          assert(NULL != header);
+          mem_header_ = *header;
+        }
       }
       TBSYS_LOG(INFO, "create index %s, ret: %d, file path: %s, block id : %"PRI64_PREFIX"u, max_bucket_size: %d, file_size: %"PRI64_PREFIX"d",
           TFS_SUCCESS == ret ? "successful" : "failed", ret, file_op_.get_path().c_str(), logic_block_id, max_bucket_size, file_size);
@@ -769,20 +864,24 @@ namespace tfs
 
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "index corrupt. logic blockid: %"PRI64_PREFIX"u, header blockid: %"PRI64_PREFIX"u, file size: %"PRI64_PREFIX"d, header file size : %"PRI64_PREFIX"d, bucket size: %d",
+          TBSYS_LOG(WARN, "index corrupt. logic blockid: %"PRI64_PREFIX"u, header blockid: %"PRI64_PREFIX"u, file size: %"PRI64_PREFIX"d, header file size : %"PRI64_PREFIX"d, bucket size: %d",
               logic_block_id, header->info_.block_id_, file_size, size, header->file_info_bucket_size_);
         }
-
-        assert(INVALID_BLOCK_ID != logic_block_id);
-        assert(logic_block_id == header->info_.block_id_);
-        assert(header->file_info_bucket_size_ > 0);
-        assert(file_size >= size);
       }
       if (TFS_SUCCESS == ret)
       {
         IndexHeaderV2* header = get_index_header_();
         header->avail_offset_ = 0;
       }
+
+      // load data index, sync IndexHeaderV2 to in memory copy
+      if (TFS_SUCCESS == ret)
+      {
+        IndexHeaderV2* header = get_index_header_();
+        assert(NULL != header);
+        mem_header_ = *header;
+      }
+
       TBSYS_LOG(INFO, "load index %s, ret: %d, block id : %"PRI64_PREFIX"u, file_size: %"PRI64_PREFIX"d",
           TFS_SUCCESS == ret ? "successful" : "failed", ret, logic_block_id, file_size);
       return ret;
@@ -849,7 +948,6 @@ namespace tfs
           assert(NULL != pheader);
           pheader->info_ = header.info_;
           pheader->last_check_time_ = 0;
-          pheader->throughput_.last_update_time_ = time(NULL);
           pheader->throughput_ = header.throughput_;
           pheader->marshalling_offset_ = header.marshalling_offset_;
           pheader->seq_no_ = header.seq_no_;
@@ -887,7 +985,6 @@ namespace tfs
             pheader->info_ = header.info_;
             pheader->last_check_time_ = 0;
             pheader->seq_no_ = header.seq_no_;
-            pheader->throughput_.last_update_time_ = time(NULL);
             pheader->marshalling_offset_ = header.marshalling_offset_;
             pheader->used_file_info_bucket_size_ = 0;
             pheader->throughput_ = header.throughput_;
@@ -897,6 +994,14 @@ namespace tfs
               ret = insert_file_info_(*iter, threshold, max_hash_bucket, false);
             }
           }
+        }
+
+        // write file infos in data blocks, sync IndexHeaderV2 to in memory copy
+        if (TFS_SUCCESS == ret)
+        {
+          IndexHeaderV2* header = get_index_header_();
+          assert(NULL != header);
+          mem_header_ = *header;
         }
 
         if (TFS_SUCCESS == ret)
@@ -1129,8 +1234,8 @@ namespace tfs
             memset((data + INDEX_HEADER_V2_LENGTH), 0, file_size - INDEX_HEADER_V2_LENGTH);
             int64_t length = file_op_.pwrite(data, file_size, 0);
             ret = (length == file_size) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
-            if (TFS_SUCCESS == ret)
-              ret = file_op_.fdatasync();
+            //if (TFS_SUCCESS == ret)
+            //  ret = file_op_.fdatasync();
             tbsys::gDeleteA(data);
           }
         }
@@ -1147,7 +1252,15 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           is_load_ = true;
-          ret = flush();
+          //ret = flush();
+        }
+
+        // create parity index, sync IndexHeaderV2 to in memory copy
+        if (TFS_SUCCESS == ret)
+        {
+          IndexHeaderV2* header = get_index_header_();
+          assert(NULL !=header);
+          mem_header_ = *header;
         }
       }
       TBSYS_LOG(INFO, "create verify block index %s, ret: %d, block id : %"PRI64_PREFIX"u, file_size: %"PRI64_PREFIX"d",
@@ -1167,7 +1280,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         file_size = file_op_.size();
-        ret = file_size <= 0 ? EXIT_FILE_OP_ERROR : TFS_SUCCESS;
+        ret = file_size <= 0 ? EXIT_INDEX_CORRUPT_ERROR : TFS_SUCCESS;
       }
       if (TFS_SUCCESS == ret)
       {
@@ -1189,6 +1302,15 @@ namespace tfs
             || header->index_num_ <= 0) ? EXIT_INDEX_CORRUPT_ERROR : TFS_SUCCESS;
         is_load_ = TFS_SUCCESS == ret;
       }
+
+      // load parity index, sync IndexHeaderV2 to in memory copy
+      if (TFS_SUCCESS == ret)
+      {
+        IndexHeaderV2* header = get_index_header_();
+        assert(NULL !=header);
+        mem_header_ = *header;
+      }
+
       TBSYS_LOG(INFO, "load verify index %s, ret: %d, block id : %"PRI64_PREFIX"u, file_size: %"PRI64_PREFIX"d",
           TFS_SUCCESS == ret ? "successful" : "failed", ret, logic_block_id, file_size);
       return ret;
@@ -1211,7 +1333,6 @@ namespace tfs
           assert(!partial);
           assert(!infos.empty());
           IndexHeaderV2* pheader = get_index_header_();
-          pheader->throughput_.last_update_time_ = time(NULL);
           InnerIndex* inner_index = get_inner_index_array_();
           assert(NULL != inner_index);
           InnerIndex* index = &inner_index[pheader->index_num_++];
@@ -1253,7 +1374,6 @@ namespace tfs
             assert(NULL != pheader);
             pheader->info_ = header.info_;
             pheader->throughput_ = header.throughput_;
-            pheader->throughput_.last_update_time_ = time(NULL);
             pheader->marshalling_offset_ = header.marshalling_offset_;
             pheader->seq_no_ = header.seq_no_;
             if (!infos.empty())

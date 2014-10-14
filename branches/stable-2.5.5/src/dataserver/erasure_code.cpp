@@ -18,8 +18,11 @@
 #include <stdlib.h>
 
 #include "ds_define.h"
+extern "C"
+{
 #include "galois.h"
 #include "jerasure.h"
+}
 #include "erasure_code.h"
 #include "tbsys.h"
 #include "common/error_msg.h"
@@ -31,8 +34,6 @@ namespace tfs
 {
   namespace dataserver
   {
-    const int ErasureCode::ws_ = 8;
-    const int ErasureCode::ps_ = 128;
     tbutil::Mutex ErasureCode::mutex_;
 
     ErasureCode::ErasureCode()
@@ -48,7 +49,42 @@ namespace tfs
       tbsys::gFree(de_matrix_);
     }
 
-    int ErasureCode::config(const int dn, const int pn, int* erased)
+    int ErasureCode::parse_type(const int8_t type)
+    {
+      int8_t alg = (type & 0xE0) >> 5; // high 3 bit ==> algorithm
+      int8_t pam = (type & 0x1F);     // low 5 bit ==> parameter config
+
+      // currently support type
+      // alg ==> [jerasure]
+      // pam ==> [ws=8,ps=128 | ws=8,ps=512]
+
+      int ret = TFS_SUCCESS;
+      if (alg == 0)
+      {
+        if (pam == 1)
+        {
+          ws_ = 8;
+          ps_ = 128;
+        }
+        else if(pam == 2)
+        {
+          ws_ = 8;
+          ps_ = 512;
+        }
+        else
+        {
+          ret = EXIT_PARAMETER_ERROR;
+        }
+      }
+      else
+      {
+        ret = EXIT_PARAMETER_ERROR;
+      }
+
+      return ret;
+    }
+
+    int ErasureCode::config(const int dn, const int pn, const int8_t type, int* erased)
     {
       int ret = TFS_SUCCESS;
 
@@ -56,6 +92,15 @@ namespace tfs
 
       dn_ = dn;
       pn_ = pn;
+
+      ret = parse_type(type);
+      if (TFS_SUCCESS != ret)
+      {
+        return ret;
+      }
+
+      TBSYS_LOG(DEBUG, "erasure_code config: data_count=%d, check_count=%d, word_size=%d, packet_size=%d",
+          dn_, pn_, ws_, ps_);
 
       matrix_ = (int*)malloc(dn_*pn_ * INT_SIZE);
       assert(NULL != matrix_);

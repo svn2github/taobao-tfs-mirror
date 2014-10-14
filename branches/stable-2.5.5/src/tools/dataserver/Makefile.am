@@ -15,9 +15,10 @@ bin_PROGRAMS = clear_file_system\
                reverse_name\
 							 check_down_disk_data\
                check_super_block \
-							 check_family \
-               view_local_key \
-							 safe_remove_block
+							 safe_remove_block \
+							 check_family\
+							 check_index_tool\
+							 view_local_key
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
@@ -29,7 +30,9 @@ LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
         $(top_builddir)/src/common/libtfscommon.a\
         $(TBLIB_ROOT)/lib/libtbnet.a\
         $(TBLIB_ROOT)/lib/libtbsys.a\
-				$(EASY_ROOT)/lib64/libeasy.a
+				$(EASY_ROOT)/lib64/libeasy.a\
+				$(JERASURE_ROOT)/lib/libJerasure.a\
+				$(JERASURE_ROOT)/lib/libgf_complete.a
 
 clear_file_system_SOURCES = clear_file_system.cpp
 
@@ -46,6 +49,8 @@ reverse_name_SOURCES = reverse_name.cpp
 format_file_system_SOURCES = format_file_system.cpp
 
 read_index_tool_SOURCES = read_index_tool.cpp
+
+check_index_tool_SOURCES = check_index_tool.cpp
 
 check_down_disk_data_SOURCES = check_down_disk_data.cpp
 

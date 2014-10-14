@@ -81,10 +81,11 @@ namespace tfs
 
     bool WritableBlockManager::is_full(const uint64_t block_id)
     {
-      int32_t block_size = 0;
-      get_block_manager().get_used_offset(block_size, block_id);
+      BlockInfoV2 info;
+      get_block_manager().get_block_info(info, block_id);
       DsRuntimeGlobalInformation& ds_info = DsRuntimeGlobalInformation::instance();
-      return BLOCK_RESERVER_LENGTH + block_size >= ds_info.max_block_size_;
+      return info.size_ + BLOCK_RESERVER_LENGTH >= ds_info.max_block_size_ ||
+        info.file_count_ >= common::MAX_SINGLE_BLOCK_FILE_COUNT;
     }
 
     void  WritableBlockManager::size(int32_t& writable, int32_t& update, int32_t& expired)
@@ -349,7 +350,7 @@ namespace tfs
       req_msg.set_size(count);
       req_msg.set_server_id(ds_info.information_.id_);
       ret = post_msg_to_server(ds_info.ns_vip_port_,&req_msg, ds_async_callback);
-      TBSYS_LOG_DW(ret, "apply block, count: %d, ret: %d", count, ret);
+      TBSYS_LOG_IW(ret, "apply block, count: %d, ret: %d", count, ret);
       return ret;
     }
 
@@ -409,7 +410,7 @@ namespace tfs
       {
         ret = post_msg_to_server(ds_info.ns_vip_port_, &req_msg, ds_async_callback);
       }
-      TBSYS_LOG_DW(ret, "renew block, size: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
+      TBSYS_LOG_IW(ret, "renew block, count: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
       return ret;
     }
 
@@ -429,7 +430,7 @@ namespace tfs
       {
         ret = post_msg_to_server(ds_info.ns_vip_port_, &req_msg, ds_async_callback);
       }
-      TBSYS_LOG_DW(ret, "giveup block, size: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
+      TBSYS_LOG_IW(ret, "giveup block, count: %"PRI64_PREFIX"d, ret: %d", blocks.get_array_index(), ret);
       return ret;
     }
 
@@ -504,7 +505,7 @@ namespace tfs
           {
             ret = EXIT_UNKNOWN_MSGTYPE;
           }
-          TBSYS_LOG_DW(ret, "apply block callback, ret: %d", ret);
+          TBSYS_LOG_IW(ret, "apply block callback, ret: %d", ret);
         }
         else if (DS_GIVEUP_BLOCK_MESSAGE == pcode && sresponse->size() > 0)
         {
@@ -523,7 +524,7 @@ namespace tfs
           {
             ret = EXIT_UNKNOWN_MSGTYPE;
           }
-          TBSYS_LOG_DW(ret, "giveup block callback, ret: %d", ret);
+          TBSYS_LOG_IW(ret, "giveup block callback, ret: %d", ret);
         }
         else if (DS_RENEW_BLOCK_MESSAGE == pcode)
         {
@@ -531,7 +532,7 @@ namespace tfs
           {
             NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
             tbnet::Packet* packet = iter->second.second;
-            if (DS_RENEW_LEASE_RESPONSE_MESSAGE == packet->getPCode())
+            if (DS_RENEW_BLOCK_RESPONSE_MESSAGE == packet->getPCode())
             {
               renew_block_callback(dynamic_cast<DsRenewBlockResponseMessage* >(packet));
             }
@@ -553,7 +554,6 @@ namespace tfs
           if (TFS_SUCCESS != ret)
           {
             // timeout, expire writable blocks in renew list
-            ret = EXIT_TIMEOUT_ERROR;
             DsRenewBlockMessage* msg = dynamic_cast<DsRenewBlockMessage*>(source);
             BlockInfoV2* infos = msg->get_block_infos();
             int32_t size = msg->get_size();
@@ -562,7 +562,7 @@ namespace tfs
               expire_one_block(infos[i].block_id_);
             }
           }
-          TBSYS_LOG_DW(ret, "renew block callback, ret: %d", ret);
+          TBSYS_LOG_IW(ret, "renew block callback, ret: %d", ret);
         }
       }
 

@@ -180,6 +180,8 @@ namespace tfs
 #define CONF_UPDATE_STATISTIC_INTERVAL                "update_statistic_interval"
 #define CONF_PENALTY_PERCENT                          "penalty_percent"
 #define CONF_NEED_MIGRATE_BACK                        "need_migrate_back"
+#define CONF_DS_BASE_PORT                             "ds_base_port"
+#define CONF_MAX_FULL_DS_COUNT                        "max_full_ds_count"
 
 //rc
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"

@@ -419,7 +419,7 @@ namespace tfs
               if (turn_ == SYSPARAM_CHECKSERVER.check_retry_turns_ &&
                   (EXIT_NO_BLOCK == iter->status_ || EXIT_BLOCK_NOT_FOUND == iter->status_))
               {
-                fprintf(less_block_fp_, "%"PRI64_PREFIX"u", iter->block_id_);
+                fprintf(less_block_fp_, "%"PRI64_PREFIX"u\n", iter->block_id_);
               }
 
               // block may already moved to other servers

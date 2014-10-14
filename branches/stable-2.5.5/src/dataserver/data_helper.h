@@ -26,6 +26,8 @@ namespace tfs
     class TrafficControl;
     class BlockManager;
     class DataService;
+    class LogicBlock;
+    class VerifyLogicBlock;
     class DataHelper
     {
       public:
@@ -149,7 +151,8 @@ namespace tfs
         int async_query_ec_meta(const common::FamilyInfoExt& family_info, const int* erased,
             common::ECMeta* ec_metas, const int32_t timeout_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT);
 
-        int check_integrity(BaseLogicBlock* src);
+        int check_integrity(LogicBlock* src);
+        int check_integrity(VerifyLogicBlock* src);
         int calc_big_file_crc(BaseLogicBlock* src,
             const common::FileInfoV2& finfo, uint32_t& crc);
 

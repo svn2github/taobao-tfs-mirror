@@ -103,7 +103,7 @@ namespace tfs
       char suffix[64] = {'\0'};
       if (del)
         snprintf(suffix, 64, "_del_%"PRI64_PREFIX"u",own_ipport);
-      snprintf(pkey, 128, "%s%06d%s", key_prefix_.c_str(), get_bucket(family_id), del ? suffix : "");
+      snprintf(pkey, 128, "%s%06d%s", key_prefix_.c_str(), del ? DELETE_FAMILY_CHUNK_DEFAULT_VALUE : get_bucket(family_id), del ? suffix : "");
       snprintf(skey, 128, "%020"PRI64_PREFIX"d", family_id);
       data_entry tair_pkey(pkey, false);
       data_entry tair_skey(skey, false);
@@ -153,9 +153,8 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int TairHelper::scan(std::vector<FamilyInfo>& family_infos, const int64_t start_family_id, const int32_t chunk, const bool del, const uint64_t peer_ipport)
+    int TairHelper::scan(std::vector<FamilyInfo>& family_infos, const int64_t start_family_id, const int32_t chunk, const bool del, const uint64_t peer_ipport, const int32_t limit)
     {
-      const int32_t ROW_LIMIT = 0;
       char pkey[128] = {'\0'};
       char start_key[128] = {'\0'};
       char end_key[128] = {'\0'};
@@ -176,7 +175,7 @@ namespace tfs
       {
         tbutil::Mutex::Lock lock(mutex_);
         ret = tair_client_.get_range(area_, tair_pkey, tair_start_key, tair_end_key,
-            0, ROW_LIMIT, values, CMD_RANGE_VALUE_ONLY);
+            0, limit, values, CMD_RANGE_VALUE_ONLY);
       }
       while (TAIR_RETURN_DATA_NOT_EXIST != ret
             && TAIR_HAS_MORE_DATA != ret

@@ -105,35 +105,10 @@ namespace tfs
       while (!srgi.is_destroyed())
       {
         now = time(NULL);
-
         //rotate log
         rotate_(last_rotate_log_time, now, zonesec);
-
-        manager_->timeout(Func::get_monotonic_time());
-
         usleep(MAX_SLEEP_TIME_US);
       }
-    }
-
-    int MigrateService::keepalive_(common::BasePacket* packet)
-    {
-      int32_t ret = (NULL != packet && packet->getPCode() == REQ_MIGRATE_DS_HEARTBEAT_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        assert(NULL != manager_);
-        MigrateDsHeartMessage* msg = dynamic_cast<MigrateDsHeartMessage*>(packet);
-        assert(NULL != msg);
-        const common::DataServerStatInfo& info = msg->get_dataserver_information();
-        ret = manager_->keepalive(info);
-        MigrateDsHeartResponseMessage* reply_msg = new (std::nothrow)MigrateDsHeartResponseMessage();
-        assert(NULL != reply_msg);
-        reply_msg->set_ret_value(ret);
-        TBSYS_LOG(INFO, "%s keepalive %s, ret: %d, total_capacity: %"PRI64_PREFIX"d, use_capacity: %"PRI64_PREFIX"d, block_count: %d, disk type: %d",
-            tbsys::CNetUtil::addrToString(info.id_).c_str(), TFS_SUCCESS == ret ? "successful" : "failed", ret,
-            info.total_capacity_, info.use_capacity_, info.block_count_, info.type_);
-        ret = msg->reply(reply_msg);
-      }
-      return ret;
     }
 
     bool MigrateService::check_response(common::NewClient* client)
@@ -246,9 +221,6 @@ namespace tfs
         {
           switch (pcode)
           {
-            case REQ_MIGRATE_DS_HEARTBEAT_MESSAGE:
-              ret = keepalive_(dynamic_cast<common::BasePacket*>(packet));
-              break;
             default:
               ret = EXIT_UNKNOWN_MSGTYPE;
               break;
@@ -272,9 +244,6 @@ namespace tfs
       {
         switch (pcode)
         {
-          case REQ_MIGRATE_DS_HEARTBEAT_MESSAGE:
-            ret = keepalive_(dynamic_cast<common::BasePacket*>(packet));
-            break;
           default:
             ret = EXIT_UNKNOWN_MSGTYPE;
             break;

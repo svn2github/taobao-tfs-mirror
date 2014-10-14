@@ -278,6 +278,8 @@ namespace tfs
     struct MigrateServerParameter
     {
       uint64_t ns_vip_port_;
+      int32_t ds_base_port_;
+      int32_t max_full_ds_count_;
       double balance_percent_;
       double penalty_percent_;
       int32_t update_statistic_interval_;
