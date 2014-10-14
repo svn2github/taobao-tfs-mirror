@@ -485,9 +485,10 @@ namespace tfs
             manager_.get_server_manager().build_relation(server, block->id(), writable, master);
           }
 
-          if (TFS_SUCCESS != ret)
+          if (TFS_SUCCESS != ret && NULL != server)
           {
-            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u build relation, ret: %d", block_id, ret);
+            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u server %s build relation, ret: %d",
+                block_id, tbsys::CNetUtil::addrToString(server->id()).c_str(), ret);
             ret = TFS_SUCCESS;
           }
         }
