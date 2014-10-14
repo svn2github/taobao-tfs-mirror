@@ -486,7 +486,10 @@ namespace tfs
           }
 
           if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u build relation, ret: %d", block_id, ret);
             ret = TFS_SUCCESS;
+          }
         }
       }
       return ret;

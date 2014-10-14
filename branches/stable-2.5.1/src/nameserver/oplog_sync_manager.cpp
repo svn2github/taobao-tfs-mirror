@@ -802,14 +802,14 @@ namespace tfs
           if (start_family_id < family.family_id_)
             start_family_id = family.family_id_;
           rt = family_manager.del_family(family.family_id_);
-          if (EXIT_NO_FAMILY == ret)
-            ret = TFS_SUCCESS;
+          if (EXIT_NO_FAMILY == rt)
+            rt = TFS_SUCCESS;
           if (TFS_SUCCESS != rt)
             TBSYS_LOG(WARN, "del family information error,family id: %"PRI64_PREFIX"d, ret: %d", family.family_id_, rt);
           else
-            rt = dbhelper_[DEFATUL_TAIR_INDEX]->del_family(family.family_id_, true, false, GFactory::get_runtime_info().owner_ip_port_);
+            rt = dbhelper_[DEFATUL_TAIR_INDEX]->del_family(family.family_id_, true, false, GFactory::get_runtime_info().peer_ip_port_);
 
-          TBSYS_LOG(DEBUG, "DEL FAMILY: %s, rt: %d", str.str().c_str(), rt);
+          TBSYS_LOG(INFO, "DEL FAMILY: %s, rt: %d", str.str().c_str(), rt);
         }
         if (!infos.empty())
           ++start_family_id;

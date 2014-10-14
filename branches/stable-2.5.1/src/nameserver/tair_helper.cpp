@@ -103,7 +103,7 @@ namespace tfs
       char suffix[64] = {'\0'};
       if (del)
         snprintf(suffix, 64, "_del_%"PRI64_PREFIX"u",own_ipport);
-      snprintf(pkey, 128, "%s%06d%s", key_prefix_.c_str(), get_bucket(family_id), del ? suffix : "");
+      snprintf(pkey, 128, "%s%06d%s", key_prefix_.c_str(), del ? DELETE_FAMILY_CHUNK_DEFAULT_VALUE : get_bucket(family_id), del ? suffix : "");
       snprintf(skey, 128, "%020"PRI64_PREFIX"d", family_id);
       data_entry tair_pkey(pkey, false);
       data_entry tair_skey(skey, false);
