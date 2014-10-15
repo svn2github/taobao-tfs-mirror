@@ -125,7 +125,7 @@ namespace tfs
       // check all disk & full dataserver alive or not
       servers_.clear();
       char buf[8] = {'\0'};
-      for (int32_t index = 0; index < max_full_ds_count_; ++index)
+      for (int32_t index = 0; index <= max_full_ds_count_; ++index) // probe system disk + full disks
       {
         snprintf(buf, sizeof(buf), "%d", index);
         int32_t port = SYSPARAM_DATASERVER.get_real_ds_port(ds_base_port_, std::string(buf));
