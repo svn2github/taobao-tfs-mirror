@@ -85,7 +85,6 @@ namespace tfs
       private:
       void rotate_(time_t& last_rotate_log_time, time_t now, time_t zonesec);
       void timeout_();
-      int  keepalive_(common::BasePacket* packet);
 
       private:
       class TimeoutThreadHelper: public tbutil::Thread

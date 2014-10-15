@@ -16,6 +16,7 @@
 
 #include "stat_tool.h"
 #include "common/version.h"
+#include "show_factory.h"
 
 using namespace std;
 using namespace tfs::common;
@@ -42,11 +43,12 @@ int32_t do_stat(const int32_t size, T& v_value_range)
   return ret;
 }
 
-int block_process(const uint64_t ns_id, StatInfo& file_stat_info,
+int block_process(const uint64_t ns_id, map<uint64_t, int32_t>& family_map, StatInfo& file_stat_info,
     V_BLOCK_SIZE_RANGE& v_block_size_range, V_DEL_BLOCK_RANGE& v_del_block_range, BLOCK_SIZE_SET& s_big_block, const int32_t top_num, BLOCK_SIZE_SET& s_topn_block)
 {
   const int32_t num = 1000;
   int32_t ret  = TFS_ERROR;
+  file_stat_info.set_family_count(family_map.size());
 
   ShowServerInformationMessage msg;
   SSMScanParameter& param = msg.get_param();
@@ -91,7 +93,19 @@ int block_process(const uint64_t ns_id, StatInfo& file_stat_info,
       {
         //block.dump();
         // add to file stat
-        file_stat_info.add(block);
+        float ratio = static_cast<float>(block.server_list_.size());
+        map<uint64_t, int32_t>::iterator iter;
+        if (INVALID_FAMILY_ID != block.info_.family_id_ &&
+            (iter = family_map.find(block.info_.family_id_)) != family_map.end())
+        {
+          int data_member_num = GET_DATA_MEMBER_NUM(iter->second);
+          int check_member_num = GET_CHECK_MEMBER_NUM(iter->second);
+          ratio = StatInfo::div((data_member_num + check_member_num), data_member_num);
+        }
+        file_stat_info.add(block, ratio);
+        // check block size is invalid
+        if (IS_VERFIFY_BLOCK(block.info_.block_id_))
+          continue;
 
         // do range stat
         ret = do_stat(block.info_.size_ / M_UNITS, v_block_size_range);
@@ -140,6 +154,64 @@ int block_process(const uint64_t ns_id, StatInfo& file_stat_info,
     if (param.end_flag_ & SSM_SCAN_CUTOVER_FLAG_NO)
     {
       param.addition_param1_ = ret_param.addition_param2_;
+    }
+    NewClientManager::get_instance().destroy_client(client);
+  }
+  return TFS_SUCCESS;
+}
+
+int family_process(const uint64_t ns_id, map<uint64_t, int32_t>& family_map)
+{
+  const int32_t num = 1000;
+  ShowServerInformationMessage msg;
+  SSMScanParameter& param = msg.get_param();
+  param.type_ = SSM_TYPE_FAMILY;
+
+  param.should_actual_count_ = (num << 16);
+  param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
+  //其余，如param.start_next_position_ 等都初始化为0
+
+  while (!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES))
+  {
+    param.data_.clear();
+    tbnet::Packet*ret_msg = NULL;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    int ret = send_msg_to_server(ns_id, client, &msg, ret_msg);
+    if (TFS_SUCCESS != ret || ret_msg == NULL)
+    {
+      TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
+      NewClientManager::get_instance().destroy_client(client);
+      return EXIT_TFS_ERROR;
+    }
+    if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
+    {
+      if (ret_msg->getPCode() == STATUS_MESSAGE)
+      {
+        StatusMessage* msg = dynamic_cast<StatusMessage*>(ret_msg);
+        TBSYS_LOG(ERROR, "get invalid message type: error: %s", msg->get_error());
+      }
+      TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
+      NewClientManager::get_instance().destroy_client(client);
+      return EXIT_TFS_ERROR;
+    }
+    ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
+    SSMScanParameter& ret_param = message->get_param();
+
+    int32_t data_len = ret_param.data_.getDataLen();
+    int32_t offset = 0;
+    while (data_len > offset)
+    {
+      FamilyShow family;
+      if (TFS_SUCCESS == family.deserialize(ret_param.data_, data_len, offset))
+      {
+        family_map.insert(make_pair(family.family_id_, family.family_aid_info_));
+      }
+    }
+    param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
+    param.end_flag_ = ret_param.end_flag_;
+    if (param.end_flag_ & SSM_SCAN_CUTOVER_FLAG_NO)
+    {
+      param.addition_param1_ = ret_param.addition_param2_;//next start family_id to scan
     }
     NewClientManager::get_instance().destroy_client(client);
   }
@@ -232,6 +304,7 @@ int main(int argc,char** argv)
   V_DEL_BLOCK_RANGE v_del_block_range;
   set<BlockSize> s_big_block;
   set<BlockSize> s_topn_block;
+  map<uint64_t, int32_t> family_map;
 
   // initialize
   int32_t row = 0;
@@ -248,7 +321,13 @@ int main(int argc,char** argv)
   }
 
   // do stat
-  ret = block_process(ns_id, stat_info, v_block_size_range, v_del_block_range, s_big_block, top_num, s_topn_block);
+  ret = family_process(ns_id, family_map);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "scan all families from ns fail, ret: %d", ret);
+    return ret;
+  }
+  ret = block_process(ns_id, family_map, stat_info, v_block_size_range, v_del_block_range, s_big_block, top_num, s_topn_block);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "scan all blocks from ns fail, ret: %d", ret);
@@ -270,12 +349,13 @@ int main(int argc,char** argv)
   {
     diter->dump(fp);
   }
+  /*
   fprintf(fp, "--------------------------block list whose size bigger is than %d. num: %zd -------------------------------\n", THRESHOLD, s_big_block.size());
   set<BlockSize>::reverse_iterator rbiter = s_big_block.rbegin();
   for (; rbiter != s_big_block.rend(); rbiter++)
   {
     fprintf(fp, "block_id: %"PRI64_PREFIX"u, size: %d\n", rbiter->block_id_, rbiter->file_size_);
-  }
+  }*/
   fprintf(fp, "--------------------------top %d block list-------------------------------\n", top_num);
   set<BlockSize>::reverse_iterator rtiter = s_topn_block.rbegin();
   for (; rtiter != s_topn_block.rend(); rtiter++)

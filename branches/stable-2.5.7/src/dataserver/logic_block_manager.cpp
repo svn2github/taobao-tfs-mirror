@@ -230,7 +230,7 @@ namespace tfs
       LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
       for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter)
       {
-        ret = (*iter)->get_block_info(block_info);
+        ret = (*iter)->get_block_info_in_memory(block_info);
         if (TFS_SUCCESS == ret)
         {
           blocks.push_back(block_info.block_id_);
@@ -247,7 +247,7 @@ namespace tfs
       LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
       for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter)
       {
-        ret = (*iter)->get_index_header(header);
+        ret = (*iter)->get_index_header_in_memory(header);
         if ((TFS_SUCCESS == ret) && !IS_VERFIFY_BLOCK(header.info_.block_id_)
             && static_cast<int>(header.info_.block_id_ % group_count) == group_seq
             && range.include(header.throughput_.last_update_time_)
@@ -267,7 +267,7 @@ namespace tfs
       LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
       for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter)
       {
-        ret = (*iter)->get_block_info(info);
+        ret = (*iter)->get_block_info_in_memory(info);
         if (TFS_SUCCESS == ret)
         {
           BlockInfo old_info;
@@ -293,7 +293,7 @@ namespace tfs
       LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
       for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter)
       {
-        ret = (*iter)->get_block_info(info);
+        ret = (*iter)->get_block_info_in_memory(info);
         if (TFS_SUCCESS == ret)
         {
           blocks.push_back(info);
@@ -315,7 +315,7 @@ namespace tfs
       LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
       for (; iter != logic_blocks_.end() && block_count < all_block_count && TFS_SUCCESS == ret; ++iter)
       {
-        ret = (*iter)->get_block_info(blocks[block_count]);
+        ret = (*iter)->get_block_info_in_memory(blocks[block_count]);
         if (TFS_SUCCESS == ret)
         {
           block_count++;
@@ -332,7 +332,7 @@ namespace tfs
       LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
       for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter)
       {
-        ret = (*iter)->get_index_header(header);
+        ret = (*iter)->get_index_header_in_memory(header);
         if (TFS_SUCCESS == ret)
         {
           headers.push_back(header);

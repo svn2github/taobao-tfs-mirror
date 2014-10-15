@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([tfs], 2.6.0, duolong@taobao.com)
+AC_INIT([tfs], 2.6.6, duolong@taobao.com)
 AC_CONFIG_SRCDIR([src/common/config_item.h])
 
-AM_INIT_AUTOMAKE(tfs, 2.6.0)
+AM_INIT_AUTOMAKE(tfs, 2.6.6)
 # Checks for programs.
 AC_PROG_AWK
 AC_PROG_CXX
@@ -98,6 +98,16 @@ if  test -z "${TAIR_ROOT}"; then
    dnl tbnet include path supplied
    TAIR_ROOT="/usr/local"
 fi
+
+AC_ARG_WITH([jerasure-root],
+           AS_HELP_STRING([--with-jerasure-root],
+           [jerasure installation path, need by erasure code]),
+           JERASURE_ROOT=${withval})
+if  test -z "${JERASURE_ROOT}"; then
+  JERASURE_ROOT="/usr/local"
+fi
+
+AC_SUBST([JERASURE_ROOT])
 
 if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
   AC_MSG_ERROR([TAIR_ROOT is not work! expect TAIR_ROOT/include and TAIR_ROOT/lib directory])

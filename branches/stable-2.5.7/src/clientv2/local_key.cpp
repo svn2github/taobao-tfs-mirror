@@ -52,7 +52,7 @@ void SegmentData::set_pri_ds_index()
   {
     pri_ds_index_ = get_nearest_ds(local_ip);
   }
-  TBSYS_LOG(DEBUG, "block_id: %"PRI64_PREFIX"u, select ds %d, %s", seg_info_.block_id_, pri_ds_index_,
+  TBSYS_LOG(DEBUG, "block_id: %u, select ds %d, %s", seg_info_.block_id_, pri_ds_index_,
       Func::addr_to_str(ds_[pri_ds_index_], true).c_str());
 }
 
@@ -112,14 +112,14 @@ int LocalKey::add_segment(const SegmentInfo& seg_info)
   {
     seg_head_.count_++;
     seg_head_.size_ += seg_info.size_;
-    TBSYS_LOG(DEBUG, "add segment successful. blockid: %"PRI64_PREFIX"u, "
+    TBSYS_LOG(DEBUG, "add segment successful. blockid: %u, "
               "fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, crc: %u",
               seg_info.block_id_, seg_info.file_id_, seg_info.offset_, seg_info.size_, seg_info.crc_);
   }
   else
   {
     // add to gc ?
-    TBSYS_LOG(ERROR, "add segment fail. blockid: %"PRI64_PREFIX"u, "
+    TBSYS_LOG(ERROR, "add segment fail. blockid: %u, "
               "fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, crc: %u",
               seg_info.block_id_, seg_info.file_id_, seg_info.offset_, seg_info.size_, seg_info.crc_);
   }
@@ -479,7 +479,7 @@ int LocalKey::load_segment(const char* buf, const int32_t buf_len)
     for (int32_t i = 0; i < count; ++i)
     {
       TBSYS_LOG(DEBUG, "load segment info, offset: %"PRI64_PREFIX"d, "
-                "blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u",
+                "blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u",
                 segment[i].offset_, segment[i].block_id_, segment[i].file_id_, segment[i].size_, segment[i].crc_);
 
       if (!seg_info_.insert(segment[i]).second)

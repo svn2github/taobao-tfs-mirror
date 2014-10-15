@@ -31,7 +31,7 @@ namespace tfs
     const int32_t SuperBlockManager::SUPERBLOCK_RESERVER_LENGTH = 512;
     const int32_t SuperBlockManager::MAX_BLOCK_INDEX_SIZE = 65535 * (1 + 3);
     SuperBlockManager::SuperBlockManager(const std::string& path):
-      file_op_(path, O_RDWR | O_SYNC | O_LARGEFILE | O_CREAT),
+      file_op_(path, O_RDWR | O_LARGEFILE | O_CREAT),
       index_(PHYSICAL_BLOCK_ID_INIT_VALUE),
       ext_index_(0)
     {

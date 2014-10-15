@@ -519,7 +519,8 @@ namespace tfs
       uint64_t block_id = oplog_sync_mgr_.generation(verify);
       while (true)
       {
-        if (!get_block_manager().exist(block_id))
+        if (!get_block_manager().exist(block_id) &&
+            (verify || static_cast<int>(block_id % SYSPARAM_NAMESERVER.group_count_) == SYSPARAM_NAMESERVER.group_seq_))
           break;
         block_id = oplog_sync_mgr_.generation(verify);
       }
@@ -560,8 +561,11 @@ namespace tfs
         rotate_(current);
 
         now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
-          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
+        while (!ngi.is_destroyed() && (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete()))
+        {
+          Func::sleep(1, ngi.destroy_flag_);
+          now = Func::get_monotonic_time();
+        }
 
         if (ngi.is_master())
         {
@@ -645,8 +649,12 @@ namespace tfs
       while (!ngi.is_destroyed())
       {
         now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
-          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ * 4, ngi.destroy_flag_);
+        while (!ngi.is_destroyed() && (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete()))
+        {
+          Func::sleep(1, ngi.destroy_flag_);
+          now = Func::get_monotonic_time();
+        }
+
 
         if (ngi.is_master())
         {
@@ -753,8 +761,11 @@ namespace tfs
       while (!ngi.is_destroyed())
       {
         int64_t now = Func::get_monotonic_time();
-        if (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete())
-          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ , ngi.destroy_flag_);
+        while (!ngi.is_destroyed() && (ngi.in_safe_mode_time(now) || !ngi.load_family_info_complete()))
+        {
+          Func::sleep(1, ngi.destroy_flag_);
+          now = Func::get_monotonic_time();
+        }
 
         now = Func::get_monotonic_time();
         while (ngi.in_report_block_time(now) && !ngi.is_destroyed())

@@ -14,6 +14,7 @@
  */
 
 #include "common/base_packet.h"
+#include "common/ob_crc.h"
 #include "message/message_factory.h"
 #include "dataservice.h"
 #include "erasure_code.h"
@@ -1124,24 +1125,16 @@ namespace tfs
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
       const int32_t member_num = data_num + check_num;
+      const int8_t mars_type =  GET_MARSHALLING_TYPE(family_info.family_aid_info_);
 
       int32_t offset_in_buffer = 0;
       int32_t file_offset = finfo.offset_ + offset;
       int32_t file_end = finfo.offset_ + offset + length;
 
-      // padding to align to encode/decode unit
-      int32_t unit = ErasureCode::ps_ * ErasureCode::ws_;
-      int32_t max_read_size = MAX_READ_SIZE + unit; // avoid dividing one request into two requests
+      int32_t max_read_size = MAX_READ_SIZE;
       int32_t real_offset = file_offset;
       int32_t real_end = file_end;
-      if (0 != (real_offset % unit))
-      {
-        real_offset = (real_offset / unit) * unit;
-      }
-      if (0 != (real_end % unit))
-      {
-        real_end = (real_end / unit + 1)  * unit;
-      }
+
 
       ErasureCode decoder;
       char* data[member_num];
@@ -1158,7 +1151,7 @@ namespace tfs
       // config decoder parameter, alloc buffer
       if (TFS_SUCCESS == ret)
       {
-        ret = decoder.config(data_num, check_num, erased);
+        ret = decoder.config(data_num, check_num, mars_type, erased);
         if (TFS_SUCCESS == ret)
         {
           for (int32_t i = 0; i < member_num; i++)
@@ -1167,6 +1160,20 @@ namespace tfs
             assert(NULL != data[i]);
           }
           decoder.bind(data, member_num, max_read_size);
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        // padding to align to encode/decode unit
+        int32_t unit = decoder.get_coding_unit();
+        if (0 != (real_offset % unit))
+        {
+          real_offset = (real_offset / unit) * unit;
+        }
+        if (0 != (real_end % unit))
+        {
+          real_end = (real_end / unit + 1)  * unit;
         }
       }
 
@@ -1445,23 +1452,29 @@ namespace tfs
 
     int DataHelper::check_integrity(const uint64_t block_id)
     {
-      int ret = (INVALID_BLOCK_ID != block_id) ? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
+      int ret = INVALID_BLOCK_ID != block_id? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         BaseLogicBlock* src = get_block_manager().get(block_id);
         ret = (NULL != src) ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          ret = check_integrity(src);
+          if (IS_VERFIFY_BLOCK(block_id))
+          {
+            ret = check_integrity(dynamic_cast<VerifyLogicBlock*>(src));
+          }
+          else
+          {
+            ret = check_integrity(dynamic_cast<LogicBlock*>(src));
+          }
         }
       }
       return ret;
     }
 
-    int DataHelper::check_integrity(BaseLogicBlock* src)
+    int DataHelper::check_integrity(LogicBlock* src)
     {
-      LogicBlock* tmpsrc = dynamic_cast<LogicBlock* >(src);
-      LogicBlock::Iterator* iter = new (std::nothrow) LogicBlock::Iterator(tmpsrc);
+      LogicBlock::Iterator* iter = new (std::nothrow) LogicBlock::Iterator(src);
       assert(NULL != iter);
 
       int ret = TFS_SUCCESS;
@@ -1504,6 +1517,54 @@ namespace tfs
 
       tbsys::gDelete(iter);
 
+      return ret;
+    }
+
+    int DataHelper::check_integrity(VerifyLogicBlock* src)
+    {
+      int32_t mars_offset = 0;
+      uint32_t header_crc = 0;
+      int ret = src->get_marshalling_offset(mars_offset);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = src->get_data_crc(header_crc);
+      }
+
+      // old family hasn't calculated crc in block header
+      // verify blocks in these family cannot be checked, just ignore it
+      if (TFS_SUCCESS == ret && header_crc != 0)
+      {
+        char *buffer = new (std::nothrow) char[MAX_READ_SIZE];
+        assert(NULL != buffer);
+
+        int32_t offset = 0;
+        int32_t nbytes = 0;
+        uint32_t crc = 0;
+        while (offset < mars_offset)
+        {
+          nbytes = std::min(MAX_READ_SIZE, mars_offset - offset);
+          ret = src->pread(buffer, nbytes, offset);
+          ret = (ret >= 0) ? TFS_SUCCESS : ret;
+          if (TFS_SUCCESS == ret)
+          {
+            crc = ob_crc32(crc, buffer, nbytes);
+            offset += nbytes;
+          }
+          else
+          {
+            break;
+          }
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          if (crc != header_crc)
+          {
+            ret = EXIT_CHECK_CRC_ERROR;
+          }
+        }
+        tbsys::gDeleteA(buffer);
+      }
       return ret;
     }
 

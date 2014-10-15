@@ -704,6 +704,23 @@ namespace tfs
           load_family_info_(thseqno);
           load_family_log_(thseqno);
           load_complete = true;
+          TBSYS_LOG(INFO, "thread %d load family complete on startup or switch", thseqno);
+
+          while (!ngi.is_destroyed() && !ngi.load_family_info_complete())
+          {
+            bool  complete = true;
+            for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && complete; ++index)
+            {
+              complete = load_family_info_thread_[index]->load_complete();
+            }
+            ngi.set_load_family_info_complete(complete);
+            if (complete)
+            {
+              TBSYS_LOG(INFO, "all threads load complete");
+              break;
+            }
+            usleep(1000000);
+          }
         }
         else
         {
@@ -711,18 +728,10 @@ namespace tfs
           {
             load_family_info_(thseqno);
             load_family_log_(thseqno);
+            TBSYS_LOG(INFO, "thread %d load family complete on slave", thseqno);
           }
         }
-       if (0 == thseqno && !ngi.load_family_info_complete())
-       {
-         bool  complete = true;
-         for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && complete; ++index)
-         {
-           complete = load_family_info_thread_[index]->load_complete();
-         }
-         ngi.set_load_family_info_complete(complete);
-       }
-       usleep(500000);
+        usleep(1000000);
       }
       return TFS_SUCCESS;
     }
@@ -736,15 +745,15 @@ namespace tfs
       FamilyManager& family_manager = manager_.get_family_manager();
       std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
       common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
+      const uint32_t limit = RANGE_DEFAULT_LIMIT; // tair default limit 1000
+      int32_t times = 0;
+      int32_t size = 0;
+      TIMER_START();
       do
       {
-        TimeStat st1,st2;
         infos.clear();
         assert(NULL != dbhelper_[thseqno]);
-        st1.start();
-        ret = dbhelper_[thseqno]->scan(infos, start_family_id, chunk, false,  GFactory::get_runtime_info().peer_ip_port_);
-        st1.end();
-        st2.start();
+        ret = dbhelper_[thseqno]->scan(infos, start_family_id, chunk, false,  GFactory::get_runtime_info().peer_ip_port_, limit);
         std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
         int64_t now = Func::get_monotonic_time();
         for (; iter != infos.end(); ++iter)
@@ -775,10 +784,13 @@ namespace tfs
         }
         if (!infos.empty())
           ++start_family_id;
-        st2.end();
-        TBSYS_LOG(INFO, "SCAN CONSUM: %ld, %ld, size: %zd", st1.duration(), st2.duration(), infos.size());
+        times++;
+        size += infos.size();
       }
-      while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
+      while (TAIR_HAS_MORE_DATA == ret || (TAIR_RETURN_SUCCESS == ret && infos.size() == limit));
+      TIMER_END();
+      TBSYS_LOG(DEBUG, "SCAN FAMILY chunk: %d, scan_times: %d, size: %d, cost: %ld",
+          chunk, times, size, TIMER_DURATION());
       return ret;
     }
 
@@ -788,11 +800,12 @@ namespace tfs
       std::vector<common::FamilyInfo> infos;
       int32_t ret = TAIR_RETURN_SUCCESS, rt = TFS_SUCCESS;
       FamilyManager& family_manager = manager_.get_family_manager();
+      const uint32_t limit = RANGE_DEFAULT_LIMIT; // tair default limit 1000
       do
       {
         infos.clear();
         assert(NULL != dbhelper_[DEFATUL_TAIR_INDEX]);
-        ret = dbhelper_[DEFATUL_TAIR_INDEX]->scan(infos, start_family_id,DELETE_FAMILY_CHUNK_DEFAULT_VALUE, true,  GFactory::get_runtime_info().peer_ip_port_);
+        ret = dbhelper_[DEFATUL_TAIR_INDEX]->scan(infos, start_family_id,DELETE_FAMILY_CHUNK_DEFAULT_VALUE, true,  GFactory::get_runtime_info().peer_ip_port_, limit);
         std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
         for (; iter != infos.end(); ++iter)
         {
@@ -802,19 +815,19 @@ namespace tfs
           if (start_family_id < family.family_id_)
             start_family_id = family.family_id_;
           rt = family_manager.del_family(family.family_id_);
-          if (EXIT_NO_FAMILY == ret)
-            ret = TFS_SUCCESS;
+          if (EXIT_NO_FAMILY == rt)
+            rt = TFS_SUCCESS;
           if (TFS_SUCCESS != rt)
             TBSYS_LOG(WARN, "del family information error,family id: %"PRI64_PREFIX"d, ret: %d", family.family_id_, rt);
           else
-            rt = dbhelper_[DEFATUL_TAIR_INDEX]->del_family(family.family_id_, true, false, GFactory::get_runtime_info().owner_ip_port_);
+            rt = dbhelper_[DEFATUL_TAIR_INDEX]->del_family(family.family_id_, true, false, GFactory::get_runtime_info().peer_ip_port_);
 
-          TBSYS_LOG(DEBUG, "DEL FAMILY: %s, rt: %d", str.str().c_str(), rt);
+          TBSYS_LOG(INFO, "DEL FAMILY: %s, rt: %d", str.str().c_str(), rt);
         }
         if (!infos.empty())
           ++start_family_id;
       }
-      while (TAIR_HAS_MORE_DATA == ret || TAIR_RETURN_SUCCESS == ret);
+      while (TAIR_HAS_MORE_DATA == ret || (TAIR_RETURN_SUCCESS == ret && infos.size() == limit));
       return ret;
     }
 

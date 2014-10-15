@@ -718,6 +718,16 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
+        ds_base_port_ = TBSYS_CONFIG.getInt(CONF_SN_MIGRATESERVER, CONF_DS_BASE_PORT, 3200);
+        max_full_ds_count_ = TBSYS_CONFIG.getInt(CONF_SN_MIGRATESERVER, CONF_MAX_FULL_DS_COUNT, 12);
+        ret = (port > 1024 && port < 65535 && max_full_ds_count_ > 0) ? TFS_SUCCESS : EXIT_SYSTEM_PARAMETER_ERROR;
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "migrateserver not ds base port: %d or max full ds count: %d invalid, must be exit", ds_base_port_, max_full_ds_count_);
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
         ns_vip_port_ = tbsys::CNetUtil::strToAddr(ipaddr, port);
 
         const char* percent = TBSYS_CONFIG.getString(CONF_SN_MIGRATESERVER, CONF_BALANCE_PERCENT, "0.05");

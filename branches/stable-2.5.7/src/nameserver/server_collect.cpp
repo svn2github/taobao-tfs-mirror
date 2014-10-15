@@ -715,6 +715,7 @@ namespace tfs
       ArrayHelper<uint64_t> helper(MAX_QUERY_NUM, blocks);
       BlockManager& block_manager = manager.get_block_manager();
       ServerManager& server_manager = manager.get_server_manager();
+      FamilyManager& family_manager = manager.get_family_manager();
       while (!all_over)
       {
         helper.clear();
@@ -734,10 +735,20 @@ namespace tfs
               block_manager.relieve_relation(pblock, id(), now);
             }
             if ((CALL_BACK_FLAG_PUSH & args)
-               && (NULL == pserver)
-               && (block_manager.need_replicate(pblock)))
+               && (NULL == pserver))
             {
-              block_manager.push_to_emergency_replicate_queue(pblock);
+              if (block_manager.need_replicate(pblock))
+              {
+                block_manager.push_to_emergency_replicate_queue(pblock);
+              }
+              else if (block_manager.need_reinstate(pblock))
+              {
+                FamilyCollect* family = family_manager.get(pblock->get_family_id());
+                if (NULL != family)
+                {
+                  family_manager.push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_REINSTATE);
+                }
+              }
             }
           }
         }
