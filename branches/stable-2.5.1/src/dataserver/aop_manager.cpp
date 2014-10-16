@@ -414,6 +414,9 @@ namespace tfs
         put(op_meta);
       }
 
+      // make sure we have BlockInfoV2 in local
+      get_block_manager().get_block_info(local, block_id);
+
       return  ret;
     }
 

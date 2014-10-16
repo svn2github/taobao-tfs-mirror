@@ -208,7 +208,7 @@ namespace tfs
             block = manager.get_block_manager().get(scan_writable_block_id_);
             if (NULL == block)  // dissove maybe happened here
               continue;
-            if (cleanup_invalid_block_(block, now))
+            if (cleanup_invalid_block_(block, now, false))
               continue;
             RWLock::Lock lock(mutex_, READ_LOCKER);
             if (!exist_(scan_writable_block_id_, *issued_leases_))
@@ -321,10 +321,6 @@ namespace tfs
         {
           pblock = block_manager.get(entry->block_id_);
           ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-        }
-        if (TFS_SUCCESS == ret)
-        {
-          ret = block_manager.has_valid_lease(pblock, now) ? EXIT_LEASE_EXISTED : TFS_SUCCESS;
         }
         if (TFS_SUCCESS == ret)
         {
@@ -806,29 +802,36 @@ namespace tfs
       return ret;
     }
 
-    bool ServerCollect::cleanup_invalid_block_(BlockCollect* block, const int64_t now)
+    bool ServerCollect::cleanup_invalid_block_(BlockCollect* block, const int64_t now, const bool master, const bool writable)
     {
       bool ret = (NULL != block);
       if (ret)
       {
         ret = false;
-        if (!block->is_writable()
-            || !block->is_master(id())
-            || !is_equal_group(block->id())
-            || !block->has_valid_lease(now)
-            || IS_VERFIFY_BLOCK(block->id()))
+        if (master)
         {
-          RWLock::Lock lock(mutex_, WRITE_LOCKER);
-          remove_(block->id(), *issued_leases_);
+          if (!block->is_writable()
+              || !block->is_master(id())
+              || !is_equal_group(block->id())
+              || !block->has_valid_lease(now)
+              || IS_VERFIFY_BLOCK(block->id()))
+          {
+            RWLock::Lock lock(mutex_, WRITE_LOCKER);
+            remove_(block->id(), *issued_leases_);
+          }
         }
-        if (block->is_full()
-            || !block->is_master(id())
-            || !is_equal_group(block->id())
-            || IS_VERFIFY_BLOCK(block->id()))
+
+        if (writable)
         {
-          ret = true;
-          RWLock::Lock lock(mutex_, WRITE_LOCKER);
-          remove_(block->id(), *writable_);
+          if (block->is_full()
+              || !block->is_master(id())
+              || !is_equal_group(block->id())
+              || IS_VERFIFY_BLOCK(block->id()))
+          {
+            ret = true;
+            RWLock::Lock lock(mutex_, WRITE_LOCKER);
+            remove_(block->id(), *writable_);
+          }
         }
       }
       return ret;

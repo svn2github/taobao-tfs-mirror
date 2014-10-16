@@ -263,8 +263,11 @@ namespace tfs
       req_msg.set_ds_stat(ds_info.information_);
 
       // ds will exit, aync giveup all blocks
-      get_writable_block_manager().expire_all_blocks();
-      get_writable_block_manager().giveup_writable_block();
+      if (is_master(who))
+      {
+        get_writable_block_manager().expire_all_blocks();
+        get_writable_block_manager().giveup_writable_block();
+      }
 
       tbnet::Packet* ret_msg = NULL;
       NewClient* new_client = NewClientManager::get_instance().create_client();
