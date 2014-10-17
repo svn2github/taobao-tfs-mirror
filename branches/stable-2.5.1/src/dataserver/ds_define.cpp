@@ -59,7 +59,7 @@ namespace tfs
       max_rw_network_bandwidth_mb_(common::DEFAULT_MAX_RW_NETWORK_CAPACITY_MB),
       verify_index_reserved_space_ratio_(common::VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO),
       check_integrity_interval_days_(common::CHECK_INTEGRITY_INTERVAL_DAYS_DEFAULT),
-      enable_version_check_(common::ENABLE_VERSION_CHECK_FLAG_YES),
+      global_switch_(common::ENABLE_VERSION_CHECK | common::ENABLE_READ_STATSTICS),
       is_reporting_block_(false)
     {
       memset(&information_, 0, sizeof(information_));

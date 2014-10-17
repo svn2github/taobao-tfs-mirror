@@ -1326,7 +1326,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[64] = {
+    const char* dynamic_parameter_str[63] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1379,7 +1379,7 @@ namespace tfs
         "choose_target_server_retry_max_nums",
         "max_marshalling_num",
         "check_integrity_interval_days",
-        "enable_version_check",
+        "global_switch",
         "marshalling_visit_time",
         "client_keepalive_interval",
         "verify_index_reserved_space_ratio",
@@ -1389,8 +1389,7 @@ namespace tfs
         "between_ns_and_ds_lease_safe_time",
         "between_ns_and_ds_lease_retry_times",
         "between_ns_and_ds_lease_retry_expire_time",
-        "migrate_complete_wait_time",
-        "enable_incomplete_update"
+        "migrate_complete_wait_time"
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
@@ -2669,7 +2668,7 @@ namespace tfs
 
 			if (TFS_SUCCESS == ret)
 			{
-				ret = Serialization::get_int32(data, data_len, pos,&enable_version_check_);
+				ret = Serialization::get_int32(data, data_len, pos,&global_switch_);
 			}
 
       if (TFS_SUCCESS == ret)
@@ -2747,7 +2746,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos,enable_version_check_);
+        ret = Serialization::set_int32(data, data_len, pos,global_switch_);
       }
 
       if (TFS_SUCCESS == ret)

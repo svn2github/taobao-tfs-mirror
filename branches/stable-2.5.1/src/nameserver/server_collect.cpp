@@ -345,7 +345,7 @@ namespace tfs
           ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, entry->servers_);
           block_manager.get_servers(servers, pblock);
           entry->size_ = servers.get_array_index();
-          if (SYSPARAM_NAMESERVER.enable_incomplete_update_ == ENABLE_INCOMPLETE_UPDATE_NO)
+          if (!(SYSPARAM_NAMESERVER.global_switch_ & ENABLE_INCOMPLETE_UPDATE))
           {
             int32_t expect_size = pblock->is_in_family() ? 1 : common::SYSPARAM_NAMESERVER.max_replication_;
             ret = entry->size_ != expect_size ? EXIT_BLOCK_COPIES_INCOMPLETE : TFS_SUCCESS;

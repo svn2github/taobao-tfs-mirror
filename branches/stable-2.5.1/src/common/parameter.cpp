@@ -81,12 +81,10 @@ namespace tfs
       between_ns_and_ds_lease_retry_expire_time_  = 2;//2s
       max_marshalling_num_ = 10;
       marshalling_visit_time_ = 7;
-      enable_old_interface_ = ENABLE_OLD_INTERFACE_FLAG_NO;
-      enable_version_check_ = ENABLE_VERSION_CHECK_FLAG_YES;
+      global_switch_ = ENABLE_VERSION_CHECK | ENABLE_READ_STATSTICS;
       client_keepalive_interval_ = 600;
       verify_index_reserved_space_ratio_ = VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO;
       check_integrity_interval_days_ = CHECK_INTEGRITY_INTERVAL_DAYS_DEFAULT;
-      enable_incomplete_update_ = ENABLE_INCOMPLETE_UPDATE_NO;
       write_file_check_copies_complete_ = WRITE_FILE_CHECK_COPIES_COMPLETE_FLAG_NO;
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
       report_block_time_interval_min_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL_MIN, 0);

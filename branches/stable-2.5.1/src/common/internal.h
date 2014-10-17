@@ -1106,7 +1106,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[64];
+    extern const char* dynamic_parameter_str[63];
 
 #pragma pack (1)
     struct FileInfoV2//30
@@ -1335,16 +1335,36 @@ namespace tfs
       int32_t max_write_file_count_;
 			int32_t verify_index_reserved_space_ratio_;
 			int32_t check_integrity_interval_days_;
-			int32_t enable_version_check_;
+			int32_t global_switch_;
       int32_t reserve_[4];
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
 
-      LeaseMeta(): lease_id_(INVALID_LEASE_ID)
+      LeaseMeta(): lease_id_(INVALID_LEASE_ID),
+        lease_expire_time_(0),
+        lease_renew_time_(0),
+        renew_retry_times_(0),
+        renew_retry_timeout_(0),
+        max_mr_network_bandwith_(0),
+        max_rw_network_bandwith_(0),
+        ns_role_(0),
+        max_block_size_(0),
+        max_write_file_count_(0),
+        verify_index_reserved_space_ratio_(0),
+        check_integrity_interval_days_(0),
+        global_switch_(0)
       {
+        memset(reserve_, 0, sizeof(reserve_));
       }
+    };
+
+    enum GlobalSwitch
+    {
+      ENABLE_VERSION_CHECK = 0x01,
+      ENABLE_READ_STATSTICS = 0x02,
+      ENABLE_INCOMPLETE_UPDATE = 0x04
     };
 
     struct SyncFileEntry
@@ -1412,24 +1432,6 @@ namespace tfs
       SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_NONE = 0,
       SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_SWITCH,
       SET_SERVER_NEXT_REPORT_BLOCK_TIME_FLAG_IMMEDIATELY
-    };
-
-    enum EnableOldInterfaceFlag
-    {
-      ENABLE_OLD_INTERFACE_FLAG_NO = 0,
-      ENABLE_OLD_INTERFACE_FLAG_YES = 1
-    };
-
-    enum EnableVersionconflictFlag
-    {
-      ENABLE_VERSION_CHECK_FLAG_NO = 0,
-      ENABLE_VERSION_CHECK_FLAG_YES = 1
-    };
-
-    enum EnableUpdateWithSingleCopyFlag
-    {
-      ENABLE_INCOMPLETE_UPDATE_NO = 0,
-      ENABLE_INCOMPLETE_UPDATE_YES = 1
     };
 
     enum DeleteFamilyFlag

@@ -87,8 +87,7 @@ namespace tfs
       int32_t between_ns_and_ds_lease_retry_expire_time_;
       int32_t resolve_version_conflic_task_expired_time_;
       int32_t write_file_check_copies_complete_;
-      int32_t enable_old_interface_;
-      int32_t enable_version_check_;
+      int32_t global_switch_;
       int32_t client_keepalive_interval_;
       int32_t verify_index_reserved_space_ratio_;
       int32_t block_safe_mode_time_;
@@ -97,7 +96,6 @@ namespace tfs
       double  balance_percent_;
       int32_t migrate_complete_wait_time_;
       int32_t check_integrity_interval_days_;
-      int32_t enable_incomplete_update_;
 
       NameServerParameter()
       {

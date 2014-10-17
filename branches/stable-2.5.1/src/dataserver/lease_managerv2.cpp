@@ -192,7 +192,7 @@ namespace tfs
         ds_info.max_rw_network_bandwidth_mb_ = lease_meta_[who].max_rw_network_bandwith_;
         ds_info.max_block_size_ = lease_meta_[who].max_block_size_;
         ds_info.max_write_file_count_ = lease_meta_[who].max_write_file_count_;
-        ds_info.enable_version_check_ = lease_meta_[who].enable_version_check_;
+        ds_info.global_switch_ = lease_meta_[who].global_switch_;
         ds_info.check_integrity_interval_days_ = lease_meta_[who].check_integrity_interval_days_;
         master_index_ = who;  // record master index for fast access
       }

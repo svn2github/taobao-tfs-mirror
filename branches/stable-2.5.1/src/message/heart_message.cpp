@@ -29,8 +29,8 @@ namespace tfs
       max_rw_network_bandwith_mb_(common::DEFAULT_MAX_RW_NETWORK_CAPACITY_MB),
       verify_index_reserved_space_ratio_(common::VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO),
       ns_role_(common::NS_ROLE_NONE),
-      enable_old_interface_(common::ENABLE_OLD_INTERFACE_FLAG_NO),
-      enable_version_check_(common::ENABLE_VERSION_CHECK_FLAG_NO)
+      enable_old_interface_(0),
+      enable_version_check_(0)
     {
       _packetHeader._pcode = common::RESP_HEART_MESSAGE;
     }

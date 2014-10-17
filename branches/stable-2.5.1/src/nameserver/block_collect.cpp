@@ -499,7 +499,7 @@ namespace tfs
         if (check)
         {
           if (update &&
-              SYSPARAM_NAMESERVER.enable_incomplete_update_ == ENABLE_INCOMPLETE_UPDATE_YES)
+              (SYSPARAM_NAMESERVER.global_switch_ & ENABLE_INCOMPLETE_UPDATE))
           {
             check = is_master(server);
           }

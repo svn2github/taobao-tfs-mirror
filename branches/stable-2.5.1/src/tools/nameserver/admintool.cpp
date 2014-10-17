@@ -358,7 +358,20 @@ int cmd_set_run_param(const VSTRING& param)
     fprintf(stderr, "param param_name\n\n");
     for (int32_t i = 0; i < param_strlen; i++)
     {
-      fprintf(stderr, "%s\n", dynamic_parameter_str[i]);
+      if (strcmp(dynamic_parameter_str[i], "plan_run_flag") == 0)
+      {
+        fprintf(stderr, "%s %s\n", dynamic_parameter_str[i],
+             "[bitmap: 1-replicate, 2-move, 4-compact, 8-marshalling, 16-reinstate, 32-dissolve]");
+      }
+      else if (strcmp(dynamic_parameter_str[i], "global_switch") == 0)
+      {
+        fprintf(stderr, "%s %s\n", dynamic_parameter_str[i],
+             "[bitmap: 1-enbale_version_check, 2-enable_read_statstics, 4-enable_incomplete_update]");
+      }
+      else
+      {
+        fprintf(stderr, "%s\n", dynamic_parameter_str[i]);
+      }
     }
     return TFS_ERROR;
   }
