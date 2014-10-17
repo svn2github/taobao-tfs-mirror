@@ -267,6 +267,7 @@ namespace tfs
       {
         get_writable_block_manager().expire_all_blocks();
         get_writable_block_manager().giveup_writable_block();
+        usleep(10000); // wait 10ms, let giveup_block first served by ns
       }
 
       tbnet::Packet* ret_msg = NULL;
