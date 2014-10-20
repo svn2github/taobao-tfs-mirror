@@ -409,6 +409,7 @@ namespace tfs
     int BaseIndexHandle::update_block_statistic_info_(common::IndexHeaderV2* header,
         const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback)
     {
+      DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
       int32_t ret = check_load();
       if (TFS_SUCCESS == ret)
       {
@@ -430,10 +431,13 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           time_t now = time(NULL);
-          header->info_.last_access_time_ = now;
-          if (need_sync)
+          if ((OPER_READ != oper_type) || (info.global_switch_ & ENABLE_READ_STATSTICS))
           {
-            mem_header_.info_.last_access_time_ = now;
+            header->info_.last_access_time_ = now;
+            if (need_sync)
+            {
+              mem_header_.info_.last_access_time_ = now;
+            }
           }
           int32_t file_count = rollback ? -1 : 1;
           int32_t real_new_size = rollback ? 0 - new_size : new_size;
@@ -524,7 +528,7 @@ namespace tfs
             }
           }
 
-          if (OPER_READ == oper_type)
+          if (OPER_READ == oper_type && (info.global_switch_ & ENABLE_READ_STATSTICS))
           {
             header->throughput_.read_bytes_ += real_new_size;
             header->throughput_.read_visit_count_ += file_count;

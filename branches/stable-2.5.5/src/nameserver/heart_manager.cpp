@@ -328,7 +328,7 @@ namespace tfs
         meta.max_block_size_ = SYSPARAM_NAMESERVER.max_block_size_;
         meta.max_write_file_count_ = SYSPARAM_NAMESERVER.max_write_file_count_;
 				meta.check_integrity_interval_days_ = SYSPARAM_NAMESERVER.check_integrity_interval_days_;
-				meta.enable_version_check_ = SYSPARAM_NAMESERVER.enable_version_check_;
+				meta.global_switch_ = SYSPARAM_NAMESERVER.global_switch_;
         server_manager.calc_single_process_max_network_bandwidth(
               meta.max_mr_network_bandwith_, meta.max_rw_network_bandwith_, info);
         ret = rs.apply(info, meta.lease_expire_time_,meta.lease_renew_time_, meta.renew_retry_times_, meta.renew_retry_timeout_);
@@ -361,7 +361,7 @@ namespace tfs
         meta.max_block_size_ = SYSPARAM_NAMESERVER.max_block_size_;
         meta.max_write_file_count_ = SYSPARAM_NAMESERVER.max_write_file_count_;
 				meta.check_integrity_interval_days_ = SYSPARAM_NAMESERVER.check_integrity_interval_days_;
-				meta.enable_version_check_ = SYSPARAM_NAMESERVER.enable_version_check_;
+				meta.global_switch_ = SYSPARAM_NAMESERVER.global_switch_;
         server_manager.calc_single_process_max_network_bandwidth(
               meta.max_mr_network_bandwith_, meta.max_rw_network_bandwith_, info);
         ret = rs.renew(info, meta.lease_expire_time_,meta.lease_renew_time_, meta.renew_retry_times_, meta.renew_retry_timeout_);

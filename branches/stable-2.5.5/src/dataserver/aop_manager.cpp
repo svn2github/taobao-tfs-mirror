@@ -387,7 +387,7 @@ namespace tfs
       if ((TFS_SUCCESS == ret) && (remote_version >= 0))
       {
         DsRuntimeGlobalInformation& info = DsRuntimeGlobalInformation::instance();
-        if (ENABLE_VERSION_CHECK_FLAG_YES == info.enable_version_check_)
+        if (info.global_switch_ & ENABLE_VERSION_CHECK)
         {
           ret = get_block_manager().check_block_version(local, remote_version, block_id, attach_block_id);
           if (TFS_SUCCESS != ret)
@@ -414,6 +414,9 @@ namespace tfs
         }
         put(op_meta);
       }
+
+      // make sure we have BlockInfoV2 in local
+      get_block_manager().get_block_info(local, block_id);
 
       return  ret;
     }

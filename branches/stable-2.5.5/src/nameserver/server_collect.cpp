@@ -208,7 +208,7 @@ namespace tfs
             block = manager.get_block_manager().get(scan_writable_block_id_);
             if (NULL == block)  // dissove maybe happened here
               continue;
-            if (cleanup_invalid_block_(block, now))
+            if (cleanup_invalid_block_(block, now, false))
               continue;
             RWLock::Lock lock(mutex_, READ_LOCKER);
             if (!exist_(scan_writable_block_id_, *issued_leases_))
@@ -324,10 +324,6 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = block_manager.has_valid_lease(pblock, now) ? EXIT_LEASE_EXISTED : TFS_SUCCESS;
-        }
-        if (TFS_SUCCESS == ret)
-        {
           ret = manager.get_task_manager().exist_block(entry->block_id_) ? EXIT_BLOCK_BUSY : TFS_SUCCESS;
         }
         if (TFS_SUCCESS == ret)
@@ -349,7 +345,7 @@ namespace tfs
           ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, entry->servers_);
           block_manager.get_servers(servers, pblock);
           entry->size_ = servers.get_array_index();
-          if (SYSPARAM_NAMESERVER.enable_incomplete_update_ == ENABLE_INCOMPLETE_UPDATE_NO)
+          if (!(SYSPARAM_NAMESERVER.global_switch_ & ENABLE_INCOMPLETE_UPDATE))
           {
             int32_t expect_size = pblock->is_in_family() ? 1 : common::SYSPARAM_NAMESERVER.max_replication_;
             ret = entry->size_ != expect_size ? EXIT_BLOCK_COPIES_INCOMPLETE : TFS_SUCCESS;
@@ -806,29 +802,36 @@ namespace tfs
       return ret;
     }
 
-    bool ServerCollect::cleanup_invalid_block_(BlockCollect* block, const int64_t now)
+    bool ServerCollect::cleanup_invalid_block_(BlockCollect* block, const int64_t now, const bool master, const bool writable)
     {
       bool ret = (NULL != block);
       if (ret)
       {
         ret = false;
-        if (!block->is_writable()
-            || !block->is_master(id())
-            || !is_equal_group(block->id())
-            || !block->has_valid_lease(now)
-            || IS_VERFIFY_BLOCK(block->id()))
+        if (master)
         {
-          RWLock::Lock lock(mutex_, WRITE_LOCKER);
-          remove_(block->id(), *issued_leases_);
+          if (!block->is_writable()
+              || !block->is_master(id())
+              || !is_equal_group(block->id())
+              || !block->has_valid_lease(now)
+              || IS_VERFIFY_BLOCK(block->id()))
+          {
+            RWLock::Lock lock(mutex_, WRITE_LOCKER);
+            remove_(block->id(), *issued_leases_);
+          }
         }
-        if (block->is_full()
-            || !block->is_master(id())
-            || !is_equal_group(block->id())
-            || IS_VERFIFY_BLOCK(block->id()))
+
+        if (writable)
         {
-          ret = true;
-          RWLock::Lock lock(mutex_, WRITE_LOCKER);
-          remove_(block->id(), *writable_);
+          if (block->is_full()
+              || !block->is_master(id())
+              || !is_equal_group(block->id())
+              || IS_VERFIFY_BLOCK(block->id()))
+          {
+            ret = true;
+            RWLock::Lock lock(mutex_, WRITE_LOCKER);
+            remove_(block->id(), *writable_);
+          }
         }
       }
       return ret;

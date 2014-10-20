@@ -455,11 +455,18 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = expire(now) ? TFS_SUCCESS : EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR;
-      }
-      if (TFS_SUCCESS == ret)
-      {
         ret = has_valid_lease(now) ? EXIT_LEASE_EXISTED : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = expire(now) ? TFS_SUCCESS : EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR;
+        }
+        else
+        {
+          if (update)
+          {
+            ret = TFS_SUCCESS;
+          }
+        }
       }
       if (TFS_SUCCESS == ret)
       {
@@ -492,7 +499,7 @@ namespace tfs
         if (check)
         {
           if (update &&
-              SYSPARAM_NAMESERVER.enable_incomplete_update_ == ENABLE_INCOMPLETE_UPDATE_YES)
+              (SYSPARAM_NAMESERVER.global_switch_ & ENABLE_INCOMPLETE_UPDATE))
           {
             check = is_master(server);
           }

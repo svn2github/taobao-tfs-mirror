@@ -305,7 +305,7 @@ namespace tfs
         ret = get_block_manager().switch_logic_block(block_id, true);
         if (TFS_SUCCESS == ret)
         {
-          ret = service_.get_client_request_server().del_block(block_id, true);
+          service_.get_client_request_server().del_block(block_id, true);
         }
       }
 

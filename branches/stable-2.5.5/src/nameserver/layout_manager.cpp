@@ -463,7 +463,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.choose_target_server_retry_max_nums_,
           &SYSPARAM_NAMESERVER.max_marshalling_num_,
           &SYSPARAM_NAMESERVER.check_integrity_interval_days_,
-          &SYSPARAM_NAMESERVER.enable_version_check_,
+          &SYSPARAM_NAMESERVER.global_switch_,
           &SYSPARAM_NAMESERVER.marshalling_visit_time_,
           &SYSPARAM_NAMESERVER.client_keepalive_interval_,
           &SYSPARAM_NAMESERVER.verify_index_reserved_space_ratio_,
@@ -473,8 +473,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_safe_time_,
           &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_times_,
           &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_,
-          &SYSPARAM_NAMESERVER.migrate_complete_wait_time_,
-          &SYSPARAM_NAMESERVER.enable_incomplete_update_
+          &SYSPARAM_NAMESERVER.migrate_complete_wait_time_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;

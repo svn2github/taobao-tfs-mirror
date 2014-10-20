@@ -302,14 +302,8 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           target = get(block_id);
-          assert(NULL != target);
-          ret = target->get_use_flag() ? EXIT_BLOCK_HAS_WRITE: TFS_SUCCESS;
-        }
-        else if (EXIT_LEASE_EXISTED == ret)
-        {
-          // another thread may already applyed this block
-          target = get(block_id);
-          if (NULL != target)
+          ret = NULL == target ? EXIT_NO_WRITABLE_BLOCK : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
           {
             ret = target->get_use_flag() ? EXIT_BLOCK_HAS_WRITE: TFS_SUCCESS;
           }

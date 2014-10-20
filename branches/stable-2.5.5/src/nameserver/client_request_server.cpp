@@ -643,6 +643,9 @@ namespace tfs
       {
         snprintf(buf, buf_length, "del family %"PRI64_PREFIX"d fail, ret: %d", info.value3_, ret);
       }
+      CLogger& block_log = manager_.get_block_log();
+      block_log.logMessage(TBSYS_LOG_LEVEL(INFO), "delete family-%"PRI64_PREFIX"d flag: %"PRI64_PREFIX"d %s",
+          info.value3_, info.value4_, TFS_SUCCESS == ret ? "successful" : "failed");
 
       return ret;
     }

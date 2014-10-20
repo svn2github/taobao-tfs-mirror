@@ -192,7 +192,7 @@ namespace tfs
         ds_info.max_rw_network_bandwidth_mb_ = lease_meta_[who].max_rw_network_bandwith_;
         ds_info.max_block_size_ = lease_meta_[who].max_block_size_;
         ds_info.max_write_file_count_ = lease_meta_[who].max_write_file_count_;
-        ds_info.enable_version_check_ = lease_meta_[who].enable_version_check_;
+        ds_info.global_switch_ = lease_meta_[who].global_switch_;
         ds_info.check_integrity_interval_days_ = lease_meta_[who].check_integrity_interval_days_;
         master_index_ = who;  // record master index for fast access
       }
@@ -263,8 +263,12 @@ namespace tfs
       req_msg.set_ds_stat(ds_info.information_);
 
       // ds will exit, aync giveup all blocks
-      get_writable_block_manager().expire_all_blocks();
-      get_writable_block_manager().giveup_writable_block();
+      if (is_master(who))
+      {
+        get_writable_block_manager().expire_all_blocks();
+        get_writable_block_manager().giveup_writable_block();
+        usleep(10000); // wait 10ms, let giveup_block first served by ns
+      }
 
       tbnet::Packet* ret_msg = NULL;
       NewClient* new_client = NewClientManager::get_instance().create_client();
