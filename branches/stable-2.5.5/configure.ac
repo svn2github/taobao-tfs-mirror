@@ -273,7 +273,6 @@ AC_CONFIG_FILES([Makefile
                  src/nameserver/Makefile
                  src/rcserver/Makefile
                  src/kv_meta_server/Makefile
-                 src/syncserver/Makefile
                  src/migrateserver/Makefile
                  src/checkserver/Makefile
                  src/life_cycle_manager/Makefile
@@ -286,6 +285,7 @@ AC_CONFIG_FILES([Makefile
                  src/tools/nameserver/Makefile
                  src/tools/cluster/Makefile
                  src/tools/workers/Makefile])
+                 #src/syncserver/Makefile
                  #tests/Makefile
                  #tests/batch/Makefile])
                  #tests/rcserver/Makefile
