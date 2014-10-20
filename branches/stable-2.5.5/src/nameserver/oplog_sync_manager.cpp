@@ -344,7 +344,7 @@ namespace tfs
           count++;
         }
         TIMER_END();
-        TBSYS_LOG(TRACE, "replay log, count=%d, length=%"PRI64_PREFIX"d, cost=%"PRI64_PREFIX"d, ret=%d",
+        TBSYS_LOG(DEBUG, "replay log, count=%d, length=%"PRI64_PREFIX"d, cost=%"PRI64_PREFIX"d, ret=%d",
             count, length, TIMER_DURATION(), ret);
         OpLogSyncResponeMessage* reply_msg = new (std::nothrow)OpLogSyncResponeMessage();
         reply_msg->set_complete_flag();

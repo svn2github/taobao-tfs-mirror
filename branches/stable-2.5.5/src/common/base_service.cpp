@@ -478,7 +478,7 @@ namespace tfs
     {
       UNUSED(args);
       BasePacket* bp = (BasePacket*)r->ipacket;
-      TBSYS_LOG(DEBUG, "process slow packet, pcode=%d", bp->getPCode());
+      TBSYS_LOG(DEBUG, "process packet in queue, pcode=%d", bp->getPCode());
       return packet_handler(bp);
     }
 

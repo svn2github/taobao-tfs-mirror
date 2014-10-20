@@ -378,7 +378,9 @@ namespace tfs
     EasyThreadType NameServer::select_thread(BasePacket* packet)
     {
       int32_t pcode = packet->getPCode();
-      if (pcode == SET_DATASERVER_MESSAGE)
+      if (pcode == DS_APPLY_LEASE_MESSAGE ||
+          pcode == DS_RENEW_LEASE_MESSAGE ||
+          pcode == DS_GIVEUP_LEASE_MESSAGE)
       {
         return EASY_IO_THREAD;
       }
