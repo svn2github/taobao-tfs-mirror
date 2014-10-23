@@ -78,6 +78,7 @@ namespace tfs
       int scan(common::SSMScanParameter& param) const;
       void get_servers(common::ArrayHelper<uint64_t>& servers) const;
       uint64_t get_master() const;
+      uint64_t get_family_server(const int64_t family_id) const;
       int apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
         common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo);
       int renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,

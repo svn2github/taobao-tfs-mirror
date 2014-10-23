@@ -337,7 +337,7 @@ namespace tfs
             FamilyMemberInfo* pbfmi = abnormal_members.get(info);
             if (NULL == pbfmi)
             {
-              info.server_ =  bm.get_master(item->first);
+              info.server_ =  bm.get_family_server(item->first, family_id);
               ret = (INVALID_SERVER_ID != info.server_) ? TFS_SUCCESS : EXIT_DATASERVER_NOT_FOUND;
               if (TFS_SUCCESS == ret)
                 info.status_ = FAMILY_MEMBER_STATUS_NORMAL;

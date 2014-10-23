@@ -202,6 +202,25 @@ namespace tfs
       return result;
     }
 
+    uint64_t BlockCollect::get_family_server(const int64_t family_id) const
+    {
+      uint64_t result = INVALID_SERVER_ID;
+      if (is_in_family())
+      {
+        CONST_SERVER_ITER iter = servers_.begin();
+        // make sure family_id correct
+        for (; iter != servers_.end(); ++iter)
+        {
+          if (iter->family_id_ == family_id)
+          {
+            result = iter->server_;
+            break;
+          }
+        }
+      }
+      return result;
+    }
+
     /**
      * to check a block if replicate
      * @return: -1: none, 0: normal, 1: emergency
