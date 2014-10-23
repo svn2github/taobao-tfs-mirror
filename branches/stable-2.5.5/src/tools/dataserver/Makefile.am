@@ -30,9 +30,7 @@ LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
         $(top_builddir)/src/common/libtfscommon.a\
         $(TBLIB_ROOT)/lib/libtbnet.a\
         $(TBLIB_ROOT)/lib/libtbsys.a\
-				$(EASY_ROOT)/lib64/libeasy.a\
-				$(JERASURE_ROOT)/lib/libJerasure.a\
-				$(JERASURE_ROOT)/lib/libgf_complete.a
+				$(EASY_ROOT)/lib64/libeasy.a
 
 clear_file_system_SOURCES = clear_file_system.cpp
 

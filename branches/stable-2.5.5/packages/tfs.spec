@@ -27,8 +27,6 @@ BuildRequires: tfs-client-restful
 BuildRequires: json-c-devel = 0.11
 BuildRequires: json-c = 0.11
 BuildRequires: openssl-devel >= 0.9
-BuildRequires: Jerasure >= 1.0.0
-BuildRequires: gf-complete >= 1.0.0
 Requires: jemalloc-devel >= 2.2
 Requires: snappy >= 1.1.2
 Requires: google-perftools = 1.7
@@ -40,8 +38,6 @@ Requires: json-c-devel = 0.11
 Requires: json-c = 0.11
 Requires: openssl >= 0.9
 Requires: t_libeasy = 1.0.17
-Requires: Jerasure >= 1.0.0
-Requires: gf-complete >= 1.0.0
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}
