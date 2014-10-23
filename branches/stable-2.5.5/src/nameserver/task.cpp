@@ -890,7 +890,7 @@ namespace tfs
                   }
                   if (TFS_SUCCESS == ret)
                   {
-                    ret = bm.set_family_id(member_info[index].block_, member_info[index].server_, INVALID_FAMILY_ID);
+                    ret = bm.set_family_id(member_info[index].block_, member_info[index-MEMBER_NUM/2].server_, INVALID_FAMILY_ID);
                   }
                   if (TFS_SUCCESS == ret)
                   {
@@ -898,11 +898,17 @@ namespace tfs
                         && INVALID_SERVER_ID != member_info[index].server_)
                     {
                       BlockInfoV2 info = block->get_block_info();
-                      info.version_ += VERSION_INC_STEP_REPLICATE;
                       server = sm.get(member_info[index].server_);
                       ret = (NULL != server) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
                       if (TFS_SUCCESS == ret)
                         lm.build_relation(block, server, &info, now, false);
+                      if (TFS_SUCCESS == ret)
+                      {
+                        uint64_t array[MAX_REPLICATION_NUM];
+                        common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, array);
+                        bm.get_servers(helper, block);
+                        bm.update_version(helper, info.block_id_, info.version_, VERSION_INC_STEP_REPLICATE, info);
+                      }
                     }
                   }
                 }
