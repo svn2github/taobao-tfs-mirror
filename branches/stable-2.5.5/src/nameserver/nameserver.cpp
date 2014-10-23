@@ -877,7 +877,10 @@ namespace tfs
                 && pcode != REQ_REPORT_BLOCKS_TO_NS_MESSAGE
                 && pcode != BATCH_GET_BLOCK_INFO_MESSAGE
                 && pcode != SHOW_SERVER_INFORMATION_MESSAGE
-                && pcode != REQ_GET_FAMILY_INFO_MESSAGE)
+                && pcode != REQ_GET_FAMILY_INFO_MESSAGE
+                && pcode != DS_APPLY_LEASE_MESSAGE
+                && pcode != DS_RENEW_LEASE_MESSAGE
+                && pcode != DS_GIVEUP_LEASE_MESSAGE)
               {
                 ret = common::TFS_ERROR;
               }
