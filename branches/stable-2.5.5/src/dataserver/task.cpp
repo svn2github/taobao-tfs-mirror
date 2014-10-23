@@ -833,7 +833,6 @@ namespace tfs
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
-      const int8_t mars_type =  GET_MARSHALLING_TYPE(family_aid_info_);
 
       ErasureCode encoder;
       int32_t offset = 0;
@@ -845,9 +844,15 @@ namespace tfs
       // get the element with max used_offset
       ECMeta* max_ele = max_element(ec_metas, ec_metas + data_num, ECMeta::u_compare);
       marshalling_len = max_ele->used_offset_;
+      // if not align, rollup for encode
+      int unit = ErasureCode::ws_ * ErasureCode::ps_;
+      if (0 != (marshalling_len % unit))
+      {
+        marshalling_len = (marshalling_len / unit + 1) * unit;
+      }
 
       // config encoder parameter, alloc buffer
-      int ret = encoder.config(data_num, check_num, mars_type);
+      int ret = encoder.config(data_num, check_num);
       if (TFS_SUCCESS == ret)
       {
         for (int32_t i = 0; i < member_num; i++)
@@ -856,16 +861,6 @@ namespace tfs
           assert(NULL != data[i]);
         }
         encoder.bind(data, member_num, MAX_READ_SIZE);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        // if not align, rollup for encode
-        int unit = encoder.get_coding_unit();
-        if (0 != (marshalling_len % unit))
-        {
-          marshalling_len = (marshalling_len / unit + 1) * unit;
-        }
       }
 
       // process block data
@@ -1196,17 +1191,6 @@ namespace tfs
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
-      const int8_t mars_type =  GET_MARSHALLING_TYPE(family_aid_info_);
-
-      int64_t read_time = 0;
-      int64_t code_time = 0;
-      int64_t write_time = 0;
-      int64_t crc_time = 0;
-      int64_t t0 = 0;
-      int64_t t1 = 0;
-      int64_t t2 = 0;
-      int64_t t3 = 0;
-      int64_t t4 = 0;
 
       ErasureCode decoder;
       int32_t offset = 0;
@@ -1218,9 +1202,15 @@ namespace tfs
       // get the element with max marshalling_offset
       ECMeta* max_ele = max_element(ec_metas, ec_metas + member_num, ECMeta::m_compare);
       marshalling_len = max_ele->mars_offset_;
+      // if not align, rollup for encode
+      int unit = ErasureCode::ws_ * ErasureCode::ps_;
+      if (0 != (marshalling_len % unit))
+      {
+        marshalling_len = (marshalling_len / unit + 1) * unit;
+      }
 
       // config decoder parameter, alloc buffer
-      int ret = decoder.config(data_num, check_num, mars_type, erased_);
+      int ret = decoder.config(data_num, check_num, erased_);
       if (TFS_SUCCESS == ret)
       {
         for (int32_t i = 0; i < member_num; i++)
@@ -1231,19 +1221,8 @@ namespace tfs
         decoder.bind(data, member_num, MAX_READ_SIZE);
       }
 
-      if (TFS_SUCCESS == ret)
-      {
-        // if not align, rollup for encode
-        int unit = decoder.get_coding_unit();
-        if (0 != (marshalling_len % unit))
-        {
-          marshalling_len = (marshalling_len / unit + 1) * unit;
-        }
-      }
-
       while ((TFS_SUCCESS == ret) && (offset < marshalling_len))
       {
-        t0 = Func::get_monotonic_time_us();
         length = std::min(marshalling_len - offset, MAX_READ_SIZE);
 
         for (int32_t i = 0; i < member_num && TFS_SUCCESS == ret; i++)
@@ -1274,15 +1253,11 @@ namespace tfs
           }
         }
 
-        t1 = Func::get_monotonic_time_us();
-
         // decode data to buffer
         if (TFS_SUCCESS == ret)
         {
           ret = decoder.decode(length);
         }
-
-        t2 = Func::get_monotonic_time_us();
 
         // recover data
         for (int32_t i = 0; (TFS_SUCCESS == ret) && (i < member_num); i++)
@@ -1295,8 +1270,6 @@ namespace tfs
           ret = get_data_helper().write_raw_data(family_members_[i].server_,
               family_members_[i].block_, data[i], length, offset, true);
         }
-
-        t3 = Func::get_monotonic_time_us();
 
         // compute lost data crc
         if (TFS_SUCCESS == ret)
@@ -1311,32 +1284,16 @@ namespace tfs
           }
         }
 
-        t4 = Func::get_monotonic_time_us();
-
         // all success, update offset
         if (TFS_SUCCESS == ret)
         {
           offset += length;
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          read_time  += (t1 - t0);
-          code_time  += (t2 - t1);
-          write_time += (t3 - t2);
-          crc_time   += (t4 - t3);
         }
       }
 
       for (int32_t i = 0; i < member_num; i++)
       {
         tbsys::gFree(data[i]);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        TBSYS_LOG(INFO, "decode family %ld cost(ms). read_time: %ld code_time: %ld write_time: %ld crc_time: %ld",
-            family_id_, read_time / 1000, code_time / 1000, write_time / 1000, crc_time / 1000);
       }
 
       return ret;
@@ -1377,8 +1334,6 @@ namespace tfs
           // compactible with old family
           if (index_data.header_.data_crc_ != 0)
           {
-            TBSYS_LOG(INFO, "check integrity when recovery block %"PRI64_PREFIX"u, crc %u:%ld",
-                family_members_[i].block_, index_data.header_.data_crc_, crc_[i]);
             assert(index_data.header_.data_crc_ == crc_[i]);
           }
           ec_metas[i].mars_offset_ = index_data.header_.marshalling_offset_;

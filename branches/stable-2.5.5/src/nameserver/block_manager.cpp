@@ -395,6 +395,13 @@ namespace tfs
       return (NULL != pblock) ? pblock->get_master() : INVALID_SERVER_ID;
     }
 
+    uint64_t BlockManager::get_family_server(const uint64_t block, const int64_t family) const
+    {
+      RWLock::Lock lock(get_mutex_(block), READ_LOCKER);
+      BlockCollect* pblock = get_(block);
+      return (NULL != pblock) ? pblock->get_family_server(family) : INVALID_SERVER_ID;
+    }
+
     bool BlockManager::exist(const BlockCollect* block, const ServerCollect* server) const
     {
       bool ret = (NULL != block && NULL != server);

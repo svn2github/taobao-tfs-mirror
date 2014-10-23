@@ -92,6 +92,7 @@ namespace tfs
         int get_servers_size(const uint64_t block) const;
         int get_servers_size(const BlockCollect* const pblock) const;
         uint64_t get_master(const uint64_t) const;
+        uint64_t get_family_server(const uint64_t block, const int64_t family) const;
         bool exist(const BlockCollect* block, const ServerCollect* server) const;
 
         int update_relation(std::vector<uint64_t>& cleanup_family_id_array, ServerCollect* server,

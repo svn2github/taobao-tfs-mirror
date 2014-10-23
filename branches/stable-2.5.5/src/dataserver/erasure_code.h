@@ -37,34 +37,17 @@ namespace tfs
          */
         virtual ~ErasureCode();
 
-        // minimal decode unit
-        int get_coding_unit() const
-        {
-          return ws_ * ps_;
-        }
-
-
-        /**
-         * @brief parse marshalling type
-         *
-         * @param type: marshalling type
-         *
-         * @return 0 on success;
-         */
-        int parse_type(const int8_t type);
-
         /**
         * @brief config erasure code
         *
         * @param dn: data numbers
         * @param pn: parity numbers
-        * @param type: encode algorithm
         * @param erased: which disk is erased
         *        only used on decode, length: dn + pn
         *        alive: 0, dead: 1, not used: -1
         * @return 0 on succss
         */
-        int config(const int dn, const int pn, const int8_t type, int* erased = NULL);
+        int config(const int dn, const int pn, int* erased = NULL);
 
         /**
          * @brief bind data with encode/decode buffer
@@ -118,6 +101,10 @@ namespace tfs
         int decode(const int size);
 
       public:
+        static const int ws_;         // word size, shouldn't change
+        static const int ps_;         // packet_size, shouldn't change
+
+      public:
         enum
         {
           NODE_ALIVE = 0,
@@ -130,8 +117,6 @@ namespace tfs
 
         int dn_;                                      // data numbers
         int pn_;                                      // parity numbers
-        int ws_;                                      // word size
-        int ps_;                                      // packet size
         int* matrix_;                                 // encode matrix
         int* de_matrix_;                              // decode matrix
         char* data_[common::MAX_MARSHALLING_NUM];     // data binding
