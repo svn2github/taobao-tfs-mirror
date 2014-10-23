@@ -98,11 +98,11 @@ namespace tfs
       {
         if (type & BLOCK_TYPE_SERVER_LIST)
         {
-         fprintf(fp, "FAMILY_ID  CONFIG %18s MEMBERS( BLOCK_ID/SERVER_ID )\n", "");
+         fprintf(fp, "FAMILY_ID  DATA_CNT CHECK_CNT %18s MEMBERS( BLOCK_ID/SERVER_ID )\n", "");
         }
         else
         {
-         fprintf(fp, "FAMILY_ID  CONFIG  %12s MEMBERS( BLOCK_ID )\n", "");
+         fprintf(fp, "FAMILY_ID  DATA_CNT CHECK_CNT %12s MEMBERS( BLOCK_ID )\n", "");
         }
       }
       if (print_type & CHECK_BLOCK_TYPE)
@@ -717,8 +717,7 @@ namespace tfs
       int32_t data_member_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_member_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_member_num + check_member_num;
-      const int8_t mars_type =  GET_MARSHALLING_TYPE(family_aid_info_);
-      fprintf(fp, "%-10"PRI64_PREFIX"d %d+%d  %d %8s", family_id_, data_member_num, check_member_num, mars_type, "");
+      fprintf(fp, "%-10"PRI64_PREFIX"d %5d %6d %8s", family_id_, data_member_num, check_member_num, "");
       std::ostringstream member_str;
       for(int32_t index = 0; index < member_num; index++)
       {
