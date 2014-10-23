@@ -73,6 +73,7 @@ namespace tfs
       block_count_(info.block_count_),
       total_network_bandwith_(128),//MB
       write_index_(0),
+      rack_id_(info.rack_id_),
       status_(SERVICE_STATUS_ONLINE),
       disk_type_(info.type_),
       wait_free_phase_(OBJECT_WAIT_FREE_PHASE_NONE),
@@ -563,6 +564,7 @@ namespace tfs
       int32_t args = CALL_BACK_FLAG_CLEAR;
       callback(reinterpret_cast<void*>(&args), manager);
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      rack_id_ = info.rack_id_;
       rb_expired_time_ = 0;
       next_report_block_time_ = 0;
       scan_writable_block_id_ = 0;

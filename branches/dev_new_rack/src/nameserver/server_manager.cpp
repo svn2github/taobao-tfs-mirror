@@ -552,7 +552,7 @@ namespace tfs
           assert(NULL != pserver);
           news.push_back(pserver->id());
           result.push_back(pserver->id());
-          uint32_t lan =  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);
+          uint32_t lan = pserver->get_rack_id();
           lans.insert(lan);
         }
       }
@@ -608,7 +608,7 @@ namespace tfs
         random_index = random() % size;
         pserver = sources.at(random_index);
         assert(NULL != pserver);
-        uint32_t lan =  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);
+        uint32_t lan =  pserver->get_rack_id();
         TBSYS_LOG(DEBUG, "==============addr: %s, lans : %u", tbsys::CNetUtil::addrToString(pserver->id()).c_str(), lan);
         if (manager_.get_task_manager().has_space_do_task_in_machine(pserver->id(), true)
             && !manager_.get_task_manager().exist_server(pserver->id())
@@ -621,66 +621,6 @@ namespace tfs
         }
       }
       return (NULL != result) ? TFS_SUCCESS : EXIT_NO_DATASERVER;
-    }
-
-    int ServerManager::choose_excess_backup_server(ServerCollect*& result, const common::ArrayHelper<uint64_t>& sources) const
-    {
-      result = NULL;
-      SORT_MAP sorts;
-      GROUP_MAP group, servers;
-      for (int64_t index = 0; index < sources.get_array_index(); ++index)
-      {
-        uint64_t id = *sources.at(index);
-        assert(INVALID_SERVER_ID != id);
-        ServerCollect* server = get(id);
-        if ((NULL != server) && server->total_capacity() > 0)
-        {
-          int64_t use = static_cast<int64_t>(calc_capacity_percentage(server->use_capacity(),
-                server->total_capacity()) *  PERCENTAGE_MAGIC);
-          sorts.insert(SORT_MAP::value_type(use, server));
-          uint32_t lan = Func::get_lan(server->id(), SYSPARAM_NAMESERVER.group_mask_);
-          GROUP_MAP_ITER iter = servers.find(server->id());
-          if (servers.end() == iter)
-            iter = servers.insert(GROUP_MAP::value_type(server->id(), SORT_MAP())).first;
-          iter->second.insert(SORT_MAP::value_type(use, server));
-          iter = group.find(lan);
-          if (group.end() == iter)
-            iter = group.insert(GROUP_MAP::value_type(lan, SORT_MAP())).first;
-          iter->second.insert(SORT_MAP::value_type(use, server));
-        }
-      }
-
-      if (0 == SYSPARAM_NAMESERVER.group_mask_)
-      {
-        result = sorts.empty() ? NULL : sorts.rbegin()->second;
-      }
-      else
-      {
-        GROUP_MAP_ITER iter = servers.begin();
-        for (; iter != servers.end() && NULL == result; ++iter)
-        {
-          if (iter->second.size() > 1u)
-            result = iter->second.rbegin()->second;
-        }
-        if (NULL == result)
-        {
-          uint32_t nums = 0;
-          GROUP_MAP_ITER iter = group.begin();
-          for (; iter != group.end(); ++iter)
-          {
-            if (iter->second.size() > nums)
-            {
-              nums = iter->second.size();
-              result = iter->second.rbegin()->second;
-            }
-          }
-        }
-        if (NULL == result)
-        {
-          result = sorts.empty() ? NULL : sorts.rbegin()->second;
-        }
-      }
-      return NULL != result ? TFS_SUCCESS : EXIT_NO_DATASERVER;
     }
 
     int ServerManager::expand_ratio(int32_t& index, const float expand_ratio)
@@ -758,7 +698,12 @@ namespace tfs
       {
         server = *source.at(index);
         assert(INVALID_SERVER_ID != server);
-        uint32_t lan =  Func::get_lan(server, SYSPARAM_NAMESERVER.group_mask_);
+        ServerCollect* pserver = manager_.get_server_manager().get(server);
+        if (NULL == pserver)
+        {
+          continue;
+        }
+        uint32_t lan =  pserver->get_rack_id();
         TBSYS_LOG(DEBUG, "addr: %s, lans : %u", tbsys::CNetUtil::addrToString(server).c_str(), lan);
         lans.insert(lan);
       }
@@ -810,7 +755,7 @@ namespace tfs
                       && (DATASERVER_DISK_TYPE_FULL == pserver->get_disk_type()));
         if (valid && !lans.empty())
         {
-          uint32_t lan =  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);
+          uint32_t lan =  pserver->get_rack_id();
           valid = lans.find(lan) == lans.end();
         }
 

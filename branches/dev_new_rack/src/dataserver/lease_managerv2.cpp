@@ -297,7 +297,6 @@ namespace tfs
         service_.get_block_manager().get_space(info.total_capacity_, info.use_capacity_);
         info.block_count_ = service_.get_block_manager().get_all_logic_block_count();
         info.current_load_ = Func::get_load_avg();
-        info.current_time_ = time(NULL);
       }
     }
 

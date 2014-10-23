@@ -671,7 +671,7 @@ namespace tfs
       int32_t block_count_;
       int32_t last_update_time_;
       int32_t startup_time_;
-      int32_t current_time_;
+      uint32_t rack_id_;
       int32_t type_;
       int32_t total_network_bandwith_;
     };

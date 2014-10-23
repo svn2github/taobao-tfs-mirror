@@ -552,7 +552,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &current_time_);
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&rack_id_));
       }
       if (TFS_SUCCESS == ret)
       {
@@ -628,7 +628,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, current_time_);
+        ret = Serialization::set_int32(data, data_len, pos, rack_id_);
       }
       if (TFS_SUCCESS == ret)
       {

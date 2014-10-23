@@ -134,11 +134,6 @@ namespace tfs
       TBSYS_LOG(INFO, "load configure::max_block_size_:%u, max_replication_:%u,max_write_file_count_:%u,max_use_capacity_ratio_:%u",
           max_block_size_,max_replication_, max_write_file_count_,max_use_capacity_ratio_);
 
-      const char* group_mask_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_GROUP_MASK, "255.255.255.255");
-      if (group_mask_str == NULL)
-          group_mask_str = "255.255.255.255";
-      group_mask_ = Func::get_addr(group_mask_str);
-
       heart_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_INTERVAL, 2);
       if (heart_interval_ <= 0)
         heart_interval_ = 2;
@@ -315,6 +310,13 @@ namespace tfs
       max_bg_task_queue_size_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_BG_TASK_QUEUE_SIZE, 5);
       business_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_BUSINESS_PORT_COUNT, 1);
       heart_port_count_ = config.getInt(CONF_SN_DATASERVER, CONF_HEART_PORT_COUNT, 1);
+      const int rack_id_tmp = config.getInt(CONF_SN_DATASERVER, CONF_RACK_ID, -1);
+      if (rack_id_tmp < 0)
+      {
+        TBSYS_LOG(ERROR, "rack_id %d < 0 invalid", rack_id_tmp);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
+      }
+      rack_id_ = rack_id_tmp;
 
       // example ==> 10.232.36.201:3100:1|10.232.36.202:3100:2|10.232.36.203:3100:1
       const char* cluster_version_str = config.getString(CONF_SN_DATASERVER, CONF_CLUSTER_VERSION_LIST, NULL);
