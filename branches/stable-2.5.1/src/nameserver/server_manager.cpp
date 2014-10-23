@@ -197,6 +197,7 @@ namespace tfs
       ServerCollect* pserver = NULL;
       int32_t expire_count = 0;
       const int32_t MAX_TRAVERSE_COUNT = 512;
+      const int32_t MAX_REPORT_COUNT = 64;
       ServerCollect* entry[MAX_TRAVERSE_COUNT];
       ArrayHelper<ServerCollect*> helper(MAX_TRAVERSE_COUNT, entry);
       all_over = traverse(last_traverse_server, servers_, helper);
@@ -214,7 +215,7 @@ namespace tfs
         else
         {
           pserver->statistics(stat_info);
-          if (pserver->is_report_block(now))
+          if (report_block_servers.get_array_index() < MAX_REPORT_COUNT && pserver->is_report_block(now))
           {
             report_block_servers.push_back(pserver);
           }
