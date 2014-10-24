@@ -239,6 +239,7 @@ namespace tfs
 #define CONF_KV_DB_CONN                             "kv_db_conn"
 #define CONF_KV_DB_USER                              "kv_db_user"
 #define CONF_KV_DB_PASS                              "kv_db_pass"
+#define CONF_KV_DB_POOL_SIZE                         "kv_db_pool_size"
 #define CONF_OBJECT_AREA                            "object_area"
 #define CONF_LIFECYCLE_AREA                       "lifecycle_area"
 #define CONF_STAT_INFO_INTERVAL                      "stat_info_interval"

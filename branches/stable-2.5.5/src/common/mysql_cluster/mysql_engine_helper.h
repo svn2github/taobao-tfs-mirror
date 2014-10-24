@@ -29,7 +29,7 @@ namespace tfs
     class MysqlEngineHelper : public KvEngineHelper
     {
     public:
-      MysqlEngineHelper(const std::string &conn_str, const std::string &user, const std::string &pass);
+      MysqlEngineHelper(const std::string &conn_str, const std::string &user, const std::string &pass, const int32_t pool_size);
       virtual ~MysqlEngineHelper();
       virtual int init();
       virtual int scan_keys(const int32_t name_area, const KvKey& start_key, const KvKey& end_key, const int32_t limit, const int32_t offset,

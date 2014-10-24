@@ -300,6 +300,7 @@ namespace tfs
       std::string conn_str_;
       std::string user_name_;
       std::string pass_wd_;
+      int32_t pool_size_;
       int object_area_;
       int lifecycle_area_;
       int32_t dump_stat_info_interval_;
