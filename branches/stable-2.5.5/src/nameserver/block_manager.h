@@ -136,7 +136,8 @@ namespace tfs
         int giveup_lease(const uint64_t server, const time_t now, const common::BlockInfoV2* info, BlockCollect* pblock);
         void timeout(const time_t now);
         void set_task_expired_time(const uint64_t block, const int64_t now, const int32_t step);
-        void update_version(common::ArrayHelper<uint64_t>& helper, const uint64_t , const int32_t version, const int32_t step, const common::BlockInfoV2& info);
+        void update_version(common::ArrayHelper<uint64_t>& helper, const uint64_t block, const int32_t version, const int32_t step, const common::BlockInfoV2& info);
+        void update_version(common::ArrayHelper<uint64_t>& helper, const uint64_t block, const int32_t version, const common::BlockInfoV2& info);
       private:
         DISALLOW_COPY_AND_ASSIGN(BlockManager);
         common::RWLock& get_mutex_(const uint64_t block) const;
