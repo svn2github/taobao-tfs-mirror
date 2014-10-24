@@ -864,6 +864,22 @@ namespace tfs
       }
     }
 
+    void BlockManager::update_version(common::ArrayHelper<uint64_t>& helper, const uint64_t block, const int32_t version, const BlockInfoV2& info)
+    {
+      RWLock::Lock lock(get_mutex_(block), WRITE_LOCKER);
+      BlockCollect* pblock = get_(block);
+      if (NULL != pblock)
+      {
+        pblock->set_version(version);
+        pblock->update_info(info);
+        for (int64_t index = 0; index < helper.get_array_index(); ++index)
+        {
+          uint64_t server = *(helper.at(index));
+          pblock->update_version(server, version);
+        }
+      }
+    }
+
     int32_t BlockManager::get_chunk_(const uint64_t block) const
     {
       return  block % MAX_BLOCK_CHUNK_NUMS;

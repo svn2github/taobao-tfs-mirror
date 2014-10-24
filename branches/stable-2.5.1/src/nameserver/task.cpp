@@ -298,7 +298,14 @@ namespace tfs
                 uint64_t array[MAX_REPLICATION_NUM];
                 common::ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, array);
                 bm.get_servers(helper, block);
-                bm.update_version(helper, info.block_id_, version, VERSION_INC_STEP_REPLICATE, info);
+                if (blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
+                {
+                  bm.update_version(helper, info.block_id_, version, VERSION_INC_STEP_REPLICATE, info);
+                }
+                else
+                {
+                  bm.update_version(helper, info.block_id_, version, info);
+                }
               }
             }
             this->log(OPLOG_TYPE_REPLICATE_MSG, message);
