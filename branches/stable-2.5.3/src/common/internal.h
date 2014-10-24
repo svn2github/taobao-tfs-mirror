@@ -738,7 +738,7 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
-      uint32_t block_id_;       // block id
+      uint64_t block_id_;       // block id
       uint64_t file_id_;        // file id
       int64_t offset_;          // offset in current file
       int32_t size_;            // size of segment

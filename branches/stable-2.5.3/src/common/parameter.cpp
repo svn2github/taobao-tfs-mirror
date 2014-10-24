@@ -714,6 +714,7 @@ namespace tfs
       conn_str_ = config.getString(CONF_SN_KVMETA, CONF_KV_DB_CONN, "");
       user_name_ = config.getString(CONF_SN_KVMETA, CONF_KV_DB_USER, "");
       pass_wd_ = config.getString(CONF_SN_KVMETA, CONF_KV_DB_PASS, "");
+      pool_size_ = config.getInt(CONF_SN_KVMETA, CONF_KV_DB_POOL_SIZE, 20);
       object_area_ = config.getInt(CONF_SN_KVMETA, CONF_OBJECT_AREA, -1);
       lifecycle_area_ = config.getInt(CONF_SN_KVMETA, CONF_LIFECYCLE_AREA, -1);
       dump_stat_info_interval_ = config.getInt(CONF_SN_KVMETA, CONF_STAT_INFO_INTERVAL, 60000000);

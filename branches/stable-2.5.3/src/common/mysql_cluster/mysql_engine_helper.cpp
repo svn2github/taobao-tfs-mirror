@@ -29,9 +29,10 @@ namespace tfs
 
     const int MysqlEngineHelper::MYSQL_RETRY_COUNT = 1;
 
-    MysqlEngineHelper::MysqlEngineHelper(const std::string &conn_str, const std::string &user, const std::string &pass)
+    MysqlEngineHelper::MysqlEngineHelper(const std::string &conn_str,
+        const std::string &user, const std::string &pass, const int32_t pool_size)
       :data_base_pool_(NULL), conn_str_(conn_str),
-      user_(user), pass_(pass), pool_size_(20)
+      user_(user), pass_(pass), pool_size_(pool_size)
     {
 
     }
