@@ -451,11 +451,11 @@ namespace tfs
             break;
           case REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
             {
-              BaseTaskMessage* packet = dynamic_cast<BaseTaskMessage*>(packet);
-              if (0 == packet->get_seqno())
-                ret = resolve_block_version_conflict(packet);
+              BaseTaskMessage* tmsg = dynamic_cast<BaseTaskMessage*>(packet);
+              if (0 == tmsg->get_seqno())
+                ret = resolve_block_version_conflict(tmsg);
               else
-                ret = layout_manager_.get_client_request_server().handle(packet);
+                ret = layout_manager_.get_client_request_server().handle(tmsg);
             }
             break;
           case REQ_GET_FAMILY_INFO_MESSAGE:
