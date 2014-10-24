@@ -1332,7 +1332,7 @@ namespace tfs
           // update lost data node's marshalling len
           // it's needed when recover check block
           // compactible with old family
-          if (index_data.header_.data_crc_ != 0)
+          if (index_data.header_.data_crc_ != 0 && ec_metas[pi].data_crc_ != 0)
           {
             assert(index_data.header_.data_crc_ == crc_[i]);
           }
