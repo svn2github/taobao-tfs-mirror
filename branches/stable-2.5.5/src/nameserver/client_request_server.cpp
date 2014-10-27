@@ -464,10 +464,21 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        if (INVALID_SERVER_ID != info.value1_ && helper.exist(info.value1_))
-          source = server_manager.get(info.value1_);
+        if (INVALID_SERVER_ID != info.value1_)
+        {
+          if (!helper.exist(info.value1_))
+          {
+            source = NULL;
+          }
+          else
+          {
+            source = server_manager.get(info.value1_);
+          }
+        }
         else
+        {
           server_manager.choose_replicate_source_server(source, helper);
+        }
         ret = (NULL != source) ? TFS_SUCCESS : EXIT_CHOOSE_SOURCE_SERVER_ERROR;
         if (TFS_SUCCESS != ret)
         {
