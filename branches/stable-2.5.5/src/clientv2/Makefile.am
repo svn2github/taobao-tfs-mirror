@@ -22,7 +22,6 @@ api_source_list = tfs_client_api_v2.cpp tfs_client_impl_v2.cpp tfs_file.cpp fsna
 									tfs_meta_manager.h tfs_kv_meta_client_impl.h tfs_kv_meta_client_api.h \
 									tfs_kv_meta_helper.h tfs_cluster_manager.h tfs_rc_helper.h \
 									tfs_rc_client_api.h tfs_rc_client_api_impl.h\
-									local_key.cpp local_key.h segment_container.h \
                   $(tair_cache_source)
 
 ld_fg = $(AM_LDFLAGS) \
