@@ -47,8 +47,7 @@ namespace tfs
     };
 
     HandleTaskHelper::HandleTaskHelper(ExpServerManager &manager)
-      :kv_engine_helper_(NULL), lifecycle_area_(0),
-      assign_task_thread_(0), task_period_(0),
+      :assign_task_thread_(0), task_period_(0),
       note_interval_(0), destroy_(false), manager_(manager)
     {
     }
@@ -68,26 +67,13 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int HandleTaskHelper::init(common::KvEngineHelper* kv_engine_helper)
+    int HandleTaskHelper::init()
     {
       int ret = TFS_SUCCESS;
 
-      if (NULL == kv_engine_helper)
-      {
-        ret = TFS_ERROR;
-      }
-      else
-      {
-        kv_engine_helper_ = kv_engine_helper;
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        lifecycle_area_ = SYSPARAM_EXPIREROOTSERVER.lifecycle_area_;
-        task_period_ = SYSPARAM_EXPIREROOTSERVER.task_period_;
-        note_interval_ = SYSPARAM_EXPIREROOTSERVER.note_interval_;
-        assign_task_thread_ = new AssignTaskThreadHelper(*this);
-      }
+      task_period_ = SYSPARAM_EXPIREROOTSERVER.task_period_;
+      note_interval_ = SYSPARAM_EXPIREROOTSERVER.note_interval_;
+      assign_task_thread_ = new AssignTaskThreadHelper(*this);
 
       return ret;
     }

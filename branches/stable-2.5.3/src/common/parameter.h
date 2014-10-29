@@ -313,6 +313,7 @@ namespace tfs
       std::string conn_str_;
       std::string user_name_;
       std::string pass_wd_;
+      int32_t pool_size_;
       int lifecycle_area_;
       uint64_t ers_ip_port_;
       uint64_t es_ip_port_;
@@ -332,11 +333,6 @@ namespace tfs
 
     struct ExpireRootServerParameter
     {
-      std::string conn_str_;
-      std::string user_name_;
-      std::string pass_wd_;
-      int lifecycle_area_;
-
       int32_t es_rts_lease_expired_time_;  //4s
       int32_t es_rts_check_lease_interval_;  //1s
       int32_t es_rts_heart_interval_;       //2s

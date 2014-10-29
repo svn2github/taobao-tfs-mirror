@@ -20,7 +20,6 @@
 #include "common/parameter.h"
 #include "common/base_service.h"
 #include "common/status_message.h"
-#include "common/kvengine_helper.h"
 #include "common/expire_define.h"
 #include "message/message_factory.h"
 #include "exp_server_manager.h"
@@ -34,7 +33,7 @@ namespace tfs
       public:
         HandleTaskHelper(ExpServerManager &manager);
         virtual ~HandleTaskHelper();
-        int init(tfs::common::KvEngineHelper* kv_engine_helper);
+        int init();
         int destroy();
 
         int handle_finish_task(const uint64_t es_id, const common::ExpireTaskInfo&);
@@ -44,7 +43,6 @@ namespace tfs
         void assign_task(void);
 
       protected:
-        common::KvEngineHelper* kv_engine_helper_;
         int32_t lifecycle_area_;
 
       private:

@@ -811,6 +811,7 @@ namespace tfs
       conn_str_ = config.getString(CONF_SN_EXPIRESERVER, CONF_KV_DB_CONN, "");
       user_name_ = config.getString(CONF_SN_EXPIRESERVER, CONF_KV_DB_USER, "");
       pass_wd_ = config.getString(CONF_SN_EXPIRESERVER, CONF_KV_DB_PASS, "");
+      pool_size_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_KV_DB_POOL_SIZE, 20);
       lifecycle_area_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_LIFECYCLE_AREA, -1);
 
       re_clean_days_ = config.getInt(CONF_SN_EXPIRESERVER, CONF_EXPIRE_RE_CLEAN_DAYS, 1);
@@ -873,10 +874,6 @@ namespace tfs
         return TFS_ERROR;
       }
 
-      conn_str_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_CONN, "");
-      user_name_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_USER, "");
-      pass_wd_ = config.getString(CONF_SN_EXPIREROOTSERVER, CONF_KV_DB_PASS, "");
-      lifecycle_area_ = config.getInt(CONF_SN_EXPIREROOTSERVER, CONF_LIFECYCLE_AREA, -1);
       task_period_ = config.getInt(CONF_SN_EXPIREROOTSERVER, CONF_TASK_PERIOD, 0);
       note_interval_ = config.getInt(CONF_SN_EXPIREROOTSERVER, CONF_NOTE_INTERVAL, 0);
 

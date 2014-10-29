@@ -104,7 +104,6 @@ namespace tfs
       ExpServerManager manager_;
 
       HandleTaskHelper handle_task_helper_;
-      common::KvEngineHelper *kv_engine_helper_;
     };
   }/** exprootserver **/
 }/** tfs **/
