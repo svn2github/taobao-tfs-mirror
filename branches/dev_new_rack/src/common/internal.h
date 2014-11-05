@@ -1458,7 +1458,9 @@ namespace tfs
       int64_t total_capacity_;
       int32_t current_load_;
       int32_t block_count_;
-      time_t last_update_time_;
+      //time_t last_update_time_;
+      uint32_t rack_id_;
+      uint32_t reserve_;
       time_t startup_time_;
       common::Throughput total_tp_;
       common::Throughput last_tp_;
@@ -1470,7 +1472,7 @@ namespace tfs
       uint8_t rb_status_;
 
       ServerStat():id_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
-          last_update_time_(0), startup_time_(0), current_time_(0),rb_expired_time_(0),
+          rack_id_(0), reserve_(0), startup_time_(0), current_time_(0),rb_expired_time_(0),
           next_report_block_time_(0), disk_type_(0), rb_status_(0)
       {
         memset(&total_tp_, 0, sizeof(total_tp_));

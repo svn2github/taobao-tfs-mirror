@@ -150,7 +150,7 @@ namespace tfs
       {
         if (server_stat_.use_capacity_ != server_b.server_stat_.use_capacity_) { flag_.set(b); server_b.flag_.set(b); }
         if (server_stat_.total_capacity_ != server_b.server_stat_.total_capacity_) { flag_.set(b + 1); server_b.flag_.set(b + 1); }
-        if (server_stat_.current_load_ != server_b.server_stat_.current_load_) { flag_.set(b + 2); server_b.flag_.set(b + 2); }
+        if (server_stat_.current_load_ != server_b.server_stat_.current_load_ ) { flag_.set(b + 2); server_b.flag_.set(b + 2); }
         if (server_stat_.block_count_ != server_b.server_stat_.block_count_) { flag_.set(b + 3); server_b.flag_.set(b + 3);}
         if (server_stat_.total_tp_.write_byte_ != server_b.server_stat_.total_tp_.write_byte_) { flag_.set(b + 4); server_b.flag_.set(b + 4);}
         if (server_stat_.total_tp_.write_file_count_ != server_b.server_stat_.total_tp_.write_file_count_) { flag_.set(b + 5); server_b.flag_.set(b + 5); }

@@ -316,7 +316,7 @@ namespace tfs
         TBSYS_LOG(ERROR, "rack_id %d < 0 invalid", rack_id_tmp);
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }
-      rack_id_ = rack_id_tmp;
+      rack_id_ = static_cast<uint32_t>(rack_id_tmp);
 
       // example ==> 10.232.36.201:3100:1|10.232.36.202:3100:2|10.232.36.203:3100:1
       const char* cluster_version_str = config.getString(CONF_SN_DATASERVER, CONF_CLUSTER_VERSION_LIST, NULL);

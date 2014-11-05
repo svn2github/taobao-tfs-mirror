@@ -238,7 +238,9 @@ namespace tfs
         param.data_.writeInt64(total_capacity_);
         param.data_.writeInt32(current_load_);
         param.data_.writeInt32(block_count_);
-        param.data_.writeInt64(this->get());
+        //param.data_.writeInt64(this->get());
+        param.data_.writeInt32(rack_id_);
+        param.data_.writeInt32(0);
         param.data_.writeInt64(startup_time_);
         for (int8_t index = 0; index < MAX_RW_STAT_PAIR_NUM; ++index)
         {
