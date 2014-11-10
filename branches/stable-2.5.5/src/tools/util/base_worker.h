@@ -167,6 +167,7 @@ namespace tfs
             if (common::TFS_SUCCESS == ret)
             {
               fprintf(succ_fp_, "%s\n", item.first.c_str());
+              fflush(succ_fp_);
             }
             else
             {
@@ -175,6 +176,7 @@ namespace tfs
                 fprintf(fail_fp_, "%s\n", item.first.c_str());
                 TBSYS_LOG(WARN, "line %s fail finally after %d times retry, ret: %d",
                     item.first.c_str(), retry_count_, ret);
+                fflush(fail_fp_);
               }
               else
               {

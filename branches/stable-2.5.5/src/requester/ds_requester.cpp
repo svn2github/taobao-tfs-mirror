@@ -345,7 +345,7 @@ namespace tfs
         int32_t retry = RETRY_TIMES;
         do
         {
-          length = std::min(total_len, traffic);
+          length = std::min(total_len - offset, traffic);
           create_msg_ref(WriteRawdataMessageV2, req);
           req.set_block_id(block);
           req.set_offset(offset);

@@ -197,7 +197,7 @@ namespace tfs
         ret = check_block_integrity(block, server, dindex_data);
       }
 
-      if (sindex_data.finfos_.empty() || dindex_data.finfos_.empty())
+      if (TFS_SUCCESS == ret && (sindex_data.finfos_.empty() || dindex_data.finfos_.empty()))
       {
         TBSYS_LOG(INFO, "block %"PRI64_PREFIX"u is empty, will not sync", block);
       }
