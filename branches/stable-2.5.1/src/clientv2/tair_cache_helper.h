@@ -14,7 +14,7 @@
 #ifndef TFS_CLIENTV2_TAIRCACHEHELPER_H_
 #define TFS_CLIENTV2_TAIRCACHEHELPER_H_
 
-#include "tair_client_api.hpp"
+#include "tair_mc_client_api.hpp"
 #include "define.hpp"
 
 #include "common/internal.h"
@@ -85,8 +85,7 @@ namespace tfs
       TairCacheHelper();
       virtual ~TairCacheHelper();
 
-      int initialize(const char* master_addr, const char* slave_addr,
-                     const char* group_name, const int32_t area);
+      int initialize(const char* config_id, const int32_t area);
 
       int put(const BlockCacheKey& key, const BlockCacheValue& value);
       int get(const BlockCacheKey& key, BlockCacheValue& value);
@@ -103,7 +102,7 @@ namespace tfs
       const static int32_t DEFAULT_EXPIRE_TIME = 0;
 
     private:
-      tair::tair_client_api* tair_client_;
+      tair::tair_mc_client_api* tair_client_;
       int32_t area_;
     };
   }

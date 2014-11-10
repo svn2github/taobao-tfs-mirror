@@ -57,9 +57,7 @@ namespace tfs
       static int32_t use_cache_;
       static int64_t cache_items_;
       static int64_t cache_time_;
-      static std::string remote_cache_master_addr_;
-      static std::string remote_cache_slave_addr_;
-      static std::string remote_cache_group_name_;
+      static std::string remote_cache_config_id_;
       static int32_t remote_cache_area_;
       static int64_t segment_size_;
       static int64_t batch_count_;

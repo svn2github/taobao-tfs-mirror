@@ -101,9 +101,7 @@ namespace tfs
       int64_t get_wait_timeout() const;
 
 #ifdef WITH_TAIR_CACHE
-      void set_remote_cache_info(const char* remote_cache_master_addr,
-          const char* remote_cache_slave_addr,
-          const char* remote_cache_group_name,
+      void set_remote_cache_info(const char* remote_cache_config_id,
           const int32_t area);
 #endif
 

@@ -22,12 +22,9 @@ namespace tfs
 {
   namespace nameserver
   {
-    TairHelper::TairHelper(const std::string& key_prefix, const std::string& master_ipaddr, const std::string& slave_ipaddr,
-          const std::string& group_name, const int32_t area):
+    TairHelper::TairHelper(const std::string& key_prefix, const std::string& config_id, const int32_t area):
       key_prefix_(key_prefix),
-      master_ipaddr_(master_ipaddr),
-      slave_ipaddr_(slave_ipaddr),
-      group_name_(group_name),
+      config_id_(config_id),
       area_(area)
     {
 
@@ -144,7 +141,7 @@ namespace tfs
     int TairHelper::initialize()
     {
       tbutil::Mutex::Lock lock(mutex_);
-      return tair_client_.startup(master_ipaddr_.c_str(), slave_ipaddr_.c_str(), group_name_.c_str()) ? TFS_SUCCESS : EXIT_INITIALIZE_TAIR_ERROR;
+      return tair_client_.startup(config_id_.c_str()) ? TFS_SUCCESS : EXIT_INITIALIZE_TAIR_ERROR;
     }
 
     int TairHelper::destroy()

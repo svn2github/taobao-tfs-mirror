@@ -27,6 +27,8 @@
 #include "common/config_item.h"
 #include "common/client_manager.h"
 #include "common/status_message.h"
+#include "common/base_packet_streamer.h"
+#include "message/message_factory.h"
 #include "tools/util/tool_util.h"
 #include "clientv2/tfs_session.h"
 #include "clientv2/client_config.h"
@@ -39,6 +41,8 @@ using namespace tfs::clientv2;
 
 static TfsSession* g_session = NULL;
 static STR_FUNC_MAP g_cmd_map;
+static tfs::message::MessageFactory gfactory;
+static tfs::common::BasePacketStreamer gstreamer;
 
 
 #ifdef _WITH_READ_LINE
@@ -93,9 +97,7 @@ int cmd_lookup_block_cache(const VSTRING& param);
 int cmd_remove_block_cache(const VSTRING& param);
 
 const char* g_ns_addr = NULL;
-const char* g_tair_master_addr = NULL;
-const char* g_tair_slave_addr = NULL;
-const char* g_tair_group_name = NULL;
+const char* g_config_id = NULL;
 int g_tair_area = 0;
 
 int main(int argc, char* argv[])
@@ -140,21 +142,25 @@ int main(int argc, char* argv[])
 
   TBSYS_CONFIG.load(conf_file);
   g_ns_addr = TBSYS_CONFIG.getString("public", "ns_addr", NULL);
-  g_tair_master_addr = TBSYS_CONFIG.getString("public", "tair_master_addr", NULL);
-  g_tair_slave_addr = TBSYS_CONFIG.getString("public", "tair_slave_addr", NULL);
-  g_tair_group_name = TBSYS_CONFIG.getString("public", "tair_group_name", NULL);
+  g_config_id = TBSYS_CONFIG.getString("public", "tair_config_id", NULL);
   g_tair_area = TBSYS_CONFIG.getInt("public", "tair_area", 0);
   //file_list = TBSYS_CONFIG.getString("public", "file_list", "./file_to_invalid_remote_cache.list");
 
   if (NULL == g_ns_addr ||
-      NULL == g_tair_master_addr || NULL == g_tair_slave_addr ||
-      NULL == g_tair_group_name || g_tair_area < 0)
+      NULL == g_config_id || g_tair_area < 0)
   {
      fprintf(stderr, "error! must config ns addr and remote cache info!\n");
      return ret;
   }
 
   init();
+  gstreamer.set_packet_factory(&gfactory);
+  ret = NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
+  if (TFS_SUCCESS != ret)
+  {
+    fprintf(stderr, "initialize NewClientManager fail, ret: %d", ret);
+    return ret;
+  }
 
   // init tfs session
   tbutil::Timer* timer = new tbutil::Timer();
@@ -167,9 +173,7 @@ int main(int argc, char* argv[])
   }
 
   // set remote cache info
-  ClientConfig::remote_cache_master_addr_ = g_tair_master_addr;
-  ClientConfig::remote_cache_slave_addr_ = g_tair_slave_addr;
-  ClientConfig::remote_cache_group_name_ = g_tair_group_name;
+  ClientConfig::remote_cache_config_id_ = g_config_id;
   ClientConfig::remote_cache_area_ = g_tair_area;
 
   ClientConfig::use_cache_ |= USE_CACHE_FLAG_LOCAL;
@@ -207,6 +211,7 @@ int main(int argc, char* argv[])
     g_session->destroy();
     timer->destroy();
   }
+  NewClientManager::get_instance().destroy();
   return TFS_SUCCESS;
 }
 
@@ -344,7 +349,6 @@ int32_t do_cmd(char* key)
     fprintf(stderr, "%s\t\t%s\n\n", it->second.syntax_, it->second.info_);
     return TFS_ERROR;
   }
-
   return it->second.func_(param);
 }
 
@@ -384,7 +388,7 @@ int cmd_insert_block_cache(const VSTRING& param)
 {
   size_t size = param.size();
   uint32_t ds_count = size - 1;
-  uint32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = atoll(param[0].c_str());
   VUINT64 ds_list;
   for (size_t i = 0; i < ds_count; i++)
   {
@@ -403,22 +407,28 @@ int cmd_insert_block_cache(const VSTRING& param)
 
 int cmd_lookup_block_cache(const VSTRING& param)
 {
-  uint32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = atoll(param[0].c_str());
   VUINT64 ds_list;
   //TODO: FamilyInfoExt not be set finished yet, leave for mingyan
   FamilyInfoExt info;
-  int ret = g_session->query_remote_block_cache(block_id, ds_list, info);
-  ToolUtil::print_info(ret, "lookup block cache");
-  for (size_t i = 0; i < ds_list.size(); i++)
+  bool success = g_session->query_remote_block_cache(block_id, ds_list, info);
+  if (!success)
   {
-    fprintf(stdout, "ds_addr: %s \n", tbsys::CNetUtil::addrToString(ds_list[i]).c_str());
+    fprintf(stderr, "lookup block cache fail, blockid: %"PRI64_PREFIX"u\n", block_id);
+  }
+  else
+  {
+    for (size_t i = 0; i < ds_list.size(); i++)
+    {
+      fprintf(stdout, "ds_addr: %s \n", tbsys::CNetUtil::addrToString(ds_list[i]).c_str());
+    }
   }
   return TFS_SUCCESS;
 }
 
 int cmd_remove_block_cache(const VSTRING& param)
 {
-  int32_t block_id = atoi(param[0].c_str());
+  uint64_t block_id = atoll(param[0].c_str());
   g_session->remove_remote_block_cache(block_id);
   return TFS_SUCCESS;
 }

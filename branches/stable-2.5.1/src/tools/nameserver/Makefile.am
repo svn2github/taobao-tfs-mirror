@@ -2,10 +2,9 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
       $(TAIR_CACHE_CPPFLAGS)\
 	    -I$(TBLIB_ROOT)/include/tbsys\
       -I$(TBLIB_ROOT)/include/tbnet\
-	    $(READLINE_INCLUDE)\
-			$(TAIR_STORE_CPPFLAGS)
+	    $(READLINE_INCLUDE)
 
-AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -luuid -lz $(TAIR_CACHE_LDFLAGS)
+AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -luuid -lz
 
 bin_PROGRAMS = admintool tfstool ssm repair_file_tool stat_tool gen_compact_blk_order # import_family_info export_family_info
 
@@ -19,9 +18,7 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/requester/libtfsrequester.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
-	$(UNIQUE_STORE_LDFLAGS)\
   $(TAIR_CACHE_LDFLAGS) \
-	$(TAIR_STORE_LDFLAGS) \
 	$(TBLIB_ROOT)/lib/libtbnet.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a\
 	-lz

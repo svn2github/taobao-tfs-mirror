@@ -19,7 +19,8 @@
 #include <Timer.h>
 #include <Mutex.h>
 #include "ns_define.h"
-#include "tair_client_api.hpp"
+#include "tair_mc_client_api.hpp"
+#include "data_entry.hpp"
 
 #ifdef TFS_GTEST
 #include <gtest/gtest.h>
@@ -38,8 +39,7 @@ namespace tfs
       FRIEND_TEST(TairHelperTest, scan);
       #endif
     public:
-      TairHelper(const std::string& key_prefix, const std::string& master_ipaddr, const std::string& slave_ipaddr,
-        const std::string& group_name, const int32_t area);
+      TairHelper(const std::string& key_prefix, const std::string& config_id, const int32_t area);
       virtual ~TairHelper();
       int initialize();
       int destroy();
@@ -59,11 +59,9 @@ namespace tfs
     private:
       DISALLOW_COPY_AND_ASSIGN(TairHelper);
       tbutil::Mutex mutex_;
-      tair::tair_client_api tair_client_;
+      tair::tair_mc_client_api tair_client_;
       std::string key_prefix_;
-      std::string master_ipaddr_;
-      std::string slave_ipaddr_;
-      std::string group_name_;
+      std::string config_id_;
       int32_t area_;
     };
   }/** end namespace nameserver **/
