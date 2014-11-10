@@ -1151,9 +1151,6 @@ int cmd_get_file_retry(char*, char*)
 
 int main(int argc,char** argv)
 {
-
-  uint64_t server = 13764466632714;
-  printf("%s\n", tbsys::CNetUtil::addrToString(server).c_str());
   int32_t i;
   bool directly = false;
   bool set_log_level = false;
