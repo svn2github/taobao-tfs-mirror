@@ -94,7 +94,7 @@ namespace tfs
     int MigrateManager::get_dataserver_info(const uint64_t server, DataServerStatInfo& info)
     {
       const int32_t MAX_TIMEOUT_MS = 1000;
-      GetServerStatusMessage req_msg;
+      create_msg_ref(GetServerStatusMessage, req_msg);
       req_msg.set_status_type(GSS_DATASEVER_INFO);
       NewClient* client = NewClientManager::get_instance().create_client();
       int32_t ret = (NULL != client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;

@@ -888,7 +888,7 @@ int cmd_access_stat_info(const VSTRING& param)//Discarded function
   }
   int32_t has_next = 0;
 
-  GetServerStatusMessage req_gss_msg;
+  create_msg_ref(GetServerStatusMessage, req_gss_msg);
 
   fprintf(stdout,
           "ip addr           | read count  | read bytes  | write count  | write bytes\n"

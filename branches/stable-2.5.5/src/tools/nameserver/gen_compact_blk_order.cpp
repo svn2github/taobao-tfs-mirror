@@ -43,7 +43,7 @@ void version(const char* app_name)
 
 int fetch_blocks(const uint64_t ns_id, list<BlockBase>& block_list, const int32_t num)
 {
-  ShowServerInformationMessage msg;
+  create_msg_ref(ShowServerInformationMessage, msg);
   SSMScanParameter& param = msg.get_param();
   param.type_ = SSM_TYPE_BLOCK;
   param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;

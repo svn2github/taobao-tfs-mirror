@@ -442,7 +442,7 @@ namespace tfs
         ret = (NULL != new_client) ? TFS_SUCCESS : EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          GetBlockInfoMessageV2 req_msg;
+          create_msg_ref(GetBlockInfoMessageV2, req_msg);
           req_msg.set_block_id(block_id);
 
           tbnet::Packet* ret_msg = NULL;

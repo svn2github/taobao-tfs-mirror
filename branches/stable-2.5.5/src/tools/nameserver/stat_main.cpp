@@ -50,7 +50,7 @@ int block_process(const uint64_t ns_id, map<uint64_t, int32_t>& family_map, Stat
   int32_t ret  = TFS_ERROR;
   file_stat_info.set_family_count(family_map.size());
 
-  ShowServerInformationMessage msg;
+  create_msg_ref(ShowServerInformationMessage, msg);
   SSMScanParameter& param = msg.get_param();
   param.type_ = SSM_TYPE_BLOCK;
   param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;
@@ -163,7 +163,7 @@ int block_process(const uint64_t ns_id, map<uint64_t, int32_t>& family_map, Stat
 int family_process(const uint64_t ns_id, map<uint64_t, int32_t>& family_map)
 {
   const int32_t num = 1000;
-  ShowServerInformationMessage msg;
+  create_msg_ref(ShowServerInformationMessage, msg);
   SSMScanParameter& param = msg.get_param();
   param.type_ = SSM_TYPE_FAMILY;
 
