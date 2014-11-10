@@ -46,7 +46,9 @@ namespace tfs
     int32_t ClientConfig::use_cache_ = USE_CACHE_FLAG_LOCAL;
     int64_t ClientConfig::cache_items_ = DEFAULT_BLOCK_CACHE_ITEMS;
     int64_t ClientConfig::cache_time_ = DEFAULT_BLOCK_CACHE_TIME;
-    string ClientConfig::remote_cache_config_id_ = "";
+    string ClientConfig::remote_cache_master_addr_ = "";
+    string ClientConfig::remote_cache_slave_addr_ = "";
+    string ClientConfig::remote_cache_group_name_ = "";
     int32_t ClientConfig::remote_cache_area_ = 0;
     int64_t ClientConfig::segment_size_ = MAX_SEGMENT_SIZE;
     int64_t ClientConfig::batch_count_ = MAX_BATCH_COUNT / 2;

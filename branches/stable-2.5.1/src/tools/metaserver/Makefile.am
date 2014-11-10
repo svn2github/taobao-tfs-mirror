@@ -11,7 +11,7 @@ bin_PROGRAMS =  dump2mysql press_select meta_transfer txt2new txt2new_V2 check_o
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/common/mysql_cluster/libkvengine_mysql.a \
 				$(top_builddir)/src/name_meta_server/libnamemetaserver.a \
-        $(MYSQL_LDFLAGS)\
+        $(TAIR_CACHE_LDFLAGS) $(MYSQL_LDFLAGS)\
 				$(top_builddir)/src/message/libtfsmessage.a\
         $(top_builddir)/src/common/libtfscommon.a\
         $(TBLIB_ROOT)/lib/libtbnet.a\

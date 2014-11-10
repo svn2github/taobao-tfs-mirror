@@ -248,15 +248,17 @@ namespace tfs
       if (NULL == remote_cache_helper_)
       {
         remote_cache_helper_ = new TairCacheHelper();
-        ret = remote_cache_helper_->initialize(ClientConfig::remote_cache_config_id_.c_str(),
+        ret = remote_cache_helper_->initialize(ClientConfig::remote_cache_master_addr_.c_str(),
+            ClientConfig::remote_cache_slave_addr_.c_str(), ClientConfig::remote_cache_group_name_.c_str(),
             ClientConfig::remote_cache_area_);
         if (TFS_SUCCESS != ret)
         {
           tbsys::gDelete(remote_cache_helper_);
         }
 
-        TBSYS_LOG(DEBUG, "init remote cache helper(config_id: %s, area: %d) %s",
-            ClientConfig::remote_cache_config_id_.c_str(), ClientConfig::remote_cache_area_,
+        TBSYS_LOG(DEBUG, "init remote cache helper(master: %s, slave: %s, group_name: %s, area: %d) %s",
+            ClientConfig::remote_cache_master_addr_.c_str(), ClientConfig::remote_cache_slave_addr_.c_str(),
+            ClientConfig::remote_cache_group_name_.c_str(), ClientConfig::remote_cache_area_,
             TFS_SUCCESS == ret ? "success" : "fail");
       }
       else

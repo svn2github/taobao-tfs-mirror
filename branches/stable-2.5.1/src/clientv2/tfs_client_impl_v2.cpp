@@ -915,10 +915,14 @@ namespace tfs
     }
 
 #ifdef WITH_TAIR_CACHE
-      void TfsClientImplV2::set_remote_cache_info(const char* remote_cache_config_id,
+      void TfsClientImplV2::set_remote_cache_info(const char* remote_cache_master_addr,
+          const char* remote_cache_slave_addr,
+          const char* remote_cache_group_name,
           const int32_t area)
       {
-        ClientConfig::remote_cache_config_id_ = remote_cache_config_id;
+        ClientConfig::remote_cache_master_addr_ = remote_cache_master_addr;
+        ClientConfig::remote_cache_slave_addr_ = remote_cache_slave_addr;
+        ClientConfig::remote_cache_group_name_ = remote_cache_group_name;
         ClientConfig::remote_cache_area_ = area;
       }
 #endif

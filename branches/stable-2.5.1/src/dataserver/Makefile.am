@@ -1,5 +1,4 @@
 AM_CPPFLAGS =-I$(top_srcdir)/src\
-			 $(TAIR_CACHE_CPPFLAGS)\
 	     -I$(TBLIB_ROOT)/include/tbsys\
 	     -I$(TBLIB_ROOT)/include/tbnet
 
@@ -9,9 +8,9 @@ LDADD=$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
 			$(top_builddir)/src/requester/libtfsrequester.a\
       $(top_builddir)/src/message/libtfsmessage.a\
       $(top_builddir)/src/common/libtfscommon.a\
-      $(TAIR_CACHE_LDFLAGS)\
       $(TBLIB_ROOT)/lib/libtbnet.a\
-      $(TBLIB_ROOT)/lib/libtbsys.a
+      $(TBLIB_ROOT)/lib/libtbsys.a\
+			$(TAIR_CACHE_LDFLAGS)
 
 noinst_LIBRARIES = libdataserver.a
 

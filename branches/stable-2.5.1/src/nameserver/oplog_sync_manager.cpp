@@ -126,10 +126,10 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        std::string tair_info = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_TAIR_ADDR, "");// prefix, config_id, area
+        std::string tair_info = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_TAIR_ADDR, "");
         std::vector<std::string> items;
         common::Func::split_string(tair_info.c_str(), ',', items);
-        ret = items.size() != 3 ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
+        ret = items.size() < 5 ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "tair info: %s is invalid", tair_info.c_str());
@@ -138,7 +138,7 @@ namespace tfs
         {
           for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && TFS_SUCCESS == ret; ++index)
           {
-            dbhelper_[index] = new TairHelper(items[0], items[1], atoi(items[2].c_str()));
+            dbhelper_[index] = new TairHelper(items[0], items[1], items[2], items[3], atoi(items[4].c_str()));
             ret = dbhelper_[index]->initialize();
           }
         }

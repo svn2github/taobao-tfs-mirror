@@ -18,6 +18,7 @@
 #include "clean_task_helper.h"
 #include <malloc.h>
 #include "common/func.h"
+#include "common/tairengine_helper.h"
 #include "common/atomic.h"
 
 using namespace std;

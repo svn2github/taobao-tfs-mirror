@@ -876,7 +876,6 @@ int main(int argc,char** argv)
       }
     }
   }
-  NewClientManager::get_instance().destroy();
 }
 int main_loop()
 {

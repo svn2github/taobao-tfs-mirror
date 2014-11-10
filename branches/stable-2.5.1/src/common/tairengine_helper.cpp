@@ -76,8 +76,9 @@ namespace tfs
 
     const int TairEngineHelper::TAIR_RETRY_COUNT = 1;
 
-    TairEngineHelper::TairEngineHelper(const string &config_id)
-      :tair_client_(NULL), config_id_(config_id), object_area_(-1)
+    TairEngineHelper::TairEngineHelper(const string &master_addr, const string &slave_addr, const string &group_name)
+      :tair_client_(NULL), master_addr_(master_addr),
+      slave_addr_(slave_addr), group_name_(group_name), object_area_(-1)
     {
 
     }
@@ -97,13 +98,15 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        tair_client_ = new tair::tair_mc_client_api();
+        tair_client_ = new tair::tair_client_api();
         assert(NULL != tair_client_);
 
-        if (!tair_client_->startup(config_id_.c_str()))
+        if (!tair_client_->startup(master_addr_.c_str(), slave_addr_.c_str(), group_name_.c_str()))
         {
-          TBSYS_LOG(ERROR, "starup tair client fail. config_id: %s", config_id_.c_str());
-          ret = EXIT_INITIALIZE_TAIR_ERROR;
+          TBSYS_LOG(ERROR, "starup tair client fail. "
+              "master addr: %s, slave addr: %s, group name:  %s",
+              master_addr_.c_str(), slave_addr_.c_str(), group_name_.c_str());
+          ret = TFS_ERROR;
         }
       }
       return ret;
@@ -268,7 +271,7 @@ namespace tfs
       int tair_ret = 0;
       tair_ret = tair_client_->get(area, pkey, pvalue);
 
-      if(TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+      if(TAIR_RETURN_DATA_NOT_EXIST == tair_ret || TAIR_RETURN_DATA_EXPIRED == tair_ret)
       {
         ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
       }
@@ -465,7 +468,7 @@ namespace tfs
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
         ret = EXIT_KV_RETURN_ERROR;
-        if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+        if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret || TAIR_RETURN_DATA_EXPIRED == tair_ret)
         {
           TBSYS_LOG(WARN, "del data noesxit.");
           ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
@@ -607,7 +610,7 @@ namespace tfs
         tair_ret = tair_client_->prefix_get(area, pkey, skey, value);
       } while (TAIR_RETURN_TIMEOUT == tair_ret && --retry_count > 0);
 
-      if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+      if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret || TAIR_RETURN_DATA_EXPIRED == tair_ret)
       {
         ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
       }
@@ -637,7 +640,7 @@ namespace tfs
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
         ret = EXIT_KV_RETURN_ERROR;
-        if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+        if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret || TAIR_RETURN_DATA_EXPIRED == tair_ret)
         {
           TBSYS_LOG(WARN, "del data noesxit.");
           ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
@@ -661,7 +664,7 @@ namespace tfs
       if (TAIR_RETURN_SUCCESS != tair_ret)
       {
         ret = EXIT_KV_RETURN_ERROR;
-        if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+        if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret || TAIR_RETURN_DATA_EXPIRED == tair_ret)
         {
           TBSYS_LOG(WARN, "del data noesxit.");
           ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
@@ -683,7 +686,7 @@ namespace tfs
         tair_ret = tair_client_->get_range(area, pkey, start_key, end_key, offset, limit, values, type);
       } while (TAIR_RETURN_TIMEOUT == tair_ret && --retry_count > 0);
 
-      if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret)
+      if (TAIR_RETURN_DATA_NOT_EXIST == tair_ret || TAIR_RETURN_DATA_EXPIRED == tair_ret)
       {
         ret = EXIT_KV_RETURN_DATA_NOT_EXIST;
       }

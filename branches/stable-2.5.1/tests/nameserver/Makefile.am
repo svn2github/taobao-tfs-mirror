@@ -18,7 +18,9 @@ LDADD=$(top_builddir)/src/nameserver/libnameserver.a \
       $(TBLIB_ROOT)/lib/libtbsys.a \
 			$(MYSQL_LDFLAGS)
 
-noinst_PROGRAMS= test_block_collect 
+noinst_PROGRAMS= test_block_collect test_block_manager test_server_collect test_server_manager\
+test_task test_task_manager test_layout_manager test_gc test_database_helper test_family_collect\
+test_family_manager test_tair_helper
 
 test_block_collect_SOURCES=test_block_collect.cpp
 test_block_collect_LDFLAGS=${AM_LDFLAGS} 

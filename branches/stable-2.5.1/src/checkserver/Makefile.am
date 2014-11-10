@@ -8,6 +8,7 @@ bin_PROGRAMS = checkserver
 LDADD = $(top_builddir)/src/message/libtfsmessage.a\
         $(top_builddir)/src/common/libtfscommon.a\
 				$(top_builddir)/src/requester/libtfsrequester.a\
+				$(top_builddir)/src/clientv2/.libs/libtfsclientv2.a\
         $(TBLIB_ROOT)/lib/libtbnet.a\
         $(TBLIB_ROOT)/lib/libtbsys.a
 
