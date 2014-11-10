@@ -1622,6 +1622,31 @@ namespace tfs
       return server_manager_.size() - task_manager_.get_running_server_size();
     }
 
+    void LayoutManager::get_server_rack_helper(const uint64_t block, common::ArrayHelper<ServerRack>& server_rack_helper)
+    {
+      int ret = INVALID_BLOCK_ID != block ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      uint64_t array[MAX_REPLICATION_NUM];
+      ArrayHelper<uint64_t> servers(MAX_REPLICATION_NUM, array);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_block_manager().get_servers(servers, block);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int64_t i = 0; i < servers.get_array_index(); ++i)
+        {
+          uint64_t server_id = *servers.at(i);
+          ServerCollect* pserver = get_server_manager().get(server_id);
+          if (NULL != pserver)
+          {
+            uint32_t lan = pserver->get_rack_id();
+            ServerRack rack(server_id, lan);
+            server_rack_helper.push_back(rack);
+          }
+        }
+      }
+    }
+
     bool LayoutManager::scan_block_(ArrayHelper<BlockCollect*>& results, int64_t& need, uint64_t& start, int64_t& max_compact_task_count, const int32_t max_query_block_num,
           const time_t now, const bool compact_time, const bool marshalling_time, const bool report_time)
     {
@@ -1636,14 +1661,19 @@ namespace tfs
       ServerItem family_arrays[MAX_REPLICATION_NUM];
       common::ArrayHelper<ServerItem> clean_family_helper(MAX_REPLICATION_NUM, family_arrays);
       NsRuntimeGlobalInformation& ngi = NsRuntimeGlobalInformation::instance();
+      ServerRack server_rack_array[MAX_REPLICATION_NUM];
+      common::ArrayHelper<ServerRack> server_rack_helper(MAX_REPLICATION_NUM, server_rack_array);
       bool over = get_block_manager().scan(results, start, max_query_block_num);
       for (int64_t index = 0; index < results.get_array_index() && need > 0; ++index)
       {
         invalids.clear();
+        server_rack_helper.clear();
         block = *results.at(index);
         block_id = block->id();
         assert(NULL != block);
-        ret = get_block_manager().resolve_invalid_copies(invalids,clean_family_helper,block,now);
+        get_server_rack_helper(block_id, server_rack_helper);
+        ret = get_block_manager().resolve_invalid_copies(invalids,clean_family_helper,block,now,server_rack_helper);
+
         build_resolve_invalid_copies_task_(invalids, block, now);
         for (int64_t k = 0; k < clean_family_helper.get_array_index(); ++k)
         {

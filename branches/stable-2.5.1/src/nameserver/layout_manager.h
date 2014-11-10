@@ -107,6 +107,7 @@ namespace tfs
 
       BlockCollect* add_new_block(uint64_t& block_id, ServerCollect* server = NULL, const time_t now = common::Func::get_monotonic_time());
 
+      void get_server_rack_helper(const uint64_t block, common::ArrayHelper<ServerRack>& server_rack_helper);
       tbsys::CLogger& get_block_log() { return block_logger_;}
       private:
       void rotate_(const time_t now);

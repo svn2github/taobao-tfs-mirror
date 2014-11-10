@@ -159,6 +159,14 @@ namespace tfs
         const int32_t server_index = atoi(server_index_.c_str());
         DsRuntimeGlobalInformation& instance = DsRuntimeGlobalInformation::instance();
         instance.information_.type_ = 0 == server_index ? DATASERVER_DISK_TYPE_SYSTEM : DATASERVER_DISK_TYPE_FULL;
+        if (0 != SYSPARAM_DATASERVER.rack_id_)
+        {
+          instance.information_.rack_id_ = SYSPARAM_DATASERVER.rack_id_;
+        }
+        else
+        {
+          instance.information_.rack_id_ = tbsys::CNetUtil::getAddr(get_ip_addr());// rack_id is 0 for test evn
+        }
       }
 
       if (TFS_SUCCESS == ret)

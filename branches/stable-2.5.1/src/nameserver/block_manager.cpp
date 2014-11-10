@@ -692,13 +692,14 @@ namespace tfs
     }
 
     bool BlockManager::resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids,
-      common::ArrayHelper<ServerItem>& clean_familyinfo, BlockCollect* block, const time_t now)
+      common::ArrayHelper<ServerItem>& clean_familyinfo, BlockCollect* block, const time_t now,
+      common::ArrayHelper<ServerRack>& server_rack_helper)
     {
       bool ret = (NULL != block );
       if (ret)
       {
         RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
-        ret = block->resolve_invalid_copies(invalids, clean_familyinfo, now);
+        ret = block->resolve_invalid_copies(invalids, clean_familyinfo, now, server_rack_helper);
       }
       return ret;
     }
@@ -741,12 +742,16 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != block && INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        ServerRack server_rack_array[MAX_REPLICATION_NUM];
+        common::ArrayHelper<ServerRack> server_rack_helper(MAX_REPLICATION_NUM, server_rack_array);
+        manager_.get_server_rack_helper(block, server_rack_helper);
+
         RWLock::Lock lock(get_mutex_(block), WRITE_LOCKER);
         BlockCollect* pblock = get_(block);
         ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
-          ret = pblock->apply_lease(server, now, step, update, helper, clean_familyinfo);
+          ret = pblock->apply_lease(server, now, step, update, helper, clean_familyinfo, server_rack_helper);
         }
       }
       return ret;
@@ -758,8 +763,12 @@ namespace tfs
       int32_t ret = (NULL != pblock && INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        ServerRack server_rack_array[MAX_REPLICATION_NUM];
+        common::ArrayHelper<ServerRack> server_rack_helper(MAX_REPLICATION_NUM, server_rack_array);
+        manager_.get_server_rack_helper(pblock->id(), server_rack_helper);
+
         RWLock::Lock lock(get_mutex_(pblock->id()), WRITE_LOCKER);
-        ret = pblock->apply_lease(server, now, step, update, helper, clean_familyinfo);
+        ret = pblock->apply_lease(server, now, step, update, helper, clean_familyinfo, server_rack_helper);
       }
       return ret;
     }
@@ -771,12 +780,16 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != block && INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        ServerRack server_rack_array[MAX_REPLICATION_NUM];
+        common::ArrayHelper<ServerRack> server_rack_helper(MAX_REPLICATION_NUM, server_rack_array);
+        manager_.get_server_rack_helper(block, server_rack_helper);
+
         RWLock::Lock lock(get_mutex_(block), WRITE_LOCKER);
         BlockCollect* pblock = get_(block);
         ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
-          ret = pblock->renew_lease(server, now, step, update, info, helper, clean_familyinfo);
+          ret = pblock->renew_lease(server, now, step, update, info, helper, clean_familyinfo, server_rack_helper);
         }
       }
       return ret;
@@ -789,8 +802,12 @@ namespace tfs
       int32_t ret = (NULL != pblock && INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        ServerRack server_rack_array[MAX_REPLICATION_NUM];
+        common::ArrayHelper<ServerRack> server_rack_helper(MAX_REPLICATION_NUM, server_rack_array);
+        manager_.get_server_rack_helper(pblock->id(), server_rack_helper);
+
         RWLock::Lock lock(get_mutex_(pblock->id()), WRITE_LOCKER);
-        ret = pblock->renew_lease(server, now, step, update, info, helper, clean_familyinfo);
+        ret = pblock->renew_lease(server, now, step, update, info, helper, clean_familyinfo, server_rack_helper);
       }
       return ret;
     }

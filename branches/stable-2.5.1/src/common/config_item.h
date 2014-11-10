@@ -75,7 +75,6 @@ namespace tfs
   //nameserver
   //
 #define CONF_IP_ADDR_LIST                             "ip_addr_list"
-#define CONF_GROUP_MASK                               "group_mask"
 #define CONF_SAFE_MODE_TIME														"safe_mode_time"
 #define CONF_TASK_PRECENT_SEC_SIZE                    "task_percent_sec_size"
 #define CONF_MAX_WRITE_FILECOUNT                      "max_write_filecount"
@@ -168,6 +167,7 @@ namespace tfs
 #define CONF_SYNC_FILE_ENTRY_QUEUE_WARN_RATIO         "sync_file_entry_queue_warn_ratio"
 #define CONF_SYNC_FILE_ENTRY_DEST_ADDR                "sync_file_entry_dest_addr"
 #define CONF_CLUSTER_VERSION_LIST                     "cluster_version_list"
+#define CONF_RACK_ID                                  "rack_id"
 
 //migrate server
 #define CONF_MIGRATE_SERVER_ADDR                      "migrate_server_addr"

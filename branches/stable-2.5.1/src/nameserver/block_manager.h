@@ -115,7 +115,8 @@ namespace tfs
         bool need_marshalling(common::ArrayHelper<uint64_t>& servers, const BlockCollect* block, const time_t now) const;
         bool need_reinstate(const BlockCollect* block, const time_t now) const;
         bool resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids,
-          common::ArrayHelper<ServerItem>& clean_familyinfo, BlockCollect* block, const time_t now);
+          common::ArrayHelper<ServerItem>& clean_familyinfo, BlockCollect* block, const time_t now,
+          common::ArrayHelper<ServerRack>& server_rack_helper);
 
         int expand_ratio(int32_t& index, const float expand_ratio = 0.1);
 

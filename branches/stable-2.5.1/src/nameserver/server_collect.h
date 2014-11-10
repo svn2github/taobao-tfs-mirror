@@ -86,6 +86,7 @@ namespace tfs
       int diff(const common::ArrayHelper<common::BlockInfoV2>& input, common::ArrayHelper<uint64_t>& left,
               common::ArrayHelper<common::BlockInfoV2*>& right, common::ArrayHelper<common::BlockInfoV2*>& same) const;
       inline uint64_t id() const { return id_;}
+      inline uint32_t get_rack_id() { return rack_id_; }
       inline int8_t get_status() const { return status_;}
       inline void set_status(const int8_t status) { status_ = status;}
       inline int8_t get_disk_type() const { return disk_type_;}
@@ -150,6 +151,7 @@ namespace tfs
       int32_t block_count_;
       int32_t total_network_bandwith_;
       mutable int32_t write_index_;
+      uint32_t rack_id_;
       int8_t  reserve_[3];
       uint8_t  status_:1;
       uint8_t  disk_type_:1;
