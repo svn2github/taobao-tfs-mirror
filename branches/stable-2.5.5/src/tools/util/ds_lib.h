@@ -28,8 +28,8 @@ namespace tfs
   {
     struct BlockVisit
     {
-      BlockVisit(uint64_t block_id, int64_t total_visit_count, int64_t last_access_time) :
-        block_id_(block_id), total_visit_count_(total_visit_count), last_access_time_(last_access_time)
+      BlockVisit(uint64_t block_id, int64_t total_visit_count, int64_t last_access_time, int32_t used_offset) :
+        block_id_(block_id), total_visit_count_(total_visit_count), last_access_time_(last_access_time), used_offset_(used_offset)
       {}
       bool operator < (const BlockVisit& b) const
       {
@@ -41,6 +41,7 @@ namespace tfs
       uint64_t block_id_;
       int64_t total_visit_count_;
       int64_t last_access_time_;
+      int32_t used_offset_;
     };
 
     class DsLib

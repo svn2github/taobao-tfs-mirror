@@ -22,7 +22,7 @@ expireserver_INCLUDE=expire_heart_manager.h  expire_service.h  clean_task_helper
 
 
 libexpireserver_a_SOURCES= expire_heart_manager.cpp  expire_service.cpp  clean_task_helper.cpp \
-													 $(expireserver_INCLUDE)
+													$(kv_engine_source)  $(expireserver_INCLUDE)
 
 
 bin_PROGRAMS = expireserver 

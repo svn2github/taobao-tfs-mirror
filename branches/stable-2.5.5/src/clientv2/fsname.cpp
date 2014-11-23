@@ -91,11 +91,13 @@ namespace tfs
           if (TFS_FILE_NAME_V1 == version_)
           {
             file_name_len = FILE_NAME_LEN;
+            cluster_id_ = 0 == cluster_id_ ? file_name[1] - '0' : cluster_id_;
             decode(file_name + 2, (char*) &filev1_, file_name_len - 2);
           }
           else
           {
             file_name_len = FILE_NAME_LEN_V2;
+            cluster_id_ = 0 == cluster_id_ ? file_name[2] - '0' : cluster_id_;
             decode(file_name + 3, (char*) &filev2_, file_name_len - 3);
           }
 
@@ -104,10 +106,6 @@ namespace tfs
             suffix = file_name + file_name_len;
           }
           set_suffix(suffix);
-          if (0 == cluster_id_)
-          {
-            cluster_id_ = file_name[1] - '0';
-          }
         }
       }
     }

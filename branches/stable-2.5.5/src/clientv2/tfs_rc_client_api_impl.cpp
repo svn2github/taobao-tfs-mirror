@@ -76,11 +76,9 @@ namespace tfs
 #ifdef WITH_TAIR_CACHE
           std::vector<std::string> ns_cache_info;
           common::Func::split_string(rc_client_.base_info_.ns_cache_info_.c_str(), ';', ns_cache_info);
-          if (ns_cache_info.size() == 4)
+          if (ns_cache_info.size() == 2)
           {
-            TfsClientImplV2::Instance()->set_remote_cache_info(ns_cache_info[0].c_str(),
-                ns_cache_info[1].c_str(), ns_cache_info[2].c_str(),
-                atoi(ns_cache_info[3].c_str()));
+            TfsClientImplV2::Instance()->set_remote_cache_info(ns_cache_info[0].c_str(), atoi(ns_cache_info[1].c_str()));
             TfsClientImplV2::Instance()->set_use_remote_cache(rc_client_.base_info_.use_remote_cache_);
           }
           else
@@ -125,6 +123,7 @@ namespace tfs
       init_stat_(INIT_INVALID), active_rc_ip_(0), next_rc_index_(0),
       kv_meta_client_(NULL), tfs_cluster_manager_(NULL), app_id_(0), my_fd_(1)
     {
+      memset(kv_rs_addr_, 0, sizeof(kv_rs_addr_));
     }
 
     void RcClientImpl::destroy()// must explict call
@@ -219,22 +218,23 @@ namespace tfs
           session_base_info_.is_logout_ = false;
 
           active_rc_ip_ = rc_ip;
-          // TODO: set kv_rs_addr before here
-          kv_meta_client_->set_tfs_cluster_manager(tfs_cluster_manager_);
-          kv_meta_client_->initialize(kv_rs_addr_);
+          if (strlen(kv_rs_addr_) > 0)//need kv meta (put/get bucket etc.)
+          {
+            kv_meta_client_->set_tfs_cluster_manager(tfs_cluster_manager_);
+            kv_meta_client_->initialize(kv_rs_addr_);
+          }
 #ifdef WITH_TAIR_CACHE
           std::vector<std::string> ns_cache_info;
           common::Func::split_string(base_info_.ns_cache_info_.c_str(), ';', ns_cache_info);
-          if (ns_cache_info.size() == 4)
+          if (ns_cache_info.size() == 2)
           {
-            TfsClientImplV2::Instance()->set_remote_cache_info(ns_cache_info[0].c_str(),
-                ns_cache_info[1].c_str(), ns_cache_info[2].c_str(),
-                atoi(ns_cache_info[3].c_str()));
+            TfsClientImplV2::Instance()->set_remote_cache_info(ns_cache_info[0].c_str(), atoi(ns_cache_info[1].c_str()));
             TfsClientImplV2::Instance()->set_use_remote_cache(base_info_.use_remote_cache_);
           }
           else
           {
-            TBSYS_LOG(WARN, "invalid ns_cache_info(size: %zd), remote cache will not initialize", ns_cache_info.size());
+            TBSYS_LOG(WARN, "invalid ns_cache_info(%s, size: %zd), remote cache will not initialize",
+                base_info_.ns_cache_info_.c_str(), ns_cache_info.size());
             TfsClientImplV2::Instance()->set_use_remote_cache(false);
           }
 #endif
@@ -277,11 +277,9 @@ namespace tfs
     {
       std::vector<std::string> tair_addr;
       common::Func::split_string(remote_cache_info, ';', tair_addr);
-      if (tair_addr.size() == 4)
+      if (tair_addr.size() == 2)
       {
-        TfsClientImplV2::Instance()->set_remote_cache_info(tair_addr[0].c_str(),
-            tair_addr[1].c_str(), tair_addr[2].c_str(),
-            atoi(tair_addr[3].c_str()));
+        TfsClientImplV2::Instance()->set_remote_cache_info(tair_addr[0].c_str(), atoi(tair_addr[1].c_str()));
         TfsClientImplV2::Instance()->set_use_remote_cache(true);
       }
     }
@@ -350,7 +348,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(WARN, "no permission to do this");
+            TBSYS_LOG(WARN, "no permission to do this, cluster id:%d, mode: %d", FSName(file_name).get_cluster_id(), mode);
           }
         }
       }

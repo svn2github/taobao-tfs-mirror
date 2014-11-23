@@ -250,13 +250,10 @@ namespace tfs
       tbsys::gDelete(tair_client_);
     }
 
-    int TairCacheHelper::initialize(const char* master_addr, const char* slave_addr,
-                                      const char* group_name, const int32_t area)
+    int TairCacheHelper::initialize(const char* config_id, const int32_t area)
     {
 #ifdef TFS_GTEST
-      UNUSED(master_addr);
-      UNUSED(slave_addr);
-      UNUSED(group_name);
+      UNUSED(config_id);
       UNUSED(area);
       return TFS_SUCCESS;
 #else
@@ -269,12 +266,11 @@ namespace tfs
       else
       {
         tbsys::gDelete(tair_client_);
-        tair_client_ = new tair_client_api();
+        tair_client_ = new tair_mc_client_api();
 
-        if (!tair_client_->startup(master_addr, slave_addr, group_name))
+        if (!tair_client_->startup(config_id))
         {
-          TBSYS_LOG(WARN, "starup tair client fail. master addr: %s, slave addr: %s, group name: %s, area: %d",
-                    master_addr, slave_addr, group_name, area);
+          TBSYS_LOG(WARN, "starup tair client fail. config id: %s, area: %d", config_id, area);
         }
         else
         {

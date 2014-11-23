@@ -35,9 +35,7 @@ class TestBlockCache : public testing::Test
 };
 
 const std::string ns_ip = "10.232.36.201:8100";
-char* remote_cache_master_addr = "10.232.12.141:5198";
-char* remote_cache_slave_addr = "10.232.12.142:5198";
-char* remote_cache_group_name = "group_1";
+char* remote_cache_config_id = "mdbcomm-daily";
 int area = 2;
 
 TEST_F(TestBlockCache, lru)
@@ -106,9 +104,7 @@ TEST_F(TestBlockCache, expire)
 TEST_F(TestBlockCache, remote)
 {
   ClientConfig::use_cache_ |= tfs::clientv2::USE_CACHE_FLAG_REMOTE;
-  ClientConfig::remote_cache_master_addr_ = remote_cache_master_addr;
-  ClientConfig::remote_cache_slave_addr_ = remote_cache_slave_addr;
-  ClientConfig::remote_cache_group_name_ = remote_cache_group_name;
+  ClientConfig::remote_cache_config_id_ = remote_cache_config_id;
   ClientConfig::remote_cache_area_ = area;
 
   VUINT64 ds;

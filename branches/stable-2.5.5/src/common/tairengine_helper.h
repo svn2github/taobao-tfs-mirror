@@ -19,7 +19,7 @@
 
 #include "kv_meta_define.h"
 #include "kvengine_helper.h"
-#include "tair_client_api.hpp"
+#include "tair_mc_client_api.hpp"
 
 namespace tfs
 {
@@ -87,10 +87,8 @@ namespace tfs
 
     private:
       DISALLOW_COPY_AND_ASSIGN(TairEngineHelper);
-      tair::tair_client_api* tair_client_;
-      std::string master_addr_;
-      std::string slave_addr_;
-      std::string group_name_;
+      tair::tair_mc_client_api* tair_client_;
+      std::string config_id_;
       int32_t object_area_;
       static const int TAIR_RETRY_COUNT;
     };

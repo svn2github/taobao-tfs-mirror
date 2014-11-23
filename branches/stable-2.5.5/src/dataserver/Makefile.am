@@ -1,4 +1,5 @@
 AM_CPPFLAGS =-I$(top_srcdir)/src\
+        $(TAIR_CACHE_CPPFLAGS)\
 	     -I$(TBLIB_ROOT)/include/tbsys\
 	     -I$(TBLIB_ROOT)/include/tbnet\
 			 -I$(EASY_ROOT)/include/easy

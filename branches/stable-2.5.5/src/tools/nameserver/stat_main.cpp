@@ -43,7 +43,7 @@ int32_t do_stat(const int32_t size, T& v_value_range)
   return ret;
 }
 
-int block_process(const uint64_t ns_id, map<uint64_t, int32_t>& family_map, StatInfo& file_stat_info,
+int block_process(const uint64_t ns_id, const map<uint64_t, int32_t>& family_map, StatInfo& file_stat_info,
     V_BLOCK_SIZE_RANGE& v_block_size_range, V_DEL_BLOCK_RANGE& v_del_block_range, BLOCK_SIZE_SET& s_big_block, const int32_t top_num, BLOCK_SIZE_SET& s_topn_block)
 {
   const int32_t num = 1000;
@@ -94,7 +94,7 @@ int block_process(const uint64_t ns_id, map<uint64_t, int32_t>& family_map, Stat
         //block.dump();
         // add to file stat
         float ratio = static_cast<float>(block.server_list_.size());
-        map<uint64_t, int32_t>::iterator iter;
+        map<uint64_t, int32_t>::const_iterator iter;
         if (INVALID_FAMILY_ID != block.info_.family_id_ &&
             (iter = family_map.find(block.info_.family_id_)) != family_map.end())
         {
@@ -115,7 +115,7 @@ int block_process(const uint64_t ns_id, map<uint64_t, int32_t>& family_map, Stat
         }
 
         // get big block info
-        if (block.info_.size_ >= THRESHOLD)
+        if (top_num > 0 && block.info_.size_ >= THRESHOLD)
         {
           s_big_block.insert(BlockSize(block.info_.block_id_, block.info_.size_));
         }
@@ -135,7 +135,7 @@ int block_process(const uint64_t ns_id, map<uint64_t, int32_t>& family_map, Stat
           }
         }
 
-        if (static_cast<int32_t>(s_topn_block.size()) >= top_num)
+        if (top_num > 0 && static_cast<int32_t>(s_topn_block.size()) >= top_num)
         {
           if (block.info_.size_ > s_topn_block.begin()->file_size_)
           {
@@ -226,7 +226,7 @@ void usage(const char *name)
   fprintf(stderr, "  %s -s ns_addr [-f log_file] [-m top_num] [-n][-h][-v]\n", name);
   fprintf(stderr, "     -s ns_addr.   cluster ns addr\n");
   fprintf(stderr, "     -f log_file.  log file for recoding stat info, default is stat_log\n");
-  fprintf(stderr, "     -m top_num.   one stat info param, to get top n most biggest blocks, default is 20\n");
+  fprintf(stderr, "     -m top_num.   one stat info param, to get top n most biggest blocks, default is 0\n");
   fprintf(stderr, "     -n.           set log level to info, default is debug\n");
   fprintf(stderr, "     -h.           show this info\n");
   fprintf(stderr, "     -v.           version\n");
@@ -246,7 +246,7 @@ int main(int argc,char** argv)
   int32_t i;
   string ns_addr;
   string log_file("stat_log");
-  int32_t top_num = 20;
+  int32_t top_num = 0;
   bool is_debug = true;
   while ((i = getopt(argc, argv, "s:f:m:nhv")) != EOF)
   {
@@ -349,18 +349,20 @@ int main(int argc,char** argv)
   {
     diter->dump(fp);
   }
-  /*
-  fprintf(fp, "--------------------------block list whose size bigger is than %d. num: %zd -------------------------------\n", THRESHOLD, s_big_block.size());
-  set<BlockSize>::reverse_iterator rbiter = s_big_block.rbegin();
-  for (; rbiter != s_big_block.rend(); rbiter++)
+  if (top_num > 0)
   {
-    fprintf(fp, "block_id: %"PRI64_PREFIX"u, size: %d\n", rbiter->block_id_, rbiter->file_size_);
-  }*/
-  fprintf(fp, "--------------------------top %d block list-------------------------------\n", top_num);
-  set<BlockSize>::reverse_iterator rtiter = s_topn_block.rbegin();
-  for (; rtiter != s_topn_block.rend(); rtiter++)
-  {
-    fprintf(fp, "block_id: %"PRI64_PREFIX"u, size: %d\n", rtiter->block_id_, rtiter->file_size_);
+    fprintf(fp, "--------------------------block list whose size bigger is than %d. num: %zd -------------------------------\n", THRESHOLD, s_big_block.size());
+    set<BlockSize>::reverse_iterator rbiter = s_big_block.rbegin();
+    for (; rbiter != s_big_block.rend(); rbiter++)
+    {
+      fprintf(fp, "block_id: %"PRI64_PREFIX"u, size: %d\n", rbiter->block_id_, rbiter->file_size_);
+    }
+    fprintf(fp, "--------------------------top %d block list-------------------------------\n", top_num);
+    set<BlockSize>::reverse_iterator rtiter = s_topn_block.rbegin();
+    for (; rtiter != s_topn_block.rend(); rtiter++)
+    {
+      fprintf(fp, "block_id: %"PRI64_PREFIX"u, size: %d\n", rtiter->block_id_, rtiter->file_size_);
+    }
   }
   fclose(fp);
 }

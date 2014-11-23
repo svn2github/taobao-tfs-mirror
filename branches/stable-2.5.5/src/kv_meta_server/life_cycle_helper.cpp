@@ -18,7 +18,6 @@
 #include "life_cycle_helper.h"
 
 #include <malloc.h>
-#include "common/tairengine_helper.h"
 #include "common/expire_define.h"
 using namespace std;
 namespace tfs

@@ -2,16 +2,15 @@ AM_CPPFLAGS=-I${top_srcdir}/src/kv_meta_server \
             -I$(top_srcdir)/src \
 						-I${top_srcdir}/src/common \
 						-I$(TBLIB_ROOT)/include/tbsys \
-						-I$(TBLIB_ROOT)/include/tbnet -DTFS_GTEST $(TAIR_META_CPPFLAGS)
+						-I$(TBLIB_ROOT)/include/tbnet -DTFS_GTEST
 
-AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest $(TAIR_META_LDFLAGS)
+AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest
 
 LDADD=$(top_builddir)/src/kv_meta_server/libkvmetaserver.a \
 			$(top_builddir)/src/life_cycle_manager/root_manager/librootserver.a\
 			$(top_builddir)/src/life_cycle_manager/expire_server/libexpireserver.a \
 			$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a \
-			$(TAIR_META_LDFLAGS)\
 			$(TBLIB_ROOT)/lib/libtbnet.a \
 			$(TBLIB_ROOT)/lib/libtbsys.a
 

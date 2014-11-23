@@ -9,7 +9,7 @@ template<class T> void print_segment_ex(T& container)
   for (typename T::iterator it = container.begin();
        it != container.end(); it++)
   {
-    printf("blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, crc: %d\n",
+    printf("blockid: %"PRI64_PREFIX"u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, crc: %d\n",
            it->block_id_, it->file_id_, it->offset_, it->size_, it->crc_);
   }
 }
