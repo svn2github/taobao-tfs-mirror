@@ -1334,7 +1334,9 @@ namespace tfs
           // compactible with old family
           if (index_data.header_.data_crc_ != 0 && ec_metas[pi].data_crc_ != 0)
           {
-            assert(index_data.header_.data_crc_ == crc_[i]);
+             TBSYS_LOG(WARN, "check crc fail when recover family %ld %u:%ld, ret: %d",
+             family_id_, index_data.header_.data_crc_, crc_[i], EXIT_CHECK_CRC_ERROR);
+             // assert(index_data.header_.data_crc_ == crc_[i]);
           }
           ec_metas[i].mars_offset_ = index_data.header_.marshalling_offset_;
           ret = get_data_helper().write_index(family_members_[i].server_,
