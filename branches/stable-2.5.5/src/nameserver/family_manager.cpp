@@ -448,10 +448,15 @@ namespace tfs
           {
             server = *helper.at(index);
             ret = manager_.get_task_manager().has_space_do_task_in_machine(server);
+            ServerCollect* pserver = NULL;
             if (ret)
             {
-              rack = SYSPARAM_NAMESERVER.group_mask_ > 0 ? Func::get_lan(server, SYSPARAM_NAMESERVER.group_mask_)
-                     : random() % MAX_RACK_NUM;
+              pserver = manager_.get_server_manager().get(server);
+              ret = (NULL != pserver);
+            }
+            if (ret)
+            {
+              rack = pserver->get_rack_id();
               ret = push_block_to_marshalling_queues(rack, server, block->id());
             }
           }
@@ -554,9 +559,15 @@ namespace tfs
             ret = item->choose_item_random(result);
           }
           marshallin_queue_mutex_.unlock();
+          ServerCollect* pserver = NULL;
           if (TFS_SUCCESS == ret)
           {
-            uint32_t lan = Func::get_lan(result.first, SYSPARAM_NAMESERVER.group_mask_);
+            pserver = manager_.get_server_manager().get(result.first);
+            ret = (NULL != pserver) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            int32_t lan = pserver->get_rack_id();
             //这里没办法精确控制1个SERVER只做一个任务，为了保险需要要DS来做保证，NS只是尽量保证
             #ifdef TFS_GTEST
             bool valid = true;

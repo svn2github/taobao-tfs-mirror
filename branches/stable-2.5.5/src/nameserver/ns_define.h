@@ -120,6 +120,30 @@ namespace tfs
       }
     };
 
+    struct ServerRack
+    {
+      uint64_t server_id_;
+      uint32_t rack_id_;
+      ServerRack() : server_id_(0), rack_id_(0)
+      {}
+      ServerRack(const uint64_t server_id, const uint32_t rack_id)
+        : server_id_(server_id), rack_id_(rack_id)
+      {
+      }
+
+      bool operator == (const ServerRack& rack) const
+      {
+        return server_id_ == rack.server_id_;
+      }
+
+      ServerRack& operator = (const ServerRack& rack)
+      {
+        server_id_ = rack.server_id_;
+        rack_id_ = rack.rack_id_;
+        return *this;
+      }
+    };
+
     struct NsGlobalStatisticsInfo
     {
       void dump(int32_t level, const char* file = __FILE__, const int32_t line = __LINE__, const char* function =

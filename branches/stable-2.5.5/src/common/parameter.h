@@ -29,7 +29,6 @@ namespace tfs
       int32_t max_block_size_;
       int32_t max_write_file_count_;
       int32_t max_use_capacity_ratio_;
-      uint32_t group_mask_;
       int32_t heart_interval_;
       int32_t replicate_ratio_;
       int32_t replicate_wait_time_;
@@ -165,6 +164,7 @@ namespace tfs
       int32_t max_bg_task_queue_size_;
       int32_t business_port_count_;
       int32_t heart_port_count_;
+      uint32_t rack_id_;
       std::map<uint64_t, int32_t> cluster_version_list_;
       static std::string get_real_file_name(const std::string& src_file,
           const std::string& index, const std::string& suffix);

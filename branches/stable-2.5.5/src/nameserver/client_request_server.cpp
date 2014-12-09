@@ -523,8 +523,8 @@ namespace tfs
       if (TFS_SUCCESS == ret
         && MOVE_BLOCK_NO_CHECK_RACK_FLAG_NO == info.value5_)
       {
-        uint32_t lan = Func::get_lan(source->id(), SYSPARAM_NAMESERVER.group_mask_);
-        uint32_t lan2= Func::get_lan(target->id(), SYSPARAM_NAMESERVER.group_mask_);
+        uint32_t lan = source->get_rack_id();
+        uint32_t lan2= target->get_rack_id();
         ret = (lan != lan2) ? TFS_SUCCESS : EXIT_CHOOSE_RACK_ERROR;
         if (TFS_SUCCESS != ret)
         {

@@ -110,6 +110,7 @@ namespace tfs
         common::Throughput last_tp_;
         common::Throughput max_tp_;
         int32_t current_load_;
+        uint32_t rack_id_;
         int32_t block_count_;
         time_t last_startup_time_;
         time_t consume_time_;

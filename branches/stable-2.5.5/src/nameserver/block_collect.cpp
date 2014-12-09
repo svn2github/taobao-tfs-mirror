@@ -329,7 +329,7 @@ namespace tfs
     }
 
     bool BlockCollect::resolve_invalid_copies(common::ArrayHelper<ServerItem>& invalids,
-      common::ArrayHelper<ServerItem>& clean_familyinfo, const time_t now)
+      common::ArrayHelper<ServerItem>& clean_familyinfo, const time_t now, const common::ArrayHelper<ServerRack>& server_rack_helper)
     {
       invalids.clear();
       clean_familyinfo.clear();
@@ -382,7 +382,13 @@ namespace tfs
         {
           if (!invalids.exist((*iter)))
           {
-            uint32_t lan = Func::get_lan(iter->server_, SYSPARAM_NAMESERVER.group_mask_);
+            ServerRack rack(iter->server_, 0);
+            ServerRack* prack = server_rack_helper.get(rack);
+            if (NULL == prack)
+            {
+              continue;
+            }
+            uint32_t lan = prack->rack_id_;
             uint32_t* result = query_item(lans, lan);
             if (NULL != result)
             {
@@ -465,7 +471,8 @@ namespace tfs
     }
 
     int BlockCollect::apply_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-      common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo)
+        common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo,
+        const common::ArrayHelper<ServerRack>& server_rack_helper)
     {
       int32_t ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -489,7 +496,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        resolve_invalid_copies(helper, clean_familyinfo, now);
+        resolve_invalid_copies(helper, clean_familyinfo, now, server_rack_helper);
         for (int64_t index = 0; index < helper.get_array_index(); ++index)
         {
           ServerItem* item = helper.at(index);
@@ -538,7 +545,8 @@ namespace tfs
     }
 
     int BlockCollect::renew_lease(const uint64_t server, const time_t now, const int32_t step, const bool update,
-        const common::BlockInfoV2& info,common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo)
+        const common::BlockInfoV2& info,common::ArrayHelper<ServerItem>& helper, common::ArrayHelper<ServerItem>& clean_familyinfo,
+        const common::ArrayHelper<ServerRack>& server_rack_helper)
     {
       int32_t ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -558,7 +566,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        resolve_invalid_copies(helper, clean_familyinfo, now);
+        resolve_invalid_copies(helper, clean_familyinfo, now, server_rack_helper);
         for (int64_t index = 0; index < helper.get_array_index(); ++index)
         {
           ServerItem* item = helper.at(index);

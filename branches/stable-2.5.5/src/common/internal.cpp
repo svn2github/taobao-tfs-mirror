@@ -552,7 +552,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &current_time_);
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&rack_id_));
       }
       if (TFS_SUCCESS == ret)
       {
@@ -628,7 +628,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, current_time_);
+        ret = Serialization::set_int32(data, data_len, pos, rack_id_);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -3086,7 +3086,9 @@ namespace tfs
       output.writeInt64(total_capacity_);
       output.writeInt32(current_load_);
       output.writeInt32(block_count_);
-      output.writeInt64(last_update_time_);
+      //output.writeInt64(last_update_time_);
+      output.writeInt32(rack_id_);
+      output.writeInt32(reserve_);
       output.writeInt64(startup_time_);
 
       output.writeInt64(total_tp_.write_byte_);
@@ -3127,7 +3129,9 @@ namespace tfs
         total_capacity_ = input.readInt64();
         current_load_ = input.readInt32();
         block_count_  = input.readInt32();
-        last_update_time_ = input.readInt64();
+        //last_update_time_ = input.readInt64();
+        rack_id_ = input.readInt32();
+        reserve_ = input.readInt32();
         startup_time_ = input.readInt64();
         total_tp_.write_byte_ = input.readInt64();
         total_tp_.read_byte_ = input.readInt64();
