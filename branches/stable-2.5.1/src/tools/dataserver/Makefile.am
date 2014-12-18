@@ -10,6 +10,7 @@ bin_PROGRAMS = clear_file_system\
                format_file_system\
                read_super_block\
 							 read_index_tool\
+							 dump_file_name\
 							 convert_name\
                reverse_name\
 							 check_down_disk_data\
@@ -44,6 +45,8 @@ reverse_name_SOURCES = reverse_name.cpp
 format_file_system_SOURCES = format_file_system.cpp
 
 read_index_tool_SOURCES = read_index_tool.cpp
+
+dump_file_name_SOURCES = dump_file_name.cpp
 
 check_index_tool_SOURCES = check_index_tool.cpp
 
