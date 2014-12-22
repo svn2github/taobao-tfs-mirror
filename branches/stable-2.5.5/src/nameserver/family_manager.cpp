@@ -764,6 +764,37 @@ namespace tfs
       return ret;
     }
 
+    // check family member whether exist conflict
+    bool FamilyManager::check_family_conflict(const FamilyCollect* family)
+    {
+      bool conflict = false;
+      if (NULL != family)
+      {
+        std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
+        ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
+        family->get_members(helper);
+
+        BlockManager& bm = manager_.get_block_manager();
+        BlockCollect* pblock = NULL;
+        int64_t family_id = family->get_family_id();
+        for (int64_t index = 0; index < helper.get_array_index() && !conflict; ++index)
+        {
+          std::pair<uint64_t, int32_t>* item = helper.at(index);
+          assert(NULL != item);
+          pblock = bm.get(item->first);
+          if (NULL != pblock)
+          {
+            conflict = pblock->get_family_id() != family_id;
+          }
+          else
+          {
+            TBSYS_LOG(WARN, "family %"PRI64_PREFIX"d member: %"PRI64_PREFIX"u can't find", family_id, item->first);
+          }
+        }
+      }
+      return conflict;
+    }
+
     bool FamilyManager::check_need_compact(const FamilyCollect* family, const time_t now) const
     {
       TaskManager& tm  = manager_.get_task_manager();

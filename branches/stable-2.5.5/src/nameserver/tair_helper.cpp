@@ -66,6 +66,11 @@ namespace tfs
         {
           TBSYS_LOG(WARN, "create family : %"PRI64_PREFIX"d error: call tair put error, ret: %d, pkey: %s, skey: %s", family_info.family_id_, ret, pkey, skey);
         }
+        // always try to delete after ns put tair timout, avoid tair put successfully itself finally
+        if (TAIR_RETURN_TIMEOUT == ret)
+        {
+          del_(pkey, skey);
+        }
         ret = (TAIR_RETURN_SUCCESS == ret) ? TFS_SUCCESS : EXIT_OP_TAIR_ERROR;
       }
       return ret;
@@ -105,6 +110,7 @@ namespace tfs
       data_entry tair_pkey(pkey, false);
       data_entry tair_skey(skey, false);
       int32_t ret = del_(pkey, skey);
+      ret = TAIR_RETURN_DATA_NOT_EXIST == ret ? TAIR_RETURN_SUCCESS : ret;
       if (TAIR_RETURN_SUCCESS != ret)
       {
         TBSYS_LOG(WARN, "del family : %"PRI64_PREFIX"d error: call tair put error, ret: %d, pkey: %s, skey: %s", family_id, ret, pkey, skey);

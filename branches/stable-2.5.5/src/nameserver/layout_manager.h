@@ -148,6 +148,8 @@ namespace tfs
       bool scan_family_(common::ArrayHelper<FamilyCollect*>& results, int64_t& need, int64_t& start,
           const int32_t max_query_family_num, const time_t now, const bool compact_time);
 
+      bool remove_family(const int64_t family_id);
+
       void init_block_logger_();
 
       class BuildPlanThreadHelper: public tbutil::Thread

@@ -447,8 +447,14 @@ namespace tfs
           {
             uint64_t block_id = *left_less_helper.at(index);
             BlockCollect* pblock = this->get(block_id);
-            if (NULL != pblock && 0 != pblock->get_last_leave_time())
+            // avoid relieve new create block by mistake when ds report block
+            int64_t new_block_safe_time = pblock->get() + SYSPARAM_NAMESERVER.block_safe_mode_time_;
+            if (NULL != pblock && now > new_block_safe_time)
+            {
               manager_.relieve_relation(pblock, server, now, true);
+              TBSYS_LOG(DEBUG, "relieve server: %s block: %"PRI64_PREFIX"u",
+                  tbsys::CNetUtil::addrToString(server->id()).c_str(), block_id);
+            }
           }
         }
       }

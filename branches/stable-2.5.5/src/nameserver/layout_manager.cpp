@@ -620,8 +620,8 @@ namespace tfs
           {
             loop = 0;
             const int64_t marshalling_queue_size = get_family_manager().get_marshalling_queue_size();
-            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, emergency_replicate_queue: %"PRI64_PREFIX"d, reinsate or dissolve queue: %"PRI64_PREFIX"d, marshalling queue: %"PRI64_PREFIX"d",
-              need, replicate_queue_size, reinsate_or_dissolve_queue_size, marshalling_queue_size);
+            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, emergency_replicate_queue: %"PRI64_PREFIX"d, reinstate or dissolve queue: %"PRI64_PREFIX"d, marshalling queue: %"PRI64_PREFIX"d, block_start: %"PRI64_PREFIX"u, family_start: %"PRI64_PREFIX"d",
+              need, replicate_queue_size, reinsate_or_dissolve_queue_size, marshalling_queue_size, block_start, family_start);
             get_task_manager().dump(TBSYS_LOG_LEVEL_DEBUG, "task manager all queues information: ");
             get_family_manager().dump_marshalling_queue(TBSYS_LOG_LEVEL_DEBUG, "marshalling queue information: ");
           }
@@ -657,10 +657,11 @@ namespace tfs
 
         if (ngi.is_master())
         {
-          while ((get_block_manager().has_emergency_replicate_in_queue()) && (!ngi.is_destroyed()) && sleep_nums++ <= MAX_SLEEP_NUMS)
-            usleep(1000);
-
-          while ((!get_family_manager().reinstate_or_dissolve_queue_empty()) && (!ngi.is_destroyed()) && sleep_nums++ <= MAX_SLEEP_NUMS)
+          int min_replicate_task_num = get_server_manager().size() / 100;
+          int64_t current_total = get_family_manager().get_reinstate_or_dissolve_queue_size()
+              + get_block_manager().get_emergency_replicate_queue_size();
+          while (current_total > min_replicate_task_num
+              && (!ngi.is_destroyed()) && sleep_nums++ <= MAX_SLEEP_NUMS)
             usleep(1000);
 
           while (((need = has_space_in_task_queue_()) <= 0) && (!ngi.is_destroyed()))
@@ -674,9 +675,10 @@ namespace tfs
           total_capacity = 0, total_use_capacity = 0, alive_server_nums = 0, sleep_nums = 0;
           get_server_manager().move_statistic_all_server_info(total_capacity,
               total_use_capacity, alive_server_nums);
+          current_total = get_family_manager().get_reinstate_or_dissolve_queue_size()
+              + get_block_manager().get_emergency_replicate_queue_size();
           if (total_capacity > 0 && total_use_capacity > 0 && alive_server_nums > 0
-             && !get_block_manager().has_emergency_replicate_in_queue()
-             && get_family_manager().reinstate_or_dissolve_queue_empty())
+              && current_total <= min_replicate_task_num)
           {
             source.clear();
             targets.clear();
@@ -1215,7 +1217,12 @@ namespace tfs
               if (server != source->id())
                 result_array.push_back(server);
             }
-            ret = TFS_SUCCESS == get_task_manager().add(block->id(), result_array, PLAN_TYPE_REPLICATE, now);
+            int iret = get_task_manager().add(block->id(), result_array, PLAN_TYPE_REPLICATE, now);
+            if (TFS_SUCCESS != iret)
+            {
+              ret = false;
+              TBSYS_LOG(DEBUG, "build_replicate_task fail, block %"PRI64_PREFIX"u, ret: %d", block->id(), iret);
+            }
           }
         }
       }
@@ -1380,6 +1387,10 @@ namespace tfs
             }
           }
         }
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(DEBUG, "build_reinstate_task fail, family %"PRI64_PREFIX"d, ret: %d", family->get_family_id(), ret);
+        }
       }
       return TFS_SUCCESS == ret;
     }
@@ -1472,6 +1483,10 @@ namespace tfs
               }
             }
           }
+        }
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(DEBUG, "build_dissolve_task fail, family %"PRI64_PREFIX"d, ret: %d", family->get_family_id(), ret);
         }
       }
       return TFS_SUCCESS == ret;
@@ -1752,8 +1767,33 @@ namespace tfs
         {
 
         }
+        ret = ((!ret) && get_family_manager().check_family_conflict(family));
+        if (ret)
+        {
+          ret = remove_family(family->get_family_id());
+        }
       }
       return over;
+    }
+
+    bool LayoutManager::remove_family(const int64_t family_id)
+    {
+      int32_t ret = (INVALID_FAMILY_ID == family_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_oplog_sync_mgr().del_family(family_id);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = get_family_manager().del_family(family_id);
+        }
+        TBSYS_LOG(INFO, "del family %"PRI64_PREFIX"d %s for marshalling conflict, ret: %d", family_id,
+            TFS_SUCCESS == ret ? "successful" : "failed", ret);
+
+        CLogger& block_log = get_block_log();
+        block_log.logMessage(TBSYS_LOG_LEVEL(INFO), "delete family-%"PRI64_PREFIX"d forcely %s",
+            family_id, TFS_SUCCESS == ret ? "successful" : "failed");
+      }
+      return TFS_SUCCESS == ret;
     }
 
       void LayoutManager::BuildPlanThreadHelper::run()

@@ -303,8 +303,9 @@ namespace tfs
       if (level <= TBSYS_LOGGER._level)
       {
         RWLock::Lock lock(rwmutex_, READ_LOCKER);
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__,pthread_self(), "%s, tasks size: %zd, block_to_task size: %zd, machine_to_task size: %"PRI64_PREFIX"d, pening_queue_size: %zd",
-          format == NULL ? "" : format, tasks_.size(), block_to_tasks_.size(), size_(), pending_queue_.size());
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__,pthread_self(),
+            "%s, tasks size: %zd, block_to_task size: %zd, machine_to_task size: %"PRI64_PREFIX"d, family_to_tasks_: %zd, pening_queue_size: %zd",
+            format == NULL ? "" : format, tasks_.size(), block_to_tasks_.size(), size_(), family_to_tasks_.size() , pending_queue_.size());
         TASKS_CONST_ITER it = tasks_.begin();
         for (; it != tasks_.end(); ++it)
           it->second->dump(TBSYS_LOG_NUM_LEVEL(level), format);
@@ -388,7 +389,9 @@ namespace tfs
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
       int32_t source_size = 0, target_size = 0, total = 0;
       total = get_task_size_in_machine_(source_size, target_size, server);
-      TBSYS_LOG(DEBUG, "total = %d target: %d, source:%d, max_task_in_machine_nums_: %d", total ,target_size, source_size, SYSPARAM_NAMESERVER.max_task_in_machine_nums_);
+      TBSYS_LOG(DEBUG, "machine: %s, total = %d target: %d, source:%d, max_task_in_machine_nums_: %d",
+          Func::addr_to_str(server, false).c_str(),
+          total ,target_size, source_size, SYSPARAM_NAMESERVER.max_task_in_machine_nums_);
       return target ? target_size < ((SYSPARAM_NAMESERVER.max_task_in_machine_nums_ / 2) + 1)
                     : source_size < ((SYSPARAM_NAMESERVER.max_task_in_machine_nums_ / 2) + 1);
     }

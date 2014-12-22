@@ -319,12 +319,9 @@ namespace tfs
         assert(NULL != entry);
         BlockCollect* pblock = NULL;
         int32_t& ret = entry->result_;
-        ret = is_equal_group(entry->block_id_) ? TFS_SUCCESS : EXIT_BLOCK_NOT_IN_CURRENT_GROUP;
-        if (TFS_SUCCESS == ret)
-        {
-          pblock = block_manager.get(entry->block_id_);
-          ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-        }
+        pblock = block_manager.get(entry->block_id_);
+        ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+
         if (TFS_SUCCESS == ret)
         {
           ret = manager.get_task_manager().exist_block(entry->block_id_) ? EXIT_BLOCK_BUSY : TFS_SUCCESS;
@@ -357,7 +354,7 @@ namespace tfs
 
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "%s apply update block %"PRI64_PREFIX"u fail, ret %d",
+          TBSYS_LOG(WARN, "%s apply update block %"PRI64_PREFIX"u fail, ret: %d",
               CNetUtil::addrToString(id()).c_str(), entry->block_id_, ret);
         }
       }
