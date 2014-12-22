@@ -428,8 +428,8 @@ namespace tfs
         block, tbsys::CNetUtil::addrToString(item.server_).c_str(), TFS_SUCCESS == ret ? "successful" : "failed",
         item.family_id_, item.version_);
       tbsys::CLogger& block_log = get_layout_manager().get_block_log();
-      block_log.logMessage(TBSYS_LOG_LEVEL(INFO), "send clean familyinfo block-%"PRI64_PREFIX"u server: %s %s",
-          block, tbsys::CNetUtil::addrToString(item.server_).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
+      block_log.logMessage(TBSYS_LOG_LEVEL(INFO), "send clean familyinfo, family-%"PRI64_PREFIX"d, block-%"PRI64_PREFIX"u server: %s %s",
+          item.family_id_, block, tbsys::CNetUtil::addrToString(item.server_).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
       return ret;
     }
 
