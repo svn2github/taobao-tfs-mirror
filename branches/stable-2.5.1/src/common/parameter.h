@@ -50,6 +50,7 @@ namespace tfs
       int32_t discard_newblk_safe_mode_time_;
       int32_t discard_max_count_;
       int32_t report_block_queue_size_;
+      int32_t report_block_pending_size_;
       int32_t report_block_time_lower_;
       int32_t report_block_time_upper_;
       int32_t report_block_time_interval_;//day

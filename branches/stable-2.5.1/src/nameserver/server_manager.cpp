@@ -197,7 +197,7 @@ namespace tfs
       ServerCollect* pserver = NULL;
       int32_t expire_count = 0;
       const int32_t MAX_TRAVERSE_COUNT = 512;
-      const int32_t MAX_REPORT_COUNT = 64;
+      const int32_t MAX_REPORT_COUNT = SYSPARAM_NAMESERVER.report_block_pending_size_;
       ServerCollect* entry[MAX_TRAVERSE_COUNT];
       ArrayHelper<ServerCollect*> helper(MAX_TRAVERSE_COUNT, entry);
       all_over = traverse(last_traverse_server, servers_, helper);
