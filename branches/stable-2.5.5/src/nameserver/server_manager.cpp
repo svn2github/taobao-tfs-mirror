@@ -255,13 +255,17 @@ namespace tfs
           pserver->set_wait_free_phase(OBJECT_WAIT_FREE_PHASE_FREE);
           pserver->set(now, SYSPARAM_NAMESERVER.object_wait_free_time_);
         }
-        else
+        else if (OBJECT_WAIT_FREE_PHASE_FREE == pserver->get_wait_free_phase())
         {
-          ++free_count;
           rwmutex_.wrlock();
-          wait_free_servers_.erase(pserver);
+          SERVER_TABLE_ITER iter  = wait_free_servers_.find(pserver);
+          if (wait_free_servers_.end() != iter)
+          {
+            ++free_count;
+            wait_free_servers_.erase(pserver);
+            pserver->free();
+          }
           rwmutex_.unlock();
-          pserver->free();
         }
       }
       return free_count;
