@@ -155,7 +155,7 @@ namespace tfs
       int8_t  reserve_[3];
       uint8_t  status_:1;
       uint8_t  disk_type_:1;
-      uint8_t  wait_free_phase_:3;
+      volatile uint8_t  wait_free_phase_:3;
       uint8_t  rb_status_:3;//report block complete status
    };
   }/** nameserver **/
