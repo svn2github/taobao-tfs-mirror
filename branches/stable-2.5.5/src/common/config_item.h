@@ -92,6 +92,7 @@ namespace tfs
 #define CONF_REPORT_BLOCK_EXPIRED_TIME                "report_block_expired_time"
 #define CONF_REPORT_BLOCK_THREAD_COUNT                "report_block_thread_count"
 #define CONF_REPORT_BLOCK_MAX_QUEUE_SIZE              "report_block_max_queue_size"
+#define CONF_REPORT_BLOCK_MAX_PENDING_SIZE            "report_block_max_pending_size"
 
 #define CONF_GROUP_SEQ                                "group_seq"
 #define CONF_GROUP_COUNT                              "group_count"
