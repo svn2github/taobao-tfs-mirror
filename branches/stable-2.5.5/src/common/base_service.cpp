@@ -477,13 +477,21 @@ namespace tfs
       EasyThreadType type = select_thread(bp);
       if (type == EASY_WORK_THREAD)
       {
-        easy_atomic_add(&easy_work_queue_size_, 1);
+        if (easy_atomic_add_return(&easy_work_queue_size_, 1) >= work_queue_size_)
+        {
+          TBSYS_LOG(WARN, "request out of workqueue limit. discard packet pcode %d", packet->getPCode());
+          return EASY_OK;
+        }
         easy_thread_pool_push(work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
         return EASY_AGAIN;
       }
       else if(type == EASY_SLOW_WORK_THREAD)
       {
-        easy_atomic_add(&easy_slow_queue_size_, 1);
+        if (easy_atomic_add(&easy_slow_queue_size_, 1) >= slow_queue_size_)
+        {
+          TBSYS_LOG(WARN, "request out of slowqueue limit. discard packet pcode %d", packet->getPCode());
+          return EASY_OK;
+        }
         easy_thread_pool_push(slow_work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
         return EASY_AGAIN;
       }
@@ -511,19 +519,13 @@ namespace tfs
       //  return EASY_OK;
       //}
 
-      // request out of limit, ignore packet
-      // client will timeout in this case
-      if (select_thread(packet) == EASY_WORK_THREAD &&
-          easy_atomic_add_return(&easy_work_queue_size_, -1) >= work_queue_size_)
+      if (select_thread(packet) == EASY_WORK_THREAD)
       {
-        TBSYS_LOG(WARN, "request out of limit. discard packet pcode %d", packet->getPCode());
-        return EASY_OK;
+        easy_atomic_add(&easy_work_queue_size_, -1);
       }
-      else if (select_thread(packet) == EASY_SLOW_WORK_THREAD &&
-          easy_atomic_add_return(&easy_slow_queue_size_, -1) >= slow_queue_size_)
+      else if (select_thread(packet) == EASY_SLOW_WORK_THREAD)
       {
-        TBSYS_LOG(WARN, "request out of limit. discard packet pcode %d", packet->getPCode());
-        return EASY_OK;
+        easy_atomic_add(&easy_slow_queue_size_, -1);
       }
 
       return handle(packet);
