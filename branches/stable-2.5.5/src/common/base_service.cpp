@@ -479,7 +479,7 @@ namespace tfs
       {
         if (easy_atomic_add_return(&easy_work_queue_size_, 1) >= work_queue_size_)
         {
-          TBSYS_LOG(WARN, "request out of workqueue limit. discard packet pcode %d", packet->getPCode());
+          TBSYS_LOG(WARN, "request out of workqueue limit. discard packet pcode %d", bp->getPCode());
           return EASY_OK;
         }
         easy_thread_pool_push(work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
@@ -487,9 +487,9 @@ namespace tfs
       }
       else if(type == EASY_SLOW_WORK_THREAD)
       {
-        if (easy_atomic_add(&easy_slow_queue_size_, 1) >= slow_queue_size_)
+        if (easy_atomic_add_return(&easy_slow_queue_size_, 1) >= slow_queue_size_)
         {
-          TBSYS_LOG(WARN, "request out of slowqueue limit. discard packet pcode %d", packet->getPCode());
+          TBSYS_LOG(WARN, "request out of slowqueue limit. discard packet pcode %d", bp->getPCode());
           return EASY_OK;
         }
         easy_thread_pool_push(slow_work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
