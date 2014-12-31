@@ -104,6 +104,7 @@ namespace tfs
 
       /** get work queue size */
       int32_t get_work_queue_size() const;
+      int32_t get_slow_queue_size() const;
 
       /** get ip addr*/
       const char* get_ip_addr() const;
@@ -167,6 +168,7 @@ namespace tfs
       tbnet::Transport* transport_;
       tbnet::PacketQueueThread main_workers_;
       int32_t work_queue_size_;
+      int32_t slow_queue_size_;
 
     private:
       easy_io_t eio_;
@@ -178,6 +180,10 @@ namespace tfs
       // only ns need heart eio
       easy_io_t heart_eio_;
       easy_io_handler_pt heart_eio_handler_;
+
+      // limit request
+      easy_atomic_t easy_work_queue_size_;
+      easy_atomic_t easy_slow_queue_size_;
     };
   }
 }

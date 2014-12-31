@@ -473,7 +473,9 @@ namespace tfs
           &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_safe_time_,
           &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_times_,
           &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_,
-          &SYSPARAM_NAMESERVER.migrate_complete_wait_time_
+          &SYSPARAM_NAMESERVER.migrate_complete_wait_time_,
+          manager_.get_work_queue_size_ptr(),
+          manager_.get_slow_queue_size_ptr()
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;

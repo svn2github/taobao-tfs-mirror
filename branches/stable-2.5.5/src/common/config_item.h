@@ -62,6 +62,7 @@ namespace tfs
 #define CONF_MAX_REPLICATION                          "max_replication"
 #define CONF_USE_CAPACITY_RATIO                       "use_capacity_ratio"
 #define CONF_TASK_MAX_QUEUE_SIZE                      "task_max_queue_size"
+#define CONF_TASK_MAX_SLOW_QUEUE_SIZE                 "task_max_slow_queue_size"
 #define CONF_DISCARD_NEWBLK_SAFE_MODE_TIME            "discard_newblk_safe_mode_time"
 #define CONF_HEART_PORT_COUNT                         "heart_port_count"
 #define CONF_BUSINESS_PORT_COUNT                      "business_port_count"

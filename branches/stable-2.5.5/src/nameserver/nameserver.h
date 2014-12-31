@@ -81,6 +81,17 @@ namespace tfs
       int handle(common::BasePacket* packet);
       virtual common::EasyThreadType select_thread(common::BasePacket* packet);
 
+      // dynamic modify queue size limit
+      int32_t *get_work_queue_size_ptr()
+      {
+        return &work_queue_size_;
+      }
+
+      int32_t *get_slow_queue_size_ptr()
+      {
+        return &slow_queue_size_;
+      }
+
    private:
       DISALLOW_COPY_AND_ASSIGN(NameServer);
       LayoutManager layout_manager_;

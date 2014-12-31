@@ -42,8 +42,11 @@ namespace tfs
       streamer_(NULL),
       timer_(0),
       work_queue_size_(10240),
+      slow_queue_size_(64),
       work_task_queue_(NULL),
-      slow_work_task_queue_(NULL)
+      slow_work_task_queue_(NULL),
+      easy_work_queue_size_(0),
+      easy_slow_queue_size_(0)
     {
     }
 
@@ -202,6 +205,11 @@ namespace tfs
       return work_queue_size_;
     }
 
+    int32_t BaseService::get_slow_queue_size() const
+    {
+      return slow_queue_size_;
+    }
+
     const char* BaseService::get_ip_addr() const
     {
       return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_IP_ADDR, NULL);
@@ -350,6 +358,14 @@ namespace tfs
         work_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_TASK_MAX_QUEUE_SIZE, 10240);
         work_queue_size_ = std::max(work_queue_size_, 10240);
         work_queue_size_ = std::min(work_queue_size_, 40960);
+
+        slow_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_TASK_MAX_SLOW_QUEUE_SIZE, 64);
+        slow_queue_size_ = std::max(slow_queue_size_, 16);
+        slow_queue_size_ = std::min(slow_queue_size_, 128);
+
+        TBSYS_LOG(INFO, "max_work_queue_size=%d max_slow_work_queue_size=%d",
+            work_queue_size_, slow_queue_size_);
+
         timer_ = new tbutil::Timer();
       }
 
@@ -461,11 +477,13 @@ namespace tfs
       EasyThreadType type = select_thread(bp);
       if (type == EASY_WORK_THREAD)
       {
+        easy_atomic_add(&easy_work_queue_size_, 1);
         easy_thread_pool_push(work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
         return EASY_AGAIN;
       }
       else if(type == EASY_SLOW_WORK_THREAD)
       {
+        easy_atomic_add(&easy_slow_queue_size_, 1);
         easy_thread_pool_push(slow_work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
         return EASY_AGAIN;
       }
@@ -492,6 +510,21 @@ namespace tfs
       //  tbsys::gDelete(local_packet);
       //  return EASY_OK;
       //}
+
+      // request out of limit, ignore packet
+      // client will timeout in this case
+      if (select_thread(packet) == EASY_WORK_THREAD &&
+          easy_atomic_add_return(&easy_work_queue_size_, -1) >= work_queue_size_)
+      {
+        TBSYS_LOG(WARN, "request out of limit. discard packet pcode %d", packet->getPCode());
+        return EASY_OK;
+      }
+      else if (select_thread(packet) == EASY_SLOW_WORK_THREAD &&
+          easy_atomic_add_return(&easy_slow_queue_size_, -1) >= slow_queue_size_)
+      {
+        TBSYS_LOG(WARN, "request out of limit. discard packet pcode %d", packet->getPCode());
+        return EASY_OK;
+      }
 
       return handle(packet);
     }
