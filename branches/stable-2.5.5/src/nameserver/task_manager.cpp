@@ -186,12 +186,12 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
         Task* task = generation_(family_id, family_aid_info, type, member_num, members);
         assert(NULL != task);
 
         task->dump(TBSYS_LOG_LEVEL(INFO), "add new task");
 
-        RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
         std::pair<PENDING_TASK_ITER, bool> rs = pending_queue_.insert(task);
         ret = !rs.second ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
@@ -266,6 +266,7 @@ namespace tfs
       TASKS_ITER iter;
       while (!complete)
       {
+        helper.clear();
         count = 0;
         rwmutex_.wrlock();
         complete = (tasks_.end() == (iter = tasks_.begin()));
