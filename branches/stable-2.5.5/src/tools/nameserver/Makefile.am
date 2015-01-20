@@ -7,7 +7,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB) -luuid -lz -lssl
 
-bin_PROGRAMS = admintool tfstool ssm repair_file_tool stat_tool gen_compact_blk_order # import_family_info export_family_info
+bin_PROGRAMS = admintool tfstool ssm repair_file_tool stat_tool gen_compact_blk_order ns_meta_tool # import_family_info export_family_info
 
 if WITH_TAIR_CACHE
 #bin_PROGRAMS += remote_block_cache_tool
@@ -41,3 +41,4 @@ stat_tool_SOURCES=stat_main.cpp stat_tool.cpp stat_tool.h common.cpp common.h sh
 gen_compact_blk_order_SOURCES = gen_compact_blk_order.cpp common.cpp common.h
 #import_family_info_SOURCES = import_family_info.cpp
 #export_family_info_SOURCES = export_family_info.cpp
+ns_meta_tool_SOURCE=ns_meta_tool.cpp
