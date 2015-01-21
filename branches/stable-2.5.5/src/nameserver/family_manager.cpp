@@ -814,16 +814,24 @@ namespace tfs
         {
           BlockCollect* pblock = NULL;
           int32_t need_compact_count = 0;
+          bool force_compact = false;
           for (int64_t index = 0; index < helper.get_array_index(); ++index)
           {
             std::pair<uint64_t, int32_t>* item = helper.at(index);
             assert(NULL != item);
             pblock = bm.get(item->first);
             if ((NULL != pblock) && !IS_VERFIFY_BLOCK(pblock->id()) && (bm.need_compact(pblock, now, false)))
+            {
+              if (pblock->need_force_compact())
+              {
+                force_compact = true;
+                break;
+              }
               ++need_compact_count;
+            }
           }
           const int32_t ratio = static_cast<int32_t>(((static_cast<float>(need_compact_count) / static_cast<float>(DATA_MEMBER_NUM)) * 100));
-          ret = (ratio >= SYSPARAM_NAMESERVER.compact_family_member_ratio_);
+          ret = (force_compact || ratio >= SYSPARAM_NAMESERVER.compact_family_member_ratio_);
         }
       }
       return ret;

@@ -185,7 +185,7 @@ namespace tfs
 
     static const int32_t MAX_REPLICATION_NUM = 8;
 
-    static const int32_t MAX_DATA_MEMBER_NUM = 8;
+    static const int32_t MAX_DATA_MEMBER_NUM = 12;
     static const int32_t MAX_CHECK_MEMBER_NUM = 4;
     static const int32_t MAX_MARSHALLING_NUM = MAX_DATA_MEMBER_NUM + MAX_CHECK_MEMBER_NUM;
     static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 76 * 1024 * 1024;
@@ -1106,7 +1106,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[65];
+    extern const char* dynamic_parameter_str[66];
 
 #pragma pack (1)
     struct FileInfoV2//30

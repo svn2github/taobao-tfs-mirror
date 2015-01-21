@@ -475,7 +475,8 @@ namespace tfs
           &SYSPARAM_NAMESERVER.between_ns_and_ds_lease_retry_expire_time_,
           &SYSPARAM_NAMESERVER.migrate_complete_wait_time_,
           manager_.get_work_queue_size_ptr(),
-          manager_.get_slow_queue_size_ptr()
+          manager_.get_slow_queue_size_ptr(),
+          &SYSPARAM_NAMESERVER.force_dissolve_max_block_size_,
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
@@ -622,8 +623,8 @@ namespace tfs
           {
             loop = 0;
             const int64_t marshalling_queue_size = get_family_manager().get_marshalling_queue_size();
-            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, emergency_replicate_queue: %"PRI64_PREFIX"d, reinstate or dissolve queue: %"PRI64_PREFIX"d, marshalling queue: %"PRI64_PREFIX"d, block_start: %"PRI64_PREFIX"u, family_start: %"PRI64_PREFIX"d",
-              need, replicate_queue_size, reinsate_or_dissolve_queue_size, marshalling_queue_size, block_start, family_start);
+            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, emergency_replicate_queue: %"PRI64_PREFIX"d, reinstate or dissolve queue: %"PRI64_PREFIX"d, marshalling queue: %"PRI64_PREFIX"d, block_start: %"PRI64_PREFIX"u, family_start: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d",
+              need, replicate_queue_size, reinsate_or_dissolve_queue_size, marshalling_queue_size, block_start, family_start, now);
             get_task_manager().dump(TBSYS_LOG_LEVEL_DEBUG, "task manager all queues information: ");
             get_family_manager().dump_marshalling_queue(TBSYS_LOG_LEVEL_DEBUG, "marshalling queue information: ");
           }

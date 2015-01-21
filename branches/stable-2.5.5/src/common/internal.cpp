@@ -1326,7 +1326,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[65] = {
+    const char* dynamic_parameter_str[66] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1391,7 +1391,8 @@ namespace tfs
         "between_ns_and_ds_lease_retry_expire_time",
         "migrate_complete_wait_time",
         "max_work_queue_size",
-        "max_slow_queue_size"
+        "max_slow_queue_size",
+        "force_dissolve_max_block_size",
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)

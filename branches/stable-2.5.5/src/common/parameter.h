@@ -96,11 +96,13 @@ namespace tfs
       double  balance_percent_;
       int32_t migrate_complete_wait_time_;
       int32_t check_integrity_interval_days_;
+      int32_t force_dissolve_max_block_size_;
 
       NameServerParameter()
       {
         business_port_count_ = 1;
         heart_port_count_ = 1;
+        force_dissolve_max_block_size_ = 128 * 1024 * 1024;
       }
 
       static NameServerParameter ns_parameter_;
