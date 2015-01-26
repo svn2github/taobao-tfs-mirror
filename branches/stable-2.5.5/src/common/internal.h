@@ -1448,10 +1448,10 @@ namespace tfs
       int32_t replica_num_;
       int32_t business_port_num_;
       int32_t migrate_complete_wait_time_;
-      int32_t reserve_[2];
+      uint64_t max_block_id_;
 
       ClusterConfig():cluster_id_(0), group_seq_(0), group_count_(1), replica_num_(0), business_port_num_(0),
-          migrate_complete_wait_time_(300)
+          migrate_complete_wait_time_(300), max_block_id_(0)
       {
       }
 

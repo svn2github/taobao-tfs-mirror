@@ -58,6 +58,7 @@ namespace tfs
 
       inline uint64_t generation(const bool verify) { return id_factory_.generation(verify);}
       inline int update(const uint64_t id) { return id_factory_.update(id);}
+      uint64_t get_max_block_id() { return id_factory_.get(); }
 
       int create_family_id(int64_t& family_id);
       int create_family(common::FamilyInfo& family_info);

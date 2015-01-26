@@ -387,6 +387,7 @@ namespace tfs
             crc = Func::crc(crc, (buffer + inner_offset + reserve_size), (finfo->size_ - reserve_size));
             if (crc != finfo->crc_)
             {
+              TBSYS_LOG(WARN, "block %"PRI64_PREFIX"u compact crc error", src->id());
               Func::hex_dump(file_data, 10, true, TBSYS_LOG_LEVEL_INFO);//TODO
             }
             assert(crc == finfo->crc_);
@@ -1332,7 +1333,8 @@ namespace tfs
           // update lost data node's marshalling len
           // it's needed when recover check block
           // compactible with old family
-          if (index_data.header_.data_crc_ != 0 && ec_metas[pi].data_crc_ != 0)
+          if (index_data.header_.data_crc_ != 0 && ec_metas[pi].data_crc_ != 0 &&
+              index_data.header_.data_crc_ != crc_[i])
           {
              TBSYS_LOG(WARN, "check crc fail when recover family %ld %u:%ld, ret: %d",
              family_id_, index_data.header_.data_crc_, crc_[i], EXIT_CHECK_CRC_ERROR);

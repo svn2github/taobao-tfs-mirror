@@ -833,6 +833,7 @@ namespace tfs
       config.group_count_ = SYSPARAM_NAMESERVER.group_count_;
       config.replica_num_ = SYSPARAM_NAMESERVER.max_replication_;
       config.migrate_complete_wait_time_ = SYSPARAM_NAMESERVER.migrate_complete_wait_time_;
+      config.max_block_id_ = manager_.get_oplog_sync_mgr().get_max_block_id();
       interval = SYSPARAM_NAMESERVER.client_keepalive_interval_;
       if (flag != DS_TABLE_NONE)
       {

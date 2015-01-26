@@ -463,6 +463,7 @@ namespace tfs
     int BaseService::process_handler(easy_request_t *r)
     {
       BasePacket* bp = (BasePacket*)r->ipacket;
+      int32_t pcode = bp->getPCode();
       if (NULL == bp || r->ms->status == EASY_MESG_DESTROY)
       {
         TBSYS_LOG(ERROR, "timeout, null packet");
@@ -477,21 +478,27 @@ namespace tfs
       EasyThreadType type = select_thread(bp);
       if (type == EASY_WORK_THREAD)
       {
-        if (easy_atomic_add_return(&easy_work_queue_size_, 1) >= work_queue_size_)
+        if (pcode != DS_APPLY_BLOCK_MESSAGE &&
+            pcode != DS_RENEW_BLOCK_MESSAGE &&
+            pcode != DS_APPLY_BLOCK_FOR_UPDATE_MESSAGE &&
+            pcode != DS_GIVEUP_BLOCK_MESSAGE &&
+            easy_work_queue_size_ >= work_queue_size_)
         {
           TBSYS_LOG(WARN, "request out of workqueue limit. discard packet pcode %d", bp->getPCode());
           return EASY_OK;
         }
+        easy_atomic_add(&easy_work_queue_size_, 1);
         easy_thread_pool_push(work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
         return EASY_AGAIN;
       }
       else if(type == EASY_SLOW_WORK_THREAD)
       {
-        if (easy_atomic_add_return(&easy_slow_queue_size_, 1) >= slow_queue_size_)
+        if (easy_slow_queue_size_ >= slow_queue_size_)
         {
           TBSYS_LOG(WARN, "request out of slowqueue limit. discard packet pcode %d", bp->getPCode());
           return EASY_OK;
         }
+        easy_atomic_add(&easy_slow_queue_size_, 1);
         easy_thread_pool_push(slow_work_task_queue_, r, easy_hash_key((uint64_t)(long)r));
         return EASY_AGAIN;
       }

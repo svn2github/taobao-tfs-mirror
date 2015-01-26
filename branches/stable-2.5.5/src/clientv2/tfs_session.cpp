@@ -654,8 +654,8 @@ namespace tfs
         {
           ds_table_ = tmp_table;
         }
-        TBSYS_LOG(INFO, "update dstable. cluster_id: %d, group_seq: %d, group_count: %d, replica_num: %d, interval: %d, server_count: %zd",
-            config.cluster_id_, config.group_seq_, config.group_count_, config.replica_num_, update_interval, tmp_table.size());
+        TBSYS_LOG(INFO, "update dstable. cluster_id: %d, group_seq: %d, group_count: %d, replica_num: %d, interval: %d, max_block_id: %"PRI64_PREFIX"u, server_count: %zd",
+            config.cluster_id_, config.group_seq_, config.group_count_, config.replica_num_, update_interval, config.max_block_id_, tmp_table.size());
       }
 
       return ret;

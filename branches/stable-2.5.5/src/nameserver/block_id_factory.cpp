@@ -165,6 +165,14 @@ namespace tfs
       return id;
     }
 
+    uint64_t BlockIdFactory::get() const
+    {
+      mutex_.lock();
+      uint64_t id = global_id_;
+      mutex_.unlock();
+      return id;
+    }
+
     int BlockIdFactory::flush_(const uint64_t id) const
     {
       assert(fd_ != -1);

@@ -3013,34 +3013,31 @@ namespace tfs
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        Serialization::set_int32(data, data_len, pos, cluster_id_);
+        ret = Serialization::set_int32(data, data_len, pos, cluster_id_);
       }
       if (TFS_SUCCESS == ret)
       {
-        Serialization::set_int32(data, data_len, pos, group_seq_);
+        ret = Serialization::set_int32(data, data_len, pos, group_seq_);
       }
       if (TFS_SUCCESS == ret)
       {
-        Serialization::set_int32(data, data_len, pos, group_count_);
+        ret = Serialization::set_int32(data, data_len, pos, group_count_);
       }
       if (TFS_SUCCESS == ret)
       {
-        Serialization::set_int32(data, data_len, pos, replica_num_);
+        ret = Serialization::set_int32(data, data_len, pos, replica_num_);
       }
       if (TFS_SUCCESS == ret)
       {
-        Serialization::set_int32(data, data_len, pos, business_port_num_);
+        ret = Serialization::set_int32(data, data_len, pos, business_port_num_);
       }
       if (TFS_SUCCESS == ret)
       {
-        Serialization::set_int32(data, data_len, pos, migrate_complete_wait_time_);
+        ret = Serialization::set_int32(data, data_len, pos, migrate_complete_wait_time_);
       }
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; i < 2; i++)
-        {
-          Serialization::set_int32(data, data_len, pos, reserve_[i]);
-        }
+        ret = Serialization::set_int64(data, data_len, pos, max_block_id_);
       }
       return ret;
     }
@@ -3050,34 +3047,31 @@ namespace tfs
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        Serialization::get_int32(data, data_len, pos, &cluster_id_);
+        ret = Serialization::get_int32(data, data_len, pos, &cluster_id_);
       }
       if (TFS_SUCCESS == ret)
       {
-        Serialization::get_int32(data, data_len, pos, &group_seq_);
+        ret = Serialization::get_int32(data, data_len, pos, &group_seq_);
       }
       if (TFS_SUCCESS == ret)
       {
-        Serialization::get_int32(data, data_len, pos, &group_count_);
+        ret = Serialization::get_int32(data, data_len, pos, &group_count_);
       }
       if (TFS_SUCCESS == ret)
       {
-        Serialization::get_int32(data, data_len, pos, &replica_num_);
+        ret = Serialization::get_int32(data, data_len, pos, &replica_num_);
       }
       if (TFS_SUCCESS == ret)
       {
-        Serialization::get_int32(data, data_len, pos, &business_port_num_);
+        ret = Serialization::get_int32(data, data_len, pos, &business_port_num_);
       }
       if (TFS_SUCCESS == ret)
       {
-        Serialization::get_int32(data, data_len, pos, &migrate_complete_wait_time_);
+        ret = Serialization::get_int32(data, data_len, pos, &migrate_complete_wait_time_);
       }
       if (TFS_SUCCESS == ret)
       {
-        for (int i = 0; i < 2; i++)
-        {
-          Serialization::get_int32(data, data_len, pos, &reserve_[i]);
-        }
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&max_block_id_));
       }
       return ret;
     }
