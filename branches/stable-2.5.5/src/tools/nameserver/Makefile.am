@@ -41,4 +41,4 @@ stat_tool_SOURCES=stat_main.cpp stat_tool.cpp stat_tool.h common.cpp common.h sh
 gen_compact_blk_order_SOURCES = gen_compact_blk_order.cpp common.cpp common.h
 #import_family_info_SOURCES = import_family_info.cpp
 #export_family_info_SOURCES = export_family_info.cpp
-ns_meta_tool_SOURCE=ns_meta_tool.cpp
+ns_meta_tool_SOURCES=ns_meta_tool.cpp
