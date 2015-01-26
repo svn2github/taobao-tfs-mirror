@@ -99,7 +99,7 @@ namespace tfs
         ~MachineShow(){}
         void dump(const int8_t flag, FILE* fp) const;
         int init(ServerShow& server, ServerShow& old_server);
-        int add(ServerShow& server, ServerShow& old_server);
+        int add(ServerShow& server, ServerShow& old_server, const int8_t sub_type);
         int calculate();
 
       public:

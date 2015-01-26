@@ -492,7 +492,9 @@ namespace tfs
       for (; iter != servers_.end(); ++iter)
       {
         pserver = (*iter);
-        assert(NULL !=pserver);
+        assert(NULL != pserver);
+        if (DATASERVER_DISK_TYPE_SYSTEM == pserver->get_disk_type())
+          continue;
         total_capacity += (pserver->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_) / 100;
         total_use_capacity += pserver->use_capacity();
       }
