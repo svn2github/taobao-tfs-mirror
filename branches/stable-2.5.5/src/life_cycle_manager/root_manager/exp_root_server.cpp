@@ -77,14 +77,7 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
-        kv_engine_helper_ = new MysqlEngineHelper(SYSPARAM_EXPIREROOTSERVER.conn_str_,
-            SYSPARAM_EXPIREROOTSERVER.user_name_, SYSPARAM_EXPIREROOTSERVER.pass_wd_);
-        iret = kv_engine_helper_->init();
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = handle_task_helper_.init(kv_engine_helper_);
+        iret = handle_task_helper_.init();
         if (TFS_SUCCESS != iret)
         {
           TBSYS_LOG(ERROR, "query task helper initial fail: %d", iret);
@@ -100,11 +93,6 @@ namespace tfs
       rt_es_heartbeat_workers_.wait();
       manager_.destroy();
       handle_task_helper_.destroy();
-      if (kv_engine_helper_ != NULL)
-      {
-        delete kv_engine_helper_;
-        kv_engine_helper_ = NULL;
-      }
       return TFS_SUCCESS;
     }
 

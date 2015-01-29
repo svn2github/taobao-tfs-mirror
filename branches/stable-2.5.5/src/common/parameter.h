@@ -340,6 +340,7 @@ namespace tfs
       std::string conn_str_;
       std::string user_name_;
       std::string pass_wd_;
+      int32_t pool_size_;
       int lifecycle_area_;
       uint64_t ers_ip_port_;
       uint64_t es_ip_port_;

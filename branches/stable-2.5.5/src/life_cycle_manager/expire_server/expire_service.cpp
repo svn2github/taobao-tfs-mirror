@@ -107,7 +107,8 @@ namespace tfs
       {
         kv_engine_helper_ = new MysqlEngineHelper(SYSPARAM_EXPIRESERVER.conn_str_,
             SYSPARAM_EXPIRESERVER.user_name_,
-            SYSPARAM_EXPIRESERVER.pass_wd_);
+            SYSPARAM_EXPIRESERVER.pass_wd_,
+            SYSPARAM_EXPIRESERVER.pool_size_);
         ret = kv_engine_helper_->init();
       }
 

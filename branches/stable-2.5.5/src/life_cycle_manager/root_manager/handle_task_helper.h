@@ -34,7 +34,7 @@ namespace tfs
       public:
         HandleTaskHelper(ExpServerManager &manager);
         virtual ~HandleTaskHelper();
-        int init(tfs::common::KvEngineHelper* kv_engine_helper);
+        int init();
         int destroy();
 
         int handle_finish_task(const uint64_t es_id, const common::ExpireTaskInfo&);
