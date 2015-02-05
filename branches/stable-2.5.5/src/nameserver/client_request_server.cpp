@@ -804,6 +804,11 @@ namespace tfs
           {
             block->set_version(info.version_);
             block->update_info(info);
+
+            if (manager_.get_block_manager().need_replicate(block))
+            {
+              manager_.get_block_manager().push_to_emergency_replicate_queue(block);
+            }
           }
           else
           {

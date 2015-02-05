@@ -856,6 +856,21 @@ namespace tfs
         assert(NULL != item);
         manager.get_block_manager().push_to_clean_familyinfo_queue(block, *item, GFactory::get_runtime_info().is_master());
       }
+
+
+      if (helper.get_array_index() > 0 || clean_family_helper.get_array_index() > 0)
+      {
+        int64_t now = Func::get_monotonic_time();
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        if (!ngi.in_safe_mode_time(now))
+        {
+          BlockCollect* pblock = manager.get_block_manager().get(block);
+          if (manager.get_block_manager().need_replicate(pblock))
+          {
+            manager.get_block_manager().push_to_emergency_replicate_queue(pblock);
+          }
+        }
+      }
     }
 
     void ServerCollect::write_block_oplog_(LayoutManager& manager, const int32_t cmd, const common::BlockInfoV2& info, const int64_t now)
