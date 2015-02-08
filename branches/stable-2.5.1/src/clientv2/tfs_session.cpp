@@ -161,6 +161,7 @@ namespace tfs
       }
       else
       {
+      /* bug: if total_ops not increase, total_ops % interval_count_ will equal 0 again next time
         uint32_t success_ops =
           stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::read_success_) +
           stat_mgr_.get_stat_value(StatItem::client_access_stat_, StatItem::write_success_) +
@@ -176,6 +177,7 @@ namespace tfs
         uint64_t total_ops = success_ops + fail_ops;
         need_update =  (total_ops % ClientConfig::update_dst_interval_count_ == 0) ||
           (fail_ops % ClientConfig::update_dst_fail_count_ == 0);
+          */
       }
       return need_update;
     }
