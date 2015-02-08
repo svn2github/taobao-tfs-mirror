@@ -70,7 +70,7 @@ namespace tfs
       dissolve_task_expired_time_  = 120;
       max_mr_network_bandwith_ratio_ = 60;
       max_rw_network_bandwith_ratio_ = 40;
-      compact_family_member_ratio_   = 60;
+      compact_family_member_ratio_   = 30;
       resolve_version_conflic_task_expired_time_ = 30;
       max_single_machine_network_bandwith_ = 240;//120MB
       adjust_copies_location_time_lower_   = 6;

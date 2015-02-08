@@ -118,6 +118,12 @@ namespace tfs
         task_expired_time_ = now + step;
       }
       inline int64_t get_last_leave_time() const { return last_leave_time_;}
+      inline bool need_force_compact() const
+      {
+        return info_.size_ >= common::SYSPARAM_NAMESERVER.force_dissolve_max_block_size_
+            && common::SYSPARAM_NAMESERVER.force_dissolve_max_block_size_ > common::MAX_MARSHALLING_BLOCK_SIZE_LIMIT
+            && servers_.size() > 0;
+      }
     private:
       inline int32_t get_delete_file_num_ratio_() const
       {
