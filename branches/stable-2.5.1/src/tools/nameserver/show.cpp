@@ -387,14 +387,14 @@ namespace tfs
               map<uint64_t, MachineShow>::iterator iter = machine_map_.find(machine_id);
               if (iter != machine_map_.end())
               {
-                (iter->second).add(server, old_server);
+                (iter->second).add(server, old_server, type);
               }
               else
               {
                 MachineShow machine;
                 machine.machine_id_ = machine_id;
                 machine.init(server, old_server);
-                machine.add(server, old_server);
+                machine.add(server, old_server, type);
                 machine_map_.insert(make_pair<uint64_t, MachineShow> (machine_id, machine));
               }
             }

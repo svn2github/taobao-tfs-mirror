@@ -553,12 +553,16 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int MachineShow::add(ServerShow& server, ServerShow& old_server)
+    int MachineShow::add(ServerShow& server, ServerShow& old_server, const int8_t sub_type)
     {
-      use_capacity_ += server.server_stat_.use_capacity_;
-      total_capacity_ += server.server_stat_.total_capacity_;
-      block_count_ += server.server_stat_.block_count_;
-      current_load_ += server.server_stat_.current_load_;
+      if ((sub_type & MACHINE_TYPE_ALL)
+          || (DATASERVER_DISK_TYPE_FULL == server.server_stat_.disk_type_))
+      {
+        use_capacity_ += server.server_stat_.use_capacity_;
+        total_capacity_ += server.server_stat_.total_capacity_;
+        block_count_ += server.server_stat_.block_count_;
+        current_load_ += server.server_stat_.current_load_;
+      }
 
       int32_t time = server.server_stat_.current_time_ - old_server.server_stat_.current_time_;
       Throughput tmp_tp_;
