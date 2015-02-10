@@ -61,7 +61,7 @@ files for developing applications that use the %name package.
 %build
 chmod u+x build.sh
 ./build.sh init
-./configure --prefix=%{_prefix} --without-tcmalloc --enable-uniquestore --enable-taircache --with-tair-root=/opt/csr/tair-3.0 --with-restful-root=/home/admin/tfs/restful/  --with-libeasy-root=/usr --with-diamond-root=/usr/local 
+./configure --prefix=%{_prefix} --without-tcmalloc --enable-lifecycle --enable-uniquestore --enable-taircache --with-tair-root=/opt/csr/tair-3.0 --with-restful-root=/home/admin/tfs/restful/  --with-libeasy-root=/usr --with-diamond-root=/usr/local 
 make %{?_smp_mflags}
 
 %install
