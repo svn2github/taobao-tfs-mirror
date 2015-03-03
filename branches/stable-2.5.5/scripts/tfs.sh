@@ -321,6 +321,43 @@ check_run()
     fi
 }
 
+rm_pid()
+{
+    case $1 in
+        ds)
+            pid_file=`echo ${DS_BIN}|sed 's/bin/logs/'`"_$2.pid"
+            ;;
+        ns)
+            pid_file=`echo ${NS_BIN}|sed 's/bin/logs/'`".pid"
+            ;;
+        rc)
+            pid_file=`echo ${RC_BIN}|sed 's/bin/logs/'`".pid"
+            ;;
+        cs)
+            pid_file=`echo ${CS_BIN}|sed 's/bin/logs/'`".pid"
+            ;;
+        ms)
+            pid_file=`echo ${MS_BIN}|sed 's/bin/logs/'`".pid"
+            ;;
+        kv_rs)
+            pid_file=`echo ${KV_RS_BIN}|sed 's/bin/logs/'`".pid"
+            ;;
+        kv_meta)
+            pid_file=`echo ${KV_META_BIN}|sed 's/bin/logs/'`".pid"
+            ;;
+        lifecycle_root)
+            pid_file=`echo ${LIFECYCLE_ROOT_BIN}|sed 's/bin/logs/'`".pid"
+            ;;
+        lifecycle_expire)
+            pid_file=`echo ${LIFECYCLE_EXPIRE_BIN}|sed 's/bin/logs/'`".pid"
+            ;;
+        *)
+            exit 1
+    esac
+    echo "rm -f $pid_file"
+}
+
+
 do_start()
 {
     if [ $1 = "ds" ] && [ -z "$2" ]
@@ -366,6 +403,7 @@ do_start()
             fail_echo "$start_name is already running pid: $ret_pid"
         elif [ $ret_pid -eq 0 ]
         then
+            rm_pid $1 $i
             $cmd &
             start_index="$start_index $i"
         else
