@@ -865,7 +865,7 @@ namespace tfs
         if (!ngi.in_safe_mode_time(now))
         {
           BlockCollect* pblock = manager.get_block_manager().get(block);
-          if (manager.get_block_manager().need_replicate(pblock))
+          if (NULL != pblock && manager.get_block_manager().need_replicate(pblock))
           {
             manager.get_block_manager().push_to_emergency_replicate_queue(pblock);
           }
