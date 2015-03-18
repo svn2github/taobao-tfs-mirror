@@ -214,7 +214,10 @@ namespace tfs
       {
         BlockCollect* pblock = get_block_manager().get(block);
         ServerCollect* pserver = get_server_manager().get(server);
-        ret = this->relieve_relation(pblock, pserver, now, print);
+        if (NULL != pblock && NULL != pserver)
+        {
+          ret = this->relieve_relation(pblock, pserver, now, print);
+        }
       }
       return ret;
     }
