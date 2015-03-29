@@ -187,19 +187,21 @@ namespace tfs
           break;
         }
         QueueItem* item = file_queue_->pop(0);
+        if (NULL != item)
+        {
+          SyncData* sf = reinterpret_cast<SyncData*>(&item->data_[0]);
+          LogUniqueKey key;
+          key.cmd_ = sf->cmd_;
+          key.block_id_ = sf->block_id_;
+          key.file_id_  = sf->file_id_;
+          unique_key_.erase(key);
+        }
         sync_mirror_monitor_.unlock();
         if (NULL != item)
         {
           if (TFS_SUCCESS == do_sync(&item->data_[0], item->length_))
           {
             file_queue_->finish(0);
-            SyncData* sf = reinterpret_cast<SyncData*>(&item->data_[0]);
-            LogUniqueKey key;
-            key.cmd_ = sf->cmd_;
-            key.block_id_ = sf->block_id_;
-            key.file_id_  = sf->file_id_;
-            tbutil::Monitor<tbutil::Mutex>::Lock lock(sync_mirror_monitor_);
-            unique_key_.erase(key);
           }
           else
           {
