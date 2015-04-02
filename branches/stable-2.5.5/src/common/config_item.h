@@ -129,6 +129,7 @@ namespace tfs
 #define CONF_TAIR_ADDR                                "tair_addr"
 
 #define CONF_MIGRATE_COMPLETE_WAIT_TIME               "migrate_complete_wait_time"
+#define CONF_PLAN_RUN_FLAG                            "plan_run_flag"
 
   //dataserver
 #define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
