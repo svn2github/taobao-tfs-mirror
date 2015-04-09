@@ -178,7 +178,8 @@ namespace tfs
       int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const;
 
       private:
-      static const int32_t INDEX_DATA_START_OFFSET = sizeof(common::IndexHeaderV2) + common::MAX_MARSHALLING_NUM * sizeof(InnerIndex);
+      //static const int32_t INDEX_DATA_START_OFFSET = sizeof(common::IndexHeaderV2) + common::MAX_MARSHALLING_NUM * sizeof(InnerIndex);
+      static const int32_t INDEX_DATA_START_OFFSET = sizeof(common::IndexHeaderV2) + 12 * sizeof(InnerIndex);
       InnerIndex* get_inner_index_array_() const;
       InnerIndex* get_inner_index_(const uint64_t logic_block_id) const;
       int read_file_info_(common::FileInfoV2*& info, const uint64_t fileid, char* buf, const int32_t nbytes, const int8_t type) const;

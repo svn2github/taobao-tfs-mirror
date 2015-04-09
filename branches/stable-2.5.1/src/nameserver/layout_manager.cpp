@@ -128,6 +128,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         gc_manager_.initialize(SYSPARAM_NAMESERVER.object_wait_free_time_, SYSPARAM_NAMESERVER.object_wait_clear_time_);
+        if (SYSPARAM_NAMESERVER.plan_run_flag_ >= 0 && SYSPARAM_NAMESERVER.plan_run_flag_ <= 63)
+        {
+          plan_run_flag_ = SYSPARAM_NAMESERVER.plan_run_flag_;
+        }
       }
 
       init_block_logger_();

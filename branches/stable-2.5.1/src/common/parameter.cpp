@@ -241,6 +241,9 @@ namespace tfs
         TBSYS_LOG(ERROR, "%s in [%s] is invalid, value: %d", CONF_HEART_PORT_COUNT, CONF_SN_NAMESERVER, heart_port_count_);
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }
+
+      plan_run_flag_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_PLAN_RUN_FLAG, -1);
+
       return TFS_SUCCESS;
     }
 

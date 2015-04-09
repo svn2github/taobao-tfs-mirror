@@ -97,6 +97,7 @@ namespace tfs
       int32_t migrate_complete_wait_time_;
       int32_t check_integrity_interval_days_;
       int32_t force_dissolve_max_block_size_;
+      int32_t plan_run_flag_;
 
       NameServerParameter()
       {
