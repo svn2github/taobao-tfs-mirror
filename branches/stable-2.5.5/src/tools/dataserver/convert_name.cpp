@@ -25,6 +25,8 @@ int main(int argc, char** argv)
   {
     printf("Usgae: %s blockid fileid [ clusterid version suffix ]\n", argv[0]);
     printf("\tparameter invalid, default: suffix is NULL, clusterid is 0, version is 2 (27 characters).\n");
+    if (argc >= 2)
+      printf("server:%s is %s\n", argv[1], tbsys::CNetUtil::addrToString(strtoull(argv[1], NULL, 10)).c_str());
     return -1;
   }
 
