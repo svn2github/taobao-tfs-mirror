@@ -615,6 +615,8 @@ namespace tfs
         check_flag_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_FLAG, 0);
         check_reserve_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_RESERVE_TIME, 180);
         force_check_all_ = config.getInt(CONF_SN_CHECKSERVER, CONF_FORCE_CHECK_ALL, 0);
+        group_seq_ = config.getInt(CONF_SN_CHECKSERVER, CONF_GROUP_SEQ, 0);
+        group_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_GROUP_COUNT, 1);
       }
 
       // start_time like 01:30
