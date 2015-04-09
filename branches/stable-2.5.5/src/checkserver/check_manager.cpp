@@ -243,8 +243,20 @@ namespace tfs
 
     int CheckManager::get_group_info()
     {
+      /* if group_count in config file greater than 0,
+       * use local config, will not fetch from ns
+       */
       uint64_t ns_id = SYSPARAM_CHECKSERVER.ns_id_;
-      int ret = retry_get_group_info(ns_id, group_count_, group_seq_);
+      int ret = TFS_SUCCESS;
+      if (SYSPARAM_CHECKSERVER.group_count_ > 0)
+      {
+        group_count_ = SYSPARAM_CHECKSERVER.group_count_;
+        group_seq_ = SYSPARAM_CHECKSERVER.group_seq_;
+      }
+      else
+      {
+        ret = retry_get_group_info(ns_id, group_count_, group_seq_);
+      }
       TBSYS_LOG(INFO, "ns: %s, group count: %d, group seq: %d, ret: %d",
           tbsys::CNetUtil::addrToString(ns_id).c_str(), group_count_, group_seq_, ret);
       return ret;
