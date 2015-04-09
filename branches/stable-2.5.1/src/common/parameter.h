@@ -265,6 +265,8 @@ namespace tfs
       int32_t force_check_all_;
       int32_t start_time_hour_;
       int32_t start_time_min_;
+      int32_t group_seq_;
+      int32_t group_count_;
 
       int initialize(const std::string& config_file);
 
