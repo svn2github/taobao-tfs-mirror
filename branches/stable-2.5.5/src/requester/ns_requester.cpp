@@ -182,7 +182,7 @@ namespace tfs
         param.data_.clear();
         tbnet::Packet* ret_msg = NULL;
         NewClient* client = NewClientManager::get_instance().create_client();
-        ret = send_msg_to_server(ns_id, client, &msg, ret_msg);
+        ret = send_msg_to_server(ns_id, client, &msg, ret_msg, DEFAULT_NETWORK_CALL_TIMEOUT, true);
         if (TFS_SUCCESS == ret)
         {
           if (ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
