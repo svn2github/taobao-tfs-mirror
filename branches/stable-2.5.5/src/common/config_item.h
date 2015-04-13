@@ -130,6 +130,7 @@ namespace tfs
 
 #define CONF_MIGRATE_COMPLETE_WAIT_TIME               "migrate_complete_wait_time"
 #define CONF_PLAN_RUN_FLAG                            "plan_run_flag"
+#define CONF_GLOBAL_SWITCH                            "global_switch"
 
   //dataserver
 #define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"

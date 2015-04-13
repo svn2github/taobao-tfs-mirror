@@ -320,7 +320,9 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = GFactory::get_runtime_info().load_family_info_complete() ? TFS_SUCCESS : EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR;
+        ret = ((SYSPARAM_NAMESERVER.global_switch_ & ENABLE_LOADFAMILY_UNCOMPLETE_UPDATE)
+            || GFactory::get_runtime_info().load_family_info_complete()) ?
+            TFS_SUCCESS : EXIT_APPLY_BLOCK_SAFE_MODE_TIME_ERROR;
       }
       if (TFS_SUCCESS == ret)
       {

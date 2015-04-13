@@ -366,7 +366,7 @@ int cmd_set_run_param(const VSTRING& param)
       else if (strcmp(dynamic_parameter_str[i], "global_switch") == 0)
       {
         fprintf(stderr, "%s %s\n", dynamic_parameter_str[i],
-             "[bitmap: 1-enbale_version_check, 2-enable_read_statstics, 4-enable_incomplete_update]");
+             "[bitmap: 1-enbale_version_check, 2-enable_read_statstics, 4-enable_incomplete_update, 8-enable_loadfamily_uncomplete_updatte");
       }
       else
       {

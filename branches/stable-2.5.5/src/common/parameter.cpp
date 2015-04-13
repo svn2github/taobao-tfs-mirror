@@ -82,6 +82,7 @@ namespace tfs
       max_marshalling_num_ = 10;
       marshalling_visit_time_ = 7;
       global_switch_ = ENABLE_VERSION_CHECK | ENABLE_READ_STATSTICS;
+      global_switch_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_GLOBAL_SWITCH, global_switch_);
       client_keepalive_interval_ = 600;
       verify_index_reserved_space_ratio_ = VERIFY_INDEX_RESERVED_SPACKE_DEFAULT_RATIO;
       check_integrity_interval_days_ = CHECK_INTEGRITY_INTERVAL_DAYS_DEFAULT;
