@@ -169,7 +169,7 @@ namespace tfs
     {
       ds_list.clear();
       int ret = TFS_SUCCESS;
-      create_msg_ref(ShowServerInformationMessage, msg);
+      ShowServerInformationMessage msg;
       SSMScanParameter& param = msg.get_param();
       param.type_ = SSM_TYPE_SERVER;
       param.child_type_ = SSM_CHILD_SERVER_TYPE_INFO;

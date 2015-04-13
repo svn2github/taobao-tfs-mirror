@@ -366,7 +366,7 @@ int cmd_set_run_param(const VSTRING& param)
       else if (strcmp(dynamic_parameter_str[i], "global_switch") == 0)
       {
         fprintf(stderr, "%s %s\n", dynamic_parameter_str[i],
-             "[bitmap: 1-enbale_version_check, 2-enable_read_statstics, 4-enable_incomplete_update, 8-enable_loadfamily_uncomplete_updatte");
+             "[bitmap: 1-enbale_version_check, 2-enable_read_statstics, 4-enable_incomplete_update, 8-enable_loadfamily_uncomplete_update]");
       }
       else
       {
@@ -888,7 +888,7 @@ int cmd_access_stat_info(const VSTRING& param)//Discarded function
   }
   int32_t has_next = 0;
 
-  create_msg_ref(GetServerStatusMessage, req_gss_msg);
+  GetServerStatusMessage req_gss_msg;
 
   fprintf(stdout,
           "ip addr           | read count  | read bytes  | write count  | write bytes\n"

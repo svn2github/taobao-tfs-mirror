@@ -171,7 +171,7 @@ namespace tfs
         server_map_.clear();
         StatStruct stat;
 
-        create_msg_ref(ShowServerInformationMessage, msg);
+        ShowServerInformationMessage msg;
         SSMScanParameter& param = msg.get_param();
         param.type_ = SSM_TYPE_SERVER;
         param.child_type_ = SSM_CHILD_SERVER_TYPE_INFO;
@@ -322,7 +322,7 @@ namespace tfs
         machine_map_.clear();
         StatStruct stat;
 
-        create_msg_ref(ShowServerInformationMessage, msg);
+        ShowServerInformationMessage msg;
         SSMScanParameter& param = msg.get_param();
         param.type_ = SSM_TYPE_SERVER;
         param.child_type_ = SSM_CHILD_SERVER_TYPE_INFO;
@@ -447,7 +447,7 @@ namespace tfs
           put_file_handle(fp);
           return EXIT_TFS_ERROR;
         }
-        create_msg_ref(ShowServerInformationMessage, msg);
+        ShowServerInformationMessage msg;
         SSMScanParameter& param = msg.get_param();
         param.type_ = SSM_TYPE_BLOCK;//遍历ns上的block数据的类型
         param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;//TYPE_INFO只为取block_id, TYPE_SERVER为ds_list
@@ -574,7 +574,7 @@ namespace tfs
 
       while ((count > 0 || is_loop_) && !interrupt_)
       {
-        create_msg_ref(ShowServerInformationMessage, msg);
+        ShowServerInformationMessage msg;
         SSMScanParameter& param = msg.get_param();
         param.type_ = SSM_TYPE_FAMILY;
 
