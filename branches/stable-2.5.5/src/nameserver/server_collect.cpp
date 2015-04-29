@@ -384,7 +384,10 @@ namespace tfs
         {
           invalid_helper.clear();
           start = *helper.at(index);
-          ret = (exist_(start, *issued_leases_)) ? EXIT_LEASE_EXISTED : TFS_SUCCESS;
+          {
+            RWLock::Lock lock(mutex_, READ_LOCKER);
+            ret = (exist_(start, *issued_leases_)) ? EXIT_LEASE_EXISTED : TFS_SUCCESS;
+          }
           if (TFS_SUCCESS == ret)
           {
             ret = manager.get_task_manager().exist_block(start) ? EXIT_BLOCK_BUSY : TFS_SUCCESS;

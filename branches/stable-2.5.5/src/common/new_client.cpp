@@ -140,25 +140,27 @@ namespace tfs
           WaitId id;
           id.seq_id_ = seq_id_;
           id.send_id_= send_id;
-          //tbnet::Packet* send_msg = NewClientManager::get_instance().clone_packet(packet, 2, false);
-          //if (NULL == send_msg)
-          //{
-          //  TBSYS_LOG(ERROR, "clone message failure, pcode:%d", packet->getPCode());
-          //  ret = common::TFS_ERROR;
-          //  monitor_.lock();
-          //  destroy_send_id(id);
-          //  monitor_.unlock();
-          //}
-          //else
+
+          BasePacket* send_msg = NewClientManager::get_instance().get_packet_streamer()->
+            clone_packet(dynamic_cast<BasePacket*>(source_packet));
+          if (NULL == send_msg)
+          {
+            TBSYS_LOG(ERROR, "clone message failure, pcode:%d", packet->getPCode());
+            ret = common::TFS_ERROR;
+            monitor_.lock();
+            destroy_send_id(id);
+            monitor_.unlock();
+          }
+          else
           {
             //dynamic_cast<BasePacket*>(send_msg)->set_auto_free(true);
             int send_ret = NewClientManager::get_instance().send_packet(server,
-                packet, reinterpret_cast<void*>(*(reinterpret_cast<int32_t*>(&id))));
+                send_msg, reinterpret_cast<void*>(*(reinterpret_cast<int32_t*>(&id))));
             if (EASY_OK != send_ret)
             {
               ret = common::EXIT_SENDMSG_ERROR;
               TBSYS_LOG(INFO, "cannot post packet, maybe send queue is full or disconnect.");
-              // send_msg->free();
+              send_msg->free();
               monitor_.lock();
               destroy_send_id(id);
               monitor_.unlock();
