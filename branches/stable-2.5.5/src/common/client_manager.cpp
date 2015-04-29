@@ -348,9 +348,8 @@ namespace tfs
     int NewClientManager::process_handler(easy_request_t *r)
     {
       WaitId id = (*(reinterpret_cast<WaitId*>(&r->args)));
-      // let NewClient free opacket and ipacket
       BasePacket* opacket = (BasePacket*)r->opacket;
-      r->opacket = NULL;
+      //r->opacket = NULL; let libeasy free opacket
       BasePacket* ipacket = (BasePacket*)r->ipacket;
       r->ipacket = NULL;
       if (ipacket == NULL)
