@@ -40,7 +40,8 @@ namespace tfs
         static BlockIdFactory instance_;
         tbutil::Mutex mutex_;
         static const uint16_t BLOCK_START_NUMBER;
-        static const uint16_t SKIP_BLOCK_NUMBER;
+        static const uint32_t SKIP_BLOCK_NUMBER;
+        static const uint16_t FLUSH_BLOCK_NUMBER;
         static const uint64_t MAX_BLOCK_ID;
         uint64_t global_id_;
         uint64_t last_flush_id_;
