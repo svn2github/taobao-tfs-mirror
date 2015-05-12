@@ -67,6 +67,9 @@ namespace tfs
       // handle libeasy packet
       int handle(common::BasePacket* packet);
 
+      int update_global_block_id(const uint64_t block_id);
+      int query_global_block_id(uint64_t& block_id);
+
     private:
       DISALLOW_COPY_AND_ASSIGN( OpLogSyncManager);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
@@ -82,6 +85,9 @@ namespace tfs
       int load_family_info_(const int32_t thread_seqno);
       int load_family_log_(const int32_t thread_seqno);
       int load_all_family_info_(const int32_t thread_seqno, bool& load_complete);
+
+      int sync_remote_block_id_();
+      int save_remote_block_id_();
 
       class LoadFamilyInfoThreadHelper: public tbutil::Thread
       {
@@ -100,6 +106,18 @@ namespace tfs
       };
       typedef tbutil::Handle<LoadFamilyInfoThreadHelper> LoadFamilyInfoThreadHelperPtr;
 
+      class SyncBlockIdThreadHelper: public tbutil::Thread
+      {
+        public:
+          SyncBlockIdThreadHelper(OpLogSyncManager& manager):manager_(manager) {start(THREAD_STATCK_SIZE);}
+          virtual ~SyncBlockIdThreadHelper() {}
+          void run();
+        private:
+          OpLogSyncManager& manager_;
+          DISALLOW_COPY_AND_ASSIGN(SyncBlockIdThreadHelper);
+      };
+      typedef tbutil::Handle<SyncBlockIdThreadHelper> SyncBlockIdThreadHelperPtr;
+
     private:
       static const int32_t DEFATUL_TAIR_INDEX = 0;
       LayoutManager& manager_;
@@ -111,6 +129,7 @@ namespace tfs
       TairHelper* dbhelper_[MAX_LOAD_FAMILY_INFO_THREAD_NUM];
       tbnet::PacketQueueThread work_thread_;
       LoadFamilyInfoThreadHelperPtr load_family_info_thread_[MAX_LOAD_FAMILY_INFO_THREAD_NUM];
+      SyncBlockIdThreadHelperPtr sync_block_id_thread_;
     };
   }//end namespace nameserver
 }//end namespace tfs

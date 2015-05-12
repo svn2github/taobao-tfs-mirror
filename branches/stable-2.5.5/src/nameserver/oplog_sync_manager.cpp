@@ -38,13 +38,14 @@ namespace tfs
   namespace nameserver
   {
     OpLogSyncManager::OpLogSyncManager(LayoutManager& mm) :
-      manager_(mm), oplog_(NULL), file_queue_(NULL), file_queue_thread_(NULL)
+      manager_(mm), oplog_(NULL), file_queue_(NULL), file_queue_thread_(NULL), id_factory_(*this)
     {
       for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
       {
         dbhelper_[index] = NULL;
         load_family_info_thread_[index] = 0;
       }
+      sync_block_id_thread_ = 0;
     }
 
     OpLogSyncManager::~OpLogSyncManager()
@@ -57,6 +58,7 @@ namespace tfs
         tbsys::gDelete(dbhelper_[index]);
         load_family_info_thread_[index] = 0;
       }
+      sync_block_id_thread_ = 0;
     }
 
     int OpLogSyncManager::initialize()
@@ -81,6 +83,26 @@ namespace tfs
       if (ret != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "initialize oplog failed, path: %s, ret: %d", queue_header_path.c_str(), ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        std::string tair_info = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_TAIR_ADDR, "");// prefix, config_id, area
+        std::vector<std::string> items;
+        common::Func::split_string(tair_info.c_str(), ',', items);
+        ret = items.size() != 3 ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "tair info: %s is invalid", tair_info.c_str());
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && TFS_SUCCESS == ret; ++index)
+          {
+            dbhelper_[index] = new TairHelper(items[0], items[1], atoi(items[2].c_str()));
+            ret = dbhelper_[index]->initialize();
+          }
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -126,30 +148,13 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        std::string tair_info = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_TAIR_ADDR, "");// prefix, config_id, area
-        std::vector<std::string> items;
-        common::Func::split_string(tair_info.c_str(), ',', items);
-        ret = items.size() != 3 ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
-        if (TFS_SUCCESS != ret)
+        for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
         {
-          TBSYS_LOG(ERROR, "tair info: %s is invalid", tair_info.c_str());
+          load_family_info_thread_[index] = new LoadFamilyInfoThreadHelper(*this, index);
         }
-        if (TFS_SUCCESS == ret)
-        {
-          for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM && TFS_SUCCESS == ret; ++index)
-          {
-            dbhelper_[index] = new TairHelper(items[0], items[1], atoi(items[2].c_str()));
-            ret = dbhelper_[index]->initialize();
-          }
-        }
-        if (TFS_SUCCESS == ret)
-        {
-          for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
-          {
-            load_family_info_thread_[index] = new LoadFamilyInfoThreadHelper(*this, index);
-          }
-        }
+        sync_block_id_thread_ = new SyncBlockIdThreadHelper(*this);
       }
+
       return ret;
     }
 
@@ -191,11 +196,12 @@ namespace tfs
       tbutil::Mutex::Lock lock(mutex_);
       if (NULL != file_queue_)
         file_queue_->clear();
-      id_factory_.skip();
       for (int32_t index = 0; index < MAX_LOAD_FAMILY_INFO_THREAD_NUM; ++index)
       {
         load_family_info_thread_[index]->set_reload();
       }
+      sync_remote_block_id_();
+      id_factory_.skip();
     }
 
     int OpLogSyncManager::log(const uint8_t type, const char* const data, const int64_t length, const time_t now)
@@ -637,6 +643,26 @@ namespace tfs
       return ret;
     }
 
+    int OpLogSyncManager::update_global_block_id(const uint64_t block_id)
+    {
+      int32_t ret = NULL != dbhelper_[DEFATUL_TAIR_INDEX] ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = dbhelper_[DEFATUL_TAIR_INDEX]->update_global_block_id(block_id);
+      }
+      return ret;
+    }
+
+    int OpLogSyncManager::query_global_block_id(uint64_t& block_id)
+    {
+      int32_t ret = NULL != dbhelper_[DEFATUL_TAIR_INDEX] ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = dbhelper_[DEFATUL_TAIR_INDEX]->query_global_block_id(block_id);
+      }
+      return ret;
+    }
+
     common::BasePacket* OpLogSyncManager::malloc_(const int32_t type)
     {
       BasePacket* result = NULL;
@@ -734,6 +760,44 @@ namespace tfs
         usleep(1000000);
       }
       return TFS_SUCCESS;
+    }
+
+    int OpLogSyncManager::sync_remote_block_id_()
+    {
+      uint64_t remote_id = 0;
+      int ret = query_global_block_id(remote_id);
+      if (TAIR_RETURN_SUCCESS == ret)
+      {
+        uint64_t local_id = id_factory_.get();
+        if (remote_id > local_id)
+        {
+          id_factory_.update(remote_id);
+          TBSYS_LOG(DEBUG, "sync %lu from remote, local_old is %lu", remote_id, local_id);
+        }
+      }
+      if (TAIR_RETURN_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "sync remote block id failed, ret %d", ret);
+      }
+      return ret;
+    }
+
+    int OpLogSyncManager::save_remote_block_id_()
+    {
+      uint64_t remote_id = 0;
+      int ret = query_global_block_id(remote_id);
+      /* first update or bigger than remote id */
+      uint64_t local_id = id_factory_.get();
+      if (TAIR_RETURN_DATA_NOT_EXIST == ret || (TAIR_RETURN_SUCCESS == ret && local_id > remote_id))
+      {
+        ret = update_global_block_id(local_id);
+        TBSYS_LOG(DEBUG, "save %lu to remote, remote_old is %lu", local_id, remote_id);
+      }
+      if (TAIR_RETURN_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "save remote block id failed, ret %d", ret);
+      }
+      return ret;
     }
 
     int OpLogSyncManager::scan_all_family_(const int32_t thseqno, const int32_t chunk, int64_t& start_family_id)
@@ -846,5 +910,34 @@ namespace tfs
         TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
       }
     }
+
+    void OpLogSyncManager::SyncBlockIdThreadHelper::run()
+    {
+      try
+      {
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        while (!ngi.is_destroyed())
+        {
+          if (ngi.is_master())
+          {
+            manager_.save_remote_block_id_();
+          }
+          else
+          {
+            manager_.sync_remote_block_id_();
+          }
+          usleep(1000000);
+        }
+      }
+      catch(std::exception& e)
+      {
+        TBSYS_LOG(ERROR, "catch exception: %s", e.what());
+      }
+      catch(...)
+      {
+        TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
+      }
+    }
+
   }//end namespace nameserver
 }//end namespace tfs

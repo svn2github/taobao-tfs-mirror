@@ -47,6 +47,8 @@ namespace tfs
       int create_family(common::FamilyInfo& family_info);
       int del_family(const int64_t family_id, const bool del, const bool log, const uint64_t own_ipport);
       int query_family(common::FamilyInfo& family_info);
+      int update_global_block_id(const uint64_t block_id);
+      int query_global_block_id(uint64_t& block_id);
       int scan(std::vector<common::FamilyInfo>& family_infos, const int64_t start_family_id,
           const int32_t chunk, const bool del, const uint64_t peer_ipport, const int32_t limit);
     private:

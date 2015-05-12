@@ -15,7 +15,10 @@
  */
 #include "common/error_msg.h"
 #include "common/directory_op.h"
+#include "common/func.h"
 #include "block_id_factory.h"
+#include "oplog_sync_manager.h"
+#include "ns_define.h"
 
 namespace tfs
 {
@@ -25,7 +28,8 @@ namespace tfs
     const uint32_t BlockIdFactory::SKIP_BLOCK_NUMBER  = 100000;
     const uint16_t BlockIdFactory::FLUSH_BLOCK_NUMBER  = 100;
     const uint64_t BlockIdFactory::MAX_BLOCK_ID = 0xFFFFFFFFFFFFFFFF -1;
-    BlockIdFactory::BlockIdFactory():
+    BlockIdFactory::BlockIdFactory(OpLogSyncManager& manager):
+      manager_(manager),
       global_id_(BLOCK_START_NUMBER),
       last_flush_id_(0),
       fd_(-1)
@@ -40,6 +44,8 @@ namespace tfs
 
     int BlockIdFactory::initialize(const std::string& path)
     {
+      uint64_t local_id = 0;
+      uint64_t remote_id = 0;
       int32_t ret = path.empty() ? common::EXIT_GENERAL_ERROR : common::TFS_SUCCESS;
       if (common::TFS_SUCCESS == ret)
       {
@@ -65,24 +71,33 @@ namespace tfs
           if (length == common::INT64_SIZE)//read successful
           {
             int64_t pos = 0;
-            ret = common::Serialization::get_int64(data, common::INT64_SIZE, pos, reinterpret_cast<int64_t*>(&global_id_));
+            ret = common::Serialization::get_int64(data, common::INT64_SIZE, pos, reinterpret_cast<int64_t*>(&local_id));
             if (common::TFS_SUCCESS != ret)
             {
               TBSYS_LOG(ERROR, "serialize global block id error, ret: %d", ret);
             }
-            else
-            {
-              last_flush_id_ = global_id_;// read success when startup be similar with flush
-              if (global_id_ < BLOCK_START_NUMBER)
-                global_id_ = BLOCK_START_NUMBER;
-            }
-            if (common::TFS_SUCCESS == ret)
-            {
-              global_id_ += SKIP_BLOCK_NUMBER;
-            }
           }
         }
       }
+
+
+      if (common::TFS_SUCCESS == ret)
+      {
+        /* query block id from tair */
+        manager_.query_global_block_id(remote_id);
+
+        global_id_ = std::max(local_id, remote_id);
+        last_flush_id_ = global_id_;
+        global_id_ += SKIP_BLOCK_NUMBER;
+
+        TBSYS_LOG(INFO, "local id %lu, remote id %lu", local_id, remote_id);
+
+        if (remote_id > local_id)
+        {
+          flush_(global_id_);
+        }
+      }
+
       return ret;
     }
 

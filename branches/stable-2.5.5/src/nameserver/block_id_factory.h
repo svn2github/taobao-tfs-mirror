@@ -23,10 +23,11 @@ namespace tfs
 {
   namespace nameserver
   {
+    class OpLogSyncManager;
     class BlockIdFactory
     {
       public:
-        BlockIdFactory();
+        BlockIdFactory(OpLogSyncManager& manager);
         virtual ~BlockIdFactory();
         int initialize(const std::string& path);
         int destroy();
@@ -37,7 +38,7 @@ namespace tfs
       private:
         int flush_(const uint64_t id) const;
         DISALLOW_COPY_AND_ASSIGN(BlockIdFactory);
-        static BlockIdFactory instance_;
+        OpLogSyncManager& manager_;
         tbutil::Mutex mutex_;
         static const uint16_t BLOCK_START_NUMBER;
         static const uint32_t SKIP_BLOCK_NUMBER;

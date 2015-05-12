@@ -507,9 +507,9 @@ namespace tfs
     void LayoutManager::switch_role(time_t now)
     {
       get_task_manager().clear();
-      GFactory::get_runtime_info().switch_role(false, now);
       get_server_manager().set_all_server_next_report_time(now);
       oplog_sync_mgr_.switch_role();
+      GFactory::get_runtime_info().switch_role(false, now);
     }
 
     void LayoutManager::rotate_(time_t now)

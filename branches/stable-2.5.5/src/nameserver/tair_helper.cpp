@@ -22,6 +22,8 @@ namespace tfs
 {
   namespace nameserver
   {
+    const char* GLOBAL_BLOCK_ID_SKEY = "global_block_id";
+
     TairHelper::TairHelper(const std::string& key_prefix, const std::string& config_id, const int32_t area):
       key_prefix_(key_prefix),
       config_id_(config_id),
@@ -88,7 +90,7 @@ namespace tfs
       int32_t ret = get_(pkey, skey, value, 1024);
       if (TAIR_RETURN_SUCCESS != ret)
       {
-        TBSYS_LOG(WARN, "query family : %"PRI64_PREFIX"d error: call tair put error, ret: %d, pkey: %s, skey: %s", family_info.family_id_, ret, pkey, skey);
+        TBSYS_LOG(WARN, "query family : %"PRI64_PREFIX"d error: call tair get error, ret: %d, pkey: %s, skey: %s", family_info.family_id_, ret, pkey, skey);
         ret = EXIT_OP_TAIR_ERROR;
       }
       else
@@ -120,6 +122,46 @@ namespace tfs
       {
         if (log)
           ret = insert_del_family_log_(family_id, own_ipport);
+      }
+      return ret;
+    }
+
+    int TairHelper::update_global_block_id(const uint64_t block_id)
+    {
+      char pkey[64] = {'\0'};
+      char skey[64] = {'\0'};
+      char value[64] = {'\0'};
+      snprintf(pkey, 64, "%s", key_prefix_.c_str());
+      snprintf(skey, 64, "%s", GLOBAL_BLOCK_ID_SKEY);
+      snprintf(value, 64, "%lu", block_id);
+
+      int ret = put_(pkey, skey, value, strlen(value));
+      if (TAIR_RETURN_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "update global block id : %"PRI64_PREFIX"u error. "
+            "call tair put error, ret: %d, pkey: %s, skey: %s", block_id, ret, pkey, skey);
+      }
+      return ret;
+    }
+
+    int TairHelper::query_global_block_id(uint64_t& block_id)
+    {
+      block_id = 0;
+      char pkey[64] = {'\0'};
+      char skey[64] = {'\0'};
+      char value[64] = {'\0'};
+      snprintf(pkey, 64, "%s", key_prefix_.c_str());
+      snprintf(skey, 64, "%s", GLOBAL_BLOCK_ID_SKEY);
+
+      int32_t ret = get_(pkey, skey, value, 64);
+      if (TAIR_RETURN_SUCCESS != ret)
+      {
+        TBSYS_LOG(WARN, "query global block id error. "
+            "call tair get error, ret: %d, pkey: %s, skey: %s", ret, pkey, skey);
+      }
+      else
+      {
+        block_id = strtoul(value, NULL, 10);
       }
       return ret;
     }
@@ -266,7 +308,7 @@ namespace tfs
         {
           ret = tair_client_.prefix_get(area_, tair_pkey, tair_skey, tair_value);
         }
-        while (TAIR_RETURN_SUCCESS != ret && index++ < 3);
+        while (TAIR_RETURN_SUCCESS != ret && TAIR_RETURN_DATA_NOT_EXIST != ret && index++ < 3);
 
         if (TFS_SUCCESS == ret)
         {
