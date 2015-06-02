@@ -105,6 +105,8 @@ namespace tfs
       }
       TBSYS_LOG(INFO, "dataserver %s apply lease: %s, ret: %d", tbsys::CNetUtil::addrToString(pserver->id()).c_str(),
         TFS_SUCCESS == ret ? "successful" : "failed", ret);
+      manager_.get_block_log().logMessage(TBSYS_LOG_LEVEL(INFO), "dataserver-%s, apply lease %s, ret: %d",
+          tbsys::CNetUtil::addrToString(pserver->id()).c_str(), TFS_SUCCESS == ret ? "successful" : "failed", ret);
       return ret;
     }
 
@@ -145,6 +147,8 @@ namespace tfs
       }
       TBSYS_LOG(INFO, "dataserver %s giveup lease: %s, ret: %d", tbsys::CNetUtil::addrToString(server).c_str(),
         TFS_SUCCESS == ret ? "successful" : "failed", ret);
+      manager_.get_block_log().logMessage(TBSYS_LOG_LEVEL(INFO), "dataserver-%s, giveup lease %s, ret: %d",
+          tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed", ret);
       return ret;
     }
 

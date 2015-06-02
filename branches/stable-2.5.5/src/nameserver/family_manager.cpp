@@ -768,7 +768,7 @@ namespace tfs
     bool FamilyManager::check_family_conflict(const FamilyCollect* family)
     {
       bool conflict = false;
-      if (NULL != family)
+      if (NULL != family && !manager_.get_task_manager().exist_family(family->get_family_id())) // avoid be deleted during marshalling
       {
         std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
         ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
