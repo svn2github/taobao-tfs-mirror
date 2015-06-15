@@ -129,13 +129,16 @@ namespace tfs
         assert(common::TFS_SUCCESS == ret);
         assert(NULL != result);
         servers_.erase(pserver);
+        if (NULL != last) {
+          last->set(now, SYSPARAM_NAMESERVER.object_wait_free_time_);
+          wait_delete_servers_.push_back(last);
+        }
       }
       rwmutex_.unlock();
 
       if (NULL != last && common::TFS_SUCCESS == ret)
       {
         pserver->copy_block(last);
-        tbsys::gDelete(last);
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -272,6 +275,24 @@ namespace tfs
           rwmutex_.unlock();
         }
       }
+
+      /* delay delete object */
+      rwmutex_.wrlock();
+      std::vector<ServerCollect*> tmp;
+      std::vector<ServerCollect*>::iterator it = wait_delete_servers_.begin();
+      for ( ; it != wait_delete_servers_.end(); it++)
+      {
+        if ((*it)->expire(now))
+        {
+          tbsys::gDelete(*it);
+        }
+        else
+        {
+          tmp.push_back(*it);
+        }
+      }
+      wait_delete_servers_.swap(tmp);
+      rwmutex_.unlock();
       return free_count;
     }
 

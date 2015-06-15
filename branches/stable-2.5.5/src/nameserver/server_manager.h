@@ -155,6 +155,7 @@ namespace tfs
       private:
       SERVER_TABLE servers_;
       SERVER_TABLE wait_free_servers_;
+      std::vector<ServerCollect*> wait_delete_servers_;
       LayoutManager& manager_;
       mutable common::RWLock rwmutex_;
       uint64_t last_traverse_server_;
