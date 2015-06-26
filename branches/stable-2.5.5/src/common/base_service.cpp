@@ -228,7 +228,7 @@ namespace tfs
       else
       {
         eio_.do_signal = 0;
-        eio_.no_redispatch = 0;
+        eio_.no_redispatch = 1;
         eio_.no_reuseport = 1;
         eio_.tcp_nodelay = 1;
         eio_.tcp_cork = 0;
@@ -294,7 +294,7 @@ namespace tfs
         else
         {
           heart_eio_.do_signal = 0;
-          heart_eio_.no_redispatch = 0;
+          heart_eio_.no_redispatch = 1;
           heart_eio_.no_reuseport = 1;
           heart_eio_.tcp_nodelay = 1;
           heart_eio_.tcp_cork = 0;
